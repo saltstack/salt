@@ -28,9 +28,9 @@ class TestSyndic(integration.SyndicCase):
         self.assertEqual(
                 self.run_function(
                     'test.fib',
-                    ['40'],
-                    )[0][-1],
-                34
+                    ['20'],
+                    )[0],
+                6765
                 )
 
 

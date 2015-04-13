@@ -48,6 +48,7 @@ def latest(name,
            bare=False,
            remote_name='origin',
            always_fetch=False,
+           fetch_tags=True,
            depth=None,
            identity=None,
            https_user=None,
@@ -229,6 +230,9 @@ def latest(name,
                     fetch_opts = remote_name
                 else:
                     fetch_opts = ''
+
+                if fetch_tags:
+                    fetch_opts += ' --tags'
 
                 # check remote if fetch_url not == name set it
                 remote = __salt__['git.remote_get'](target,

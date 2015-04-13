@@ -902,7 +902,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     signing_cert:
         A certificate matching the private key that will be used to sign this certificate. This is used
         to populate the issuer values in the resulting certificate. Do not include this value for
-        self-signed certificateds.
+        self-signed certificates.
 
     public_key:
         The public key to be included in this certificate. This can be sourced from a public key,

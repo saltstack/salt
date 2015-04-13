@@ -171,6 +171,9 @@ def latest_version(*names, **kwargs):
                 ret_data[k] = pkg_info.get(k)
             ret[name] = ret_data
 
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]['version']
     return ret
 
 
