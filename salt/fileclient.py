@@ -458,7 +458,6 @@ class Client(object):
 
         # Copy files from master
         for fn_ in self.file_list(saltenv, prefix=path):
-            log.warning(fn_)
             # Prevent files in "salt://foobar/" (or salt://foo.sh) from
             # matching a path of "salt://foo"
             try:
