@@ -662,9 +662,8 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
         log.warning('Refusing to create subnet for non-existent VPC')
         return False
 
-    vpc_subnet = _create_resource('subnet', subnet_name, tags=tags,
-                                  vpc_id=vpc_id, cidr_block=cidr_block,
-                                  region=region, key=key, keyid=keyid,
+    vpc_subnet = _create_resource('subnet', subnet_name, availability_zone=availability_zone, tags=tags,
+                                  vpc_id=vpc_id, cidr_block=cidr_block, region=region, key=key, keyid=keyid,
                                   profile=profile)
     if vpc_subnet:
         log.info('Subnet {0} has {1} available ips on VPC {2}'.format(vpc_subnet.id,
