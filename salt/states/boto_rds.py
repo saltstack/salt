@@ -415,9 +415,7 @@ def subnet_group_absent(name, tags=None, region=None, key=None, keyid=None, prof
         ret['comment'] = 'RDS subnet group {0} is set to be removed.'.format(name)
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_rds.delete_subnet_group'](name, skip_final_snapshot,
-                                                       final_db_snapshot_identifier,
-                                                       region, key, keyid, profile)
+    deleted = __salt__['boto_rds.delete_subnet_group'](name, region, key, keyid, profile)
     if not deleted:
         ret['result'] = False
         ret['comment'] = 'Failed to delete {0} RDS subnet group.'.format(name)
