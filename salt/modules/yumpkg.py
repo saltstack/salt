@@ -1413,21 +1413,27 @@ def group_list():
 
         salt '*' pkg.group_list
     '''
-    ret = {'installed': [], 'available': [], 'available languages': {}}
+    ret = {'installed': [], 'available': [], 'installed environments': [], 'available environments': [], 'available languages': {}}
     cmd = 'yum grouplist'
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
     for idx in range(len(out)):
-        if out[idx] == 'Installed Groups:':
+        if out[idx].lower() == 'installed groups:':
             key = 'installed'
             continue
-        elif out[idx] == 'Available Groups:':
+        elif out[idx].lower() == 'available groups:':
             key = 'available'
             continue
-        elif out[idx] == 'Available Language Groups:':
+        elif out[idx].lower() == 'installed environment groups:':
+            key = 'installed environments'
+            continue
+        elif out[idx].lower() == 'available environment groups:':
+            key = 'available environments'
+            continue
+        elif out[idx].lower() == 'available language groups:':
             key = 'available languages'
             continue
-        elif out[idx] == 'Done':
+        elif out[idx].lower() == 'done':
             continue
 
         if key is None:
