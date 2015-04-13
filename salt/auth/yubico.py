@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 '''
-Provide authentication using YubiKey
+Provide authentication using YubiKey.
+
+.. versionadded:: 2015.2.0
+
+:depends: yubico-client Python module
 
 To get your YubiKey API key you will need to visit the website below.
 
@@ -32,12 +36,11 @@ two values in your /etc/salt/master configuration.
 Please wait five to ten minutes after generating the key before testing so that
 the API key will be updated on all the YubiCloud servers.
 
-:depends:   - yubico-client Python module
 '''
 
-from __future__ import print_function
-
+# Import Python Libs
 from __future__ import absolute_import
+from __future__ import print_function
 import logging
 
 log = logging.getLogger(__name__)
@@ -82,8 +85,6 @@ def auth(username, password):
     except yubico_exceptions.StatusCodeError as e:
         log.info('Unable to verify YubiKey `{0}`'.format(e))
         return False
-
-    return False
 
 
 if __name__ == '__main__':

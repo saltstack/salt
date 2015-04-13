@@ -3847,7 +3847,7 @@ def manage_file(name,
             ret['comment'] = 'File {0} updated'.format(name)
 
         elif not ret['changes'] and ret['result']:
-            ret['comment'] = 'File {0} is in the correct state'.format(name)
+            ret['comment'] = u'File {0} is in the correct state'.format(name)
         if sfn:
             __clean_tmp(sfn)
         return ret

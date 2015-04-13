@@ -229,7 +229,18 @@ FunctionEnd
 
 Function .onInit
 
+MessageBox MB_OK "$INSTDIR"
+
+  confFind:
   IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
+
+  confNotFound:
+    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+      StrCpy $INSTDIR "C:\salt"
+      goto confFind
+    ${Else}
+      goto confReallyNotFound
+    ${EndIf}
 
   confFound:
     FileOpen $0 "$INSTDIR\conf\minion" r
@@ -256,7 +267,7 @@ Function .onInit
     EndOfFile:
       FileClose $0
 
-  confNotFound:
+  confReallyNotFound:
     Push $R0
     Push $R1
     Push $R2

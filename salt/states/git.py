@@ -214,7 +214,7 @@ def latest(name,
 
             # only do something, if the specified rev differs from the
             # current_rev and remote_rev
-            if current_rev in [rev, remote_rev] or remote_rev.startswith(current_rev):
+            if current_rev in [rev, remote_rev] or (remote_rev is not None and remote_rev.startswith(current_rev)):
                 new_rev = current_rev
             else:
 
@@ -328,6 +328,7 @@ def latest(name,
 
                 new_rev = __salt__['git.revision'](cwd=target, user=user)
         except Exception as exc:
+            log.error('Unexpected exception in git state', exc_info=True)
             return _fail(
                 ret,
                 str(exc))
@@ -399,6 +400,7 @@ def latest(name,
                 __salt__['git.revision'](cwd=target, user=user))
 
         except Exception as exc:
+            log.error('Unexpected exception in git state', exc_info=True)
             return _fail(
                 ret,
                 str(exc))

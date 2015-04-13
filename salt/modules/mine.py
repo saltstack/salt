@@ -209,6 +209,7 @@ def get(tgt, fun, expr_form='glob'):
         grain_pcre
         compound
         pillar
+        pillar_pcre
 
     Note that all pillar matches, whether using the compound matching system or
     the pillar matching system, will be exact matches, with globbing disabled.
@@ -231,6 +232,7 @@ def get(tgt, fun, expr_form='glob'):
                      'ipcidr': __salt__['match.ipcidr'],
                      'compound': __salt__['match.compound'],
                      'pillar': __salt__['match.pillar'],
+                     'pillar_pcre': __salt__['match.pillar_pcre'],
                      }[expr_form](tgt)
         if is_target:
             data = __salt__['data.getval']('mine_cache')
