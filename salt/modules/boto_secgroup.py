@@ -33,6 +33,9 @@ Connection module for Amazon Security Groups
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint disable=F821
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -54,7 +57,6 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -74,6 +76,7 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
+        __utils__['boto.assign_funcs'](__name__, 'ec2')
         return True
 
 
@@ -86,9 +89,8 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
 
         salt myminion boto_secgroup.exists mysecgroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         return True
@@ -173,9 +175,8 @@ def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=N
 
         salt myminion boto_secgroup.get_group_id mysecgroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     group = _get_group(conn, name, vpc_id, region)
     if group:
         return group.id
@@ -221,9 +222,8 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
 
         salt myminion boto_secgroup.get_config mysecgroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     sg = _get_group(conn, name, vpc_id, group_id, region)
     if sg:
         ret = odict.OrderedDict()
@@ -281,9 +281,8 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
 
         salt myminion boto_secgroup.create mysecgroup 'My Security Group'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     created = conn.create_security_group(name, description, vpc_id)
     if created:
         log.info('Created security group {0}.'.format(name))
@@ -303,9 +302,8 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
 
         salt myminion boto_secgroup.delete mysecgroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
@@ -334,9 +332,8 @@ def authorize(name=None, source_group_name=None,
 
         salt myminion boto_secgroup.authorize mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='['10.0.0.0/8', '192.168.0.0/24']'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
@@ -378,9 +375,8 @@ def revoke(name=None, source_group_name=None,
 
         salt myminion boto_secgroup.revoke mysecgroup ip_protocol=tcp from_port=80 to_port=80 cidr_ip='10.0.0.0/8'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
@@ -408,37 +404,3 @@ def revoke(name=None, source_group_name=None,
     else:
         log.debug('Failed to remove rule from security group.')
         return False
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to ec2.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('secgroup.region'):
-        region = __salt__['config.option']('secgroup.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('secgroup.key'):
-        key = __salt__['config.option']('secgroup.key')
-    if not keyid and __salt__['config.option']('secgroup.keyid'):
-        keyid = __salt__['config.option']('secgroup.keyid')
-
-    try:
-        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make ec2 connection for security groups.')
-        return None
-    return conn
