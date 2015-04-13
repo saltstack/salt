@@ -138,3 +138,13 @@ Known issues:
   if modules or pillars are refreshed at the same time that one
   or more masters are down. This can be worked around by setting
   'auth_timeout' and 'auth_tries' down to shorter periods.
+
+- There are known issues with batch mode operating on the incorrect number of minions.
+  This bug can be patched with the change in `Pull Request #22464`_.
+
+- The `fun`, `state`, and `unless` keywords are missing from the state internals, which
+  can cause problems running some states. This bug can be patched with the change in
+  `Pull Request #22365`_.
+
+.. _Pull Request #22464: https://github.com/saltstack/salt/pull/22464
+.. _Pull Request #22365: https://github.com/saltstack/salt/pull/22365
