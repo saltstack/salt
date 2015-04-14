@@ -74,6 +74,8 @@ if CONFIG_DIR is None:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'local', 'etc', 'salt')
     elif 'netbsd' in __PLATFORM:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'usr', 'pkg', 'etc', 'salt')
+    elif 'sunos5' in __PLATFORM:
+        CONFIG_DIR = os.path.join(ROOT_DIR, 'opt', 'local', 'etc', 'salt')
     else:
         CONFIG_DIR = os.path.join(ROOT_DIR, 'etc', 'salt')
 
