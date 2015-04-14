@@ -40,6 +40,21 @@ class SysInfo(object):
         '''
         return __grains__.get(grain, 'N/A')
 
+    def _get_disk_size(self, device):
+        '''
+        Get a size of a disk.
+        '''
+        out = __salt__['cmd.run_all']("df {0}".format(device))
+        if out['retcode']:
+            raise SysInfo.SIException("Disk size info error: {0}".format(out['stderr']))
+
+        devpath, blocks, used, available, used_p, mountpoint = [elm for elm in out['stdout'].split(os.linesep)[-1].split(" ") if elm]
+
+        return {
+            'device': devpath, 'blocks': blocks, 'used': used,
+            'available': available, 'used (%)': used_p, 'mounted': mountpoint,
+        }
+
     def _get_fs(self):
         '''
         Get available file systems and their types.
