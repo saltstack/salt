@@ -34,7 +34,7 @@ Connection module for Amazon RDS
 :depends: boto
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint disable=E0602
+#pylint: disable=E0602
 
 from __future__ import absolute_import
 
@@ -482,7 +482,6 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                 region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
 
     if not skip_final_snapshot or final_db_snapshot_identifier:
         raise SaltInvocationError('At least on of the following must'

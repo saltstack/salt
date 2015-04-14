@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+# Import Python Libs
+from __future__ import absolute_import
 import multiprocessing
 import ctypes
 import logging
@@ -7,16 +10,16 @@ import hashlib
 import shutil
 import binascii
 
-import tornado.gen
-
-from M2Crypto import RSA
-
-# salt libs
+# Import Salt Libs
 import salt.crypt
 import salt.payload
 import salt.master
 import salt.utils.event
 from salt.utils.cache import CacheCli
+
+# Import Third Party Libs
+import tornado.gen
+from M2Crypto import RSA
 
 
 log = logging.getLogger(__name__)

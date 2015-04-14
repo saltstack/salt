@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 
+# Import Salt Libs
 from salt.transport.client import ReqChannel
 
 log = logging.getLogger(__name__)

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+# Import Python Libs
+from __future__ import absolute_import
+
+# Import Salt Libs
 import salt.transport.client
 
 

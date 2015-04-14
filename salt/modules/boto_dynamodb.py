@@ -33,7 +33,7 @@ Connection module for Amazon DynamoDB
 :depends: boto
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint disable=E0602
+#pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
@@ -47,13 +47,13 @@ logging.getLogger('boto').setLevel(logging.INFO)
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
-    # pylint: disable=import-error
+    #pylint: disable=import-error
     import boto
     import boto.dynamodb2
     from boto.dynamodb2.fields import HashKey, RangeKey
     from boto.dynamodb2.fields import AllIndex, GlobalAllIndex
     from boto.dynamodb2.table import Table
-    # pylint: enable=import-error
+    #pylint: enable=import-error
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
