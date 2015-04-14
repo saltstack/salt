@@ -365,5 +365,13 @@ class Query(object):
         return data
 
     def _all(self, *args, **kwargs):
-        return "This is all"
+        '''
+        Return all the summary of the particular system.
+        '''
+        data = dict()
+        data['software'] = self._software(**kwargs)
+        data['system'] = self._system(**kwargs)
+        data['services'] = self._services(**kwargs)
+
+        return data
 
