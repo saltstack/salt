@@ -207,12 +207,30 @@ def _package_conf_ordering(conf, clean=True, keep_backup=False):
                     shutil.rmtree(triplet[0])
 
 
-def _merge_flags(*args):
+def _check_accept_keywords(approved, flag):
+    '''check compatibility of accept_keywords'''
+    if flag in approved:
+        return False
+    elif (flag.startswith('~') and flag[1:] in approved) \
+            or ('~'+flag in approved):
+        return False
+    else:
+        return True
+
+
+def _merge_flags(new_flags, old_flags=None, conf='any'):
     '''
     Merges multiple lists of flags removing duplicates and resolving conflicts
     giving priority to lasts lists.
     '''
-    tmp = portage.flatten(args)
+    if not old_flags:
+        old_flags = []
+    args = [old_flags, new_flags]
+    if conf == 'accept_keywords':
+        tmp = new_flags+ \
+            [i for i in old_flags if _check_accept_keywords(new_flags, i)]
+    else:
+        tmp = portage.flatten(args)
     flags = {}
     for flag in tmp:
         if flag[0] == '-':
@@ -326,7 +344,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                             continue
                         elif not new_flags:
                             continue
-                    merged_flags = _merge_flags(old_flags, new_flags)
+                    merged_flags = _merge_flags(new_flags, old_flags, conf)
                     if merged_flags:
                         new_contents += '{0} {1}\n'.format(
                             atom, ' '.join(merged_flags))
