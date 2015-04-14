@@ -189,6 +189,29 @@ class Query(object):
     def _configuration(self, *args, **kwargs):
         return "This is configuration"
 
+    def _get_local_users(self, disabled=None):
+        '''
+        Return all known local accounts to the system.
+        '''
+        users = dict()
+        for line in open("/etc/passwd").xreadlines():
+            line = line.strip()
+            if ":" not in line:
+                continue
+            name, password, uid, gid, gecos, directory, shell = line.split(":")
+            active = not (password == "*" or password.startswith("!"))
+            if (disabled is False and active) or (disabled is True and not active) or disabled is None:
+                users[name] = {
+                    'uid': uid,
+                    'git': gid,
+                    'info': gecos,
+                    'home': directory,
+                    'shell': shell,
+                    'disabled': not active
+                }
+
+        return users
+
     def _identity(self, *args, **kwargs):
         return "This is identity"
 
