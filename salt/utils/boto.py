@@ -200,18 +200,21 @@ class BotoExecutionError(CommandExecutionError):
 
         try:
             body = boto_exception.body or ''
-            self.error = ET.fromstring(body).find('Errors').find('Error').find('Message').text
+            error = ET.fromstring(body).find('Errors').find('Error')
+            self.error = {'code': error.find('Code').text,
+                          'message': error.find('Message').text}
         except (AttributeError, ET.ParseError):
             self.error = None
 
         status = self.status or ''
         reason = self.reason or ''
-        error = self.error or ''
+        error = self.error or {}
 
         if error:
-            self.message = '{0} {1}: {2}'.format(status, reason, error)
+            message = '{0} {1}: {2}'.format(status, reason, error.get('message'))
         else:
-            self.message = '{0} {1}'.format(status, reason)
+            message = '{0} {1}'.format(status, reason)
+        super(BotoExecutionError, self).__init__(message)
 
 
 def assign_funcs(modname, service, module=None):
