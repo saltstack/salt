@@ -212,6 +212,26 @@ class Query(object):
 
         return users
 
+    def _get_local_groups(self):
+        '''
+        Return all known local groups to the system.
+        '''
+        groups = dict()
+        for line in open("/etc/group").xreadlines():
+            line = line.strip()
+            if ":" not in line:
+                continue
+            name, password, gid, users = line.split(":")
+            groups[name] = {
+                'gid': gid,
+            }
+
+            if users:
+                groups[name]['users'] = users.split(',')
+
+        return groups
+
+
     def _identity(self, *args, **kwargs):
         return "This is identity"
 
