@@ -32,7 +32,7 @@ try:
     import yum
     HAS_YUM = True
 except ImportError:
-    from salt._compat import configparser
+    from salt.ext.six.moves import configparser
     HAS_YUM = False
 
 # Import salt libs
