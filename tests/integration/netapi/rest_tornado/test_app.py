@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+from __future__ import print_function
 import json
 import time
 from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
@@ -416,7 +417,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                 self.assertIn('StartTime', ret)
                 self.assertIn('Arguments', ret)
         except AttributeError as attribute_error:
-            print json.loads(response.body)
+            print(json.loads(response.body))
             raise
 
         # test with a specific JID passed in
