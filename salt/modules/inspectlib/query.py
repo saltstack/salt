@@ -63,7 +63,15 @@ class SysInfo(object):
         out = __salt__['cmd.run_all']("blkid -o export")
         salt.utils.fsutils._verify_run(out)
 
-        return salt.utils.fsutils._blkid_output(out['stdout'])
+        data = dict()
+        for dev, dev_data in salt.utils.fsutils._blkid_output(out['stdout']).items():
+            dev = self._get_disk_size(dev)
+            device = dev.pop('device')
+            dev['type'] = dev_data['type']
+            data[device] = dev
+
+        return data
+
     def _get_cpu(self):
         '''
         Get available CPU information.
