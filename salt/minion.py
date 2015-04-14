@@ -1321,6 +1321,7 @@ class Minion(MinionBase):
 
         if func == 'add':
             self.beacons.add_beacon(name, beacon_data)
+            self.handle_beacons()
 
     def environ_setenv(self, package):
         '''
