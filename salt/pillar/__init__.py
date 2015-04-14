@@ -16,6 +16,7 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
+from salt.exceptions import SaltClientError
 from salt.template import compile_template
 from salt.utils.dictupdate import merge
 from salt.utils.odict import OrderedDict
@@ -24,6 +25,7 @@ from salt.version import __version__
 # Import 3rd-party libs
 import salt.ext.six as six
 
+import tornado.gen
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +49,74 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
     }.get(opts['file_client'], Pillar)
     return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
                  pillar=pillar)
+
+
+# TODO: migrate everyone to this one!
+def get_async_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
+               pillar=None):
+    '''
+    Return the correct pillar driver based on the file_client option
+    '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+    ptype = {
+        'remote': AsyncRemotePillar,
+        #'local': AsyncPillar  # TODO: implement
+    }.get(opts['file_client'], Pillar)
+    return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
+                 pillar=pillar)
+
+
+class AsyncRemotePillar(object):
+    '''
+    Get the pillar from the master
+    '''
+    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
+                 pillar=None):
+        self.opts = opts
+        self.opts['environment'] = saltenv
+        self.ext = ext
+        self.grains = grains
+        self.id_ = id_
+        self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
+        self.pillar_override = {}
+        if pillar is not None:
+            if isinstance(pillar, dict):
+                self.pillar_override = pillar
+            else:
+                log.error('Pillar data must be a dictionary')
+
+    @tornado.gen.coroutine
+    def compile_pillar(self):
+        '''
+        Return a future which will contain the pillar data from the master
+        '''
+        load = {'id': self.id_,
+                'grains': self.grains,
+                'saltenv': self.opts['environment'],
+                'pillar_override': self.pillar_override,
+                'ver': '2',
+                'cmd': '_pillar'}
+        if self.ext:
+            load['ext'] = self.ext
+        ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
+            load,
+            dictkey='pillar',
+        )
+
+        if not isinstance(ret_pillar, dict):
+            msg = ('Got a bad pillar from master, type {0}, expecting dict: '
+                   '{1}').format(type(ret_pillar).__name__, ret_pillar)
+            log.error(msg)
+            # raise an exception! Pillar isn't empty, we can't sync it!
+            raise SaltClientError(msg)
+        raise tornado.gen.Return(ret_pillar)
 
 
 class RemotePillar(object):

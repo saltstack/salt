@@ -576,9 +576,10 @@ class Minion(MinionBase):
         Return a future which will complete when you are connected to a master
         '''
         master, self.pub_channel = yield self.eval_master(self.opts, self.timeout, self.safe)
-        self._post_master_init(master)
+        yield self._post_master_init(master)
 
     # TODO: better name...
+    @tornado.gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -588,7 +589,7 @@ class Minion(MinionBase):
         '''
         self.opts['master'] = master
 
-        self.opts['pillar'] = salt.pillar.get_pillar(
+        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
@@ -1267,13 +1268,15 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+    # TODO: only allow one future in flight at a time?
+    @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
         '''
         log.debug('Refreshing pillar')
         try:
-            self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
@@ -1384,6 +1387,7 @@ class Minion(MinionBase):
         ret = channel.send(load)
         return ret
 
+    @tornado.gen.coroutine
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1393,7 +1397,7 @@ class Minion(MinionBase):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
-            self.pillar_refresh()
+            yield self.pillar_refresh()
         elif package.startswith('manage_schedule'):
             self.manage_schedule(package)
         elif package.startswith('grains_refresh'):
@@ -1573,7 +1577,7 @@ class Minion(MinionBase):
             try:
                 beacons = self.process_beacons(self.functions)
             except Exception:
-                log.critical('The beacon errored: ', exec_info=True)
+                log.critical('The beacon errored: ', exc_info=True)
             if beacons:
                 self._fire_master(events=beacons)
         self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
