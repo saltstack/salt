@@ -26,6 +26,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     Execute a command and read the output as YAMLEX
     '''
     try:
+        command = command.replace('%s', minion_id)
         return deserialize(__salt__['cmd.run']('{0}'.format(command)))
     except Exception:
         log.critical(
