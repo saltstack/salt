@@ -77,15 +77,26 @@ class Beacon(object):
 
     def add_beacon(self, name, beacon_data):
         '''
-        Process beacons with intervals
-        Return True if a beacon should be run on this loop
+        Add a beacon item
         '''
 
         data = {}
         data[name] = beacon_data
 
-        log.debug('before: self.opts[beacons] {0}'.format(self.opts['beacons']))
+        if name in self.opts['beacons']:
+            log.info('Updating settings for beacon '
+                     'item: {0}'.format(name))
+        else:
+            log.info('Added new beacon item {0}'.format(name))
         self.opts['beacons'].update(data)
-        log.debug('after: self.opts[beacons] {0}'.format(self.opts['beacons']))
+        return True
 
+    def delete_beacon(self, name):
+        '''
+        Delete a beacon item
+        '''
+
+        if name in self.opts['beacons']:
+            log.info('Deleting beacon item {0}'.format(name))
+            del self.opts['beacons'][name]
         return True

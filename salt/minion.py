@@ -1321,7 +1321,8 @@ class Minion(MinionBase):
 
         if func == 'add':
             self.beacons.add_beacon(name, beacon_data)
-            self.handle_beacons()
+        if func == 'delete':
+            self.beacons.delete_beacon(name)
 
     def environ_setenv(self, package):
         '''
@@ -1580,7 +1581,7 @@ class Minion(MinionBase):
             try:
                 beacons = self.process_beacons(self.functions)
             except Exception:
-                log.critical('The beacon errored: ', exec_info=True)
+                log.critical('The beacon errored: ', exc_info=True)
             if beacons:
                 self._fire_master(events=beacons)
         self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
