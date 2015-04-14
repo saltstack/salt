@@ -24,7 +24,7 @@ def output(data):
     ident = 0
     if __opts__.get('__multi_key'):
         ident = 4
-    if __opts__['transport'] == 'zeromq':
+    if __opts__['transport'] in ('zeromq', 'tcp'):
         acc = 'minions'
         pend = 'minions_pre'
         den = 'minions_denied'
