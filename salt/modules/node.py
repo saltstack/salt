@@ -59,7 +59,7 @@ def _(module):
     return mod
 
 
-def query(scope):
+def query(scope, **kwargs):
     '''
     Query the node for specific information.
 
