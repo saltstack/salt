@@ -44,7 +44,7 @@ class ArchiveTest(TestCase):
         '''
 
         source = 'file.tar.gz'
-        tmp_dir = os.path.join(tempfile.gettempdir(), 'test_archive')
+        tmp_dir = os.path.join(tempfile.gettempdir(), 'test_archive', '')
         test_tar_opts = [
             '--no-anchored foo',
             'v -p --opt',
