@@ -102,7 +102,7 @@ quickly and safely as is possible.
     lists. The announcement contains a description of the issue and a link to
     the full release documentation and download locations.
 
-Receiving security announcemnts
+Receiving security announcements
 ===============================
 
 The fastest place to receive security announcements is via the `salt-announce`_

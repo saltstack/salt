@@ -67,6 +67,8 @@
 #pki_dir: /etc/salt/pki/master
 
 # Directory to store job and cache data:
+# This directory may contain sensitive data and should be protected accordingly.
+# 
 #cachedir: /var/cache/salt/master
 
 # Directory for custom modules. This directory can contain subdirectories for
@@ -547,10 +549,11 @@
 #####          Syndic settings       #####
 ##########################################
 # The Salt syndic is used to pass commands through a master from a higher
-# master. Using the syndic is simple, if this is a master that will have
-# syndic servers(s) below it set the "order_masters" setting to True, if this
-# is a master that will be running a syndic daemon for passthrough the
-# "syndic_master" setting needs to be set to the location of the master server
+# master. Using the syndic is simple. If this is a master that will have
+# syndic servers(s) below it, then set the "order_masters" setting to True.
+#
+# If this is a master that will be running a syndic daemon for passthrough, then
+# the "syndic_master" setting needs to be set to the location of the master server
 # to receive commands from.
 
 # Set the order_masters setting to True if this master will command lower

@@ -14,6 +14,10 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
+import salt.config
+import salt.loader
+
 # Import Third Party Libs
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -53,6 +57,11 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key': secret_key}
+
+opts = salt.config.DEFAULT_MASTER_OPTS
+utils = salt.loader.utils(opts, whitelist=['boto'])
+boto_secgroup.__utils__ = utils
+boto_secgroup.__virtual__()
 
 
 def _random_group_id():

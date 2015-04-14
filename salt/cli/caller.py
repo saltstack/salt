@@ -67,7 +67,7 @@ class Caller(object):
             ttype = opts['pillar']['master']['transport']
 
         # switch on available ttypes
-        if ttype == 'zeromq':
+        if ttype in ('zeromq', 'tcp'):
             return ZeroMQCaller(opts, **kwargs)
         elif ttype == 'raet':
             return RAETCaller(opts, **kwargs)
@@ -180,11 +180,12 @@ class BaseCaller(object):
             try:
                 ret['return'] = func(*args, **kwargs)
             except TypeError as exc:
-                trace = traceback.format_exc()
-                sys.stderr.write('Passed invalid arguments: {0}\n'.format(exc))
+                sys.stderr.write('\nPassed invalid arguments: {0}.\n\nUsage:\n'.format(exc))
+                print_cli(func.__doc__)
                 active_level = LOG_LEVELS.get(
                     self.opts['log_level'].lower(), logging.ERROR)
                 if active_level <= logging.DEBUG:
+                    trace = traceback.format_exc()
                     sys.stderr.write(trace)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:

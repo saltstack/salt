@@ -77,9 +77,10 @@ import logging
 # Import 3rd-party libs
 import requests
 from requests.exceptions import ConnectionError
-# pylint: disable=import-error
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
-# pylint: enable=import-error
+import salt.ext.six.moves.http_client
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
@@ -213,7 +214,7 @@ def _query(function,
         ret['res'] = False
         return ret
 
-    if result.status_code == 200:
+    if result.status_code == salt.ext.six.moves.http_client.OK:
         result = result.json()
         response = pushover_functions.get(function).get('response')
         if response in result and result[response] == 0:

@@ -24,8 +24,10 @@ Full list of builtin state modules
     boto_asg
     boto_cloudwatch_alarm
     boto_dynamodb
+    boto_ec2
     boto_elasticache
     boto_elb
+    boto_iam
     boto_iam_role
     boto_lc
     boto_rds
@@ -116,6 +118,7 @@ Full list of builtin state modules
     postgres_user
     powerpath
     process
+    pushover
     pyenv
     pyrax_queues
     quota
@@ -150,6 +153,7 @@ Full list of builtin state modules
     timezone
     tomcat
     tuned
+    uptime
     user
     vbox_guest
     virtualenv_mod
@@ -162,7 +166,7 @@ Full list of builtin state modules
     win_system
     win_update
     winrepo
-    xmpp
     x509
+    xmpp
     zcbuildout
     zk_concurrency

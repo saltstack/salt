@@ -67,9 +67,8 @@ def _blkid_output(out, fs_type=None):
             key, val = items.split('=', 1)
             dev[key.lower()] = val
         if fs_type and dev.get('type', '') == fs_type or not fs_type:
-            if 'type' in dev:
+            if 'type' in dev and fs_type:
                 dev.pop('type')
-            dev['label'] = dev.get('label')
             data[dev.pop('devname')] = dev
 
     if fs_type:

@@ -137,8 +137,6 @@ class ScheduleTestCase(TestCase):
                  ' or "days" with "when" option.')
         comm2 = 'Unable to use "when" and "cron" options together.  Ignoring.'
         comm3 = 'Job job2 does not exist in schedule.'
-        chan = {'diff': ('--- \n+++ \n@@ -0,0 +1,4 @@\n+function:test.ping\n+'
-                         'jid_include:True\n+maxrunning:1\n+name:job3\n')}
         comm4 = 'Job: job3 would be modified in schedule.'
         with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1,
                                                          'job3': {}}}):
@@ -161,10 +159,9 @@ class ScheduleTestCase(TestCase):
                                   'comment': 'Job job1 in correct state',
                                   'result': True})
 
-            self.assertDictEqual(schedule.modify('job3', function='test.ping',
-                                                 test=True),
-                                 {'changes': chan, 'comment': comm4,
-                                  'result': True})
+            ret = schedule.modify('job3', function='test.ping', test=True)
+            del ret['changes']['diff']  # difflib formatting changes between 2.6 and 2.7
+            self.assertDictEqual(ret, {'changes': {}, 'comment': comm4, 'result': True})
 
     # 'run_job' function tests: 1
 

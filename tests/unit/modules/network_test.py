@@ -5,6 +5,8 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import socket
+import os.path
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -24,8 +26,6 @@ ensure_in_syspath('../../')
 import salt.utils
 from salt.modules import network
 from salt.exceptions import CommandExecutionError
-import socket
-import os.path
 
 # Globals
 network.__grains__ = {}
@@ -37,6 +37,36 @@ class NetworkTestCase(TestCase):
     '''
     Test cases for salt.modules.network
     '''
+    def test_wol_bad_mac(self):
+        '''
+        tests network.wol with bad mac
+        '''
+        bad_mac = '31337'
+        self.assertRaises(ValueError, network.wol, bad_mac)
+
+    def test_wol_success(self):
+        '''
+        tests network.wol success
+        '''
+        mac = '080027136977'
+        bcast = '255.255.255.255 7'
+
+        class MockSocket(object):
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __call__(self, *args, **kwargs):
+                pass
+
+            def setsockopt(self, *args, **kwargs):
+                pass
+
+            def sendto(self, *args, **kwargs):
+                pass
+
+        with patch('socket.socket', MockSocket):
+            self.assertTrue(network.wol(mac, bcast))
+
     def test_ping(self):
         '''
         Test for Performs a ping to a host
@@ -99,6 +129,7 @@ class NetworkTestCase(TestCase):
                                                MagicMock(return_value='A')}):
                 self.assertEqual(network.dig('host'), 'A')
 
+    @patch('salt.utils.which', MagicMock(return_value=''))
     def test_arp(self):
         '''
         Test for return the arp table from the minion

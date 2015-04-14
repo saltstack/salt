@@ -28,6 +28,7 @@ from salt.ext.six.moves import input
 # Import salt libs
 import salt.config
 import salt.loader
+import salt.transport.client
 import salt.utils
 import salt.utils.minions
 import salt.payload
@@ -337,20 +338,17 @@ class Resolver(object):
 
     def _send_token_request(self, load):
         if self.opts['transport'] == 'zeromq':
-            sreq = salt.payload.SREQ(
-                    'tcp://{0}:{1}'.format(
-                        salt.utils.ip_bracket(self.opts['interface']),
-                        self.opts['ret_port']),
-                        opts=self.opts
-                )
-            tdata = sreq.send('clear', load)
-            return tdata
+            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+                         ':' + str(self.opts['ret_port'])
+            channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                master_uri=master_uri)
+            return channel.send(load)
+
         elif self.opts['transport'] == 'raet':
-            sreq = salt.transport.Channel.factory(
-                    self.opts)
-            sreq.dst = (None, None, 'local_cmd')
-            tdata = sreq.send(load)
-            return tdata
+            channel = salt.transport.client.ReqChannel.factory(self.opts)
+            channel.dst = (None, None, 'local_cmd')
+            return channel.send(load)
 
     def cli(self, eauth):
         '''

@@ -24,6 +24,7 @@ import logging
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves import range
+import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
 try:
@@ -113,7 +114,7 @@ def _query(function, api_key=None, method='GET', data=None):
         ret['res'] = False
         return ret
 
-    if result.status_code == 200:
+    if result.status_code == salt.ext.six.moves.http_client.OK:
         result = result.json()
         response = slack_functions.get(function).get('response')
         if 'error' in result:
@@ -122,7 +123,7 @@ def _query(function, api_key=None, method='GET', data=None):
             return ret
         ret['message'] = result.get(response)
         return ret
-    elif result.status_code == 204:
+    elif result.status_code == salt.ext.six.moves.http_client.NO_CONTENT:
         return True
     else:
         log.debug(url)

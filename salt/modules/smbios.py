@@ -4,18 +4,11 @@ Interface to SMBIOS/DMI
 
 (Parsing through dmidecode)
 
-.. seealso:: External References
-
-.. _`Desktop Management Interface (DMI)`: http://www.dmtf.org/standards/dmi
-.. _`System Management BIOS`: http://www.dmtf.org/standards/smbios
-.. _`DMIdecode`: http://www.nongnu.org/dmidecode/
-
-References:
-
-- http://standards.ieee.org/develop/regauth/oui/oui.txt
-- https://www.wireshark.org/tools/oui-lookup.html
-- https://en.wikipedia.org/wiki/MAC_address
-
+External References
+-------------------
+| `Desktop Management Interface (DMI) <http://www.dmtf.org/standards/dmi>`_
+| `System Management BIOS <http://www.dmtf.org/standards/smbios>`_
+| `DMIdecode <http://www.nongnu.org/dmidecode/>`_
 
 '''
 # Import python libs
@@ -45,7 +38,7 @@ def __virtual__():
     Only work when dmidecode is installed.
     '''
     if DMIDECODER is None:
-        log.warn('SMBIOS: dmidecode nor smbios found!')
+        log.debug('SMBIOS: neither dmidecode nor smbios found!')
         return False
     else:
         return True
@@ -57,34 +50,38 @@ def get(string, clean=True):
 
     string
         The string to fetch. DMIdecode supports:
-            bios-vendor
-            bios-version
-            bios-release-date
-            system-manufacturer
-            system-product-name
-            system-version
-            system-serial-number
-            system-uuid
-            baseboard-manufacturer
-            baseboard-product-name
-            baseboard-version
-            baseboard-serial-number
-            baseboard-asset-tag
-            chassis-manufacturer
-            chassis-type
-            chassis-version
-            chassis-serial-number
-            chassis-asset-tag
-            processor-family
-            processor-manufacturer
-            processor-version
-            processor-frequency
+          - ``bios-vendor``
+          - ``bios-version``
+          - ``bios-release-date``
+          - ``system-manufacturer``
+          - ``system-product-name``
+          - ``system-version``
+          - ``system-serial-number``
+          - ``system-uuid``
+          - ``baseboard-manufacturer``
+          - ``baseboard-product-name``
+          - ``baseboard-version``
+          - ``baseboard-serial-number``
+          - ``baseboard-asset-tag``
+          - ``chassis-manufacturer``
+          - ``chassis-type``
+          - ``chassis-version``
+          - ``chassis-serial-number``
+          - ``chassis-asset-tag``
+          - ``processor-family``
+          - ``processor-manufacturer``
+          - ``processor-version``
+          - ``processor-frequency``
+
     clean
-        Don't return well-known false information
-        (invalid UUID's, serial 000000000's, that kind of stuff)
-        Defaults to True
+      | Don't return well-known false information
+      | (invalid UUID's, serial 000000000's, etcetera)
+      | Defaults to ``True``
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' smbios.get system-uuid clean=False
     '''
 
@@ -101,8 +98,9 @@ def records(rec_type=None, fields=None, clean=True):
         Return only records of type(s)
         The SMBIOS specification defines the following DMI types:
 
+        ====  ======================================
         Type  Information
-        ============================================
+        ====  ======================================
          0    BIOS
          1    System
          2    Baseboard
@@ -146,17 +144,22 @@ def records(rec_type=None, fields=None, clean=True):
         40    Additional Information
         41    Onboard Devices Extended Information
         42    Management Controller Host Interface
+        ====  ======================================
+
     clean
-        Don't return well-known false information
-        (invalid UUID's, serial 000000000's, that kind of stuff)
-        Defaults to True
+      | Don't return well-known false information
+      | (invalid UUID's, serial 000000000's, etcetera)
+      | Defaults to ``True``
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' smbios.records clean=False
         salt '*' smbios.records 14
         salt '*' smbios.records 4 core_count,thread_count,current_speed
-    '''
 
+    '''
     if rec_type is None:
         smbios = _dmi_parse(_dmidecoder(), clean, fields)
     else:
@@ -173,7 +176,8 @@ def _dmi_parse(data, clean=True, fields=None):
     dmi = []
 
     # Detect & split Handle records
-    dmi_raw = iter(re.split('(handle [0-9]x[0-9a-f]+[^\n]+)\n', data, flags=re.MULTILINE+re.IGNORECASE)[1:])
+    dmi_split = re.compile('(handle [0-9]x[0-9a-f]+[^\n]+)\n', re.MULTILINE+re.IGNORECASE)
+    dmi_raw = iter(re.split(dmi_split, data)[1:])
     for handle, dmi_raw in zip(dmi_raw, dmi_raw):
         handle, htype = [hline.split()[-1] for hline in handle.split(',')][0:2]
         dmi_raw = dmi_raw.split('\n')
@@ -290,7 +294,7 @@ def _dmi_isclean(key, val):
                 return True
             except ValueError:
                 continue
-        log.debug('DMI {0} value {1} is an invalid UUID'.format(key, val))
+        log.trace('DMI {0} value {1} is an invalid UUID'.format(key, val.replace('\n', ' ')))
         return False
     elif re.match('serial|part|version', key):
         # 'To be filled by O.E.M.

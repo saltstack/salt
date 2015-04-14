@@ -234,6 +234,8 @@ Default: :file:`/var/cache/salt`
 The location used to store cache information, particularly the job information
 for executed salt commands.
 
+This directory may contain sensitive data and should be protected accordingly.
+
 .. code-block:: yaml
 
     cachedir: /var/cache/salt

@@ -33,6 +33,9 @@ Connection module for Amazon SQS
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint disable=F821
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -44,8 +47,10 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=import-error
     import boto
     import boto.sqs
+    # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -60,6 +65,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'sqs')
     return True
 
 
@@ -71,9 +77,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sqs.exists myqueue region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if conn.get_queue(name):
         return True
     else:
@@ -88,9 +93,8 @@ def create(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sqs.create myqueue region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not conn.get_queue(name):
         try:
             conn.create_queue(name)
@@ -110,9 +114,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sqs.delete myqueue region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     queue_obj = conn.get_queue(name)
     if queue_obj:
         deleted_queue = conn.delete_queue(queue_obj)
@@ -131,7 +134,7 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sqs.get_attributes myqueue
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return {}
     queue_obj = conn.get_queue(name)
@@ -151,9 +154,8 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
         salt myminion boto_sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
     '''
     ret = True
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     queue_obj = conn.get_queue(name)
     if not queue_obj:
         log.error('Queue {0} does not exist.'.format(name))
@@ -170,37 +172,3 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             msg = 'Set attribute {0} = {1} on queue {2}'
             log.info(msg.format(attr, val, name))
     return ret
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to SQS.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('sqs.region'):
-        region = __salt__['config.option']('sqs.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('sqs.key'):
-        key = __salt__['config.option']('sqs.key')
-    if not keyid and __salt__['config.option']('sqs.keyid'):
-        keyid = __salt__['config.option']('sqs.keyid')
-
-    try:
-        conn = boto.sqs.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto sqs connection.')
-        return None
-    return conn

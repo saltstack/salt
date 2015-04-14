@@ -7,6 +7,8 @@ VMware Cloud Module
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
+See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
+
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 :depends: pyVmomi Python module
 
@@ -42,9 +44,11 @@ cloud configuration at
       password: verybadpass
       url: vcenter03.domain.com
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
+from random import randint
+from re import match
 import pprint
 import logging
 import time
@@ -224,6 +228,305 @@ def _get_mor_by_property(obj_type, property_value, property_name='name'):
     return None
 
 
+def _edit_existing_hard_disk_helper(disk, size_kb):
+    disk.capacityInKB = size_kb
+    disk_spec = vim.vm.device.VirtualDeviceSpec()
+    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    disk_spec.device = disk
+
+    return disk_spec
+
+
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
+    random_key = randint(-2099, -2000)
+
+    size_kb = int(size_gb) * 1024 * 1024
+
+    disk_spec = vim.vm.device.VirtualDeviceSpec()
+    disk_spec.fileOperation = 'create'
+    disk_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    disk_spec.device = vim.vm.device.VirtualDisk()
+    disk_spec.device.key = random_key
+    disk_spec.device.deviceInfo = vim.Description()
+    disk_spec.device.deviceInfo.label = disk_label
+    disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
+    disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
+    disk_spec.device.backing.diskMode = 'persistent'
+    disk_spec.device.controllerKey = 1000
+    disk_spec.device.unitNumber = unit_number
+    disk_spec.device.capacityInKB = size_kb
+
+    return disk_spec
+
+
+def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
+    network_ref = _get_mor_by_property(vim.Network, new_network_name)
+    network_adapter.backing.deviceName = new_network_name
+    network_adapter.backing.network = network_ref
+    network_adapter.deviceInfo.summary = new_network_name
+    network_adapter.connectable.allowGuestControl = True
+    network_adapter.connectable.startConnected = True
+    network_spec = vim.vm.device.VirtualDeviceSpec()
+    network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    network_spec.device = network_adapter
+
+    return network_spec
+
+
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type):
+    random_key = randint(-4099, -4000)
+
+    adapter_type.strip().lower()
+    network_spec = vim.vm.device.VirtualDeviceSpec()
+
+    if adapter_type == "vmxnet":
+        network_spec.device = vim.vm.device.VirtualVmxnet()
+    elif adapter_type == "vmxnet2":
+        network_spec.device = vim.vm.device.VirtualVmxnet2()
+    elif adapter_type == "vmxnet3":
+        network_spec.device = vim.vm.device.VirtualVmxnet3()
+    elif adapter_type == "e1000":
+        network_spec.device = vim.vm.device.VirtualE1000()
+    elif adapter_type == "e1000e":
+        network_spec.device = vim.vm.device.VirtualE1000e()
+    else:
+        # If type not specified or does not match, create adapter of type vmxnet3
+        network_spec.device = vim.vm.device.VirtualVmxnet3()
+        log.warn("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
+
+    network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    network_spec.device.key = random_key
+    network_spec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
+    network_spec.device.backing.deviceName = network_name
+    network_spec.device.backing.network = _get_mor_by_property(vim.Network, network_name)
+    network_spec.device.deviceInfo = vim.Description()
+    network_spec.device.deviceInfo.label = network_adapter_label
+    network_spec.device.deviceInfo.summary = network_name
+    network_spec.device.wakeOnLanEnabled = True
+    network_spec.device.connectable = vim.vm.device.VirtualDevice.ConnectInfo()
+    network_spec.device.connectable.startConnected = True
+    network_spec.device.connectable.allowGuestControl = True
+
+    return network_spec
+
+
+def _manage_devices(devices, vm):
+    unit_number = 0
+    device_specs = []
+    existing_disks_label = []
+    existing_network_adapters_label = []
+    nics_map = []
+
+    # loop through all the devices the vm/template has
+    # check if the device needs to be created or configured
+    for device in vm.config.hardware.device:
+        if hasattr(device.backing, 'fileName'):
+            # this is a hard disk
+            if 'disk' in devices.keys():
+                # there is atleast one disk specified to be created/configured
+                unit_number += 1
+                # check if scsi controller
+                if unit_number == 7:
+                    unit_number += 1
+                existing_disks_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['disk'].keys():
+                    size_gb = devices['disk'][device.deviceInfo.label]['size']
+                    size_kb = int(size_gb) * 1024 * 1024
+                    if device.capacityInKB < size_kb:
+                        # expand the disk
+                        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                        device_specs.append(disk_spec)
+        elif hasattr(device.backing, 'network'):
+            # this is a network adapter
+            if 'network' in devices.keys():
+                # there is atleast one network adapter specified to be created/configured
+                existing_network_adapters_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['network'].keys():
+                    network_name = devices['network'][device.deviceInfo.label]['name']
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                    device_specs.append(network_spec)
+
+                    adapter_mapping = vim.vm.customization.AdapterMapping()
+                    adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+                    if 'domain' in devices['network'][device.deviceInfo.label].keys():
+                        domain = devices['network'][device.deviceInfo.label]['domain']
+                        adapter_mapping.adapter.dnsDomain = domain
+                    if 'gateway' in devices['network'][device.deviceInfo.label].keys():
+                        gateway = devices['network'][device.deviceInfo.label]['gateway']
+                        adapter_mapping.adapter.gateway = gateway
+                    if 'ip' in devices['network'][device.deviceInfo.label].keys():
+                        ip = str(devices['network'][device.deviceInfo.label]['ip'])
+                        subnet_mask = str(devices['network'][device.deviceInfo.label]['subnet_mask'])
+                        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+                        adapter_mapping.adapter.subnetMask = subnet_mask
+                    else:
+                        adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+                    nics_map.append(adapter_mapping)
+
+    if 'disk' in devices.keys():
+        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
+        disks_to_create.sort()
+        log.debug("Disks to create: {0}".format(disks_to_create))
+        for disk_label in disks_to_create:
+            # create the disk
+            size_gb = devices['disk'][disk_label]['size']
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
+            device_specs.append(disk_spec)
+            unit_number += 1
+            # check if scsi controller
+            if unit_number == 7:
+                unit_number += 1
+
+    if 'network' in devices.keys():
+        network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
+        network_adapters_to_create.sort()
+        log.debug("Networks to create: {0}".format(network_adapters_to_create))
+        for network_adapter_label in network_adapters_to_create:
+            network_name = devices['network'][network_adapter_label]['name']
+            adapter_type = devices['network'][network_adapter_label]['type']
+            # create the network adapter
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
+            device_specs.append(network_spec)
+
+            adapter_mapping = vim.vm.customization.AdapterMapping()
+            adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+            if 'domain' in devices['network'][network_adapter_label].keys():
+                domain = devices['network'][network_adapter_label]['domain']
+                adapter_mapping.adapter.dnsDomain = domain
+            if 'gateway' in devices['network'][network_adapter_label].keys():
+                gateway = devices['network'][network_adapter_label]['gateway']
+                adapter_mapping.adapter.gateway = gateway
+            if 'ip' in devices['network'][network_adapter_label].keys():
+                ip = str(devices['network'][network_adapter_label]['ip'])
+                subnet_mask = str(devices['network'][network_adapter_label]['subnet_mask'])
+                adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+                adapter_mapping.adapter.subnetMask = subnet_mask
+            else:
+                adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+            nics_map.append(adapter_mapping)
+
+    ret = {
+        'device_specs': device_specs,
+        'nics_map': nics_map
+    }
+
+    return ret
+
+
+def _wait_for_ip(vm, max_wait_minute):
+    time_counter = 0
+    max_wait_second = int(max_wait_minute * 60)
+    while time_counter < max_wait_second:
+        log.info("Waiting to get IP information [{0} s]".format(time_counter))
+        for net in vm.guest.net:
+            if net.ipConfig.ipAddress:
+                for current_ip in net.ipConfig.ipAddress:
+                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                        ip = current_ip.ipAddress
+                        return ip
+        time.sleep(5)
+        time_counter += 5
+    return False
+
+
+def _format_instance_info(vm):
+    device_full_info = {}
+    disk_full_info = {}
+    for device in vm["config.hardware.device"]:
+        device_full_info[device.deviceInfo.label] = {
+            'key': device.key,
+            'label': device.deviceInfo.label,
+            'summary': device.deviceInfo.summary,
+            'type': type(device).__name__.rsplit(".", 1)[1],
+            'unitNumber': device.unitNumber
+        }
+
+        if hasattr(device.backing, 'network'):
+            device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+            device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+
+        if hasattr(device, 'busNumber'):
+            device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+        if hasattr(device, 'device'):
+            device_full_info[device.deviceInfo.label]['devices'] = device.device
+
+        if hasattr(device, 'videoRamSizeInKB'):
+            device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+        if isinstance(device, vim.vm.device.VirtualDisk):
+            device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+            device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label].copy()
+            disk_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+
+    storage_full_info = {
+        'committed': vm["summary.storage.committed"],
+        'uncommitted': vm["summary.storage.uncommitted"],
+        'unshared': vm["summary.storage.unshared"],
+        'disks': disk_full_info,
+    }
+
+    file_full_info = {}
+    for file in vm["layoutEx.file"]:
+        file_full_info[file.key] = {
+            'key': file.key,
+            'name': file.name,
+            'size': file.size,
+            'type': file.type
+        }
+
+    network_full_info = {}
+    for net in vm["guest.net"]:
+        network_full_info = {
+            'connected': net.connected,
+            'ip_addresses': net.ipAddress,
+            'mac_address': net.macAddress,
+            'network': net.network
+        }
+
+    vm_full_info = {
+        'devices': device_full_info,
+        'storage': storage_full_info,
+        'files': file_full_info,
+        'guest_full_name': vm["config.guestFullName"],
+        'guest_id': vm["config.guestId"],
+        'hostname': vm["object"].guest.hostName,
+        'ip_address': vm["object"].guest.ipAddress,
+        'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
+        'memory_mb': vm["config.hardware.memoryMB"],
+        'name': vm['name'],
+        'net': [network_full_info],
+        'num_cpu': vm["config.hardware.numCPU"],
+        'path': vm["config.files.vmPathName"],
+        'status': vm["summary.runtime.powerState"],
+        'tools_status': vm["guest.toolsStatus"],
+    }
+
+    return vm_full_info
+
+
+def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+    snapshots = {}
+    for snapshot in snapshot_list:
+        snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
+        snapshots[snapshot_path] = {
+            'name': snapshot.name,
+            'description': snapshot.description,
+            'created': str(snapshot.createTime).split('.')[0],
+            'state': snapshot.state,
+            'path': snapshot_path,
+        }
+        # Check if child snapshots exist
+        if snapshot.childSnapshotList:
+            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+    return snapshots
+
+
 def get_vcenter_version(kwargs=None, call=None):
     '''
     Show the vCenter Server version with build number.
@@ -262,9 +565,7 @@ def list_datacenters(kwargs=None, call=None):
         return False
 
     datacenters = []
-    datacenter_properties = [
-                                "name"
-                            ]
+    datacenter_properties = ["name"]
 
     datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
 
@@ -291,9 +592,7 @@ def list_clusters(kwargs=None, call=None):
         return False
 
     clusters = []
-    cluster_properties = [
-                             "name"
-                         ]
+    cluster_properties = ["name"]
 
     cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
 
@@ -320,9 +619,7 @@ def list_datastore_clusters(kwargs=None, call=None):
         return False
 
     datastore_clusters = []
-    datastore_cluster_properties = [
-                                       "name"
-                                   ]
+    datastore_cluster_properties = ["name"]
 
     datastore_cluster_list = _get_mors_with_properties(vim.StoragePod, datastore_cluster_properties)
 
@@ -349,9 +646,7 @@ def list_datastores(kwargs=None, call=None):
         return False
 
     datastores = []
-    datastore_properties = [
-                               "name"
-                           ]
+    datastore_properties = ["name"]
 
     datastore_list = _get_mors_with_properties(vim.Datastore, datastore_properties)
 
@@ -378,9 +673,7 @@ def list_hosts(kwargs=None, call=None):
         return False
 
     hosts = []
-    host_properties = [
-                          "name"
-                      ]
+    host_properties = ["name"]
 
     host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
 
@@ -407,9 +700,7 @@ def list_resourcepools(kwargs=None, call=None):
         return False
 
     resource_pools = []
-    resource_pool_properties = [
-                                   "name"
-                               ]
+    resource_pool_properties = ["name"]
 
     resource_pool_list = _get_mors_with_properties(vim.ResourcePool, resource_pool_properties)
 
@@ -436,9 +727,7 @@ def list_networks(kwargs=None, call=None):
         return False
 
     networks = []
-    network_properties = [
-                             "name"
-                         ]
+    network_properties = ["name"]
 
     network_list = _get_mors_with_properties(vim.Network, network_properties)
 
@@ -450,7 +739,7 @@ def list_networks(kwargs=None, call=None):
 
 def list_nodes_min(kwargs=None, call=None):
     '''
-    Return a list of the VMs that are on the provider, with no details
+    Return a list of all VMs and templates that are on the provider, with no details
 
     CLI Example:
 
@@ -461,9 +750,7 @@ def list_nodes_min(kwargs=None, call=None):
     '''
 
     ret = {}
-    vm_properties = [
-                        "name"
-                    ]
+    vm_properties = ["name"]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -475,7 +762,7 @@ def list_nodes_min(kwargs=None, call=None):
 
 def list_nodes(kwargs=None, call=None):
     '''
-    Return a list of the VMs that are on the provider, with basic fields
+    Return a list of all VMs and templates that are on the provider, with basic fields
 
     CLI Example:
 
@@ -486,12 +773,12 @@ def list_nodes(kwargs=None, call=None):
 
     ret = {}
     vm_properties = [
-                        "name",
-                        "guest.ipAddress",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "guest.ipAddress",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -506,6 +793,118 @@ def list_nodes(kwargs=None, call=None):
         ret[vm_info['id']] = vm_info
 
     return ret
+
+
+def list_nodes_full(kwargs=None, call=None):
+    '''
+    Return a list of all VMs and templates that are on the provider, with full details
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_full my-vmware-config
+    '''
+
+    ret = {}
+    vm_properties = [
+        "config.hardware.device",
+        "summary.storage.committed",
+        "summary.storage.uncommitted",
+        "summary.storage.unshared",
+        "layoutEx.file",
+        "config.guestFullName",
+        "config.guestId",
+        "guest.net",
+        "config.hardware.memoryMB",
+        "name",
+        "config.hardware.numCPU",
+        "config.files.vmPathName",
+        "summary.runtime.powerState",
+        "guest.toolsStatus"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        vm_full_info = _format_instance_info(vm)
+        ret[vm_full_info['name']] = vm_full_info
+
+    return ret
+
+
+def show_instance(name, call=None):
+    '''
+    List all available details of the specified VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a show_instance vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+        "config.hardware.device",
+        "summary.storage.committed",
+        "summary.storage.uncommitted",
+        "summary.storage.unshared",
+        "layoutEx.file",
+        "config.guestFullName",
+        "config.guestId",
+        "guest.net",
+        "config.hardware.memoryMB",
+        "name",
+        "config.hardware.numCPU",
+        "config.files.vmPathName",
+        "summary.runtime.powerState",
+        "guest.toolsStatus"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm['name'] == name:
+            vm_full_info = _format_instance_info(vm)
+    return vm_full_info
+
+
+def avail_images():
+    '''
+    Return a list of all the templates present in this VMware environment with basic
+    details
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-images my-vmware-config
+    '''
+
+    templates = {}
+    vm_properties = [
+        "name",
+        "config.template",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["config.template"]:
+            templates[vm["name"]] = {
+                'name': vm["name"],
+                'guest_fullname': vm["config.guestFullName"],
+                'cpus': vm["config.hardware.numCPU"],
+                'ram': vm["config.hardware.memoryMB"]
+            }
+    return templates
 
 
 def list_folders(kwargs=None, call=None):
@@ -525,9 +924,7 @@ def list_folders(kwargs=None, call=None):
         return False
 
     folders = []
-    folder_properties = [
-                            "name"
-                        ]
+    folder_properties = ["name"]
 
     folder_list = _get_mors_with_properties(vim.Folder, folder_properties)
 
@@ -535,6 +932,51 @@ def list_folders(kwargs=None, call=None):
         folders.append(folder["name"])
 
     return {'Folders': folders}
+
+
+def list_snapshots(kwargs=None, call=None):
+    '''
+    List snapshots either for all VMs and templates or for a specific VM/template
+    in this VMware environment
+
+    To list snapshots for all VMs and templates:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config
+
+    To list snapshots for a specific VM/template:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config name="vmname"
+    '''
+    if call != 'function':
+        log.error(
+            'The list_snapshots function must be called with -f or --function.'
+        )
+        return False
+
+    ret = {}
+    vm_properties = [
+        "name",
+        "rootSnapshot",
+        "snapshot"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["rootSnapshot"]:
+            if kwargs and 'name' in kwargs and vm["name"] == kwargs['name']:
+                return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
+            else:
+                ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+    return ret
 
 
 def start(name, call=None):
@@ -553,9 +995,9 @@ def start(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -590,9 +1032,9 @@ def stop(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -627,9 +1069,9 @@ def suspend(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -668,9 +1110,9 @@ def reset(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -701,6 +1143,12 @@ def destroy(name, call=None):
         salt-cloud --destroy vmname
         salt-cloud -a destroy vmname
     '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'destroying instance',
@@ -710,9 +1158,9 @@ def destroy(name, call=None):
     )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -741,124 +1189,15 @@ def destroy(name, call=None):
     )
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
-    return 'True'
+    return True
 
 
 def create(vm_):
     '''
     To create a single VM in the VMware environment.
 
-    Create a profile at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/vmware.conf``
-
-    .. code-block:: yaml
-
-        vmware-centos6.5:
-          provider: vmware-vcenter01
-          clonefrom: test-vm
-          ## Optional arguments
-          num_cpus: 4
-          memory: 8192
-          datastore: HUGE-DATASTORE-Cluster
-          # If cloning from template, either resourcepool or cluster must be specified
-          resourcepool: Resources
-          cluster: Prod
-          folder: Development
-          datacenter: DC1
-          host: c4212n-002.domain.com
-          template: False
-          power_on: True
-
-
-    provider
-        Enter the name that was specified when the cloud provider config was created.
-
-    clonefrom
-        Enter the name of the VM/template to clone from.
-
-    num_cpus
-        Enter the number of vCPUS you want the VM/template to have. If not specified, the current
-        VM/template\'s vCPU count is used.
-
-    memory
-        Enter memory (in MB) you want the VM/template to have. If not specified, the current
-        VM/template\'s memory size is used.
-
-    datastore
-        Enter the name of the datastore or the datastore cluster where the virtual machine should
-        be located on physical storage. If not specified, the current datastore is used.
-
-        .. note::
-
-            - If you specify a datastore cluster name, DRS Storage recommendation is automatically
-              applied.
-            - If you specify a datastore name, DRS Storage recommendation is disabled.
-
-    resourcepool
-        Enter the name of the resourcepool to which the new virtual machine should be
-        attached. This determines what compute resources will be available to the clone.
-
-        .. note::
-
-            - For a clone operation from a virtual machine, it will use the same resourcepool as
-              the original virtual machine unless specified.
-            - For a clone operation from a template to a virtual machine, specifying either this
-              or cluster is required. If both are specified, the resourcepool value will be used.
-            - For a clone operation to a template, this argument is ignored.
-
-    cluster
-        Enter the name of the cluster whose resource pool the new virtual machine should be
-        attached to.
-
-        .. note::
-
-            - For a clone operation from a virtual machine, it will use the same cluster\'s
-              resourcepool as the original virtual machine unless specified.
-            - For a clone operation from a template to a virtual machine, specifying either
-              this or resourcepool is required. If both are specified, the resourcepool value
-              will be used.
-            - For a clone operation to a template, this argument is ignored.
-
-    folder
-        Enter the name of the folder that will contain the new virtual machine.
-
-        .. note::
-
-            - For a clone operation from a VM/template, the new VM/template will be added to the
-              same folder that the original VM/template belongs to unless specified.
-            - If both folder and datacenter are specified, the folder value will be used.
-
-    datacenter
-        Enter the name of the datacenter that will contain the new virtual machine.
-
-        .. note::
-
-            - For a clone operation from a VM/template, the new VM/template will be added to the
-              same folder that the original VM/template belongs to unless specified.
-            - If both folder and datacenter are specified, the folder value will be used.
-
-    host
-        Enter the name of the target host where the virtual machine should be registered.
-
-        If not specified:
-
-        .. note::
-
-            - If resource pool is not specified, current host is used.
-            - If resource pool is specified, and the target pool represents a stand-alone
-              host, the host is used.
-            - If resource pool is specified, and the target pool represents a DRS-enabled
-              cluster, a host selected by DRS is used.
-            - If resource pool is specified and the target pool represents a cluster without
-              DRS enabled, an InvalidArgument exception be thrown.
-
-    template
-        Specifies whether the new virtual machine should be marked as a template or not.
-        Default is ``template: False``.
-
-    power_on
-        Specifies whether the new virtual machine should be powered on or not. If ``template: True``
-        is set, this field is ignored. Default is ``power_on: True``.
-
+    Sample profile and arguments that can be specified in it can be found
+    :ref:`here. <vmware-cloud-profile>`
 
     CLI Example:
 
@@ -908,8 +1247,20 @@ def create(vm_):
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
     )
+    devices = config.get_cloud_config_value(
+        'devices', vm_, __opts__, default=None
+    )
+    extra_config = config.get_cloud_config_value(
+        'extra_config', vm_, __opts__, default=None
+    )
     power = config.get_cloud_config_value(
         'power_on', vm_, __opts__, default=False
+    )
+    key_filename = config.get_cloud_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    deploy = config.get_cloud_config_value(
+        'deploy', vm_, __opts__, search_global=False, default=True
     )
 
     if 'clonefrom' in vm_:
@@ -950,15 +1301,14 @@ def create(vm_):
         # If not specified, the current datastore is used.
         if datastore:
             datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
-            reloc_spec.datastore = datastore_ref
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
-            reloc_spec.host = host_ref
-
-        log.debug('reloc_spec set to {0}\n'.format(
-            pprint.pformat(reloc_spec))
-        )
+            if host_ref:
+                reloc_spec.host = host_ref
+            else:
+                log.warning("Specified host: {0} does not exist".format(host))
+                log.warning("Using host used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
@@ -969,9 +1319,14 @@ def create(vm_):
         if memory:
             config_spec.memoryMB = memory
 
-        log.debug('config_spec set to {0}\n'.format(
-            pprint.pformat(config_spec))
-        )
+        if devices:
+            specs = _manage_devices(devices, object_ref)
+            config_spec.deviceChange = specs['device_specs']
+
+        if extra_config:
+            for key, value in extra_config.iteritems():
+                option = vim.option.OptionValue(key=key, value=value)
+                config_spec.extraConfig.append(option)
 
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
@@ -979,6 +1334,22 @@ def create(vm_):
             location=reloc_spec,
             config=config_spec
         )
+
+        if specs['nics_map']:
+            if "Windows" not in object_ref.config.guestFullName:
+                global_ip = vim.vm.customization.GlobalIPSettings()
+                if vm_['dns_servers']:
+                    global_ip.dnsServerList = vm_['dns_servers']
+                identity = vim.vm.customization.LinuxPrep()
+                identity.domain = vm_['domain']
+                identity.hostName = vim.vm.customization.FixedName(name=vm_name)
+
+                custom_spec = vim.vm.customization.Specification(
+                    nicSettingMap=specs['nics_map'],
+                    globalIPSettings=global_ip,
+                    identity=identity
+                )
+                clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
@@ -999,8 +1370,8 @@ def create(vm_):
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
             time_counter = 0
-            while task.info.state != 'success':
-                log.debug("Waiting for clone task to finish [{0} s]".format(time_counter))
+            while task.info.state == 'running':
+                log.info("Waiting for clone task to finish [{0} s]".format(time_counter))
                 time.sleep(5)
                 time_counter += 5
         except Exception as exc:
@@ -1014,6 +1385,24 @@ def create(vm_):
             )
             return False
 
+        new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+
+        # If it a template or if it does not need to be powered on, or if deploy is False then do not wait for ip
+        if not template and power:
+            ip = _wait_for_ip(new_vm_ref, 20)
+            if ip:
+                log.debug("IP is: {0}".format(ip))
+                # ssh or smb using ip and install salt
+                if deploy:
+                    vm_['key_filename'] = key_filename
+                    vm_['ssh_host'] = ip
+
+                    salt.utils.cloud.bootstrap(vm_, __opts__)
+            else:
+                log.warning("Could not get IP information for {0}".format(vm_name))
+
+        data = show_instance(vm_name, call='action')
+
         salt.utils.cloud.fire_event(
             'event',
             'created instance',
@@ -1025,9 +1414,8 @@ def create(vm_):
             },
             transport=__opts__['transport']
         )
-
     else:
         log.error("clonefrom option hasn\'t been specified. Exiting.")
         return False
 
-    return {vm_name: True}
+    return {vm_name: data}

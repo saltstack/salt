@@ -66,6 +66,8 @@ from collections import MutableMapping
 import salt.ext.six as six
 try:
     import zmq
+    import zmq.eventloop.ioloop
+    import zmq.eventloop.zmqstream
 except ImportError:
     # Local mode does not need zmq
     pass
@@ -112,7 +114,8 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
-    if transport == 'zeromq':
+    # TODO: AIO core is separate from transport
+    if transport in ('zeromq', 'tcp'):
         if node == 'master':
             return MasterEvent(sock_dir or opts.get('sock_dir', None))
         return SaltEvent(node, sock_dir, opts)
@@ -128,7 +131,8 @@ def get_master_event(opts, sock_dir, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
-    if opts['transport'] == 'zeromq':
+    # TODO: AIO core is separate from transport
+    if opts['transport'] in ('zeromq', 'tcp'):
         return MasterEvent(sock_dir)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
@@ -275,18 +279,10 @@ class SaltEvent(object):
     def connect_pull(self, timeout=1000):
         '''
         Establish a connection with the event pull socket
-        Set the send timeout of the socket options to timeout (in milliseconds)
+        Set the linger timeout of the socket options to timeout (in milliseconds)
         Default timeout is 1000 ms
-        The linger timeout must be at least as long as this timeout
         '''
         self.push = self.context.socket(zmq.PUSH)
-        try:
-            # bug in 0MQ default send timeout of -1 (infinite) is not infinite
-            self.push.setsockopt(zmq.SNDTIMEO, timeout)
-        except AttributeError:
-            # This is for ZMQ < 2.2 (Caught when ssh'ing into the Jenkins
-            #                        CentOS5, which still uses 2.1.9)
-            pass
         self.push.setsockopt(zmq.LINGER, timeout)
         self.push.connect(self.pulluri)
         self.cpush = True
@@ -644,6 +640,142 @@ class MinionEvent(SaltEvent):
             'minion', sock_dir=opts.get('sock_dir', None), opts=opts)
 
 
+class AsyncEventPublisher(object):
+    '''
+    An event publisher class intended to run in an ioloop (within a single process)
+
+    TODO: remove references to "minion_event" whenever we need to use this for other things
+    '''
+    def __init__(self, opts, publish_handler, io_loop=None):
+        self.opts = opts
+        self.publish_handler = publish_handler
+
+        self.io_loop = io_loop or zmq.eventloop.ioloop.ZMQIOLoop()
+        self.context = zmq.Context()
+
+        hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
+        # Only use the first 10 chars to keep longer hashes from exceeding the
+        # max socket path length.
+        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
+        epub_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pub.ipc'.format(id_hash)
+        )
+        if os.path.exists(epub_sock_path):
+            os.unlink(epub_sock_path)
+        epull_sock_path = os.path.join(
+            self.opts['sock_dir'],
+            'minion_event_{0}_pull.ipc'.format(id_hash)
+        )
+        if os.path.exists(epull_sock_path):
+            os.unlink(epull_sock_path)
+
+        self.epub_sock = self.context.socket(zmq.PUB)
+
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            epub_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pub_port']
+            )
+            epull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts['tcp_pull_port']
+            )
+        else:
+            epub_uri = 'ipc://{0}'.format(epub_sock_path)
+            salt.utils.zeromq.check_ipc_path_max_len(epub_uri)
+            epull_uri = 'ipc://{0}'.format(epull_sock_path)
+            salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
+
+        log.debug(
+            '{0} PUB socket URI: {1}'.format(
+                self.__class__.__name__, epub_uri
+            )
+        )
+        log.debug(
+            '{0} PULL socket URI: {1}'.format(
+                self.__class__.__name__, epull_uri
+            )
+        )
+
+        # Check to make sure the sock_dir is available, create if not
+        default_minion_sock_dir = os.path.join(
+            salt.syspaths.SOCK_DIR,
+            'minion'
+        )
+        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
+
+        if not os.path.isdir(minion_sock_dir):
+            # Let's try to create the directory defined on the configuration
+            # file
+            try:
+                os.makedirs(minion_sock_dir, 0o755)
+            except OSError as exc:
+                log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                # Let's not fail yet and try using the default path
+                if minion_sock_dir == default_minion_sock_dir:
+                    # We're already trying the default system path, stop now!
+                    raise
+
+            if not os.path.isdir(default_minion_sock_dir):
+                try:
+                    os.makedirs(default_minion_sock_dir, 0o755)
+                except OSError as exc:
+                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                    # Let's stop at this stage
+                    raise
+
+        # Create the pull socket
+        self.epull_sock = self.context.socket(zmq.PULL)
+
+        # Securely bind the event sockets
+        if self.opts.get('ipc_mode', '') != 'tcp':
+            old_umask = os.umask(0o177)
+        try:
+            log.info('Starting pub socket on {0}'.format(epub_uri))
+            self.epub_sock.bind(epub_uri)
+            log.info('Starting pull socket on {0}'.format(epull_uri))
+            self.epull_sock.bind(epull_uri)
+        finally:
+            if self.opts.get('ipc_mode', '') != 'tcp':
+                os.umask(old_umask)
+
+        self.stream = zmq.eventloop.zmqstream.ZMQStream(self.epull_sock, io_loop=self.io_loop)
+        self.stream.on_recv(self.handle_publish)
+
+    def handle_publish(self, package):
+        '''
+        Get something from epull, publish it out epub, and return the package (or None)
+        '''
+        package = package[0]
+        try:
+            self.epub_sock.send(package)
+            self.io_loop.spawn_callback(self.publish_handler, package)
+            return package
+        # Add an extra fallback in case a forked process leeks through
+        except zmq.ZMQError as exc:
+            # The interrupt caused by python handling the
+            # SIGCHLD. Throws this error with errno == EINTR.
+            # Nothing to receive on the zmq socket throws this error
+            # with EAGAIN.
+            # Both are safe to ignore
+            if exc.errno != errno.EAGAIN and exc.errno != errno.EINTR:
+                log.critical('Unexpected ZMQError while polling minion',
+                             exc_info=True)
+            return None
+
+    def destroy(self):
+        if hasattr(self, 'stream') and self.stream.closed is False:
+            self.stream.close()
+        if hasattr(self, 'epub_sock') and self.epub_sock.closed is False:
+            self.epub_sock.close()
+        if hasattr(self, 'epull_sock') and self.epull_sock.closed is False:
+            self.epull_sock.close()
+        if hasattr(self, 'context') and self.context.closed is False:
+            self.context.term()
+
+    def __del__(self):
+        self.destroy()
+
+
 class EventPublisher(multiprocessing.Process):
     '''
     The interface that takes master events and republishes them out to anyone
@@ -752,7 +884,12 @@ class EventReturn(multiprocessing.Process):
                     self.opts['event_return']
                 )
                 if event_return in self.minion.returners:
-                    self.minion.returners[event_return](event_queue)
+                    try:
+                        self.minion.returners[event_return](event_queue)
+                    except Exception as exc:
+                        log.error('Could not store event {0}. '
+                                  'Returner raised exception: {1}'.format(
+                                      event, exc))
                     event_queue = []
                 else:
                     log.error(
