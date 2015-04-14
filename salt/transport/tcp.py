@@ -471,7 +471,7 @@ class SaltMessageClient(object):
                     else:
                         log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
             except tornado.iostream.StreamClosedError as e:
-                log.debug('tcp stream to {0}:{1} closed, unable to send'.format(self.host, self.port))
+                log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
                 for future in self.send_future_map.itervalues():
                     future.set_exception(e)
                 self.send_future_map = {}
