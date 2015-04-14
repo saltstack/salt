@@ -194,11 +194,18 @@ def latest(name,
         log.debug(('target {0} is found, "git pull" '
                    'is probably required'.format(target)))
         try:
-            current_rev = __salt__['git.revision'](target, user=user)
+            try:
+                current_rev = __salt__['git.revision'](target, user=user)
+            except CommandExecutionError:
+                current_rev = None
 
             # handle the case where a branch was provided for rev
             remote_rev, new_rev = None, None
-            branch = __salt__['git.current_branch'](target, user=user)
+            try:
+                branch = __salt__['git.current_branch'](target, user=user)
+            except CommandExecutionError:
+                branch = None
+
             # We're only interested in the remote branch if a branch
             # (instead of a hash, for example) was provided for rev.
             if (branch != 'HEAD' and branch == rev) or rev is None:
@@ -321,7 +328,10 @@ def latest(name,
                                               identity=identity,
                                               opts='--recursive')
 
-                new_rev = __salt__['git.revision'](cwd=target, user=user)
+                try:
+                    new_rev = __salt__['git.revision'](cwd=target, user=user)
+                except CommandExecutionError:
+                    new_rev = None
         except Exception as exc:
             log.error('Unexpected exception in git state', exc_info=True)
             return _fail(
@@ -391,8 +401,12 @@ def latest(name,
                                           identity=identity,
                                           opts='--recursive')
 
-            new_rev = None if bare else (
-                __salt__['git.revision'](cwd=target, user=user))
+            new_rev = None
+            if not bare:
+                try:
+                    new_rev = __salt__['git.revision'](cwd=target, user=user)
+                except CommandExecutionError:
+                    pass
 
         except Exception as exc:
             log.error('Unexpected exception in git state', exc_info=True)
