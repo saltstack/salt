@@ -350,7 +350,7 @@ class Shell(object):
                 elif stdout and stdout.endswith('_||ext_mods||_'):
                     mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
-                time.sleep(0.5)
+                time.sleep(0.01)
             return ret_stdout, ret_stderr, term.exitstatus
         finally:
             term.close(terminate=True, kill=True)
