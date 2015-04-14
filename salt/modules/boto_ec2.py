@@ -35,7 +35,7 @@ Connection module for Amazon EC2
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint disable=E0602
+#pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
