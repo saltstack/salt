@@ -392,6 +392,111 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
         return False
 
 
+def get_attribute(attribute, instance_name=None, instance_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get an EC2 instance attribute.
+
+    CLI example::
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_attribute name=my_instance attribute=sourceDestCheck
+
+    Available attributes:
+        * instanceType
+        * kernel
+        * ramdisk
+        * userData
+        * disableApiTermination
+        * instanceInitiatedShutdownBehavior
+        * rootDeviceName
+        * blockDeviceMapping
+        * productCodes
+        * sourceDestCheck
+        * groupSet
+        * ebsOptimized
+        * sriovNetSupport
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    attribute_list = ['instanceType', 'kernel', 'ramdisk', 'userData', 'disableApiTermination',
+                      'instanceInitiatedShutdownBehavior', 'rootDeviceName', 'blockDeviceMapping', 'productCodes',
+                      'sourceDestCheck', 'groupSet', 'ebsOptimized', 'sriovNetSupport']
+    if not any((instance_name, instance_id)):
+        raise SaltInvocationError('At least one of the following must be specified: instance_name or instance_id.')
+    if instance_name and instance_id:
+        raise SaltInvocationError('Both instance_name and instance_id can not be specified in the same command.')
+    if attribute not in attribute_list:
+        raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
+    try:
+        if instance_name:
+            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
+            if len(instances) != 1:
+                raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
+            instance_id = instances[0]
+        attribute = conn.get_instance_attribute(instance_id, attribute)
+        if not attribute:
+            return False
+        return attribute
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
+def set_attribute(attribute, attribute_value, instance_name=None, instance_id=None, region=None, key=None, keyid=None,
+                  profile=None):
+    '''
+    Set an EC2 instance attribute.
+    Returns whether the operation succeeded or not.
+
+    CLI example::
+    .. code-block:: bash
+
+        salt myminion boto_ec2.set_attribute instance_name=my_instance \
+                attribute=sourceDestCheck attribute_value=False
+
+    Available attributes:
+        * instanceType
+        * kernel
+        * ramdisk
+        * userData
+        * disableApiTermination
+        * instanceInitiatedShutdownBehavior
+        * rootDeviceName
+        * blockDeviceMapping
+        * productCodes
+        * sourceDestCheck
+        * groupSet
+        * ebsOptimized
+        * sriovNetSupport
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    attribute_list = ['instanceType', 'kernel', 'ramdisk', 'userData', 'disableApiTermination',
+                      'instanceInitiatedShutdownBehavior', 'rootDeviceName', 'blockDeviceMapping', 'productCodes',
+                      'sourceDestCheck', 'groupSet', 'ebsOptimized', 'sriovNetSupport']
+    if not any((instance_name, instance_id)):
+        raise SaltInvocationError('At least one of the following must be specified: instance_name or instance_id.')
+    if instance_name and instance_id:
+        raise SaltInvocationError('Both instance_name and instance_id can not be specified in the same command.')
+    if attribute not in attribute_list:
+        raise SaltInvocationError('Attribute must be one of: {0}.'.format(attribute_list))
+    try:
+        if instance_name:
+            instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
+            if len(instances) != 1:
+                raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
+            instance_id = instances[0]
+        attribute = conn.modify_instance_attribute(instance_id, attribute, attribute_value)
+        if not attribute:
+            return False
+        return attribute
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def _get_conn(region, key, keyid, profile):
     '''
     Get a boto connection to ec2.
