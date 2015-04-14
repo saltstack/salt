@@ -178,10 +178,14 @@ def _walk(path, value, metrics, timestamp, skip):
         Whether or not to skip metrics when there's an error casting the value
         to a float. Defaults to `False`.
     '''
-
+    log.trace('Carbon return walking path: {0}, value: {1}, metrics: {2}, timestamp: {3}'.format(path, value, metrics, timestamp))
     if isinstance(value, collections.Mapping):
         for key, val in six.iteritems(value):
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
+    elif isinstance(value, list):
+        for item in value:
+            _walk('{0}.{1}'.format(path, item), item, metrics, timestamp, skip)
+
     else:
         try:
             val = float(value)
@@ -196,22 +200,16 @@ def _walk(path, value, metrics, timestamp, skip):
                 raise
 
 
-def returner(ret):
+def _send(saltdata, metric_base, opts):
     '''
-    Return data to a remote carbon server using the text metric protocol
-
-    Each metric will look like::
-
-        [module].[function].[minion_id].[metric path [...]].[metric name]
-
+    Send the data to carbon
     '''
-    _options = _get_options(ret)
 
-    host = _options.get('host')
-    port = _options.get('port')
-    skip = _options.get('skip')
-    if 'mode' in _options:
-        mode = _options.get('mode').lower()
+    host = opts.get('host')
+    port = opts.get('port')
+    skip = opts.get('skip')
+    if 'mode' in opts:
+        mode = opts.get('mode').lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
@@ -225,19 +223,12 @@ def returner(ret):
     # {'fun': 'test.version', 'jid': '20130113193949451054', 'return': '0.11.0', 'id': 'salt'}
     timestamp = int(time.time())
 
-    saltdata = ret['return']
-    metric_base = ret['fun']
     handler = _send_picklemetrics if mode == 'pickle' else _send_textmetrics
-
-    # Strip the hostname from the carbon base if we are returning from virt
-    # module since then we will get stable metric bases even if the VM is
-    # migrate from host to host
-    if not metric_base.startswith('virt.'):
-        metric_base += '.' + ret['id'].replace('.', '_')
-
     metrics = []
+    log.trace('Carbon returning walking data: {0}'.format(saltdata))
     _walk(metric_base, saltdata, metrics, timestamp, skip)
     data = handler(metrics)
+    log.trace('Carbon inserting data: {0}'.format(data))
 
     with _carbon(host, port) as sock:
         total_sent_bytes = 0
@@ -249,6 +240,42 @@ def returner(ret):
 
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
+
+
+def event_return(events):
+    '''
+    Return event data to remote carbon server
+
+    Provide a list of events to be stored in carbon
+    '''
+    opts = _get_options({})  # Pass in empty ret, since this is a list of events
+    opts['skip'] = True
+    for event in events:
+        log.trace('Carbon returner received event: {0}'.format(event))
+        metric_base = event['tag']
+        saltdata = event['data'].get('data')
+        _send(saltdata, metric_base, opts)
+
+
+def returner(ret):
+    '''
+    Return data to a remote carbon server using the text metric protocol
+
+    Each metric will look like::
+
+        [module].[function].[minion_id].[metric path [...]].[metric name]
+
+    '''
+    opts = _get_options(ret)
+    metric_base = ret['fun']
+    # Strip the hostname from the carbon base if we are returning from virt
+    # module since then we will get stable metric bases even if the VM is
+    # migrate from host to host
+    if not metric_base.startswith('virt.'):
+        metric_base += '.' + ret['id'].replace('.', '_')
+
+    saltdata = ret['return']
+    _send(saltdata, metric_base, opts)
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
