@@ -15,9 +15,9 @@
 # limitations under the License.
 
 
-import salt
 import os
 
+import salt
 
 class SysInfo(object):
     '''
