@@ -255,7 +255,26 @@ class Query(object):
         return users
 
     def _identity(self, *args, **kwargs):
-        return "This is identity"
+        '''
+        Local users and groups.
+
+        accounts
+            Can be either 'local', 'remote' or 'all' (equal to "local,remote").
+            Remote accounts cannot be resolved on all systems, but only
+            those, which supports 'passwd -S -a'.
+
+        disabled
+            True (or False, default) to return only disabled accounts.
+        '''
+        LOCAL = 'local accounts'
+        EXT = 'external accounts'
+
+        data = dict()
+        data[LOCAL] = self._get_local_users(disabled=kwargs.get('disabled'))
+        data[EXT] = self._get_external_accounts(data[LOCAL].keys()) or 'N/A'
+        data['local groups'] = self._get_local_groups()
+
+        return data
 
     def _system(self, *args, **kwargs):
         '''
