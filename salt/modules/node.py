@@ -73,5 +73,10 @@ def query(scope, **kwargs):
 
         salt '*' node.query scope=os
     '''
-
-    return _("query").Query(scope)()
+    query = _("query")
+    try:
+        return query.Query(scope)(**kwargs)
+    except query.Query.InspectorQueryException as ex:
+        raise CommandExecutionError(ex)
+    except Exception as ex:
+        raise ex
