@@ -35,7 +35,7 @@ def _verify_run(out, cmd=None):
         raise CommandExecutionError(out['stderr'])
 
 
-def _get_mounts(fs_type):
+def _get_mounts(fs_type=None):
     '''
     List mounted filesystems.
     '''
@@ -43,15 +43,18 @@ def _get_mounts(fs_type):
     with salt.utils.fopen("/proc/mounts") as fhr:
         for line in fhr.readlines():
             device, mntpnt, fstype, options, fs_freq, fs_passno = line.strip().split(" ")
-            if fstype != fs_type:
+            if fs_type and fstype != fs_type:
                 continue
             if mounts.get(device) is None:
                 mounts[device] = []
 
-            mounts[device].append({
+            data = {
                 'mount_point': mntpnt,
                 'options': options.split(",")
-            })
+            }
+            if not fs_type:
+                data['type'] = fstype
+            mounts[device].append(data)
     return mounts
 
 
