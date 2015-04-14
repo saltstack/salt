@@ -64,6 +64,22 @@ class Mockwmi(object):
         self.ipenabled = IPEnabled
         return [Mockwmi()]
 
+
+class Mockwinapi(object):
+    '''
+    Mock winapi class
+    '''
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def Com():
+        '''
+        Mock Com method
+        '''
+        return True
+
+win_dns_client.salt.utils.winapi = Mockwinapi
 win_dns_client.wmi = Mockwmi
 
 
