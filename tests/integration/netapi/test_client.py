@@ -45,7 +45,6 @@ class NetapiClientTest(TestCase):
         ret['minions'] = sorted(ret['minions'])
         self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
 
-
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
         low.update(self.eauth_creds)
