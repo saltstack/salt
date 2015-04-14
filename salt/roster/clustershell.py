@@ -14,9 +14,17 @@ Example:
 # Import python libs
 from __future__ import absolute_import
 import socket
-
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from ClusterShell.NodeSet import NodeSet
+
+REQ_ERROR = None
+try:
+    from ClusterShell.NodeSet import NodeSet
+except (ImportError, OSError) as e:
+    REQ_ERROR = 'ClusterShell import error, perhaps missing python ClusterShell package'
+
+
+def __virtual__():
+    return (REQ_ERROR is None, REQ_ERROR)
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
