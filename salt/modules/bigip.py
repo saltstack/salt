@@ -1251,7 +1251,7 @@ def modify_virtual(hostname, username, password, name,
 
     #specify policies if provided
     if policies is not None:
-            payload['policies'] = _build_list(policies, 'ltm:virtual:policy')
+        payload['policies'] = _build_list(policies, 'ltm:virtual:policy')
 
     #specify rules if provided
     if rules is not None:
@@ -1534,7 +1534,7 @@ def list_profile(hostname, username, password, profile_type, name=None, ):
         if name:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}?expandSubcollections=true'.format(type=profile_type, name=name))
         else:
-            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{name}'.format(type=profile_type))
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type))
     except requests.exceptions.ConnectionError, e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
@@ -1680,7 +1680,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
                 try:
                     payload[key] = _set_value(value)
                 except salt.exceptions.CommandExecutionError:
-                    return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key, value)
+                    return 'Error: Unable to Parse JSON data for parameter: {key}\n{value}'.format(key=key, value=value)
 
     #put to REST
     try:
