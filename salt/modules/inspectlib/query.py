@@ -357,7 +357,11 @@ class Query(object):
         }
 
     def _payload(self, *args, **kwargs):
-        return "This is payload"
+        '''
+        Find all unmanaged files.
+        '''
+        data = dict()
+        return data
 
     def _all(self, *args, **kwargs):
         return "This is all"
