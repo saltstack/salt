@@ -812,8 +812,7 @@ class Minion(MinionBase):
                         salt.utils.event.TAGEND,
                         serialized_data,
                 )
-                self.handle_event(event)
-                self.epub_sock.send(event)
+                self.event_publisher.handle_publish([event])
 
     def _load_modules(self, force_refresh=False, notify=False):
         '''
@@ -1518,7 +1517,11 @@ class Minion(MinionBase):
         if start:
             self.sync_connect_master()
 
-        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
+        self.event_publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.handle_event,
+            io_loop=self.io_loop,
+        )
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
