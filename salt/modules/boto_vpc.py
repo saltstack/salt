@@ -121,7 +121,7 @@ def _get_profile(service, region, key, keyid, profile):
 def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     '''
     Check whether a VPC with the given name or id exists and log
-    an appropriate message. Returns the vpc_id or None.
+    raise an appropriate message. Returns the vpc_id or None.
     '''
 
     if vpc_name:
@@ -131,8 +131,7 @@ def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
             log.info('VPC {0} does not exist.'.format(vpc_name))
             return None
     elif not vpc_id:
-        log.warning('Either vpc_id or vpc_name must be provided.')
-        return None
+        raise SaltInvocationError('Either vpc_id or vpc_name must be provided.')
     else:
         if not exists(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
                       profile=profile):
@@ -788,7 +787,9 @@ def delete_internet_gateway(internet_gateway_id=None,
     try:
         if detach:
             igw = _get_resource('internet_gateway',
-                                internet_gateway_name, conn)
+                                internet_gateway_name, region=region,
+                                key=key, keyid=keyid, profile=profile)
+
             if not igw:
                 return False
             if igw.attachments:
@@ -1865,7 +1866,7 @@ def describe_subnets(subnet_ids=None, vpc_id=None, cidr=None, region=None, key=N
         raise BotoExecutionError(exc)
 
 
-def describe_route_tables(route_table_id=None, route_table_name=None, tags=None, region=None, key=None, keyid=None,
+def describe_route_table(route_table_id=None, route_table_name=None, tags=None, region=None, key=None, keyid=None,
                           profile=None):
     '''
     Given route table properties, return route table details if matching table(s) exist.

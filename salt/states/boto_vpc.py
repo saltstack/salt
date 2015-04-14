@@ -515,7 +515,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
            'changes': {}
            }
 
-    _ret = _route_table_present(name=name, vpc_id=vpc_id, tags=tags, region=region, key=key,
+    _ret = _route_table_present(name=name, vpc_name=vpc_name, vpc_id=vpc_id,
+                                tags=tags, region=region, key=key,
                                 keyid=keyid, profile=profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
