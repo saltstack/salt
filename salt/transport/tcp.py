@@ -406,7 +406,7 @@ class SaltMessageClient(object):
     # TODO: timeout inflight sessions
     def destroy(self):
         self._closing = True
-        if hasattr(self, '_stream'):
+        if hasattr(self, '_stream') and not self._stream.closed():
             self._stream.close()
 
     def __del__(self):
@@ -439,7 +439,6 @@ class SaltMessageClient(object):
         '''
         while True:
             if self._closing:
-                self.destroy()
                 break
             try:
                 self._stream = yield self._tcp_client.connect(self.host, self.port)
