@@ -3,10 +3,12 @@
 Zeromq transport classes
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+import logging
 import os
 import errno
 import hashlib
-
 from random import randint
 
 # Import Salt Libs
@@ -16,9 +18,6 @@ import salt.utils
 import salt.utils.verify
 import salt.utils.event
 import salt.payload
-import logging
-
-
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
@@ -31,7 +30,7 @@ if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import zmq.eventloop.zmqstream
 
-# tornado imports
+# Import Tornado Libs
 import tornado
 import tornado.gen
 import tornado.concurrent
