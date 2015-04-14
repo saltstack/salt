@@ -752,6 +752,7 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
                 )
             )
 
+
 def wait_for_winrm(host, port, username, password, timeout=900):
     '''
     Wait until WinRM connection can be established.
@@ -786,6 +787,7 @@ def wait_for_winrm(host, port, username, password, timeout=900):
                     host, port, trycount
                 )
             )
+
 
 def validate_windows_cred(host, username='Administrator', password=None, retries=10,
                           retry_delay=1):
@@ -1855,6 +1857,7 @@ def win_cmd(command, **kwargs):
     # Signal an error
     return 1
 
+
 def winrm_cmd(session, command, flags, **kwargs):
     '''
     Wrapper for commands to be run against Windows boxes using WinRM.
@@ -1864,6 +1867,7 @@ def winrm_cmd(session, command, flags, **kwargs):
     ))
     r = session.run_cmd(command, flags)
     return r.status_code
+
 
 def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
