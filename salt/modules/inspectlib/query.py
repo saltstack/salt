@@ -18,6 +18,8 @@
 import os
 
 import salt
+import salt.utils.network
+
 
 class SysInfo(object):
     '''
@@ -104,6 +106,16 @@ class SysInfo(object):
                 size = size + "K"
             ret[descr] = size
         return ret
+
+    def _get_network(self):
+        '''
+        Get network configuration.
+        '''
+        data = dict()
+        data['interfaces'] = salt.utils.network.interfaces()
+        data['subnets'] = salt.utils.network.subnets()
+
+        return data
 
 
 class Query(object):
