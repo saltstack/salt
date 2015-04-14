@@ -434,10 +434,10 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
             if len(instances) != 1:
                 raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
             instance_id = instances[0]
-        attribute = conn.get_instance_attribute(instance_id, attribute)
-        if not attribute:
+        instance_attribute = conn.get_instance_attribute(instance_id, attribute)
+        if not instance_attribute:
             return False
-        return attribute
+        return {attribute: instance_attribute[attribute]}
     except boto.exception.BotoServerError as exc:
         log.error(exc)
         return False
