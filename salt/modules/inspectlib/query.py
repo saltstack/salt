@@ -162,7 +162,8 @@ class Query(object):
         :return:
         '''
         if scope not in self.SCOPES:
-            raise Query.InspectorQueryException("Unknown scope: {0}".format(repr(scope)))
+            raise Query.InspectorQueryException(
+                "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
         self.scope = '_' + scope
 
     def __call__(self, *args, **kwargs):
