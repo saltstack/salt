@@ -40,7 +40,7 @@ Connection module for Amazon VPC
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint disable=E0602
+#pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
@@ -58,10 +58,10 @@ log = logging.getLogger(__name__)
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
-    # pylint: disable=import-error
+    #pylint: disable=import-error
     import boto
     import boto.vpc
-    # pylint: enable=import-error
+    #pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -1736,6 +1736,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
 
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     keys = ('id',
             'cidr_block',
             'is_default',
@@ -1790,6 +1791,8 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
         salt myminion boto_vpc.describe_subnet subnet_name=mysubnet
 
     '''
+    if not any((subnet_id, subnet_name)):
+        raise SaltInvocationError('either subnet id or subnet_name must be specified.')
     subnet = _get_resource('subnet', subnet_name=subnet_name, region=region,
                            key=key, keyid=keyid, profile=profile)
     if not subnet:
@@ -1900,21 +1903,17 @@ def describe_route_tables(route_table_id=None, route_table_name=None, tags=None,
             return False
 
         route_table = {}
-        keys = ('id', 'vpc_id', 'tags', 'routes')
+        keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']
         route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id']
+        assoc_keys = ['id', 'main', 'route_table_id', 'subnet_id']
         for item in route_tables:
-            routes_list = []
             for key in keys:
                 if hasattr(item, key):
                     route_table[key] = getattr(item, key)
                     if key == 'routes':
-                        for r_item in item.routes:
-                            route = {}
-                            for r_key in route_keys:
-                                if hasattr(r_item, r_key):
-                                    route[r_key] = getattr(r_item, r_key)
-                            routes_list.append(route)
-                        route_table[key] = routes_list
+                        route_table[key] = _key_iter(key, route_keys, item)
+                    if key == 'associations':
+                        route_table[key] = _key_iter(key, assoc_keys, item)
         return route_table
 
     except boto.exception.BotoServerError as exc:
@@ -1950,3 +1949,14 @@ def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))
+
+def _key_iter(key, keys, item):
+    elements_list = []
+    for r_item in getattr(item, key):
+        element = {}
+        for r_key in keys:
+            if hasattr(r_item, r_key):
+                element[r_key] = getattr(r_item, r_key)
+        elements_list.append(element)
+    return elements_list
+

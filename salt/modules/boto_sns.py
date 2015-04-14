@@ -32,7 +32,7 @@ Connection module for Amazon SNS
 :depends: boto
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint disable=E0602
+#pylint: disable=E0602
 
 from __future__ import absolute_import
 
@@ -42,10 +42,10 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
-    # pylint: disable=import-error
+    #pylint: disable=import-error
     import boto
     import boto.sns
-    # pylint: enable=import-error
+    #pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
