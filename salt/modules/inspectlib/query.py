@@ -34,6 +34,12 @@ class SysInfo(object):
         if systype.lower() == "solaris":
             raise SysInfo.SIException("Platform {0} not (yet) supported.".format(systype))
 
+    def _grain(self, grain):
+        '''
+        An alias for grains getter.
+        '''
+        return __grains__.get(grain, 'N/A')
+
     def _get_fs(self):
         '''
         Get available file systems and their types.
