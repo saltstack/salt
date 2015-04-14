@@ -2,12 +2,14 @@
 '''
 TCP transport classes
 
-
-
 Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+import logging
+import msgpack
 import socket
 import sys
 import os
@@ -21,9 +23,6 @@ import salt.utils.verify
 import salt.utils.event
 import salt.payload
 import salt.exceptions
-
-import logging
-
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
@@ -32,9 +31,12 @@ from salt.exceptions import SaltReqTimeoutError, SaltClientError
 # for IPC (for now)
 import zmq
 import zmq.eventloop.ioloop
+# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import zmq.eventloop.zmqstream
 
-# tornado imports
+# Import Tornado Libs
 import tornado
 import tornado.tcpserver
 import tornado.gen
@@ -42,8 +44,6 @@ import tornado.concurrent
 import tornado.tcpclient
 
 log = logging.getLogger(__name__)
-
-import msgpack
 
 
 def frame_msg(body, header=None, raw_body=False):
