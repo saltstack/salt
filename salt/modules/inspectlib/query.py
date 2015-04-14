@@ -201,6 +201,7 @@ class Query(object):
         data['cpu'] = sysinfo._get_cpu()
         data['disks'] = sysinfo._get_fs()
         data['memory'] = sysinfo._get_mem()
+        data['network'] = sysinfo._get_network()
 
         return data
 
