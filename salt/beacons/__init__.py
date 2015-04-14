@@ -74,3 +74,18 @@ class Beacon(object):
             log.trace('Interval process inserting mod: {0}'.format(mod))
             self.interval_map[mod] = 1
         return False
+
+    def add_beacon(self, name, beacon_data):
+        '''
+        Process beacons with intervals
+        Return True if a beacon should be run on this loop
+        '''
+
+        data = {}
+        data[name] = beacon_data
+
+        log.debug('before: self.opts[beacons] {0}'.format(self.opts['beacons']))
+        self.opts['beacons'].update(data)
+        log.debug('after: self.opts[beacons] {0}'.format(self.opts['beacons']))
+
+        return True

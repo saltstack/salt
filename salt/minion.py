@@ -1310,6 +1310,18 @@ class Minion(MinionBase):
         elif func == 'reload':
             self.schedule.reload(schedule)
 
+    def manage_beacons(self, package):
+        '''
+        Manage Beacons
+        '''
+        tag, data = salt.utils.event.MinionEvent.unpack(package)
+        func = data.get('func', None)
+        name = data.get('name', None)
+        beacon_data = data.get('beacon_data', None)
+
+        if func == 'add':
+            self.beacons.add_beacon(name, beacon_data)
+
     def environ_setenv(self, package):
         '''
         Set the salt-minion main process environment according to
@@ -1392,6 +1404,8 @@ class Minion(MinionBase):
             self.pillar_refresh()
         elif package.startswith('manage_schedule'):
             self.manage_schedule(package)
+        elif package.startswith('manage_beacons'):
+            self.manage_beacons(package)
         elif package.startswith('grains_refresh'):
             if self.grains_cache != self.opts['grains']:
                 self.pillar_refresh(force_refresh=True)
