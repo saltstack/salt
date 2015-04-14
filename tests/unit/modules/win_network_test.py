@@ -21,6 +21,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import win_network
+import salt.utils
 
 win_network.__salt__ = {}
 
@@ -63,65 +64,7 @@ class Mockwinapi(object):
         '''
         return True
 
-
-class Mocknetwork(object):
-    '''
-    Mock network class
-    '''
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def sanitize_host(host):
-        '''
-        Mock sanitize_host method
-        '''
-        return host
-
-    @staticmethod
-    def interfaces():
-        '''
-        Mock interfaces method
-        '''
-        return True
-
-    @staticmethod
-    def hw_addr(iface):
-        '''
-        Mock hw_addr method
-        '''
-        return iface
-
-    @staticmethod
-    def subnets():
-        '''
-        Mock subnets method
-        '''
-        return '10.1.1.0/24'
-
-    @staticmethod
-    def in_subnet(cidr):
-        '''
-        Mock in_subnet method
-        '''
-        return cidr
-
-    @staticmethod
-    def ip_addrs(interface=None, include_loopback=False):
-        '''
-        Mock ip_addrs method
-        '''
-        return (interface, include_loopback)
-
-    @staticmethod
-    def ip_addrs6(interface=None, include_loopback=False):
-        '''
-        Mock ip_addrs6 method
-        '''
-        return (interface, include_loopback)
-
 win_network.salt.utils.winapi = Mockwinapi
-win_network.salt.utils.network = Mocknetwork
 win_network.wmi = Mockwmi
 
 
@@ -237,7 +180,9 @@ class WinNetworkTestCase(TestCase):
         Test if it return the hardware address (a.k.a. MAC address)
         for a given interface
         '''
-        self.assertEqual(win_network.hw_addr('Ethernet'), 'Ethernet')
+        with patch.object(salt.utils.network, 'hw_addr',
+                          MagicMock(return_value='Ethernet')):
+            self.assertEqual(win_network.hw_addr('Ethernet'), 'Ethernet')
 
     # 'subnets' function tests: 1
 
@@ -245,7 +190,9 @@ class WinNetworkTestCase(TestCase):
         '''
         Test if it returns a list of subnets to which the host belongs
         '''
-        self.assertEqual(win_network.subnets(), '10.1.1.0/24')
+        with patch.object(salt.utils.network, 'subnets',
+                          MagicMock(return_value='10.1.1.0/24')):
+            self.assertEqual(win_network.subnets(), '10.1.1.0/24')
 
     # 'in_subnet' function tests: 1
 
@@ -254,7 +201,9 @@ class WinNetworkTestCase(TestCase):
         Test if it returns True if host is within specified subnet,
         otherwise False
         '''
-        self.assertTrue(win_network.in_subnet('10.1.1.0/16'))
+        with patch.object(salt.utils.network, 'in_subnet',
+                          MagicMock(return_value=True)):
+            self.assertTrue(win_network.in_subnet('10.1.1.0/16'))
 
     # 'ip_addrs' function tests: 1
 
