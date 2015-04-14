@@ -228,10 +228,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_response_minions = []
         not_connected_minions = []
         for each_minion in ret:
-            if "Minion did not return" in ret[each_minion]:
-                if "Not connected" in ret[each_minion]:
+            minion_ret = ret[each_minion].get('ret')
+            if (
+                isinstance(minion_ret, (str, unicode))
+                and "Minion did not return" in minion_ret
+            ):
+                if "Not connected" in minion_ret:
                     not_connected_minions.append(each_minion)
-                elif "No response" in ret[each_minion]:
+                elif "No response" in minion_ret:
                     not_response_minions.append(each_minion)
                 not_return_counter += 1
                 not_return_minions.append(each_minion)
