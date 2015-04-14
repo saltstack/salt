@@ -140,7 +140,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        self._package_load(self.auth.crypticle.dumps(load))
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)

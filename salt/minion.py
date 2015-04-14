@@ -316,16 +316,21 @@ class SMinion(object):
                 masters = self.opts['master']
                 if self.opts['random_master'] is True:
                     shuffle(masters)
+                connected_master = False
                 for master in masters:
                     self.opts['master'] = master
                     self.opts.update(resolve_dns(opts))
                     try:
                         self.gen_modules()
+                        connected_master = True
                         break
                     except SaltClientError:
                         log.warning(('Attempted to authenticate with master '
                                      '{0} and failed'.format(master)))
                         continue
+                # if we are out of masters, lets raise an exception
+                if not connected_master:
+                    raise SaltClientError('Unable to connect to any master')
             else:
                 if self.opts['random_master'] is True:
                     log.warning('random_master is True but there is only one master specified. Ignoring.')
