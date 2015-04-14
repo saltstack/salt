@@ -193,11 +193,12 @@ class SSH(object):
                         'salt-ssh.rsa'
                         )
                     )
-        if not os.path.isfile(priv):
-            try:
-                salt.client.ssh.shell.gen_key(priv)
-            except OSError:
-                raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
+        if priv != 'agent-forwarding':
+            if not os.path.isfile(priv):
+                try:
+                    salt.client.ssh.shell.gen_key(priv)
+                except OSError:
+                    raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
         self.defaults = {
             'user': self.opts.get(
                 'ssh_user',
@@ -427,6 +428,9 @@ class SSH(object):
                     running.pop(host)
             if len(rets) >= len(self.targets):
                 break
+            # Sleep when limit or all threads started
+            if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
+                time.sleep(0.1)
 
     def run_iter(self, mine=False):
         '''

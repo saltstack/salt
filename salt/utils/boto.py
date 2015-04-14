@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import hashlib
 import logging
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+from functools import partial
 
 # Import salt libs
 import salt.ext.six as six
@@ -129,6 +130,19 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
     return __context__.get(cxkey)
 
 
+def cache_id_func(service):
+    '''
+    Returns a partial `cache_id` function for the provided service.
+
+    ... code-block:: python
+
+        cache_id = __utils__['boto.cache_id_func']('ec2')
+        cache_id('myinstance', 'i-a1b2c3')
+        instance_id = cache_id('myinstance')
+    '''
+    return partial(cache_id, service)
+
+
 def get_connection(service, module=None, region=None, key=None, keyid=None,
                    profile=None):
     '''
@@ -161,6 +175,18 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
         raise get_exception(exc)
     __context__[cxkey] = conn
     return conn
+
+
+def get_connection_func(service):
+    '''
+    Returns a partial `get_connection` function for the provided service.
+
+    ... code-block:: python
+
+        get_conn = __utils__['boto.get_connection_func']('ec2')
+        conn = get_conn()
+    '''
+    return partial(get_connection, service)
 
 
 def get_exception(e):
