@@ -207,7 +207,55 @@ class Query(object):
         return data
 
     def _software(self, *args, **kwargs):
-        return "This is software"
+        data = dict()
+        if 'exclude' in kwargs:
+            excludes = kwargs['exclude'].split(",")
+        else:
+            excludes = list()
+
+        os_family = __grains__.get("os_family").lower()
+
+        # Get locks
+        if os_family == 'suse':
+            LOCKS = "pkg.list_locks"
+            if 'products' not in excludes:
+                products = __salt__['pkg.list_products']()
+                if products:
+                    data['products'] = products
+        elif os_family == 'redhat':
+            LOCKS = "pkg.get_locked_packages"
+        else:
+            LOCKS = None
+
+        if LOCKS and 'locks' not in excludes:
+            locks = __salt__[LOCKS]()
+            if locks:
+                data['locks'] = locks
+
+        # Get patterns
+        if os_family == 'suse':
+            PATTERNS = 'pkg.list_installed_patterns'
+        elif os_family == 'redhat':
+            PATTERNS = 'pkg.group_list'
+        else:
+            PATTERNS = None
+
+        if PATTERNS and 'patterns' not in excludes:
+            patterns = __salt__[PATTERNS]()
+            if patterns:
+                data['patterns'] = patterns
+
+        # Get packages
+        if 'packages' not in excludes:
+            data['packages'] = __salt__['pkg.list_pkgs']()
+
+        # Get repositories
+        if 'repositories' not in excludes:
+            repos = __salt__['pkg.list_repos']()
+            if repos:
+                data['repositories'] = repos
+
+        return data
 
     def _services(self, *args, **kwargs):
         return "This is service"
