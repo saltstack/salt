@@ -258,7 +258,13 @@ class Query(object):
         return data
 
     def _services(self, *args, **kwargs):
-        return "This is service"
+        '''
+        Get list of enabled and disabled services on the particular system.
+        '''
+        return {
+            'enabled': __salt__['service.get_enabled'](),
+            'disabled': __salt__['service.get_disabled'](),
+        }
 
     def _payload(self, *args, **kwargs):
         return "This is payload"
