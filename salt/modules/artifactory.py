@@ -10,10 +10,10 @@ import os
 import xml.etree.ElementTree as ET
 from urllib2 import HTTPError
 import logging
-import salt.ext.six.moves.http_client
 
 # Import Salt libs
 import salt.utils
+import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
