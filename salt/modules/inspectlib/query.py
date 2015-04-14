@@ -74,6 +74,12 @@ class SysInfo(object):
 
         return data
 
+    def _get_mounts(self):
+        '''
+        Get mounted FS on the system.
+        '''
+        return salt.utils.fsutils._get_mounts()
+
     def _get_cpu(self):
         '''
         Get available CPU information.
