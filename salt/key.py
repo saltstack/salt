@@ -650,7 +650,7 @@ class Key(object):
         # We have to differentiate between RaetKey._check_minions_directories
         # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
         # havd an additional 'denied' state.
-        if self.opts['transport'] == 'zeromq':
+        if self.opts['transport'] in ('zeromq', 'tcp'):
             key_dirs = self._check_minions_directories()
         else:
             key_dirs = self._check_minions_directories()
