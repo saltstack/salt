@@ -46,10 +46,10 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
-    #pylint: disable=import-error
+    #pylint: disable=unused-import
     import boto
     import boto.route53
-    #pylint: enable=import-error
+    #pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
