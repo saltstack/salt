@@ -52,10 +52,10 @@ log = logging.getLogger(__name__)
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
-    # pylint: disable=import-error
+    #pylint: disable=import-error
     import boto
     import boto.vpc
-    # pylint: enable=import-error
+    #pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -1458,10 +1458,10 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
             raise SaltInvocationError('Found more than one route table.')
 
         route_check = {'destination_cidr_block': destination_cidr_block,
-                      'gateway_id': gateway_id,
-                      'instance_id': instance_id,
-                      'interface_id': interface_id
-                      }
+                       'gateway_id': gateway_id,
+                       'instance_id': instance_id,
+                       'interface_id': interface_id
+                       }
 
         for route_match in route_tables[0].routes:
 
@@ -1666,7 +1666,6 @@ def describe(vpc_id=None, region=None, key=None, keyid=None, profile=None):
                 dhcp_options_id=None,
                 instance_tenancy=None)
 
-
     if not vpc_id:
         raise SaltInvocationError('VPC ID needs to be specified.')
 
@@ -1708,7 +1707,6 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
              'tags',
              'dhcp_options_id',
              'instance_tenancy')
-
 
     try:
         filter_parameters = {'filters': {}}
@@ -1757,7 +1755,6 @@ def describe_subnet(subnet_id=None, region=None, key=None, keyid=None, profile=N
                 state=None,
                 vpc_id=None,
                 tags=None)
-
 
     if not subnet_id:
         raise SaltInvocationError('subnet id needs to be specified.')
@@ -1891,7 +1888,6 @@ def describe_route_table(route_table_id=None, route_table_name=None, tags=None, 
         route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id']
         assoc_keys = ['id', 'main', 'route_table_id', 'subnet_id']
         for item in route_tables:
-            routes_list = []
             for key in keys:
                 if hasattr(item, key):
                     route_table[key] = getattr(item, key)
