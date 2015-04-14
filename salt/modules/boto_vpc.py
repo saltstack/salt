@@ -5,8 +5,8 @@ Connection module for Amazon VPC
 .. versionadded:: 2014.7.0
 
 .. versionchanged:: Beryllium
-    When boto raises a BotoServerError, this module now raises CommandExecutionError
-    instead of returning False.
+    When boto raises a BotoServerError, this module now raises BotoExecutionError
+    (subclass of CommandExecutionError) instead of returning False.
 
 
 :configuration: This module accepts explicit VPC credentials but can also
@@ -50,6 +50,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.boto import BotoExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -183,7 +184,7 @@ def _create_resource(resource, name=None, tags=None, region=None, key=None,
             return False
     except boto.exception.BotoServerError as exc:
         log.error(exc)
-        raise BotoExceptionError(exc)
+        raise BotoExecutionError(exc)
 
 
 def _delete_resource(resource, name=None, resource_id=None, region=None,
@@ -222,7 +223,7 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
             return False
     except boto.exception.BotoServerError as exc:
         log.error(exc)
-        raise salt.utils.BotoExecutionError(exc)
+        raise BotoExecutionError(exc)
 
 
 def _get_resource(resource, name=None, resource_id=None, region=None,
@@ -232,7 +233,7 @@ def _get_resource(resource, name=None, resource_id=None, region=None,
     Cache the id if name was provided.
     '''
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         get_resources = getattr(conn, 'get_all_{0}s'.format(resource))
@@ -459,6 +460,7 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     vpcs = _find_vpc(vpc_id=vpc_id, name=name, cidr=cidr, tags=tags, conn=conn)
+
     if vpcs:
         log.info('VPC exists.')
         return True
@@ -923,7 +925,12 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
             return False
     except boto.exception.BotoServerError as exc:
         log.error(exc)
-        raise BotoExecutionError(exc)
+        e = BotoExecutionError(exc)
+        if e.error and e.error['code'].endswith('.NotFound'):
+            return False
+        raise e
+
+
 
 
 def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None, keyid=None, profile=None):
@@ -943,14 +950,17 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None
     try:
         if conn.associate_dhcp_options(dhcp_options_id, vpc_id):
             log.info('DHCP options with id {0} were associated with VPC {1}'.format(dhcp_options_id, vpc_id))
-
             return True
         else:
             log.warning('DHCP options with id {0} were not associated with VPC {1}'.format(dhcp_options_id, vpc_id))
             return False
     except boto.exception.BotoServerError as exc:
         log.error(exc)
-        raise BotoExecutionError(exc)
+        e = BotoExecutionError(exc)
+
+        if e.error and e.error['code'].endswith('.NotFound'):
+            return False
+        raise e
 
 
 def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_servers=None, ntp_servers=None,
@@ -1240,39 +1250,6 @@ def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
             log.warning('Network ACL entry was not created')
             return False
     except boto.exception.BotoServerError as exc:
-        log.error(exc)
-        raise BotoExecutionError(exc)
-
-
-def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
-                             icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
-                             region=None, key=None, keyid=None, profile=None):
-    '''
-    Creates a network acl entry.
-
-    CLI Example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.create_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
-
-    '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        network_acl_entry = conn.create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
-                                                          cidr_block,
-                                                          egress=egress, icmp_code=icmp_code, icmp_type=icmp_type,
-                                                          port_range_from=port_range_from, port_range_to=port_range_to)
-        if network_acl_entry:
-            log.info('Network ACL entry was created')
-            return True
-        else:
-            log.warning('Network ACL entry was not created')
-            return False
-    except boto.exception as exc:
         log.error(exc)
         raise BotoExecutionError(exc)
 
@@ -1719,15 +1696,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
     if not any((vpc_id, vpc_name)):
         raise SaltInvocationError('A valid vpc id or name needs to be specified.')
-
     vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-    _ret = dict(cidr_block=None,
-                is_default=None,
-                state=None,
-                tags=None,
-                dhcp_options_id=None,
-                instance_tenancy=None)
-
 
     if not vpc_id:
         return None
@@ -1821,7 +1790,6 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
         salt myminion boto_vpc.describe_subnet subnet_name=mysubnet
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     subnet = _get_resource('subnet', subnet_name=subnet_name, region=region,
                            key=key, keyid=keyid, profile=profile)
     if not subnet:

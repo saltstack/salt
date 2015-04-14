@@ -3,7 +3,6 @@
 # Import Python libs
 from __future__ import absolute_import
 
-import sys
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
@@ -18,6 +17,7 @@ import salt.config
 import salt.loader
 from salt.modules import boto_vpc
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.utils.boto import BotoExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 
 # Import 3rd-party libs
@@ -438,9 +438,8 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         '''
         Tests deleting a non-existent vpc
         '''
-        vpc_deletion_result = boto_vpc.delete('1234', **conn_parameters)
-
-        self.assertFalse(vpc_deletion_result)
+        with self.assertRaisesRegexp(BotoExecutionError, '.*400 Bad Request.*'):
+            boto_vpc.delete('1234', **conn_parameters)
 
     @mock_ec2
     def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_true(self):
@@ -480,16 +479,15 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         vpc = self._create_vpc(name='test', tags={'test': 'testvalue'})
 
         with patch('moto.ec2.models.VPCBackend.get_all_vpcs',
-                   side_effect=BotoServerError(400, 'Mocked error')):
-            with self.assertRaisesRegexp(CommandExecutionError,
-                                         'Mocked error'):
-                describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
-                self.assertEqual(describe_vpc, True)
+                side_effect=BotoServerError(400, 'Mocked error')):
+            with self.assertRaisesRegexp(BotoExecutionError,
+                                         '400 Mocked error'):
+             boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
     @mock_ec2
     def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(self):
         '''
-        Tests describing vpc  without vpc id
+        Tests describing vpc without vpc id
         '''
         with self.assertRaisesRegexp(SaltInvocationError,
                                      'A valid vpc id or name needs to be specified.'):
@@ -578,7 +576,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         self.assertTrue(subnet_creation_result)
 
     @mock_ec2
-    def test_that_when_creating_a_subnet_fails_the_create_subnet_method_returns_false(self):
+    def test_that_when_creating_a_subnet_fails_the_create_subnet_method_raises_exception(self):
         '''
         Tests creating a subnet failure
         '''
@@ -605,9 +603,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase):
         '''
         Tests deleting a subnet that doesn't exist
         '''
-        subnet_deletion_result = boto_vpc.delete_subnet(subnet_id='1234', **conn_parameters)
-
-        self.assertFalse(subnet_deletion_result)
+        with self.assertRaisesRegexp(BotoExecutionError, '.*400 Bad Request.*'):
+            boto_vpc.delete_subnet(subnet_id='1234', **conn_parameters)
 
     @mock_ec2
     def test_that_when_checking_if_a_subnet_exists_by_id_the_subnet_exists_method_returns_true(self):
@@ -737,15 +734,14 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_options_creation_result)
 
     @mock_ec2
-    def test_that_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_false(self):
+    def test_that_when_creating_dhcp_options_fails_the_create_dhcp_options_method_raises_exception(self):
         '''
         Tests creating dhcp options failure
         '''
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
-
-        self.assertFalse(dhcp_options_creation_result)
+            with self.assertRaisesRegexp(CommandExecutionError, '400 Mocked error'):
+                dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
 
     @mock_ec2
     def test_that_when_associating_an_existing_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_true(
@@ -762,7 +758,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_options_association_result)
 
     @mock_ec2
-    def test_that_when_associating_a_non_existent_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_true(
+    def test_that_when_associating_a_non_existent_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_false(
             self):
         '''
         Tests associating non-existanct dhcp options successfully
@@ -800,7 +796,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         self.assertTrue(dhcp_creation_and_association_result)
 
     @mock_ec2
-    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
+    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
             self):
         '''
         Tests creation failure during creation/association of dchp options to an existing vpc
@@ -809,14 +805,11 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
-                                                                                              **dhcp_options_parameters)
-
-        self.assertFalse(dhcp_creation_and_association_result)
+            with self.assertRaisesRegexp(CommandExecutionError, 'Mocked error'):
+                boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options_parameters)
 
     @mock_ec2
-    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
-            self):
+    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(self):
         '''
         Tests association failure during creation/association of dchp options to existing vpc
         '''
@@ -824,10 +817,8 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
 
         with patch('moto.ec2.models.DHCPOptionsSetBackend.associate_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
-            dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
-                                                                                              **dhcp_options_parameters)
-
-        self.assertFalse(dhcp_creation_and_association_result)
+            with self.assertRaisesRegexp(CommandExecutionError, 'Mocked error'):
+                boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options_parameters)
 
     @mock_ec2
     def test_that_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
@@ -835,10 +826,9 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         '''
         Tests creation/association of dhcp options to non-existent vpc
         '''
-        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc('fake',
-                                                                                          **dhcp_options_parameters)
-
-        self.assertFalse(dhcp_creation_and_association_result)
+        
+        with self.assertRaisesRegexp(CommandExecutionError, '400 Bad Request.*'):
+             boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options_parameters)
 
     @mock_ec2
     def test_that_when_dhcp_options_exists_the_dhcp_options_exists_method_returns_true(self):
@@ -856,9 +846,8 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         '''
         Tests existence of dhcp options failure
         '''
-        dhcp_options_exists_result = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
-
-        self.assertFalse(dhcp_options_exists_result)
+        with self.assertRaisesRegexp(BotoExecutionError, '.*400 Bad Request.*'):
+            boto_vpc.dhcp_options_exists('fake', **conn_parameters)
 
     @mock_ec2
     def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(self):
