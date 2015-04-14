@@ -45,7 +45,40 @@ config:
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    Ensure subnet exists:
+        boto_vpc.subnet_present:
+            - name: mysubnet
+            - vpc_id: vpc-123456
+            - cidr_block: 10.0.0.0/16
+            - region: us-east-1
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    Ensure internet gateway exists:
+        boto_vpc.internet_gateway_present:
+            - name: myigw
+            - vpc_name: myvpc
+            - region: us-east-1
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    Ensure route table exists:
+        boto_vpc.route_table_present:
+            - name: my_route_table
+            - vpc_id: vpc-123456
+            - routes:
+              - destination_cidr_block: 0.0.0.0/0
+                instance_id: i-123456
+                interface_id: eni-123456
+            - subnets:
+              - name: subnet1
+              - name: subnet2
+            - region: us-east-1
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+import salt.utils.dictupdate as dictupdate
 
 
 def __virtual__():
@@ -425,8 +458,8 @@ def internet_gateway_absent(name, detach=False, region=None,
     return ret
 
 
-def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, tags=None, region=None, key=None,
-                        keyid=None, profile=None):
+def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=None, tags=None,
+                        region=None, key=None, keyid=None, profile=None):
     '''
     Ensure route table with routes exists and is associated to a VPC.
     .. versionadded:: Beryllium
@@ -446,6 +479,13 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, tags=None
             [
                 ['172.31.0.0/16', 'local', 'None', 'None'],
                 ['0.0.0.0/0', 'igw-0add326b', 'None', 'None']
+            ]
+
+    subnets
+        A list of subnets lists; example:
+            [
+                ['test1', 'None'],
+                ['None', 'subnet-7102a3e0']
             ]
 
     tags
@@ -480,7 +520,15 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, tags=None
             return ret
     _ret = _routes_present(route_table_name=name, routes=routes, tags=tags, region=region, key=key,
                            keyid=keyid, profile=profile)
-    ret['changes'] = _ret['changes']
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _subnets_present(route_table_name=name, subnets=subnets, tags=tags, region=region, key=key,
+                            keyid=keyid, profile=profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
@@ -510,7 +558,6 @@ def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=Non
             ret['result'] = False
             ret['comment'] = 'Failed to create route table {0}.'.format(name)
             return ret
-
         ret['changes']['old'] = {'route_table': None}
         ret['changes']['new'] = {'route_table': created}
         ret['comment'] = 'Route table {0} created.'.format(name)
@@ -578,6 +625,86 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
         route = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
                                                           keyid=keyid, profile=profile)
         ret['changes']['new'] = {'routes': route['routes']}
+    return ret
+
+
+def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'name': route_table_name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    # Describe routing table
+    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
+                                                            key=key, keyid=keyid, profile=profile)
+    if not route_table:
+        msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    # Describe all subnets
+    all_subnets = __salt__['boto_vpc.describe_subnets'](region=region, key=key, keyid=keyid, profile=profile)
+    if not all_subnets:
+        msg = 'Could not retrieve subnets.'
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    # Build subnets list with default keys from Salt
+    if not subnets:
+        subnets = []
+    else:
+        subnet_keys = ['name', 'id', 'subnet_id']
+        for subnet in subnets:
+            for s_key in subnet_keys:
+                subnet.setdefault(s_key, None)
+    # Build subnets list which are associated with route table
+    route_subnets = []
+    for assoc in route_table['associations']:
+        for subnet in all_subnets:
+            if subnet['id'] == assoc['subnet_id']:
+                route_subnets.append({'id': assoc['id'], 'subnet_id': assoc['subnet_id'], 'name': subnet['tags']['Name']})
+    # Build list of subnets to be associated
+    to_create = filter(lambda x: not any(set(dict(x).items()) & set(dict(f).items()) for f in route_subnets), subnets)  # pylint: disable=W0141
+    # Update list of subnets to be associated (add subnet_id if missing)
+    for item in to_create:
+        if item['subnet_id'] is None:
+            for subnet in all_subnets:
+                if subnet['tags']['Name'] == item['name']:
+                    item['subnet_id'] = subnet['id']
+    # Build list of subnets to be disassociated
+    to_delete = filter(lambda x: not any(set(x.items()) & set(dict(f).items()) for f in subnets), route_subnets)  # pylint: disable=W0141
+    if to_create or to_delete:
+        if __opts__['test']:
+            msg = 'Subnet associations for route table {0} set to be modified.'.format(route_table_name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        if to_delete:
+            for s in to_delete:
+                for rs in route_subnets:
+                    if rs['subnet_id'] == s['subnet_id']:
+                        r_asc = rs['id']
+                deleted = __salt__['boto_vpc.disassociate_route_table'](r_asc, region, key, keyid, profile)
+                if not deleted:
+                    msg = 'Failed to dissociate {0} from route table {1}.'.format(r_asc, route_table_name)
+                    ret['comment'] = msg
+                    ret['result'] = False
+                ret['comment'] = 'Dissociated subnet {0} from route table {1}.'.format(r_asc, route_table_name)
+        if to_create:
+            for r in to_create:
+                created = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table['id'],
+                                                                     subnet_id=r['subnet_id'], region=region, key=key,
+                                                                     keyid=keyid, profile=profile)
+                if not created:
+                    msg = 'Failed to associate subnet {0} with route table {1}.'.format(r['name'], route_table_name)
+                    ret['comment'] = msg
+                    ret['result'] = False
+                ret['comment'] = 'Assiciated subnet {0} with route table {1}.'.format(r['name'], route_table_name)
+        ret['changes']['old'] = {'subnets_associations': route_table['associations']}
+        new_sub = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
+                                                            keyid=keyid, profile=profile)
+        ret['changes']['new'] = {'subnets_associations': new_sub['associations']}
     return ret
 
 
