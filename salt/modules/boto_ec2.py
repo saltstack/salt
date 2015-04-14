@@ -44,7 +44,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 
 # Import Salt libs
 import salt.ext.six as six
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
