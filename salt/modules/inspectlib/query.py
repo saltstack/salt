@@ -194,13 +194,10 @@ class Query(object):
         :param kwargs:
         :return:
         '''
-        CPU = 'CPU'
-        data = {CPU: dict()}
-        for key, value in __grains__.items():
-            print "KEY:", key
-            if key.startswith("cpu_"):
-                data[CPU][key.replace("cpu_", "")] = value
         sysinfo = SysInfo(__grains__.get("kernel"))
+
+        data = dict()
+        data['cpu'] = sysinfo._get_cpu()
         data['disks'] = sysinfo._get_fs()
         data['memory'] = sysinfo._get_mem()
 
