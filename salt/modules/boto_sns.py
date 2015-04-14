@@ -32,7 +32,7 @@ Connection module for Amazon SNS
 :depends: boto
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint disable=E0602
+#pylint: disable=E0602
 
 from __future__ import absolute_import
 
