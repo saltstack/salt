@@ -202,6 +202,7 @@ class Query(object):
         data['disks'] = sysinfo._get_fs()
         data['memory'] = sysinfo._get_mem()
         data['network'] = sysinfo._get_network()
+        data['os'] = sysinfo._get_os()
 
         return data
 
