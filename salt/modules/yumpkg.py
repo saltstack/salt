@@ -26,7 +26,6 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import shlex_quote as _cmd_quote, range
-# pylint: enable=import-error
 
 try:
     import yum
@@ -34,6 +33,7 @@ try:
 except ImportError:
     from salt.ext.six.moves import configparser
     HAS_YUM = False
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
