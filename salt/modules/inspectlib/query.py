@@ -64,6 +64,18 @@ class SysInfo(object):
         salt.utils.fsutils._verify_run(out)
 
         return salt.utils.fsutils._blkid_output(out['stdout'])
+    def _get_cpu(self):
+        '''
+        Get available CPU information.
+        '''
+        # CPU data in grains is OK-ish, but lscpu is still better in this case
+        out = __salt__['cmd.run_all']("lscpu")
+        salt.utils.fsutils._verify_run(out)
+        data = dict()
+        for descr, value in [elm.split(":", 1) for elm in out['stdout'].split(os.linesep)]:
+            data[descr.strip()] = value.strip()
+
+        return data
 
     def _get_mem(self):
         '''
