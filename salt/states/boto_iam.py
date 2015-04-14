@@ -455,9 +455,9 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
             return ret
         created = __salt__['boto_iam.create_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
         if not created:
-            ret['comment'] = 'IAM user {0} is set to be created.'.format(name)
-            ret['result'] = None
-            # TODO: throw error here
+            ret['comment'] = 'Failed to create IAM user {0}.'.format(name)
+            ret['result'] = False
+            return ret
         ret['changes']['group'] = created
         ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} has been created.'.format(name)])
     else:
