@@ -614,7 +614,7 @@ class Single(object):
         self.id = id_
 
         self.mods = mods if isinstance(mods, dict) else {}
-        args = {'host': host,
+        args = {'host': id_,
                 'user': user,
                 'port': port,
                 'passwd': passwd,
