@@ -866,8 +866,6 @@ def _get_base(**kwargs):
             return profile_match
         return kw_overrides_match
 
-    cntrs = ls_()
-
     template = select('template')
     image = select('image')
     vgname = select('vgname')
@@ -884,7 +882,7 @@ def _get_base(**kwargs):
                 img_tar,
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
-        if not exists(cntrs):
+        if not exists(name):
             create(name, template=template, image=image,
                    vgname=vgname, **kwargs)
             if vgname:
@@ -893,7 +891,7 @@ def _get_base(**kwargs):
         return name
     elif template:
         name = '__base_{0}'.format(template)
-        if name not in cntrs:
+        if not exists(name):
             create(name, template=template, image=image,
                    vgname=vgname, **kwargs)
             if vgname:
