@@ -14,6 +14,10 @@ import hashlib
 import time
 from tornado.testing import AsyncTestCase
 import zmq
+import zmq.eventloop.ioloop
+# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 from contextlib import contextmanager
 from multiprocessing import Process
 
