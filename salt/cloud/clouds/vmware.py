@@ -510,20 +510,20 @@ def _format_instance_info(vm):
         }
 
     vm_full_info = {
+        'id': vm['name'],
+        'image': "{0} (Detected)".format(vm["config.guestFullName"]),
+        'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
+        'state': vm["summary.runtime.powerState"],
+        'private_ips': network_full_info["ip_addresses"] if "ip_addresses" in network_full_info else [],
+        'public_ips': [],
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
-        'guest_full_name': vm["config.guestFullName"],
         'guest_id': vm["config.guestId"],
         'hostname': vm["object"].guest.hostName,
-        'ip_address': vm["object"].guest.ipAddress,
         'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
-        'memory_mb': vm["config.hardware.memoryMB"],
-        'name': vm['name'],
         'net': [network_full_info],
-        'num_cpu': vm["config.hardware.numCPU"],
         'path': vm["config.files.vmPathName"],
-        'status': vm["summary.runtime.powerState"],
         'tools_status': vm["guest.toolsStatus"],
     }
 
@@ -797,7 +797,8 @@ def list_nodes(kwargs=None, call=None):
         "guest.ipAddress",
         "config.guestFullName",
         "config.hardware.numCPU",
-        "config.hardware.memoryMB"
+        "config.hardware.memoryMB",
+        "summary.runtime.powerState"
     ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
@@ -805,10 +806,11 @@ def list_nodes(kwargs=None, call=None):
     for vm in vm_list:
         vm_info = {
             'id': vm["name"],
-            'ip_address': vm["guest.ipAddress"] if "guest.ipAddress" in vm else None,
-            'guest_fullname': vm["config.guestFullName"],
-            'cpus': vm["config.hardware.numCPU"],
-            'ram': vm["config.hardware.memoryMB"],
+            'image': "{0} (Detected)".format(vm["config.guestFullName"]),
+            'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
+            'state': vm["summary.runtime.powerState"],
+            'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
+            'public_ips': []
         }
         ret[vm_info['id']] = vm_info
 
@@ -848,9 +850,26 @@ def list_nodes_full(kwargs=None, call=None):
 
     for vm in vm_list:
         vm_full_info = _format_instance_info(vm)
-        ret[vm_full_info['name']] = vm_full_info
+        ret[vm_full_info['id']] = vm_full_info
 
     return ret
+
+
+def list_nodes_select(call=None):
+    '''
+    Return a list of all VMs and templates that are on the provider, with fields specified
+    in the ``query.selection`` option in ``/etc/salt/cloud``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_select my-vmware-config
+    '''
+
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__.get('query.selection'), call,
+    )
 
 
 def show_instance(name, call=None):
