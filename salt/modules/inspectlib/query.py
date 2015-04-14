@@ -232,6 +232,28 @@ class Query(object):
         return groups
 
 
+    def _get_external_accounts(self, locals):
+        '''
+        Return all known accounts, excluding local accounts.
+        '''
+        users = dict()
+        out = __salt__['cmd.run_all']("passwd -S -a")
+        if out['retcode']:
+            # System does not supports all accounts descriptions, just skipping.
+            return users
+        status = {'L': 'Locked', 'NP': 'No password', 'P': 'Usable password', 'LK': 'Locked'}
+        for data in [elm.strip().split(" ") for elm in out['stdout'].split(os.linesep) if elm.strip()]:
+            if len(data) < 2:
+                continue
+            name, login = data[:2]
+            if name not in locals:
+                users[name] = {
+                    'login': login,
+                    'status': status.get(login, 'N/A')
+                }
+
+        return users
+
     def _identity(self, *args, **kwargs):
         return "This is identity"
 
