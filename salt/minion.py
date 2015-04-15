@@ -82,6 +82,7 @@ import salt.utils.schedule
 import salt.utils.error
 import salt.utils.zeromq
 import salt.defaults.exitcodes
+import salt.cli.daemons
 
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.six import string_types
@@ -334,7 +335,10 @@ class SMinion(object):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.utils = salt.loader.utils(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
+                                                 include_errors=True)
+        self.proxy = salt.loader.proxy(self.opts, None)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -736,7 +740,6 @@ class Minion(MinionBase):
         # store your hexid to subscribe to zmq, hash since zmq filters are prefix
         # matches this way we can avoid collisions
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
-
         if 'proxy' in self.opts['pillar']:
             log.debug('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
                                                                                  self.opts['pillar']['proxy']))
@@ -746,7 +749,10 @@ class Minion(MinionBase):
                 if pid > 0:
                     continue
                 else:
-                    proxyminion = salt.ProxyMinion()
+                    reinit_crypto()
+                    log.debug('---------- making object')
+                    proxyminion = salt.cli.daemons.ProxyMinion()
+                    log.debug('---------- object made')
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
@@ -2897,12 +2903,15 @@ class ProxyMinion(Minion):
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
     '''
-    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
 
         self._running = None
+        self.win_proc = []
+        self.loaded_base_name = loaded_base_name
+
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
             try:
@@ -2922,11 +2931,21 @@ class ProxyMinion(Minion):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        # print opts['proxymodule']
+        opts['grains'] = salt.loader.grains(opts)
+        opts['master'] = self.eval_master(opts,
+                                          timeout,
+                                          safe)
+
         fq_proxyname = 'proxy.'+opts['proxy']['proxytype']
+        log.debug('------------------ proxy module --------')
+        log.debug('{}'.format(opts['proxy']))
         self.proxymodule = salt.loader.proxy(opts, fq_proxyname)
-        opts['proxyobject'] = self.proxymodule[opts['proxy']['proxytype']+'.Proxyconn'](opts['proxy'])
-        opts['id'] = opts['proxyobject'].id(opts)
+        log.debug('------------------ proxy module init --------')
+        log.debug('{}'.format(self.proxymodule.keys()))
+        log.debug('{0}'.format(self.proxymodule))
+        # log.debug('{0}'.format(self.proxymodule['init']))
+        opts['proxymodule'] = self.proxymodule
+        opts['id'] = opts['proxymodule']['junos.id'](opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
@@ -2947,7 +2966,26 @@ class ProxyMinion(Minion):
             self.opts,
             self.functions,
             self.returners)
+
+        # add default scheduling jobs to the minions scheduler
+        if 'mine.update' in self.functions:
+            log.info('Added mine.update to scheduler')
+            self.schedule.add_job({
+                '__mine_interval':
+                    {
+                        'function': 'mine.update',
+                        'minutes': opts['mine_interval'],
+                        'jid_include': True,
+                        'maxrunning': 2
+                    }
+            })
+
         self.grains_cache = self.opts['grains']
+
+        # store your hexid to subscribe to zmq, hash since zmq filters are prefix
+        # matches this way we can avoid collisions
+        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
+
         # self._running = True
 
     def _prep_mod_opts(self):
