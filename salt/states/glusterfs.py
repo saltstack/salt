@@ -217,18 +217,18 @@ def add_volume_bricks(name, bricks):
 
     .. code-block:: yaml
 
-    myvolume:
-      glusterfs.add_volume_bricks:
-        - bricks:
-            - host1:/srv/gluster/drive1
-            - host2:/srv/gluster/drive2
+        myvolume:
+          glusterfs.add_volume_bricks:
+            - bricks:
+                - host1:/srv/gluster/drive1
+                - host2:/srv/gluster/drive2
 
-    Replicated Volume:
-      glusterfs.add_volume_bricks:
-        - name: volume2
-        - bricks:
-          - host1:/srv/gluster/drive2
-          - host2:/srv/gluster/drive3
+        Replicated Volume:
+          glusterfs.add_volume_bricks:
+            - name: volume2
+            - bricks:
+              - host1:/srv/gluster/drive2
+              - host2:/srv/gluster/drive3
     '''
     ret = {'name': name,
        'changes': {},
