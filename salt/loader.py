@@ -1034,8 +1034,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # containing the names of the proxy types that the module supports.
         if not hasattr(mod, 'render') and 'proxy' in self.opts:
             if not hasattr(mod, '__proxyenabled__') or \
-                    self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
-                    '*' in mod.__proxyenabled__:
+                    (self.opts['proxy']['proxytype'] not in mod.__proxyenabled__ and
+                        '*' not in mod.__proxyenabled__):
                 err_string = 'not a proxy_minion enabled module'
                 self.missing_modules[module_name] = err_string
                 self.missing_modules[name] = err_string
