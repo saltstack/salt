@@ -2073,7 +2073,7 @@ def apply_master_config(overrides=None, defaults=None):
     if opts.get('id') is None:
         opts['id'], using_ip_for_id = get_id(
                 opts,
-                minion_id=None)
+                cache_minion_id=None)
         append_master = True
 
     # it does not make sense to append a domain to an IP based id
