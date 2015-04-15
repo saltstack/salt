@@ -59,9 +59,9 @@ def wrap_tmpl_func(render_str):
         if 'salt' in kws:
             if 'cmd.run' in kws['salt'] and 'cmd.shell' in kws['salt']:
                 kws['salt']['cmd.run'] = kws['salt']['cmd.shell']
-            if 'run' in kws['salt'].get('cmd', {}) \
-                    and 'shell' in kws['salt'].get('cmd', {}):
-                kws['salt']['cmd']['run'] = kws['salt']['cmd']['shell']
+            if ('cmd' in kws['salt'] and hasattr(kws['salt']['cmd'], 'run')
+                    and hasattr(kws['salt']['cmd'], 'shell')):
+                setattr(kws['salt']['cmd'], 'run', kws['salt']['cmd'].shell)
 
         # We want explicit context to overwrite the **kws
         kws.update(context)
