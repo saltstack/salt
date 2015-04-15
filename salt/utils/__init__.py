@@ -1532,6 +1532,19 @@ def is_true(value=None):
         return bool(value)
 
 
+def exactly_n(l, n=1):
+    '''
+    Tests that exactly N items in an iterable are "truthy" (neither None,
+    False, nor 0).
+    '''
+    i = iter(l)
+    return all(any(i) for j in range(n)) and not any(i)
+
+
+def exactly_one(l):
+    return exactly_n(l)
+
+
 def rm_rf(path):
     '''
     Platform-independent recursive delete. Includes code from
