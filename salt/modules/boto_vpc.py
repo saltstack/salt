@@ -119,8 +119,9 @@ def _get_profile(service, region, key, keyid, profile):
 
 def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     '''
-    Check whether a VPC with the given name or id exists and log
-    raise an appropriate message. Returns the vpc_id or None.
+    Check whether a VPC with the given name or id exists. 
+    Returns the vpc_id or None. Raises SaltInvocationError if
+    both vpc_id and vpc_name are None.
     '''
 
     if vpc_name:
