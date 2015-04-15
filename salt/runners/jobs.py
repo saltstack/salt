@@ -10,6 +10,7 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import os
+import copy
 
 # Import salt libs
 import salt.client
@@ -221,7 +222,7 @@ def list_jobs(ext_source=None,
                     log.info('The search_metadata parameter must be specified'
                              ' as a dictionary.  Ignoring.')
     else:
-        mret = ret.copy()
+        mret = copy.copy(ret)
 
     if search_target:
         _mret = {}
