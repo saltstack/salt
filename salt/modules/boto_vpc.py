@@ -58,10 +58,10 @@ log = logging.getLogger(__name__)
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
-    #pylint: disable=import-error
+    #pylint: disable=unused-import
     import boto
     import boto.vpc
-    #pylint: enable=import-error
+    #pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:

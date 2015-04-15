@@ -40,7 +40,7 @@ import json
 log = logging.getLogger(__name__)
 
 # Import third party libs
-# pylint: disable=import-error
+# pylint: disable=unused-import
 from salt.ext.six import string_types
 from salt.ext.six.moves.urllib.parse import unquote as _unquote  # pylint: disable=no-name-in-module
 try:
@@ -50,7 +50,7 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-# pylint: enable=import-error
+# pylint: enable=unused-import
 
 # Import salt libs
 import salt.utils.odict as odict
