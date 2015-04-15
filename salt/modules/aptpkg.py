@@ -1617,23 +1617,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
             mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
 
-    # if all comps aren't part of the disable
-    # match, it is important we keep the comps
-    # not destined to be disabled/enabled in
-    # the original state
-    if ('disabled' in kwargs and
-            mod_source.disabled != kwargs['disabled']):
-
-        s_comps = set(mod_source.comps)
-        r_comps = set(repo_comps)
-        if s_comps.symmetric_difference(r_comps):
-            new_source = sourceslist.SourceEntry(source.line)
-            new_source.file = source.file
-            new_source.comps = list(r_comps.difference(s_comps))
-            source.comps = list(s_comps.difference(r_comps))
-            sources.insert(sources.index(source), new_source)
-            sources.save()
-
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
