@@ -33,6 +33,15 @@ def __init__(opts):
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
 
+def conn():
+    return thisproxy['conn']
+
+def facts():
+    return thisproxy['conn'].facts
+
+def refresh():
+    return thisproxy['conn'].refresh()
+
 def proxytype():
     '''
     Returns the name of this proxy
