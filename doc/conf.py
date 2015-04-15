@@ -46,6 +46,7 @@ MOCK_MODULES = [
     'Crypto.Hash',
     'Crypto.PublicKey',
     'Crypto.Random',
+    'Crypto.Signature',
     'M2Crypto',
     'msgpack',
     'yaml',
@@ -54,6 +55,7 @@ MOCK_MODULES = [
     'yaml.scanner',
     'zmq',
     'zmq.eventloop',
+    'zmq.eventloop.ioloop',
 
     # third-party libs for cloud modules
     'libcloud',
@@ -67,6 +69,7 @@ MOCK_MODULES = [
     'libcloud.loadbalancer.providers',
     'libcloud.common',
     'libcloud.common.google',
+    'linodepy',
 
     # third-party libs for netapi modules
     'cherrypy',
@@ -89,22 +92,27 @@ MOCK_MODULES = [
     'ws4py.websocket',
 
     # modules, renderers, states, returners, et al
+    'ClusterShell',
+    'ClusterShell.NodeSet',
     'django',
+    'fsutils',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
+    'nagios_json',
     'psutil',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
     'redis',
     'requests',
+    'requests.exceptions',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
     'yum',
     'OpenSSL',
-    'zfs'
+    'zfs',
 ]
 
 for mod_name in MOCK_MODULES:
