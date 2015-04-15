@@ -421,7 +421,7 @@ def _wait_for_ip(vm, max_wait_minute):
     time_counter = 0
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
-        log.info("Waiting to get IP information [{0} s]".format(time_counter))
+        log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm.name, time_counter))
         for net in vm.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
@@ -433,10 +433,10 @@ def _wait_for_ip(vm, max_wait_minute):
     return False
 
 
-def _wait_for_task(task, task_type, sleep_seconds=1, log_level='debug'):
+def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
     time_counter = 0
     while task.info.state == 'running':
-        message = "Waiting for {0} task to finish [{1} s]".format(task_type, time_counter)
+        message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
         if log_level=='info':
             log.info(message)
         else:
@@ -444,7 +444,7 @@ def _wait_for_task(task, task_type, sleep_seconds=1, log_level='debug'):
         time.sleep(int(sleep_seconds))
         time_counter += int(sleep_seconds)
     if task.info.state == 'success':
-        message = "Successfully completed {0} task in {1} seconds".format(task_type, time_counter)
+        message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
         if log_level=='info':
             log.info(message)
         else:
@@ -1210,12 +1210,12 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    _wait_for_task(task, "power off")
+                    _wait_for_task(task, name, "power off")
                 except Exception as exc:
                     log.error('Could not destroy VM {0}: {1}'.format(name, exc))
                     return 'failed to destroy'
             task = vm["object"].Destroy_Task()
-            _wait_for_task(task, "destroy")
+            _wait_for_task(task, name, "destroy")
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1406,7 +1406,7 @@ def create(vm_):
             )
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-            _wait_for_task(task, "clone", 5, 'info')
+            _wait_for_task(task, vm_name, "clone", 5, 'info')
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
