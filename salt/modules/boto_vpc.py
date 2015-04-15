@@ -1927,4 +1927,3 @@ def _key_iter(key, keys, item):
                 element[r_key] = getattr(r_item, r_key)
         elements_list.append(element)
     return elements_list
-
