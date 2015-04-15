@@ -513,7 +513,7 @@ def _format_instance_info(vm):
         'id': vm['name'],
         'image': "{0} (Detected)".format(vm["config.guestFullName"]),
         'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
-        'state': vm["summary.runtime.powerState"],
+        'state': str(vm["summary.runtime.powerState"]),
         'private_ips': network_full_info["ip_addresses"] if "ip_addresses" in network_full_info else [],
         'public_ips': [],
         'devices': device_full_info,
@@ -524,7 +524,7 @@ def _format_instance_info(vm):
         'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
         'net': [network_full_info],
         'path': vm["config.files.vmPathName"],
-        'tools_status': vm["guest.toolsStatus"],
+        'tools_status': str(vm["guest.toolsStatus"]),
     }
 
     return vm_full_info
@@ -808,7 +808,7 @@ def list_nodes(kwargs=None, call=None):
             'id': vm["name"],
             'image': "{0} (Detected)".format(vm["config.guestFullName"]),
             'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
-            'state': vm["summary.runtime.powerState"],
+            'state': str(vm["summary.runtime.powerState"]),
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
         }
