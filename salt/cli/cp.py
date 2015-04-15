@@ -104,4 +104,5 @@ class SaltCP(object):
 
         salt.output.display_output(
                 ret,
+                self.opts.get('output', 'nested'),
                 self.opts)
