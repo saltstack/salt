@@ -13,6 +13,7 @@ therefore, must be accessed via the loader or from the __utils__ dict.
 from __future__ import absolute_import
 import hashlib
 import logging
+import sys
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
 
@@ -167,17 +168,20 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
     try:
         conn = svc_mod.connect_to_region(region, aws_access_key_id=keyid,
                                          aws_secret_access_key=key)
+        if conn is None:
+            raise SaltInvocationError('Region "{0}" is not '
+                                      'valid.'.format(region))
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError('No authentication credentials found when '
                                   'attempting to make boto {0} connection to '
                                   'region "{1}".'.format(service, region))
     except BotoServerError as exc:
-        raise get_exception(exc)
+        raise BotoExecutionError(exc)
     __context__[cxkey] = conn
     return conn
 
 
-def get_connection_func(service):
+def get_connection_func(service, module=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
@@ -186,31 +190,41 @@ def get_connection_func(service):
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()
     '''
-    return partial(get_connection, service)
+    return partial(get_connection, service, module=module)
 
 
-def get_exception(e):
+class BotoExecutionError(CommandExecutionError):
+    def __init__(self, boto_exception):
+        self.status = boto_exception.status
+        self.reason = boto_exception.reason
+
+        try:
+            body = boto_exception.body or ''
+            error = ET.fromstring(body).find('Errors').find('Error')
+            self.error = {'code': error.find('Code').text,
+                          'message': error.find('Message').text}
+        except (AttributeError, ET.ParseError):
+            self.error = None
+
+        status = self.status or ''
+        reason = self.reason or ''
+        error = self.error or {}
+
+        if error:
+            message = '{0} {1}: {2}'.format(status, reason, error.get('message'))
+        else:
+            message = '{0} {1}'.format(status, reason)
+        super(BotoExecutionError, self).__init__(message)
+
+
+def assign_funcs(modname, service, module=None):
     '''
-    Extract the message from a boto exception and return a
-    CommandExecutionError with the original reason and message.
+    Assign _get_conn and _cache_id functions to the named module.
 
     .. code-block:: python
 
-        raise __utils__['boto.get_exception'](e)
+        _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
-
-    status = e.status or ''
-    reason = e.reason or ''
-    body = e.body or ''
-
-    try:
-        message = ET.fromstring(body).find('Errors').find('Error').find('Message').text
-    except (AttributeError, ET.ParseError):
-        message = ''
-
-    if message:
-        message = '{0} {1}: {2}'.format(status, reason, message)
-    else:
-        message = '{0} {1}'.format(status, reason)
-
-    return CommandExecutionError(message)
+    mod = sys.modules[modname]
+    setattr(mod, '_get_conn', get_connection_func(service, module=module))
+    setattr(mod, '_cache_id', cache_id_func(service))

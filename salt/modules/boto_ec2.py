@@ -34,10 +34,11 @@ Connection module for Amazon EC2
 :depends: boto
 
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
-import hashlib
 import logging
 import time
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
@@ -48,10 +49,10 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
-    # pylint: disable=import-error
+    # pylint: disable=unused-import
     import boto
     import boto.ec2
-    # pylint: enable=import-error
+    # pylint: enable=unused-import
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -74,6 +75,7 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
+        __utils__['boto.assign_funcs'](__name__, 'ec2')
         return True
 
 
@@ -86,9 +88,7 @@ def get_zones(region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_ec2.get_zones
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     return [z.name for z in conn.get_all_zones()]
 
@@ -107,9 +107,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         filter_parameters = {'filters': {}}
@@ -179,10 +177,6 @@ def get_id(name=None, tags=None, region=None, key=None,
         salt myminion boto_ec2.get_id myinstance
 
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
-
     instance_ids = find_instances(name=name, tags=tags, region=region, key=key,
                                   keyid=keyid, profile=profile)
     if instance_ids:
@@ -211,10 +205,6 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
 
         salt myminion boto_ec2.exists myinstance
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
     instances = find_instances(instance_id=instance_id, name=name, tags=tags)
     if instances:
         log.info('instance exists.')
@@ -241,9 +231,7 @@ def run(image_id, name=None, tags=None, instance_type='m1.small',
     '''
     #TODO: support multi-instance reservations
 
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     reservation = conn.run_instances(image_id, instance_type=instance_type,
                                      key_name=key_name,
@@ -279,9 +267,7 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_ec2.get_key mykey
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
         key = conn.get_key_pair(key_name)
@@ -303,9 +289,8 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
 
         salt myminion boto_ec2.create mykey /root/
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         key = conn.create_key_pair(key_name)
         log.debug("the key to return is : {0}".format(key))
@@ -330,9 +315,8 @@ def import_key(key_name, public_key_material, region=None, key=None,
 
         salt myminion boto_ec2.import mykey publickey
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         key = conn.import_key_pair(key_name, public_key_material)
         log.debug("the key to return is : {0}".format(key))
@@ -349,9 +333,8 @@ def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_ec2.delete_key mykey
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         key = conn.delete_key_pair(key_name)
         log.debug("the key to return is : {0}".format(key))
@@ -376,9 +359,8 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
 
         salt myminion boto_ec2.get_keys
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         keys = conn.get_all_key_pairs(keynames, filters)
         log.debug("the key to return is : {0}".format(keys))
@@ -416,9 +398,8 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
         * ebsOptimized
         * sriovNetSupport
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     attribute_list = ['instanceType', 'kernel', 'ramdisk', 'userData', 'disableApiTermination',
                       'instanceInitiatedShutdownBehavior', 'rootDeviceName', 'blockDeviceMapping', 'productCodes',
                       'sourceDestCheck', 'groupSet', 'ebsOptimized', 'sriovNetSupport']
@@ -470,9 +451,8 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
         * ebsOptimized
         * sriovNetSupport
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     attribute_list = ['instanceType', 'kernel', 'ramdisk', 'userData', 'disableApiTermination',
                       'instanceInitiatedShutdownBehavior', 'rootDeviceName', 'blockDeviceMapping', 'productCodes',
                       'sourceDestCheck', 'groupSet', 'ebsOptimized', 'sriovNetSupport']
@@ -495,47 +475,3 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
     except boto.exception.BotoServerError as exc:
         log.error(exc)
         return False
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to ec2.
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('ec2.region'):
-        region = __salt__['config.option']('ec2.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('ec2.key'):
-        key = __salt__['config.option']('ec2.key')
-    if not keyid and __salt__['config.option']('ec2.keyid'):
-        keyid = __salt__['config.option']('ec2.keyid')
-
-    # avoid repeatedly creating new connections
-    if keyid:
-        cxkey = 'boto_ec2:' + hashlib.md5(region + keyid + key).hexdigest()
-    else:
-        cxkey = 'boto_ec2:' + region
-
-    if cxkey in __context__:
-        return __context__[cxkey]
-
-    try:
-        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto ec2 connection.')
-        return None
-    __context__[cxkey] = conn
-    return conn
