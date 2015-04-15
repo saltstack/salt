@@ -8,7 +8,6 @@ Connection module for Amazon VPC
     When boto raises a BotoServerError, this module now raises BotoExecutionError
     (subclass of CommandExecutionError) instead of returning False.
 
-
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
