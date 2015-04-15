@@ -76,7 +76,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 integration.TMP, 'cp_{0}_testfile'.format(idx)
             )
 
-            ret = self.run_cp('{0} {1} {2}'.format(
+            ret = self.run_cp('--out pprint {0} {1} {2}'.format(
                 pipes.quote(minion),
                 pipes.quote(testfile),
                 pipes.quote(minion_testfile)
@@ -138,7 +138,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} \'*\' foo {0}/foo'.format(
+            '--out pprint --config-dir {0} \'*\' foo {0}/foo'.format(
                 config_dir
             ),
             catch_stderr=True,
