@@ -5,12 +5,16 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import salt.utils
+import new
+import sys
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
     MagicMock,
     patch,
+    Mock,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -19,9 +23,16 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+# wmi modules are platform specific...
+wmi = new.module('wmi')
+sys.modules['wmi'] = wmi
+
+if NO_MOCK is False:
+    WMI = Mock()
+    wmi.WMI = Mock(return_value=WMI)
+
 # Import Salt Libs
 from salt.modules import win_network
-import salt.utils
 
 win_network.__salt__ = {}
 
@@ -33,21 +44,7 @@ class Mockwmi(object):
     NetConnectionID = 'Ethernet'
 
     def __init__(self):
-        self.netenabled = None
-
-    @staticmethod
-    def WMI():
-        '''
-        Mock WMI method
-        '''
-        return Mockwmi()
-
-    def Win32_NetworkAdapter(self, NetEnabled=True):
-        '''
-        Mock Win32_NetworkAdapter method
-        '''
-        self.netenabled = NetEnabled
-        return [Mockwmi()]
+        pass
 
 
 class Mockwinapi(object):
@@ -57,15 +54,19 @@ class Mockwinapi(object):
     def __init__(self):
         pass
 
-    @staticmethod
-    def Com():
+    class winapi(object):
         '''
-        Mock Com method
+        Mock winapi class
         '''
-        return True
+        def __init__(self):
+            pass
 
-win_network.salt.utils.winapi = Mockwinapi
-win_network.wmi = Mockwmi
+        @staticmethod
+        def Com():
+            '''
+            Mock Com method
+            '''
+            return True
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -158,12 +159,17 @@ class WinNetworkTestCase(TestCase):
 
     # 'interfaces_names' function tests: 1
 
+    @patch('salt.utils', Mockwinapi)
     def test_interfaces_names(self):
         '''
         Test if it return a list of all the interfaces names
         '''
+        WMI.Win32_NetworkAdapter = MagicMock(return_value=Mockwmi)
         with patch('salt.utils.winapi.Com', MagicMock()):
-            self.assertListEqual(win_network.interfaces_names(), ['Ethernet'])
+            with patch.object(WMI, 'Win32_NetworkAdapter',
+                              return_value=[Mockwmi()]):
+                self.assertListEqual(win_network.interfaces_names(),
+                                     ['Ethernet'])
 
     # 'interfaces' function tests: 1
 
