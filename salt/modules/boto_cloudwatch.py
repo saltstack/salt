@@ -33,6 +33,9 @@ Connection module for Amazon CloudWatch
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -64,6 +67,8 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
+                                   module='ec2.cloudwatch')
     return True
 
 
@@ -75,9 +80,8 @@ def get_alarm(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_cloudwatch.get_alarm myalarm region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     alarms = conn.describe_alarms(alarm_names=[name])
     if len(alarms) == 0:
         return None
@@ -147,9 +151,8 @@ def get_all_alarms(region=None, prefix=None, key=None, keyid=None,
 
         salt myminion boto_cloudwatch.get_all_alarms region=us-east-1 --out=txt
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     alarms = conn.describe_alarms()
     results = odict.OrderedDict()
     for alarm in alarms:
@@ -227,9 +230,8 @@ def create_or_update_alarm(
     )
     ok_actions = convert_to_arn(ok_actions, region, key, keyid, profile)
 
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     alarm = boto.ec2.cloudwatch.alarm.MetricAlarm(
         connection=connection,
         name=name,
@@ -285,9 +287,8 @@ def delete_alarm(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_cloudwatch.delete_alarm myalarm region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     conn.delete_alarms([name])
     log.info('Deleted alarm {0}'.format(name))
     return True
@@ -307,38 +308,3 @@ def _metric_alarm_to_dict(alarm):
         if hasattr(alarm, f):
             d[f] = getattr(alarm, f)
     return d
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to cloudwatch.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('cloudwatch_alarm.region'):
-        region = __salt__['config.option']('cloudwatch_alarm.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('cloudwatch_alarm.key'):
-        key = __salt__['config.option']('cloudwatch_alarm.key')
-    if not keyid and __salt__['config.option']('cloudwatch_alarm.keyid'):
-        keyid = __salt__['config.option']('cloudwatch_alarm.keyid')
-
-    try:
-        conn = boto.ec2.cloudwatch.connect_to_region(
-            region, aws_access_key_id=keyid, aws_secret_access_key=key
-        )
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto cloudwatch_alarm connection.')
-        return None
-    return conn

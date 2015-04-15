@@ -223,7 +223,6 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
     The zeromq behavior for the workers
     '''
     Ioinits = {'opts': '.salt.opts',
-               'mkey': '.salt.var.zmq.master_key',
                'key': '.salt.access_keys',
                'aes': '.salt.var.zmq.aes'}
 
@@ -241,10 +240,9 @@ class SaltZmqWorker(ioflo.base.deeding.Deed):
         if not self.created:
             crypticle = salt.crypt.Crypticle(self.opts.value, self.aes.value)
             self.worker = salt.master.FloMWorker(
-                    self.opts.value,
-                    self.mkey.value,
-                    self.key.value,
-                    crypticle)
+                self.opts.value,
+                self.key.value,
+            )
             self.worker.setup()
             self.created = True
             log.info('Started ZMQ worker')

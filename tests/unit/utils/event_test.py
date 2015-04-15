@@ -12,7 +12,12 @@ from __future__ import absolute_import
 import os
 import hashlib
 import time
+from tornado.testing import AsyncTestCase
 import zmq
+import zmq.eventloop.ioloop
+# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 from contextlib import contextmanager
 from multiprocessing import Process
 
@@ -310,6 +315,33 @@ class TestSaltEvent(TestCase):
 
             evt = me.get_event(tag='fire_master')
             self.assertGotEvent(evt, {'data': data, 'tag': 'test_master', 'events': None, 'pretag': None})
+
+
+class TestAsyncEventPublisher(AsyncTestCase):
+    def get_new_ioloop(self):
+        return zmq.eventloop.ioloop.ZMQIOLoop()
+
+    def setUp(self):
+        super(TestAsyncEventPublisher, self).setUp()
+        self.publisher = event.AsyncEventPublisher(
+            {'sock_dir': SOCK_DIR},
+            self._handle_publish,
+            self.io_loop,
+        )
+
+    def _handle_publish(self, raw):
+        self.tag, self.data = event.SaltEvent.unpack(raw)
+        self.stop()
+
+    def test_event_subscription(self):
+        '''Test a single event is received'''
+        me = event.MinionEvent({'sock_dir': SOCK_DIR})
+        me.fire_event({'data': 'foo1'}, 'evt1')
+        self.wait()
+        evt1 = me.get_event(tag='evt1')
+        self.assertEqual(self.tag, 'evt1')
+        self.data.pop('_stamp')  # drop the stamp
+        self.assertEqual(self.data, {'data': 'foo1'})
 
 if __name__ == '__main__':
     from integration import run_tests

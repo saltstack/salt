@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 
 def get_key(opts):
-    if opts['transport'] == 'zeromq':
+    if opts['transport'] in ('zeromq', 'tcp'):
         return Key(opts)
     else:
         return RaetKey(opts)
@@ -49,7 +49,7 @@ class KeyCLI(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        if self.opts['transport'] == 'zeromq':
+        if self.opts['transport'] in ('zeromq', 'tcp'):
             self.key = Key(opts)
         else:
             self.key = RaetKey(opts)
@@ -650,7 +650,7 @@ class Key(object):
         # We have to differentiate between RaetKey._check_minions_directories
         # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
         # havd an additional 'denied' state.
-        if self.opts['transport'] == 'zeromq':
+        if self.opts['transport'] in ('zeromq', 'tcp'):
             key_dirs = self._check_minions_directories()
         else:
             key_dirs = self._check_minions_directories()

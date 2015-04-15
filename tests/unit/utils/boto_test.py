@@ -131,6 +131,11 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
         salt.utils.boto.cache_id(service, resource_name, resource_id=resource_id, invalidate=True)
         self.assertEqual(salt.utils.boto.cache_id(service, resource_name), None)
 
+    def test_partial(self):
+        cache_id = salt.utils.boto.cache_id_func(service)
+        cache_id(resource_name, resource_id=resource_id)
+        self.assertEqual(cache_id(resource_name), resource_id)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -161,30 +166,36 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     def test_get_conn_error_raises_command_execution_error(self):
         with patch('boto.{0}.connect_to_region'.format(service),
                    side_effect=BotoServerError(400, 'Mocked error', body=error_body)):
-            with self.assertRaises(CommandExecutionError):
+            with self.assertRaises(salt.utils.boto.BotoExecutionError):
                 salt.utils.boto.get_connection(service)
+
+    @mock_ec2
+    def test_partial(self):
+        get_conn = salt.utils.boto.get_connection_func(service)
+        conn = get_conn(**conn_parameters)
+        self.assertTrue(conn in salt.utils.boto.__context__.values())
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
-class BotoUtilsGetExceptionTestCase(BotoUtilsTestCaseBase):
-    def test_get_exception_type_and_message(self):
+class BotoUtilsBotoExecutionErrorTestCase(BotoUtilsTestCaseBase):
+    def test_exception_type_and_message(self):
         e = BotoServerError('400', 'Mocked error', body=error_body)
-        r = salt.utils.boto.get_exception(e)
+        r = salt.utils.boto.BotoExecutionError(e)
         self.assertTrue(isinstance(r, CommandExecutionError))
         self.assertEqual(r.message, '400 Mocked error: Error message')
 
-    def test_get_exception_message_with_no_body(self):
+    def test_exception_message_with_no_body(self):
         e = BotoServerError('400', 'Mocked error')
-        r = salt.utils.boto.get_exception(e)
+        r = salt.utils.boto.BotoExecutionError(e)
         self.assertTrue(isinstance(r, CommandExecutionError))
         self.assertEqual(r.message, '400 Mocked error')
 
-    def test_get_exception_message_with_no_error_in_body(self):
+    def test_exception_message_with_no_error_in_body(self):
         e = BotoServerError('400', 'Mocked error', body=no_error_body)
-        r = salt.utils.boto.get_exception(e)
+        r = salt.utils.boto.BotoExecutionError(e)
         self.assertTrue(isinstance(r, CommandExecutionError))
         self.assertEqual(r.message, '400 Mocked error')
 
