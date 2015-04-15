@@ -116,7 +116,7 @@ class MockState(object):
             data = data
             data1 = data1
             data2 = data2
-            return [{"ABC", ""}]
+            return {'': 'ABC'}
 
         @staticmethod
         def call_chunks(data):
