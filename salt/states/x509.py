@@ -414,12 +414,13 @@ def certificate_managed(name,
         new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
-            try:
-                new_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
-                    re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
-                        new_comp['X509v3 Extensions']['authorityKeyIdentifier']))
-            except KeyError:
-                pass
+            if 'signing_cert' not in kwargs:
+                try:
+                    new_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
+                        re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
+                            new_comp['X509v3 Extensions']['authorityKeyIdentifier']))
+                except KeyError:
+                    pass
         new_comp.pop('Not Before')
         new_comp.pop('Not After')
         new_comp.pop('MD5 Finger Print')
