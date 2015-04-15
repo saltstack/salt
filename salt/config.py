@@ -1958,7 +1958,7 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None and not minion_id:
+    if opts['id'] is None:
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 minion_id=minion_id)
