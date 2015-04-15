@@ -1682,6 +1682,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
 
 class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
+                                            OutputOptionsMixIn,
                                             ConfigDirMixIn,
                                             MergeConfigMixIn,
                                             TimeoutMixIn,
