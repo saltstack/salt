@@ -119,7 +119,7 @@ def _get_profile(service, region, key, keyid, profile):
 
 def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     '''
-    Check whether a VPC with the given name or id exists. 
+    Check whether a VPC with the given name or id exists.
     Returns the vpc_id or None. Raises SaltInvocationError if
     both vpc_id and vpc_name are None.
     '''
@@ -930,8 +930,6 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         if e.error and e.error['code'].endswith('.NotFound'):
             return False
         raise e
-
-
 
 
 def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id, region=None, key=None, keyid=None, profile=None):
@@ -1917,6 +1915,7 @@ def _maybe_set_dns(conn, vpcid, dns_support, dns_hostnames):
     if dns_hostnames:
         conn.modify_vpc_attribute(vpc_id=vpcid, enable_dns_hostnames=dns_hostnames)
         log.debug('DNS hostnames was set to: {0} on vpc {1}'.format(dns_hostnames, vpcid))
+
 
 def _key_iter(key, keys, item):
     elements_list = []
