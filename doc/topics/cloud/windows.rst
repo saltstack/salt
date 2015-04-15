@@ -32,6 +32,14 @@ channels:
 
 .. __: http://software.opensuse.org/package/winexe
 
+Optionally WinRM can be used instead of `winexe` if the python module `pywinrm`
+is available and WinRM is supported on the target Windows version. Information
+on pywinrm can be found at the project home:
+
+* `pywinrm project home`__
+
+.. __: https://github.com/diyan/pywinrm
+
 Additionally, a copy of the Salt Minion Windows installer must be present on
 the system on which Salt Cloud is running. This installer may be downloaded
 from saltstack.com:
@@ -68,6 +76,7 @@ profile configuration as `userdata_file`. For instance:
     userdata_file: /etc/salt/windows-firewall.ps1
 
 
+
 Configuration
 =============
 Configuration is set as usual, with some extra configuration settings. The
@@ -92,6 +101,8 @@ Setting the installer in ``/etc/salt/cloud.providers``:
 
 The default Windows user is `Administrator`, and the default Windows password
 is blank.
+
+If WinRM is to be used ``use_winrm`` needs to be set to `True`.
 
 
 Auto-Generated Passwords on EC2
