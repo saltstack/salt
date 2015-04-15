@@ -56,6 +56,37 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
 )
 
 
+def static_loader(
+        opts,
+        ext_type,
+        tag,
+        pack=None,
+        int_type=None,
+        ext_dirs=True,
+        ext_type_dirs=None,
+        base_path=None,
+        filter_name=None,
+        ):
+    funcs = LazyLoader(_module_dirs(opts,
+                                  ext_type,
+                                  tag,
+                                  int_type,
+                                  ext_dirs,
+                                  ext_type_dirs,
+                                  base_path),
+                     opts,
+                     tag=tag,
+                     pack=pack,
+                     )
+    ret = {}
+    funcs._load_all()
+    if filter_name:
+        funcs = FilterDictWrapper(funcs, filter_name)
+    for key in funcs:
+        ret[key] = funcs[key]
+    return ret
+
+
 def _module_dirs(
         opts,
         ext_type,
