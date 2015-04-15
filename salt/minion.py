@@ -2907,7 +2907,6 @@ class ProxyMinion(Minion):
         '''
         Pass in the options dict
         '''
-
         self._running = None
         self.win_proc = []
         self.loaded_base_name = loaded_base_name
@@ -2931,7 +2930,6 @@ class ProxyMinion(Minion):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        opts['grains'] = salt.loader.grains(opts)
         opts['master'] = self.eval_master(opts,
                                           timeout,
                                           safe)
@@ -2945,6 +2943,7 @@ class ProxyMinion(Minion):
         log.debug('{0}'.format(self.proxymodule))
         # log.debug('{0}'.format(self.proxymodule['init']))
         opts['proxymodule'] = self.proxymodule
+        opts['grains'] = salt.loader.grains(opts)
         opts['id'] = opts['proxymodule']['junos.id'](opts)
         opts.update(resolve_dns(opts))
         self.opts = opts

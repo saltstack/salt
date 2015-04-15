@@ -415,8 +415,8 @@ class ProxyMinion(parsers.MinionOptionParser):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        if 'proxy' in self.minion.opts:
-            self.minion.opts['proxyobject'].shutdown(self.minion.opts)
+        if 'proxymodule' in self.minion.opts:
+            self.minion.opts['proxymodule']['shutdown'](self.minion.opts)
         logger.info('The proxy minion is shut down')
 
 

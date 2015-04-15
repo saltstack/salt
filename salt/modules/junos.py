@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import logging
 
 # Juniper interface libraries
-# https://github.com/jeremyschulman/py-junos-eznc
+# https://github.com/Juniper/py-junos-eznc
 
 
 try:
@@ -37,7 +37,7 @@ __proxyenabled__ = ['junos']
 def __virtual__():
     '''
     We need the Junos adapter libraries for this
-    module to work.  We also need a proxyobject object
+    module to work.  We also need a proxymodule entry in __opts__
     in the opts dictionary
     '''
     if HAS_JUNOS and 'proxy' in __opts__:
@@ -52,13 +52,13 @@ def facts_refresh():
     if the device configuration is changed by some other actor.
     '''
 
-    return __opts__['proxyobject'].refresh
+    return __opts__['proxymodule']['junos.conn']().refresh()
 
 
 def set_hostname(hostname=None, commit_change=True):
 
     ret = dict()
-    conn = __opts__['proxyobject']
+    conn = __opts__['proxymodule']['junos.conn']()
     if hostname is None:
         ret['out'] = False
         return ret
@@ -79,7 +79,7 @@ def set_hostname(hostname=None, commit_change=True):
 
 def commit():
 
-    conn = __opts__['proxyobject']
+    conn = __opts__['proxymodule']['junos.conn']()
 
     ret = {}
     commit_ok = conn.cu.commit_check()
@@ -99,7 +99,7 @@ def commit():
 
 
 def rollback():
-    conn = __opts__['proxyobject']
+    conn = __opts__['proxymodule']['junos.conn']()
     ret = dict()
 
     ret['out'] = conn.cu.rollback(0)
@@ -115,7 +115,7 @@ def rollback():
 def diff():
 
     ret = dict()
-    conn = __opts__['proxyobject']
+    conn = __opts__['proxymodule']['junos.conn']()
     ret['out'] = True
     ret['message'] = conn.cu.diff()
 
@@ -125,6 +125,6 @@ def diff():
 def ping():
 
     ret = dict()
-    conn = __opts__['proxyobject']
+    conn = __opts__['proxymodule']['junos.conn']()
     ret['message'] = conn.cli('show system uptime')
     ret['out'] = True
