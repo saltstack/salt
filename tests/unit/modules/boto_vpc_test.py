@@ -482,7 +482,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
                 side_effect=BotoServerError(400, 'Mocked error')):
             with self.assertRaisesRegexp(BotoExecutionError,
                                          '400 Mocked error'):
-             boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
+                boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
     @mock_ec2
     def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(self):
@@ -828,7 +828,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         '''
 
         with self.assertRaisesRegexp(CommandExecutionError, '400 Bad Request.*'):
-             boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options_parameters)
+            boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options_parameters)
 
     @mock_ec2
     def test_that_when_dhcp_options_exists_the_dhcp_options_exists_method_returns_true(self):
