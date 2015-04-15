@@ -50,7 +50,7 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 import salt.ext.six as six
-# pylint: disable=unused-import-error
+# pylint: disable=import-error
 try:
     #pylint: disable=unused-import
     import boto
