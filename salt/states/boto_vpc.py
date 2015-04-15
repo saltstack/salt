@@ -153,8 +153,8 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
             ret['result'] = False
             ret['comment'] = 'Failed to create {0} VPC.'.format(name)
             return ret
-        _describe = __salt__['boto_vpc.describe'](created, region, key,
-                                                  keyid, profile)
+        _describe = __salt__['boto_vpc.describe'](created, region=region, key=key,
+                                                  keyid=keyid, profile=profile)
         ret['changes']['old'] = {'vpc': None}
         ret['changes']['new'] = {'vpc': _describe}
         ret['comment'] = 'VPC {0} created.'.format(name)
@@ -515,7 +515,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
            'changes': {}
            }
 
-    _ret = _route_table_present(name=name, vpc_id=vpc_id, tags=tags, region=region, key=key,
+    _ret = _route_table_present(name=name, vpc_name=vpc_name, vpc_id=vpc_id,
+                                tags=tags, region=region, key=key,
                                 keyid=keyid, profile=profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
