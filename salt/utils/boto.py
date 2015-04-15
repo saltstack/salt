@@ -19,7 +19,7 @@ from functools import partial
 
 # Import salt libs
 import salt.ext.six as six
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError
 from salt._compat import ElementTree as ET
 
 # Import third party libs
@@ -28,7 +28,6 @@ try:
     # pylint: disable=import-error
     import boto
     import boto.exception
-    from boto.exception import BotoServerError
     # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -175,8 +174,6 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
         raise SaltInvocationError('No authentication credentials found when '
                                   'attempting to make boto {0} connection to '
                                   'region "{1}".'.format(service, region))
-    except BotoServerError as exc:
-        raise BotoExecutionError(exc)
     __context__[cxkey] = conn
     return conn
 
@@ -193,28 +190,31 @@ def get_connection_func(service, module=None):
     return partial(get_connection, service, module=module)
 
 
-class BotoExecutionError(CommandExecutionError):
-    def __init__(self, boto_exception):
-        self.status = boto_exception.status
-        self.reason = boto_exception.reason
+def get_error(e):
+    aws = {}
+    if e.status:
+        aws['status'] = e.status
+    if e.reason:
+        aws['reason'] = e.reason
 
-        try:
-            body = boto_exception.body or ''
-            error = ET.fromstring(body).find('Errors').find('Error')
-            self.error = {'code': error.find('Code').text,
-                          'message': error.find('Message').text}
-        except (AttributeError, ET.ParseError):
-            self.error = None
+    try:
+        body = e.body or ''
+        error = ET.fromstring(body).find('Errors').find('Error')
+        error = {'code': error.find('Code').text,
+                 'message': error.find('Message').text}
+    except (AttributeError, ET.ParseError):
+        error = None
 
-        status = self.status or ''
-        reason = self.reason or ''
-        error = self.error or {}
-
-        if error:
-            message = '{0} {1}: {2}'.format(status, reason, error.get('message'))
-        else:
-            message = '{0} {1}'.format(status, reason)
-        super(BotoExecutionError, self).__init__(message)
+    if error:
+        aws.update(error)
+        message = '{0}: {1}'.format(aws.get('reason', ''),
+                                    error['message'])
+    else:
+        message = aws.get('reason')
+    r = {'message': message}
+    if aws:
+        r['aws'] = aws
+    return r
 
 
 def assign_funcs(modname, service, module=None):
