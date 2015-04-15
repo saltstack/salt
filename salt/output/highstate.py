@@ -422,11 +422,18 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     elif ret['result'] is None:
         result = u'Differs'
     if tabular is True:
-        fmt_string = u'{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
+        fmt_string = u'{0}'
+        if __opts__.get('state_output_profile', False):
+            fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
+        fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
-        fmt_string = tabular
+            fmt_string = tabular
     else:
-        fmt_string = u' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
+        fmt_string = u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
+        if __opts__.get('state_output_profile', False):
+            fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
+        fmt_string += u'{5}'
+
     msg = fmt_string.format(tcolor,
                             comps[2],
                             comps[0],
