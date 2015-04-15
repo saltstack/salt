@@ -57,14 +57,16 @@ def _get_pip_bin(bin_env):
 
 def _get_cached_requirements(requirements, saltenv):
     '''Get the location of a cached requirements file; caching if necessary.'''
-    cached_requirements = __salt__['cp.is_cached'](
+    is_cached = __salt__['cp.is_cached'](
         requirements, saltenv
     )
-    if not cached_requirements:
+    if not is_cached:
         # It's not cached, let's cache it.
         cached_requirements = __salt__['cp.cache_file'](
             requirements, saltenv
         )
+    else:
+        cached_requirements = ''
     # Check if the master version has changed.
     if __salt__['cp.hash_file'](requirements, saltenv) != \
             __salt__['cp.hash_file'](cached_requirements, saltenv):
