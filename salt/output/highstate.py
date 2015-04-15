@@ -427,7 +427,7 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
             fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
-            fmt_string = tabular
+        fmt_string = tabular
     else:
         fmt_string = u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
         if __opts__.get('state_output_profile', False):
