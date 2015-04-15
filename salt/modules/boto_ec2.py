@@ -49,10 +49,10 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
-    # pylint: disable=import-error
+    # pylint: disable=unused-import
     import boto
     import boto.ec2
-    # pylint: enable=import-error
+    # pylint: enable=unused-import
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
