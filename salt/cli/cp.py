@@ -16,6 +16,7 @@ import pprint
 # Import salt libs
 import salt.client
 from salt.utils import parsers, print_cli
+import salt.output
 
 
 class SaltCPCli(parsers.SaltCPOptionParser):
@@ -102,4 +103,6 @@ class SaltCP(object):
 
         ret = local.cmd(*args)
 
-        pprint.pprint(ret)
+        salt.output.display_output(
+                ret,
+                self.opts)
