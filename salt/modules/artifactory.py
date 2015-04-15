@@ -13,7 +13,7 @@ import logging
 
 # Import Salt libs
 import salt.utils
-import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin
+import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
 
 log = logging.getLogger(__name__)
 
