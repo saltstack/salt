@@ -82,12 +82,11 @@ class Mockloader(object):
         self.lst = lst
         return {}
 
-sysmod.salt.state = Mockstate
-sysmod.salt.runner = Mockrunner
-sysmod.salt.loader = Mockloader()
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@patch('salt.state', Mockstate())
+@patch('salt.runner', Mockrunner())
+@patch('salt.loader', Mockloader())
 class SysmodTestCase(TestCase):
     '''
     Test cases for salt.modules.sysmod
