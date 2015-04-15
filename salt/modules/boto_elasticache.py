@@ -33,6 +33,9 @@ Connection module for Amazon Elasticache
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -44,15 +47,16 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    # pylint: disable=unused-import
     import boto
     import boto.elasticache
+    # pylint: enable=unused-import
     import boto.utils
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -62,6 +66,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'elasticache')
     return True
 
 
@@ -73,9 +78,8 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticache.exists myelasticache
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         conn.describe_cache_clusters(name)
         return True
@@ -92,9 +96,8 @@ def group_exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticache.group_exists myelasticache
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         conn.describe_replication_groups(name)
         return True
@@ -113,7 +116,8 @@ def create_replication_group(name, primary_cluster_id, replication_group_descrip
 
         salt myminion boto_elasticache.create_replication_group myelasticache myprimarycluster description
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not conn:
         return None
     try:
@@ -145,7 +149,8 @@ def describe_replication_group(name, region=None, key=None, keyid=None,
 
         salt myminion boto_elasticache.describe_replication_group mygroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not conn:
         return None
     try:
@@ -206,7 +211,8 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticache.get_config myelasticache
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not conn:
         return None
     try:
@@ -271,7 +277,8 @@ def get_node_host(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticache.get_node_host myelasticache
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not conn:
         return None
     try:
@@ -296,7 +303,8 @@ def get_group_host(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticache.get_group_host myelasticachegroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not conn:
         return None
     try:
@@ -377,9 +385,8 @@ def get_cache_subnet_group(name, region=None, key=None, keyid=None,
 
         salt myminion boto_elasticache.get_cache_subnet_group mycache_subnet_group
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         csg = conn.describe_cache_subnet_groups(name)
         csg = csg['DescribeCacheSubnetGroupsResponse']
@@ -454,9 +461,8 @@ def create(name, num_cache_nodes=None, engine=None, cache_node_type=None,
         salt myminion boto_elasticache.create myelasticache 1 redis cache.t1.micro
         cache_security_group_names='["myelasticachesg"]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         conn.create_cache_cluster(
             name, num_cache_nodes, cache_node_type, engine,
@@ -491,9 +497,8 @@ def delete(name, wait=False, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elasticache.delete myelasticache
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         conn.delete_cache_cluster(name)
         if not wait:
@@ -524,9 +529,8 @@ def create_cache_security_group(name, description, region=None, key=None,
 
         salt myminion boto_elasticache.create_cache_security_group myelasticachesg 'My Cache Security Group'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     created = conn.create_cache_security_group(name, description)
     if created:
         log.info('Created cache security group {0}.'.format(name))
@@ -546,9 +550,8 @@ def delete_cache_security_group(name, region=None, key=None, keyid=None,
 
         salt myminion boto_elasticache.delete_cache_security_group myelasticachesg 'My Cache Security Group'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     deleted = conn.delete_cache_security_group(name)
     if deleted:
         log.info('Deleted cache security group {0}.'.format(name))
@@ -571,9 +574,8 @@ def authorize_cache_security_group_ingress(name, ec2_security_group_name,
 
         salt myminion boto_elasticache.authorize_cache_security_group_ingress myelasticachesg myec2sg 879879
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         added = conn.authorize_cache_security_group_ingress(
             name, ec2_security_group_name, ec2_security_group_owner_id)
@@ -607,9 +609,8 @@ def revoke_cache_security_group_ingress(name, ec2_security_group_name,
 
         salt myminion boto_elasticache.revoke_cache_security_group_ingress myelasticachesg myec2sg 879879
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         removed = conn.revoke_cache_security_group_ingress(
             name, ec2_security_group_name, ec2_security_group_owner_id)
@@ -629,38 +630,3 @@ def revoke_cache_security_group_ingress(name, ec2_security_group_name,
         msg = msg.format(name, ec2_security_group_name)
         log.error(msg)
         return False
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to ec2.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('elasticache.region'):
-        region = __salt__['config.option']('elasticache.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('elasticache.key'):
-        key = __salt__['config.option']('elasticache.key')
-    if not keyid and __salt__['config.option']('elasticache.keyid'):
-        keyid = __salt__['config.option']('elasticache.keyid')
-
-    try:
-        conn = boto.elasticache.connect_to_region(region,
-                                                  aws_access_key_id=keyid,
-                                                  aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make elasticache connection.')
-        return None
-    return conn

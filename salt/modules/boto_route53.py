@@ -33,6 +33,9 @@ Connection module for Amazon Route53
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
+
 from __future__ import absolute_import
 
 # Import Python libs
@@ -43,14 +46,15 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    #pylint: disable=unused-import
     import boto
     import boto.route53
+    #pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
 import salt.utils.odict as odict
 
 
@@ -60,6 +64,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'route53')
     return True
 
 
@@ -72,9 +77,8 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
         salt myminion boto_route53.get_record test.example.org example.org A
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
@@ -120,9 +124,8 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 
         salt myminion boto_route53.add_record test.example.org 1.1.1.1 example.org A
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
@@ -155,9 +158,8 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 
         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
@@ -190,9 +192,8 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
 
         salt myminion boto_route53.delete_record test.example.org example.org A
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
@@ -229,37 +230,3 @@ def _wait_for_sync(status, conn, wait_for_sync):
         time.sleep(10)
     log.error('Timed out waiting for Route53 status update.')
     return False
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to Route53.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('route53.region'):
-        region = __salt__['config.option']('route53.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('route53.key'):
-        key = __salt__['config.option']('route53.key')
-    if not keyid and __salt__['config.option']('route53.keyid'):
-        keyid = __salt__['config.option']('route53.keyid')
-
-    try:
-        conn = boto.route53.connect_to_region(region, aws_access_key_id=keyid,
-                                              aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto route53 connection.')
-        return None
-    return conn
