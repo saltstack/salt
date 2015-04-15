@@ -1,4 +1,10 @@
-# Python 2.7 port of Python 3.4's ipaddress module.
+'''
+Python 2.[67] port of Python 3.4's ipaddress module
+
+Almost verbatim copy of the core lib, with compatibility changes
+Source: https://bitbucket.org/kwi/py2-ipaddress/
+'''
+# pylint: skip-file
 
 # List of compatibility changes:
 

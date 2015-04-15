@@ -1,4 +1,9 @@
-# Python 2.7 port of Python 3.4's test_ipaddress.
+'''
+Python 2.[67] port of Python 3.4's test_ipaddress.
+
+Almost verbatim copy of core lib w/compatibility fixes
+'''
+# pylint: skip-file
 
 # List of compatibility changes:
 
