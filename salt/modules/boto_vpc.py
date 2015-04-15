@@ -240,7 +240,7 @@ def _get_resource(resource, name=None, resource_id=None, region=None,
         if name:
             filter_parameters['filters'] = {'tag:Name': name}
         if resource_id:
-            filter_parameters['_ids'.format(resource)] = resource_id
+            filter_parameters['{0}_ids'.format(resource)] = resource_id
         if not filter_parameters:
             return False
 
@@ -1255,39 +1255,6 @@ def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
         raise BotoExecutionError(exc)
 
 
-def create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
-                             icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
-                             region=None, key=None, keyid=None, profile=None):
-    '''
-    Creates a network acl entry.
-
-    CLI Example::
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.create_network_acl_entry 'acl-5fb85d36' '32767' '-1' 'deny' '0.0.0.0/0'
-
-    '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-
-    try:
-        network_acl_entry = conn.create_network_acl_entry(network_acl_id, rule_number, protocol, rule_action,
-                                                          cidr_block,
-                                                          egress=egress, icmp_code=icmp_code, icmp_type=icmp_type,
-                                                          port_range_from=port_range_from, port_range_to=port_range_to)
-        if network_acl_entry:
-            log.info('Network ACL entry was created')
-            return True
-        else:
-            log.warning('Network ACL entry was not created')
-            return False
-    except boto.exception.BotoServerError as exc:
-        log.error(exc)
-        raise BotoExecutionError(exc)
-
-
 def replace_network_acl_entry(network_acl_id, rule_number, protocol, rule_action, cidr_block, egress=None,
                               icmp_code=None, icmp_type=None, port_range_from=None, port_range_to=None,
                               region=None, key=None, keyid=None, profile=None):
@@ -1794,7 +1761,7 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
     '''
     if not any((subnet_id, subnet_name)):
         raise SaltInvocationError('either subnet id or subnet_name must be specified.')
-    subnet = _get_resource('subnet', subnet_name=subnet_name, region=region,
+    subnet = _get_resource('subnet', name=subnet_name, region=region,
                            key=key, keyid=keyid, profile=profile)
     if not subnet:
         return subnet

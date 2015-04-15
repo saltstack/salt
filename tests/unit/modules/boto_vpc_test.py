@@ -826,7 +826,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase):
         '''
         Tests creation/association of dhcp options to non-existent vpc
         '''
-        
+
         with self.assertRaisesRegexp(CommandExecutionError, '400 Bad Request.*'):
              boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options_parameters)
 
