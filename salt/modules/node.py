@@ -79,4 +79,4 @@ def query(scope, **kwargs):
     except query.Query.InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
-        raise ex
+        raise Exception(ex)
