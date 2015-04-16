@@ -48,6 +48,7 @@ class SysInfo(object):
         out = __salt__['cmd.run_all']("df {0}".format(device))
         if out['retcode']:
             msg = "Disk size info error: {0}".format(out['stderr'])
+            log.error(msg)
             raise SIException(msg)
 
         devpath, blocks, used, available, used_p, mountpoint = [elm for elm in out['stdout'].split(os.linesep)[-1].split(" ") if elm]
