@@ -19,6 +19,8 @@ import os
 
 import salt
 import salt.utils.network
+from salt.modules.inspectlib.dbhandle import DBHandle
+
 
 
 class SysInfo(object):
@@ -171,6 +173,7 @@ class Query(object):
             raise Query.InspectorQueryException(
                 "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
         self.scope = '_' + scope
+        self.db = DBHandle(globals()['__salt__']['config.get']('inspector.db', ''))
 
     def __call__(self, *args, **kwargs):
         '''
@@ -187,7 +190,22 @@ class Query(object):
         return "This is changes"
 
     def _configuration(self, *args, **kwargs):
-        return "This is configuration"
+        '''
+        Return configuration files.
+        '''
+
+        data = dict()
+        self.db.open()
+        self.db.cursor.execute("SELECT id, name FROM inspector_pkg")
+        for pkg_id, pkg_name in self.db.cursor.fetchall():
+            self.db.cursor.execute("SELECT id, path FROM inspector_pkg_cfg_files WHERE pkgid=?", (pkg_id,))
+            configs = list()
+            for cnf_id, cnf_name in self.db.cursor.fetchall():
+                configs.append(cnf_name)
+            data[pkg_name] = configs
+        self.db.close()
+
+        return data
 
     def _get_local_users(self, disabled=None):
         '''
@@ -372,6 +390,7 @@ class Query(object):
         data['software'] = self._software(**kwargs)
         data['system'] = self._system(**kwargs)
         data['services'] = self._services(**kwargs)
+        data['configuration'] = self._configuration(**kwargs)
 
         return data
 
