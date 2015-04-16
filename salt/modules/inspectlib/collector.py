@@ -18,7 +18,7 @@ import os
 import sys
 from subprocess import Popen, PIPE, STDOUT
 from salt.modules.inspectlib.dbhandle import DBHandle
-
+from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 
 class Inspector(object):
 
@@ -30,7 +30,7 @@ class Inspector(object):
             db_path = globals().get('__salt__')['config.get']('inspector.db', '')
 
         if not db_path:
-            raise Inspector.InspectorSnapshotException("Inspector database location is not configured yet in minion.")
+            raise InspectorSnapshotException("Inspector database location is not configured yet in minion.")
         self.dbfile = db_path
 
         self.db = DBHandle(self.dbfile)
@@ -40,7 +40,7 @@ class Inspector(object):
             pid_file = globals().get('__salt__')['config.get']('inspector.pid', '')
 
         if not pid_file:
-            raise Inspector.InspectorSnapshotException("Inspector PID file location is not configured yet in minion.")
+            raise InspectorSnapshotException("Inspector PID file location is not configured yet in minion.")
         self.pidfile = pid_file
 
     def _syscall(self, command, input=None, env=None, *params):
@@ -109,7 +109,7 @@ class Inspector(object):
         Take a snapshot of the system.
         '''
         if mode not in self.MODE:
-            raise Inspector.InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
+            raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
 
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
             priority, __file__, self.pidfile, self.dbfile, mode))
