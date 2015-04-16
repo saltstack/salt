@@ -128,8 +128,7 @@ class _Puppet(object):
         if self.subcmd == 'agent':
             # no arguments are required
             args.extend([
-                'onetime', 'verbose', 'ignorecache', 'no-daemonize',
-                'no-usecacheonfailure', 'no-splay', 'show_diff'
+                'test'
             ])
 
         # finally do this after subcmd has been matched for all remaining args
@@ -171,7 +170,13 @@ def run(*args, **kwargs):
 
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
-    return __salt__['cmd.run_all'](repr(puppet), python_shell=False)
+    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=False)
+    if ret['retcode'] in [0, 2]:
+        ret['retcode'] = 0
+    else:
+        ret['retcode'] = 1
+
+    return ret
 
 
 def noop(*args, **kwargs):
