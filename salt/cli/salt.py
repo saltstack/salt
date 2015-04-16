@@ -6,6 +6,7 @@ import os
 import sys
 
 # Import Salt libs
+from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
 from salt.exceptions import (
         SaltClientError,
@@ -228,7 +229,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_response_minions = []
         not_connected_minions = []
         for each_minion in ret:
-            if "Minion did not return" in ret[each_minion]:
+            minion_ret = ret[each_minion].get('ret')
+            if (
+                    isinstance(minion_ret, string_types)
+                    and minion_ret.startswith("Minion did not return")
+                    ):
                 if "Not connected" in ret[each_minion]:
                     not_connected_minions.append(each_minion)
                 elif "No response" in ret[each_minion]:

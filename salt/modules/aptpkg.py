@@ -1436,7 +1436,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         cmd = 'apt-add-repository {0}'.format(_cmd_quote(repo))
                     else:
                         cmd = 'apt-add-repository -y {0}'.format(_cmd_quote(repo))
-                    out = __salt__['cmd.run_stdout'](cmd, **kwargs)
+                    out = __salt__['cmd.run_all'](cmd, **kwargs)
+                    if out['retcode']:
+                        raise CommandExecutionError(
+                             'Unable to add PPA {0!r}. '
+                             '{1!r} exited with status {2!s}: '
+                             '{3!r} '.format(repo[4:], cmd, out['retcode'], out['stderr'])
+                        )
                     # explicit refresh when a repo is modified.
                     if kwargs.get('refresh_db', True):
                         refresh_db()

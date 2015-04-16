@@ -36,6 +36,7 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
+import salt.utils.sdb
 
 log = logging.getLogger(__name__)
 
@@ -1323,7 +1324,7 @@ def insert_system_path(opts, paths):
 def minion_config(path,
                   env_var='SALT_MINION_CONFIG',
                   defaults=None,
-                  minion_id=False):
+                  cache_minion_id=False):
     '''
     Reads in the minion configuration file and sets up special options
 
@@ -1358,7 +1359,7 @@ def minion_config(path,
     overrides.update(include_config(default_include, path, verbose=False))
     overrides.update(include_config(include, path, verbose=True))
 
-    opts = apply_minion_config(overrides, defaults, minion_id=minion_id)
+    opts = apply_minion_config(overrides, defaults, cache_minion_id=cache_minion_id)
     _validate_opts(opts)
     return opts
 
@@ -2288,7 +2289,7 @@ def _cache_id(minion_id, cache_file):
         log.error('Could not cache minion ID: {0}'.format(exc))
 
 
-def get_id(opts, minion_id=False):
+def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
 
@@ -2324,13 +2325,14 @@ def get_id(opts, minion_id=False):
                 return name, False
         except (IOError, OSError):
             pass
-
-    log.debug('Guessing ID. The id can be explicitly in set {0}'
-              .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
+    if '__role' in opts and opts.get('__role') == 'minion':
+        log.debug('Guessing ID. The id can be explicitly in set {0}'
+                  .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()
-    log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
-    if minion_id and opts.get('minion_id_caching', True):
+    if '__role' in opts and opts.get('__role') == 'minion':
+        log.info('Found minion id from generate_minion_id(): {0}'.format(newid))
+    if cache_minion_id and opts.get('minion_id_caching', True):
         _cache_id(newid, id_cache)
     is_ipv4 = newid.count('.') == 3 and not any(c.isalpha() for c in newid)
     return newid, is_ipv4
@@ -2338,7 +2340,7 @@ def get_id(opts, minion_id=False):
 
 def apply_minion_config(overrides=None,
                         defaults=None,
-                        minion_id=False):
+                        cache_minion_id=False):
     '''
     Returns minion configurations dict.
     '''
@@ -2358,7 +2360,7 @@ def apply_minion_config(overrides=None,
     if opts['id'] is None:
         opts['id'], using_ip_for_id = get_id(
                 opts,
-                minion_id=minion_id)
+                cache_minion_id=cache_minion_id)
 
     # it does not make sense to append a domain to an IP based id
     if not using_ip_for_id and 'append_domain' in opts:
@@ -2470,7 +2472,7 @@ def apply_master_config(overrides=None, defaults=None):
     if opts.get('id') is None:
         opts['id'], using_ip_for_id = get_id(
                 opts,
-                minion_id=None)
+                cache_minion_id=None)
         append_master = True
 
     # it does not make sense to append a domain to an IP based id

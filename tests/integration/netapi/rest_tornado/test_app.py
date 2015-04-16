@@ -186,11 +186,15 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
+
         response_obj = json.loads(response.body)
+        ret = response_obj['return']
+        ret[0]['minions'] = sorted(ret[0]['minions'])
+
         # TODO: verify pub function? Maybe look at how we test the publisher
-        self.assertEqual(len(response_obj['return']), 1)
-        self.assertIn('jid', response_obj['return'][0])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(len(ret), 1)
+        self.assertIn('jid', ret[0])
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_multi_local_async_post(self):
         low = [{'client': 'local_async',
@@ -207,12 +211,17 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
+
         response_obj = json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 2)
-        self.assertIn('jid', response_obj['return'][0])
-        self.assertIn('jid', response_obj['return'][1])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
-        self.assertEqual(response_obj['return'][1]['minions'], ['minion', 'sub_minion'])
+        ret = response_obj['return']
+        ret[0]['minions'] = sorted(ret[0]['minions'])
+        ret[1]['minions'] = sorted(ret[1]['minions'])
+
+        self.assertEqual(len(ret), 2)
+        self.assertIn('jid', ret[0])
+        self.assertIn('jid', ret[1])
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_multi_local_async_post_multitoken(self):
         low = [{'client': 'local_async',
@@ -236,13 +245,18 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
+
         response_obj = json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 3)  # make sure we got 3 responses
-        self.assertIn('jid', response_obj['return'][0])  # the first 2 are regular returns
-        self.assertIn('jid', response_obj['return'][1])
-        self.assertIn('Failed to authenticate', response_obj['return'][2])  # bad auth
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
-        self.assertEqual(response_obj['return'][1]['minions'], ['minion', 'sub_minion'])
+        ret = response_obj['return']
+        ret[0]['minions'] = sorted(ret[0]['minions'])
+        ret[1]['minions'] = sorted(ret[1]['minions'])
+
+        self.assertEqual(len(ret), 3)  # make sure we got 3 responses
+        self.assertIn('jid', ret[0])  # the first 2 are regular returns
+        self.assertIn('jid', ret[1])
+        self.assertIn('Failed to authenticate', ret[2])  # bad auth
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_simple_local_async_post_no_tgt(self):
         low = [{'client': 'local_async',
@@ -272,7 +286,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
@@ -321,11 +336,15 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
+
         response_obj = json.loads(response.body)
+        ret = response_obj['return']
+        ret[0]['minions'] = sorted(ret[0]['minions'])
+
         # TODO: verify pub function? Maybe look at how we test the publisher
-        self.assertEqual(len(response_obj['return']), 1)
-        self.assertIn('jid', response_obj['return'][0])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(len(ret), 1)
+        self.assertIn('jid', ret[0])
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_post_with_client(self):
         # get a token for this test
@@ -339,11 +358,15 @@ class TestMinionSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
+
         response_obj = json.loads(response.body)
+        ret = response_obj['return']
+        ret[0]['minions'] = sorted(ret[0]['minions'])
+
         # TODO: verify pub function? Maybe look at how we test the publisher
-        self.assertEqual(len(response_obj['return']), 1)
-        self.assertIn('jid', response_obj['return'][0])
-        self.assertEqual(response_obj['return'][0]['minions'], ['minion', 'sub_minion'])
+        self.assertEqual(len(ret), 1)
+        self.assertIn('jid', ret[0])
+        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
 
     def test_post_with_incorrect_client(self):
         '''
@@ -384,13 +407,17 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                )
         response = self.wait(timeout=30)
         response_obj = json.loads(response.body)['return'][0]
-        for jid, ret in six.iteritems(response_obj):
-            self.assertIn('Function', ret)
-            self.assertIn('Target', ret)
-            self.assertIn('Target-type', ret)
-            self.assertIn('User', ret)
-            self.assertIn('StartTime', ret)
-            self.assertIn('Arguments', ret)
+        try:
+            for jid, ret in six.iteritems(response_obj):
+                self.assertIn('Function', ret)
+                self.assertIn('Target', ret)
+                self.assertIn('Target-type', ret)
+                self.assertIn('User', ret)
+                self.assertIn('StartTime', ret)
+                self.assertIn('Arguments', ret)
+        except AttributeError as attribute_error:
+            print json.loads(response.body)
+            raise
 
         # test with a specific JID passed in
         jid = next(six.iterkeys(response_obj))

@@ -173,44 +173,43 @@ rendered SLS file (or any errors generated while rendering the SLS file).
 Understanding the Structure of Reactor Formulas
 ===============================================
 
-While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to function calls.
+**I.e., when to use `arg` and `kwarg` and when to specify the function
+arguments directly.**
+
+While the reactor system uses the same basic data structure as the state
+system, the functions that will be called using that data structure are
+different functions than are called via Salt's state system. The Reactor can
+call Runner modules using the `runner` prefix, Wheel modules using the `wheel`
+prefix, and can also cause minions to run Execution modules using the `local`
+prefix.
 
 .. versionchanged:: 2014.7.0
     The ``cmd`` prefix was renamed to ``local`` for consistency with other
     parts of Salt. A backward-compatible alias was added for ``cmd``.
 
-In state files the minion generates the data structure locally and uses that to
-call local state functions. In the reactor system the master generates a data
-structure that is used to call methods on one of Salt's client interfaces
-described in :ref:`the Python API documentation <client-apis>`.
+The Reactor runs on the master and calls functions that exist on the master. In
+the case of Runner and Wheel functions the Reactor can just call those
+functions directly since they exist on the master and are run on the master.
 
-* :py:class:`~salt.client.LocalClient` is used to call Execution modules
-  remotely on minions. (The :command:`salt` CLI program uses this also.)
-* :py:class:`~salt.runner.RunnerClient` calls Runner modules locally on the
-  master.
-* :py:class:`~salt.wheel.WheelClient` calls Wheel modules locally on the
-  master.
+In the case of functions that exist on minions and are run on minions, the
+Reactor still needs to call a function on the master in order to send the
+necessary data to the minion so the minion can execute that function.
 
-The :strong:`state declaration` field takes a reference to the function to call
-in each interface. So to trigger a salt-run call the :strong:`state
-declaration` field will start with :strong:`runner`, followed by the runner
-function to call. This means that a call to what would be on the command line
-:strong:`salt-run manage.up` will be :strong:`runner.manage.up`. An example of
-this in a reactor formula would look like this:
+The Reactor calls functions exposed in :ref:`Salt's Python API documentation
+<client-apis>`. and thus the structure of Reactor files very transparently
+reflects the function signatures of those functions.
 
-.. code-block:: yaml
+Calling Execution modules on Minions
+------------------------------------
 
-    manage_up:
-      runner.manage.up
+The Reactor sends commands down to minions in the exact same way Salt's CLI
+interface does. It calls a function locally on the master that sends the name
+of the function as well as a list of any arguments and a dictionary of any
+keyword arguments that the minion should use to execute that function.
 
-If the runner takes arguments then they can be specified as well:
-
-.. code-block:: yaml
-
-    overstate_dev_env:
-      runner.state.over:
-        - env: dev
+Specifically, the Reactor calls the async version of :py:meth:`this function
+<salt.client.LocalClient.cmd>`. You can see that function has 'arg' and 'kwarg'
+parameters which are both values that are sent down to the minion.
 
 Executing remote commands maps to the :strong:`LocalClient` interface which is
 used by the :strong:`salt` command. This interface more specifically maps to
@@ -255,6 +254,40 @@ Use the ``expr_form`` argument to specify a matcher:
         - arg:
           - rm -rf /tmp/*
 
+Any other parameters in the :py:meth:`LocalClient().cmd()
+<salt.client.LocalClient.cmd>` method can be specified as well.
+
+Calling Runner modules and Wheel modules
+----------------------------------------
+
+Calling Runenr modules and wheel modules from the Reactor uses a more direct
+syntax since the function is being executed locally instead of sending a
+command to a remote system to be executed there. There are no 'arg' or 'kwarg'
+parameters (unless the Runenr function or Wheel function accepts a paramter
+with either of those names.)
+
+For example:
+
+.. code-block:: yaml
+
+    clear_the_grains_cache_for_all_minions:
+      runner.cache.clear_grains
+
+If :py:func:`the runner takes arguments <salt.runners.cache.clear_grains>` then
+they can be specified as well:
+
+.. code-block:: yaml
+
+    spin_up_more_web_machines:
+      runner.cloud.profile:
+        - prof: centos_6
+        - instances:
+          - web11       # These VM names would be generated via Jinja in a
+          - web12       # real-world example.
+
+Passing event data to Minions or Orchestrate as Pillar
+------------------------------------------------------
+
 An interesting trick to pass data from the Reactor script to
 ``state.highstate`` or ``state.sls`` is to pass it as inline Pillar data since
 both functions take a keyword argument named ``pillar``.
@@ -294,6 +327,22 @@ The above command is equivalent to the following command at the CLI:
 .. code-block:: bash
 
     salt 'haproxy*' state.sls haproxy.refresh_pool 'pillar={new_minion: minionid}'
+
+This works with Orchestrate files as well:
+
+.. code-block:: yaml
+
+    call_some_orchestrate_file:
+      runner.state.orchestrate:
+        - mods: some_orchestrate_file
+        - pillar:
+            stuff: things
+
+Which is equivalent to the following command at the CLI:
+
+.. code-block:: bash
+
+    salt-run state.orchestrate some_orchestrate_file pillar='{stuff: things}'
 
 Finally, that data is available in the state file using the normal Pillar
 lookup syntax. The following example is grabbing web server names and IP

@@ -37,7 +37,7 @@ __outputter__ = {
     'setval': 'nested',
 }
 
-# http://stackoverflow.com/a/12414913/127816
+ http://stackoverflow.com/a/12414913/127816
 _infinitedict = lambda: collections.defaultdict(_infinitedict)
 
 log = logging.getLogger(__name__)

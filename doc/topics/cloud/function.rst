@@ -1,3 +1,5 @@
+.. _salt-cloud-functions:
+
 ===============
 Cloud Functions
 ===============
@@ -10,3 +12,19 @@ provider, that provider must be specified.
 .. code-block:: bash
 
     $ salt-cloud -f show_image ec2 image=ami-fd20ad94
+
+There are three universal salt-cloud functions that are extremely useful for
+gathering information about instances on a provider basis:
+
+*``list_nodes``: Returns some general information about the instances for the given provider.
+*``list_nodes_full``: Returns all information about the instances for the given provider.
+*``list_nodes_select``: Returns select information about the instances for the given provider.
+
+.. code-block:: bash
+
+    $ salt-cloud -f list_nodes linode
+    $ salt-cloud -f list_nodes_full linode
+    $ salt-cloud -f list_nodes_select linode
+
+Another useful reference for viewing salt-cloud functions is the
+:ref:Salt Cloud Feature Matrix <salt-cloud-feature-matrix>

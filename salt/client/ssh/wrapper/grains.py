@@ -19,13 +19,6 @@ import salt.ext.six as six
 # Seed the grains dict so cython will build
 __grains__ = {}
 
-# Change the default outputter to make it more readable
-__outputter__ = {
-    'items': 'grains',
-    'item': 'grains',
-    'setval': 'grains',
-}
-
 
 def _serial_sanitizer(instr):
     '''Replaces the last 1/4 of a string with X's'''
