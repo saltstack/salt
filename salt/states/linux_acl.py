@@ -5,6 +5,7 @@ Linux File Access Control Lists
 Ensure a Linux ACL is present
 
   .. code-block:: yaml
+
     root:
       acl.present:
         - name: /root

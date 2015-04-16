@@ -66,6 +66,7 @@ def ipcidr(tgt):
     Pillar Example:
 
     .. code-block:: yaml
+
        '172.16.0.0/12':
          - match: ipcidr
          - nodeclass: internal
