@@ -20,6 +20,8 @@ Module for full system inspection.
 from __future__ import absolute_import
 import logging
 import importlib
+from salt.modules.inspectlib.exceptions import (InspectorQueryException,
+                                                InspectorSnapshotException)
 
 # Import Salt libs
 import salt.utils
