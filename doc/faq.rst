@@ -21,8 +21,8 @@ The salt-users mailing list as well as the salt IRC channel can both be helpful
 resources to confirm if others are seeing the issue and to assist with
 immediate debugging.
 
-To report a bug to the Salt project, please follow the instructions in :doc:
-`reporting a bug <topics/development/reporting_bugs>`.
+To report a bug to the Salt project, please follow the instructions in 
+:doc:`reporting a bug </topics/development/reporting_bugs>`.
 
 
 What ports should I open on my firewall?
