@@ -6,14 +6,15 @@ DigitalOcean Cloud Module v2
 The DigitalOcean cloud module is used to control access to the DigitalOcean
 VPS system.
 
-Use of this module only requires the ``personal_access_token`` parameter to be set. Set up the
-cloud configuration at ``/etc/salt/cloud.providers`` or
+Use of this module only requires the ``personal_access_token`` and ``ssh_key_names`` parameters to be set.
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/digital_ocean.conf``:
 
 .. code-block:: yaml
 
     my-digital-ocean-config:
-      personal_access_token: xxx
+      personal_access_token: ''
+      ssh_key_names: ''
       provider: digital_ocean
 
 :depends: requests
