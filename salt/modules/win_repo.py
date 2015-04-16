@@ -16,7 +16,6 @@ import os
 import logging
 
 # Import third party libs
-import yaml
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
