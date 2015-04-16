@@ -1452,3 +1452,53 @@ def create(vm_):
         return False
 
     return {vm_name: data}
+
+
+def create_datacenter(kwargs=None, call=None):
+    '''
+    Create a data center in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_datacenter my-vmware-config name="MyNewDatacenter"
+    '''
+    if call != 'function':
+        log.error(
+            'The create_datacenter function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs or 'name' not in kwargs:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the new datacenter to be created.'
+        )
+
+    if len(kwargs['name']) >= 80 or len(kwargs['name']) <= 0:
+        raise SaltCloudSystemExit(
+            'The datacenter name must be a non empty string of less than 80 characters.'
+        )
+
+    # Get the service instance
+    si = _get_si()
+
+    folder = si.content.rootFolder
+
+    # Verify that the folder is of type vim.Folder
+    if isinstance(folder, vim.Folder):
+        try:
+            folder.CreateDatacenter(name=kwargs['name'])
+        except Exception as exc:
+            log.error(
+                'Error creating datacenter {0}: {1}'.format(
+                    kwargs['name'],
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+    log.debug("Created datacenter {0}".format(kwargs['name']))
+
+    return {kwargs['name']: 'created'}
