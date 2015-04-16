@@ -17,7 +17,6 @@ except ImportError:
     HAS_DEPENDENCIES = False
 
 # Import python libs
-import copy
 import logging
 try:
     import msgpack
@@ -227,14 +226,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
-    if 'pkg.list_pkgs' in __context__:
-        if versions_as_list:
-            return __context__['pkg.list_pkgs']
-        else:
-            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
-            __salt__['pkg_resource.stringify'](ret)
-            return ret
-
     ret = {}
     name_map = _get_name_map()
     with salt.utils.winapi.Com():
@@ -248,7 +239,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
-    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -564,7 +554,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
 
-    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
 
@@ -668,7 +657,6 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
 
-    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
 
