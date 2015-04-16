@@ -95,7 +95,7 @@ class SaltmodTestCase(TestCase):
 
         ret.update({'comment': 'Function ran successfully.', 'result': True})
         with patch.dict(saltmod.__opts__, {'test': False}):
-            mock = MagicMock(return_value={})
+            mock = MagicMock(return_value={'minion': {'retcode': 0, 'ret': True}})
             with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock}):
                 self.assertDictEqual(saltmod.function(name, tgt), ret)
 
