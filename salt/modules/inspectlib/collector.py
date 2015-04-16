@@ -119,6 +119,28 @@ class Inspector(object):
 
         self.db.connection.commit()
 
+    def _get_managed_files(self):
+        '''
+        Build a in-memory data of all managed files.
+        '''
+        dirs = set()
+        links = set()
+        files = set()
+
+        for line in os.popen("rpm -qlav").xreadlines():
+            line = line.strip()
+            if not line:
+                continue
+            line = line.replace("\t", " ").split(" ")
+            if line[0][0] == "d":
+                dirs.add(line[-1])
+            elif line[0][0] == "l":
+                links.add(line[-1])
+            elif line[0][0] == "-":
+                files.add(line[-1])
+
+        return sorted(files), sorted(dirs), sorted(links)
+
     def snapshot(self, mode):
         '''
         Take a snapshot of the system.
