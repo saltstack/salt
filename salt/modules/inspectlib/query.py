@@ -142,12 +142,6 @@ class Query(object):
     so there would be no need to pick it from various places.
     '''
 
-    class InspectorQueryException(Exception):
-        '''
-        Exception that is only for the inspector query.
-        '''
-        pass
-
     # Configuration: config files
     # Identity: users/groups
     # Software: packages, patterns, repositories
