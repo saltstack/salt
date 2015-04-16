@@ -392,7 +392,10 @@ class Query(object):
         data['software'] = self._software(**kwargs)
         data['system'] = self._system(**kwargs)
         data['services'] = self._services(**kwargs)
-        data['configuration'] = self._configuration(**kwargs)
+        try:
+            data['configuration'] = self._configuration(**kwargs)
+        except InspectorQueryException as ex:
+            log.error(ex)
 
         return data
 
