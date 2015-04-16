@@ -259,9 +259,9 @@ def mounted(name,
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)
                             return ret
                         else:
-                            # nfs requires umounting and mounting if options change
+                            # Some file systems require umounting and mounting if options change
                             # add others to list that require similiar functionality
-                            if fstype in ['nfs']:
+                            if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
                                 ret['changes']['umount'] = "Forced unmount and mount because " \
                                                             + "options ({0}) changed".format(opt)
                                 unmount_result = __salt__['mount.umount'](real_name)

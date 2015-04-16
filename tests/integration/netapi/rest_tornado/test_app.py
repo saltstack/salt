@@ -297,7 +297,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               request_timeout=10,
                               )
         response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
 
 
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')

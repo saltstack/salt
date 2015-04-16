@@ -45,21 +45,6 @@ class NetapiClientTest(TestCase):
         ret['minions'] = sorted(ret['minions'])
         self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
 
-    def test_jid(self):
-        '''
-        Tests whether a predetermined jid successfully passes through netapi to
-        salt and back.
-        '''
-        low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping',
-               'jid': '123abc'}
-        low.update(self.eauth_creds)
-
-        ret = self.netapi.run(low)
-        ret['minions'] = sorted(ret['minions'])
-
-        self.assertEqual(ret, {'jid': '123abc',
-                               'minions': sorted(['minion', 'sub_minion'])})
-
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
         low.update(self.eauth_creds)

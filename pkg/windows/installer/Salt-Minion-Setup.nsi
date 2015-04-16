@@ -193,7 +193,39 @@ SectionEnd
 
 Section "MainSection" SEC01
 
-  ExecWait "net stop salt-minion" ;stopping service before upgrading
+  ; Remove previous version of salt, but don't remove conf and key
+  ; Service must be stopped to delete files that are in use
+  ExecWait "net stop salt-minion"
+  ; Remove the service in case we're installing over an older version
+  ; It will be recreated later
+  ExecWait "sc delete salt-minion"
+
+  ; Delete everything except conf and var
+  ClearErrors
+  FindFirst $0 $1 $INSTDIR\*
+
+  loop:
+    IfFileExists "$INSTDIR\$1\*.*" IsDir IsFile
+
+    IsDir:
+      ${IfNot} $1 == "."
+      ${AndIfNot} $1 == ".."
+      ${AndIfNot} $1 == "conf"
+      ${AndIfNot} $1 == "var"
+        RMDir /r "$INSTDIR\$1"
+      ${EndIf}
+
+    IsFile:
+      DELETE "$INSTDIR\$1"
+
+    FindNext $0 $1
+    IfErrors done
+
+    Goto loop
+
+  done:
+    FindClose $0
+
   Sleep 3000
   SetOutPath "$INSTDIR\"
   SetOverwrite try
@@ -290,36 +322,6 @@ Function .onInit
     Pop $R2
     Pop $R1
     Pop $R0
-
-  ; Remove previous version of salt, but don't remove conf and key
-  ExecWait "net stop salt-minion"
-  ExecWait "sc delete salt-minion"
-
-  ; Delete everything except conf and var
-  ClearErrors
-  FindFirst $0 $1 $INSTDIR\*
-
-  loop:
-    IfFileExists "$INSTDIR\$1\*.*" IsDir IsFile
-
-    IsDir:
-      ${IfNot} $1 == "."
-      ${AndIfNot} $1 == ".."
-      ${AndIfNot} $1 == "conf"
-      ${AndIfNot} $1 == "var"
-        RMDir /r "$INSTDIR\$1"
-      ${EndIf}
-
-    IsFile:
-      DELETE "$INSTDIR\$1"
-
-    FindNext $0 $1
-    IfErrors done
-
-    Goto loop
-
-  done:
-    FindClose $0
 
 FunctionEnd
 

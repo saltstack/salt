@@ -393,6 +393,7 @@ def mod_watch(name,
               sig=None,
               reload=False,
               full_restart=False,
+              force=False,
               **kwargs):
     '''
     The service watcher, called to invoke the watch command.
@@ -411,6 +412,7 @@ def mod_watch(name,
            'changes': {},
            'result': True,
            'comment': ''}
+    past_participle = None
 
     if sfun == 'dead':
         verb = 'stop'
@@ -424,20 +426,22 @@ def mod_watch(name,
     elif sfun == 'running':
         if __salt__['service.status'](name, sig):
             if 'service.reload' in __salt__ and reload:
-                func = __salt__['service.reload']
-                verb = 'reload'
-                past_participle = verb + 'ed'
+                if 'service.force_reload' in __salt__ and force:
+                    func = __salt__['service.force_reload']
+                    verb = 'forcefully reload'
+                else:
+                    func = __salt__['service.reload']
+                    verb = 'reload'
             elif 'service.full_restart' in __salt__ and full_restart:
                 func = __salt__['service.full_restart']
                 verb = 'fully restart'
-                past_participle = verb + 'ed'
             else:
                 func = __salt__['service.restart']
                 verb = 'restart'
-                past_participle = verb + 'ed'
         else:
             func = __salt__['service.start']
             verb = 'start'
+        if not past_participle:
             past_participle = verb + 'ed'
     else:
         ret['comment'] = 'Unable to trigger watch for service.{0}'.format(sfun)
