@@ -1448,7 +1448,7 @@ def create(vm_):
 
 def create_datacenter(kwargs=None, call=None):
     '''
-    Create a data center in this VMware environment
+    Create a new data center in this VMware environment
 
     CLI Example:
 
@@ -1461,15 +1461,22 @@ def create_datacenter(kwargs=None, call=None):
             'The create_datacenter function must be called with -f or --function.'
         )
 
-    if not kwargs or 'name' not in kwargs:
+    datacenter_name = kwargs.get('name')
+
+    if not datacenter_name:
         raise SaltCloudSystemExit(
             'You must pass a name for the new datacenter to be created.'
         )
 
-    if len(kwargs['name']) >= 80 or len(kwargs['name']) <= 0:
+    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
         raise SaltCloudSystemExit(
             'The datacenter name must be a non empty string of less than 80 characters.'
         )
+
+    # Check if datacenter already exists
+    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+    if datacenter_ref:
+        return {datacenter_name: 'datacenter already exists'}
 
     # Get the service instance
     si = _get_si()
@@ -1479,17 +1486,83 @@ def create_datacenter(kwargs=None, call=None):
     # Verify that the folder is of type vim.Folder
     if isinstance(folder, vim.Folder):
         try:
-            folder.CreateDatacenter(name=kwargs['name'])
+            folder.CreateDatacenter(name=datacenter_name)
         except Exception as exc:
             log.error(
                 'Error creating datacenter {0}: {1}'.format(
-                    kwargs['name'],
+                    datacenter_name,
                     exc
                 ),
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
-    log.debug("Created datacenter {0}".format(kwargs['name']))
 
-    return {kwargs['name']: 'created'}
+        log.debug("Created datacenter {0}".format(datacenter_name))
+        return {datacenter_name: 'created'}
+
+    return False
+
+
+def create_cluster(kwargs=None, call=None):
+    '''
+    Create a new cluster under the specified datacenter in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_cluster my-vmware-config name="MyNewCluster" datacenter="DatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_cluster function must be called with -f or --function.'
+        )
+
+    cluster_name = kwargs.get('name')
+    datacenter = kwargs.get('datacenter')
+
+    if not cluster_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the new cluster to be created.'
+        )
+
+    if not datacenter:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the datacenter where the cluster should be created.'
+        )
+
+    if not isinstance(datacenter, vim.Datacenter):
+        datacenter = _get_mor_by_property(vim.Datacenter, datacenter)
+        if not datacenter:
+            raise SaltCloudSystemExit(
+                'The specified datacenter does not exist.'
+            )
+
+    # Check if cluster already exists
+    cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+    if cluster_ref:
+        return {cluster_name: 'cluster already exists'}
+
+    cluster_spec = vim.cluster.ConfigSpecEx()
+    folder = datacenter.hostFolder
+
+    # Verify that the folder is of type vim.Folder
+    if isinstance(folder, vim.Folder):
+        try:
+            folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
+        except Exception as exc:
+            log.error(
+                'Error creating cluster {0}: {1}'.format(
+                    cluster_name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+        log.debug("Created cluster {0} under datacenter {1}".format(cluster_name, datacenter.name))
+        return {cluster_name: 'created'}
+
+    return False
