@@ -167,7 +167,7 @@ class Query(object):
         :return:
         '''
         if scope not in self.SCOPES:
-            raise Query.InspectorQueryException(
+            raise InspectorQueryException(
                 "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
         self.scope = '_' + scope
         self.db = DBHandle(globals()['__salt__']['config.get']('inspector.db', ''))
