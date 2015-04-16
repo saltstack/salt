@@ -480,6 +480,8 @@ def grains(opts, force_refresh=False):
 
     # Run the rest of the grains
     for key, fun in six.iteritems(funcs):
+        if '.' not in key:
+            continue
         if key.startswith('core.') or key == '_errors':
             continue
         try:
