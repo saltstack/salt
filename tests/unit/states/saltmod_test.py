@@ -80,10 +80,10 @@ class SaltmodTestCase(TestCase):
         minion via salt or salt-ssh
         '''
         name = 'state'
-        tgt = 'minion1'
+        tgt = 'larry'
 
         comt = ('Function state will be executed'
-                ' on target minion1 as test=False')
+                ' on target {0} as test=False'.format(tgt))
 
         ret = {'name': name,
                'changes': {},
@@ -93,10 +93,14 @@ class SaltmodTestCase(TestCase):
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.function(name, tgt), ret)
 
-        ret.update({'comment': 'Function ran successfully.', 'result': True})
+        ret.update({'result': True,
+                    'changes': {'out': 'highstate', 'ret': {tgt: ''}},
+                    'comment': 'Function ran successfully.'
+                              ' Function state ran on {0}.'.format(tgt)})
         with patch.dict(saltmod.__opts__, {'test': False}):
-            mock = MagicMock(return_value={})
-            with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock}):
+            mock_ret = {'larry': {'ret': '', 'retcode': 0, 'failed': False}}
+            mock_cmd = MagicMock(return_value=mock_ret)
+            with patch.dict(saltmod.__salt__, {'saltutil.cmd': mock_cmd}):
                 self.assertDictEqual(saltmod.function(name, tgt), ret)
 
     # 'wait_for_event' function tests: 1
