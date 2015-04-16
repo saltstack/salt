@@ -17,7 +17,6 @@ except ImportError:
     HAS_DEPENDENCIES = False
 
 # Import python libs
-import copy
 import logging
 try:
     import msgpack
