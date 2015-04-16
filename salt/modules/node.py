@@ -52,6 +52,31 @@ def _(module):
     return mod
 
 
+def inspect(mode='all', priority=19):
+    '''
+    Start node inspection and save the data to the database for further query.
+
+    Parameters:
+
+    * **mode**: Clarify inspection mode: configuration, payload, all (default)
+    * **priority**: (advanced) Set priority of the inspection. Default is low priority.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' node.inspect
+        salt '*' node.inspect configuration
+    '''
+    collector = _("collector")
+    try:
+        return collector.Inspector().request_snapshot(mode, priority=priority)
+    except collector.Inspector.InspectorSnapshotException as ex:
+        raise CommandExecutionError(ex)
+    except Exception as ex:
+        raise Exception(ex)
+
+
 def query(scope, **kwargs):
     '''
     Query the node for specific information.
