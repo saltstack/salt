@@ -18,9 +18,6 @@
 Module for full system inspection.
 '''
 from __future__ import absolute_import
-import os
-import re
-import uuid
 import logging
 import importlib
 
@@ -29,11 +26,7 @@ import salt.utils
 import salt.utils.fsutils
 from salt.exceptions import CommandExecutionError
 
-
 log = logging.getLogger(__name__)
-
-# Import inspectlib
-from salt.modules.inspectlib import query as q
 
 
 def __virtual__():
