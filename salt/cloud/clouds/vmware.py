@@ -1568,11 +1568,15 @@ def create_cluster(kwargs=None, call=None):
     return False
 
 
-def vm_tools_upgrade(vm_name, reboot=False, call=None):
+def vm_tools_upgrade(name, reboot=False, call=None):
     '''
-    To check status and upgrade VMware Tools on a VM using vm name.
-    Default is ``reboot=False``  which attempts to suppress the reboot
-    on Windows VMs.  Use ``reboot=True`` to override.
+    To upgrade VMware Tools on a specified virtual machine.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, use ``reboot=True``
+        to reboot the virtual machine after VMware tools upgrade. Default
+        is ``reboot=False``
 
     CLI Example:
 
@@ -1583,56 +1587,38 @@ def vm_tools_upgrade(vm_name, reboot=False, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The start action must be called with -a or --action.'
+            'The vm_tools_upgrade action must be called with -a or --action.'
         )
 
-    vm = _get_mor_by_property(vim.VirtualMachine, vm_name)
+    vm = _get_mor_by_property(vim.VirtualMachine, name)
 
-    # Check if VM is powered on and vmware tools is up to date. 
-    if vm.summary.runtime.powerState == "poweredOn":
-        if vm.guest.toolsStatus == "toolsOk":
-            ret = 'VMware tools is up to date.'
-            log.info('VM {0} {1}'.format(vm_name, ret))
-            return ret
+    tools_status = vm.guest.toolsStatus
+
+    # Exit if VMware tools is already up to date
+    if tools_status == "toolsOk":
+        return 'VMware tools is already up to date'
+
+    # Exit if VM is not powered on 
+    if vm.summary.runtime.powerState != "poweredOn":
+        return 'Tools cannot be upgraded if the VM is not powered on'
         
-        # If vmware tools is out of date, check major OS family.
-        # Upgrade tools on Linux guests.
-        elif vm.guest.toolsStatus == "toolsOld":
-            if vm.guest.guestFamily == "linuxGuest":
-                try:
-                    log.info('Upgrading VMware tools on {0}'.format(vm_name))
-                    task = vm.UpgradeTools()
-                    _wait_for_task(task, vm_name, "Upgrade tools", 5, "info")
-                except Exception as exc:
-                    log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm_name, exc))
-                    return 'failed to upgrade VMware tools'
-                
-            # If Windows, check if reboot is true.
-            elif vm.guest.guestFamily == "windowsGuest":
-                if reboot:
-                    try:
-                        log.info('Upgrading VMware tools on {0}'.format(vm_name))
-                        task = vm.UpgradeTools()
-                        _wait_for_task(task, vm_name, "Upgrade tools", 5, "info")
-                    except Exception as exc:
-                        log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm_name, exc))
-                        return 'failed to upgrade VMware tools'
+    # If vmware tools is out of date, check major OS family
+    # Upgrade tools on Linux and Windows guests
+    if tools_status == "toolsOld":
+        log.info('Upgrading VMware tools on {0}'.format(name))
+        os_family = vm.guest.guestFamily
+        try:
+            if os_family == "windowsGuest" and not reboot:
+                log.info('Reboot suppressed on {0}'.format(name))
+                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
+            elif os_family in ["linuxGuest", "windowsGuest"]:
+                task = vm.UpgradeTools()
+            else:
+                return 'VMware tools upgrade is currently supported only on Linux or Windows guests.'
+            _wait_for_task(task, name, "tools upgrade", 5, "info")
+        except Exception as exc:
+            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(name, exc))
+            return 'failed to upgrade VMware tools'
+        return 'VMware tools upgraded'
 
-                # If reboot is false, upgrade tools while supressing the reboot.
-                else:
-                    try:
-                        log.info('Upgrading VMware tools on {0}'.format(vm_name))
-                        task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
-                        _wait_for_task(task, vm_name, "Upgrade tools", 5, "info")
-                    except Exception as exc:
-                        log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm_name, exc))
-                        return 'failed to upgrade VMware tools'
-
-            return 'VMware tools upgraded'
-        
-    # If vm is powered off, exit.
-    elif vm.summary.runtime.powerState == "poweredOff":
-        ret = 'Tools cannot be upgraded on powered off VMs.'
-        log.info('VM {0} {1}'.format(vm_name, ret))
-
-    return ret
+    return 'VMware tools is not installed'
