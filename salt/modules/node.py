@@ -96,7 +96,7 @@ def query(scope, **kwargs):
     query = _("query")
     try:
         return query.Query(scope)(**kwargs)
-    except query.Query.InspectorQueryException as ex:
+    except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
         raise Exception(ex)
