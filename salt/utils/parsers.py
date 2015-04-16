@@ -1425,7 +1425,7 @@ class MinionOptionParser(MasterOptionParser):
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
-                                    minion_id=True)
+                                    cache_minion_id=True)
 
 
 class SyndicOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
@@ -2128,7 +2128,7 @@ class SaltCallOptionParser(OptionParser, ConfigDirMixIn, MergeConfigMixIn,
 
     def setup_config(self):
         opts = config.minion_config(self.get_config_file_path(),
-                                    minion_id=True)
+                                    cache_minion_id=True)
 
         if opts.get('transport') == 'raet':
             if not self._find_raet_minion(opts):  # must create caller minion
