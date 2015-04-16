@@ -98,7 +98,7 @@ class SysInfo(object):
         '''
         out = __salt__['cmd.run_all']("vmstat -s")
         if out['retcode']:
-            raise SysInfo.SIException("Memory info error: {0}".format(out['stderr']))
+            raise SIException("Memory info error: {0}".format(out['stderr']))
 
         ret = dict()
         for line in out['stdout'].split(os.linesep):
