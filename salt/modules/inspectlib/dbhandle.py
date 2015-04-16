@@ -56,6 +56,16 @@ class DBHandleBase(object):
 
         self.connection.commit()
 
+    def purge(self):
+        '''
+        Purge whole database.
+        '''
+        if self.connection and self.cursor:
+            self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            for table_name in self.cursor.fetchall():
+                self.cursor.execute("DROP TABLE ?", (table_name,))
+            self.connection.commit()
+
     def flush(self, table):
         '''
         Flush the table.
