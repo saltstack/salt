@@ -579,10 +579,9 @@ def list_datacenters(kwargs=None, call=None):
         salt-cloud -f list_datacenters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datacenters function must be called with -f or --function.'
         )
-        return False
 
     datacenters = []
     datacenter_properties = ["name"]
@@ -606,10 +605,9 @@ def list_clusters(kwargs=None, call=None):
         salt-cloud -f list_clusters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_clusters function must be called with -f or --function.'
         )
-        return False
 
     clusters = []
     cluster_properties = ["name"]
@@ -633,10 +631,9 @@ def list_datastore_clusters(kwargs=None, call=None):
         salt-cloud -f list_datastore_clusters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datastore_clusters function must be called with -f or --function.'
         )
-        return False
 
     datastore_clusters = []
     datastore_cluster_properties = ["name"]
@@ -660,10 +657,9 @@ def list_datastores(kwargs=None, call=None):
         salt-cloud -f list_datastores my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datastores function must be called with -f or --function.'
         )
-        return False
 
     datastores = []
     datastore_properties = ["name"]
@@ -687,10 +683,9 @@ def list_hosts(kwargs=None, call=None):
         salt-cloud -f list_hosts my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_hosts function must be called with -f or --function.'
         )
-        return False
 
     hosts = []
     host_properties = ["name"]
@@ -714,10 +709,9 @@ def list_resourcepools(kwargs=None, call=None):
         salt-cloud -f list_resourcepools my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_resourcepools function must be called with -f or --function.'
         )
-        return False
 
     resource_pools = []
     resource_pool_properties = ["name"]
@@ -741,10 +735,9 @@ def list_networks(kwargs=None, call=None):
         salt-cloud -f list_networks my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_networks function must be called with -f or --function.'
         )
-        return False
 
     networks = []
     network_properties = ["name"]
@@ -957,10 +950,9 @@ def list_folders(kwargs=None, call=None):
         salt-cloud -f list_folders my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_folders function must be called with -f or --function.'
         )
-        return False
 
     folders = []
     folder_properties = ["name"]
@@ -995,10 +987,9 @@ def list_snapshots(kwargs=None, call=None):
         salt-cloud -f list_snapshots my-vmware-config name="vmname"
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_snapshots function must be called with -f or --function.'
         )
-        return False
 
     ret = {}
     vm_properties = [
@@ -1315,8 +1306,9 @@ def create(vm_):
             cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
             resourcepool_ref = cluster_ref.resourcePool
         elif clone_type == "template":
-            log.error('You must either specify a cluster, a host or a resource pool')
-            return False
+            raise SaltCloudSystemExit(
+                'You must either specify a cluster, a host or a resource pool'
+            )
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
@@ -1465,10 +1457,9 @@ def create_datacenter(kwargs=None, call=None):
         salt-cloud -f create_datacenter my-vmware-config name="MyNewDatacenter"
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The create_datacenter function must be called with -f or --function.'
         )
-        return False
 
     if not kwargs or 'name' not in kwargs:
         raise SaltCloudSystemExit(
