@@ -73,7 +73,7 @@ def inspect(mode='all', priority=19):
     collector = _("collector")
     try:
         return collector.Inspector().request_snapshot(mode, priority=priority)
-    except collector.Inspector.InspectorSnapshotException as ex:
+    except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
         raise Exception(ex)
