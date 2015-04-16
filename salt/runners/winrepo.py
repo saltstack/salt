@@ -9,7 +9,6 @@ import os
 
 # Import third party libs
 import salt.ext.six as six
-import yaml
 try:
     import msgpack
 except ImportError:
