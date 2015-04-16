@@ -80,3 +80,28 @@ class DBHandleBase(object):
         if self.cursor is not None and self.connection is not None:
             self.connection.close()
             self.cursor = self.connection = None
+
+
+class DBHandle(DBHandleBase):
+    __instance = None
+
+    def __new__(cls, *args, **kwargs):
+        '''
+        Keep singleton.
+        '''
+        if not cls.__instance:
+            cls.__instance = super(DBHandle, cls).__new__(cls, *args, **kwargs)
+        return cls.__instance
+
+    def __init__(self, path):
+        '''
+        Database handle for the specific
+
+        :param path:
+        :return:
+        '''
+        DBHandleBase.__init__(self, path)
+
+        self.init_queries.append("CREATE TABLE inspector_pkg (id INTEGER PRIMARY KEY, name CHAR(255))")
+        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_files (id INTEGER PRIMARY KEY, pkgid INTEGER, path CHAR(4096))")
+        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_diffs (id INTEGER PRIMARY KEY, cfgid INTEGER, diff TEXT)")
