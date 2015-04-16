@@ -18,21 +18,12 @@ import sqlite3
 import os
 
 
-class DBHandle(object):
+class DBHandleBase(object):
     '''
     Handle for the *volatile* database, which serves the purpose of caching
     the inspected data. This database can be destroyed or corrupted, so it should
     be simply re-created from scratch.
     '''
-    __instance = None
-
-    def __new__(cls, *args, **kwargs):
-        '''
-        Keep singleton.
-        '''
-        if not cls.__instance:
-            cls.__instance = super(DBHandle, cls).__new__(cls, *args, **kwargs)
-        return cls.__instance
 
     def __init__(self, path):
         '''
@@ -41,6 +32,7 @@ class DBHandle(object):
         self._path = path
         self.connection = None
         self.cursor = None
+        self.init_queries = list()
 
     def open(self, new=False):
         '''
@@ -59,9 +51,9 @@ class DBHandle(object):
         if self.cursor.fetchall():
             return
 
-        self.cursor.execute("CREATE TABLE inspector_pkg (id INTEGER PRIMARY KEY, name CHAR(255))")
-        self.cursor.execute("CREATE TABLE inspector_pkg_cfg_files (id INTEGER PRIMARY KEY, pkgid INTEGER, path CHAR(4096))")
-        self.cursor.execute("CREATE TABLE inspector_pkg_cfg_diffs (id INTEGER PRIMARY KEY, cfgid INTEGER, diff TEXT)")
+        for query in self.init_queries:
+            self.cursor.execute(query)
+
         self.connection.commit()
 
     def flush(self, table):
