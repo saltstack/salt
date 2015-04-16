@@ -421,7 +421,7 @@ def _wait_for_ip(vm, max_wait_minute):
     time_counter = 0
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
-        log.info("Waiting to get IP information [{0} s]".format(time_counter))
+        log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm.name, time_counter))
         for net in vm.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
@@ -431,6 +431,26 @@ def _wait_for_ip(vm, max_wait_minute):
         time.sleep(5)
         time_counter += 5
     return False
+
+
+def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
+    time_counter = 0
+    while task.info.state == 'running':
+        message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    if task.info.state == 'success':
+        message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+    else:
+        raise task.info.error
 
 
 def _format_instance_info(vm):
@@ -490,21 +510,21 @@ def _format_instance_info(vm):
         }
 
     vm_full_info = {
+        'id': vm['name'],
+        'image': "{0} (Detected)".format(vm["config.guestFullName"]),
+        'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
+        'state': str(vm["summary.runtime.powerState"]),
+        'private_ips': network_full_info["ip_addresses"] if "ip_addresses" in network_full_info else [],
+        'public_ips': [],
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
-        'guest_full_name': vm["config.guestFullName"],
         'guest_id': vm["config.guestId"],
         'hostname': vm["object"].guest.hostName,
-        'ip_address': vm["object"].guest.ipAddress,
         'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
-        'memory_mb': vm["config.hardware.memoryMB"],
-        'name': vm['name'],
         'net': [network_full_info],
-        'num_cpu': vm["config.hardware.numCPU"],
         'path': vm["config.files.vmPathName"],
-        'status': vm["summary.runtime.powerState"],
-        'tools_status': vm["guest.toolsStatus"],
+        'tools_status': str(vm["guest.toolsStatus"]),
     }
 
     return vm_full_info
@@ -559,10 +579,9 @@ def list_datacenters(kwargs=None, call=None):
         salt-cloud -f list_datacenters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datacenters function must be called with -f or --function.'
         )
-        return False
 
     datacenters = []
     datacenter_properties = ["name"]
@@ -586,10 +605,9 @@ def list_clusters(kwargs=None, call=None):
         salt-cloud -f list_clusters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_clusters function must be called with -f or --function.'
         )
-        return False
 
     clusters = []
     cluster_properties = ["name"]
@@ -613,10 +631,9 @@ def list_datastore_clusters(kwargs=None, call=None):
         salt-cloud -f list_datastore_clusters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datastore_clusters function must be called with -f or --function.'
         )
-        return False
 
     datastore_clusters = []
     datastore_cluster_properties = ["name"]
@@ -640,10 +657,9 @@ def list_datastores(kwargs=None, call=None):
         salt-cloud -f list_datastores my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datastores function must be called with -f or --function.'
         )
-        return False
 
     datastores = []
     datastore_properties = ["name"]
@@ -667,10 +683,9 @@ def list_hosts(kwargs=None, call=None):
         salt-cloud -f list_hosts my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_hosts function must be called with -f or --function.'
         )
-        return False
 
     hosts = []
     host_properties = ["name"]
@@ -694,10 +709,9 @@ def list_resourcepools(kwargs=None, call=None):
         salt-cloud -f list_resourcepools my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_resourcepools function must be called with -f or --function.'
         )
-        return False
 
     resource_pools = []
     resource_pool_properties = ["name"]
@@ -721,10 +735,9 @@ def list_networks(kwargs=None, call=None):
         salt-cloud -f list_networks my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_networks function must be called with -f or --function.'
         )
-        return False
 
     networks = []
     network_properties = ["name"]
@@ -777,7 +790,8 @@ def list_nodes(kwargs=None, call=None):
         "guest.ipAddress",
         "config.guestFullName",
         "config.hardware.numCPU",
-        "config.hardware.memoryMB"
+        "config.hardware.memoryMB",
+        "summary.runtime.powerState"
     ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
@@ -785,10 +799,11 @@ def list_nodes(kwargs=None, call=None):
     for vm in vm_list:
         vm_info = {
             'id': vm["name"],
-            'ip_address': vm["guest.ipAddress"] if "guest.ipAddress" in vm else None,
-            'guest_fullname': vm["config.guestFullName"],
-            'cpus': vm["config.hardware.numCPU"],
-            'ram': vm["config.hardware.memoryMB"],
+            'image': "{0} (Detected)".format(vm["config.guestFullName"]),
+            'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
+            'state': str(vm["summary.runtime.powerState"]),
+            'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
+            'public_ips': []
         }
         ret[vm_info['id']] = vm_info
 
@@ -828,9 +843,26 @@ def list_nodes_full(kwargs=None, call=None):
 
     for vm in vm_list:
         vm_full_info = _format_instance_info(vm)
-        ret[vm_full_info['name']] = vm_full_info
+        ret[vm_full_info['id']] = vm_full_info
 
     return ret
+
+
+def list_nodes_select(call=None):
+    '''
+    Return a list of all VMs and templates that are on the provider, with fields specified
+    in the ``query.selection`` option in ``/etc/salt/cloud``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_select my-vmware-config
+    '''
+
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__.get('query.selection'), call,
+    )
 
 
 def show_instance(name, call=None):
@@ -918,10 +950,9 @@ def list_folders(kwargs=None, call=None):
         salt-cloud -f list_folders my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_folders function must be called with -f or --function.'
         )
-        return False
 
     folders = []
     folder_properties = ["name"]
@@ -956,10 +987,9 @@ def list_snapshots(kwargs=None, call=None):
         salt-cloud -f list_snapshots my-vmware-config name="vmname"
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_snapshots function must be called with -f or --function.'
         )
-        return False
 
     ret = {}
     vm_properties = [
@@ -1171,14 +1201,12 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    while task.info.state != 'success':
-                        log.debug("Waiting for Power off task to finish")
+                    _wait_for_task(task, name, "power off")
                 except Exception as exc:
                     log.error('Could not destroy VM {0}: {1}'.format(name, exc))
                     return 'failed to destroy'
             task = vm["object"].Destroy_Task()
-            while task.info.state != 'success':
-                log.debug("Waiting for destroy task to finish")
+            _wait_for_task(task, name, "destroy")
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1278,8 +1306,9 @@ def create(vm_):
             cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
             resourcepool_ref = cluster_ref.resourcePool
         elif clone_type == "template":
-            log.error('You must either specify a cluster, a host or a resource pool')
-            return False
+            raise SaltCloudSystemExit(
+                'You must either specify a cluster, a host or a resource pool'
+            )
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
@@ -1369,11 +1398,7 @@ def create(vm_):
             )
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-            time_counter = 0
-            while task.info.state == 'running':
-                log.info("Waiting for clone task to finish [{0} s]".format(time_counter))
-                time.sleep(5)
-                time_counter += 5
+            _wait_for_task(task, vm_name, "clone", 5, 'info')
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
@@ -1419,3 +1444,125 @@ def create(vm_):
         return False
 
     return {vm_name: data}
+
+
+def create_datacenter(kwargs=None, call=None):
+    '''
+    Create a new data center in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_datacenter my-vmware-config name="MyNewDatacenter"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_datacenter function must be called with -f or --function.'
+        )
+
+    datacenter_name = kwargs.get('name')
+
+    if not datacenter_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the new datacenter to be created.'
+        )
+
+    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
+        raise SaltCloudSystemExit(
+            'The datacenter name must be a non empty string of less than 80 characters.'
+        )
+
+    # Check if datacenter already exists
+    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+    if datacenter_ref:
+        return {datacenter_name: 'datacenter already exists'}
+
+    # Get the service instance
+    si = _get_si()
+
+    folder = si.content.rootFolder
+
+    # Verify that the folder is of type vim.Folder
+    if isinstance(folder, vim.Folder):
+        try:
+            folder.CreateDatacenter(name=datacenter_name)
+        except Exception as exc:
+            log.error(
+                'Error creating datacenter {0}: {1}'.format(
+                    datacenter_name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+        log.debug("Created datacenter {0}".format(datacenter_name))
+        return {datacenter_name: 'created'}
+
+    return False
+
+
+def create_cluster(kwargs=None, call=None):
+    '''
+    Create a new cluster under the specified datacenter in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_cluster my-vmware-config name="MyNewCluster" datacenter="DatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_cluster function must be called with -f or --function.'
+        )
+
+    cluster_name = kwargs.get('name')
+    datacenter = kwargs.get('datacenter')
+
+    if not cluster_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the new cluster to be created.'
+        )
+
+    if not datacenter:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the datacenter where the cluster should be created.'
+        )
+
+    if not isinstance(datacenter, vim.Datacenter):
+        datacenter = _get_mor_by_property(vim.Datacenter, datacenter)
+        if not datacenter:
+            raise SaltCloudSystemExit(
+                'The specified datacenter does not exist.'
+            )
+
+    # Check if cluster already exists
+    cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+    if cluster_ref:
+        return {cluster_name: 'cluster already exists'}
+
+    cluster_spec = vim.cluster.ConfigSpecEx()
+    folder = datacenter.hostFolder
+
+    # Verify that the folder is of type vim.Folder
+    if isinstance(folder, vim.Folder):
+        try:
+            folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
+        except Exception as exc:
+            log.error(
+                'Error creating cluster {0}: {1}'.format(
+                    cluster_name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+        log.debug("Created cluster {0} under datacenter {1}".format(cluster_name, datacenter.name))
+        return {cluster_name: 'created'}
+
+    return False
