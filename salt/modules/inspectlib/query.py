@@ -207,6 +207,9 @@ class Query(object):
             data[pkg_name] = configs
         self.db.close()
 
+        if not data:
+            raise InspectorQueryException("No inspected configuration yet available.")
+
         return data
 
     def _get_local_users(self, disabled=None):
