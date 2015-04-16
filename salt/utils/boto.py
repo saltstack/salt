@@ -9,6 +9,10 @@ therefore, must be accessed via the loader or from the __utils__ dict.
 .. versionadded:: Beryllium
 '''
 
+# NOTE: The functionality for passing in ctx, opts, and pillar is temporary
+#       and will be removed in a future version. It is not needed when using
+#       this module via the loader.
+
 # Import Python libs
 from __future__ import absolute_import
 import hashlib
@@ -54,39 +58,46 @@ def __virtual__():
         return True
 
 
-def _option(value):
+def _option(value, opts, pillar):
     '''
     Look up the value for an option.
     '''
-    if value in __opts__:
-        return __opts__[value]
-    master_opts = __pillar__.get('master', {})
+
+    if opts is None:
+        opts = __opts__
+
+    if pillar is None:
+        pillar = __pillar__
+
+    if value in opts:
+        return opts[value]
+    master_opts = pillar.get('master', {})
     if value in master_opts:
         return master_opts[value]
-    if value in __pillar__:
-        return __pillar__[value]
+    if value in pillar:
+        return pillar[value]
 
 
-def _get_profile(service, region, key, keyid, profile):
+def _get_profile(service, opts, pillar, region, key, keyid, profile):
     if profile:
         if isinstance(profile, six.string_types):
-            _profile = _option(profile)
+            _profile = _option(profile, opts, pillar)
         elif isinstance(profile, dict):
             _profile = profile
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
 
-    if not region and _option(service + '.region'):
-        region = _option(service + '.region')
+    if not region and _option(service + '.region', opts, pillar):
+        region = _option(service + '.region', opts, pillar)
 
     if not region:
         region = 'us-east-1'
 
-    if not key and _option(service + '.key'):
-        key = _option(service + '.key')
-    if not keyid and _option(service + '.keyid'):
-        keyid = _option(service + '.keyid')
+    if not key and _option(service + '.key', opts, pillar):
+        key = _option(service + '.key', opts, pillar)
+    if not keyid and _option(service + '.keyid', opts, pillar):
+        keyid = _option(service + '.keyid', opts, pillar)
 
     label = 'boto_{0}:'.format(service)
     if keyid:
@@ -99,7 +110,7 @@ def _get_profile(service, region, key, keyid, profile):
 
 def cache_id(service, name, sub_resource=None, resource_id=None,
              invalidate=False, region=None, key=None, keyid=None,
-             profile=None):
+             profile=None, ctx=None, opts=None, pillar=None):
     '''
     Cache, invalidate, or retrieve an AWS resource id keyed by name.
 
@@ -110,7 +121,10 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
                                    profile='custom_profile')
     '''
 
-    cxkey, _, _, _ = _get_profile(service, region, key,
+    if ctx is None:
+        ctx = __context__
+
+    cxkey, _, _, _ = _get_profile(service, opts, pillar, region, key,
                                   keyid, profile)
     if sub_resource:
         cxkey = '{0}:{1}:{2}:id'.format(cxkey, sub_resource, name)
@@ -118,19 +132,19 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
         cxkey = '{0}:{1}:id'.format(cxkey, name)
 
     if invalidate:
-        if cxkey in __context__:
-            del __context__[cxkey]
+        if cxkey in ctx:
+            del ctx[cxkey]
             return True
         else:
             return False
     if resource_id:
-        __context__[cxkey] = resource_id
+        ctx[cxkey] = resource_id
         return True
 
-    return __context__.get(cxkey)
+    return ctx.get(cxkey)
 
 
-def cache_id_func(service):
+def cache_id_func(service, ctx=None, opts=None, pillar=None):
     '''
     Returns a partial `cache_id` function for the provided service.
 
@@ -140,11 +154,11 @@ def cache_id_func(service):
         cache_id('myinstance', 'i-a1b2c3')
         instance_id = cache_id('myinstance')
     '''
-    return partial(cache_id, service)
+    return partial(cache_id, service, ctx=ctx, opts=opts, pillar=pillar)
 
 
 def get_connection(service, module=None, region=None, key=None, keyid=None,
-                   profile=None):
+                   profile=None, ctx=None, opts=None, pillar=None):
     '''
     Return a boto connection for the service.
 
@@ -155,14 +169,17 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
 
     module = module or service
 
+    if ctx is None:
+        ctx = __context__
+
     svc_mod = __import__('boto.' + module, fromlist=[module])
 
-    cxkey, region, key, keyid = _get_profile(service, region, key,
+    cxkey, region, key, keyid = _get_profile(service, opts, pillar, region, key,
                                              keyid, profile)
     cxkey = cxkey + ':conn'
 
-    if cxkey in __context__:
-        return __context__[cxkey]
+    if cxkey in ctx:
+        return ctx[cxkey]
 
     try:
         conn = svc_mod.connect_to_region(region, aws_access_key_id=keyid,
@@ -174,11 +191,12 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
         raise SaltInvocationError('No authentication credentials found when '
                                   'attempting to make boto {0} connection to '
                                   'region "{1}".'.format(service, region))
-    __context__[cxkey] = conn
+    ctx[cxkey] = conn
     return conn
 
 
-def get_connection_func(service, module=None):
+def get_connection_func(service, module=None, ctx=None,
+                        opts=None, pillar=None):
     '''
     Returns a partial `get_connection` function for the provided service.
 
@@ -187,7 +205,8 @@ def get_connection_func(service, module=None):
         get_conn = __utils__['boto.get_connection_func']('ec2')
         conn = get_conn()
     '''
-    return partial(get_connection, service, module=module)
+    return partial(get_connection, service, module=module, ctx=ctx,
+                   opts=opts, pillar=pillar)
 
 
 def get_error(e):
@@ -223,8 +242,14 @@ def assign_funcs(modname, service, module=None):
 
     .. code-block:: python
 
-        _utils__['boto.assign_partials'](__name__, 'ec2')
+        __utils__['boto.assign_funcs'](__name__, 'ec2')
     '''
     mod = sys.modules[modname]
-    setattr(mod, '_get_conn', get_connection_func(service, module=module))
-    setattr(mod, '_cache_id', cache_id_func(service))
+    ctx = mod.__context__
+    opts = mod.__opts__
+    pillar = mod.__pillar__
+    setattr(mod, '_get_conn', get_connection_func(service, module=module,
+                                                  ctx=ctx, opts=opts,
+                                                  pillar=pillar))
+    setattr(mod, '_cache_id', cache_id_func(service, ctx=ctx,
+                                            opts=opts, pillar=pillar))
