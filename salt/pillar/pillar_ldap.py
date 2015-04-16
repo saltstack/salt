@@ -74,9 +74,9 @@ The ``it-admins`` configuration below returns the Pillar ``it-admins`` by:
         bindpw:    bi7ieBai5Ano
         referrals: false
         anonymous: false
-        mode: map
-        dn: 'ou=users,dc=company,dc=tld'
-        filter: '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
+        mode:      map
+        dn:        'ou=users,dc=company,dc=tld'
+        filter:    '(&(memberof=cn=it-admins,ou=groups,dc=company,dc=tld)(objectclass=user))'
         attrs:
             - cn
             - displayName
