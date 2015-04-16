@@ -1601,7 +1601,7 @@ def vm_tools_upgrade(name, reboot=False, call=None):
     # Exit if VM is not powered on 
     if vm.summary.runtime.powerState != "poweredOn":
         return 'Tools cannot be upgraded if the VM is not powered on'
-        
+
     # If vmware tools is out of date, check major OS family
     # Upgrade tools on Linux and Windows guests
     if tools_status == "toolsOld":
