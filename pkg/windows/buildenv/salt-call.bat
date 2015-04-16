@@ -3,7 +3,7 @@
 :: Accepts all parameters that Salt-Minion Accepts
 
 :: Define Variables
-Set Python="%~dp0\bin\python.exe"
-Set Script="%~dp0\bin\Scripts\salt-call"
+Set Python=%~dp0bin\python.exe
+Set Script=%~dp0bin\Scripts\salt-call
 
 "%Python%" "%Script%" %*
