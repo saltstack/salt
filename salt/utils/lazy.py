@@ -95,8 +95,8 @@ class LazyDict(collections.MutableMapping):
         '''
         Check if the name is in the dict and return it if it is
         '''
-        if name in self._dict:
-            return self._dict[name]
+        if name in self:
+            return self[name]
         raise AttributeError(name)
 
     def __len__(self):
