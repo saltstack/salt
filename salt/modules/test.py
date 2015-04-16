@@ -27,6 +27,19 @@ def missing_func():
     return 'foo'
 
 
+def attr_call():
+    '''
+    Call grains.items via the attribute
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt '*' test.attr_call
+    '''
+    return __salt__.grains.items()
+
+
 def module_report():
     '''
     Return a dict containing all of the exeution modules with a report on
@@ -36,7 +49,7 @@ def module_report():
 
     .. code-block:: bash
 
-        salt '*' module_report
+        salt '*' test.module_report
     '''
     ret = {'functions': [],
            'function_attrs': [],
