@@ -189,9 +189,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
     if 'protocol' in kwargs:
         proto = kwargs['protocol']
+        proto_negation = maybe_add_negation('protocol')
         del kwargs['protocol']
     elif 'proto' in kwargs:
         proto = kwargs['proto']
+        proto_negation = maybe_add_negation('proto')
         del kwargs['proto']
 
     if proto:
@@ -199,7 +201,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             proto = re.sub(bang_not_pat, '', proto)
             rule += '! '
 
-        rule.append('{0}-p {1}'.format(maybe_add_negation('proto'), proto))
+        rule.append('{0}-p {1}'.format(proto_negation, proto))
         proto = True
 
     if 'match' in kwargs:
