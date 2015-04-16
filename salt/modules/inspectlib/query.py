@@ -180,7 +180,10 @@ class Query(object):
         return getattr(self, self.scope)(*args, **kwargs)
 
     def _changes(self, *args, **kwargs):
-        return "This is changes"
+        '''
+        Returns all diffs to the configuration files.
+        '''
+        raise Exception("Not yet implemented")
 
     def _configuration(self, *args, **kwargs):
         '''
