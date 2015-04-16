@@ -511,6 +511,8 @@ def grains(opts, force_refresh=False):
 
     # Run the rest of the grains
     for key, fun in six.iteritems(funcs):
+        if '.' not in key:
+            continue
         if key.startswith('core.') or key == '_errors':
             continue
         try:
@@ -842,13 +844,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         '''
         if 'grains' in opts:
-            self.grains = opts['grains']
+            self._grains = opts['grains']
         else:
-            self.grains = {}
+            self._grains = {}
         if 'pillar' in opts:
-            self.pillar = opts['pillar']
+            self._pillar = opts['pillar']
         else:
-            self.pillar = {}
+            self._pillar = {}
 
         mod_opts = {}
         for key, val in opts.items():
@@ -955,8 +957,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         else:
             mod.__opts__ = self.opts
 
-        mod.__grains__ = self.grains
-        mod.__pillar__ = self.pillar
+        mod.__grains__ = self._grains
+        mod.__pillar__ = self._pillar
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
@@ -1011,6 +1013,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     module_name
                 )
             )
+        self._dict[module_name] = salt.utils.odict.OrderedDict()
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1027,7 +1030,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            # Save many references for lookups
             self._dict['{0}.{1}'.format(module_name, funcname)] = func
+            setattr(self._dict[module_name], funcname, func)
+            self._dict[module_name][funcname] = func
             self._apply_outputter(func, mod)
 
         # enforce depends
@@ -1040,9 +1046,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if not isinstance(key, six.string_types) or '.' not in key:
+        if not isinstance(key, six.string_types):
             raise KeyError
-        mod_name, _ = key.split('.', 1)
+        if '.' not in key:
+            mod_name = key
+        else:
+            mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
         # if the modulename isn't in the whitelist, don't bother
