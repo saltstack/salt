@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function
 import fnmatch
 import logging
 import os
-import copy
 
 # Import salt libs
 import salt.client
