@@ -21,6 +21,7 @@ import logging
 import salt
 import salt.utils.network
 from salt.modules.inspectlib.dbhandle import DBHandle
+from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
 
 log = logging.getLogger(__name__)
 
