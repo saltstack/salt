@@ -31,12 +31,6 @@ class SysInfo(object):
     System information.
     '''
 
-    class SIException(Exception):
-        '''
-        System information exception.
-        '''
-        pass
-
     def __init__(self, systype):
         if systype.lower() == "solaris":
             raise SysInfo.SIException("Platform {0} not (yet) supported.".format(systype))
