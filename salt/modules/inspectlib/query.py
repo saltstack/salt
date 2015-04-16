@@ -16,11 +16,13 @@
 
 
 import os
+import logging
 
 import salt
 import salt.utils.network
 from salt.modules.inspectlib.dbhandle import DBHandle
 
+log = logging.getLogger(__name__)
 
 
 class SysInfo(object):
