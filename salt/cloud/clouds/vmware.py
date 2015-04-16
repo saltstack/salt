@@ -1568,7 +1568,7 @@ def create_cluster(kwargs=None, call=None):
     return False
 
 
-def vm_tools_upgrade(name, reboot=False, call=None):
+def upgrade_tools(name, reboot=False, call=None):
     '''
     To upgrade VMware Tools on a specified virtual machine.
 
@@ -1582,12 +1582,12 @@ def vm_tools_upgrade(name, reboot=False, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_tools_upgrade vmname
-        salt-cloud -a vm_tools_upgrade vmname reboot=True
+        salt-cloud -a upgrade_tools vmname
+        salt-cloud -a upgrade_tools vmname reboot=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The vm_tools_upgrade action must be called with -a or --action.'
+            'The upgrade_tools action must be called with -a or --action.'
         )
 
     vm = _get_mor_by_property(vim.VirtualMachine, name)
