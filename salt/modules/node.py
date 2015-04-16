@@ -76,6 +76,7 @@ def inspect(mode='all', priority=19):
     except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
+        log.error(ex.message)
         raise Exception(ex)
 
 
@@ -99,4 +100,5 @@ def query(scope, **kwargs):
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
+        log.error(ex.message)
         raise Exception(ex)
