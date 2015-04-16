@@ -405,7 +405,6 @@ def function(
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         changes[minion] = m_ret
-    
     if not cmd_ret:
         ret['result'] = False
         ret['command'] = 'No minions responded'
