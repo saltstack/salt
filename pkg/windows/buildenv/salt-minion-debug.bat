@@ -1,2 +1,7 @@
 net stop salt-minion
-.\bin\python.exe .\bin\Scripts\salt-minion -l debug -c C:\salt\conf
+
+Set SaltInstallDir=%~dp0
+Set Python="%SaltInstallDir%bin\python.exe"
+Set Script="%SaltInstallDir%bin\Scripts\salt-minion"
+
+%Python% %Script% -l debug -c "%SaltInstallDir%conf"
