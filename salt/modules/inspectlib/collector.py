@@ -21,10 +21,6 @@ from salt.modules.inspectlib.dbhandle import DBHandle
 
 
 class Inspector(object):
-    class InspectorSnapshotException(Exception):
-        '''
-        Snapshot exception.
-        '''
 
     MODE = ['configuration', 'payload', 'all']
 
