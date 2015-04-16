@@ -17,6 +17,7 @@ Configuring the LDAP ext_pillar
 
 The basic configuration is part of the `master configuration
 <master-configuration-ext-pillar>`_.
+
 .. code-block:: yaml
 
     ext_pillar:
