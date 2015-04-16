@@ -1598,7 +1598,7 @@ def upgrade_tools(name, reboot=False, call=None):
     if tools_status == "toolsOk":
         return 'VMware tools is already up to date'
 
-    # Exit if VM is not powered on 
+    # Exit if VM is not powered on
     if vm.summary.runtime.powerState != "poweredOn":
         return 'Tools cannot be upgraded if the VM is not powered on'
 
