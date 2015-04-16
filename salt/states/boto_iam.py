@@ -80,6 +80,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - key: 'fdkjsafkljsASSADFalkfjasdf'
 
 .. code-block:: yaml
+
     delete server certificate:
       boto_iam.server_cert_absent:
         - name: mycert
