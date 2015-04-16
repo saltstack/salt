@@ -315,6 +315,9 @@ class Query(object):
         return data
 
     def _software(self, *args, **kwargs):
+        '''
+        Return installed software.
+        '''
         data = dict()
         if 'exclude' in kwargs:
             excludes = kwargs['exclude'].split(",")
