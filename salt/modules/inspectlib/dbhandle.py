@@ -51,10 +51,15 @@ class DBHandleBase(object):
         if self.cursor.fetchall():
             return
 
+        self._run_init_queries()
+        self.connection.commit()
+
+    def _run_init_queries(self):
+        '''
+        Initialization queries
+        '''
         for query in self.init_queries:
             self.cursor.execute(query)
-
-        self.connection.commit()
 
     def purge(self):
         '''
@@ -63,8 +68,9 @@ class DBHandleBase(object):
         if self.connection and self.cursor:
             self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
             for table_name in self.cursor.fetchall():
-                self.cursor.execute("DROP TABLE ?", (table_name,))
+                self.cursor.execute("DROP TABLE {0}".format(table_name[0]))
             self.connection.commit()
+        self._run_init_queries()
 
     def flush(self, table):
         '''
