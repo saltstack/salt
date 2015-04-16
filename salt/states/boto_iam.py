@@ -106,6 +106,9 @@ import xml.etree.cElementTree as xml
 # Import Salt Libs
 import salt.utils
 import salt.utils.odict as odict
+import salt.utils.dictupdate as dictupdate
+import salt.ext.six as six
+from salt.ext.six import string_types
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -397,83 +400,157 @@ def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=Non
     return ret
 
 
-def group_present(name, policy_name=None, policy=None, users=None, region=None, key=None, keyid=None, profile=None):
+def group_present(name, policies=None, policies_from_pillars=None, users=None, region=None, key=None, keyid=None, profile=None):
     '''
 
     .. versionadded:: Beryllium
 
     Ensure the IAM group is present
 
-    name (string) – The name of the new group.
+    name (string)
+        The name of the new group.
 
-    policy_name (string) - The policy document to add to the group.
+    policies (dict)
+        A dict of IAM group policy documents.
 
-    users (list) - A list of users to be added to the group.
+    policies_from_pillars (list)
+        A list of pillars that contain role policy dicts. Policies in the
+        pillars will be merged in the order defined in the list and key
+        conflicts will be handled by later defined keys overriding earlier
+        defined keys. The policies defined here will be merged with the
+        policies defined in the policies argument. If keys conflict, the keys
+        in the policies argument will override the keys defined in
+        policies_from_pillars.
 
-    region (string) - Region to connect to.
+    users (list)
+        A list of users to be added to the group.
 
-    key (string) - Secret key to be used.
+    region (string)
+        Region to connect to.
 
-    keyid (string) - Access key to be used.
+    key (string)
+        Secret key to be used.
 
-    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
-    that contains a dict with region, key and keyid.
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not policies:
+        policies = {}
+    if not policies_from_pillars:
+        policies_from_pillars = []
+    _policies = {}
+    for policy in policies_from_pillars:
+        _policy = __salt__['pillar.get'](policy)
+        _policies.update(_policy)
+    _policies.update(policies)
     exists = __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
     if not exists:
         if __opts__['test']:
-            ret['comment'] = 'IAM user {0} is set to be created.'.format(name)
+            ret['comment'] = 'IAM group {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
         created = __salt__['boto_iam.create_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
-        if created:
-            ret['changes']['group'] = created
-            ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} has been created.'.format(name)])
-            if policy_name and policy:
-                ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
-            if users:
-                log.debug('users are : {0}'.format(users))
-                for user in users:
-                    log.debug('user is : {0}'.format(user))
-                    ret = _case_group(ret, user, name, region, key, keyid, profile)
+        if not created:
+            ret['comment'] = 'Failed to create IAM user {0}.'.format(name)
+            ret['result'] = False
+            return ret
+        ret['changes']['group'] = created
+        ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} has been created.'.format(name)])
     else:
         ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} is present.'.format(name)])
-        if policy_name and policy:
-            ret = _case_policy(ret, name, policy_name, policy, region, key, keyid, profile)
-        if users:
-            log.debug('Users are : {0}.'.format(users))
-            for user in users:
-                log.debug('User is : {0}.'.format(user))
-                ret = _case_group(ret, user, name, region, key, keyid, profile)
+    # User exists, ensure group policies and users are set.
+    _ret = _group_policies_present(
+        name, _policies, region, key, keyid, profile
+    )
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        return ret
+    # TODO: make this work like _group_policies_present. This is currently not
+    #       fully idempotent.
+    if users:
+        log.debug('Users are : {0}.'.format(users))
+        for user in users:
+            log.debug('User is : {0}.'.format(user))
+            ret = _case_group(ret, user, name, region, key, keyid, profile)
     return ret
 
 
-def _case_policy(ret, group_name, policy_name, policy, region=None, key=None, keyid=None, profile=None):
-    exists = __salt__['boto_iam.get_group_policy'](group_name, policy_name, region, key, keyid, profile)
-    if exists:
-        log.debug('Policy exists is : {0}.'.format(exists))
-        if not isinstance(policy, str):
-            policy = json.loads(policy, object_pairs_hook=odict.OrderedDict)
-            log.debug('Policy in Json is : {0}.'.format(policy))
-        if exists == policy:
-            ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(group_name)])
+def _group_policies_present(
+        name,
+        policies=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    policies_to_create = {}
+    policies_to_delete = []
+    for policy_name, policy in six.iteritems(policies):
+        if isinstance(policy, string_types):
+            dict_policy = json.loads(
+                policy, object_pairs_hook=odict.OrderedDict
+            )
         else:
-            if __opts__['test']:
-                ret['comment'] = 'Group policy {0} is set to be updated.'.format(policy_name)
-                ret['result'] = None
-                return ret
-            __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
-            ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
-            ret['changes']['policy_name'] = policy
-    else:
+            dict_policy = policy
+        _policy = __salt__['boto_iam.get_group_policy'](
+            name, policy_name, region, key, keyid, profile
+        )
+        if _policy != dict_policy:
+            policies_to_create[policy_name] = policy
+    _list = __salt__['boto_iam.get_all_group_policies'](
+        name, region, key, keyid, profile
+    )
+    for policy_name in _list:
+        if policy_name not in policies:
+            policies_to_delete.append(policy_name)
+    if policies_to_create or policies_to_delete:
+        _to_modify = list(policies_to_delete)
+        _to_modify.extend(policies_to_create)
         if __opts__['test']:
-            ret['comment'] = 'Group policy {0} is set to be created.'.format(policy_name)
+            msg = '{0} policies to be modified on group {1}.'
+            ret['comment'] = msg.format(', '.join(_to_modify), name)
             ret['result'] = None
             return ret
-        __salt__['boto_iam.put_group_policy'](group_name, policy_name, policy, region, key, keyid, profile)
-        ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been added to group {1}.'.format(policy_name, group_name)])
-        ret['changes'][policy_name] = policy
+        ret['changes']['old'] = {'policies': _list}
+        for policy_name, policy in six.iteritems(policies_to_create):
+            policy_set = __salt__['boto_iam.put_group_policy'](
+                name, policy_name, policy, region, key, keyid, profile
+            )
+            if not policy_set:
+                _list = __salt__['boto_iam.get_all_group_policies'](
+                    name, region, key, keyid, profile
+                )
+                ret['changes']['new'] = {'policies': _list}
+                ret['result'] = False
+                msg = 'Failed to add policy {0} to group {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        for policy_name in policies_to_delete:
+            policy_unset = __salt__['boto_iam.delete_group_policy'](
+                name, policy_name, region, key, keyid, profile
+            )
+            if not policy_unset:
+                _list = __salt__['boto_iam.get_all_group_policies'](
+                    name, region, key, keyid, profile
+                )
+                ret['changes']['new'] = {'policies': _list}
+                ret['result'] = False
+                msg = 'Failed to add policy {0} to group {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        _list = __salt__['boto_iam.get_all_group_policies'](
+            name, region, key, keyid, profile
+        )
+        ret['changes']['new'] = {'policies': _list}
+        msg = '{0} policies modified on group {1}.'
+        ret['comment'] = msg.format(', '.join(_list), name)
     return ret
 
 
