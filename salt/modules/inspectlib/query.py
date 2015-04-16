@@ -33,7 +33,7 @@ class SysInfo(object):
 
     def __init__(self, systype):
         if systype.lower() == "solaris":
-            raise SysInfo.SIException("Platform {0} not (yet) supported.".format(systype))
+            raise SIException("Platform {0} not (yet) supported.".format(systype))
 
     def _grain(self, grain):
         '''
