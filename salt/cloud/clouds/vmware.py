@@ -1873,7 +1873,7 @@ def upgrade_tools(name, reboot=False, call=None):
 
     return 'VMware tools is not installed'
 
-def rescanAllHba(name, call=None):
+def rescan_all_hbas_on_host(kwargs=None, call=None):
     '''
     To rescan all HBA's on a Host using the Hostname
         
@@ -1881,58 +1881,53 @@ def rescanAllHba(name, call=None):
         
     .. code-block:: bash
         
-        salt-cloud -a rescanAllHba hostname
+    salt-cloud -f rescan_all_hbas_on_host my-vmware-config host
     '''
     
-    if call != 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
-            'The rescanHBA action must be called with -a or --action.'
+            'The rescan_all_hbas_on_host action must be called with -f or --function.'
         )
 
-    host_properties = ["name"]
+    host_name = kwargs.get('host')
 
-    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
-    
-    for host in host_list:
-        if host["name"] == name:
-            try:
-                log.info('Rescanning HBA\'s on host {0}'.format(name))
-                host["object"].RescanAllHba()
-            except Exception as exc:
-                log.error('Could not rescan HBA\'s on host {0}: {1}'.format(name, exc))
-                return 'failed to rescan HBA\'s'
+    host_ref = _get_mor_with_property(vim.HostSystem, host_name)
+            
+    try:
+        log.info('Rescanning HBA\'s on host {0}'.format(host_name))
+        host_ref.configManager.storageSystem.RescanAllHba()
+    except Exception as exc:
+        log.error('Could not rescan HBA\'s on host {0}: {1}'.format(host_name, exc))
+        return 'failed to rescan HBA\'s'
+
     return 'rescanned HBA\'s'
 
-def rescanHba(hba, name, call=None):
+def rescan_hba_on_host(kwargs=None, call=None):
     '''
-        To rescan a specific HBA on a Host using the HBA device name and Hostname
+    To rescan a specific HBA on a Host using the HBA device name and Hostname
         
-        CLI Example:
+    CLI Example:
         
-        .. code-block:: bash
+    .. code-block:: bash
         
-        salt-cloud -a rescanHba devicename hostname
-        '''
+    salt-cloud -f rescan_hba_on_host my-vmware-config hba host
+    '''
     
-    if call != 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
-            'The rescanHba action must be called with -a or --action.'
+            'The rescan_hba_on_host function must be called with -f or --function.'
         )
-    
-    host_properties = [
-        "name",
-        "HostBusAdapter.device"
-    ]
 
-    host_list = _get_mors_with_properties(vim.host, host_properties)
+    hba = kwargs.get('hba')
+    host_name = kwargs.get('host')
     
-    for host in host_list:
-        if host["name"] == name:
-            try:
-                log.info('Rescanning HBA {0} on host {1}'.format(hba, name))
-                host["object"].RescanHba(hba)
-            except Exception as exc:
-                log.error('Could not rescan HBA {0} on host {1}: {2}'.format(hba, name, exc))
-                return 'failed to rescan HBA {0}'.format(hba)
+    host_ref = _get_mor_with_property(vim.HostSystem, host_name)
+        
+    try:
+        log.info('Rescanning HBA {0} on host {1}'.format(hba, host_name))
+        host_ref.configManager.storageSystem.RescanHba(hba)
+    except Exception as exc:
+        log.error('Could not rescan HBA {0} on host {1}: {2}'.format(hba, host_name, exc))
+        return 'failed to rescan HBA {0}'.format(hba)
+    
     return 'rescanned HBA {0}'.format(hba)
-
