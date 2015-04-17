@@ -1622,3 +1622,35 @@ def upgrade_tools(name, reboot=False, call=None):
         return 'VMware tools upgraded'
 
     return 'VMware tools is not installed'
+
+def rescanAllHba(name, call=None):
+    '''
+    To rescan all HBA's on a Host using the Hostname
+        
+    CLI Example:
+        
+    .. code-block:: bash
+        
+        salt-cloud -a rescanAllHba hostname
+    '''
+    
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The rescanHBA action must be called with -a or --action.'
+        )
+
+    host_properties = [
+        "name",
+    ]
+
+host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+    
+    for host in host_list:
+        if host["name"] == name:
+            try:
+                log.info('Rescanning HBA\'s on host {0}'.format(name))
+                host["object"].RescanAllHba()
+            except Exception as exc:
+                log.error('Could not rescan HBA\'s on host {0}: {1}'.format(name, exc))
+                return 'failed to rescan HBA\'s'
+return 'rescanned HBA\'s'
