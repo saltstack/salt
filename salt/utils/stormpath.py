@@ -19,7 +19,7 @@ def query(action=None,
            args=None,
            method='GET',
            header_dict=None,
-           data=None
+           data=None,
            opts=None):
     '''
     Make a web call to Stormpath

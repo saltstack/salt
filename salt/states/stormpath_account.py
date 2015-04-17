@@ -83,7 +83,7 @@ def present(name, **kwargs):
             ret['comment'] = 'Stormpath account {0} needs to be created'.format(name)
         else:
             if 'password' in needs_update:
-                needs_update['password'] == '**HIDDEN**'
+                needs_update['password'] = '**HIDDEN**'
             ret['comment'] = ('Stormpath account {0} needs the following '
                 'fields to be updated: '.format(', '.join(needs_update)))
         return ret
@@ -93,7 +93,7 @@ def present(name, **kwargs):
         account_id = comps[-1]
         ret['changes'] = info
         ret['result'] = True
-        kwargs['password'] == '**HIDDEN**'
+        kwargs['password'] = '**HIDDEN**'
         ret['comment'] = 'Created account ID {0} ({1}): {2}'.format(
             account_id, name, pprint.pformat(kwargs))
         return ret
@@ -104,7 +104,7 @@ def present(name, **kwargs):
         ret['changes'] = needs_update
         ret['result'] = True
         if 'password' in needs_update:
-            needs_update['password'] == '**HIDDEN**'
+            needs_update['password'] = '**HIDDEN**'
         ret['comment'] = 'Set the following fields for account ID {0} ({1}): {2}'.format(
             account_id, name, pprint.pformat(needs_update))
         return ret
