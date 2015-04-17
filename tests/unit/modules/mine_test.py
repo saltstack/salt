@@ -114,6 +114,7 @@ class MineTestCase(TestCase):
                                         'match.ipcidr': MagicMock(),
                                         'match.compound': MagicMock(),
                                         'match.pillar': MagicMock(),
+                                        'match.pillar_pcre': MagicMock(),
                                         'data.getval':
                                         MagicMock(return_value={})}):
             with patch.dict(mine.__opts__, {'file_client': 'local',

@@ -2204,9 +2204,22 @@ class Matcher(object):
             self.opts['pillar'], tgt, delimiter=delimiter
         )
 
+    def pillar_pcre_match(self, tgt, delimiter=DEFAULT_TARGET_DELIM):
+        '''
+        Reads in the pillar pcre match
+        '''
+        log.debug('pillar PCRE target: {0}'.format(tgt))
+        if delimiter not in tgt:
+            log.error('Got insufficient arguments for pillar PCRE match '
+                      'statement from master')
+            return False
+        return salt.utils.subdict_match(
+            self.opts['pillar'], tgt, delimiter=delimiter, regex_match=True
+        )
+
     def pillar_exact_match(self, tgt, delimiter=':'):
         '''
-        Reads in the pillar match, no globbing
+        Reads in the pillar match, no globbing, no PCRE
         '''
         log.debug('pillar target: {0}'.format(tgt))
         if delimiter not in tgt:
@@ -2266,6 +2279,7 @@ class Matcher(object):
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
+               'J': 'pillar_pcre',
                'L': 'list',
                'S': 'ipcidr',
                'E': 'pcre'}

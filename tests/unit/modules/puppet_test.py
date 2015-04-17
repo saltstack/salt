@@ -42,7 +42,7 @@ class PuppetTestCase(TestCase):
         with patch.object(puppet, '_check_puppet', mock):
             mock = MagicMock(return_value={"A": "B"})
             with patch.object(salt.utils, 'clean_kwargs', mock):
-                mock = MagicMock(return_value=True)
+                mock = MagicMock(return_value={'retcode': 0})
                 mock_lst = MagicMock(return_value=[])
                 with patch.dict(puppet.__salt__, {'cmd.run_all': mock,
                                                   'cmd.run': mock_lst}):

@@ -13,11 +13,12 @@ HERE=$(pwd)
 
 mv /opt/local /opt/local.backup ; hash -r
 cd /
-curl http://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2014Q2-x86_64.tar.gz | gtar xz
+curl http://pkgsrc.joyent.com/packages/SmartOS/bootstrap/bootstrap-2014Q4-x86_64.tar.gz | gtar xz
 hash -r
 
+rm -rf /var/db/pkgin/
 pkgin -y up
-pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb libsodium
+pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb libsodium mysql-client
 pkgin -y rm salt py27-zmq
 
 cd /opt/local/bin
@@ -51,15 +52,16 @@ until pip install --egg -r pkg/smartos/esky/raet_requirements.txt ; do sleep 1 ;
 python2.7 pkg/smartos/esky/sodium_grabber_installer.py install
 
 # ugly workaround for odd zeromq linking breakage
-cp /opt/local/lib/libzmq.so.3 /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/
-patchelf --set-rpath '$ORIGIN:$ORIGIN/../lib' /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/libzmq.so.3
+cp /opt/local/lib/libzmq.so.4 /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/
+patchelf --set-rpath '$ORIGIN:$ORIGIN/../lib' /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/libzmq.so.4
+cp /opt/local/lib/libsodium.so.13 /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/
+patchelf --set-rpath '$ORIGIN:$ORIGIN/../lib' /opt/local/lib/python2.7/site-packages/pyzmq-13.1.0-py2.7-solaris-2.11-i86pc.64bit.egg/zmq/libsodium.so.13
 
 # at this point you have a build environment that you could set aside and reuse to run further builds.
 
 bash pkg/smartos/esky/build-tarball.sh
 
 # Upload packages into Manta
-#pkgin -y in sdc-manta
 #mmkdir -p /$MANTA_USER/public/salt
 #for file in dist/salt*; do mput -m /$MANTA_USER/public/salt -f $file; done;
 ```

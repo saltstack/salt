@@ -6,6 +6,7 @@ An execution module which can manipulate an f5 bigip via iControl REST
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import requests
 import requests.exceptions
 import json
@@ -211,7 +212,7 @@ def list_node(hostname, username, password, name=None):
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node')
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=e)
 
     return _load_response(response)
@@ -244,7 +245,7 @@ def create_node(hostname, username, password, name, address):
     #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node', data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=e)
 
     return _load_response(response)
@@ -307,7 +308,7 @@ def modify_node(hostname, username, password, name,
     #put to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -334,7 +335,7 @@ def delete_node(hostname, username, password, name):
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     if _load_response(response) == '':
@@ -368,7 +369,7 @@ def list_pool(hostname, username, password, name=None):
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/?expandSubcollections=true'.format(name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool')
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -494,7 +495,7 @@ def create_pool(hostname, username, password, name, members=None,
     #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool', data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -614,7 +615,7 @@ def modify_pool(hostname, username, password, name,
     #post to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -641,7 +642,7 @@ def delete_pool(hostname, username, password, name):
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     if _load_response(response) == '':
@@ -681,7 +682,7 @@ def replace_pool_members(hostname, username, password, name, members):
     #put to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -710,7 +711,7 @@ def add_pool_member(hostname, username, password, name, member):
     #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members'.format(name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -781,7 +782,7 @@ def modify_pool_member(hostname, username, password, name, member,
     #put to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -809,7 +810,7 @@ def delete_pool_member(hostname, username, password, name, member):
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     if _load_response(response) == '':
@@ -843,7 +844,7 @@ def list_virtual(hostname, username, password, name=None):
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}/?expandSubcollections=true'.format(name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual')
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1086,7 +1087,7 @@ def create_virtual(hostname, username, password, name, destination,
     #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual', data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1314,7 +1315,7 @@ def modify_virtual(hostname, username, password, name,
     #put to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1341,7 +1342,7 @@ def delete_virtual(hostname, username, password, name):
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     if _load_response(response) == '':
@@ -1377,7 +1378,7 @@ def list_monitor(hostname, username, password, monitor_type, name=None, ):
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}?expandSubcollections=true'.format(type=monitor_type, name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}'.format(type=monitor_type))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1424,7 +1425,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}'.format(type=monitor_type), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1470,7 +1471,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
     #put to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1499,7 +1500,7 @@ def delete_monitor(hostname, username, password, monitor_type, name):
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     if _load_response(response) == '':
@@ -1535,7 +1536,7 @@ def list_profile(hostname, username, password, profile_type, name=None, ):
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}?expandSubcollections=true'.format(type=profile_type, name=name))
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1609,7 +1610,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     #post to REST
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1685,7 +1686,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     #put to REST
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name), data=json.dumps(payload))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     return _load_response(response)
@@ -1714,7 +1715,7 @@ def delete_profile(hostname, username, password, profile_type, name):
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name))
-    except requests.exceptions.ConnectionError, e:
+    except requests.exceptions.ConnectionError as e:
         return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
 
     if _load_response(response) == '':

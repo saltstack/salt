@@ -256,11 +256,10 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], dict):
-            if self.opts.get('ssh_key_deploy'):
-                target = self.targets[host]
-                if 'passwd' in target:
-                    self._key_deploy_run(host, target, False)
+        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy'):
+            target = self.targets[host]
+            if 'passwd' in target or self.opts['ssh_passwd']:
+                self._key_deploy_run(host, target, False)
             return ret
         if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
@@ -468,7 +467,7 @@ class SSH(object):
 
         for ret in self.handle_ssh(mine=mine):
             host = next(six.iterkeys(ret))
-            self.cache_job(jid, host, ret[host])
+            self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 self.event.fire_event(
                         ret,
@@ -477,13 +476,14 @@ class SSH(object):
                             'job'))
             yield ret
 
-    def cache_job(self, jid, id_, ret):
+    def cache_job(self, jid, id_, ret, fun):
         '''
         Cache the job information
         '''
         self.returners['{0}.returner'.format(self.opts['master_job_cache'])]({'jid': jid,
-                                                                                      'id': id_,
-                                                                                      'return': ret})
+                                                                              'id': id_,
+                                                                              'return': ret,
+                                                                              'fun': fun})
 
     def run(self):
         '''
@@ -512,7 +512,10 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        try:
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        except Exception as exc:
+            log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
 
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)
@@ -523,7 +526,7 @@ class SSH(object):
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
-            self.cache_job(jid, host, ret[host])
+            self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
                 p_data = {host: ret[host]}
