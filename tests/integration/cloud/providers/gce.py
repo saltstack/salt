@@ -23,7 +23,7 @@ ensure_in_syspath('../../../')
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
-def __random_name(size=6):
+def _random_name(size=6):
     '''
     Generates a radom cloud instance name
     '''
@@ -31,9 +31,6 @@ def __random_name(size=6):
         random.choice(string.ascii_lowercase + string.digits)
         for x in range(size)
     )
-
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = __random_name()
 
 
 class GCETest(integration.ShellCase):
@@ -52,6 +49,8 @@ class GCETest(integration.ShellCase):
         profile_str = 'gce-config:'
         provider = 'gce'
         providers = self.run_cloud('--list-providers')
+        # Create the cloud instance name to be used throughout the tests
+        self.INSTANCE_NAME = _random_name()
 
         if profile_str not in providers:
             self.skipTest(
@@ -93,24 +92,52 @@ class GCETest(integration.ShellCase):
         '''
 
         # create the instance
-        instance = self.run_cloud('-p gce-test {0}'.format(INSTANCE_NAME))
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+        instance = self.run_cloud('-p gce-test {0}'.format(self.INSTANCE_NAME))
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
 
         # check if instance returned with salt installed
         try:
             self.assertIn(ret_str, instance)
         except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
         # check if deletion was performed appropriately
         try:
-            self.assertIn(INSTANCE_NAME, delete_str)
+            self.assertIn(self.INSTANCE_NAME, delete_str)
+            self.assertIn('True', delete_str)
+        except AssertionError:
+            raise
+
+    def test_instance_extra(self):
+        '''
+        Tests creating and deleting an instance on GCE
+        '''
+
+        # create the instance
+        instance = self.run_cloud('-p gce-test-extra {0}'.format(self.INSTANCE_NAME))
+        ret_str = '{0}:'.format(self.INSTANCE_NAME)
+
+        # check if instance returned with salt installed
+        try:
+            self.assertIn(ret_str, instance)
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+            raise
+
+        # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
+        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+        delete_str = ''.join(delete)
+
+        # check if deletion was performed appropriately
+        try:
+            self.assertIn(self.INSTANCE_NAME, delete_str)
             self.assertIn('True', delete_str)
         except AssertionError:
             raise
@@ -119,12 +146,13 @@ class GCETest(integration.ShellCase):
         '''
         Clean up after tests
         '''
+        # salt-cloud -a show_instance myinstance
         query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
+        ret_str = '        {0}:'.format(self.INSTANCE_NAME)
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME))
 
 
 if __name__ == '__main__':
