@@ -2,8 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import imp
-import sys
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
@@ -138,12 +136,6 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
         cache_id(resource_name, resource_id=resource_id)
         self.assertEqual(cache_id(resource_name), resource_id)
 
-    def test_partial_with_ctx(self):
-        ctx = {}
-        cache_id = salt.utils.boto.cache_id_func(service, ctx=ctx)
-        cache_id(resource_name, resource_id=resource_id)
-        self.assertEqual(ctx.values()[0], resource_id)
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -213,17 +205,6 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
         expected = {'aws': {'reason': 'Mocked error', 'status': '400'},
                             'message': 'Mocked error'}
         self.assertEqual(r, expected)
-
-class BotoUtilsAssignFuncsTestCase(TestCase):
-    def test_assign_funcs(self):
-        m = imp.new_module('test_module')
-        m.__context__ = {}
-        m.__opts__ = {}
-        m.__pillar__ = {}
-        sys.modules['test_module'] = m
-        salt.utils.boto.assign_funcs('test_module', 'ec2')
-        self.assertTrue(hasattr(m, '_get_conn'))
-        self.assertTrue(hasattr(m, '_cache_id'))
 
 if __name__ == '__main__':
     from integration import run_tests
