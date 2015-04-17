@@ -28,7 +28,6 @@ from xml.dom import minidom
 try:
     import libvirt  # pylint: disable=import-error
     HAS_LIBVIRT = True
-    HAS_ALL_IMPORTS = True
 except ImportError:
     HAS_LIBVIRT = False
 
@@ -37,7 +36,6 @@ import salt.utils
 import salt.utils.files
 import salt.utils.templates
 import salt.utils.validate.net
-from salt._compat import StringIO as _StringIO
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -104,8 +102,6 @@ def __get_conn():
          - http://libvirt.org/uri.html#URI_config
         '''
         connection = __salt__['config.get']('libvirt:connection', 'esx')
-        if connection.startswith('esx://'):
-            return connection
         return connection
 
     def __esxi_auth():

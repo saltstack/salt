@@ -203,7 +203,6 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
         rule.append('{0}-p {1}'.format(proto_negation, proto))
         proto = True
-        del kwargs['proto']
 
     if 'match' in kwargs:
         match_value = kwargs['match']

@@ -28,9 +28,9 @@ from __future__ import absolute_import
 from numbers import Number
 
 # Import salt libs
-from salt.utils import get_colors, sdecode
 import salt.output
 from salt.ext.six import string_types
+from salt.utils import get_colors, sdecode
 
 
 class NestDisplay(object):
