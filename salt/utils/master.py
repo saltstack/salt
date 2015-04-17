@@ -506,17 +506,6 @@ class ConnectedCache(multiprocessing.Process):
         '''
         self.stop()
 
-    def renew(self):
-        '''
-        compares the current minion list against the ips
-        connected on the master publisher port and updates
-        the minion list accordingly
-        '''
-        log.debug('ConCache renewing minion cache')
-        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
-        self.minions = new_mins
-        log.debug('ConCache received {0} minion ids'.format(len(new_mins)))
-
     def cleanup(self):
         '''
         remove sockets on shutdown
@@ -614,10 +603,6 @@ class ConnectedCache(multiprocessing.Process):
                         # Send reply back to client
                         reply = serial.dumps(self.minions)
                         creq_in.send(reply)
-
-                else:
-                    reply = serial.dumps(False)
-                    creq_in.send(reply)
 
             # check for next cache-update from workers
             elif socks.get(cupd_in) == zmq.POLLIN:
