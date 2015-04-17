@@ -640,8 +640,9 @@ class ConnectedCache(multiprocessing.Process):
                 sec_event = serial.loads(timer_in.recv())
 
                 # update the list every 30 seconds
-                if (sec_event == 31) or (sec_event == 1):
-                    self.renew()
+                if int(sec_event % 30) == 0:
+                    cw = CacheWorker(self.opts)
+                    cw.start()
 
         self.stop()
         creq_in.close()
