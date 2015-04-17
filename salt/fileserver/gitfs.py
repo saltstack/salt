@@ -1147,7 +1147,21 @@ def update():
                 except KeyError:
                     # No credentials configured for this repo
                     pass
-                fetch = origin.fetch()
+                try:
+                    fetch = origin.fetch()
+                except pygit2.errors.GitError as exc:
+                    # Using exc.__str__() here to avoid deprecation warning
+                    # when referencing exc.message
+                    if 'unsupported url protocol' in exc.__str__().lower() \
+                            and isinstance(repo.get('credentials'),
+                                           pygit2.Keypair):
+                        log.error(
+                            'Unable to fetch SSH-based gitfs remote {0}. '
+                            'libgit2 must be compiled with libssh2 to support '
+                            'SSH authentication.'.format(repo['url'])
+                        )
+                        continue
+                    raise
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
                     received_objects = fetch['received_objects']
