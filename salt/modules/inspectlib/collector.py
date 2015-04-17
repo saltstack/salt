@@ -179,6 +179,22 @@ class Inspector(object):
                 files.append(obj)
 
         return sorted(files), sorted(dirs), sorted(links)
+
+    def _get_unmanaged_files(self, managed, system_all):
+        '''
+        Get the intersection between all files and managed files.
+        '''
+        def intr(src, data):
+            out = set()
+            for d_el in data:
+                if d_el not in src:
+                    out.add(d_el)
+            return out
+
+        m_files, m_dirs, m_links = managed
+        s_files, s_dirs, s_links = system_all
+
+        return sorted(intr(m_files, s_files)), sorted(intr(m_dirs, s_dirs)), sorted(intr(m_links, s_links))
     def snapshot(self, mode):
         '''
         Take a snapshot of the system.
