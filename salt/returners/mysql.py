@@ -7,9 +7,9 @@ Return data to a mysql server
 :depends:       python-mysqldb
 :platform:      all
 
-To enable this returner the minion will need the python client for mysql
+To enable this returner, the minion will need the python client for mysql
 installed and the following values configured in the minion or master
-config, these are the defaults:
+config. These are the defaults:
 
 .. code-block:: yaml
 
@@ -19,9 +19,19 @@ config, these are the defaults:
     mysql.db: 'salt'
     mysql.port: 3306
 
-Alternative configuration values can be used by prefacing the configuration.
-Any values not found in the alternative configuration will be pulled from
-the default location:
+SSL is optional. The defaults are set to None. If you do not want to use SSL,
+either exclude these options or set them to None.
+
+.. code-block:: yaml
+
+    mysql.ssl_ca: None
+    mysql.ssl_cert: None
+    mysql.ssl_key: None
+
+Alternative configuration values can be used by prefacing the configuration
+with `alternative.`. Any values not found in the alternative configuration will
+be pulled from the default location. As stated above, SSL configuration is
+optional. The following ssl options are simply for illustration purposes:
 
 .. code-block:: yaml
 
@@ -30,6 +40,9 @@ the default location:
     alternative.mysql.pass: 'salt'
     alternative.mysql.db: 'salt'
     alternative.mysql.port: 3306
+    alternative.mysql.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
+    alternative.mysql.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
+    alternative.mysql.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
 Use the following mysql database schema:
 
@@ -144,13 +157,19 @@ def _get_options(ret=None):
                 'user': 'salt',
                 'pass': 'salt',
                 'db': 'salt',
-                'port': 3306}
+                'port': 3306,
+                'ssl_ca': None,
+                'ssl_cert': None,
+                'ssl_key': None}
 
     attrs = {'host': 'host',
              'user': 'user',
              'pass': 'pass',
              'db': 'db',
-             'port': 'port'}
+             'port': 'port',
+             'ssl_ca': 'ssl_ca',
+             'ssl_cert': 'ssl_cert',
+             'ssl_key': 'ssl_key'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -177,11 +196,21 @@ def _get_serv(ret=None, commit=False):
     else:
         log.debug('Generating new MySQL connection pool')
         try:
+            # An empty ssl_options dictionary passed to MySQLdb.connect will
+            # effectively connect w/o SSL.
+            ssl_options = {}
+            if _options.get('ssl_ca'):
+                ssl_options['ca'] = _options.get('ssl_ca')
+            if _options.get('ssl_cert'):
+                ssl_options['cert'] = _options.get('ssl_cert')
+            if _options.get('ssl_key'):
+                ssl_options['key'] = _options.get('ssl_key')
             conn = MySQLdb.connect(host=_options.get('host'),
                                    user=_options.get('user'),
                                    passwd=_options.get('pass'),
                                    db=_options.get('db'),
-                                   port=_options.get('port'))
+                                   port=_options.get('port'),
+                                   ssl=ssl_options)
 
             try:
                 __context__['mysql_returner_conn'] = conn
@@ -189,7 +218,9 @@ def _get_serv(ret=None, commit=False):
                 pass
         except MySQLdb.connections.OperationalError as exc:
             raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
+
     cursor = conn.cursor()
+
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
