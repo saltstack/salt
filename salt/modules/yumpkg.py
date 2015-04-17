@@ -348,7 +348,7 @@ def _normalize_basedir(basedir=None):
         basedir = []
 
     # if we are passed a string (for backward compatibility), convert to a list
-    if isinstance(basedir, basestring):
+    if isinstance(basedir, six.string_types):
         basedir = [x.strip() for x in basedir.split(',')]
 
     # nothing specified, so use the reposdir option as the default
