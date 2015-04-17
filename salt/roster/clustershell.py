@@ -14,9 +14,17 @@ Example:
 # Import python libs
 from __future__ import absolute_import
 import socket
-
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
-from ClusterShell.NodeSet import NodeSet
+
+REQ_ERROR = None
+try:
+    from ClusterShell.NodeSet import NodeSet
+except (ImportError, OSError) as e:
+    REQ_ERROR = 'ClusterShell import error, perhaps missing python ClusterShell package'
+
+
+def __virtual__():
+    return (REQ_ERROR is None, REQ_ERROR)
 
 
 def targets(tgt, tgt_type='glob', **kwargs):
@@ -30,9 +38,9 @@ def targets(tgt, tgt_type='glob', **kwargs):
         ports = list(map(int, str(ports).split(',')))
 
     hosts = list(NodeSet(tgt))
-    addrs = [socket.gethostbyname(h) for h in hosts]
+    host_addrs = {h: socket.gethostbyname(h) for h in hosts}
 
-    for addr in addrs:
+    for host, addr in host_addrs.items():
         addr = str(addr)
         for port in ports:
             try:
@@ -41,7 +49,7 @@ def targets(tgt, tgt_type='glob', **kwargs):
                 sock.connect((addr, port))
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-                ret[addr] = {'host': addr, 'port': port}
+                ret[host] = {'host': addr, 'port': port}
             except socket.error:
                 pass
     return ret

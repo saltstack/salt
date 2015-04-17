@@ -53,7 +53,7 @@ def present(name, target):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to set alias'
+        ret['comment'] = 'Failed to set alias {0} -> {1}'.format(name, target)
         return ret
 
 
@@ -83,5 +83,5 @@ def absent(name):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to remove alias'
+        ret['comment'] = 'Failed to remove alias {0}'.format(name)
         return ret
