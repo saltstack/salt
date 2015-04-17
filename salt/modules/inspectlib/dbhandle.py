@@ -108,6 +108,14 @@ class DBHandle(DBHandleBase):
         '''
         DBHandleBase.__init__(self, path)
 
-        self.init_queries.append("CREATE TABLE inspector_pkg (id INTEGER PRIMARY KEY, name CHAR(255))")
-        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_files (id INTEGER PRIMARY KEY, pkgid INTEGER, path CHAR(4096))")
-        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_diffs (id INTEGER PRIMARY KEY, cfgid INTEGER, diff TEXT)")
+        self.init_queries.append("CREATE TABLE inspector_pkg "
+                                 "(id INTEGER PRIMARY KEY, name CHAR(255))")
+        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_files "
+                                 "(id INTEGER PRIMARY KEY, pkgid INTEGER, path CHAR(4096))")
+        self.init_queries.append("CREATE TABLE inspector_pkg_cfg_diffs "
+                                 "(id INTEGER PRIMARY KEY, cfgid INTEGER, diff TEXT)")
+        self.init_queries.append("CREATE TABLE inspector_payload "
+                                 "(id INTEGER PRIMARY KEY, path CHAR(4096), "
+                                 "p_type char(1), mode INTEGER, uid INTEGER, gid INTEGER, p_size INTEGER, "
+                                 "atime FLOAT, mtime FLOAT, ctime FLOAT)")
+        self.init_queries.append("CREATE TABLE inspector_ignored (path CHAR(4096))")
