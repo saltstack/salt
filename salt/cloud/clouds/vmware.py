@@ -1643,7 +1643,7 @@ def rescanAllHba(name, call=None):
         "name",
     ]
 
-host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
     
     for host in host_list:
         if host["name"] == name:
@@ -1653,4 +1653,4 @@ host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
             except Exception as exc:
                 log.error('Could not rescan HBA\'s on host {0}: {1}'.format(name, exc))
                 return 'failed to rescan HBA\'s'
-return 'rescanned HBA\'s'
+    return 'rescanned HBA\'s'
