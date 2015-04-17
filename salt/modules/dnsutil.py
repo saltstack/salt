@@ -239,7 +239,7 @@ def check_ip(ip_addr):
 
 def A(host, nameserver=None):
     '''
-    Return the A record for 'host'.
+    Return the A record(s) for `host`.
 
     Always returns a list.
 
@@ -247,17 +247,44 @@ def A(host, nameserver=None):
 
     .. code-block:: bash
 
-        salt ns1 dig.A www.google.com
+        salt ns1 dnsutil.A www.google.com
     '''
     if _has_dig():
         return __salt__['dig.A'](host, nameserver)
     elif nameserver is None:
         # fall back to the socket interface, if we don't care who resolves
         try:
-            (hostname, aliases, addresses) = socket.gethostbyname_ex(host)
+            addresses = [sock[4][0] for sock in socket.getaddrinfo(host, None, socket.AF_INET, 0, socket.SOCK_RAW)]
             return addresses
-        except socket.error:
-            return 'Unabled to resolve {0}'.format(host)
+        except socket.gaierror:
+            return 'Unable to resolve {0}'.format(host)
+
+    return 'This function requires dig, which is not currently available'
+
+
+def AAAA(host, nameserver=None):
+    '''
+    Return the AAAA record(s) for `host`.
+
+    Always returns a list.
+
+    .. versionadded:: 2014.7.5
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt ns1 dnsutil.AAAA www.google.com
+    '''
+    if _has_dig():
+        return __salt__['dig.AAAA'](host, nameserver)
+    elif nameserver is None:
+        # fall back to the socket interface, if we don't care who resolves
+        try:
+            addresses = [sock[4][0] for sock in socket.getaddrinfo(host, None, socket.AF_INET6, 0, socket.SOCK_RAW)]
+            return addresses
+        except socket.gaierror:
+            return 'Unable to resolve {0}'.format(host)
 
     return 'This function requires dig, which is not currently available'
 
