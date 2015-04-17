@@ -12,6 +12,17 @@ import psutil
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for ps beacon should be a list of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for ps beacon must be a dictionary.')
+        return False
+    return True
+
+
 def beacon(config):
     '''
     Scan for processes and fire events

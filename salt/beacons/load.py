@@ -36,25 +36,25 @@ def validate(config):
         log.info('Configuration for load beacon must be a list.')
         return False
     else:
-        for l in config:
-            if not isinstance(l, dict):
+        for config_item in config:
+            if not isinstance(config_item, dict):
                 log.info('Configuration for load beacon must '
-                         'be a list of dictionarys.')
+                         'be a list of dictionaries.')
                 return False
             else:
-                if not any(j in ['1m', '5m', '15m'] for j in l.keys()):
+                if not any(j in ['1m', '5m', '15m'] for j in config_item.keys()):
                     log.info('Configuration for load beacon must '
                              'contain 1m, 5m and 15m items.')
                     return False
 
-            for item in l:
-                if not isinstance(l[item], list):
+            for item in config_item:
+                if not isinstance(config_item[item], list):
                     log.info('Configuration for load beacon: '
                              '1m, 5m and 15m items must be '
                              'a list of two items.')
                     return False
                 else:
-                    if len(l[item]) != 2:
+                    if len(config_item[item]) != 2:
                         log.info('Configuration for load beacon: '
                                  '1m, 5m and 15m items must be '
                                  'a list of two items.')
