@@ -1639,9 +1639,7 @@ def rescanAllHba(name, call=None):
             'The rescanHBA action must be called with -a or --action.'
         )
 
-    host_properties = [
-        "name",
-    ]
+    host_properties = ["name"]
 
     host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
     
@@ -1654,3 +1652,37 @@ def rescanAllHba(name, call=None):
                 log.error('Could not rescan HBA\'s on host {0}: {1}'.format(name, exc))
                 return 'failed to rescan HBA\'s'
     return 'rescanned HBA\'s'
+
+def rescanHba(hba, name, call=None):
+    '''
+        To rescan a specific HBA on a Host using the HBA device name and Hostname
+        
+        CLI Example:
+        
+        .. code-block:: bash
+        
+        salt-cloud -a rescanHba devicename hostname
+        '''
+    
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The rescanHba action must be called with -a or --action.'
+        )
+    
+    host_properties = [
+        "name",
+        "HostBusAdapter.device"
+    ]
+
+    host_list = _get_mors_with_properties(vim.host, host_properties)
+    
+    for host in host_list:
+        if host["name"] == name:
+            try:
+                log.info('Rescanning HBA {0} on host {1}'.format(hba, name))
+                host["object"].RescanHba(hba)
+            except Exception as exc:
+                log.error('Could not rescan HBA {0} on host {1}: {2}'.format(hba, name, exc))
+                return 'failed to rescan HBA {0}'.format(hba)
+    return 'rescanned HBA {0}'.format(hba)
+
