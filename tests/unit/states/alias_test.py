@@ -3,8 +3,8 @@
 unit tests for the alias state
 '''
 
-# Import Salt Libs
-from salt.states import alias
+# Import Python Libs
+from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -17,6 +17,9 @@ from salttesting.mock import (
 )
 
 ensure_in_syspath('../../')
+
+# Import Salt Libs
+from salt.states import alias
 
 alias.__opts__ = {}
 alias.__salt__ = {}
