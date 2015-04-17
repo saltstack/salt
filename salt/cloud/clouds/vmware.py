@@ -1371,6 +1371,45 @@ def reset(name, call=None):
     return 'reset'
 
 
+def terminate(name, call=None):
+    '''
+    To do an immediate power off of a VM using its name. A ``SIGKILL``
+    is issued to the vmx process of the VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a terminate vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The terminate action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+        "name",
+        "summary.runtime.powerState"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] == "poweredOff":
+                ret = 'already powered off'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            try:
+                log.info('Terminating VM {0}'.format(name))
+                vm["object"].Terminate()
+            except Exception as exc:
+                log.error('Could not terminate VM {0}: {1}'.format(name, exc))
+                return 'failed to terminate'
+
+    return 'terminated'
+
+
 def destroy(name, call=None):
     '''
     To destroy a VM from the VMware environment
