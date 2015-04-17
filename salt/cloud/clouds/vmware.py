@@ -1874,19 +1874,19 @@ def upgrade_tools(name, reboot=False, call=None):
     return 'VMware tools is not installed'
 
 
-def rescan_all_hbas_on_host(kwargs=None, call=None):
+def rescan_all_hbas(kwargs=None, call=None):
     '''
-    To rescan all HBA's on a Host using the Hostname
+    To rescan all HBAs on a Host using the Host System Name
         
     CLI Example:
         
     .. code-block:: bash
         
-    salt-cloud -f rescan_all_hbas_on_host my-vmware-config host="myHostName"
+        salt-cloud -f rescan_all_hbas my-vmware-config host="hostSystemName"
     '''    
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The rescan_all_hbas_on_host action must be called with -f or --function.'
+            'The rescan_all_hbas function must be called with -f or --function.'
         )
 
     host_name = kwargs.get('host')
@@ -1894,28 +1894,29 @@ def rescan_all_hbas_on_host(kwargs=None, call=None):
     host_ref = _get_mor_with_property(vim.HostSystem, host_name)
             
     try:
-        log.info('Rescanning HBA\'s on host {0}'.format(host_name))
+        log.info('Rescanning HBAs on host {0}'.format(host_name))
         host_ref.configManager.storageSystem.RescanAllHba()
     except Exception as exc:
-        log.error('Could not rescan HBA\'s on host {0}: {1}'.format(host_name, exc))
-        return 'failed to rescan HBA\'s'
+        log.error('Could not rescan HBAs on host {0}: {1}'.format(host_name, exc))
+        return 'failed to rescan HBAs'
 
-    return 'rescanned HBA\'s'
+    return 'rescanned HBAs'
 
 
-def rescan_hba_on_host(kwargs=None, call=None):
+def rescan_hba(kwargs=None, call=None):
     '''
-    To rescan a specific HBA on a Host using the HBA device name and Hostname
+    To rescan a specified HBA on a Host using the HBA device name and Host System
+    Name
         
     CLI Example:
         
     .. code-block:: bash
         
-    salt-cloud -f rescan_hba_on_host my-vmware-config hba="myHbaName" host="myHostName"
+        salt-cloud -f rescan_hba my-vmware-config hba="hbaDeviceName" host="hostSystemName"
     '''    
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The rescan_hba_on_host function must be called with -f or --function.'
+            'The rescan_hba function must be called with -f or --function.'
         )
 
     hba = kwargs.get('hba')
