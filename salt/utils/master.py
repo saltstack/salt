@@ -605,7 +605,7 @@ class ConnectedCache(multiprocessing.Process):
                         creq_in.send(reply)
 
             # check for next cache-update from workers
-            elif socks.get(cupd_in) == zmq.POLLIN:
+            if socks.get(cupd_in) == zmq.POLLIN:
                 new_c_data = serial.loads(cupd_in.recv())
                 # tell the worker to exit
                 #cupd_in.send(serial.dumps('ACK'))
@@ -636,7 +636,7 @@ class ConnectedCache(multiprocessing.Process):
                 log.info('ConCache {0} entries in cache'.format(len(self.minions)))
 
             # check for next timer-event to start new jobs
-            elif socks.get(timer_in) == zmq.POLLIN:
+            if socks.get(timer_in) == zmq.POLLIN:
                 sec_event = serial.loads(timer_in.recv())
 
                 # update the list every 30 seconds
