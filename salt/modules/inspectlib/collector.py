@@ -197,6 +197,29 @@ class Inspector(object):
         s_files, s_dirs, s_links = system_all
 
         return sorted(intr(m_files, s_files)), sorted(intr(m_dirs, s_dirs)), sorted(intr(m_links, s_links))
+
+    def _scan_payload(self):
+        '''
+        Scan the system.
+        '''
+        # Get ignored points
+        ignored = list()
+        self.db.cursor.execute("SELECT path FROM inspector_ignored")
+        for ign_path in self.db.cursor.fetchall():
+            ign_path = ign_path[0]
+            ignored.append(ign_path)
+
+        all_files = list()
+        all_dirs = list()
+        all_links = list()
+        for entry_path in os.listdir("/"):
+            e_files, e_dirs, e_links = self._get_all_files("/{0}".format(entry_path), *ignored)
+            all_files.extend(e_files)
+            all_dirs.extend(e_dirs)
+            all_links.extend(e_links)
+
+        return self._get_unmanaged_files(self._get_managed_files(), (all_files, all_dirs, all_links,))
+
     def _prepare_full_scan(self):
         '''
 
