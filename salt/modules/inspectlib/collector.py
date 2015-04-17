@@ -16,7 +16,9 @@
 
 import os
 import sys
+import stat
 from subprocess import Popen, PIPE, STDOUT
+
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 
@@ -144,6 +146,39 @@ class Inspector(object):
 
         return sorted(files), sorted(dirs), sorted(links)
 
+    def _get_all_files(self, path, *exclude):
+        '''
+        Walk implementation. Version in python 2.x and 3.x works differently.
+        '''
+        files = list()
+        dirs = list()
+        links = list()
+
+        for obj in os.listdir(path):
+            obj = os.path.join(path, obj)
+            valid = True
+            for ex_obj in exclude:
+                try:
+                    if obj.startswith(str(ex_obj)):
+                        valid = False
+                        continue
+                except Exception as ex:
+                    continue
+            if not valid:
+                continue
+            mode = os.lstat(obj).st_mode
+            if stat.S_ISLNK(mode):
+                links.append(obj)
+            elif stat.S_ISDIR(mode):
+                dirs.append(obj)
+                f_obj, d_obj, l_obj = self._get_all_files(obj, *exclude)
+                files.extend(f_obj)
+                dirs.extend(d_obj)
+                links.extend(l_obj)
+            elif stat.S_ISREG(mode):
+                files.append(obj)
+
+        return sorted(files), sorted(dirs), sorted(links)
     def snapshot(self, mode):
         '''
         Take a snapshot of the system.
