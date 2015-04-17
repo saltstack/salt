@@ -281,7 +281,9 @@ class Inspector(object):
         Take a snapshot of the system.
         '''
         # TODO: Mode
+
         self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
+        self._save_payload(*self._scan_payload())
 
     def request_snapshot(self, mode, priority=19):
         '''
@@ -291,6 +293,7 @@ class Inspector(object):
             raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
 
         self._prepare_full_scan()
+
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
             priority, __file__, self.pidfile, self.dbfile, mode))
 
