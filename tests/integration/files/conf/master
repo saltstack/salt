@@ -64,3 +64,5 @@ nodegroups:
   sub_min: sub_minion
   mins: N@min or N@sub_min
   redundant_minions: N@min or N@mins
+  nodegroup_loop_a: N@nodegroup_loop_b
+  nodegroup_loop_b: N@nodegroup_loop_a
