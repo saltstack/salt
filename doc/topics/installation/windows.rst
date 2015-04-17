@@ -174,15 +174,16 @@ Windows. The development environment allows you to work with the source code to
 customize or fix bugs. It will also allow you to build your own installation.
 
 The Easy Way
-============
+------------
 
 Prerequisite Software
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
-To do this the easy way you only need to install `Git for Windows<https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20150319/Git-1.9.5-preview20150319.exe/>`_.
+To do this the easy way you only need to install `Git for Windows <https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20150319/Git-1.9.5-preview20150319.exe/>`_.
 
 Create the Build Environment
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 1. Clone the `Salt-Windows-Dev <https://github.com/saltstack/salt-windows-dev/>`_
    repo from github.
 
@@ -231,10 +232,10 @@ Create the Build Environment
 
 
 The Hard Way
-============
+------------
 
 Prerequisite Software
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Install the following software:
 
@@ -251,7 +252,7 @@ These files contain all sofware required to build and develop salt. Unzip the
 contents of the file to ``C:\Salt-Dev\temp``.
 
 Create the Build Environment
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Build the Python Environment
 
