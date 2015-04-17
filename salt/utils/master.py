@@ -462,7 +462,7 @@ class CacheWorker(multiprocessing.Process):
         new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
         cc = cache_cli(self.opts)
         cc.get_cached()
-        cc.put_cache(new_mins)
+        cc.put_cache([new_mins])
         log.debug('ConCache CacheWorker update finished')
 
 
@@ -618,18 +618,28 @@ class ConnectedCache(multiprocessing.Process):
 
                 # the cache will receive lists of minions
                 # 1. if the list only has 1 item, its from an MWorker, we append it
-                # 2. anything else is considered malformed
+                # 2. if the list contains another list, its from a CacheWorker and
+                #    the currently cached minions are replaced with that list
+                # 3. anything else is considered malformed
 
-                if len(new_c_data) == 0:
-                    log.debug('ConCache Got empty update from worker')
-                elif len(new_c_data) == 1:
-                    if new_c_data[0] not in self.minions:
-                        log.trace('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
-                        self.minions.append(new_c_data[0])
-                elif len(new_c_data) > 1:
-                    log.debug('ConCache Replacing minion list from worker')
-                    self.minions = new_c_data
-                else:
+                try:
+
+                    if len(new_c_data) == 0:
+                        log.debug('ConCache Got empty update from worker')
+                        continue
+
+                    data = new_c_data[0]
+
+                    if isinstance(data, str):
+                        if data not in self.minions:
+                            log.debug('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
+                            self.minions.append(data)
+
+                    elif isinstance(data, list):
+                        log.debug('ConCache Replacing minion list from worker')
+                        self.minions = data
+
+                except IndexError:
                     log.debug('ConCache Got malformed result dict from worker')
                     del new_c_data
 
