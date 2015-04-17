@@ -1900,7 +1900,7 @@ def rescan_hba(kwargs=None, call=None):
             log.info('Rescanning HBA {0} on host {1}'.format(hba, host_name))
             host_ref.configManager.storageSystem.RescanHba(hba)
             ret = 'rescanned HBA'
-        else
+        else:
             log.info('Rescanning all HBAs on host {0}'.format(host_name))
             host_ref.configManager.storageSystem.RescanAllHba()
             ret = 'rescanned all HBAs'
