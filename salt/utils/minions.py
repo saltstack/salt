@@ -80,12 +80,11 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
         log.error('Failed nodegroup expansion: illegal nested nodegroup "{0}"'.format(nodegroup))
         return ''
 
-    skip.add(nodegroup)
-
     if nodegroup not in nodegroups:
         log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
         return ''
 
+    skip.add(nodegroup)
     nglookup = nodegroups[nodegroup]
 
     ret = []
@@ -94,10 +93,12 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
     for match in tokens:
         if match in opers:
             ret.append(match)
-        elif len(match) >= 3 and match[:2] == 'N@':
+        elif len(match) >= 3 and match.startswith('N@'):
             ret.append(nodegroup_comp(match[2:], nodegroups, skip=skip))
         else:
             ret.append(match)
+
+    skip.remove(nodegroup)
 
     expanded = '( {0} )'.format(' '.join(ret)) if ret else ''
     log.debug('nodegroup_comp("{0}") => {1}'.format(nodegroup, expanded))

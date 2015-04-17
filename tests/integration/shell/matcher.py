@@ -87,6 +87,10 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = self.run_salt('-N unknown_nodegroup test.ping')
         self.assertFalse(minion_in_target('minion', data))
         self.assertFalse(minion_in_target('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt('-N redundant_minions test.ping')
+        self.assertTrue(minion_in_target('minion', data))
+        self.assertTrue(minion_in_target('sub_minion', data))
 
     def test_glob(self):
         '''
