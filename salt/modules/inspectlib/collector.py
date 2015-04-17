@@ -240,6 +240,7 @@ class Inspector(object):
         '''
         Take a snapshot of the system.
         '''
+        # TODO: Mode
         self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
 
     def request_snapshot(self, mode, priority=19):
