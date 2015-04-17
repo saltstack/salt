@@ -126,6 +126,23 @@ class Inspector(object):
 
         self.db.connection.commit()
 
+    def _save_payload(self, files, directories, links):
+        '''
+        Save payload (unmanaged files)
+        '''
+        idx = 0
+        for p_type, p_list in (('f', files), ('d', directories), ('l', links,),):
+            for p_obj in p_list:
+                stats = os.stat(p_obj)
+                self.db.cursor.execute("INSERT INTO inspector_payload "
+                                       "(id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime)"
+                                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                       (id, p_obj, p_type, stats.st_mode, stats.st_uid, stats.st_gid, stats.st_size,
+                                        stats.st_atime, stats.st_mtime, stats.st_ctime))
+                idx += 1
+
+        self.db.connection.commit()
+
     def _get_managed_files(self):
         '''
         Build a in-memory data of all managed files.
