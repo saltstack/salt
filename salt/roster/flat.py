@@ -78,7 +78,7 @@ class RosterMatcher(object):
         '''
         Return minions that match via list
         '''
-        minions = []
+        minions = {}
         for minion in self.raw:
             if minion in self.tgt:
                 data = self.get_data(minion)
