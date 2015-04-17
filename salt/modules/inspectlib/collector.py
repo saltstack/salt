@@ -183,7 +183,7 @@ class Inspector(object):
                         continue
                 except Exception as ex:
                     continue
-            if not valid:
+            if not valid or not os.path.exists(obj):
                 continue
             mode = os.lstat(obj).st_mode
             if stat.S_ISLNK(mode):
