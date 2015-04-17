@@ -1874,44 +1874,15 @@ def upgrade_tools(name, reboot=False, call=None):
     return 'VMware tools is not installed'
 
 
-def rescan_all_hbas(kwargs=None, call=None):
-    '''
-    To rescan all HBAs on a Host using the Host System Name
-        
-    CLI Example:
-        
-    .. code-block:: bash
-        
-        salt-cloud -f rescan_all_hbas my-vmware-config host="hostSystemName"
-    '''    
-    if call != 'function':
-        raise SaltCloudSystemExit(
-            'The rescan_all_hbas function must be called with -f or --function.'
-        )
-
-    host_name = kwargs.get('host')
-
-    host_ref = _get_mor_with_property(vim.HostSystem, host_name)
-            
-    try:
-        log.info('Rescanning HBAs on host {0}'.format(host_name))
-        host_ref.configManager.storageSystem.RescanAllHba()
-    except Exception as exc:
-        log.error('Could not rescan HBAs on host {0}: {1}'.format(host_name, exc))
-        return 'failed to rescan HBAs'
-
-    return 'rescanned HBAs'
-
-
 def rescan_hba(kwargs=None, call=None):
     '''
-    To rescan a specified HBA on a Host using the HBA device name and Host System
-    Name
-        
+    To rescan a specified HBA or all the HBAs on the Host System
+
     CLI Example:
-        
+
     .. code-block:: bash
-        
+
+        salt-cloud -f rescan_hba my-vmware-config host="hostSystemName"
         salt-cloud -f rescan_hba my-vmware-config hba="hbaDeviceName" host="hostSystemName"
     '''    
     if call != 'function':
@@ -1921,14 +1892,20 @@ def rescan_hba(kwargs=None, call=None):
 
     hba = kwargs.get('hba')
     host_name = kwargs.get('host')
-    
+
     host_ref = _get_mor_with_property(vim.HostSystem, host_name)
-        
+
     try:
-        log.info('Rescanning HBA {0} on host {1}'.format(hba, host_name))
-        host_ref.configManager.storageSystem.RescanHba(hba)
+        if hba:
+            log.info('Rescanning HBA {0} on host {1}'.format(hba, host_name))
+            host_ref.configManager.storageSystem.RescanHba(hba)
+            ret = 'rescanned HBA'
+        else
+            log.info('Rescanning all HBAs on host {0}'.format(host_name))
+            host_ref.configManager.storageSystem.RescanAllHba()
+            ret = 'rescanned all HBAs'
     except Exception as exc:
-        log.error('Could not rescan HBA {0} on host {1}: {2}'.format(hba, host_name, exc))
-        return 'failed to rescan HBA {0}'.format(hba)
-    
-    return 'rescanned HBA {0}'.format(hba)
+        log.error('Could not rescan HBA on host {0}: {1}'.format(host_name, exc))
+        return 'failed to rescan HBA'
+
+    return ret
