@@ -9,6 +9,7 @@ import copy
 
 # Import Salt libs
 import salt.loader
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +90,12 @@ class Beacon(object):
         else:
             log.info('Added new beacon item {0}'.format(name))
         self.opts['beacons'].update(data)
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_add_complete')
+
         return True
 
     def delete_beacon(self, name):
