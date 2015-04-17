@@ -626,6 +626,9 @@ class ConnectedCache(multiprocessing.Process):
                     if new_c_data[0] not in self.minions:
                         log.trace('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
                         self.minions.append(new_c_data[0])
+                elif len(new_c_data) > 1:
+                    log.debug('ConCache Replacing minion list from worker')
+                    self.minions = new_c_data
                 else:
                     log.debug('ConCache Got malformed result dict from worker')
                     del new_c_data
