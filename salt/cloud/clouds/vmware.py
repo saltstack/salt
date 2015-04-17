@@ -1106,7 +1106,7 @@ def show_instance(name, call=None):
 
     for vm in vm_list:
         if vm['name'] == name:
-            return  _format_instance_info(vm)
+            return _format_instance_info(vm)
 
 
 def avail_images():
