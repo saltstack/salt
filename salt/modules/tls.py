@@ -16,10 +16,10 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import time
-import datetime
 import logging
 import hashlib
 from salt.ext.six.moves import range
+from datetime import datetime
 
 HAS_SSL = False
 try:
@@ -204,9 +204,9 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
                 except Exception:
                     bits = 2048
                 try:
-                    days = (datetime.datetime.strptime(cert.get_notAfter(),
+                    days = (datetime.strptime(cert.get_notAfter(),
                                                        '%Y%m%d%H%M%SZ') -
-                            datetime.datetime.now()).days
+                            datetime.now()).days
                 except (ValueError, TypeError):
                     days = 365
                 subj = cert.get_subject()
@@ -489,7 +489,7 @@ def create_ca(ca_name,
                                                 key)
     write_key = True
     if os.path.exists(ca_keyp):
-        bck = "{0}.{1}".format(ca_keyp, datetime.datetime.now().strftime(
+        bck = "{0}.{1}".format(ca_keyp, datetime.now().strftime(
             "%Y%m%d%H%M%S"))
         with salt.utils.fopen(ca_keyp) as fic:
             old_key = fic.read().strip()
@@ -1029,6 +1029,61 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
                     ca_name,
                     CN
                     )
+
+
+def cert_info(cert_path, digest='sha256'):
+    '''
+    Return information for a particular certificate
+
+    cert_path
+        path to the cert file
+    digest
+        what digest to use for fingerprinting
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.cert_info /dir/for/certs/cert.pem
+    '''
+    # format that OpenSSL returns dates in
+    date_fmt = '%Y%m%d%H%M%SZ'
+
+    with salt.utils.fopen(cert_path) as cert_file:
+        cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                cert_file.read()
+            )
+    ret = {
+        'fingerprint': cert.digest(digest),
+        'subject': dict(cert.get_subject().get_components()),
+        'issuer': dict(cert.get_issuer().get_components()),
+        'serial_number': cert.get_serial_number(),
+        'not_before': time.mktime(datetime.strptime(cert.get_notBefore(), date_fmt).timetuple()),
+        'not_after': time.mktime(datetime.strptime(cert.get_notAfter(), date_fmt).timetuple()),
+    }
+
+    # add additional info if your version of pyOpenSSL supports it
+    if hasattr(cert, 'get_extension_count'):
+        ret['extensions'] = {}
+        for i in range(cert.get_extension_count()):
+            ext = cert.get_extension(i)
+            ret['extensions'][ext.get_short_name()] = ext
+
+    if 'subjectAltName' in ret.get('extensions', {}):
+        valid_names = set()
+        for name in ret['extensions']['subjectAltName']._subjectAltNameString().split(", "):
+            if not name.startswith('DNS:'):
+                log.error('Cert {0} has an entry ({1}) which does not start with DNS:'.format(cert_path, name))
+            else:
+                valid_names.add(name[4:])
+        ret['subject_alt_names'] = valid_names
+
+    if hasattr(cert, 'get_signature_algorithm'):
+        ret['signature_algorithm'] = cert.get_signature_algorithm()
+
+    return ret
+
 
 if __name__ == '__main__':
     #create_ca('koji', days=365, **cert_sample_meta)

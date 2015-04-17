@@ -388,7 +388,6 @@ def function(
             'string. Ignored.'
         )
         fail_minions = ()
-
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
         if mdata.get('retcode'):
@@ -406,28 +405,31 @@ def function(
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         changes[minion] = m_ret
-
-    if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
-    if fail:
+    if not cmd_ret:
         ret['result'] = False
-        ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+        ret['command'] = 'No minions responded'
     else:
-        ret['comment'] = 'Function ran successfully.'
-    if changes:
-        ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
-    if failures:
-        ret['comment'] += '\nFailures:\n'
-        for minion, failure in six.iteritems(failures):
-            ret['comment'] += '\n'.join(
-                    (' ' * 4 + l)
-                    for l in salt.output.out_format(
-                        {minion: failure},
-                        'highstate',
-                        __opts__,
-                        ).splitlines()
-                    )
-            ret['comment'] += '\n'
+        if changes:
+            ret['changes'] = {'out': 'highstate', 'ret': changes}
+        if fail:
+            ret['result'] = False
+            ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+        else:
+            ret['comment'] = 'Function ran successfully.'
+        if changes:
+            ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
+        if failures:
+            ret['comment'] += '\nFailures:\n'
+            for minion, failure in six.iteritems(failures):
+                ret['comment'] += '\n'.join(
+                        (' ' * 4 + l)
+                        for l in salt.output.out_format(
+                            {minion: failure},
+                            'highstate',
+                            __opts__,
+                            ).splitlines()
+                        )
+                ret['comment'] += '\n'
     return ret
 
 
