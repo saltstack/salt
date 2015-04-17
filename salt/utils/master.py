@@ -461,7 +461,7 @@ class CacheWorker(multiprocessing.Process):
         '''
         new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
         cc = cache_cli(self.opts)
-
+        cc.get_cached()
         cc.put_cache(new_mins)
         log.debug('ConCache CacheWorker update finished')
 
