@@ -1873,6 +1873,7 @@ def upgrade_tools(name, reboot=False, call=None):
 
     return 'VMware tools is not installed'
 
+
 def rescan_all_hbas_on_host(kwargs=None, call=None):
     '''
     To rescan all HBA's on a Host using the Hostname
@@ -1881,9 +1882,8 @@ def rescan_all_hbas_on_host(kwargs=None, call=None):
         
     .. code-block:: bash
         
-    salt-cloud -f rescan_all_hbas_on_host my-vmware-config host
-    '''
-    
+    salt-cloud -f rescan_all_hbas_on_host my-vmware-config host="myHostName"
+    '''    
     if call != 'function':
         raise SaltCloudSystemExit(
             'The rescan_all_hbas_on_host action must be called with -f or --function.'
@@ -1902,6 +1902,7 @@ def rescan_all_hbas_on_host(kwargs=None, call=None):
 
     return 'rescanned HBA\'s'
 
+
 def rescan_hba_on_host(kwargs=None, call=None):
     '''
     To rescan a specific HBA on a Host using the HBA device name and Hostname
@@ -1910,9 +1911,8 @@ def rescan_hba_on_host(kwargs=None, call=None):
         
     .. code-block:: bash
         
-    salt-cloud -f rescan_hba_on_host my-vmware-config hba host
-    '''
-    
+    salt-cloud -f rescan_hba_on_host my-vmware-config hba="myHbaName" host="myHostName"
+    '''    
     if call != 'function':
         raise SaltCloudSystemExit(
             'The rescan_hba_on_host function must be called with -f or --function.'
