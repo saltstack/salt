@@ -1566,3 +1566,59 @@ def create_cluster(kwargs=None, call=None):
         return {cluster_name: 'created'}
 
     return False
+
+
+def upgrade_tools(name, reboot=False, call=None):
+    '''
+    To upgrade VMware Tools on a specified virtual machine.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, use ``reboot=True``
+        to reboot the virtual machine after VMware tools upgrade. Default
+        is ``reboot=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a upgrade_tools vmname
+        salt-cloud -a upgrade_tools vmname reboot=True
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools action must be called with -a or --action.'
+        )
+
+    vm = _get_mor_by_property(vim.VirtualMachine, name)
+
+    tools_status = vm.guest.toolsStatus
+
+    # Exit if VMware tools is already up to date
+    if tools_status == "toolsOk":
+        return 'VMware tools is already up to date'
+
+    # Exit if VM is not powered on
+    if vm.summary.runtime.powerState != "poweredOn":
+        return 'Tools cannot be upgraded if the VM is not powered on'
+
+    # If vmware tools is out of date, check major OS family
+    # Upgrade tools on Linux and Windows guests
+    if tools_status == "toolsOld":
+        log.info('Upgrading VMware tools on {0}'.format(name))
+        os_family = vm.guest.guestFamily
+        try:
+            if os_family == "windowsGuest" and not reboot:
+                log.info('Reboot suppressed on {0}'.format(name))
+                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
+            elif os_family in ["linuxGuest", "windowsGuest"]:
+                task = vm.UpgradeTools()
+            else:
+                return 'VMware tools upgrade is currently supported only on Linux or Windows guests.'
+            _wait_for_task(task, name, "tools upgrade", 5, "info")
+        except Exception as exc:
+            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(name, exc))
+            return 'failed to upgrade VMware tools'
+        return 'VMware tools upgraded'
+
+    return 'VMware tools is not installed'
