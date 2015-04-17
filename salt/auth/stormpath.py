@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 '''
 Provide authentication using Stormpath.
 
@@ -16,6 +15,8 @@ normally requires.
     # Or can use a directory ID
     directory: 3456789012
     # But not both
+
+.. versionadded:: Beryllium
 '''
 
 from __future__ import absolute_import

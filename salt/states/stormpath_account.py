@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Support for Stormpath
+
+.. versionadded:: Beryllium
 '''
 
 import pprint
@@ -48,6 +50,8 @@ def present(name, **kwargs):
 
     customData.
         Optional. Must be specified as a dict.
+
+    .. versionadded:: Beryllium
     '''
     # Because __opts__ is not available outside of functions
     if __opts__.get('requests_lib', False):
@@ -130,6 +134,8 @@ def absent(name, directory_id=None):
         each will be scanned for the account. Specifying a directory_id will
         therefore cut down on the number of requests to Stormpath, and increase
         performance of this state.
+
+    .. versionadded:: Beryllium
     '''
     # Because __opts__ is not available outside of functions
     if __opts__.get('requests_lib', False):
