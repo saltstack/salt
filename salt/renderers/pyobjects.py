@@ -306,6 +306,8 @@ def load_states():
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
     for key, func in six.iteritems(lazy_states):
+        if '.' not in key:
+            continue
         mod_name, func_name = key.split('.', 1)
         if mod_name not in states:
             states[mod_name] = {}
