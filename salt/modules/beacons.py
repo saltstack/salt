@@ -2,7 +2,7 @@
 '''
 Module for managing the Salt schedule on a minion
 
-.. versionadded:: 2014.7.0
+.. versionadded:: Beryllium
 
 '''
 
