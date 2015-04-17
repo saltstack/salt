@@ -250,6 +250,7 @@ class Inspector(object):
         if mode not in self.MODE:
             raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
 
+        self._prepare_full_scan()
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
             priority, __file__, self.pidfile, self.dbfile, mode))
 
