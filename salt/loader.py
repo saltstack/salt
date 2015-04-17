@@ -21,6 +21,7 @@ from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
 import salt.utils.event
+import salt.utils.odict
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
