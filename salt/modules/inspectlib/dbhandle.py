@@ -45,6 +45,7 @@ class DBHandleBase(object):
             os.unlink(self._path)  # As simple as that
 
         self.connection = sqlite3.connect(self._path)
+        self.connection.text_factory = str
         self.cursor = self.connection.cursor()
 
         self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
