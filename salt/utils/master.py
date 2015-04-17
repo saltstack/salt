@@ -25,6 +25,7 @@ import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
+from salt.utils.cache import CacheCli as cache_cli
 
 # Import third party libs
 import salt.ext.six as six
@@ -439,6 +440,30 @@ class CacheTimer(Thread):
             count += 1
             if count >= 60:
                 count = 0
+
+class CacheWorker(multiprocessing.Process):
+    '''
+    Worker for ConnectedCache updates which run in its
+    own process to prevent blocking of ConnectedCache
+    main-loop when refreshing minion-list
+    '''
+
+    def __init__(self, opts):
+        '''
+        Sets up the zmq-connection to the ConCache
+        '''
+        super(CacheWorker, self).__init__()
+        self.opts = opts
+
+    def run(self):
+        '''
+        Gather currently connected minions and update the cache
+        '''
+        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
+        cc = cache_cli(self.opts)
+
+        cc.put_cache(new_mins)
+        log.debug('ConCache CacheWorker update finished')
 
 
 class ConnectedCache(multiprocessing.Process):
