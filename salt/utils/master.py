@@ -595,7 +595,7 @@ class ConnectedCache(multiprocessing.Process):
             # check for next cache-request
             if socks.get(creq_in) == zmq.POLLIN:
                 msg = serial.loads(creq_in.recv())
-                log.trace('ConCache Received request: {0}'.format(msg))
+                log.debug('ConCache Received request: {0}'.format(msg))
 
                 # requests to the minion list are send as str's
                 if isinstance(msg, str):
