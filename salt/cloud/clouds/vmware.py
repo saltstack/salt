@@ -421,7 +421,7 @@ def _wait_for_ip(vm, max_wait_minute):
     time_counter = 0
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
-        log.info("Waiting to get IP information [{0} s]".format(time_counter))
+        log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm.name, time_counter))
         for net in vm.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
@@ -433,9 +433,131 @@ def _wait_for_ip(vm, max_wait_minute):
     return False
 
 
+def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
+    time_counter = 0
+    while task.info.state == 'running':
+        message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    if task.info.state == 'success':
+        message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+    else:
+        raise task.info.error
+
+
+def _format_instance_info_select(vm, selection):
+    vm_select_info = {}
+
+    if 'id' in selection:
+        vm_select_info['id'] = vm["name"]
+
+    if 'image' in selection:
+        vm_select_info['image'] = "{0} (Detected)".format(vm["config.guestFullName"])
+
+    if 'size' in selection:
+        vm_select_info['size'] = u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"])
+
+    if 'state' in selection:
+        vm_select_info['state'] = str(vm["summary.runtime.powerState"])
+
+    if 'guest_id' in selection:
+        vm_select_info['guest_id'] = vm["config.guestId"]
+
+    if 'hostname' in selection:
+        vm_select_info['hostname'] = vm["object"].guest.hostName
+
+    if 'path' in selection:
+        vm_select_info['path'] = vm["config.files.vmPathName"]
+
+    if 'tools_status' in selection:
+        vm_select_info['tools_status'] = str(vm["guest.toolsStatus"])
+
+    if ('private_ips' or 'mac_address' or 'networks') in selection:
+        network_full_info = {}
+        ip_addresses = []
+        mac_addresses = []
+
+        for net in vm["guest.net"]:
+            network_full_info[net.network] = {
+                'connected': net.connected,
+                'ip_addresses': net.ipAddress,
+                'mac_address': net.macAddress
+            }
+            ip_addresses.extend(net.ipAddress)
+            mac_addresses.append(net.macAddress)
+
+        if 'private_ips' in selection:
+            vm_select_info['private_ips'] = ip_addresses
+
+        if 'mac_address' in selection:
+            vm_select_info['mac_address'] = mac_addresses
+
+        if 'networks' in selection:
+            vm_select_info['networks'] = network_full_info
+
+    if 'devices' in selection:
+        device_full_info = {}
+        for device in vm["config.hardware.device"]:
+            device_full_info[device.deviceInfo.label] = {
+                'key': device.key,
+                'label': device.deviceInfo.label,
+                'summary': device.deviceInfo.summary,
+                'type': type(device).__name__.rsplit(".", 1)[1],
+                'unitNumber': device.unitNumber
+            }
+
+            if hasattr(device.backing, 'network'):
+                device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+                device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+
+            if hasattr(device, 'busNumber'):
+                device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+            if hasattr(device, 'device'):
+                device_full_info[device.deviceInfo.label]['devices'] = device.device
+
+            if hasattr(device, 'videoRamSizeInKB'):
+                device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+            if isinstance(device, vim.vm.device.VirtualDisk):
+                device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+                device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+                device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+
+        vm_select_info['devices'] = device_full_info
+
+    if 'storage' in selection:
+        storage_full_info = {
+            'committed': vm["summary.storage.committed"],
+            'uncommitted': vm["summary.storage.uncommitted"],
+            'unshared': vm["summary.storage.unshared"]
+        }
+        vm_select_info['storage'] = storage_full_info
+
+    if 'files' in selection:
+        file_full_info = {}
+        for file in vm["layoutEx.file"]:
+            file_full_info[file.key] = {
+                'key': file.key,
+                'name': file.name,
+                'size': file.size,
+                'type': file.type
+            }
+        vm_select_info['files'] = file_full_info
+
+    return vm_select_info
+
+
 def _format_instance_info(vm):
     device_full_info = {}
-    disk_full_info = {}
     for device in vm["config.hardware.device"]:
         device_full_info[device.deviceInfo.label] = {
             'key': device.key,
@@ -461,14 +583,12 @@ def _format_instance_info(vm):
         if isinstance(device, vim.vm.device.VirtualDisk):
             device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
             device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
-            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label].copy()
-            disk_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+            device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
 
     storage_full_info = {
         'committed': vm["summary.storage.committed"],
         'uncommitted': vm["summary.storage.uncommitted"],
-        'unshared': vm["summary.storage.unshared"],
-        'disks': disk_full_info,
+        'unshared': vm["summary.storage.unshared"]
     }
 
     file_full_info = {}
@@ -481,33 +601,53 @@ def _format_instance_info(vm):
         }
 
     network_full_info = {}
+    ip_addresses = []
+    mac_addresses = []
     for net in vm["guest.net"]:
-        network_full_info = {
+        network_full_info[net.network] = {
             'connected': net.connected,
             'ip_addresses': net.ipAddress,
-            'mac_address': net.macAddress,
-            'network': net.network
+            'mac_address': net.macAddress
         }
+        ip_addresses.extend(net.ipAddress)
+        mac_addresses.append(net.macAddress)
 
     vm_full_info = {
+        'id': vm['name'],
+        'image': "{0} (Detected)".format(vm["config.guestFullName"]),
+        'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
+        'state': str(vm["summary.runtime.powerState"]),
+        'private_ips': ip_addresses,
+        'public_ips': [],
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
-        'guest_full_name': vm["config.guestFullName"],
         'guest_id': vm["config.guestId"],
         'hostname': vm["object"].guest.hostName,
-        'ip_address': vm["object"].guest.ipAddress,
-        'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
-        'memory_mb': vm["config.hardware.memoryMB"],
-        'name': vm['name'],
-        'net': [network_full_info],
-        'num_cpu': vm["config.hardware.numCPU"],
+        'mac_address': mac_addresses,
+        'networks': network_full_info,
         'path': vm["config.files.vmPathName"],
-        'status': vm["summary.runtime.powerState"],
-        'tools_status': vm["guest.toolsStatus"],
+        'tools_status': str(vm["guest.toolsStatus"]),
     }
 
     return vm_full_info
+
+
+def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+    snapshots = {}
+    for snapshot in snapshot_list:
+        snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
+        snapshots[snapshot_path] = {
+            'name': snapshot.name,
+            'description': snapshot.description,
+            'created': str(snapshot.createTime).split('.')[0],
+            'state': snapshot.state,
+            'path': snapshot_path,
+        }
+        # Check if child snapshots exist
+        if snapshot.childSnapshotList:
+            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+    return snapshots
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -542,15 +682,12 @@ def list_datacenters(kwargs=None, call=None):
         salt-cloud -f list_datacenters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datacenters function must be called with -f or --function.'
         )
-        return False
 
     datacenters = []
-    datacenter_properties = [
-                                "name"
-                            ]
+    datacenter_properties = ["name"]
 
     datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
 
@@ -571,15 +708,12 @@ def list_clusters(kwargs=None, call=None):
         salt-cloud -f list_clusters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_clusters function must be called with -f or --function.'
         )
-        return False
 
     clusters = []
-    cluster_properties = [
-                             "name"
-                         ]
+    cluster_properties = ["name"]
 
     cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
 
@@ -600,15 +734,12 @@ def list_datastore_clusters(kwargs=None, call=None):
         salt-cloud -f list_datastore_clusters my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datastore_clusters function must be called with -f or --function.'
         )
-        return False
 
     datastore_clusters = []
-    datastore_cluster_properties = [
-                                       "name"
-                                   ]
+    datastore_cluster_properties = ["name"]
 
     datastore_cluster_list = _get_mors_with_properties(vim.StoragePod, datastore_cluster_properties)
 
@@ -629,15 +760,12 @@ def list_datastores(kwargs=None, call=None):
         salt-cloud -f list_datastores my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_datastores function must be called with -f or --function.'
         )
-        return False
 
     datastores = []
-    datastore_properties = [
-                               "name"
-                           ]
+    datastore_properties = ["name"]
 
     datastore_list = _get_mors_with_properties(vim.Datastore, datastore_properties)
 
@@ -658,15 +786,12 @@ def list_hosts(kwargs=None, call=None):
         salt-cloud -f list_hosts my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_hosts function must be called with -f or --function.'
         )
-        return False
 
     hosts = []
-    host_properties = [
-                          "name"
-                      ]
+    host_properties = ["name"]
 
     host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
 
@@ -687,15 +812,12 @@ def list_resourcepools(kwargs=None, call=None):
         salt-cloud -f list_resourcepools my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_resourcepools function must be called with -f or --function.'
         )
-        return False
 
     resource_pools = []
-    resource_pool_properties = [
-                                   "name"
-                               ]
+    resource_pool_properties = ["name"]
 
     resource_pool_list = _get_mors_with_properties(vim.ResourcePool, resource_pool_properties)
 
@@ -716,15 +838,12 @@ def list_networks(kwargs=None, call=None):
         salt-cloud -f list_networks my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_networks function must be called with -f or --function.'
         )
-        return False
 
     networks = []
-    network_properties = [
-                             "name"
-                         ]
+    network_properties = ["name"]
 
     network_list = _get_mors_with_properties(vim.Network, network_properties)
 
@@ -736,20 +855,22 @@ def list_networks(kwargs=None, call=None):
 
 def list_nodes_min(kwargs=None, call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with no details
+    Return a list of all VMs and templates that are on the specified provider, with no details
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -Q
         salt-cloud -f list_nodes_min my-vmware-config
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called '
+            'with -f or --function.'
+        )
 
     ret = {}
-    vm_properties = [
-                        "name"
-                    ]
+    vm_properties = ["name"]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -761,33 +882,49 @@ def list_nodes_min(kwargs=None, call=None):
 
 def list_nodes(kwargs=None, call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with basic fields
+    Return a list of all VMs and templates that are on the specified provider, with basic fields
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes my-vmware-config
+
+    To return a list of all VMs and templates present on ALL configured providers, with basic
+    fields:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -Q
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called '
+            'with -f or --function.'
+        )
 
     ret = {}
     vm_properties = [
-                        "name",
-                        "guest.ipAddress",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "guest.ipAddress",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         vm_info = {
             'id': vm["name"],
-            'ip_address': vm["guest.ipAddress"] if "guest.ipAddress" in vm else None,
-            'guest_fullname': vm["config.guestFullName"],
-            'cpus': vm["config.hardware.numCPU"],
-            'ram': vm["config.hardware.memoryMB"],
+            'image': "{0} (Detected)".format(vm["config.guestFullName"]),
+            'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
+            'state': str(vm["summary.runtime.powerState"]),
+            'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
+            'public_ips': []
         }
         ret[vm_info['id']] = vm_info
 
@@ -796,14 +933,28 @@ def list_nodes(kwargs=None, call=None):
 
 def list_nodes_full(kwargs=None, call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with full details
+    Return a list of all VMs and templates that are on the specified provider, with full details
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes_full my-vmware-config
+
+    To return a list of all VMs and templates present on ALL configured providers, with full
+    details:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -F
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called '
+            'with -f or --function.'
+        )
 
     ret = {}
     vm_properties = [
@@ -826,9 +977,96 @@ def list_nodes_full(kwargs=None, call=None):
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        vm_full_info = _format_instance_info(vm)
-        ret[vm_full_info['name']] = vm_full_info
+        ret[vm["name"]] = _format_instance_info(vm)
 
+    return ret
+
+
+def list_nodes_select(call=None):
+    '''
+    Return a list of all VMs and templates that are on the specified provider, with fields
+    specified under ``query.selection`` in ``/etc/salt/cloud``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_select my-vmware-config
+
+    To return a list of all VMs and templates present on ALL configured providers, with
+    fields specified under ``query.selection`` in ``/etc/salt/cloud``:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -S
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
+    ret = {}
+    vm_properties = []
+    selection = __opts__.get('query.selection')
+
+    if not selection:
+        raise SaltCloudSystemExit(
+            'query.selection not found in /etc/salt/cloud'
+        )
+
+    if 'id' in selection:
+        vm_properties.append("name")
+
+    if 'image' in selection:
+        vm_properties.append("config.guestFullName")
+
+    if 'size' in selection:
+        vm_properties.extend(["config.hardware.numCPU", "config.hardware.memoryMB"])
+
+    if 'state' in selection:
+        vm_properties.append("summary.runtime.powerState")
+
+    if ('private_ips' or 'mac_address' or 'networks') in selection:
+        vm_properties.append("guest.net")
+
+    if 'devices' in selection:
+        vm_properties.append("config.hardware.device")
+
+    if 'storage' in selection:
+        vm_properties.extend([
+            "config.hardware.device",
+            "summary.storage.committed",
+            "summary.storage.uncommitted",
+            "summary.storage.unshared"
+        ])
+
+    if 'files' in selection:
+        vm_properties.append("layoutEx.file")
+
+    if 'guest_id' in selection:
+        vm_properties.append("config.guestId")
+
+    if 'hostname' in selection:
+        vm_properties.append("guest.hostName")
+
+    if 'path' in selection:
+        vm_properties.append("config.files.vmPathName")
+
+    if 'tools_status' in selection:
+        vm_properties.append("guest.toolsStatus")
+
+    if not vm_properties:
+        return {}
+    elif 'name' not in vm_properties:
+        vm_properties.append("name")
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        ret[vm["name"]] = _format_instance_info_select(vm, selection)
     return ret
 
 
@@ -868,8 +1106,7 @@ def show_instance(name, call=None):
 
     for vm in vm_list:
         if vm['name'] == name:
-            vm_full_info = _format_instance_info(vm)
-    return vm_full_info
+            return _format_instance_info(vm)
 
 
 def avail_images():
@@ -886,12 +1123,12 @@ def avail_images():
 
     templates = {}
     vm_properties = [
-                        "name",
-                        "config.template",
-                        "config.guestFullName",
-                        "config.hardware.numCPU",
-                        "config.hardware.memoryMB"
-                    ]
+        "name",
+        "config.template",
+        "config.guestFullName",
+        "config.hardware.numCPU",
+        "config.hardware.memoryMB"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -903,6 +1140,7 @@ def avail_images():
                 'cpus': vm["config.hardware.numCPU"],
                 'ram': vm["config.hardware.memoryMB"]
             }
+
     return templates
 
 
@@ -917,15 +1155,12 @@ def list_folders(kwargs=None, call=None):
         salt-cloud -f list_folders my-vmware-config
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The list_folders function must be called with -f or --function.'
         )
-        return False
 
     folders = []
-    folder_properties = [
-                            "name"
-                        ]
+    folder_properties = ["name"]
 
     folder_list = _get_mors_with_properties(vim.Folder, folder_properties)
 
@@ -933,6 +1168,51 @@ def list_folders(kwargs=None, call=None):
         folders.append(folder["name"])
 
     return {'Folders': folders}
+
+
+def list_snapshots(kwargs=None, call=None):
+    '''
+    List snapshots either for all VMs and templates or for a specific VM/template
+    in this VMware environment
+
+    To list snapshots for all VMs and templates:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config
+
+    To list snapshots for a specific VM/template:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_snapshots my-vmware-config name="vmname"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_snapshots function must be called with -f or --function.'
+        )
+
+    ret = {}
+    vm_properties = [
+        "name",
+        "rootSnapshot",
+        "snapshot"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["rootSnapshot"]:
+            if kwargs and 'name' in kwargs and vm["name"] == kwargs['name']:
+                return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
+            else:
+                ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+
+    return ret
 
 
 def start(name, call=None):
@@ -951,9 +1231,9 @@ def start(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -969,6 +1249,7 @@ def start(name, call=None):
             except Exception as exc:
                 log.error('Could not power on VM {0}: {1}'.format(name, exc))
                 return 'failed to power on'
+
     return 'powered on'
 
 
@@ -988,9 +1269,9 @@ def stop(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1006,6 +1287,7 @@ def stop(name, call=None):
             except Exception as exc:
                 log.error('Could not power off VM {0}: {1}'.format(name, exc))
                 return 'failed to power off'
+
     return 'powered off'
 
 
@@ -1025,9 +1307,9 @@ def suspend(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1047,6 +1329,7 @@ def suspend(name, call=None):
             except Exception as exc:
                 log.error('Could not suspend VM {0}: {1}'.format(name, exc))
                 return 'failed to suspend'
+
     return 'suspended'
 
 
@@ -1066,9 +1349,9 @@ def reset(name, call=None):
         )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1084,7 +1367,47 @@ def reset(name, call=None):
             except Exception as exc:
                 log.error('Could not reset VM {0}: {1}'.format(name, exc))
                 return 'failed to reset'
+
     return 'reset'
+
+
+def terminate(name, call=None):
+    '''
+    To do an immediate power off of a VM using its name. A ``SIGKILL``
+    is issued to the vmx process of the VM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a terminate vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The terminate action must be called with -a or --action.'
+        )
+
+    vm_properties = [
+        "name",
+        "summary.runtime.powerState"
+    ]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        if vm["name"] == name:
+            if vm["summary.runtime.powerState"] == "poweredOff":
+                ret = 'already powered off'
+                log.info('VM {0} {1}'.format(name, ret))
+                return ret
+            try:
+                log.info('Terminating VM {0}'.format(name))
+                vm["object"].Terminate()
+            except Exception as exc:
+                log.error('Could not terminate VM {0}: {1}'.format(name, exc))
+                return 'failed to terminate'
+
+    return 'terminated'
 
 
 def destroy(name, call=None):
@@ -1114,9 +1437,9 @@ def destroy(name, call=None):
     )
 
     vm_properties = [
-                        "name",
-                        "summary.runtime.powerState"
-                    ]
+        "name",
+        "summary.runtime.powerState"
+    ]
 
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
@@ -1127,14 +1450,12 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    while task.info.state != 'success':
-                        log.debug("Waiting for Power off task to finish")
+                    _wait_for_task(task, name, "power off")
                 except Exception as exc:
                     log.error('Could not destroy VM {0}: {1}'.format(name, exc))
                     return 'failed to destroy'
             task = vm["object"].Destroy_Task()
-            while task.info.state != 'success':
-                log.debug("Waiting for destroy task to finish")
+            _wait_for_task(task, name, "destroy")
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1145,6 +1466,7 @@ def destroy(name, call=None):
     )
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return True
 
 
@@ -1234,8 +1556,9 @@ def create(vm_):
             cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
             resourcepool_ref = cluster_ref.resourcePool
         elif clone_type == "template":
-            log.error('You must either specify a cluster, a host or a resource pool')
-            return False
+            raise SaltCloudSystemExit(
+                'You must either specify a cluster, a host or a resource pool'
+            )
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
@@ -1325,11 +1648,7 @@ def create(vm_):
             )
 
             task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-            time_counter = 0
-            while task.info.state == 'running':
-                log.info("Waiting for clone task to finish [{0} s]".format(time_counter))
-                time.sleep(5)
-                time_counter += 5
+            _wait_for_task(task, vm_name, "clone", 5, 'info')
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
@@ -1375,3 +1694,181 @@ def create(vm_):
         return False
 
     return {vm_name: data}
+
+
+def create_datacenter(kwargs=None, call=None):
+    '''
+    Create a new data center in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_datacenter my-vmware-config name="MyNewDatacenter"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_datacenter function must be called with -f or --function.'
+        )
+
+    datacenter_name = kwargs.get('name')
+
+    if not datacenter_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the new datacenter to be created.'
+        )
+
+    if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
+        raise SaltCloudSystemExit(
+            'The datacenter name must be a non empty string of less than 80 characters.'
+        )
+
+    # Check if datacenter already exists
+    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+    if datacenter_ref:
+        return {datacenter_name: 'datacenter already exists'}
+
+    # Get the service instance
+    si = _get_si()
+
+    folder = si.content.rootFolder
+
+    # Verify that the folder is of type vim.Folder
+    if isinstance(folder, vim.Folder):
+        try:
+            folder.CreateDatacenter(name=datacenter_name)
+        except Exception as exc:
+            log.error(
+                'Error creating datacenter {0}: {1}'.format(
+                    datacenter_name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+        log.debug("Created datacenter {0}".format(datacenter_name))
+        return {datacenter_name: 'created'}
+
+    return False
+
+
+def create_cluster(kwargs=None, call=None):
+    '''
+    Create a new cluster under the specified datacenter in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_cluster my-vmware-config name="MyNewCluster" datacenter="DatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_cluster function must be called with -f or --function.'
+        )
+
+    cluster_name = kwargs.get('name')
+    datacenter = kwargs.get('datacenter')
+
+    if not cluster_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the new cluster to be created.'
+        )
+
+    if not datacenter:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the datacenter where the cluster should be created.'
+        )
+
+    if not isinstance(datacenter, vim.Datacenter):
+        datacenter = _get_mor_by_property(vim.Datacenter, datacenter)
+        if not datacenter:
+            raise SaltCloudSystemExit(
+                'The specified datacenter does not exist.'
+            )
+
+    # Check if cluster already exists
+    cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+    if cluster_ref:
+        return {cluster_name: 'cluster already exists'}
+
+    cluster_spec = vim.cluster.ConfigSpecEx()
+    folder = datacenter.hostFolder
+
+    # Verify that the folder is of type vim.Folder
+    if isinstance(folder, vim.Folder):
+        try:
+            folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
+        except Exception as exc:
+            log.error(
+                'Error creating cluster {0}: {1}'.format(
+                    cluster_name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
+
+        log.debug("Created cluster {0} under datacenter {1}".format(cluster_name, datacenter.name))
+        return {cluster_name: 'created'}
+
+    return False
+
+
+def upgrade_tools(name, reboot=False, call=None):
+    '''
+    To upgrade VMware Tools on a specified virtual machine.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, use ``reboot=True``
+        to reboot the virtual machine after VMware tools upgrade. Default
+        is ``reboot=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a upgrade_tools vmname
+        salt-cloud -a upgrade_tools vmname reboot=True
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools action must be called with -a or --action.'
+        )
+
+    vm = _get_mor_by_property(vim.VirtualMachine, name)
+
+    tools_status = vm.guest.toolsStatus
+
+    # Exit if VMware tools is already up to date
+    if tools_status == "toolsOk":
+        return 'VMware tools is already up to date'
+
+    # Exit if VM is not powered on
+    if vm.summary.runtime.powerState != "poweredOn":
+        return 'Tools cannot be upgraded if the VM is not powered on'
+
+    # If vmware tools is out of date, check major OS family
+    # Upgrade tools on Linux and Windows guests
+    if tools_status == "toolsOld":
+        log.info('Upgrading VMware tools on {0}'.format(name))
+        os_family = vm.guest.guestFamily
+        try:
+            if os_family == "windowsGuest" and not reboot:
+                log.info('Reboot suppressed on {0}'.format(name))
+                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
+            elif os_family in ["linuxGuest", "windowsGuest"]:
+                task = vm.UpgradeTools()
+            else:
+                return 'VMware tools upgrade is currently supported only on Linux or Windows guests.'
+            _wait_for_task(task, name, "tools upgrade", 5, "info")
+        except Exception as exc:
+            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(name, exc))
+            return 'failed to upgrade VMware tools'
+        return 'VMware tools upgraded'
+
+    return 'VMware tools is not installed'

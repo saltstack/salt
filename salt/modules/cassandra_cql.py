@@ -647,6 +647,7 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     :rtype:                dict
 
     .. code-block:: bash
+
         salt 'minion1' cassandra_cql.list_permissions
 
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_keyspace permission=select
@@ -702,6 +703,7 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
     :rtype:
 
     .. code-block:: bash
+
         salt 'minion1' cassandra_cql.grant_permission
 
         salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_keyspace permission=select

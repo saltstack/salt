@@ -52,10 +52,14 @@ def __virtual__():
 
 
 def _vartree():
+    import portage
+    portage = reload(portage)
     return portage.db[portage.root]['vartree']
 
 
 def _porttree():
+    import portage
+    portage = reload(portage)
     return portage.db[portage.root]['porttree']
 
 

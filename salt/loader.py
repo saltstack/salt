@@ -7,7 +7,6 @@ Routines to set up a minion
 from __future__ import absolute_import
 import os
 import imp
-import copy
 import sys
 import salt
 import time
@@ -22,6 +21,7 @@ from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
 import salt.utils.event
+import salt.utils.odict
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -33,7 +33,6 @@ import salt.ext.six as six
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
 }
-_grains = {}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
@@ -55,6 +54,37 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'openstack.list_locations',
     'rackspace.list_locations'
 )
+
+
+def static_loader(
+        opts,
+        ext_type,
+        tag,
+        pack=None,
+        int_type=None,
+        ext_dirs=True,
+        ext_type_dirs=None,
+        base_path=None,
+        filter_name=None,
+        ):
+    funcs = LazyLoader(_module_dirs(opts,
+                                  ext_type,
+                                  tag,
+                                  int_type,
+                                  ext_dirs,
+                                  ext_type_dirs,
+                                  base_path),
+                     opts,
+                     tag=tag,
+                     pack=pack,
+                     )
+    ret = {}
+    funcs._load_all()
+    if filter_name:
+        funcs = FilterDictWrapper(funcs, filter_name)
+    for key in funcs:
+        ret[key] = funcs[key]
+    return ret
 
 
 def _module_dirs(
@@ -130,6 +160,19 @@ def minion_mods(
                      pack={'__context__': context, '__utils__': utils},
                      whitelist=whitelist,
                      loaded_base_name=loaded_base_name)
+
+    # Load any provider overrides from the configuration file providers option
+    #  Note: Providers can be pkg, service, user or group - not to be confused
+    #        with cloud providers.
+    if opts.get('providers', False):
+        providers = opts.get('providers', False)
+        for mod in providers:
+            funcs = raw_mod(opts, providers[mod], ret.items())
+            if funcs:
+                for func in funcs:
+                    f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
+                    ret[f_key] = funcs[func]
+
     ret.pack['__salt__'] = ret
     if notify:
         evt = salt.utils.event.get_event('minion', opts=opts)
@@ -481,6 +524,8 @@ def grains(opts, force_refresh=False):
 
     # Run the rest of the grains
     for key, fun in six.iteritems(funcs):
+        if '.' not in key:
+            continue
         if key.startswith('core.') or key == '_errors':
             continue
         try:
@@ -675,12 +720,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
         super(LazyLoader, self).__init__()  # init the lazy loader
-        self.tag = tag
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
+        self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
@@ -812,18 +857,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         '''
         if 'grains' in opts:
-            self.grains = opts['grains']
+            self._grains = opts['grains']
         else:
-            self.grains = {}
-        if self.tag not in ['grains'] and not self.grains:
-            if not _grains:
-                # memoize cache the grains, not to reload each run
-                _grains.update(grains(opts))
-            self.grains.update(copy.deepcopy(_grains))
+            self._grains = {}
         if 'pillar' in opts:
-            self.pillar = opts['pillar']
+            self._pillar = opts['pillar']
         else:
-            self.pillar = {}
+            self._pillar = {}
 
         mod_opts = {}
         for key, val in list(opts.items()):
@@ -930,8 +970,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         else:
             mod.__opts__ = self.opts
 
-        mod.__grains__ = self.grains
-        mod.__pillar__ = self.pillar
+        mod.__grains__ = self._grains
+        mod.__pillar__ = self._pillar
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
@@ -986,6 +1026,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     module_name
                 )
             )
+        self._dict[module_name] = salt.utils.odict.OrderedDict()
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1002,7 +1043,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            # Save many references for lookups
             self._dict['{0}.{1}'.format(module_name, funcname)] = func
+            setattr(self._dict[module_name], funcname, func)
+            self._dict[module_name][funcname] = func
             self._apply_outputter(func, mod)
 
         # enforce depends
@@ -1015,9 +1059,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if key is None or not isinstance(key, six.string_types) or '.' not in key:
+        if not isinstance(key, six.string_types):
             raise KeyError
-        mod_name, _ = key.split('.', 1)
+        if '.' not in key:
+            mod_name = key
+        else:
+            mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
         # if the modulename isn't in the whitelist, don't bother

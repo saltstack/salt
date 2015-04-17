@@ -727,6 +727,29 @@ def create_key(kwargs=None, call=None):
     return result
 
 
+def remove_key(kwargs=None, call=None):
+    '''
+    Delete public key
+    '''
+    if call != 'function':
+        log.error(
+            'The create_key function must be called with -f or --function.'
+        )
+        return False
+
+    try:
+        result = query(
+            method='account',
+            command='keys/' + kwargs['id'],
+            http_method='delete'
+        )
+    except KeyError:
+        log.info('`id` argument must be specified')
+        return False
+
+    return result
+
+
 def get_keyid(keyname):
     '''
     Return the ID of the keyname

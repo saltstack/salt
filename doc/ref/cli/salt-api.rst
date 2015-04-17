@@ -21,13 +21,19 @@ Options
 
 .. program:: salt-api
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options.
+.. option:: -d, --daemon
 
-.. option:: -C CONFIG, --config=CONFIG
+    Run the salt-api as a daemon
 
-    Specify an alternative location for the salt master configuration file.
+.. option:: --pid-file=PIDFILE
+
+    Specify the location of the pidfile. Default: /var/run/salt-api.pid
+
+.. include:: _includes/logging-options.rst
+.. |logfile| replace:: /var/log/salt/api
+.. |loglevel| replace:: ``warning``
 
 See also
 ========

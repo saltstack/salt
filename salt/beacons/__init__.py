@@ -74,3 +74,29 @@ class Beacon(object):
             log.trace('Interval process inserting mod: {0}'.format(mod))
             self.interval_map[mod] = 1
         return False
+
+    def add_beacon(self, name, beacon_data):
+        '''
+        Add a beacon item
+        '''
+
+        data = {}
+        data[name] = beacon_data
+
+        if name in self.opts['beacons']:
+            log.info('Updating settings for beacon '
+                     'item: {0}'.format(name))
+        else:
+            log.info('Added new beacon item {0}'.format(name))
+        self.opts['beacons'].update(data)
+        return True
+
+    def delete_beacon(self, name):
+        '''
+        Delete a beacon item
+        '''
+
+        if name in self.opts['beacons']:
+            log.info('Deleting beacon item {0}'.format(name))
+            del self.opts['beacons'][name]
+        return True

@@ -146,6 +146,7 @@ class SSHClient(object):
         WARNING: Eauth is **NOT** respected
 
         .. code-block:: python
+
             client.cmd_sync({
                 'tgt': 'silver',
                 'fun': 'test.ping',

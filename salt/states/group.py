@@ -170,7 +170,7 @@ def present(name,
             ret['comment'] += 'Some changes could not be applied'
             ret['changes'] = {'Failed': changes}
         else:
-            ret['changes'] = {'Final': 'All Changed applied successfully'}
+            ret['changes'] = {'Final': 'All changes applied successfully'}
 
     if changes is False:
         # The group is not present, make it!

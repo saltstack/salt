@@ -12,6 +12,7 @@ A REST API for Salt
     <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
     introduced in version 3.2.5. The issue was reportedly resolved with
     CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
+            - salt-api package
 :optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system which requires additional configuration not described

@@ -19,6 +19,11 @@ JBoss 7 State
 
 Remove unused argument ``timeout`` in jboss7.status.
 
+Pkgrepo State
+=============
+
+Deprecate ``enabled`` argument in ``pkgrepo.managed`` in favor of ``disabled``.
+
 Archive Module
 ==============
 

@@ -187,8 +187,21 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
-    if 'proto' in kwargs:
-        rule.append('{0}-p {1}'.format(maybe_add_negation('proto'), kwargs['proto']))
+    if 'protocol' in kwargs:
+        proto = kwargs['protocol']
+        proto_negation = maybe_add_negation('protocol')
+        del kwargs['protocol']
+    elif 'proto' in kwargs:
+        proto = kwargs['proto']
+        proto_negation = maybe_add_negation('proto')
+        del kwargs['proto']
+
+    if proto:
+        if proto.startswith('!') or proto.startswith('not'):
+            proto = re.sub(bang_not_pat, '', proto)
+            rule += '! '
+
+        rule.append('{0}-p {1}'.format(proto_negation, proto))
         proto = True
         del kwargs['proto']
 
@@ -203,7 +216,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         del kwargs['match']
 
     if 'connstate' in kwargs:
+        if '-m state' not in rule:
+            rule += '-m state '
+
         rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
+
         del kwargs['connstate']
 
     if 'dport' in kwargs:

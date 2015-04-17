@@ -193,11 +193,12 @@ class SSH(object):
                         'salt-ssh.rsa'
                         )
                     )
-        if not os.path.isfile(priv):
-            try:
-                salt.client.ssh.shell.gen_key(priv)
-            except OSError:
-                raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
+        if priv != 'agent-forwarding':
+            if not os.path.isfile(priv):
+                try:
+                    salt.client.ssh.shell.gen_key(priv)
+                except OSError:
+                    raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
         self.defaults = {
             'user': self.opts.get(
                 'ssh_user',
@@ -255,11 +256,10 @@ class SSH(object):
         '''
         Deploy the SSH key if the minions don't auth
         '''
-        if not isinstance(ret[host], dict):
-            if self.opts.get('ssh_key_deploy'):
-                target = self.targets[host]
-                if 'passwd' in target:
-                    self._key_deploy_run(host, target, False)
+        if not isinstance(ret[host], dict) or self.opts.get('ssh_key_deploy'):
+            target = self.targets[host]
+            if 'passwd' in target or self.opts['ssh_passwd']:
+                self._key_deploy_run(host, target, False)
             return ret
         if ret[host].get('stderr', '').count('Permission denied'):
             target = self.targets[host]
@@ -427,6 +427,9 @@ class SSH(object):
                     running.pop(host)
             if len(rets) >= len(self.targets):
                 break
+            # Sleep when limit or all threads started
+            if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
+                time.sleep(0.1)
 
     def run_iter(self, mine=False):
         '''
@@ -509,7 +512,10 @@ class SSH(object):
             }
 
         # save load to the master job cache
-        self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        try:
+            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+        except Exception as exc:
+            log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
 
         if self.opts.get('verbose'):
             msg = 'Executing job with jid {0}'.format(jid)

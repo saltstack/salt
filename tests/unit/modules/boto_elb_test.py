@@ -44,6 +44,8 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import Salt Libs
+import salt.config
+import salt.loader
 from salt.modules import boto_elb
 
 # Import Salt Testing Libs
@@ -63,6 +65,11 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key,
 boto_conn_parameters = {'aws_access_key_id': access_key,
                         'aws_secret_access_key': secret_key}
 instance_parameters = {'instance_type': 't1.micro'}
+
+opts = salt.config.DEFAULT_MASTER_OPTS
+utils = salt.loader.utils(opts, whitelist=['boto'])
+boto_elb.__utils__ = utils
+boto_elb.__virtual__()
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

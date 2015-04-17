@@ -218,6 +218,7 @@ def _get_serv(ret=None, commit=False):
                 pass
         except MySQLdb.connections.OperationalError as exc:
             raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
+
     cursor = conn.cursor()
 
     try:

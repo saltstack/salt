@@ -91,7 +91,8 @@ def get_local_client(
     if opts['transport'] == 'raet':
         import salt.client.raet
         return salt.client.raet.LocalClient(mopts=opts)
-    elif opts['transport'] == 'zeromq':
+    # TODO: AIO core is separate from transport
+    elif opts['transport'] in ('zeromq', 'tcp'):
         return LocalClient(mopts=opts, skip_perm_errors=skip_perm_errors)
 
 
@@ -827,7 +828,8 @@ class LocalClient(object):
             for tag in tags_regex:
                 tag_search.append(re.compile(tag))
         while True:
-            if self.opts.get('transport') == 'zeromq':
+            # TODO: this is a check of event type, NOT transport type!
+            if self.opts.get('transport') in ('zeromq', 'tcp'):
                 try:
                     raw = event.get_event_noblock()
                     if gather_errors:

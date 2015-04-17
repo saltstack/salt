@@ -100,6 +100,7 @@ def send_msg(recipient,
     msg['Subject'] = subject
     msg['From'] = sender
     msg['To'] = recipient
+    recipients = [r.strip() for r in recipient.split(',')]
 
     try:
         if use_ssl in ['True', 'true']:
@@ -137,7 +138,7 @@ def send_msg(recipient,
             return False
 
     try:
-        smtpconn.sendmail(sender, [recipient], msg.as_string())
+        smtpconn.sendmail(sender, recipients, msg.as_string())
     except smtplib.SMTPRecipientsRefused:
         log.debug("All recipients were refused.")
         return False

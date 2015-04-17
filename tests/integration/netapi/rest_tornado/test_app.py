@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+from __future__ import print_function
 import json
 import time
 from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
@@ -286,7 +287,8 @@ class TestSaltAPIHandler(SaltnadoTestCase):
                               request_timeout=30,
                               )
         response_obj = json.loads(response.body)
-        self.assertEqual(response_obj['return'], [['minion', 'sub_minion']])
+        self.assertEqual(len(response_obj['return']), 1)
+        self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
@@ -407,7 +409,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
         response = self.wait(timeout=30)
         response_obj = json.loads(response.body)['return'][0]
         try:
-            for jid, ret in six.iteritems(response_obj.iteritems()):
+            for jid, ret in six.iteritems(response_obj):
                 self.assertIn('Function', ret)
                 self.assertIn('Target', ret)
                 self.assertIn('Target-type', ret)
@@ -415,7 +417,7 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                 self.assertIn('StartTime', ret)
                 self.assertIn('Arguments', ret)
         except AttributeError as attribute_error:
-            print json.loads(response.body)
+            print(json.loads(response.body))
             raise
 
         # test with a specific JID passed in

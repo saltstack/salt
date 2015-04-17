@@ -457,10 +457,29 @@ class Client(object):
             prefix = separated[0]
 
         # Copy files from master
-        for fn_ in self.file_list(saltenv):
-            if fn_.startswith(path):
-                # Prevent files in "salt://foobar/" (or salt://foo.sh) from
-                # matching a path of "salt://foo"
+        for fn_ in self.file_list(saltenv, prefix=path):
+            # Prevent files in "salt://foobar/" (or salt://foo.sh) from
+            # matching a path of "salt://foo"
+            try:
+                if fn_[len(path)] != '/':
+                    continue
+            except IndexError:
+                continue
+            # Remove the leading directories from path to derive
+            # the relative path on the minion.
+            minion_relpath = fn_[len(prefix):].lstrip('/')
+            ret.append(
+               self.get_file(
+                  'salt://{0}'.format(fn_),
+                  '{0}/{1}'.format(dest, minion_relpath),
+                  True, saltenv, gzip
+               )
+            )
+        # Replicate empty dirs from master
+        try:
+            for fn_ in self.file_list_emptydirs(saltenv, prefix=path):
+                # Prevent an empty dir "salt://foobar/" from matching a path of
+                # "salt://foo"
                 try:
                     if fn_[len(path)] != '/':
                         continue
@@ -469,31 +488,10 @@ class Client(object):
                 # Remove the leading directories from path to derive
                 # the relative path on the minion.
                 minion_relpath = fn_[len(prefix):].lstrip('/')
-                ret.append(
-                    self.get_file(
-                        'salt://{0}'.format(fn_),
-                        '{0}/{1}'.format(dest, minion_relpath),
-                        True, saltenv, gzip
-                    )
-                )
-        # Replicate empty dirs from master
-        try:
-            for fn_ in self.file_list_emptydirs(saltenv):
-                if fn_.startswith(path):
-                    # Prevent an empty dir "salt://foobar/" from matching a path of
-                    # "salt://foo"
-                    try:
-                        if fn_[len(path)] != '/':
-                            continue
-                    except IndexError:
-                        continue
-                    # Remove the leading directories from path to derive
-                    # the relative path on the minion.
-                    minion_relpath = fn_[len(prefix):].lstrip('/')
-                    minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
-                    if not os.path.isdir(minion_mkdir):
-                        os.makedirs(minion_mkdir)
-                    ret.append(minion_mkdir)
+                minion_mkdir = '{0}/{1}'.format(dest, minion_relpath)
+                if not os.path.isdir(minion_mkdir):
+                    os.makedirs(minion_mkdir)
+                ret.append(minion_mkdir)
         except TypeError:
             pass
         ret.sort()

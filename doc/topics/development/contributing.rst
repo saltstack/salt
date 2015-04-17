@@ -41,7 +41,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
         isolated into separate branches.
 
     If you're working on a fix, create your branch from the oldest release
-    branch having the bug.  See :ref:`Which Salt Branch`.
+    branch having the bug.  See :ref:`Which Salt Branch?`.
 
     .. code-block:: bash
 
@@ -88,7 +88,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
 
     If you get stuck `there are many introductory Git resources on
-    help.github.com<Git resources>`_.
+    help.github.com<Git resources_>`_.
 
 #.  Push your locally-committed changes to your GitHub fork,
 
@@ -156,13 +156,15 @@ Fork a Repo Guide_>`_ and is well worth reading.
 Which Salt branch?
 ==================
 
-GitHub will open pull requests against Salt's main branch named ``develop`` by
-default. Most contributors can keep the default options. This section is for
-advanced contributors.
+GitHub will open pull requests against Salt's main branch, ``develop``, by
+default.  Ideally features should go into ``develop`` and bug fixes should go
+into the oldest supported release branch affected by the bug.  See
+:ref:`Sending a GitHub pull request`.
 
-Each pull request should address a single concern, as mentioned in the section
-above. For example, "Fix bug X," or "Add feature Y." And a pull request should
-be opened against the branch that corresponds to that concern.
+If you have a bug fix and have already forked your working branch from
+``develop`` and do not know how to rebase your commits against another branch,
+then submit it to ``develop`` anyway and we'll be sure to backport it to the
+correct place.
 
 The current release branch
 --------------------------
@@ -170,7 +172,7 @@ The current release branch
 The current release branch is the most recent stable release. Pull requests
 containing bug fixes should be made against the release branch.
 
-The branch name will be a date-based name such as ``2014.7``.
+The branch name will be a date-based name such as ``2015.2``.
 
 Bug fixes are made on this branch so that minor releases can be cut from this
 branch without introducing surprises and new features. This approach maximizes

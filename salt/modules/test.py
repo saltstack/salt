@@ -33,6 +33,58 @@ def missing_func():
     return 'foo'
 
 
+def attr_call():
+    '''
+    Call grains.items via the attribute
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt '*' test.attr_call
+    '''
+    return __salt__.grains.items()
+
+
+def module_report():
+    '''
+    Return a dict containing all of the exeution modules with a report on
+    the overall availability via different references
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt '*' test.module_report
+    '''
+    ret = {'functions': [],
+           'function_attrs': [],
+           'function_subs': [],
+           'modules': [],
+           'module_attrs': [],
+           'missing_attrs': [],
+           'missing_subs': []}
+    for ref in __salt__:
+        if '.' in ref:
+            ret['functions'].append(ref)
+        else:
+            ret['modules'].append(ref)
+            if hasattr(__salt__, ref):
+                ret['module_attrs'].append(ref)
+            for func in __salt__[ref]:
+                full = '{0}.{1}'.format(ref, func)
+                if hasattr(getattr(__salt__, ref), func):
+                    ret['function_attrs'].append(full)
+                if func in __salt__[ref]:
+                    ret['function_subs'].append(full)
+    for func in ret['functions']:
+        if func not in ret['function_attrs']:
+            ret['missing_attrs'].append(func)
+        if func not in ret['function_subs']:
+            ret['missing_subs'].append(func)
+    return ret
+
+
 def echo(text):
     '''
     Return a string - used for testing the connection
@@ -253,8 +305,10 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to but not including the passed number,
-    and the time it took to compute in seconds. Used for performance tests.
+    Return the num-th Fibonacci number, and the time it took to compute in
+    seconds. Used for performance tests.
+
+    This function is designed to have terrible performance.
 
     CLI Example:
 
@@ -264,12 +318,18 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    fib_a, fib_b = 0, 1
-    ret = [0]
-    while fib_b < num:
-        ret.append(fib_b)
-        fib_a, fib_b = fib_b, fib_a + fib_b
-    return ret, time.time() - start
+    if num < 2:
+        return num, time.time() - start
+    return _fib(num-1) + _fib(num-2), time.time() - start
+
+
+def _fib(num):
+    '''
+    Helper method for test.fib, doesn't calculate the time.
+    '''
+    if num < 2:
+        return num
+    return _fib(num-1) + _fib(num-2)
 
 
 def collatz(start):

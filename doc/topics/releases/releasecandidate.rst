@@ -52,3 +52,8 @@ installation docs <_installation>`.  Then install salt using the following:
 
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`Salt Bootstrap`: https://github.com/saltstack/salt-bootstrap
+
+Install on Windows
+==================
+
+Builds for Windows can be found here: http://docs.saltstack.com/downloads/
