@@ -596,8 +596,8 @@ def _verify_auth(repo):
         if user == address:
             # No '@' sign == no user. This is a problem.
             log.critical(
-                'Password / keypair specified for remote {0}, but remote '
-                'URL is missing a username'.format(repo['url'])
+                'Keypair specified for remote {0}, but remote URL is missing '
+                'a username'.format(repo['url'])
             )
             _failhard()
 
