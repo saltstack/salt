@@ -177,11 +177,8 @@ class Inspector(object):
             obj = os.path.join(path, obj)
             valid = True
             for ex_obj in exclude:
-                try:
-                    if obj.startswith(str(ex_obj)):
-                        valid = False
-                        continue
-                except Exception as ex:
+                if obj.startswith(str(ex_obj)):
+                    valid = False
                     continue
             if not valid or not os.path.exists(obj):
                 continue
