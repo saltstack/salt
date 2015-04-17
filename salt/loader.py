@@ -20,6 +20,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
+import salt.utils.odict
 import salt.utils.event
 
 # Solve the Chicken and egg problem where grains need to run before any
