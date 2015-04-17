@@ -453,9 +453,111 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
         raise task.info.error
 
 
+def _format_instance_info_select(vm, selection):
+    vm_select_info = {}
+
+    if 'id' in selection:
+        vm_select_info['id'] = vm["name"]
+
+    if 'image' in selection:
+        vm_select_info['image'] = "{0} (Detected)".format(vm["config.guestFullName"])
+
+    if 'size' in selection:
+        vm_select_info['size'] = u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"])
+
+    if 'state' in selection:
+        vm_select_info['state'] = str(vm["summary.runtime.powerState"])
+
+    if 'guest_id' in selection:
+        vm_select_info['guest_id'] = vm["config.guestId"]
+
+    if 'hostname' in selection:
+        vm_select_info['hostname'] = vm["object"].guest.hostName
+
+    if 'path' in selection:
+        vm_select_info['path'] = vm["config.files.vmPathName"]
+
+    if 'tools_status' in selection:
+        vm_select_info['tools_status'] = str(vm["guest.toolsStatus"])
+
+    if ('private_ips' or 'mac_address' or 'networks') in selection:
+        network_full_info = {}
+        ip_addresses = []
+        mac_addresses = []
+
+        for net in vm["guest.net"]:
+            network_full_info[net.network] = {
+                'connected': net.connected,
+                'ip_addresses': net.ipAddress,
+                'mac_address': net.macAddress
+            }
+            ip_addresses.extend(net.ipAddress)
+            mac_addresses.append(net.macAddress)
+
+        if 'private_ips' in selection:
+            vm_select_info['private_ips'] = ip_addresses
+
+        if 'mac_address' in selection:
+            vm_select_info['mac_address'] = mac_addresses
+
+        if 'networks' in selection:
+            vm_select_info['networks'] = network_full_info
+
+    if 'devices' in selection:
+        device_full_info = {}
+        for device in vm["config.hardware.device"]:
+            device_full_info[device.deviceInfo.label] = {
+                'key': device.key,
+                'label': device.deviceInfo.label,
+                'summary': device.deviceInfo.summary,
+                'type': type(device).__name__.rsplit(".", 1)[1],
+                'unitNumber': device.unitNumber
+            }
+
+            if hasattr(device.backing, 'network'):
+                device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+                device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+
+            if hasattr(device, 'busNumber'):
+                device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+            if hasattr(device, 'device'):
+                device_full_info[device.deviceInfo.label]['devices'] = device.device
+
+            if hasattr(device, 'videoRamSizeInKB'):
+                device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+            if isinstance(device, vim.vm.device.VirtualDisk):
+                device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+                device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+                device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+
+        vm_select_info['devices'] = device_full_info
+
+    if 'storage' in selection:
+        storage_full_info = {
+            'committed': vm["summary.storage.committed"],
+            'uncommitted': vm["summary.storage.uncommitted"],
+            'unshared': vm["summary.storage.unshared"]
+        }
+        vm_select_info['storage'] = storage_full_info
+
+    if 'files' in selection:
+        file_full_info = {}
+        for file in vm["layoutEx.file"]:
+            file_full_info[file.key] = {
+                'key': file.key,
+                'name': file.name,
+                'size': file.size,
+                'type': file.type
+            }
+        vm_select_info['files'] = file_full_info
+
+    return vm_select_info
+
+
 def _format_instance_info(vm):
     device_full_info = {}
-    disk_full_info = {}
     for device in vm["config.hardware.device"]:
         device_full_info[device.deviceInfo.label] = {
             'key': device.key,
@@ -481,14 +583,12 @@ def _format_instance_info(vm):
         if isinstance(device, vim.vm.device.VirtualDisk):
             device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
             device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
-            disk_full_info[device.deviceInfo.label] = device_full_info[device.deviceInfo.label].copy()
-            disk_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+            device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
 
     storage_full_info = {
         'committed': vm["summary.storage.committed"],
         'uncommitted': vm["summary.storage.uncommitted"],
-        'unshared': vm["summary.storage.unshared"],
-        'disks': disk_full_info,
+        'unshared': vm["summary.storage.unshared"]
     }
 
     file_full_info = {}
@@ -501,28 +601,31 @@ def _format_instance_info(vm):
         }
 
     network_full_info = {}
+    ip_addresses = []
+    mac_addresses = []
     for net in vm["guest.net"]:
-        network_full_info = {
+        network_full_info[net.network] = {
             'connected': net.connected,
             'ip_addresses': net.ipAddress,
-            'mac_address': net.macAddress,
-            'network': net.network
+            'mac_address': net.macAddress
         }
+        ip_addresses.extend(net.ipAddress)
+        mac_addresses.append(net.macAddress)
 
     vm_full_info = {
         'id': vm['name'],
         'image': "{0} (Detected)".format(vm["config.guestFullName"]),
         'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
         'state': str(vm["summary.runtime.powerState"]),
-        'private_ips': network_full_info["ip_addresses"] if "ip_addresses" in network_full_info else [],
+        'private_ips': ip_addresses,
         'public_ips': [],
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
         'guest_id': vm["config.guestId"],
         'hostname': vm["object"].guest.hostName,
-        'mac_address': network_full_info["mac_address"] if "mac_address" in network_full_info else None,
-        'net': [network_full_info],
+        'mac_address': mac_addresses,
+        'networks': network_full_info,
         'path': vm["config.files.vmPathName"],
         'tools_status': str(vm["guest.toolsStatus"]),
     }
@@ -752,15 +855,19 @@ def list_networks(kwargs=None, call=None):
 
 def list_nodes_min(kwargs=None, call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with no details
+    Return a list of all VMs and templates that are on the specified provider, with no details
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -Q
         salt-cloud -f list_nodes_min my-vmware-config
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called '
+            'with -f or --function.'
+        )
 
     ret = {}
     vm_properties = ["name"]
@@ -775,14 +882,28 @@ def list_nodes_min(kwargs=None, call=None):
 
 def list_nodes(kwargs=None, call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with basic fields
+    Return a list of all VMs and templates that are on the specified provider, with basic fields
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes my-vmware-config
+
+    To return a list of all VMs and templates present on ALL configured providers, with basic
+    fields:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -Q
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called '
+            'with -f or --function.'
+        )
 
     ret = {}
     vm_properties = [
@@ -812,14 +933,28 @@ def list_nodes(kwargs=None, call=None):
 
 def list_nodes_full(kwargs=None, call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with full details
+    Return a list of all VMs and templates that are on the specified provider, with full details
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes_full my-vmware-config
+
+    To return a list of all VMs and templates present on ALL configured providers, with full
+    details:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -F
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called '
+            'with -f or --function.'
+        )
 
     ret = {}
     vm_properties = [
@@ -842,27 +977,97 @@ def list_nodes_full(kwargs=None, call=None):
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        vm_full_info = _format_instance_info(vm)
-        ret[vm_full_info['id']] = vm_full_info
+        ret[vm["name"]] = _format_instance_info(vm)
 
     return ret
 
 
 def list_nodes_select(call=None):
     '''
-    Return a list of all VMs and templates that are on the provider, with fields specified
-    in the ``query.selection`` option in ``/etc/salt/cloud``
+    Return a list of all VMs and templates that are on the specified provider, with fields
+    specified under ``query.selection`` in ``/etc/salt/cloud``
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f list_nodes_select my-vmware-config
-    '''
 
-    return salt.utils.cloud.list_nodes_select(
-        list_nodes_full('function'), __opts__.get('query.selection'), call,
-    )
+    To return a list of all VMs and templates present on ALL configured providers, with
+    fields specified under ``query.selection`` in ``/etc/salt/cloud``:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -S
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_select function must be called '
+            'with -f or --function.'
+        )
+
+    ret = {}
+    vm_properties = []
+    selection = __opts__.get('query.selection')
+
+    if not selection:
+        raise SaltCloudSystemExit(
+            'query.selection not found in /etc/salt/cloud'
+        )
+
+    if 'id' in selection:
+        vm_properties.append("name")
+
+    if 'image' in selection:
+        vm_properties.append("config.guestFullName")
+
+    if 'size' in selection:
+        vm_properties.extend(["config.hardware.numCPU", "config.hardware.memoryMB"])
+
+    if 'state' in selection:
+        vm_properties.append("summary.runtime.powerState")
+
+    if ('private_ips' or 'mac_address' or 'networks') in selection:
+        vm_properties.append("guest.net")
+
+    if 'devices' in selection:
+        vm_properties.append("config.hardware.device")
+
+    if 'storage' in selection:
+        vm_properties.extend([
+            "config.hardware.device",
+            "summary.storage.committed",
+            "summary.storage.uncommitted",
+            "summary.storage.unshared"
+        ])
+
+    if 'files' in selection:
+        vm_properties.append("layoutEx.file")
+
+    if 'guest_id' in selection:
+        vm_properties.append("config.guestId")
+
+    if 'hostname' in selection:
+        vm_properties.append("guest.hostName")
+
+    if 'path' in selection:
+        vm_properties.append("config.files.vmPathName")
+
+    if 'tools_status' in selection:
+        vm_properties.append("guest.toolsStatus")
+
+    if not vm_properties:
+        return {}
+    elif 'name' not in vm_properties:
+        vm_properties.append("name")
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        ret[vm["name"]] = _format_instance_info_select(vm, selection)
+    return ret
 
 
 def show_instance(name, call=None):
@@ -901,8 +1106,7 @@ def show_instance(name, call=None):
 
     for vm in vm_list:
         if vm['name'] == name:
-            vm_full_info = _format_instance_info(vm)
-    return vm_full_info
+            return  _format_instance_info(vm)
 
 
 def avail_images():
@@ -936,6 +1140,7 @@ def avail_images():
                 'cpus': vm["config.hardware.numCPU"],
                 'ram': vm["config.hardware.memoryMB"]
             }
+
     return templates
 
 
@@ -1006,6 +1211,7 @@ def list_snapshots(kwargs=None, call=None):
                 return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
             else:
                 ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
+
     return ret
 
 
@@ -1043,6 +1249,7 @@ def start(name, call=None):
             except Exception as exc:
                 log.error('Could not power on VM {0}: {1}'.format(name, exc))
                 return 'failed to power on'
+
     return 'powered on'
 
 
@@ -1080,6 +1287,7 @@ def stop(name, call=None):
             except Exception as exc:
                 log.error('Could not power off VM {0}: {1}'.format(name, exc))
                 return 'failed to power off'
+
     return 'powered off'
 
 
@@ -1121,6 +1329,7 @@ def suspend(name, call=None):
             except Exception as exc:
                 log.error('Could not suspend VM {0}: {1}'.format(name, exc))
                 return 'failed to suspend'
+
     return 'suspended'
 
 
@@ -1158,6 +1367,7 @@ def reset(name, call=None):
             except Exception as exc:
                 log.error('Could not reset VM {0}: {1}'.format(name, exc))
                 return 'failed to reset'
+
     return 'reset'
 
 
@@ -1217,6 +1427,7 @@ def destroy(name, call=None):
     )
     if __opts__.get('update_cachedir', False) is True:
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
     return True
 
 
