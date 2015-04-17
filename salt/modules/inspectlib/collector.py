@@ -21,6 +21,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
+from salt.utils import fsutils
+
 
 class Inspector(object):
 
@@ -195,6 +197,45 @@ class Inspector(object):
         s_files, s_dirs, s_links = system_all
 
         return sorted(intr(m_files, s_files)), sorted(intr(m_dirs, s_dirs)), sorted(intr(m_links, s_links))
+    def _prepare_full_scan(self):
+        '''
+
+        '''
+        # TODO: Backup the SQLite database. Backup should be restored automatically if current db failed while queried.
+        self.db.purge()
+
+        # Add ignored filesystems
+        ignored_fs = set()
+        ignored_fs |= set(self.IGNORE_PATHS)
+        mounts = fsutils._get_mounts()
+        for device, data in mounts.items():
+            if device in self.IGNORE_MOUNTS:
+                for mpt in data:
+                    ignored_fs.add(mpt['mount_point'])
+                continue
+            for mpt in data:
+                if mpt['type'] in self.IGNORE_FS_TYPES:
+                    ignored_fs.add(mpt['mount_point'])
+
+        # Remove leafs of ignored filesystems
+        ignored_all = list()
+        for entry in sorted(list(ignored_fs)):
+            valid = True
+            for e_entry in ignored_all:
+                if entry.startswith(e_entry):
+                    valid = False
+                    break
+            if valid:
+                ignored_all.append(entry)
+        # Save to the database for further scan
+        for ignored_dir in ignored_all:
+            self.db.cursor.execute("INSERT INTO inspector_ignored VALUES (?)", (ignored_dir,))
+
+        self.db.connection.commit()
+
+        return ignored_all
+
+
     def snapshot(self, mode):
         '''
         Take a snapshot of the system.
