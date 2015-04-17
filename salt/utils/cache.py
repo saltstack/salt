@@ -67,7 +67,6 @@ class CacheCli(object):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheCli, self).__init__()
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts.get('serial', ''))
         self.cache_sock = os.path.join(self.opts['sock_dir'], 'con_cache.ipc')
