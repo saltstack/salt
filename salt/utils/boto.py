@@ -6,6 +6,31 @@ Boto Common Utils
 Note: This module depends on the dicts packed by the loader and,
 therefore, must be accessed via the loader or from the __utils__ dict.
 
+The __utils__ dict will not be automatically available to execution modules
+until Beryllium. The `salt.utils.compat.pack_dunder` helper function
+provides backwards compatibility.
+
+This module provides common functionality for the boto execution modules.
+The expected usage is to call `apply_funcs` from the `__virtual__` function
+of the module. This will bring properly initilized partials of  `_get_conn`
+and `_cache_id` into the module's namespace.
+
+Example Usage:
+
+    .. code-block:: python
+
+        import salt.utils.boto
+
+        def __virtual__():
+            # only required in 2015.2
+            salt.utils.compat.pack_dunder(__name__)
+
+            __utils__['boto.apply_funcs'](__name__, 'vpc')
+
+        def test():
+            conn = _get_conn()
+            vpc_id = _cache_id('test-vpc')
+
 .. versionadded:: Beryllium
 '''
 
