@@ -368,7 +368,6 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.add_user_to_group myuser mygroup
     '''
-
     user = get_user(user_name, region, key, keyid, profile)
     if not user:
         msg = 'Username : {0} does not exist.'
@@ -392,6 +391,15 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
 
 def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
                          profile=None):
+    '''
+    Check if user exists in group.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.user_exists_in_group myuser mygroup
+    '''
     group = get_group(group_name=group_name, region=region, key=key, keyid=keyid,
                       profile=profile)
     if group:
@@ -400,12 +408,20 @@ def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=Non
                 msg = 'Username : {0} is already in group {1}.'
                 log.info(msg.format(user_name, group_name))
                 return True
-        return False
     return False
 
 
 def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=None,
                            profile=None):
+    '''
+    Remove user from group.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.remove_user_from_group mygroup myuser
+    '''
     user = get_user(user_name, region, key, keyid, profile)
     if not user:
         msg = 'Username : {0} does not exist.'
@@ -425,8 +441,6 @@ def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=N
         msg = 'Failed to remove user {0} from group {1}.'
         log.error(msg.format(user_name, group_name))
         return False
-
-
 
 
 def put_group_policy(group_name, policy_name, policy_json, region=None, key=None,

@@ -357,8 +357,8 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
         if group:
-            if  __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid,
-                                               profile=profile):
+            if __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid,
+                                              profile=profile):
                 ret = _case_group(ret, name, group, region, key, keyid, profile)
             else:
                 ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} does not exist.'.format(group)])
@@ -489,6 +489,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
 
 
 def _case_delete(users, group):
+    # Returns a list of users that are not in the group
     to_delete = []
     for _users in group['get_group_response']['get_group_result']['users']:
         if _users['user_name'] not in users:
