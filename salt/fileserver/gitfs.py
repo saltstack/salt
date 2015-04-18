@@ -1169,10 +1169,16 @@ def update():
                     # pygit2.Remote.fetch() returns a class instance in
                     # pygit2 >= 0.21.0
                     received_objects = fetch.received_objects
-                log.debug(
-                    'gitfs received {0} objects for remote {1}'
-                    .format(received_objects, repo['url'])
-                )
+                if received_objects != 0:
+                    log.debug(
+                        'gitfs received {0} objects for remote {1}'
+                        .format(received_objects, repo['url'])
+                    )
+                else:
+                    log.debug(
+                        'gitfs remote {0} is up-to-date'
+                        .format(repo['url'])
+                    )
                 # Clean up any stale refs
                 refs_post = repo['repo'].listall_references()
                 cleaned = _clean_stale(repo['repo'], refs_post)
