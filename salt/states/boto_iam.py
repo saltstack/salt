@@ -388,14 +388,17 @@ def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=Non
     if __salt__['boto_iam.user_exists_in_group'](name, group, region, key, keyid, profile):
         ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(name, group)])
     else:
+        if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
+            ret['comment'] = 'User {0} does not exist.'.format(name)
         if __opts__['test']:
             ret['comment'] = 'User {0} is set to be added to group {1}.'.format(name, group)
             ret['result'] = None
             return ret
         result = __salt__['boto_iam.add_user_to_group'](name, group, region, key, keyid, profile)
-        log.debug('result of the group is : {0} '.format(result))
-        ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
-        ret['changes']['group'] = name
+        if result:
+            log.debug('Result of the group is : {0} '.format(result))
+            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
+            ret['changes'][name] = group
     return ret
 
 
@@ -462,7 +465,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
         ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} has been created.'.format(name)])
     else:
         ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} is present.'.format(name)])
-    # User exists, ensure group policies and users are set.
+    # Group exists, ensure group policies and users are set.
     _ret = _group_policies_present(
         name, _policies, region, key, keyid, profile
     )
@@ -483,8 +486,8 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
             else:
                 __salt__['boto_iam.remove_user_from_group'](group_name=name, user_name=user, region=region,
                                                             key=key, keyid=keyid, profile=profile)
-                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is deleted.'.format(user)])
-                ret['changes'][user] = 'Deleted.'
+                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, name)])
+                ret['changes'][user] = 'Removed from group.'.format(name)
     return ret
 
 
