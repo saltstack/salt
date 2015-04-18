@@ -357,7 +357,11 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
         if group:
-            ret = _case_group(ret, name, group, region, key, keyid, profile)
+            if  __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid,
+                                               profile=profile):
+                ret = _case_group(ret, name, group, region, key, keyid, profile)
+            else:
+                ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} does not exist.'.format(group)])
     return ret
 
 
@@ -381,22 +385,17 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
 
 
 def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=None):
-    exists = __salt__['boto_iam.get_group'](group_name=group, region=region, key=key, keyid=keyid, profile=profile)
-    if exists:
+    if __salt__['boto_iam.user_exists_in_group'](name, group, region, key, keyid, profile):
+        ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(name, group)])
+    else:
         if __opts__['test']:
-            ret['comment'] = 'Group {0} is set to be created.'.format(group)
+            ret['comment'] = 'User {0} is set to be added to group {1}.'.format(name, group)
             ret['result'] = None
             return ret
         result = __salt__['boto_iam.add_user_to_group'](name, group, region, key, keyid, profile)
         log.debug('result of the group is : {0} '.format(result))
-        if 'Exists' in result:
-            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(name, group)])
-        else:
-            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
-            ret['changes']['group'] = name
-    else:
-        ret['result'] = False
-        ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} does not exist.'.format(group)])
+        ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
+        ret['changes']['group'] = name
     return ret
 
 
@@ -456,7 +455,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
             return ret
         created = __salt__['boto_iam.create_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
         if not created:
-            ret['comment'] = 'Failed to create IAM user {0}.'.format(name)
+            ret['comment'] = 'Failed to create IAM group {0}.'.format(name)
             ret['result'] = False
             return ret
         ret['changes']['group'] = created
@@ -472,14 +471,29 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
     if not _ret['result']:
         ret['result'] = _ret['result']
         return ret
-    # TODO: make this work like _group_policies_present. This is currently not
-    #       fully idempotent.
     if users:
         log.debug('Users are : {0}.'.format(users))
         for user in users:
             log.debug('User is : {0}.'.format(user))
             ret = _case_group(ret, user, name, region, key, keyid, profile)
+        for user in _case_delete(users, exists):
+            if __opts__['test']:
+                ret['comment'] = os.linesep.join([ret['comment'], 'User is set to be deleted {0}.'.format(user)])
+                ret['result'] = None
+            else:
+                __salt__['boto_iam.remove_user_from_group'](group_name=name, user_name=user, region=region,
+                                                            key=key, keyid=keyid, profile=profile)
+                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is deleted.'.format(user)])
+                ret['changes'][user] = 'Deleted.'
     return ret
+
+
+def _case_delete(users, group):
+    to_delete = []
+    for _users in group['get_group_response']['get_group_result']['users']:
+        if _users['user_name'] not in users:
+            to_delete.append(_users['user_name'])
+    return to_delete
 
 
 def _group_policies_present(

@@ -368,18 +368,15 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.add_user_to_group myuser mygroup
     '''
-    group = get_group(group_name=group_name, region=region, key=key, keyid=keyid, profile=profile)
-    if group:
-        for _users in group['get_group_response']['get_group_result']['users']:
-            if user_name == _users['user_name']:
-                msg = 'Username : {0} is already in group {1}.'
-                log.info(msg.format(user_name, group_name))
-                return 'Exists'
+
     user = get_user(user_name, region, key, keyid, profile)
-    if not group or not user:
-        msg = 'Username : {0} or group {1} do not exist.'
+    if not user:
+        msg = 'Username : {0} does not exist.'
         log.error(msg.format(user_name, group_name))
         return False
+    if user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
+                            profile=None):
+        return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.add_user_to_group(group_name, user_name)
@@ -391,6 +388,45 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         msg = 'Failed to add user {0} to group {1}.'
         log.error(msg.format(user_name, group_name))
         return False
+
+
+def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
+                         profile=None):
+    group = get_group(group_name=group_name, region=region, key=key, keyid=keyid,
+                      profile=profile)
+    if group:
+        for _users in group['get_group_response']['get_group_result']['users']:
+            if user_name == _users['user_name']:
+                msg = 'Username : {0} is already in group {1}.'
+                log.info(msg.format(user_name, group_name))
+                return True
+        return False
+    return False
+
+
+def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=None,
+                           profile=None):
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username : {0} does not exist.'
+        log.error(msg.format(user_name, group_name))
+        return False
+    if not user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
+                                profile=None):
+        return True
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        info = conn.remove_user_from_group(group_name, user_name)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to remove user {0} from group {1}.'
+        log.error(msg.format(user_name, group_name))
+        return False
+
+
 
 
 def put_group_policy(group_name, policy_name, policy_json, region=None, key=None,
