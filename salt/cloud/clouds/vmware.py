@@ -1207,7 +1207,7 @@ def list_snapshots(kwargs=None, call=None):
 
     for vm in vm_list:
         if vm["rootSnapshot"]:
-            if kwargs and 'name' in kwargs and vm["name"] == kwargs['name']:
+            if kwargs and kwargs.get('name') == vm["name"]:
                 return {vm["name"]: _get_snapshots(vm["snapshot"].rootSnapshotList)}
             else:
                 ret[vm["name"]] = _get_snapshots(vm["snapshot"].rootSnapshotList)
@@ -1711,7 +1711,7 @@ def create_datacenter(kwargs=None, call=None):
             'The create_datacenter function must be called with -f or --function.'
         )
 
-    datacenter_name = kwargs.get('name')
+    datacenter_name = kwargs.get('name') if kwargs else None
 
     if not datacenter_name:
         raise SaltCloudSystemExit(
@@ -1769,8 +1769,8 @@ def create_cluster(kwargs=None, call=None):
             'The create_cluster function must be called with -f or --function.'
         )
 
-    cluster_name = kwargs.get('name')
-    datacenter = kwargs.get('datacenter')
+    cluster_name = kwargs.get('name') if kwargs else None
+    datacenter = kwargs.get('datacenter') if kwargs else None
 
     if not cluster_name:
         raise SaltCloudSystemExit(
@@ -1884,28 +1884,33 @@ def rescan_hba(kwargs=None, call=None):
 
         salt-cloud -f rescan_hba my-vmware-config host="hostSystemName"
         salt-cloud -f rescan_hba my-vmware-config hba="hbaDeviceName" host="hostSystemName"
-    '''    
+    '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The rescan_hba function must be called with -f or --function.'
         )
 
-    hba = kwargs.get('hba')
-    host_name = kwargs.get('host')
+    hba = kwargs.get('hba') if kwargs else None
+    host_name = kwargs.get('host') if kwargs else None
 
-    host_ref = _get_mor_with_property(vim.HostSystem, host_name)
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name of the host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
 
     try:
         if hba:
             log.info('Rescanning HBA {0} on host {1}'.format(hba, host_name))
             host_ref.configManager.storageSystem.RescanHba(hba)
-            ret = 'rescanned HBA'
+            ret = 'rescanned HBA {0}'.format(hba)
         else:
             log.info('Rescanning all HBAs on host {0}'.format(host_name))
             host_ref.configManager.storageSystem.RescanAllHba()
             ret = 'rescanned all HBAs'
     except Exception as exc:
         log.error('Could not rescan HBA on host {0}: {1}'.format(host_name, exc))
-        return 'failed to rescan HBA'
+        return {host_name: 'failed to rescan HBA'}
 
-    return ret
+    return {host_name: ret}
