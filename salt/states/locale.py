@@ -62,7 +62,8 @@ def present(name):
     .. versionadded:: 2014.7.0
 
     name
-        The name of the locale to be present
+        The name of the locale to be present. Some distributions require the
+        charmap to be specified as part of the locale at this point.
     '''
     ret = {'name': name,
            'changes': {},
