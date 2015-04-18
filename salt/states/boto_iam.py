@@ -489,7 +489,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
                 __salt__['boto_iam.remove_user_from_group'](group_name=name, user_name=user, region=region,
                                                             key=key, keyid=keyid, profile=profile)
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, name)])
-                ret['changes'][user] = 'Removed from group.'.format(name)
+                ret['changes'][user] = 'Removed from group {0}.'.format(name)
     return ret
 
 
