@@ -923,6 +923,116 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     return __context__[cache_key]
 
 
+def get_all_user_policies(user_name, marker=None, max_items=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get all user policies.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.get_group mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        info = conn.get_all_user_policies(user_name, marker, max_items)
+        if not info:
+            return False
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get user {0} policy.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def get_user_policy(user_name, policy_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Retrieves the specified policy document for the specified user.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.get_user_policy myuser mypolicyname
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        info = conn.get_user_policy(user_name, policy_name)
+        log.debug('Info for group policy is : {0}.'.format(info))
+        if not info:
+            return False
+        info = info.get_user_policy_response.get_user_policy_result.policy_document
+        info = _unquote(info)
+        info = json.loads(info, object_pairs_hook=odict.OrderedDict)
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get user {0} policy.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def put_user_policy(user_name, policy_name, policy_json, region=None, key=None, keyid=None, profile=None):
+    '''
+    Adds or updates the specified policy document for the specified user.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.put_user_policy myuser policyname policyrules
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        log.error('User {0} does not exist'.format(user_name))
+        return False
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        if not isinstance(policy_json, string_types):
+            policy_json = json.dumps(policy_json)
+        created = conn.put_user_policy(user_name, policy_name,
+                                       policy_json)
+        if created:
+            log.info('Created policy for user {0}.'.format(user_name))
+            return True
+        msg = 'Could not create policy for user {0}.'
+        log.error(msg.format(user_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create policy for user {0}.'
+        log.error(msg.format(user_name))
+    return False
+
+
+def delete_user_policy(user_name, policy_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a user policy.
+
+    CLI example::
+
+        salt myminion boto_iam.delete_user_policy myuser mypolicy
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    _policy = get_user_policy(
+        user_name, policy_name, region, key, keyid, profile
+    )
+    if not _policy:
+        return True
+    try:
+        conn.delete_user_policy(user_name, policy_name)
+        msg = 'Successfully deleted {0} policy for user {1}.'
+        log.info(msg.format(policy_name, user_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete {0} policy for user {1}.'
+        log.error(msg.format(policy_name, user_name))
+        return False
+
+
 def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=None,
                        region=None, key=None, keyid=None, profile=None):
     '''
