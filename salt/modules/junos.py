@@ -28,6 +28,7 @@ except ImportError:
 # Set up logging
 log = logging.getLogger(__name__)
 
+
 # Define the module's virtual name
 __virtualname__ = 'junos'
 
@@ -52,13 +53,15 @@ def facts_refresh():
     if the device configuration is changed by some other actor.
     '''
 
-    return __opts__['proxymodule']['junos.conn']().refresh()
+    return __opts__['proxymodule']['junos.refresh']()
 
+def call_rpc():
+    return __opts__['proxymodule']['junos.rpc']()
 
 def set_hostname(hostname=None, commit_change=True):
 
-    ret = dict()
     conn = __opts__['proxymodule']['junos.conn']()
+    ret = dict()
     if hostname is None:
         ret['out'] = False
         return ret
@@ -80,7 +83,6 @@ def set_hostname(hostname=None, commit_change=True):
 def commit():
 
     conn = __opts__['proxymodule']['junos.conn']()
-
     ret = {}
     commit_ok = conn.cu.commit_check()
     if commit_ok:
@@ -99,8 +101,8 @@ def commit():
 
 
 def rollback():
-    conn = __opts__['proxymodule']['junos.conn']()
     ret = dict()
+    conn = __opts__['proxymodule']['junos.conn']()
 
     ret['out'] = conn.cu.rollback(0)
 
@@ -114,8 +116,8 @@ def rollback():
 
 def diff():
 
-    ret = dict()
     conn = __opts__['proxymodule']['junos.conn']()
+    ret = dict()
     ret['out'] = True
     ret['message'] = conn.cu.diff()
 
@@ -124,7 +126,8 @@ def diff():
 
 def ping():
 
-    ret = dict()
     conn = __opts__['proxymodule']['junos.conn']()
-    ret['message'] = conn.cli('show system uptime')
+    ret = dict()
+    ret['message'] = conn.probe()
     ret['out'] = True
+
