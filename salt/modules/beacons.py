@@ -62,13 +62,13 @@ def add(name, beacon_data, **kwargs):
         salt '*' beacons.add
 
     '''
-    ret = {'comment': 'Failed to add beacon.',
+    ret = {'comment': 'Failed to add beacon {0}.'.format(name),
            'result': False}
 
     if 'test' in kwargs and kwargs['test']:
+        ret['result'] = True
         ret['comment'] = 'Beacon: {0} would be added.'.format(name)
     else:
-
         # Attempt to load the beacon module so we have access to the validate function
         try:
             beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
@@ -89,20 +89,20 @@ def add(name, beacon_data, **kwargs):
             ret['comment'] = 'Beacon {0} configuration invalid, not adding.'.format(name)
             return ret
 
-    try:
-        eventer = salt.utils.event.get_event('minion', opts=__opts__)
-        res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'add'}, 'manage_beacons')
-        if res:
-            event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_add_complete', wait=30)
-            if event_ret and event_ret['complete']:
-                beacons = event_ret['beacons']
-                if name in beacons and beacons[name] == beacon_data:
-                    ret['result'] = True
-                    ret['comment'] = 'Added beacon: {0}.'.format(name)
-                    return ret
-    except KeyError:
-        # Effectively a no-op, since we can't really return without an event system
-        ret['comment'] = 'Event module not available. Beacon add failed.'
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'add'}, 'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_add_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    beacons = event_ret['beacons']
+                    if name in beacons and beacons[name] == beacon_data:
+                        ret['result'] = True
+                        ret['comment'] = 'Added beacon: {0}.'.format(name)
+                        return ret
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon add failed.'
     return ret
 
 
@@ -120,16 +120,25 @@ def delete(name, **kwargs):
 
     '''
 
-    ret = {'comment': [],
-           'result': True}
+    ret = {'comment': 'Failed to delete beacon {0}.'.format(name),
+           'result': False}
 
     if 'test' in kwargs and kwargs['test']:
+        ret['result'] = True
         ret['comment'] = 'Beacon: {0} would be deleted.'.format(name)
     else:
-        out = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_beacons')
-        if out:
-            ret['comment'] = 'Deleted beacon: {0}.'.format(name)
-        else:
-            ret['comment'] = 'Failed to delete beacon {0}.'.format(name)
-            ret['result'] = False
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_delete_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    beacons = event_ret['beacons']
+                    if name not in beacons:
+                        ret['result'] = True
+                        ret['comment'] = 'Deleted beacon: {0}.'.format(name)
+                        return ret
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon add failed.'
     return ret

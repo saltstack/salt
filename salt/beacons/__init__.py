@@ -106,4 +106,10 @@ class Beacon(object):
         if name in self.opts['beacons']:
             log.info('Deleting beacon item {0}'.format(name))
             del self.opts['beacons'][name]
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_delete_complete')
+
         return True
