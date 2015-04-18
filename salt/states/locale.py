@@ -3,12 +3,19 @@
 Management of languages/locales
 ===============================
 
-The locale can be managed for the system:
+Manage the available locales and the system default:
 
 .. code-block:: yaml
 
-    en_US.UTF-8:
-      locale.system
+    us_locale:
+      locale.present:
+        - name: en_US.UTF-8
+
+    default_locale:
+      locale.system:
+        - name: en_US.UTF-8
+        - require:
+          - locale: us_locale
 '''
 
 
