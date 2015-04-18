@@ -35,7 +35,6 @@ def list_(return_yaml=True):
 
     if 'beacons' in __opts__:
         beacons = __opts__['beacons'].copy()
-        log.debug('beacons {0}'.format(__opts__['beacons']))
     else:
         return {'beacons': {}}
 
@@ -47,7 +46,6 @@ def list_(return_yaml=True):
         else:
             return beacons
     else:
-        log.debug('beacons is empty, second check'.format(__opts__['beacons']))
         return {'beacons': {}}
 
 

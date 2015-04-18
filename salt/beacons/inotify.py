@@ -122,7 +122,7 @@ def validate(config):
                 for mask in config[config_item]['mask']:
                     if mask not in VALID_MASK:
                         log.info('Configuration for inotify beacon '
-                                 'invalid mask option.'.format(mask))
+                                 'invalid mask option {0}.'.format(mask))
                         return False
     return True
 
