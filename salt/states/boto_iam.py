@@ -281,35 +281,37 @@ def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profi
         ret['result'] = False
         ret['comment'] = 'IAM User {0} does not exist.'.format(user_name)
         return ret
-    if __opts__['test']:
-        ret['comment'] = 'Access keys {0} are set to be deleted.'.format(access_keys)
-        ret['result'] = None
-        return ret
     for k in access_keys:
-        if _delete_key(k, user_name, region, key, keyid, profile):
-            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k)])
-            ret['changes'][k] = 'deleted'
-        else:
-            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} does not exist.'.format(k)])
+        ret = _delete_key(ret, k, user_name, region, key, keyid, profile)
     return ret
 
 
-def _delete_key(access_key_id, user_name, region=None, key=None, keyid=None, profile=None):
+def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None, profile=None):
     keys = __salt__['boto_iam.get_all_access_keys'](user_name=user_name, region=region, key=key,
                                                     keyid=keyid, profile=profile)
-    log.debug('Keys for user {1} are : {0}'.format(keys, user_name))
+    log.debug('Keys for user {1} are : {0}.'.format(keys, user_name))
     if isinstance(keys, str):
         log.debug('Keys {0} are a string. Something went wrong.'.format(keys))
-        return False
+        ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
+        return ret
     keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
     for k in keys:
         log.debug('Key is: {0} and is compared with: {1}'.format(k['access_key_id'], access_key_id))
         if str(k['access_key_id']) == str(access_key_id):
+            if __opts__['test']:
+                ret['comment'] = 'Access key {0} is set to be deleted.'.format(access_key_id)
+                ret['result'] = None
+                return ret
             deleted = __salt__['boto_iam.delete_access_key'](access_key_id, user_name, region, key,
                                                              keyid, profile)
             if deleted:
-                return True
-            return False
+                ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(access_key_id)])
+                ret['changes'][access_key_id] = 'deleted'
+                return ret
+            ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} could not be deleted.'.format(access_key_id)])
+            return ret
+        ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} does not exist.'.format(k)])
+        return ret
 
 
 def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
