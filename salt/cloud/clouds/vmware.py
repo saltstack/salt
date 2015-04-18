@@ -312,10 +312,68 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
+def _edit_existing_scsi_adapter_helper(scsi_adapter, bus_sharing):
+    scsi_adapter.sharedBus = bus_sharing
+    scsi_spec = vim.vm.device.VirtualDeviceSpec()
+    scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    scsi_spec.device = scsi_adapter
+
+    return scsi_spec
+
+
+def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
+    random_key = randint(-1050, -1000)
+    adapter_type = properties['type'].strip().lower() if 'type' in properties else None
+    bus_sharing = properties['bus_sharing'].strip().lower() if 'bus_sharing' in properties else None
+
+    scsi_spec = vim.vm.device.VirtualDeviceSpec()
+
+    if adapter_type == "lsilogic":
+        summary = "LSI Logic"
+        scsi_spec.device = vim.vm.device.VirtualLsiLogicController()
+    elif adapter_type == "lsilogic_sas":
+        summary = "LSI Logic Sas"
+        scsi_spec.device = vim.vm.device.VirtualLsiLogicSASController()
+    elif adapter_type == "paravirtual":
+        summary = "VMware paravirtual SCSI"
+        scsi_spec.device = vim.vm.device.ParaVirtualSCSIController()
+    else:
+        # If type not specified or does not match, show error and return
+        if not adapter_type:
+            err_msg = "The type of {0} has not been specified".format(scsi_adapter_label)
+        else:
+            err_msg = "Cannot create {0} of invalid/unsupported type {1}".format(scsi_adapter_label, adapter_type)
+        raise SaltCloudSystemExit(err_msg)
+
+    scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    scsi_spec.device.key = random_key
+    scsi_spec.device.busNumber = bus_number
+    scsi_spec.device.deviceInfo = vim.Description()
+    scsi_spec.device.deviceInfo.label = scsi_adapter_label
+    scsi_spec.device.deviceInfo.summary = summary
+
+    if bus_sharing == "virtual":
+        # Virtual disks can be shared between virtual machines on the same server
+        scsi_spec.device.sharedBus = vim.vm.device.VirtualSCSIController.Sharing.virtualSharing
+
+    elif bus_sharing == "physical":
+        # Virtual disks can be shared between virtual machines on any server
+        scsi_spec.device.sharedBus = vim.vm.device.VirtualSCSIController.Sharing.physicalSharing
+
+    else:
+        # Virtual disks cannot be shared between virtual machines
+        scsi_spec.device.sharedBus = vim.vm.device.VirtualSCSIController.Sharing.noSharing
+
+    return scsi_spec
+
+
 def _manage_devices(devices, vm):
     unit_number = 0
+    bus_number = 0
     device_specs = []
     existing_disks_label = []
+    existing_scsi_adapters_label = []
     existing_network_adapters_label = []
     nics_map = []
 
@@ -327,9 +385,6 @@ def _manage_devices(devices, vm):
             if 'disk' in devices.keys():
                 # there is atleast one disk specified to be created/configured
                 unit_number += 1
-                # check if scsi controller
-                if unit_number == 7:
-                    unit_number += 1
                 existing_disks_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in devices['disk'].keys():
                     size_gb = devices['disk'][device.deviceInfo.label]['size']
@@ -365,6 +420,22 @@ def _manage_devices(devices, vm):
                     else:
                         adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
                     nics_map.append(adapter_mapping)
+        elif hasattr(device, 'scsiCtlrUnitNumber'):
+            # this is a scsi adapter
+            if 'scsi' in devices.keys():
+                # there is atleast one scsi adapter specified to be created/configured
+                bus_number += 1
+                existing_scsi_adapters_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in devices['scsi'].keys():
+                    # Modify the existing SCSI adapter
+                    scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
+                    bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
+                    if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
+                        bus_sharing = '{0}Sharing'.format(bus_sharing)
+                        if bus_sharing != device.sharedBus:
+                            # Only edit the SCSI adapter if bus_sharing is different
+                            scsi_spec = _edit_existing_scsi_adapter_helper(device, bus_sharing)
+                            device_specs.append(scsi_spec)
 
     if 'disk' in devices.keys():
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
@@ -376,9 +447,6 @@ def _manage_devices(devices, vm):
             disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
             device_specs.append(disk_spec)
             unit_number += 1
-            # check if scsi controller
-            if unit_number == 7:
-                unit_number += 1
 
     if 'network' in devices.keys():
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
@@ -408,6 +476,17 @@ def _manage_devices(devices, vm):
             else:
                 adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
             nics_map.append(adapter_mapping)
+
+    if 'scsi' in devices.keys():
+        scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
+        scsi_adapters_to_create.sort()
+        log.debug("SCSI adapters to create: {0}".format(scsi_adapters_to_create))
+        for scsi_adapter_label in scsi_adapters_to_create:
+            # create the scsi adapter
+            scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
+            scsi_spec = _add_new_scsi_adapter_helper(scsi_adapter_label, scsi_adapter_properties, bus_number)
+            device_specs.append(scsi_spec)
+            bus_number += 1
 
     ret = {
         'device_specs': device_specs,
