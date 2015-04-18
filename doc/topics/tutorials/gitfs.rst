@@ -59,9 +59,12 @@ be used to install it:
 If pygit2_ is not packaged for the platform on which the Master is running, the
 pygit2_ website has installation instructions here__. Keep in mind however that
 following these instructions will install libgit2 and pygit2_ without system
-packages.
+packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
+<pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
+libraries to be present before libgit2 is built.
 
 .. __: http://www.pygit2.org/install.html
+.. _libssh2: http://www.libssh2.org/
 
 GitPython
 ---------
@@ -186,7 +189,7 @@ master:
        ``git+ssh://``.
 
 3. Restart the master to load the new configuration.
-   
+
 
 .. note::
 
@@ -539,6 +542,8 @@ an ``insecure_auth`` parameter:
         - password: mypassword
         - insecure_auth: True
 
+.. _pygit2-authentication-ssh:
+
 SSH
 ~~~
 
@@ -647,7 +652,7 @@ server via SSH:
 .. code-block:: bash
 
     $ su
-    Password: 
+    Password:
     # ssh github.com
     The authenticity of host 'github.com (192.30.252.128)' can't be established.
     RSA key fingerprint is 16:27:ac:a5:76:28:2d:36:63:1b:56:4d:eb:df:a6:48.

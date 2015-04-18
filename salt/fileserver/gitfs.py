@@ -572,7 +572,7 @@ def _verify_auth(repo):
         '''
         Helper function to log errors about missing auth parameters
         '''
-        log.error(
+        log.critical(
             'Incomplete authentication information for remote {0}. Missing '
             'parameters: {1}'.format(remote_url, ', '.join(missing))
         )
@@ -595,9 +595,9 @@ def _verify_auth(repo):
         user = address.split('@')[0]
         if user == address:
             # No '@' sign == no user. This is a problem.
-            log.error(
-                'Password / keypair specified for remote {0}, but remote '
-                'URL is missing a username'.format(repo['url'])
+            log.critical(
+                'Keypair specified for remote {0}, but remote URL is missing '
+                'a username'.format(repo['url'])
             )
             _failhard()
 
@@ -620,7 +620,7 @@ def _verify_auth(repo):
             return True
         if password_ok:
             if transport == 'http' and not repo['insecure_auth']:
-                log.error(
+                log.critical(
                     'Invalid configuration for gitfs remote {0}. '
                     'Authentication is disabled by default on http remotes. '
                     'Either set gitfs_insecure_auth to True in the master '
@@ -636,7 +636,7 @@ def _verify_auth(repo):
             missing_auth = [x for x in required_params if not bool(repo[x])]
             _incomplete_auth(repo['url'], missing_auth)
     else:
-        log.error(
+        log.critical(
             'Invalid configuration for remote {0}. Unsupported transport '
             '{1!r}.'.format(repo['url'], transport)
         )
@@ -700,7 +700,7 @@ def init():
                  salt.utils.repack_dictlist(remote[repo_url]).items()]
             )
             if not per_remote_conf:
-                log.error(
+                log.critical(
                     'Invalid per-remote configuration for gitfs remote {0}. '
                     'If no per-remote parameters are being specified, there '
                     'may be a trailing colon after the URL, which should be '
@@ -811,7 +811,7 @@ def init():
                    '{0}'.format(exc))
             if provider == 'gitpython':
                 msg += ' Perhaps git is not available.'
-            log.error(msg, exc_info_on_loglevel=logging.DEBUG)
+            log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
             _failhard()
 
     if new_remote:
@@ -1147,7 +1147,21 @@ def update():
                 except KeyError:
                     # No credentials configured for this repo
                     pass
-                fetch = origin.fetch()
+                try:
+                    fetch = origin.fetch()
+                except pygit2.errors.GitError as exc:
+                    # Using exc.__str__() here to avoid deprecation warning
+                    # when referencing exc.message
+                    if 'unsupported url protocol' in exc.__str__().lower() \
+                            and isinstance(repo.get('credentials'),
+                                           pygit2.Keypair):
+                        log.error(
+                            'Unable to fetch SSH-based gitfs remote {0}. '
+                            'libgit2 must be compiled with libssh2 to support '
+                            'SSH authentication.'.format(repo['url'])
+                        )
+                        continue
+                    raise
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
                     received_objects = fetch['received_objects']
@@ -1155,10 +1169,16 @@ def update():
                     # pygit2.Remote.fetch() returns a class instance in
                     # pygit2 >= 0.21.0
                     received_objects = fetch.received_objects
-                log.debug(
-                    'gitfs received {0} objects for remote {1}'
-                    .format(received_objects, repo['url'])
-                )
+                if received_objects != 0:
+                    log.debug(
+                        'gitfs received {0} objects for remote {1}'
+                        .format(received_objects, repo['url'])
+                    )
+                else:
+                    log.debug(
+                        'gitfs remote {0} is up-to-date'
+                        .format(repo['url'])
+                    )
                 # Clean up any stale refs
                 refs_post = repo['repo'].listall_references()
                 cleaned = _clean_stale(repo['repo'], refs_post)
@@ -1175,14 +1195,14 @@ def update():
                 try:
                     refs_post = client.fetch(path, repo['repo'])
                 except dulwich.errors.NotGitRepository:
-                    log.critical(
+                    log.error(
                         'Dulwich does not recognize remote {0} as a valid '
                         'remote URL. Perhaps it is missing \'.git\' at the '
                         'end.'.format(repo['url'])
                     )
                     continue
                 except KeyError:
-                    log.critical(
+                    log.error(
                         'Local repository cachedir {0!r} (corresponding '
                         'remote: {1}) has been corrupted. Salt will now '
                         'attempt to remove the local checkout to allow it to '
@@ -1193,7 +1213,7 @@ def update():
                     try:
                         salt.utils.rm_rf(repo['cachedir'])
                     except OSError as exc:
-                        log.critical(
+                        log.error(
                             'Unable to remove {0!r}: {1}'
                             .format(repo['cachedir'], exc)
                         )
@@ -1621,7 +1641,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            log.error('Unable to make cachedir {0}'.format(list_cachedir))
             return []
     list_cache = os.path.join(
         list_cachedir,
