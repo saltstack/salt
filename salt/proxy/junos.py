@@ -13,6 +13,7 @@ import logging
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.utils.config
+import json
 HAS_JUNOS = True
 
 __proxyenabled__ = ['junos']
@@ -40,7 +41,7 @@ def facts():
     return thisproxy['conn'].facts
 
 def refresh():
-    return thisproxy['conn'].refresh()
+    return thisproxy['conn'].facts_refresh()
 
 def proxytype():
     '''
@@ -71,3 +72,6 @@ def shutdown(opts):
         thisproxy['conn'].close()
     except Exception:
         pass
+
+def rpc():
+    return json.dumps(thisproxy['conn'].rpc.get_software_information())
