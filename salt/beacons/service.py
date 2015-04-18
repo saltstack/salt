@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 last_status = {}
 
+
 def beacon(config):
     '''
     Scan for the configured services and fire events
