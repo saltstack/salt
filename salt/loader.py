@@ -870,7 +870,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if not _grains:
                 # memoize cache the grains, not to reload each run
                 _grains.update(grains(opts))
-            self._grains.update(copy.deepcopy(_grains))            
+            self._grains.update(copy.deepcopy(_grains))
 
         mod_opts = {}
         for key, val in list(opts.items()):
