@@ -368,6 +368,27 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
+def _set_network_adapter_mapping(adapter_specs):
+    adapter_mapping = vim.vm.customization.AdapterMapping()
+    adapter_mapping.adapter = vim.vm.customization.IPSettings()
+
+    if 'domain' in adapter_specs.keys():
+        domain = adapter_specs['domain']
+        adapter_mapping.adapter.dnsDomain = domain
+    if 'gateway' in adapter_specs.keys():
+        gateway = adapter_specs['gateway']
+        adapter_mapping.adapter.gateway = gateway
+    if 'ip' in adapter_specs.keys():
+        ip = str(adapter_specs['ip'])
+        subnet_mask = str(adapter_specs['subnet_mask'])
+        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+        adapter_mapping.adapter.subnetMask = subnet_mask
+    else:
+        adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
+
+    return adapter_mapping
+
+
 def _manage_devices(devices, vm):
     unit_number = 0
     bus_number = 0
@@ -393,6 +414,7 @@ def _manage_devices(devices, vm):
                         # expand the disk
                         disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
                         device_specs.append(disk_spec)
+
         elif hasattr(device.backing, 'network'):
             # this is a network adapter
             if 'network' in devices.keys():
@@ -401,25 +423,10 @@ def _manage_devices(devices, vm):
                 if device.deviceInfo.label in devices['network'].keys():
                     network_name = devices['network'][device.deviceInfo.label]['name']
                     network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                    adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                     device_specs.append(network_spec)
-
-                    adapter_mapping = vim.vm.customization.AdapterMapping()
-                    adapter_mapping.adapter = vim.vm.customization.IPSettings()
-
-                    if 'domain' in devices['network'][device.deviceInfo.label].keys():
-                        domain = devices['network'][device.deviceInfo.label]['domain']
-                        adapter_mapping.adapter.dnsDomain = domain
-                    if 'gateway' in devices['network'][device.deviceInfo.label].keys():
-                        gateway = devices['network'][device.deviceInfo.label]['gateway']
-                        adapter_mapping.adapter.gateway = gateway
-                    if 'ip' in devices['network'][device.deviceInfo.label].keys():
-                        ip = str(devices['network'][device.deviceInfo.label]['ip'])
-                        subnet_mask = str(devices['network'][device.deviceInfo.label]['subnet_mask'])
-                        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
-                        adapter_mapping.adapter.subnetMask = subnet_mask
-                    else:
-                        adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
                     nics_map.append(adapter_mapping)
+
         elif hasattr(device, 'scsiCtlrUnitNumber'):
             # this is a scsi adapter
             if 'scsi' in devices.keys():
@@ -457,24 +464,8 @@ def _manage_devices(devices, vm):
             adapter_type = devices['network'][network_adapter_label]['type']
             # create the network adapter
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
+            adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
-
-            adapter_mapping = vim.vm.customization.AdapterMapping()
-            adapter_mapping.adapter = vim.vm.customization.IPSettings()
-
-            if 'domain' in devices['network'][network_adapter_label].keys():
-                domain = devices['network'][network_adapter_label]['domain']
-                adapter_mapping.adapter.dnsDomain = domain
-            if 'gateway' in devices['network'][network_adapter_label].keys():
-                gateway = devices['network'][network_adapter_label]['gateway']
-                adapter_mapping.adapter.gateway = gateway
-            if 'ip' in devices['network'][network_adapter_label].keys():
-                ip = str(devices['network'][network_adapter_label]['ip'])
-                subnet_mask = str(devices['network'][network_adapter_label]['subnet_mask'])
-                adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
-                adapter_mapping.adapter.subnetMask = subnet_mask
-            else:
-                adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
             nics_map.append(adapter_mapping)
 
     if 'scsi' in devices.keys():
