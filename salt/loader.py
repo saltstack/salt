@@ -766,7 +766,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 reason = self.missing_modules[mod_name]
             except KeyError:
                 return '\'{0}\' is not available.'.format(function_name)
-            else:    
+            else:
                 if reason is not None:
                     return '\'{0}\' __virtual__ returned False: {1}'.format(mod_name, reason)
                 else:
