@@ -43,7 +43,7 @@ def splay(*args, **kwargs):
     NOTE: You *probably* want to use --async here and look up the job results later.
           If you're dead set on getting the output from the CLI command, then make
           sure to set the timeout (with the -t flag) to something greater than the
-          splaytime (max splaytime + time to execute job). 
+          splaytime (max splaytime + time to execute job).
           Otherwise, it's very likely that the cli will time out before the job returns.
 
 
@@ -69,13 +69,13 @@ def splay(*args, **kwargs):
 
     func = args.pop(0)
     # Check if the func is valid before the sleep
-    if not func in __salt__:
+    if func not in __salt__:
         raise CommandExecutionError('Unable to find module function {0}'.format(func))
 
     my_delay = _calc_splay(__grains__['id'], splaytime=splaytime)
     time.sleep(my_delay)
     # Get rid of the hidden kwargs that salt injects
-    func_kwargs = dict((k,v) for k,v in kwargs.iteritems() if not k.startswith('__'))
+    func_kwargs = dict((k, v) for k, v in kwargs.iteritems() if not k.startswith('__'))
     result = __salt__[func](*args, **func_kwargs)
     if type(result) != dict:
         result = {'result': result}
