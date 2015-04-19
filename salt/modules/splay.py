@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 '''
 Splay function calls across targeted minions
 '''
