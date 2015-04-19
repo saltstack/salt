@@ -368,7 +368,7 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
-def _set_network_adapter_mapping(adapter_specs):
+def _set_network_adapter_mapping_helper(adapter_specs):
     adapter_mapping = vim.vm.customization.AdapterMapping()
     adapter_mapping.adapter = vim.vm.customization.IPSettings()
 
@@ -423,7 +423,7 @@ def _manage_devices(devices, vm):
                 if device.deviceInfo.label in devices['network'].keys():
                     network_name = devices['network'][device.deviceInfo.label]['name']
                     network_spec = _edit_existing_network_adapter_helper(device, network_name)
-                    adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
+                    adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
                     device_specs.append(network_spec)
                     nics_map.append(adapter_mapping)
 
@@ -464,7 +464,7 @@ def _manage_devices(devices, vm):
             adapter_type = devices['network'][network_adapter_label]['type']
             # create the network adapter
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
-            adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
+            adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
 
