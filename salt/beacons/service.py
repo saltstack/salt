@@ -64,7 +64,7 @@ def beacon(config):
         # We only want to report the nature of the shutdown
         # if the current running status is False
         # as well as if the config for the beacon asks for it
-        if 'uncleanshutdown' in config[service] and not ret_dict[service]:
+        if 'uncleanshutdown' in config[service] and not ret_dict[service]['running']:
             filename = config[service]['uncleanshutdown']
             if os.path.exists(filename):
                 ret_dict[service]['shutdown'] = 'unclean'
