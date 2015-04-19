@@ -92,6 +92,15 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
             domain: mycompany.com
+        scsi:
+          SCSI controller 1:
+            type: lsilogic
+          SCSI controller 2:
+            type: lsilogic_sas
+            bus_sharing: virtual
+          SCSI controller 3:
+            type: paravirtual
+            bus_sharing: physical
 
       domain: mycompany.com
       dns_servers:
@@ -127,21 +136,21 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
 
-provider
+``provider``
     Enter the name that was specified when the cloud provider config was created.
 
-clonefrom
+``clonefrom``
     Enter the name of the VM/template to clone from.
 
-num_cpus
+``num_cpus``
     Enter the number of vCPUS you want the VM/template to have. If not specified,
     the current VM/template\'s vCPU count is used.
 
-memory
+``memory``
     Enter memory (in MB) you want the VM/template to have. If not specified, the
     current VM/template\'s memory size is used.
 
-devices
+``devices``
     Enter the device specifications here. Currently, the following devices can be
     created or reconfigured:
 
@@ -164,7 +173,7 @@ devices
             Enter the network name you want the network adapter to be mapped to.
 
         type
-            Enter the network adapter type you wante to create. Currently supported
+            Enter the network adapter type you want to create. Currently supported
             types are vmxnet, vmxnet2, vmxnet3, e1000 and e1000e. If no type is
             specified, by default vmxnet3 will be used.
 
@@ -184,13 +193,38 @@ devices
             Enter the domain to be used with the network adapter. If the network
             specified is DHCP enabled, you do not have to specify this.
 
-domain
+    scsi
+        Enter the SCSI adapter specification here. If the SCSI adapter doesn\'t exist,
+        a new SCSI adapter will be created of the specified type. If the SCSI adapter
+        already exists, it will be reconfigured with the specifications. Currently, only
+        SCSI adapters of type lsilogic, lsilogic_sas and paravirtual can be created. The
+        following additional options can be specified per SCSI adapter:
+
+        type
+            Enter the SCSI adapter type you want to create. Currently supported
+            types are lsilogic, lsilogic_sas and paravirtual. Type must be specified
+            when creating a new SCSI adapter.
+
+        bus_sharing
+            Specify this if sharing of virtual disks between virtual machines is desired.
+            The following can be specified:
+
+            virtual
+                Virtual disks can be shared between virtual machines on the same server.
+
+            physical
+                Virtual disks can be shared between virtual machines on any server.
+
+            no
+                Virtual disks cannot be shared between virtual machines.
+
+``domain``
     Enter the global domain name to be used for DNS.
 
-dns_servers
+``dns_servers``
     Enter the list of DNS servers to use in order of priority.
 
-resourcepool
+``resourcepool``
     Enter the name of the resourcepool to which the new virtual machine should be
     attached. This determines what compute resources will be available to the clone.
 
@@ -203,7 +237,7 @@ resourcepool
           value will be used.
         - For a clone operation to a template, this argument is ignored.
 
-cluster
+``cluster``
     Enter the name of the cluster whose resource pool the new virtual machine should
     be attached to.
 
@@ -216,7 +250,7 @@ cluster
           value will be used.
         - For a clone operation to a template, this argument is ignored.
 
-datastore
+``datastore``
     Enter the name of the datastore or the datastore cluster where the virtual machine
     should be located on physical storage. If not specified, the current datastore is
     used.
@@ -227,7 +261,7 @@ datastore
           automatically applied.
         - If you specify a datastore name, DRS Storage recommendation is disabled.
 
-folder
+``folder``
     Enter the name of the folder that will contain the new virtual machine.
 
     .. note::
@@ -236,7 +270,7 @@ folder
           to the same folder that the original VM/template belongs to unless specified.
         - If both folder and datacenter are specified, the folder value will be used.
 
-datacenter
+``datacenter``
     Enter the name of the datacenter that will contain the new virtual machine.
 
     .. note::
@@ -245,7 +279,7 @@ datacenter
           to the same folder that the original VM/template belongs to unless specified.
         - If both folder and datacenter are specified, the folder value will be used.
 
-host
+``host``
     Enter the name of the target host where the virtual machine should be registered.
 
     If not specified:
@@ -260,40 +294,40 @@ host
         - If resource pool is specified and the target pool represents a cluster without
           DRS enabled, an InvalidArgument exception be thrown.
 
-template
+``template``
     Specifies whether the new virtual machine should be marked as a template or not.
     Default is ``template: False``.
 
-power_on
+``power_on``
     Specifies whether the new virtual machine should be powered on or not. If
     ``template: True`` is set, this field is ignored. Default is ``power_on: True``.
 
-extra_config
+``extra_config``
     Specifies the additional configuration information for the virtual machine. This
     describes a set of modifications to the additional options. If the key is already
     present, it will be reset with the new value provided. Otherwise, a new option is
     added. Keys with empty values will be removed.
 
-deploy
+``deploy``
     Specifies if salt should be installed on the newly created VM. Default is ``True``
     so salt will be installed using the bootstrap script. If ``template: True`` or
     ``power_on: False`` is set, this field is ignored and salt will not be installed.
 
-private_key
+``private_key``
     Specify the path to the private key to use to be able to ssh to the VM.
 
-ssh_username
+``ssh_username``
     Specify the username to use in order to ssh to the VM. Default is ``root``
 
-password
+``password``
     Specify a password to use in order to ssh to the VM. If ``private_key`` is
     specified, you do not need to specify this.
 
-minion
+``minion``
     Specify custom minion configuration you want the salt minion to have. A good example
     would be to specify the ``master`` as the IP/DNS name of the master.
 
-file_map
+``file_map``
     Specify file/files you want to copy to the VM before the bootstrap script is run
     and salt is installed. A good example of using this would be if you need to put
     custom repo files on the server in case your server will be in a private network
