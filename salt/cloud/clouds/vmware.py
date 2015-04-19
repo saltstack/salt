@@ -70,6 +70,9 @@ try:
 except Exception:
     pass
 
+# Import third party libs
+import salt.ext.six as six
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -372,13 +375,13 @@ def _set_network_adapter_mapping_helper(adapter_specs):
     adapter_mapping = vim.vm.customization.AdapterMapping()
     adapter_mapping.adapter = vim.vm.customization.IPSettings()
 
-    if 'domain' in adapter_specs.keys():
+    if 'domain' in list(adapter_specs.keys()):
         domain = adapter_specs['domain']
         adapter_mapping.adapter.dnsDomain = domain
-    if 'gateway' in adapter_specs.keys():
+    if 'gateway' in list(adapter_specs.keys()):
         gateway = adapter_specs['gateway']
         adapter_mapping.adapter.gateway = gateway
-    if 'ip' in adapter_specs.keys():
+    if 'ip' in list(adapter_specs.keys()):
         ip = str(adapter_specs['ip'])
         subnet_mask = str(adapter_specs['subnet_mask'])
         adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
@@ -403,11 +406,11 @@ def _manage_devices(devices, vm):
     for device in vm.config.hardware.device:
         if hasattr(device.backing, 'fileName'):
             # this is a hard disk
-            if 'disk' in devices.keys():
+            if 'disk' in list(devices.keys()):
                 # there is atleast one disk specified to be created/configured
                 unit_number += 1
                 existing_disks_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in devices['disk'].keys():
+                if device.deviceInfo.label in list(devices['disk'].keys()):
                     size_gb = devices['disk'][device.deviceInfo.label]['size']
                     size_kb = int(size_gb) * 1024 * 1024
                     if device.capacityInKB < size_kb:
@@ -417,10 +420,10 @@ def _manage_devices(devices, vm):
 
         elif hasattr(device.backing, 'network'):
             # this is a network adapter
-            if 'network' in devices.keys():
+            if 'network' in list(devices.keys()):
                 # there is atleast one network adapter specified to be created/configured
                 existing_network_adapters_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in devices['network'].keys():
+                if device.deviceInfo.label in list(devices['network'].keys()):
                     network_name = devices['network'][device.deviceInfo.label]['name']
                     network_spec = _edit_existing_network_adapter_helper(device, network_name)
                     adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
@@ -429,11 +432,11 @@ def _manage_devices(devices, vm):
 
         elif hasattr(device, 'scsiCtlrUnitNumber'):
             # this is a scsi adapter
-            if 'scsi' in devices.keys():
+            if 'scsi' in list(devices.keys()):
                 # there is atleast one scsi adapter specified to be created/configured
                 bus_number += 1
                 existing_scsi_adapters_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in devices['scsi'].keys():
+                if device.deviceInfo.label in list(devices['scsi'].keys()):
                     # Modify the existing SCSI adapter
                     scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
                     bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
@@ -444,7 +447,7 @@ def _manage_devices(devices, vm):
                             scsi_spec = _edit_existing_scsi_adapter_helper(device, bus_sharing)
                             device_specs.append(scsi_spec)
 
-    if 'disk' in devices.keys():
+    if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
         log.debug("Disks to create: {0}".format(disks_to_create))
@@ -455,7 +458,7 @@ def _manage_devices(devices, vm):
             device_specs.append(disk_spec)
             unit_number += 1
 
-    if 'network' in devices.keys():
+    if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
         network_adapters_to_create.sort()
         log.debug("Networks to create: {0}".format(network_adapters_to_create))
@@ -468,7 +471,7 @@ def _manage_devices(devices, vm):
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
 
-    if 'scsi' in devices.keys():
+    if 'scsi' in list(devices.keys()):
         scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
         scsi_adapters_to_create.sort()
         log.debug("SCSI adapters to create: {0}".format(scsi_adapters_to_create))
@@ -1673,7 +1676,7 @@ def create(vm_):
             config_spec.deviceChange = specs['device_specs']
 
         if extra_config:
-            for key, value in extra_config.iteritems():
+            for key, value in six.iteritems(extra_config):
                 option = vim.option.OptionValue(key=key, value=value)
                 config_spec.extraConfig.append(option)
 
