@@ -395,6 +395,7 @@ class Query(object):
         try:
             data['configuration'] = self._configuration(**kwargs)
         except InspectorQueryException as ex:
+            data['configuration'] = 'N/A'
             log.error(ex)
         data['payload'] = self._payload(**kwargs) or 'N/A'
 
