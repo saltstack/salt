@@ -2,7 +2,12 @@
 '''
 Splay function calls across targeted minions
 '''
+
+# Import Python Libs
+from __future__ import absolute_import
 import time
+
+# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 _DEFAULT_SPLAYTIME = 600
