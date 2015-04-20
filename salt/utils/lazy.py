@@ -104,8 +104,8 @@ class LazyDict(collections.MutableMapping):
                 log.debug('LazyLoaded {0}'.format(name))
                 return self._dict[name]
             else:
-                log.debug('Could not LazyLoad {0}'.format(key))
-                raise KeyError(key)
+                log.debug('Could not LazyLoad {0}'.format(name))
+                raise KeyError(name)
         elif name in self:
             return self[name]
         raise AttributeError(name)
