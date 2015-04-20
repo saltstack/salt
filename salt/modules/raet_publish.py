@@ -120,6 +120,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - grain
     - grain_pcre
     - pillar
+    - pillar_pcre
     - ipcidr
     - range
     - compound

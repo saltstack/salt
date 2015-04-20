@@ -7,8 +7,8 @@ expected to return
 # Import python libs
 from __future__ import absolute_import
 import os
+import fnmatch
 import re
-import glob
 import logging
 
 # Import salt libs
@@ -70,36 +70,49 @@ def get_minion_data(minion, opts):
     return minion if minion else None, None, None
 
 
-def nodegroup_comp(group, nodegroups, skip=None):
+def nodegroup_comp(nodegroup, nodegroups, skip=None):
     '''
-    Take the nodegroup and the nodegroups and fill in nodegroup refs
+    Recursively expand ``nodegroup`` from ``nodegroups``; ignore nodegroups in ``skip``
     '''
-    k = 1
+
     if skip is None:
-        skip = set([group])
-        k = 0
-    if group not in nodegroups:
+        skip = set()
+    elif nodegroup in skip:
+        log.error('Failed nodegroup expansion: illegal nested nodegroup "{0}"'.format(nodegroup))
         return ''
-    gstr = nodegroups[group]
-    ret = ''
-    for comp in gstr.split(','):
-        if not comp.startswith('N@'):
-            ret += '{0} or '.format(comp)
-            continue
-        ngroup = comp[2:]
-        if ngroup in skip:
-            continue
-        skip.add(ngroup)
-        ret += nodegroup_comp(ngroup, nodegroups, skip)
-    if k == 1:
-        return ret
-    else:
-        return ret[:-3]
+
+    skip.add(nodegroup)
+
+    if nodegroup not in nodegroups:
+        log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
+        return ''
+
+    nglookup = nodegroups[nodegroup]
+
+    ret = []
+    opers = ['and', 'or', 'not', '(', ')']
+    tokens = nglookup.split()
+    for match in tokens:
+        if match in opers:
+            ret.append(match)
+        elif len(match) >= 3 and match[:2] == 'N@':
+            ret.append(nodegroup_comp(match[2:], nodegroups, skip=skip))
+        else:
+            ret.append(match)
+
+    expanded = '( {0} )'.format(' '.join(ret)) if ret else ''
+    log.debug('nodegroup_comp("{0}") => {1}'.format(nodegroup, expanded))
+    return expanded
 
 
 class CkMinions(object):
     '''
     Used to check what minions should respond from a target
+
+    Note: This is a best-effort set of the minions that would match a target.
+    Depending on master configuration (grains caching, etc.) and topology (syndics)
+    the list may be a subset-- but we err on the side of too-many minions in this
+    class.
     '''
     def __init__(self, opts):
         self.opts = opts
@@ -114,23 +127,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via globs
         '''
-        cwd = os.getcwd()
         pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
-
-        # If there is no directory return an empty list
-        if os.path.isdir(pki_dir) is False:
-            return []
-
-        os.chdir(pki_dir)
-        ret = set(glob.glob(expr))
         try:
-            os.chdir(cwd)
-        except OSError as exc:
-            if exc.errno != 13:
-                # If it's not a permission denied, perhaps we're running with
-                # sudo
-                raise
-        return list(ret)
+            files = os.listdir(pki_dir)
+            return fnmatch.filter(files, expr)
+        except OSError:
+            return []
 
     def _check_list_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
@@ -139,22 +141,21 @@ class CkMinions(object):
         if isinstance(expr, string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for fn_ in os.listdir(os.path.join(self.opts['pki_dir'], self.acc)):
-            if fn_ in expr:
-                if fn_ not in ret:
-                    ret.append(fn_)
+        for m in expr:
+            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, m)):
+                ret.append(m)
         return ret
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
         '''
         Return the minions found by looking via regular expressions
         '''
-        cwd = os.getcwd()
-        os.chdir(os.path.join(self.opts['pki_dir'], self.acc))
-        reg = re.compile(expr)
-        ret = [fn_ for fn_ in os.listdir('.') if reg.match(fn_)]
-        os.chdir(cwd)
-        return ret
+        try:
+            minions = os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            reg = re.compile(expr)
+            return [m for m in minions if reg.match(m)]
+        except OSError:
+            return []
 
     def _check_cache_minions(self,
                              expr,
@@ -221,13 +222,23 @@ class CkMinions(object):
         '''
         return self._check_cache_minions(expr, delimiter, greedy, 'pillar')
 
+    def _check_pillar_pcre_minions(self, expr, delimiter, greedy):
+        '''
+        Return the minions found by looking via pillar with PCRE
+        '''
+        return self._check_cache_minions(expr,
+                                         delimiter,
+                                         greedy,
+                                         'pillar',
+                                         regex_match=True)
+
     def _check_pillar_exact_minions(self, expr, delimiter, greedy):
         '''
         Return the minions found by looking via pillar
         '''
         return self._check_cache_minions(expr,
-                                         greedy,
                                          delimiter,
+                                         greedy,
                                          'pillar',
                                          exact_match=True)
 
@@ -295,46 +306,21 @@ class CkMinions(object):
                 'Range matcher unavailable (unable to import seco.range, '
                 'module most likely not installed)'
             )
-        cache_enabled = self.opts.get('minion_data_cache', False)
-        if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+        if not hasattr(self, '_range'):
+            self._range = seco.range.Range(self.opts['range_server'])
+        try:
+            return self._range.expand(expr)
+        except seco.range.RangeException as exc:
+            log.error(
+                'Range exception in compound match: {0}'.format(exc)
             )
-        elif cache_enabled:
-            minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
-        else:
-            return list()
-
-        if cache_enabled:
-            cdir = os.path.join(self.opts['cachedir'], 'minions')
-            if not os.path.isdir(cdir):
-                return list(minions)
-            for id_ in os.listdir(cdir):
-                if not greedy and id_ not in minions:
-                    continue
-                datap = os.path.join(cdir, id_, 'data.p')
-                if not os.path.isfile(datap):
-                    if not greedy and id_ in minions:
-                        minions.remove(id_)
-                    continue
-                try:
-                    with salt.utils.fopen(datap, 'rb') as fp_:
-                        grains = self.serial.load(fp_).get('grains')
-                except (IOError, OSError):
-                    continue
-                range_ = seco.range.Range(self.opts['range_server'])
-                try:
-                    if grains.get('fqdn', '') not in range_.expand(expr) and id_ in minions:
-                        minions.remove(id_)
-                except seco.range.RangeException as exc:
-                    log.debug(
-                        'Range exception in compound match: {0}'.format(exc)
-                    )
-                    try:
-                        minions.remove(id_)
-                    except KeyError:
-                        pass
-        return list(minions)
+            cache_enabled = self.opts.get('minion_data_cache', False)
+            if greedy:
+                return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            elif cache_enabled:
+                return os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
+            else:
+                return list()
 
     def _check_compound_pillar_exact_minions(self, expr, delimiter, greedy):
         '''
@@ -362,25 +348,27 @@ class CkMinions(object):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
                    'I': self._check_pillar_minions,
+                   'J': self._check_pillar_pcre_minions,
                    'L': self._check_list_minions,
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
             if pillar_exact:
                 ref['I'] = self._check_pillar_exact_minions
+                ref['J'] = self._check_pillar_exact_minions
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
             tokens = expr.split()
             for match in tokens:
                 # Try to match tokens from the compound target, first by using
-                # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
+                # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
                 if '@' in match and match[1] == '@':
                     comps = match.split('@')
                     matcher = ref.get(comps[0])
 
                     matcher_args = ['@'.join(comps[1:])]
-                    if comps[0] in ('G', 'P', 'I'):
+                    if comps[0] in ('G', 'P', 'I', 'J'):
                         matcher_args.append(delimiter)
                     matcher_args.append(True)
 
@@ -510,6 +498,7 @@ class CkMinions(object):
             if expr_form in ('grain',
                              'grain_pcre',
                              'pillar',
+                             'pillar_pcre',
                              'pillar_exact',
                              'compound',
                              'compound_pillar_exact'):
@@ -531,6 +520,7 @@ class CkMinions(object):
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
+               'J': 'pillar_pcre',
                'L': 'list',
                'S': 'ipcidr',
                'E': 'pcre',
@@ -538,7 +528,8 @@ class CkMinions(object):
         infinite = [
                 'node',
                 'ipcidr',
-                'pillar']
+                'pillar',
+                'pillar_pcre']
         if not self.opts.get('minion_data_cache', False):
             infinite.append('grain')
             infinite.append('grain_pcre')
@@ -611,7 +602,7 @@ class CkMinions(object):
         '''
         if publish_validate:
             v_tgt_type = tgt_type
-            if tgt_type.lower() == 'pillar':
+            if tgt_type.lower() in ('pillar', 'pillar_pcre'):
                 v_tgt_type = 'pillar_exact'
             elif tgt_type.lower() == 'compound':
                 v_tgt_type = 'compound_pillar_exact'
@@ -619,7 +610,8 @@ class CkMinions(object):
             minions = set(self.check_minions(tgt, tgt_type))
             mismatch = bool(minions.difference(v_minions))
             # If the non-exact match gets more minions than the exact match
-            # then pillar globbing is being used, and we have a problem
+            # then pillar globbing or PCRE is being used, and we have a
+            # problem
             if mismatch:
                 return False
         # compound commands will come in a list so treat everything as a list

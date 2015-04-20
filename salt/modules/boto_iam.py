@@ -405,23 +405,54 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
     group = get_group(group_name, region, key, keyid, profile)
-    if group:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        try:
-            created = conn.put_group_policy(group_name, policy_name,
-                                            policy_json)
-            if created:
-                log.info('Created policy for group {0}.'.format(group_name))
-                return True
-            msg = 'Could not create policy for group {0}'
-            log.error(msg.format(group_name))
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            msg = 'Failed to create policy for group {0}'
-            log.error(msg.format(group_name))
-    else:
+    if not group:
         log.error('Group {0} does not exist'.format(group_name))
+        return False
+    conn = _get_conn(region, key, keyid, profile)
+    try:
+        if not isinstance(policy_json, string_types):
+            policy_json = json.dumps(policy_json)
+        created = conn.put_group_policy(group_name, policy_name,
+                                        policy_json)
+        if created:
+            log.info('Created policy for group {0}.'.format(group_name))
+            return True
+        msg = 'Could not create policy for group {0}'
+        log.error(msg.format(group_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create policy for group {0}'
+        log.error(msg.format(group_name))
     return False
+
+
+def delete_group_policy(group_name, policy_name, region=None, key=None,
+                        keyid=None, profile=None):
+    '''
+    Delete a group policy.
+
+    CLI example::
+
+        salt myminion boto_iam.delete_group_policy mygroup mypolicy
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    _policy = get_group_policy(
+        group_name, policy_name, region, key, keyid, profile
+    )
+    if not _policy:
+        return True
+    try:
+        conn.delete_group_policy(group_name, policy_name)
+        msg = 'Successfully deleted {0} policy for group {1}.'
+        log.info(msg.format(policy_name, group_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete {0} policy for group {1}.'
+        log.error(msg.format(policy_name, group_name))
+        return False
 
 
 def get_group_policy(group_name, policy_name, region=None, key=None,
@@ -450,6 +481,27 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         msg = 'Failed to get group {0} info.'
         log.error(msg.format(group_name))
         return False
+
+
+def get_all_group_policies(group_name, region=None, key=None, keyid=None,
+                           profile=None):
+    '''
+    Get a list of policy names from a group.
+
+    CLI example::
+
+        salt myminion boto_iam.get_all_group_policies mygroup
+    '''
+    conn = _get_conn(region, key, keyid, profile)
+    if not conn:
+        return False
+    try:
+        response = conn.get_all_group_policies(group_name)
+        _list = response.list_group_policies_response.list_group_policies_result
+        return _list.policy_names
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return []
 
 
 def create_login_profile(user_name, password, region=None, key=None,

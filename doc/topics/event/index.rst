@@ -27,7 +27,7 @@ Listening for Events
 ====================
 
 Salt's Event Bus is used heavily within Salt and it is also written to
-integrate heavily with existings tooling and scripts. There is a variety of
+integrate heavily with existing tooling and scripts. There is a variety of
 ways to consume it.
 
 From the CLI

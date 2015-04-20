@@ -29,7 +29,7 @@ import logging
 import salt.utils
 
 # Define the module's virtual name
-__virtualname__ = 'solarisips'
+__virtualname__ = 'pkg'
 log = logging.getLogger(__name__)
 
 
@@ -37,7 +37,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris 11
     '''
-    if __grains__['os'] == 'Solaris' and __grains__['kernelrelease'] == '5.11':
+    if __grains__['os'] == 'Solaris' and float(__grains__['kernelrelease']) > 5.10:
         return __virtualname__
     return False
 
@@ -129,8 +129,7 @@ def list_upgrades(refresh=False):
         refresh_db(full=True)
     upgrades = {}
     # awk is in core-os package so we can use it without checking
-    lines = __salt__['cmd.run_stdout'](
-        "/bin/pkg list -Hu | /bin/awk '{print $1}' | /bin/xargs pkg list -Hnv").splitlines()
+    lines = __salt__['cmd.run_stdout']("/bin/pkg list -Huv").splitlines()
     for line in lines:
         upgrades[_ips_get_pkgname(line)] = _ips_get_pkgversion(line)
     return upgrades

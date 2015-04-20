@@ -865,8 +865,6 @@ def _get_base(**kwargs):
             return profile_match
         return kw_overrides_match
 
-    cntrs = ls_()
-
     template = select('template')
     image = select('image')
     vgname = select('vgname')
@@ -883,7 +881,7 @@ def _get_base(**kwargs):
                 img_tar,
                 __salt__['config.get']('hash_type'))
         name = '__base_{0}_{1}_{2}'.format(proto, img_name, hash_)
-        if name not in cntrs:
+        if not exists(name):
             create(name, template=template, image=image,
                    vgname=vgname, **kwargs)
             if vgname:
@@ -892,7 +890,7 @@ def _get_base(**kwargs):
         return name
     elif template:
         name = '__base_{0}'.format(template)
-        if name not in cntrs:
+        if not exists(name):
             create(name, template=template, image=image,
                    vgname=vgname, **kwargs)
             if vgname:
@@ -1810,7 +1808,7 @@ def clone(name,
         )
 
 
-def ls_(active=None):
+def ls_(active=None, cache=True):
     '''
     Return a list of the containers available on the minion
 
@@ -1829,7 +1827,7 @@ def ls_(active=None):
     contextvar = 'lxc.ls'
     if active:
         contextvar += '.active'
-    if contextvar in __context__:
+    if cache and (contextvar in __context__):
         return __context__[contextvar]
     else:
         ret = []
@@ -2179,7 +2177,13 @@ def exists(name):
 
         salt '*' lxc.exists name
     '''
-    return name in ls_()
+
+    _exists = name in ls_()
+    # container may be just created but we did cached earlier the
+    # lxc-ls results
+    if not _exists:
+        _exists = name in ls_(cache=False)
+    return _exists
 
 
 def state(name):

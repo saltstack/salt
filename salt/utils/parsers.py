@@ -925,8 +925,17 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
                   'use a pillar value to identify targets, the syntax '
-                  'for the target is the pillar key followed by a glob'
+                  'for the target is the pillar key followed by a glob '
                   'expression:\n"role:production*"')
+        )
+        group.add_option(
+            '-J', '--pillar-pcre',
+            default=False,
+            action='store_true',
+            help=('Instead of using shell globs to evaluate the target '
+                  'use a pillar value to identify targets, the syntax '
+                  'for the target is the pillar key followed by a pcre '
+                  'regular expression:\n"role:prod.*"')
         )
         group.add_option(
             '-S', '--ipcidr',
@@ -1400,7 +1409,7 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
-                                    minion_id=True)
+                                    cache_minion_id=True)
 
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
@@ -1682,6 +1691,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
 
 class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
+                                            OutputOptionsMixIn,
                                             ConfigDirMixIn,
                                             MergeConfigMixIn,
                                             TimeoutMixIn,
@@ -2141,7 +2151,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
 
     def setup_config(self):
         opts = config.minion_config(self.get_config_file_path(),
-                                    minion_id=True)
+                                    cache_minion_id=True)
 
         if opts.get('transport') == 'raet':
             if not self._find_raet_minion(opts):  # must create caller minion

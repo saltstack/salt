@@ -1436,7 +1436,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
                         cmd = 'apt-add-repository {0}'.format(_cmd_quote(repo))
                     else:
                         cmd = 'apt-add-repository -y {0}'.format(_cmd_quote(repo))
-                    out = __salt__['cmd.run_stdout'](cmd, **kwargs)
+                    out = __salt__['cmd.run_all'](cmd, **kwargs)
+                    if out['retcode']:
+                        raise CommandExecutionError(
+                             'Unable to add PPA {0!r}. '
+                             '{1!r} exited with status {2!s}: '
+                             '{3!r} '.format(repo[4:], cmd, out['retcode'], out['stderr'])
+                        )
                     # explicit refresh when a repo is modified.
                     if kwargs.get('refresh_db', True):
                         refresh_db()
@@ -1616,23 +1622,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if 'comments' in kwargs:
             mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
-
-    # if all comps aren't part of the disable
-    # match, it is important we keep the comps
-    # not destined to be disabled/enabled in
-    # the original state
-    if ('disabled' in kwargs and
-            mod_source.disabled != kwargs['disabled']):
-
-        s_comps = set(mod_source.comps)
-        r_comps = set(repo_comps)
-        if s_comps.symmetric_difference(r_comps):
-            new_source = sourceslist.SourceEntry(source.line)
-            new_source.file = source.file
-            new_source.comps = list(r_comps.difference(s_comps))
-            source.comps = list(s_comps.difference(r_comps))
-            sources.insert(sources.index(source), new_source)
-            sources.save()
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
