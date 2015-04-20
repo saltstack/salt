@@ -2397,6 +2397,10 @@ def apply_minion_config(overrides=None,
 
     prepend_root_dir(opts, prepend_root_dirs)
 
+    # if there is no beacons option yet, add an empty beacons dict
+    if 'beacons' not in opts:
+        opts['beacons'] = {}
+
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
         opts['schedule'] = {}

@@ -14,6 +14,9 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 __virtualname__ = 'sh'
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -36,6 +39,17 @@ def _get_shells():
         __context__['sh.last_shells'] = start
         __context__['sh.shells'] = __salt__['cmd.shells']()
     return __context__['sh.shells']
+
+
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for sh beacon should be a list of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for sh beacon must be a dictionary.')
+        return False
+    return True
 
 
 def beacon(config):

@@ -30,9 +30,12 @@ FIELDS = [
           'session',
           'time',
           'addr'
-          ]
+]
 SIZE = struct.calcsize(FMT)
 LOC_KEY = 'wtmp.loc'
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -47,6 +50,17 @@ def _get_loc():
     '''
     if LOC_KEY in __context__:
         return __context__[LOC_KEY]
+
+
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for wtmp beacon should be a list of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for wtmp beacon must be a dictionary.')
+        return False
+    return True
 
 
 # TODO: add support for only firing events for specific users and login times
