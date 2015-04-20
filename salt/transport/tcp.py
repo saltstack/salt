@@ -43,6 +43,7 @@ import tornado.tcpserver
 import tornado.gen
 import tornado.concurrent
 import tornado.tcpclient
+import tornado.netutil
 
 log = logging.getLogger(__name__)
 
@@ -386,6 +387,10 @@ class SaltMessageClient(object):
         self.port = port
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+
+        # Configure the resolver to use a non-blocking one
+        # Not Threaded since we need to work on python2
+        tornado.netutil.Resolver.configure('tornado.netutil.ExecutorResolver')
 
         self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop)
 
