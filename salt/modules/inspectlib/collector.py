@@ -219,17 +219,24 @@ class Inspector(object):
         Scan the system.
         '''
         # Get ignored points
+        allowed = list()
+        self.db.cursor.execute("SELECT path FROM inspector_allowed")
+        for alwd_path in self.db.cursor.fetchall():
+            if os.path.exists(alwd_path[0]):
+                allowed.append(alwd_path[0])
+
         ignored = list()
-        self.db.cursor.execute("SELECT path FROM inspector_ignored")
-        for ign_path in self.db.cursor.fetchall():
-            ign_path = ign_path[0]
-            ignored.append(ign_path)
+        if not allowed:
+            self.db.cursor.execute("SELECT path FROM inspector_ignored")
+            for ign_path in self.db.cursor.fetchall():
+                ignored.append(ign_path[0])
 
         all_files = list()
         all_dirs = list()
         all_links = list()
-        for entry_path in os.listdir("/"):
-            entry_path = "/{0}".format(entry_path)
+        for entry_path in [pth for pth in (allowed or os.listdir("/")) if pth]:
+            if entry_path[0] != "/":
+                entry_path = "/{0}".format(entry_path)
             if entry_path in ignored:
                 continue
             e_files, e_dirs, e_links = self._get_all_files(entry_path, *ignored)
