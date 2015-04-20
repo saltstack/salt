@@ -2977,9 +2977,9 @@ class HighState(BaseHighState):
 
     def __init__(self, opts, pillar=None, jid=None):
         self.opts = opts
+        self.state = State(self.opts, pillar, jid)
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts, pillar, jid)
         self.matcher = salt.minion.Matcher(self.opts)
 
         # tracks all pydsl state declarations globally across sls files
