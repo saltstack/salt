@@ -119,4 +119,8 @@ class DBHandle(DBHandleBase):
                                  "(id INTEGER PRIMARY KEY, path CHAR(4096), "
                                  "p_type char(1), mode INTEGER, uid INTEGER, gid INTEGER, p_size INTEGER, "
                                  "atime FLOAT, mtime FLOAT, ctime FLOAT)")
+
+        # inspector_allowed overrides inspector_ignored.
+        # I.e. if allowed is not empty, then inspector_ignored is completely omitted.
         self.init_queries.append("CREATE TABLE inspector_ignored (path CHAR(4096))")
+        self.init_queries.append("CREATE TABLE inspector_allowed (path CHAR(4096))")
