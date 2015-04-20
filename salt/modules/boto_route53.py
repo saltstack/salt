@@ -212,15 +212,16 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
 
 
 def _wait_for_sync(status, conn):
-    retry = 30
+    retry = 10
     i = 0
     while i < retry:
         log.info('Getting route53 status (attempt {0})'.format(i + 1))
         change = conn.get_change(status)
+        log.debug(change.GetChangeResponse.ChangeInfo.Status)
         if change.GetChangeResponse.ChangeInfo.Status == 'INSYNC':
             return True
         i = i + 1
-        time.sleep(10)
+        time.sleep(20)
     log.error('Timed out waiting for Route53 status update.')
     return False
 
