@@ -239,7 +239,7 @@ class Inspector(object):
 
         return self._get_unmanaged_files(self._get_managed_files(), (all_files, all_dirs, all_links,))
 
-    def _prepare_full_scan(self):
+    def _prepare_full_scan(self, **kwargs):
         '''
 
         '''
@@ -273,6 +273,11 @@ class Inspector(object):
         for ignored_dir in ignored_all:
             self.db.cursor.execute("INSERT INTO inspector_ignored VALUES (?)", (ignored_dir,))
 
+        # Add allowed filesystems (overrides all above at full scan)
+        allowed = [elm for elm in kwargs.get("filter", "").split(",") if elm]
+        for allowed_dir in allowed:
+            self.db.cursor.execute("INSERT INTO inspector_allowed VALUES (?)", (allowed_dir,))
+
         self.db.connection.commit()
 
         return ignored_all
@@ -287,14 +292,14 @@ class Inspector(object):
         self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
         self._save_payload(*self._scan_payload())
 
-    def request_snapshot(self, mode, priority=19):
+    def request_snapshot(self, mode, priority=19, **kwargs):
         '''
         Take a snapshot of the system.
         '''
         if mode not in self.MODE:
             raise InspectorSnapshotException("Unknown mode: '{0}'".format(mode))
 
-        self._prepare_full_scan()
+        self._prepare_full_scan(**kwargs)
 
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
             priority, __file__, self.pidfile, self.dbfile, mode))

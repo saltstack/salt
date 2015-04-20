@@ -54,7 +54,7 @@ def _(module):
     return mod
 
 
-def inspect(mode='all', priority=19):
+def inspect(mode='all', priority=19, **kwargs):
     '''
     Start node inspection and save the data to the database for further query.
 
@@ -79,7 +79,7 @@ def inspect(mode='all', priority=19):
     '''
     collector = _("collector")
     try:
-        return collector.Inspector().request_snapshot(mode, priority=priority)
+        return collector.Inspector().request_snapshot(mode, priority=priority, **kwargs)
     except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
