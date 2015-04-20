@@ -291,10 +291,13 @@ class Shell(object):
         ret = self._run_cmd(cmd)
         return ret
 
-    def send(self, local, remote):
+    def send(self, local, remote, makedirs=False):
         '''
         scp a file or files to a remote system
         '''
+        if makedirs:
+            self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
+
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
 
