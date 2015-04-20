@@ -59,13 +59,12 @@ be used to install it:
 If pygit2_ is not packaged for the platform on which the Master is running, the
 pygit2_ website has installation instructions here__. Keep in mind however that
 following these instructions will install libgit2 and pygit2_ without system
-packages. Also, while this is not explicitly mentioned in the pygit2_
-installation instructions, libssh2 development headers must be installed before
-building libgit2 in order to enable access to SSH-protected git repositories.
-Luckily, these are available in most distros' repositories, usually as either
-``libssh2-devel`` or ``libssh2-dev``, depending on platform.
+packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
+<pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
+libraries to be present before libgit2 is built.
 
 .. __: http://www.pygit2.org/install.html
+.. _libssh2: http://www.libssh2.org/
 
 GitPython
 ---------
@@ -542,6 +541,8 @@ an ``insecure_auth`` parameter:
         - user: git
         - password: mypassword
         - insecure_auth: True
+
+.. _pygit2-authentication-ssh:
 
 SSH
 ~~~
