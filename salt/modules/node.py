@@ -61,7 +61,13 @@ def inspect(mode='all', priority=19):
     Parameters:
 
     * **mode**: Clarify inspection mode: configuration, payload, all (default)
+
+      payload
+        * **filter**: Comma-separated directories to track payload.
+
     * **priority**: (advanced) Set priority of the inspection. Default is low priority.
+
+
 
     CLI Example:
 
@@ -69,6 +75,7 @@ def inspect(mode='all', priority=19):
 
         salt '*' node.inspect
         salt '*' node.inspect configuration
+        salt '*' node.inspect payload filter=/opt,/ext/oracle
     '''
     collector = _("collector")
     try:
