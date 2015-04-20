@@ -167,6 +167,7 @@ class Query(object):
                 "Unknown scope: {0}. Must be one of: {1}".format(repr(scope), ", ".join(self.SCOPES)))
         self.scope = '_' + scope
         self.db = DBHandle(globals()['__salt__']['config.get']('inspector.db', ''))
+        self.local_identity = dict()
 
     def __call__(self, *args, **kwargs):
         '''
@@ -376,6 +377,29 @@ class Query(object):
             'enabled': __salt__['service.get_enabled'](),
             'disabled': __salt__['service.get_disabled'](),
         }
+
+    def _id_resolv(self, iid, named=True, uid=True):
+        '''
+        Resolve local users and groups.
+
+        :param iid:
+        :param named:
+        :param uid:
+        :return:
+        '''
+
+        if not self.local_identity:
+            self.local_identity['users'] = self._get_local_users()
+            self.local_identity['groups'] = self._get_local_groups()
+
+        if not named:
+            return iid
+
+        for name, meta in self.local_identity[uid and 'users' or 'groups'].items():
+            if (uid and int(meta.get('uid', -1)) == iid) or (not uid and int(meta.get('gid', -1)) == iid):
+                return name
+
+        return iid
 
     def _payload(self, *args, **kwargs):
         '''
