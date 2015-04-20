@@ -154,7 +154,7 @@ def _sync(form, saltenv=None):
                 break
             for emptydir in emptydirs:
                 touched = True
-                os.rmdir(emptydir)
+                shutil.rmtree(emptydir, ignore_errors=True)
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
@@ -252,6 +252,23 @@ def sync_modules(saltenv=None, refresh=True):
     server. This function is environment aware, pass the desired environment
     to grab the contents of the _modules directory, base is the default
     environment.
+
+    .. important::
+
+        If this function is executed using a :py:func:`module.run
+        <salt.states.module.run>` state, the SLS file will not have access to
+        newly synced execution modules unless a ``reload_modules`` argument is
+        added to the state, like so:
+
+        .. code-block:: yaml
+
+            load_my_custom_module:
+              module.run:
+                - name: saltutil.sync_modules
+                - reload_modules: True
+
+        See :ref:`here <reloading-modules>` for a more detailed explanation of
+        why this is necessary.
 
     CLI Example:
 
@@ -387,6 +404,24 @@ def sync_all(saltenv=None, refresh=True):
 
     refresh : True
         Also refresh the execution modules available to the minion.
+
+    .. important::
+
+        If this function is executed using a :py:func:`module.run
+        <salt.states.module.run>` state, the SLS file will not have access to
+        newly synced execution modules unless a ``reload_modules`` argument is
+        added to the state, like so:
+
+        .. code-block:: yaml
+
+            load_my_custom_module:
+              module.run:
+                - name: saltutil.sync_all
+                - refresh: True
+                - reload_modules: True
+
+        See :ref:`here <reloading-modules>` for a more detailed explanation of
+        why this is necessary.
 
     CLI Example:
 
