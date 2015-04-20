@@ -3,12 +3,19 @@
 Management of languages/locales
 ===============================
 
-The locale can be managed for the system:
+Manage the available locales and the system default:
 
 .. code-block:: yaml
 
-    en_US.UTF-8:
-      locale.system
+    us_locale:
+      locale.present:
+        - name: en_US.UTF-8
+
+    default_locale:
+      locale.system:
+        - name: en_US.UTF-8
+        - require:
+          - locale: us_locale
 '''
 
 
@@ -55,7 +62,8 @@ def present(name):
     .. versionadded:: 2014.7.0
 
     name
-        The name of the locale to be present
+        The name of the locale to be present. Some distributions require the
+        charmap to be specified as part of the locale at this point.
     '''
     ret = {'name': name,
            'changes': {},
