@@ -65,11 +65,11 @@ dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': 
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
-opts = salt.config.DEFAULT_MASTER_OPTS
+opts = salt.config.DEFAULT_MINION_OPTS
 utils = salt.loader.utils(opts, whitelist=['boto'])
 
 boto_vpc.__utils__ = utils
-boto_vpc.__virtual__()
+boto_vpc.__init__(opts)
 
 
 def _has_required_boto():
@@ -475,7 +475,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
                               dhcp_options_id=u'dopt-7a8b9c2d',
                               instance_tenancy=u'default')
 
-        self.assertEqual(describe_vpc, vpc_properties)
+        self.assertEqual(describe_vpc, {'vpc': vpc_properties})
 
     @mock_ec2
     def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_false(self):
@@ -486,7 +486,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
 
         describe_vpc = boto_vpc.describe(vpc_id='vpc-fake', **conn_parameters)
 
-        self.assertFalse(describe_vpc)
+        self.assertFalse(describe_vpc['vpc'])
 
     @mock_ec2
     def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_error(self):
