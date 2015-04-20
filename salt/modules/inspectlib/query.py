@@ -137,7 +137,6 @@ class SysInfo(object):
         }
 
 
-
 class Query(object):
     '''
     Query the system.
@@ -249,7 +248,6 @@ class Query(object):
                 groups[name]['users'] = users.split(',')
 
         return groups
-
 
     def _get_external_accounts(self, locals):
         '''
@@ -521,4 +519,3 @@ class Query(object):
         data['payload'] = self._payload(**kwargs) or 'N/A'
 
         return data
-
