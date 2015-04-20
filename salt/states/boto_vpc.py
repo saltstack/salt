@@ -138,25 +138,29 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
            'changes': {}
            }
 
-    exists = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
-                                         key=key, keyid=keyid, profile=profile)
-    if not exists:
+    r = __salt__['boto_vpc.exists'](name=name, tags=tags, region=region,
+                                    key=key, keyid=keyid, profile=profile)
+
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create VPC: {0}.'.format(r['error']['message'])
+
+    if not r.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'VPC {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_vpc.create'](cidr_block, instance_tenancy,
-                                              name, dns_support, dns_hostnames,
-                                              tags, region, key, keyid,
-                                              profile)
-        if not created:
+        r = __salt__['boto_vpc.create'](cidr_block, instance_tenancy,
+                                        name, dns_support, dns_hostnames,
+                                        tags, region, key, keyid, profile)
+        if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create {0} VPC.'.format(name)
+            ret['comment'] = 'Failed to create VPC: {0}.'.format(r['error']['message'])
             return ret
-        _describe = __salt__['boto_vpc.describe'](created, region=region, key=key,
+        _describe = __salt__['boto_vpc.describe'](r['id'], region=region, key=key,
                                                   keyid=keyid, profile=profile)
         ret['changes']['old'] = {'vpc': None}
-        ret['changes']['new'] = {'vpc': _describe}
+        ret['changes']['new'] = _describe
         ret['comment'] = 'VPC {0} created.'.format(name)
         return ret
     ret['comment'] = 'VPC present.'
@@ -193,9 +197,14 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
            'changes': {}
            }
 
-    vpc_id = __salt__['boto_vpc.get_id'](name=name, tags=tags, region=region,
-                                         key=key, keyid=keyid, profile=profile)
-    if not vpc_id:
+    r = __salt__['boto_vpc.get_id'](name=name, tags=tags, region=region,
+                                    key=key, keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete VPC: {0}.'.format(r['error']['message'])
+
+    _id = r.get('id')
+    if not _id:
         ret['comment'] = '{0} VPC does not exist.'.format(name)
         return ret
 
@@ -203,14 +212,14 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
         ret['comment'] = 'VPC {0} is set to be removed.'.format(name)
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_vpc.delete'](name=name, tags=tags,
-                                          region=region, key=key,
-                                          keyid=keyid, profile=profile)
-    if not deleted:
+    r = __salt__['boto_vpc.delete'](name=name, tags=tags,
+                                    region=region, key=key,
+                                    keyid=keyid, profile=profile)
+    if not r['deleted']:
         ret['result'] = False
-        ret['comment'] = 'Failed to delete {0} VPC.'.format(name)
+        ret['comment'] = 'Failed to delete VPC: {0}.'.format(r['error']['message'])
         return ret
-    ret['changes']['old'] = {'vpc': vpc_id}
+    ret['changes']['old'] = {'vpc': _id}
     ret['changes']['new'] = {'vpc': None}
     ret['comment'] = 'VPC {0} deleted.'.format(name)
     return ret
@@ -263,27 +272,36 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
            'changes': {}
            }
 
-    exists = __salt__['boto_vpc.subnet_exists'](subnet_name=name, tags=tags,
-                                                region=region, key=key,
-                                                keyid=keyid, profile=profile)
-    if not exists:
+    r = __salt__['boto_vpc.subnet_exists'](subnet_name=name, tags=tags,
+                                           region=region, key=key,
+                                           keyid=keyid, profile=profile)
+
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create subnet: {0}.'.format(r['error']['message'])
+
+
+    if not r.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Subnet {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_vpc.create_subnet'](subnet_name=name,
-                                                     cidr_block=cidr_block,
-                                                     availability_zone=availability_zone,
-                                                     vpc_name=vpc_name, vpc_id=vpc_id,
-                                                     tags=tags, region=region,
-                                                     key=key, keyid=keyid,
-                                                     profile=profile)
-        if not created:
+        r = __salt__['boto_vpc.create_subnet'](subnet_name=name,
+                                               cidr_block=cidr_block,
+                                               availability_zone=availability_zone,
+                                               vpc_name=vpc_name, vpc_id=vpc_id,
+                                               tags=tags, region=region,
+                                               key=key, keyid=keyid,
+                                               profile=profile)
+        if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create {0} subnet.'.format(name)
+            ret['comment'] = 'Failed to create subnet: {0}'.format(r['error']['message'])
             return ret
-        ret['changes']['old'] = {'vpc': None}
-        ret['changes']['new'] = {'vpc': created}
+        _describe = __salt__['boto_vpc.describe_subnet'](r['id'], region=region, key=key,
+                                                         keyid=keyid, profile=profile)
+ 
+        ret['changes']['old'] = {'subnet': None}
+        ret['changes']['new'] = _describe
         ret['comment'] = 'Subnet {0} created.'.format(name)
         return ret
     ret['comment'] = 'Subnet present.'
@@ -318,25 +336,31 @@ def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, 
            'changes': {}
            }
 
-    subnet_id = __salt__['boto_vpc.get_resource_id']('subnet', name=name,
-                                                     region=region, key=key,
-                                                     keyid=keyid, profile=profile)
-    if not subnet_id:
+    r = __salt__['boto_vpc.get_resource_id']('subnet', name=name,
+                                             region=region, key=key,
+                                             keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete subnet: {0}.'.format(r['error']['message'])
+
+    _id = r.get('id')
+
+    if not _id:
         ret['comment'] = '{0} subnet does not exist.'.format(name)
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'Subnet {0} is set to be removed.'.format(name)
+        ret['comment'] = 'Subnet {0} ({1}) is set to be removed.'.format(name, r['id'])
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_vpc.delete_subnet'](subnet_name=name,
-                                                 region=region, key=key,
-                                                 keyid=keyid, profile=profile)
-    if not deleted:
+    r = __salt__['boto_vpc.delete_subnet'](subnet_name=name,
+                                           region=region, key=key,
+                                           keyid=keyid, profile=profile)
+    if not r.get('deleted'):
         ret['result'] = False
-        ret['comment'] = 'Failed to delete {0} subnet.'.format(name)
+        ret['comment'] = 'Failed to delete subnet: {0}'.format(r['error']['message'])
         return ret
-    ret['changes']['old'] = {'subnet': subnet_id}
+    ret['changes']['old'] = {'subnet': _id}
     ret['changes']['new'] = {'subnet': None}
     ret['comment'] = 'Subnet {0} deleted.'.format(name)
     return ret
