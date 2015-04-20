@@ -1255,7 +1255,6 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.finish()
 
 
-
 class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     Endpoint to run commands without normal session handling
