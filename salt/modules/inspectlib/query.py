@@ -16,6 +16,7 @@
 
 
 import os
+import time
 import logging
 
 import salt
@@ -404,8 +405,104 @@ class Query(object):
     def _payload(self, *args, **kwargs):
         '''
         Find all unmanaged files.
+
+        Parameters:
+
+        * **filter**: Include only results which path starts from the filter string.
+        * **time**: Display time in Unix ticks or format according to the configured TZ (default)
+                    Values: ticks, tz (default)
+        * **size**: Format size. Values: B, KB, MB, GB
+        * **owners**: Resolve UID/GID to an actual names or leave them numeric (default).
+                      Values: name (default), id
+        * **type**: Comma-separated type of included payload: dir (or directory), link and/or file.
+        * **brief**: Return just a list of matches, if True. Default: False
         '''
-        data = dict()
+        def _size_format(size, fmt):
+            if fmt is None:
+                return size
+
+            fmt = fmt.lower()
+            if fmt == "b":
+                return "{0} Bytes".format(size)
+            elif fmt == "kb":
+                return "{0} Kb".format(round((float(size) / 0x400), 2))
+            elif fmt == "mb":
+                return "{0} Mb".format(round((float(size) / 0x400 / 0x400), 2))
+            elif fmt == "gb":
+                return "{0} Gb".format(round((float(size) / 0x400 / 0x400 / 0x400), 2))
+
+        filter = None
+        if 'filter' in kwargs:
+            filter = kwargs['filter']
+
+        timeformat = kwargs.get("time", "tz")
+        if timeformat not in ["ticks", "tz"]:
+            raise InspectorQueryException('Unknown "{0}" value for parameter "time"'.format(timeformat))
+        tfmt = lambda param: timeformat == "tz" and time.strftime("%b %d %Y %H:%M:%S", time.gmtime(param)) or int(param)
+
+        size_fmt = kwargs.get("size")
+        if size_fmt is not None and size_fmt.lower() not in ["b", "kb", "mb", "gb"]:
+            raise InspectorQueryException('Unknown "{0}" value for parameter "size". '
+                                          'Should be either B, Kb, Mb or Gb'.format(timeformat))
+
+        owners = kwargs.get("owners", "id")
+        if owners not in ["name", "id"]:
+            raise InspectorQueryException('Unknown "{0}" value for parameter "owners". '
+                                          'Should be either name or id (default)'.format(owners))
+
+        incl_type = [prm for prm in kwargs.get("type", "").lower().split(",") if prm]
+        if not incl_type:
+            incl_type.append("file")
+
+        for i_type in incl_type:
+            if i_type not in ["directory", "dir", "d", "file", "f", "link", "l"]:
+                raise InspectorQueryException('Unknown "{0}" values for parameter "type". '
+                                              'Should be comma separated one or more of '
+                                              'dir, file and/or link.'.format(", ".join(incl_type)))
+
+        where_clause = set()
+        for i_type in incl_type:
+            if i_type in ["file", "f"]:
+                where_clause.add("p_type = 'f'")
+            elif i_type in ["d", "dir", "directory"]:
+                where_clause.add("p_type = 'd'")
+            elif i_type in ["l", "link"]:
+                where_clause.add("p_type = 'l'")
+
+        if filter:
+            where_filter_clause = " AND path LIKE '{0}%'".format(filter)
+        else:
+            where_filter_clause = ""
+
+        self.db.open()
+        self.db.cursor.execute("SELECT id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime "
+                               "FROM inspector_payload "
+                               "WHERE {0}{1}".format(" OR ".join(list(where_clause)),
+                                                     where_filter_clause))
+
+        brief = kwargs.get("brief")
+        if brief:
+            data = list()
+        else:
+            data = dict()
+
+        for pld_data in self.db.cursor.fetchall():
+            p_id, path, p_type, mode, uid, gid, p_size, atime, mtime, ctime = pld_data
+            if brief:
+                data.append(path)
+            else:
+                data[path] = {
+                    'uid': self._id_resolv(uid, named=(owners == "id")),
+                    'gid': self._id_resolv(gid, named=(owners == "id"), uid=False),
+                    'size': _size_format(p_size, fmt=size_fmt),
+                    'mode': oct(mode),
+                    'accessed': tfmt(atime),
+                    'modified': tfmt(mtime),
+                    'created': tfmt(ctime),
+                }
+
+        self.db.close()
+
         return data
 
     def _all(self, *args, **kwargs):
