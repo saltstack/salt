@@ -65,6 +65,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 
 # Import Salt libs
 import salt.utils.boto
+import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.utils import exactly_one
 
@@ -100,9 +101,14 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
-        salt.utils.boto.compat(__name__)
-        __utils__['boto.assign_funcs'](__name__, 'vpc')
+
         return True
+
+
+def __init__(opts):
+    log.warning('__init__')
+    salt.utils.compat.pack_dunder(__name__)
+    __utils__['boto.assign_funcs'](__name__, 'vpc')
 
 
 def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
@@ -117,11 +123,11 @@ def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
         raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
                                   'must be provided.')
     if vpc_name:
-        vpc_id = get_id(name=vpc_name, region=region, key=key, keyid=keyid,
+        vpc_id = _get_id(vpc_name=vpc_name, region=region, key=key, keyid=keyid,
                         profile=profile)
     else:
-        if not exists(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                      profile=profile):
+        if not _find_vpcs(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                          profile=profile):
                 log.info('VPC {0} does not exist.'.format(vpc_id))
                 return None
     return vpc_id
@@ -193,10 +199,10 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
                              'connection.'.format('delete_' + resource))
 
     if name:
-        r = get_resource_id(resource, name,
-                            region=region, key=key,
-                            keyid=keyid, profile=profile)
-        if not r.get('id'):
+        resource_id = _get_resource_id(resource, name,
+                                       region=region, key=key,
+                                       keyid=keyid, profile=profile)
+        if not resource_id:
             return {'deleted': False, 'error': {'message':
                     '{0} {1} does not exist.'.format(resource, name)}}
 
@@ -556,12 +562,12 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
     if not any((vpc_id, vpc_name)):
         raise SaltInvocationError('A valid vpc id or name needs to be specified.')
-    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-
-    if not vpc_id:
-        return None
 
     try:
+        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        if not vpc_id:
+            return {'vpc': None}
+
         filter_parameters = {'vpc_ids': vpc_id}
 
         vpcs = conn.get_all_vpcs(**filter_parameters)
@@ -572,7 +578,9 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
             keys = ('id', 'cidr_block', 'is_default', 'state', 'tags',
                     'dhcp_options_id', 'instance_tenancy')
-            return dict([(k, getattr(vpc, k)) for k in keys])
+            return {'vpc': dict([(k, getattr(vpc, k)) for k in keys])}
+        else:
+            return {'vpc': None}
 
     except BotoServerError as e:
         return {'error': salt.utils.boto.get_error(e)}
@@ -626,7 +634,9 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
             ret = []
             for vpc in vpcs:
                 ret.append(dict((k, getattr(vpc, k)) for k in keys))
-            return ret
+            return {'vpcs': ret}
+        else:
+            return {'vpcs': None}
 
     except BotoServerError as e:
         return {'error': salt.utils.boto.get_error(e)}
@@ -688,15 +698,17 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
                 subnet_name='mysubnet', cidr_block='10.0.0.0/25'
     '''
 
-    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-    if not vpc_id:
-        return {'error': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}
+    try:
+        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        if not vpc_id:
+            return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
+    except BotoServerError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
     return _create_resource('subnet', name=subnet_name, tags=tags,
                              vpc_id=vpc_id, cidr_block=cidr_block,
                              region=region, key=key, keyid=keyid,
                              profile=profile)
-
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
                   keyid=None, profile=None):
@@ -945,7 +957,8 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
     if vpc_id or vpc_name:
         vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
-            return {'error': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}
+            return {'created': False,
+                    'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
 
 
     r = _create_resource('internet_gateway', name=internet_gateway_name,
