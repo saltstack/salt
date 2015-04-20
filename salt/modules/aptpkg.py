@@ -488,7 +488,7 @@ def install(name=None,
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
             # Only use the 'version' param if 'name' was not specified as a
             # comma-separated list
-            pkg_params = {name: kwargs.get('version')}
+            pkg_params = {name: str(kwargs.get('version'))}
         targets = []
         for param, version_num in pkg_params.iteritems():
             if version_num is None:
