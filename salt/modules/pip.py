@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Install Python packages with pip to either the system or a virtualenv
 
 Windows Support
