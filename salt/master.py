@@ -1187,6 +1187,12 @@ class AESFuncs(object):
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[fstr](load['jid'], load['load'])
 
+        # Register the syndic
+        syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
+        if not os.path.exists(syndic_cache_path):
+            with salt.utils.fopen(syndic_cache_path, 'w') as f:
+                f.write('')
+
         # Format individual return loads
         for key, item in six.iteritems(load['return']):
             ret = {'jid': load['jid'],
