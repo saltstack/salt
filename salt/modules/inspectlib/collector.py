@@ -29,7 +29,9 @@ class Inspector(object):
     MODE = ['configuration', 'payload', 'all']
     IGNORE_MOUNTS = ["proc", "sysfs", "devtmpfs", "tmpfs", "fuse.gvfs-fuse-daemon"]
     IGNORE_FS_TYPES = ["autofs", "cifs", "nfs", "nfs4"]
-    IGNORE_PATHS = ["/tmp", "/var/tmp", "/lost+found", "/var/run", "/var/lib/rpm", "/.snapshots", "/.zfs", "/etc/ssh"]
+    IGNORE_PATHS = ["/tmp", "/var/tmp", "/lost+found", "/var/run",
+                    "/var/lib/rpm", "/.snapshots", "/.zfs", "/etc/ssh",
+                    "/root", "/home"]
 
     def __init__(self, db_path=None, pid_file=None):
         # Configured path
