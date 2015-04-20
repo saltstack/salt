@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.client.ssh
 import logging
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
