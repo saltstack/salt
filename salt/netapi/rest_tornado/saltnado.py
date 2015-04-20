@@ -694,7 +694,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                "return": "Welcome"}
         self.write(self.serialize(ret))
 
-    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def post(self):
         '''
         Send one or more Salt commands (lowstates) in the request body
@@ -768,7 +768,9 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             self.redirect('/login')
             return
 
-        self.disbatch()
+        ret = yield self.disbatch()
+        self.write(self.serialize({'return': ret}))
+        self.finish()
 
     @tornado.gen.coroutine
     def disbatch(self):
@@ -798,8 +800,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 logger.error('Unexpected exception while handling request:', exc_info=True)
 
-        self.write(self.serialize({'return': ret}))
-        self.finish()
+        raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
     def _disbatch_local_batch(self, chunk):
@@ -1007,7 +1008,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A convenience endpoint for minion related functions
     '''
-    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def get(self, mid=None):  # pylint: disable=W0221
         '''
         A convenience URL for getting lists of minions or getting minion
@@ -1057,9 +1058,11 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             'tgt': mid or '*',
             'fun': 'grains.items',
         }]
-        self.disbatch()
+        ret = yield self.disbatch()
+        self.write(self.serialize({'return': ret}))
+        self.finish()
 
-    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def post(self):
         '''
         Start an execution command and immediately return the job id
@@ -1129,14 +1132,16 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 self.finish()
                 return
 
-        self.disbatch()
+        ret = yield self.disbatch()
+        self.write(self.serialize({'return': ret}))
+        self.finish()
 
 
 class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     A convenience endpoint for job cache data
     '''
-    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def get(self, jid=None):  # pylint: disable=W0221
         '''
         A convenience URL for getting lists of previously run jobs or getting
@@ -1229,20 +1234,32 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 'jid': jid,
                 'client': 'runner',
             }]
+            info = yield self.disbatch()
+            rets = []
+            for i in info:
+                ret = {}
+                for minion, ret_dict in i['Result'].iteritems():
+                    ret[minion] = ret_dict['return']
+                rets.append(ret)
+            self.write(self.serialize({
+                'info': info,
+                'return': rets,
+            }))
         else:
             self.lowstate = [{
                 'fun': 'jobs.list_jobs',
                 'client': 'runner',
             }]
-
-        self.disbatch()
+            ret = yield self.disbatch()
+            self.write(self.serialize({'return': ret}))
+        self.finish()
 
 
 class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
     '''
     Endpoint to run commands without normal session handling
     '''
-    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def post(self):
         '''
         Run commands bypassing the :ref:`normal session handling
@@ -1299,7 +1316,9 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                 ms-3: true
                 ms-4: true
         '''
-        self.disbatch()
+        ret = yield self.disbatch()
+        self.write(self.serialize({'return': ret}))
+        self.finish()
 
 
 class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
