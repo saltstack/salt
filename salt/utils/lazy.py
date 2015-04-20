@@ -95,7 +95,15 @@ class LazyDict(collections.MutableMapping):
         '''
         Check if the name is in the dict and return it if it is
         '''
-        if name in self:
+        if name not in self._dict and not self.loaded:
+            # load the item
+            if self._load(name):
+                log.debug('LazyLoaded {0}'.format(name))
+                return self._dict[name]
+            else:
+                log.debug('Could not LazyLoad {0}'.format(name))
+                raise KeyError(name)
+        elif name in self:
             return self[name]
         raise AttributeError(name)
 
