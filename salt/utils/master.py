@@ -443,7 +443,7 @@ class CacheTimer(Thread):
 
 class CacheWorker(multiprocessing.Process):
     '''
-    Worker for ConnectedCache updates which run in its
+    Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
     main-loop when refreshing minion-list
     '''
