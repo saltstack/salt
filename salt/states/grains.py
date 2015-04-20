@@ -65,21 +65,31 @@ def list_present(name, value):
     '''
     .. versionadded:: 2014.1.0
 
-    Ensure the value is present in the list type grain
+    Ensure the value is present in the list type grain.
 
     name
-        The grain name
+        The grain name.
 
     value
-        The value is present in the list type grain
+        The value is present in the list type grain.
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
-      roles:
-        grains.list_present:
-          - value: web
+        roles:
+          grains.list_present:
+            - value: web
+
+    For multiple grains, the syntax looks like:
+
+    .. code-block:: yaml
+
+        roles:
+          grains.list_present:
+            - value:
+              - web
+              - dev
     '''
     ret = {'name': name,
            'changes': {},
@@ -121,21 +131,33 @@ def list_present(name, value):
 
 def list_absent(name, value):
     '''
-    Delete a value from a grain formed as a list
+    Delete a value from a grain formed as a list.
+
+    .. versionadded:: 2014.1.0
 
     name
-        The grain name
+        The grain name.
 
     value
-       The value to delete from the grain list
+       The value to delete from the grain list.
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
-      roles:
-        grains.list_absent:
-          - value: db
+        roles:
+          grains.list_absent:
+            - value: db
+
+    For multiple grains, the syntax looks like:
+
+    .. code-block:: yaml
+
+        roles:
+          grains.list_absent:
+            - value:
+              - web
+              - dev
     '''
     ret = {'name': name,
            'changes': {},

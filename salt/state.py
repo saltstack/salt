@@ -70,6 +70,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'check_cmd',
     'fail_hard',
     'onlyif',
+    'unless',
     'order',
     'prereq',
     'prereq_in',
@@ -1707,14 +1708,15 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
+                        if req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                found = True
+                                reqs[r_state].append(chunk)
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
-                                found = True
-                                reqs[r_state].append(chunk)
-                        elif req_key == 'sls':
-                            # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
@@ -1816,6 +1818,14 @@ class State(object):
                         req_val = req[req_key]
                         if req_val is None:
                             continue
+                        if req_key == 'sls':
+                            # Allow requisite tracking of entire sls files
+                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
+                                if requisite == 'prereq':
+                                    chunk['__prereq__'] = True
+                                reqs.append(chunk)
+                                found = True
+                            continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
                             if chunk['state'] == req_key:
@@ -1823,13 +1833,6 @@ class State(object):
                                     chunk['__prereq__'] = True
                                 elif requisite == 'prerequired':
                                     chunk['__prerequired__'] = True
-                                reqs.append(chunk)
-                                found = True
-                        elif req_key == 'sls':
-                            # Allow requisite tracking of entire sls files
-                            if fnmatch.fnmatch(chunk['__sls__'], req_val):
-                                if requisite == 'prereq':
-                                    chunk['__prereq__'] = True
                                 reqs.append(chunk)
                                 found = True
                     if not found:
@@ -1910,7 +1913,7 @@ class State(object):
             else:
                 # determine what the requisite failures where, and return
                 # a nice error message
-                comment_dict = {}
+                failed_requisites = set()
                 # look at all requisite types for a failure
                 for req_lows in six.itervalues(reqs):
                     for req_low in req_lows:
@@ -1925,13 +1928,18 @@ class State(object):
                             # use SLS.ID for the key-- so its easier to find
                             key = '{sls}.{_id}'.format(sls=req_low['__sls__'],
                                                        _id=req_low['__id__'])
-                            comment_dict[key] = req_ret['comment']
+                            failed_requisites.add(key)
 
-                running[tag] = {'changes': {},
-                                'result': False,
-                                'comment': 'One or more requisite failed: {0}'.format(comment_dict),
-                                '__run_num__': self.__run_num,
-                                '__sls__': low['__sls__']}
+                _cmt = 'One or more requisite failed: {0}'.format(
+                    ', '.join(str(i) for i in failed_requisites)
+                )
+                running[tag] = {
+                    'changes': {},
+                    'result': False,
+                    'comment': _cmt,
+                    '__run_num__': self.__run_num,
+                    '__sls__': low['__sls__']
+                }
             self.__run_num += 1
         elif status == 'change' and not low.get('__prereq__'):
             ret = self.call(low, chunks, running)
@@ -2520,7 +2528,6 @@ class BaseHighState(object):
         '''
         Render a state file and retrieve all of the include states
         '''
-        err = ''
         errors = []
         if not local:
             state_data = self.client.get_state(sls, saltenv)
@@ -2535,7 +2542,8 @@ class BaseHighState(object):
         if not fn_:
             errors.append(
                 'Specified SLS {0} in saltenv {1} is not '
-                'available on the salt master'.format(sls, saltenv)
+                'available on the salt master or through a configured '
+                'fileserver'.format(sls, saltenv)
             )
         state = None
         try:

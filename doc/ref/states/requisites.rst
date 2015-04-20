@@ -428,6 +428,11 @@ the specified commands return ``False``. The ``unless`` requisite operates
 as NOR and is useful in giving more granular control over when a state should
 execute.
 
+**NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with 
+``python_shell=True``.  This means the commands referenced by unless will be
+parsed by a shell, so beware of side-effects as this shell will be run with the
+same privileges as the salt-minion.
+
 .. code-block:: yaml
 
     vim:
@@ -443,7 +448,7 @@ exist (returns ``False``). The state will run if both commands return
 
 However, the state will not run if both commands return ``True``.
 
-Unless requisites are resolved for each name to which they are associated.
+Unless checks are resolved for each name to which they are associated.
 
 For example:
 
@@ -452,8 +457,8 @@ For example:
     deploy_app:
       cmd.run:
         - names:
-            - first_deploy_cmd
-            - second_deploy_cmd
+          - first_deploy_cmd
+          - second_deploy_cmd
         - unless: some_check
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
@@ -467,6 +472,11 @@ Onlyif
 ``onlyif`` is the opposite of ``unless``. If all of the commands in ``onlyif``
 return ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
+
+**NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with 
+``python_shell=True``.  This means the commands referenced by unless will be
+parsed by a shell, so beware of side-effects as this shell will be run with the
+same privileges as the salt-minion.
 
 .. code-block:: yaml
 
@@ -541,6 +551,11 @@ check_cmd
 
 Check Command is used for determining that a state did or did not run as
 expected.
+
+**NOTE**: Under the hood ``check_cmd`` calls ``cmd.retcode`` with 
+``python_shell=True``.  This means the commands referenced by unless will be
+parsed by a shell, so beware of side-effects as this shell will be run with the
+same privileges as the salt-minion.
 
 .. code-block:: yaml
 

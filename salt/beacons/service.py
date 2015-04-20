@@ -11,6 +11,17 @@ import logging
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for service beacon should be a list of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for service beacon must be a dictionary.')
+        return False
+    return True
+
+
 def beacon(config):
     '''
     Scan for the configured services and fire events

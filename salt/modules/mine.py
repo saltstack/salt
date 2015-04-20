@@ -209,6 +209,7 @@ def get(tgt, fun, expr_form='glob'):
         grain_pcre
         compound
         pillar
+        pillar_pcre
 
     Note that all pillar matches, whether using the compound matching system or
     the pillar matching system, will be exact matches, with globbing disabled.
@@ -231,6 +232,7 @@ def get(tgt, fun, expr_form='glob'):
                      'ipcidr': __salt__['match.ipcidr'],
                      'compound': __salt__['match.compound'],
                      'pillar': __salt__['match.pillar'],
+                     'pillar_pcre': __salt__['match.pillar_pcre'],
                      }[expr_form](tgt)
         if is_target:
             data = __salt__['data.getval']('mine_cache')
@@ -356,14 +358,17 @@ def get_docker(interfaces=None, cidrs=None):
                 if container['Image'] not in proxy_lists:
                     proxy_lists[container['Image']] = {}
                 for dock_port in container['Ports']:
+                    # IP exists only if port is exposed
+                    ip_address = dock_port.get('IP')
                     # If port is 0.0.0.0, then we must get the docker host IP
-                    if dock_port['IP'] == '0.0.0.0':
+                    if ip_address == '0.0.0.0':
                         for ip_ in host_ips:
                             proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                                 '{0}:{1}'.format(ip_, dock_port['PublicPort']))
                             proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
-                    elif dock_port['IP']:
+                    elif ip_address:
                         proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                             '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
                         proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
+
     return proxy_lists

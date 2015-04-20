@@ -18,6 +18,9 @@ try:
 except ImportError:
     HAS_SYSTEMD = False
 
+import logging
+log = logging.getLogger(__name__)
+
 __virtualname__ = 'journald'
 
 
@@ -38,6 +41,22 @@ def _get_journal():
     __context__['systemd.journald'].seek_tail()
     __context__['systemd.journald'].get_previous()
     return __context__['systemd.journald']
+
+
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for journald beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False
+    else:
+        for item in config:
+            if not isinstance(config[item], dict):
+                log.info('Configuration for journald beacon must '
+                         'be a dictionary of dictionaries.')
+                return False
+    return True
 
 
 def beacon(config):

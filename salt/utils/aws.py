@@ -71,14 +71,18 @@ def creds(provider):
                 return __AccessKeyId__, __SecretAccessKey__, __Token__
         # We don't have any cached credentials, or they are expired, get them
         # TODO: Wrap this with a try and handle exceptions gracefully
+
+        # Connections to instance meta-data must never be proxied
         result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+            proxies={'http': ''},
         )
         result.raise_for_status()
         role = result.text
         # TODO: Wrap this with a try and handle exceptions gracefully
         result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role)
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
+            proxies={'http': ''},
         )
         result.raise_for_status()
         data = result.json()

@@ -122,22 +122,44 @@ def _connect(contact_points=None, port=None, cql_user=None, cql_pass=None):
     :return:               The session and cluster objects.
     :rtype:                cluster object, session object
     '''
+    # Lazy load the Cassandra cluster and session for this module by creating a
+    # cluster and session when cql_query is called the first time. Get the
+    # Cassandra cluster and session from this module's __context__ after it is
+    # loaded the first time cql_query is called.
+    #
+    # TODO: Call cluster.shutdown() when the module is unloaded on
+    # master/minion shutdown. Currently, Master.shutdown() and Minion.shutdown()
+    # do nothing to allow loaded modules to gracefully handle resources stored
+    # in __context__ (i.e. connection pools). This means that the the connection
+    # pool is orphaned and Salt relies on Cassandra to reclaim connections.
+    # Perhaps if Master/Minion daemons could be enhanced to call an "__unload__"
+    # function, or something similar for each loaded module, connection pools
+    # and the like can be gracefully reclaimed/shutdown.
+    if (__context__
+        and 'cassandra_cql_returner_cluster' in __context__
+        and 'cassandra_cql_returner_session' in __context__):
+        return __context__['cassandra_cql_returner_cluster'], __context__['cassandra_cql_returner_session']
+    else:
+        contact_points = _load_properties(property_name=contact_points, config_option='cluster')
+        contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
+        port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
+        cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
+        cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
 
-    contact_points = _load_properties(property_name=contact_points, config_option='cluster')
-    contact_points = contact_points if isinstance(contact_points, list) else contact_points.split(',')
-    port = _load_properties(property_name=port, config_option='port', set_default=True, default=9042)
-    cql_user = _load_properties(property_name=cql_user, config_option='username', set_default=True, default="cassandra")
-    cql_pass = _load_properties(property_name=cql_pass, config_option='password', set_default=True, default="cassandra")
-
-    try:
-        auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
-        cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
-        session = cluster.connect()
-        log.debug('Successfully connected to Cassandra cluster at {0}'.format(contact_points))
-        return cluster, session
-    except (ConnectionException, ConnectionShutdown, NoHostAvailable):
-        log.error('Could not connect to Cassandra cluster at {0}'.format(contact_points))
-        raise CommandExecutionError('ERROR: Could not connect to Cassandra cluster.')
+        try:
+            auth_provider = PlainTextAuthProvider(username=cql_user, password=cql_pass)
+            cluster = Cluster(contact_points, port=port, auth_provider=auth_provider)
+            session = cluster.connect()
+            # TODO: Call cluster.shutdown() when the module is unloaded on shutdown.
+            __context__['cassandra_cql_returner_cluster'] = cluster
+            __context__['cassandra_cql_returner_session'] = session
+            log.debug('Successfully connected to Cassandra cluster at {0}'.format(contact_points))
+            return cluster, session
+        except TypeError:
+            pass
+        except (ConnectionException, ConnectionShutdown, NoHostAvailable):
+            log.error('Could not connect to Cassandra cluster at {0}'.format(contact_points))
+            raise CommandExecutionError('ERROR: Could not connect to Cassandra cluster.')
 
 
 def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=None):
@@ -188,8 +210,6 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
                 values[key] = value
             ret.append(values)
 
-    cluster.shutdown()
-
     return ret
 
 
@@ -212,9 +232,9 @@ def version(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.version
+        salt 'minion1' cassandra_cql.version
 
-        salt 'minion1' cassandra.version contact_points=minion1
+        salt 'minion1' cassandra_cql.version contact_points=minion1
     '''
     query = '''select release_version
                  from system.local
@@ -251,9 +271,9 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.info
+        salt 'minion1' cassandra_cql.info
 
-        salt 'minion1' cassandra.info contact_points=minion1
+        salt 'minion1' cassandra_cql.info contact_points=minion1
     '''
 
     query = '''select cluster_name,
@@ -301,9 +321,9 @@ def list_keyspaces(contact_points=None, port=None, cql_user=None, cql_pass=None)
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.list_keyspaces
+        salt 'minion1' cassandra_cql.list_keyspaces
 
-        salt 'minion1' cassandra.list_keyspaces contact_points=minion1 port=9000
+        salt 'minion1' cassandra_cql.list_keyspaces contact_points=minion1 port=9000
     '''
     query = '''select keyspace_name
                  from system.schema_keyspaces;'''
@@ -326,7 +346,7 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
     '''
     List column families in a Cassandra cluster for all keyspaces or just the provided one.
 
-    :param keyspace        The keyspace to provide the column families for, optional.
+    :param keyspace:       The keyspace to provide the column families for, optional.
     :type  keyspace:       str
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
     :type  contact_points: str | list[str]
@@ -343,11 +363,11 @@ def list_column_families(keyspace=None, contact_points=None, port=None, cql_user
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.list_column_families
+        salt 'minion1' cassandra_cql.list_column_families
 
-        salt 'minion1' cassandra.list_column_families contact_points=minion1
+        salt 'minion1' cassandra_cql.list_column_families contact_points=minion1
 
-        salt 'minion1' cassandra.list_column_families keyspace=system
+        salt 'minion1' cassandra_cql.list_column_families keyspace=system
     '''
     where_clause = "where keyspace_name = '{0}'".format(keyspace) if keyspace else ""
 
@@ -390,9 +410,9 @@ def keyspace_exists(keyspace, contact_points=None, port=None, cql_user=None, cql
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.keyspace_exists keyspace=system
+        salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
 
-        salt 'minion1' cassandra.list_keyspaces keyspace=system contact_points=minion1
+        salt 'minion1' cassandra_cql.list_keyspaces keyspace=system contact_points=minion1
     '''
     # Only project the keyspace_name to make the query efficien.
     # Like an echo
@@ -439,9 +459,9 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.create_keyspace keyspace=newkeyspace
+        salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace
 
-        salt 'minion1' cassandra.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
+        salt 'minion1' cassandra_cql.create_keyspace keyspace=newkeyspace replication_strategy=NetworkTopologyStrategy \
         replication_datacenters='{"datacenter_1": 3, "datacenter_2": 2}'
     '''
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
@@ -482,7 +502,7 @@ def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_p
     '''
     Drop a keyspace if it exists in a Cassandra cluster.
 
-    :param keyspace        The keyspace to drop.
+    :param keyspace:       The keyspace to drop.
     :type  keyspace:       str
     :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
     :type  contact_points: str | list[str]
@@ -499,9 +519,9 @@ def drop_keyspace(keyspace, contact_points=None, port=None, cql_user=None, cql_p
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.drop_keyspace keyspace=test
+        salt 'minion1' cassandra_cql.drop_keyspace keyspace=test
 
-        salt 'minion1' cassandra.drop_keyspace keyspace=test contact_points=minion1
+        salt 'minion1' cassandra_cql.drop_keyspace keyspace=test contact_points=minion1
     '''
     existing_keyspace = keyspace_exists(keyspace, contact_points, port)
     if existing_keyspace:
@@ -535,9 +555,9 @@ def list_users(contact_points=None, port=None, cql_user=None, cql_pass=None):
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.list_users
+        salt 'minion1' cassandra_cql.list_users
 
-        salt 'minion1' cassandra.list_users contact_points=minion1
+        salt 'minion1' cassandra_cql.list_users contact_points=minion1
     '''
     query = "list users;"
 
@@ -578,11 +598,11 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
 
     .. code-block:: bash
 
-        salt 'minion1' cassandra.create_user username=joe password=secret
+        salt 'minion1' cassandra_cql.create_user username=joe password=secret
 
-        salt 'minion1' cassandra.create_user username=joe password=secret superuser=True
+        salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True
 
-        salt 'minion1' cassandra.create_user username=joe password=secret superuser=True contact_points=minion1
+        salt 'minion1' cassandra_cql.create_user username=joe password=secret superuser=True contact_points=minion1
     '''
     superuser_cql = 'superuser' if superuser else 'nosuperuser'
     query = '''create user if not exists {0} with password '{1}' {2};'''.format(username, password, superuser_cql)
@@ -627,11 +647,12 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     :rtype:                dict
 
     .. code-block:: bash
-        salt 'minion1' cassandra.list_permissions
 
-        salt 'minion1' cassandra.list_permissions username=joe resource=test_keyspace permission=select
+        salt 'minion1' cassandra_cql.list_permissions
 
-        salt 'minion1' cassandra.list_permissions username=joe resource=test_table resource_type=table \
+        salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_keyspace permission=select
+
+        salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     '''
     keyspace_cql = "{0} {1}".format(resource_type, resource) if resource else "all keyspaces"
@@ -682,11 +703,12 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
     :rtype:
 
     .. code-block:: bash
-        salt 'minion1' cassandra.grant_permission
 
-        salt 'minion1' cassandra.grant_permission username=joe resource=test_keyspace permission=select
+        salt 'minion1' cassandra_cql.grant_permission
 
-        salt 'minion1' cassandra.grant_permission username=joe resource=test_table resource_type=table \
+        salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_keyspace permission=select
+
+        salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_table resource_type=table \
         permission=select contact_points=minion1
     '''
     permission_cql = "grant {0}".format(permission) if permission else "grant all permissions"
