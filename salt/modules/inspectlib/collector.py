@@ -248,7 +248,7 @@ class Inspector(object):
 
     def _prepare_full_scan(self, **kwargs):
         '''
-
+        Prepare full system scan by setting up the database etc.
         '''
         # TODO: Backup the SQLite database. Backup should be restored automatically if current db failed while queried.
         self.db.purge()
@@ -288,7 +288,6 @@ class Inspector(object):
         self.db.connection.commit()
 
         return ignored_all
-
 
     def snapshot(self, mode):
         '''
