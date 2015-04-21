@@ -286,8 +286,8 @@ def chshell(name, shell):
 
 def chhome(name, home, persist=False):
     '''
-    Change the home directory of the user, pass True for persist to copy files
-    to the new home dir
+    Change the home directory of the user, pass True for persist to move files
+    to the new home directory if the old home directory exist.
 
     CLI Example:
 
