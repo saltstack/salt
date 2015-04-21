@@ -213,7 +213,10 @@ def present(name,
         the state, True by default
 
     home
-        The location of the home directory to manage
+        The custom login directory of user. Uses default value of underlying
+        system if not set. Notice that this directory does not have to exists.
+        This also the location of the home directory to create if createhome is
+        set to True.
 
     createhome
         If True, the home directory will be created if it doesn't exist.
