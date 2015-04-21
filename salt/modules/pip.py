@@ -1,6 +1,77 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Install Python packages with pip to either the system or a virtualenv
+
+Windows Support
+===============
+
+.. versionadded:: 2014.7.4
+
+Salt now uses a portable python. As a result the entire pip module is now
+functional on the salt installation itself. You can pip install dependencies
+for your custom modules. You can even upgrade salt itself using pip. For this
+to work properly, you must specify the Current Working Directory (``cwd``) and
+the Pip Binary (``bin_env``) salt should use.
+
+For example, the following command will list all software installed using pip
+to your current salt environment:
+
+.. code-block:: bat
+
+   salt <minion> pip.list cwd='C:\salt\bin\Scripts' bin_env='C:\salt\bin\Scripts\pip.exe'
+
+Specifying the ``cwd`` and ``bin_env`` options ensures you're modifying the
+salt environment. If these are omitted, it will default to the local
+installation of python. If python is not installed locally it will fail saying
+it couldn't find pip.
+
+State File Support
+------------------
+
+This functionality works in states as well. If you need to pip install colorama
+with a state, for example, the following will work:
+
+.. code-block:: yaml
+
+   install_colorama:
+     pip.installed:
+       - name: colorama
+       - cwd: 'C:\salt\bin\scripts'
+       - bin_env: 'C:\salt\bin\scripts\pip.exe'
+       - upgrade: True
+
+Upgrading Salt using Pip
+------------------------
+
+You can now update salt using pip to any version from the 2014.7 branch
+forward. Previous version require recompiling some of the dependencies which is
+painful in windows.
+
+To do this you just use pip with git to update to the version you want and then
+restart the service. Here is a sample state file that upgrades salt to the head
+of the 2015.2 branch:
+
+.. code-block:: yaml
+
+   install_salt:
+     pip.installed:
+       - cwd: 'C:\salt\bin\scripts'
+       - bin_env: 'C:\salt\bin\scripts\pip.exe'
+       - editable: git+https://github.com/saltstack/salt@2015.2#egg=salt
+       - upgrade: True
+
+   restart_service:
+     service.running:
+       - name: salt-minion
+       - enable: True
+       - watch:
+         - pip: install_salt
+
+.. note::
+   If you're having problems, you might try doubling the back slashes. For
+   example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
+   back slash is an escape character.
+
 '''
 from __future__ import absolute_import
 

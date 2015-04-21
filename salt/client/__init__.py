@@ -948,8 +948,8 @@ class LocalClient(object):
                     # if additional lower-level masters deliver their lists of expected
                     # minions.
                     break
-           # If we get here we may not have gathered the minion list yet. Keep waiting
-           # for all lower-level masters to respond with their minion lists
+            # If we get here we may not have gathered the minion list yet. Keep waiting
+            # for all lower-level masters to respond with their minion lists
 
             # let start the timeouts for all remaining minions
 
@@ -1301,14 +1301,12 @@ class LocalClient(object):
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
                     if connected_minions and id_ not in connected_minions:
                         yield {id_: {'out': 'no_return',
-                                        'ret': 'Minion did not return. [Not connected]'}}
+                                     'ret': 'Minion did not return. [Not connected]'}}
                     else:
-                        yield({
-                            id_: {
-                                'out': 'no_return',
-                                'ret': 'Minion did not return. [No response]'
-                            }
-                        })
+                        # don't report syndics as unresponsive minions
+                        if not os.path.exists(os.path.join(self.opts['syndic_dir'], id_)):
+                            yield {id_: {'out': 'no_return',
+                                         'ret': 'Minion did not return. [No response]'}}
                 else:
                     yield {id_: min_ret}
 

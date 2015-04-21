@@ -341,7 +341,7 @@ def assemble(name,
                 opts.append(kwargs[key])
 
     # Devices may have been written with a blob:
-    if type(devices) is str:
+    if isinstance(devices, str):
         devices = devices.split(',')
 
     cmd = ['mdadm', '-A', name, '-v', opts] + devices

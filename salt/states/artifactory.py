@@ -75,8 +75,8 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         log.debug("ret=%s", str(ret))
 
         return ret
-    except Exception as e:
-        return None, e.message
+    except Exception as exception:
+        return None, exception
 
 
 def __fetch_from_artifactory(artifact, target_dir, target_file):

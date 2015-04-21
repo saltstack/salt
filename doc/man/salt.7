@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "7" "March 27, 2015" "2015.2.0rc1-246-g596dbc3" "Salt"
+.TH "SALT" "7" "April 21, 2015" "2015.2.0rc2-143-g32ef5ca" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -1403,6 +1403,18 @@ minion exe>\fP should match the contents of the corresponding md5 file.
 .IP "Download here"
 .INDENT 0.0
 .IP \(bu 2
+2014.7.5
+.IP \(bu 2
+\fI\%Salt\-Minion\-2014.7.5\-x86\-Setup.exe\fP | \fI\%md5\fP
+.IP \(bu 2
+\fI\%Salt\-Minion\-2014.7.5\-AMD64\-Setup.exe\fP | \fI\%md5\fP
+.IP \(bu 2
+2014.7.4
+.IP \(bu 2
+\fI\%Salt\-Minion\-2014.7.4\-x86\-Setup.exe\fP | \fI\%md5\fP
+.IP \(bu 2
+\fI\%Salt\-Minion\-2014.7.4\-AMD64\-Setup.exe\fP | \fI\%md5\fP
+.IP \(bu 2
 2014.7.2
 .IP \(bu 2
 \fI\%Salt\-Minion\-2014.7.2\-x86\-Setup.exe\fP | \fI\%md5\fP
@@ -1574,7 +1586,7 @@ The 2014.7.0 installers have been removed because of a regression. Please use th
 \fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-The executables above will install all dependencies that the Salt minion
+The executables above will install dependencies that the Salt minion
 requires.
 .UNINDENT
 .UNINDENT
@@ -1611,224 +1623,413 @@ Salt\-Minion\-0.17.0\-Setup\-amd64.exe /S /master=yoursaltmaster /minion\-name=y
 .UNINDENT
 .UNINDENT
 .SS Setting up a Windows build environment
+.sp
+This document will explain how to set up a development environment for salt on
+Windows. The development environment allows you to work with the source code to
+customize or fix bugs. It will also allow you to build your own installation.
+.SS The Easy Way
+.SS Prerequisite Software
+.sp
+To do this the easy way you only need to install \fI\%Git for Windows\fP\&.
+.SS Create the Build Environment
 .INDENT 0.0
-.IP 1. 4
-Install the Microsoft Visual C++ 2008 SP1 Redistributable, \fI\%vcredist_x86\fP
-or \fI\%vcredist_x64\fP\&.
-.IP 2. 4
-Install \fI\%msysgit\fP
-.IP 3. 4
-Clone the Salt git repository from GitHub
-.INDENT 4.0
+.IP 1. 3
+Clone the \fI\%Salt\-Windows\-Dev\fP
+repo from github.
+.sp
+Open a command line and type:
+.INDENT 3.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-git clone git://github.com/saltstack/salt.git
+git clone https://github.com/saltstack/salt\-windows\-dev
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.IP 4. 4
-Install the latest point release of \fI\%Python 2.7\fP for the architecture you
-wish to target
-.IP 5. 4
-Add C:\ePython27 and C:\ePython27\eScripts to your system path
-.IP 6. 4
-Download and run the Setuptools bootstrap \- \fI\%ez_setup.py\fP
-.INDENT 4.0
+.IP 2. 3
+Build the Python Environment
+.sp
+Go into the salt\-windows\-dev directory. Right\-click the file named
+\fBdev_env.ps1\fP and select \fBRun with PowerShell\fP
+.sp
+If you get an error, you may need to change the execution policy.
+.sp
+Open a powershell window and type the following:
+.INDENT 3.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-python ez_setup.py
+Set\-ExecutionPolicy RemoteSigned
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.IP 7. 4
+.sp
+This will download and install Python with all the dependencies needed to
+develop and build salt.
+.IP 3. 3
+Build the Salt Environment
+.sp
+Right\-click on the file named \fBdev_env_salt.ps1\fP and select \fBRun with
+Powershell\fP
+.sp
+This will clone salt into \fBC:\eSalt\-Dev\esalt\fP and set it to the 2015.2
+branch. You could optionally run the command from a powershell window with a
+\fB\-Version\fP switch to pull a different version. For example:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+dev_env_salt.ps1 \-Version \(aq2014.7\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To view a list of available branches and tags, open a command prompt in your
+\fIC:Salt\-Devsalt\fP directory and type:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git branch \-a
+git tag \-n
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS The Hard Way
+.SS Prerequisite Software
+.sp
+Install the following software:
+.INDENT 0.0
+.IP 1. 3
+\fI\%Git for Windows\fP
+.IP 2. 3
+\fI\%Nullsoft Installer\fP
+.UNINDENT
+.sp
+Download the Prerequisite zip file for your CPU architecture from the
+SaltStack download site:
+.INDENT 0.0
+.IP \(bu 2
+\fI\%Salt32.zip\fP
+.IP \(bu 2
+\fI\%Salt64.zip\fP
+.UNINDENT
+.sp
+These files contain all sofware required to build and develop salt. Unzip the
+contents of the file to \fBC:\eSalt\-Dev\etemp\fP\&.
+.SS Create the Build Environment
+.INDENT 0.0
+.IP 1. 3
+Build the Python Environment
+.INDENT 3.0
+.IP \(bu 2
+Install Python:
+.sp
+Browse to the \fBC:\eSalt\-Dev\etemp\fP directory and find the Python
+installation file for your CPU Architecture under the corresponding
+subfolder. Double\-click the file to install python.
+.sp
+Make sure the following are in your \fBPATH\fP environment variable:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+C:\ePython27
+C:\ePython27\eScripts
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP \(bu 2
 Install Pip
-.INDENT 4.0
+.sp
+Open a command prompt and navigate to \fBC:\eSalt\-Dev\etemp\fP
+Run the following command:
+.INDENT 3.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-easy_install pip
+python get\-pip.py
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.IP 8. 4
-Install the latest point release of \fI\%OpenSSL for Windows\fP
-.INDENT 4.0
+.IP \(bu 2
+Easy Install compiled binaries.
+.sp
+M2Crypto, PyCrypto, and PyWin32 need to be installed using Easy Install.
+Open a command prompt and navigate to \fBC:\eSalt\-Dev\etemp\e<cpuarch>\fP\&.
+Run the following commands:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+easy_install \-Z <M2Crypto file name>
+easy_install \-Z <PyCrypto file name>
+easy_install \-Z <PyWin32 file name>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 3.0
+.INDENT 3.5
+You can type the first part of the file name and then press the tab key
+to auto\-complete the name of the file.
+.UNINDENT
+.UNINDENT
+.IP \(bu 2
+Pip Install Additional Prerequisites
+.sp
+All remaining prerequisites need to be pip installed. These prerequisites
+are as follow:
+.INDENT 3.0
+.IP \(bu 2
+MarkupSafe
+.IP \(bu 2
+Jinja
+.IP \(bu 2
+MsgPack
+.IP \(bu 2
+PSUtil
+.IP \(bu 2
+PyYAML
+.IP \(bu 2
+PyZMQ
+.IP \(bu 2
+WMI
+.IP \(bu 2
+Requests
+.IP \(bu 2
+Certifi
+.UNINDENT
+.sp
+Open a command prompt and navigate to \fBC:\eSalt\-Dev\etemp\fP\&. Run the following
+commands:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+pip install <cpuarch>\e<MarkupSafe file name>
+pip install <Jinja file name>
+pip install <cpuarch>\e<MsgPack file name>
+pip install <cpuarch>\e<psutil file name>
+pip install <cpuarch>\e<PyYAML file name>
+pip install <cpuarch>\e<pyzmq file name>
+pip install <WMI file name>
+pip install <requests file name>
+pip install <certifi file name>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.IP 2. 3
+Build the Salt Environment
+.INDENT 3.0
+.IP \(bu 2
+Clone Salt
+.sp
+Open a command prompt and navigate to \fBC:\eSalt\-Dev\fP\&. Run the following command
+to clone salt:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git clone https://github.com/saltstack/salt
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP \(bu 2
+Checkout Branch
+.sp
+Checkout the branch or tag of salt you want to work on or build. Open a
+command prompt and navigate to \fBC:\eSalt\-Dev\esalt\fP\&. Get a list of
+available tags and branches by running the following commands:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git fetch \-\-all
+
+To view a list of available branches:
+git branch \-a
+
+To view a list of availabel tags:
+git tag \-n
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Checkout the branch or tag by typing the following command:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+git checkout <branch/tag name>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP \(bu 2
+Clean the Environment
+.sp
+When switching between branches residual files can be left behind that
+will interfere with the functionality of salt. Therefore, after you check
+out the branch you want to work on, type the following commands to clean
+the salt environment:
+.UNINDENT
+.UNINDENT
+.SS Developing with Salt
+.sp
+There are two ways to develop with salt. You can run salt\(aqs setup.py each time
+you make a change to source code or you can use the setup tools develop mode.
+.SS Configure the Minion
+.sp
+Both methods require that the minion configuration be in the \fBC:\esalt\fP
+directory. Copy the conf and var directories from \fBC:\eSalt\-Dev\esalt\epkg\e
+windows\ebuildenv\fP to \fBC:\esalt\fP\&. Now go into the \fBC:\esalt\econf\fP directory
+and edit the file name \fBminion\fP (no extension). You need to configure the
+master and id parameters in this file. Edit the following lines:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+master: <ip or name of your master>
+id: <name of your minion>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Setup.py Method
+.sp
+Go into the \fBC:\eSalt\-Dev\esalt\fP directory from a cmd prompt and type:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+python setup.py install \-\-force
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This will install python into your python installation at \fBC:\ePython27\fP\&.
+Everytime you make an edit to your source code, you\(aqll have to stop the minion,
+run the setup, and start the minion.
+.sp
+To start the salt\-minion go into \fBC:\ePython27\eScripts\fP from a cmd prompt and
+type:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-minion
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For debug mode type:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-minion \-l debug
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To stop the minion press Ctrl+C.
+.SS Setup Tools Develop Mode (Preferred Method)
+.sp
+To use the Setup Tools Develop Mode go into \fBC:\eSalt\-Dev\esalt\fP from a cmd
+prompt and type:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+pip install \-e .
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This will install pointers to your source code that resides at
+\fBC:\eSalt\-Dev\esalt\fP\&. When you edit your source code you only have to restart
+the minion.
+.SS Build the windows installer
+.sp
+This is the method of building the installer as of version 2014.7.4.
+.SS Clean the Environment
+.sp
+Make sure you don\(aqt have any leftover salt files from previous versions of salt
+in your Python directory.
+.INDENT 0.0
 .IP 1. 3
-During setup, choose first option to install in Windows system
+Remove all files that start with salt in the \fBC:\ePython27\eScripts\fP
 directory
+.IP 2. 3
+Remove all files and directorys that start with salt in the
+\fBC:\ePython27\eLib\esite\-packages\fP directory
 .UNINDENT
-.IP 9. 4
-Install the latest point release of \fI\%M2Crypto\fP
-.INDENT 4.0
-.IP 1. 3
-In general, be sure to download installers targeted at py2.7 for your
-chosen architecture
-.UNINDENT
-.IP 10. 4
-Install the latest point release of \fI\%pycrypto\fP
-.IP 11. 4
-Install the latest point release of \fI\%pywin32\fP
-.IP 12. 4
-Install the latest point release of \fI\%Cython\fP
-.IP 13. 4
-Install the latest point release of \fI\%jinja2\fP
-.IP 14. 4
-Install the latest point release of \fI\%msgpack\fP
-.IP 15. 4
-Install psutil
-.INDENT 4.0
+.SS Install Salt
+.sp
+Install salt using salt\(aqs setup.py. From the \fBC:\eSalt\-Dev\esalt\fP directory
+type the following command:
+.INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-easy_install psutil
+python setup.py install \-\-force
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.IP 16. 4
-Install pyzmq
-.INDENT 4.0
+.SS Build the Installer
+.sp
+From cmd prompt go into the \fBC:\eSalt\-Dev\esalt\epkg\ewindows\fP directory. Type
+the following command for the branch or tag of salt you\(aqre building:
+.INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-easy_install pyzmq
+BuildSalt.bat <branch or tag>
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.IP 17. 4
-Install PyYAML
-.INDENT 4.0
-.INDENT 3.5
 .sp
-.nf
-.ft C
-easy_install pyyaml
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 18. 4
-Install bbfreeze
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-easy_install bbfreeze
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 19. 4
-Install wmi
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-pip install wmi
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 20. 4
-Install requests
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-pip install requests
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 21. 4
-Install markupsafe
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-pip install markupsafe
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 22. 4
-Install six
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-pip install six
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 23. 4
-Install esky
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-pip install esky
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 24. 4
-Install Salt
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-cd salt
-python setup.py install
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.IP 25. 4
-Build a frozen binary distribution of Salt
-.INDENT 4.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-python setup.py bdist_esky
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.UNINDENT
-.sp
-A zip file has been created in the \fBdist/\fP folder, containing a frozen copy
-of Python and the dependency libraries, along with Windows executables for each
-of the Salt scripts.
-.SS Building the installer
-.sp
-The Salt Windows installer is built with the open\-source NSIS compiler. The
-source for the installer is found in the pkg directory of the Salt repo here:
-\fI\%https://github.com/saltstack/salt/blob/develop/pkg/windows/installer/Salt\-Minion\-Setup.nsi\fP\&. To create the installer,
-extract the frozen archive from \fBdist/\fP into \fBpkg/windows/buildenv/\fP and
-run NSIS.
-.sp
-The NSIS installer can be found here: \fI\%http://nsis.sourceforge.net/Main_Page\fP
+This will copy python with salt installed to the \fBbuildenv\ebin\fP directory,
+make it portable, and then create the windows installer . The .exe for the
+windows installer will be placed in the \fBinstaller\fP directory.
 .SS Testing the Salt minion
 .INDENT 0.0
 .IP 1. 3
@@ -1934,7 +2135,7 @@ For more info check \fI\%http://csa\-net.dk/salt\fP
 .sp
 On windows Server 2003, you need to install optional component "wmi windows
 installer provider" to have full list of installed packages. If you don\(aqt have
-this, salt\-minion can\(aqt report some installed packages.
+this, salt\-minion can\(aqt report some installed softwares.
 .SS SUSE Installation
 .sp
 With openSUSE 13.1, Salt 0.16.4 has been available in the primary repositories.
@@ -8339,11 +8540,8 @@ be used to install it:
 If \fI\%pygit2\fP is not packaged for the platform on which the Master is running, the
 \fI\%pygit2\fP website has installation instructions \fI\%here\fP\&. Keep in mind however that
 following these instructions will install libgit2 and \fI\%pygit2\fP without system
-packages. Also, while this is not explicitly mentioned in the \fI\%pygit2\fP
-installation instructions, libssh2 development headers must be installed before
-building libgit2 in order to enable access to SSH\-protected git repositories.
-Luckily, these are available in most distros\(aq repositories, usually as either
-\fBlibssh2\-devel\fP or \fBlibssh2\-dev\fP, depending on platform.
+packages. Additionally, keep in mind that \fI\%SSH authentication in pygit2\fP requires \fI\%libssh2\fP (\fInot\fP libssh) development
+libraries to be present before libgit2 is built.
 .SS GitPython
 .sp
 \fI\%GitPython\fP 0.3.0 or newer is required to use GitPython for gitfs. For
@@ -11657,6 +11855,7 @@ nodegroups. Here\(aqs an example nodegroup configuration within
 nodegroups:
   group1: \(aqL@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com\(aq
   group2: \(aqG@os:Debian and foo.domain.com\(aq
+  group3: \(aqG@os:Debian and N@group1\(aq
 .ft P
 .fi
 .UNINDENT
@@ -11667,6 +11866,15 @@ nodegroups:
 .INDENT 3.5
 The \fBL\fP within group1 is matching a list of minions, while the \fBG\fP in
 group2 is matching specific grains. See the \fBcompound matchers\fP documentation for more details.
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Nodgroups can reference other nodegroups as seen in \fBgroup3\fP\&.  Ensure
+that you do not have circular references.  Circular references will be
+detected and cause partial expansion with a logged error message.
 .UNINDENT
 .UNINDENT
 .sp
@@ -12604,60 +12812,39 @@ salt\-master \-l debug
 .UNINDENT
 .SS Understanding the Structure of Reactor Formulas
 .sp
-While the reactor system uses the same data structure as the state system, this
-data does not translate the same way to function calls.
+\fBI.e., when to use \(gaarg\(ga and \(gakwarg\(ga and when to specify the function
+arguments directly.\fP
+.sp
+While the reactor system uses the same basic data structure as the state
+system, the functions that will be called using that data structure are
+different functions than are called via Salt\(aqs state system. The Reactor can
+call Runner modules using the \fIrunner\fP prefix, Wheel modules using the \fIwheel\fP
+prefix, and can also cause minions to run Execution modules using the \fIlocal\fP
+prefix.
 .sp
 Changed in version 2014.7.0: The \fBcmd\fP prefix was renamed to \fBlocal\fP for consistency with other
 parts of Salt. A backward\-compatible alias was added for \fBcmd\fP\&.
 
 .sp
-In state files the minion generates the data structure locally and uses that to
-call local state functions. In the reactor system the master generates a data
-structure that is used to call methods on one of Salt\(aqs client interfaces
-described in \fIthe Python API documentation\fP\&.
-.INDENT 0.0
-.IP \(bu 2
-\fBLocalClient\fP is used to call Execution modules
-remotely on minions. (The \fBsalt\fP CLI program uses this also.)
-.IP \(bu 2
-\fBRunnerClient\fP calls Runner modules locally on the
-master.
-.IP \(bu 2
-\fBWheelClient\fP calls Wheel modules locally on the
-master.
-.UNINDENT
+The Reactor runs on the master and calls functions that exist on the master. In
+the case of Runner and Wheel functions the Reactor can just call those
+functions directly since they exist on the master and are run on the master.
 .sp
-The \fBstate declaration\fP field takes a reference to the function to call
-in each interface. So to trigger a salt\-run call the \fBstate
-declaration\fP field will start with \fBrunner\fP, followed by the runner
-function to call. This means that a call to what would be on the command line
-\fBsalt\-run manage.up\fP will be \fBrunner.manage.up\fP\&. An example of
-this in a reactor formula would look like this:
-.INDENT 0.0
-.INDENT 3.5
+In the case of functions that exist on minions and are run on minions, the
+Reactor still needs to call a function on the master in order to send the
+necessary data to the minion so the minion can execute that function.
 .sp
-.nf
-.ft C
-manage_up:
-  runner.manage.up
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
+The Reactor calls functions exposed in \fISalt\(aqs Python API documentation\fP\&. and thus the structure of Reactor files very transparently
+reflects the function signatures of those functions.
+.SS Calling Execution modules on Minions
 .sp
-If the runner takes arguments then they can be specified as well:
-.INDENT 0.0
-.INDENT 3.5
+The Reactor sends commands down to minions in the exact same way Salt\(aqs CLI
+interface does. It calls a function locally on the master that sends the name
+of the function as well as a list of any arguments and a dictionary of any
+keyword arguments that the minion should use to execute that function.
 .sp
-.nf
-.ft C
-overstate_dev_env:
-  runner.state.over:
-    \- env: dev
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
+Specifically, the Reactor calls the async version of \fBthis function\fP\&. You can see that function has \(aqarg\(aq and \(aqkwarg\(aq
+parameters which are both values that are sent down to the minion.
 .sp
 Executing remote commands maps to the \fBLocalClient\fP interface which is
 used by the \fBsalt\fP command. This interface more specifically maps to
@@ -12720,6 +12907,47 @@ clean_tmp:
 .UNINDENT
 .UNINDENT
 .sp
+Any other parameters in the \fBLocalClient().cmd()\fP method can be specified as well.
+.SS Calling Runner modules and Wheel modules
+.sp
+Calling Runenr modules and wheel modules from the Reactor uses a more direct
+syntax since the function is being executed locally instead of sending a
+command to a remote system to be executed there. There are no \(aqarg\(aq or \(aqkwarg\(aq
+parameters (unless the Runenr function or Wheel function accepts a paramter
+with either of those names.)
+.sp
+For example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+clear_the_grains_cache_for_all_minions:
+  runner.cache.clear_grains
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If \fBthe runner takes arguments\fP then
+they can be specified as well:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+spin_up_more_web_machines:
+  runner.cloud.profile:
+    \- prof: centos_6
+    \- instances:
+      \- web11       # These VM names would be generated via Jinja in a
+      \- web12       # real\-world example.
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Passing event data to Minions or Orchestrate as Pillar
+.sp
 An interesting trick to pass data from the Reactor script to
 \fBstate.highstate\fP or \fBstate.sls\fP is to pass it as inline Pillar data since
 both functions take a keyword argument named \fBpillar\fP\&.
@@ -12773,6 +13001,34 @@ The above command is equivalent to the following command at the CLI:
 .nf
 .ft C
 salt \(aqhaproxy*\(aq state.sls haproxy.refresh_pool \(aqpillar={new_minion: minionid}\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This works with Orchestrate files as well:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+call_some_orchestrate_file:
+  runner.state.orchestrate:
+    \- mods: some_orchestrate_file
+    \- pillar:
+        stuff: things
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Which is equivalent to the following command at the CLI:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run state.orchestrate some_orchestrate_file pillar=\(aq{stuff: things}\(aq
 .ft P
 .fi
 .UNINDENT
@@ -14428,7 +14684,7 @@ Fired when an instance has been destroyed.
 .SS Listening for Events
 .sp
 Salt\(aqs Event Bus is used heavily within Salt and it is also written to
-integrate heavily with existings tooling and scripts. There is a variety of
+integrate heavily with existing tooling and scripts. There is a variety of
 ways to consume it.
 .SS From the CLI
 .sp
@@ -16056,6 +16312,9 @@ joyent:
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+Another useful reference for viewing more salt\-cloud actions is the
+:ref:Salt Cloud Feature Matrix <salt\-cloud\-feature\-matrix>
 .SS Cloud Functions
 .sp
 Cloud functions work much the same way as cloud actions, except that they don\(aqt
@@ -16072,6 +16331,40 @@ $ salt\-cloud \-f show_image ec2 image=ami\-fd20ad94
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+There are three universal salt\-cloud functions that are extremely useful for
+gathering information about instances on a provider basis:
+.sp
+
+.nf
+*
+.fi
+\fBlist_nodes\fP: Returns some general information about the instances for the given provider.
+
+.nf
+*
+.fi
+\fBlist_nodes_full\fP: Returns all information about the instances for the given provider.
+
+.nf
+*
+.fi
+\fBlist_nodes_select\fP: Returns select information about the instances for the given provider.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ salt\-cloud \-f list_nodes linode
+$ salt\-cloud \-f list_nodes_full linode
+$ salt\-cloud \-f list_nodes_select linode
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Another useful reference for viewing salt\-cloud functions is the
+:ref:Salt Cloud Feature Matrix <salt\-cloud\-feature\-matrix>
 .SS Core Configuration
 .SS Core Configuration
 .sp
@@ -16116,48 +16409,18 @@ minion:
 .sp
 In particular, this is the location to specify the location of the salt master
 and its listening port, if the port is not set to the default.
-.SS New Cloud Configuration Syntax
+.SS Cloud Configuration Syntax
 .sp
 The data specific to interacting with public clouds is set up here.
 .sp
-\fBATTENTION\fP: Since version 0.8.7 a new cloud provider configuration syntax
-was implemented.  It will allow for multiple configurations of the same cloud
-provider where only minor details can change, for example, the region for an
-EC2 instance. While the old format is still supported and automatically
-migrated every time salt\-cloud configuration is parsed, a choice was made to
-warn the user or even exit with an error if both formats are mixed.
-.SS Migrating Configurations
-.sp
-If you wish to migrate, there are several alternatives. Since the old syntax
-was mainly done on the main cloud configuration file, see the next before and
-after migration example.
-.INDENT 0.0
-.IP \(bu 2
-Before migration in \fB/etc/salt/cloud\fP:
-.UNINDENT
+Cloud provider configuration syntax can live in several places. The first is in
+\fB/etc/salt/cloud\fP:
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-AWS.id: HJGRYCILJLKJYG
-AWS.key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
-AWS.keyname: test
-AWS.securitygroup: quick\-start
-AWS.private_key: /root/test.pem
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-After migration in \fB/etc/salt/cloud\fP:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
+# /etc/salt/cloud
 providers:
   my\-aws\-migrated\-config:
     id: HJGRYCILJLKJYG
@@ -16171,28 +16434,19 @@ providers:
 .UNINDENT
 .UNINDENT
 .sp
-Notice that it\(aqs no longer required to name a cloud provider\(aqs configuration
-after its provider; it can be an alias, though an additional configuration
-key is added, \fBprovider\fP\&. This allows for multiple configuration for the same
-cloud provider to coexist.
+Cloud provider configuration data can also be housed in \fB/etc/salt/cloud.providers\fP
+or any file matching \fB/etc/salt/cloud.providers.d/*.conf\fP\&. All files in any of these
+locations will be parsed for cloud provider data.
 .sp
-While moving towards an improved and extensible configuration handling
-regarding the cloud providers, \fB\-\-providers\-config\fP, which defaults to
-\fB/etc/salt/cloud.providers\fP, was added to the cli parser.  It allows for the
-cloud providers configuration to be provided in a different file, and/or even
-any matching file on a sub\-directory, \fBcloud.providers.d/*.conf\fP which is
-relative to the providers configuration file(with the above configuration file
-as an example, \fB/etc/salt/cloud.providers.d/*.conf\fP).
-.sp
-So, using the example configuration above, after migration in
-\fB/etc/salt/cloud.providers\fP or
-\fB/etc/salt/cloud.providers.d/aws\-migrated.conf\fP:
+Using the example configuration above:
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-my\-aws\-migrated\-config:
+# /etc/salt/cloud.providers
+# or could be /etc/salt/cloud.providers.d/*.conf
+my\-aws\-config:
   id: HJGRYCILJLKJYG
   key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
   keyname: test
@@ -16204,50 +16458,16 @@ my\-aws\-migrated\-config:
 .UNINDENT
 .UNINDENT
 .sp
-Notice that on this last migrated example, it \fBno longer\fP includes the
-\fBproviders\fP starting key.
-.sp
-While migrating the cloud providers configuration, if the provider alias (from
-the above example \fBmy\-aws\-migrated\-config\fP) changes from what you had (from
-the above example \fBaws\fP), you will also need to change the \fBprovider\fP
-configuration key in the defined profiles.
-.INDENT 0.0
-.IP \(bu 2
-From:
-.UNINDENT
+\fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-.sp
-.nf
-.ft C
-rhel_aws:
-  provider: aws
-  image: ami\-e565ba8c
-  size: t1.micro
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-To:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-rhel_aws:
-  provider: my\-aws\-migrated\-config
-  image: ami\-e565ba8c
-  size: t1.micro
-.ft P
-.fi
+Salt Cloud provider configurations within \fB/etc/cloud.provider.d/ should not
+specify the \(ga\(gaproviders\fP starting key.
 .UNINDENT
 .UNINDENT
 .sp
-This new configuration syntax even allows you to have multiple cloud
-configurations under the same alias, for example:
+It is also possible to have multiple cloud configuration blocks within the same alias block.
+For example:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16259,6 +16479,7 @@ production\-config:
     keyname: test
     securitygroup: quick\-start
     private_key: /root/test.pem
+    provider: aws
 
   \- user: example_user
     apikey: 123984bjjas87034
@@ -16268,10 +16489,8 @@ production\-config:
 .UNINDENT
 .UNINDENT
 .sp
-\fBNotice the dash and indentation on the above example.\fP
-.sp
-Having multiple entries for a configuration alias also makes the \fBprovider\fP
-key on any defined profile to change, see the example:
+However, using this configuration method requires a change with profile configuration blocks.
+The provider alias needs to have the provider key value appended as in the following example:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16287,7 +16506,6 @@ rhel_aws_prod:
   image: ami\-e565ba8c
   size: High\-CPU Extra Large Instance
 
-
 database_prod:
   provider: production\-config:rackspace
   image: Ubuntu 12.04 LTS
@@ -16297,23 +16515,23 @@ database_prod:
 .UNINDENT
 .UNINDENT
 .sp
-Notice that because of the multiple entries, one has to be explicit about the
-provider alias and name, from the above example, \fBproduction\-config:aws\fP\&.
+Notice that because of the multiple entries, one has to be explicit about the provider alias and
+name, from the above example, \fBproduction\-config: aws\fP\&.
 .sp
-This new syntax also changes the interaction with the \fBsalt\-cloud\fP binary.
-\fB\-\-list\-location\fP, \fB\-\-list\-images\fP, and \fB\-\-list\-sizes\fP which needs a cloud
-provider as an argument. Since 0.8.7 the argument used should be the configured
-cloud provider alias. If the provider alias only has a single entry, use
-\fB<provider\-alias>\fP\&.  If it has multiple entries,
-\fB<provider\-alias>:<provider\-name>\fP should be used.
+This data interactions with the \fBsalt\-cloud\fP binary regarding its \fB\-\-list\-location\fP,
+\fB\-\-list\-images\fP, and \fB\-\-list\-sizes\fP which needs a cloud provider as an argument. The argument
+used should be the configured cloud provider alias. If the provider alias has multiple entries,
+\fB<provider\-alias>: <provider\-name>\fP should be used.
+.sp
+To allow for a more extensible configuration, \fB\-\-providers\-config\fP, which defaults to
+\fB/etc/salt/cloud.providers\fP, was added to the cli parser.  It allows for the providers\(aq
+configuration to be added on a per\-file basis.
 .SS Pillar Configuration
 .sp
-It is possible to configure cloud providers using pillars.  This is only used
-when inside the cloud module.  You can setup a variable called \fBcloud\fP that
-contains your profile and provider to pass that information to the cloud
-servers instead of having to copy the full configuration to every minion.
-.sp
-In your pillar file, you would use something like this.
+It is possible to configure cloud providers using pillars. This is only used when inside the cloud
+module. You can setup a variable called \fBcloud\fP that contains your profile and provider to pass
+that information to the cloud servers instead of having to copy the full configuration to every
+minion. In your pillar file, you would use something like this:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16350,44 +16568,20 @@ cloud:
       size: performance1\-8
       image: bb02b1a3\-bc77\-4d17\-ab5b\-421d89850fca
       script_args: git develop
-      flush_mine_on_destroy: True
 
     ubuntu\-openstack:
       provider: my\-openstack
       size: performance1\-8
       image: bb02b1a3\-bc77\-4d17\-ab5b\-421d89850fca
       script_args: git develop
-      flush_mine_on_destroy: True
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.sp
-\fBNOTE\fP: This is only valid in the cloud module, so also in the cloud state.
-This does not work with the salt\-cloud binary.
 .SS Cloud Configurations
 .SS Rackspace
 .sp
-Rackspace cloud requires two configuration options:
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-RACKSPACE.user: example_user
-RACKSPACE.apikey: 123984bjjas87034
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
+Rackspace cloud requires two configuration options; a \fBuser\fP and an \fBapikey\fP:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16396,40 +16590,23 @@ Using the new configuration format:
 my\-rackspace\-config:
   user: example_user
   apikey: 123984bjjas87034
-  provider: rackspace
+  provider: rackspace\-config
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have \fBprovider:
-rackspace\-config\fP instead of \fBprovider: rackspace\fP on a profile
-configuration.
-.SS Amazon AWS
-.sp
-A number of configuration options are required for Amazon AWS:
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
+\fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-rackspace\-config\fP\&.
+.UNINDENT
+.UNINDENT
+.SS Amazon AWS
 .sp
-.nf
-.ft C
-AWS.id: HJGRYCILJLKJYG
-AWS.key: \(aqkdjgfsgm;woormgl/aserigjksjdhasdfgn\(aq
-AWS.keyname: test
-AWS.securitygroup: quick\-start
-AWS.private_key: /root/test.pem
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
+A number of configuration options are required for Amazon AWS including \fBid\fP,
+\fBkey\fP, \fBkeyname\fP, \fBsercuritygroup\fP, and \fBprivate_key\fP:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16455,32 +16632,18 @@ my\-aws\-default:
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-aws\-quick\-start\fP or \fBprovider: my\-aws\-default\fP instead of
-\fBprovider: aws\fP on a profile configuration.
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be either \fBprovider: my\-aws\-quick\-start\fP
+or \fBprovider: my\-aws\-default\fP\&.
+.UNINDENT
+.UNINDENT
 .SS Linode
 .sp
 Linode requires a single API key, but the default root password also needs to
 be set:
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-LINODE.apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
-LINODE.password: F00barbaz
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16497,84 +16660,52 @@ my\-linode\-config:
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-linode\-config\fP instead of \fBprovider: linode\fP on a profile
-configuration.
-.sp
 The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
-.SS Joyent Cloud
 .sp
-The Joyent cloud requires three configuration parameters. The username and
-password that are used to log into the Joyent system, and the location of the
-private SSH key associated with the Joyent account. The SSH key is needed to
-send the provisioning commands up to the freshly created virtual machine.
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
+\fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-linode\-config\fP
+.UNINDENT
+.UNINDENT
+.SS Joyent Cloud
 .sp
-.nf
-.ft C
-JOYENT.user: fred
-JOYENT.password: saltybacon
-JOYENT.private_key: /root/joyent.pem
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
+The Joyent cloud requires three configuration parameters: The username and
+password that are used to log into the Joyent system, as well as the location
+of the private SSH key associated with the Joyent account. The SSH key is needed
+to send the provisioning commands up to the freshly created virtual machine.
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
 my\-joyent\-config:
-    user: fred
-    password: saltybacon
-    private_key: /root/mykey.pem
-    keyname: mykey
-    provider: joyent
+  user: fred
+  password: saltybacon
+  private_key: /root/joyent.pem
+  provider: joyent
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-joyent\-config\fP instead of \fBprovider: joyent\fP on a profile
-configuration.
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-joyent\-config\fP
+.UNINDENT
+.UNINDENT
 .SS GoGrid
 .sp
-To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
+To use Salt Cloud with GoGrid, log into the GoGrid web interface and create an
 API key. Do this by clicking on "My Account" and then going to the API Keys
 tab.
 .sp
-The GOGRID.apikey and the GOGRID.sharedsecret configuration parameters need to
+The \fBapikey\fP and the \fBsharedsecret\fP configuration parameters need to
 be set in the configuration file to enable interfacing with GoGrid:
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-GOGRID.apikey: asdff7896asdh789
-GOGRID.sharedsecret: saltybacon
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16589,64 +16720,19 @@ my\-gogrid\-config:
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-gogrid\-config\fP instead of \fBprovider: gogrid\fP on a profile
-configuration.
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-gogrid\-config\fP\&.
+.UNINDENT
+.UNINDENT
 .SS OpenStack
 .sp
 OpenStack configuration differs between providers, and at the moment several
 options need to be specified. This module has been officially tested against
 the HP and the Rackspace implementations, and some examples are provided for
 both.
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-# For HP
-OPENSTACK.identity_url: \(aqhttps://region\-a.geo\-1.identity.hpcloudsvc.com:35357/v2.0/\(aq
-OPENSTACK.compute_name: Compute
-OPENSTACK.compute_region: \(aqaz\-1.region\-a.geo\-1\(aq
-OPENSTACK.tenant: myuser\-tenant1
-OPENSTACK.user: myuser
-OPENSTACK.ssh_key_name: mykey
-OPENSTACK.ssh_key_file: \(aq/etc/salt/hpcloud/mykey.pem\(aq
-OPENSTACK.password: mypass
-
-# For Rackspace
-OPENSTACK.identity_url: \(aqhttps://identity.api.rackspacecloud.com/v2.0/tokens\(aq
-OPENSTACK.compute_name: cloudServersOpenStack
-OPENSTACK.protocol: ipv4
-OPENSTACK.compute_region: DFW
-OPENSTACK.protocol: ipv4
-OPENSTACK.user: myuser
-OPENSTACK.tenant: 5555555
-OPENSTACK.password: mypass
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-If you have an API key for your provider, it may be specified instead of a
-password:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-OPENSTACK.apikey: 901d3f579h23c8v73q9
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16698,29 +16784,21 @@ my\-openstack\-rackspace\-config:
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-openstack\-hp\-config\fP or \fBprovider:
-my\-openstack\-rackspace\-config\fP instead of \fBprovider: openstack\fP on a profile
-configuration.
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be either \fBprovider: my\-openstack\-hp\-config\fP
+or \fBprovider: my\-openstack\-rackspace\-config\fP\&.
+.UNINDENT
+.UNINDENT
 .sp
 You will certainly need to configure the \fBuser\fP, \fBtenant\fP, and either
 \fBpassword\fP or \fBapikey\fP\&.
 .sp
 If your OpenStack instances only have private IP addresses and a CIDR range of
 private addresses are not reachable from the salt\-master, you may set your
-preference to have Salt ignore it. Using the old could configurations syntax:
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-OPENSTACK.ignore_cidr: 192.168.0.0/16
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.sp
-Using the new syntax:
+preference to have Salt ignore it:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16749,69 +16827,33 @@ my\-openstack\-config:
 .UNINDENT
 .SS DigitalOcean
 .sp
-Using Salt for DigitalOcean requires a client_key and an api_key. These can be
-found in the DigitalOcean web interface, in the "My Settings" section, under
-the API Access tab.
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
+Using Salt for DigitalOcean requires a \fBclient_key\fP and an \fBapi_key\fP\&. These
+can be found in the DigitalOcean web interface, in the "My Settings" section,
+under the API Access tab.
+.. code\-block:: yaml
 .INDENT 0.0
 .INDENT 3.5
-.sp
-.nf
-.ft C
-DIGITAL_OCEAN.client_key: wFGEwgregeqw3435gDger
-DIGITAL_OCEAN.api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
 .INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
+.TP
+.B my\-digitalocean\-config:
+provider: digital_ocean
+personal_access_token: xxx
+location: New York 1
 .UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-.sp
-.nf
-.ft C
-my\-digitalocean\-config:
-  provider: digital_ocean
-  personal_access_token: xxx
-  location: New York 1
-.ft P
-.fi
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-digital\-ocean\-config\fP\&.
 .UNINDENT
 .UNINDENT
-.sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-digitalocean\-config\fP instead of \fBprovider: digital_ocean\fP on a
-profile configuration.
 .SS Parallels
 .sp
-Using Salt with Parallels requires a user, password, and URL. These can be
-obtained from your cloud provider.
-.INDENT 0.0
-.IP \(bu 2
-Using the old format:
-.UNINDENT
-.INDENT 0.0
-.INDENT 3.5
-.sp
-.nf
-.ft C
-PARALLELS.user: myuser
-PARALLELS.password: xyzzy
-PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
-.ft P
-.fi
-.UNINDENT
-.UNINDENT
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
+Using Salt with Parallels requires a \fBuser\fP, \fBpassword\fP and \fBURL\fP\&. These
+can be obtained from your cloud provider.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16827,17 +16869,17 @@ my\-parallels\-config:
 .UNINDENT
 .UNINDENT
 .sp
-\fBNOTE\fP: With the new providers configuration syntax you would have
-\fBprovider: my\-parallels\-config\fP instead of \fBprovider: parallels\fP on a
-profile configuration.
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-parallels\-config\fP\&.
+.UNINDENT
+.UNINDENT
 .SS Proxmox
 .sp
-Using Salt with Proxmox requires a user, password, and URL. These can be
+Using Salt with Proxmox requires a \fBuser\fP, \fBpassword\fP, and \fBURL\fP\&. These can be
 obtained from your cloud provider. Both PAM and PVE users can be used.
-.INDENT 0.0
-.IP \(bu 2
-Using the new configuration format:
-.UNINDENT
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16852,13 +16894,19 @@ my\-proxmox\-config:
 .fi
 .UNINDENT
 .UNINDENT
-.SS lxc
 .sp
-The lxc driver is a new, experimental driver for installing Salt on
-newly provisioned (via saltcloud) lxc containers. It will in turn use saltify
-to install salt and reattach the lxc container as a new lxc minion.
-As soon as we can, we manage baremetal operation over SSH.
-You can also destroy those containers via this driver.
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: my\-proxmox\-config\fP\&.
+.UNINDENT
+.UNINDENT
+.SS LXC
+.sp
+The lxc driver uses saltify to install salt and attach the lxc container as a new lxc
+minion. As soon as we can, we manage baremetal operation over SSH. You can also destroy
+those containers via this driver.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -16892,6 +16940,18 @@ devhost10\-lxc:
     \- lxc.utsname: superlxc
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be 
+.nf
+\(ga\(ga
+.fi
+provdier: devhost10\-lxc\(ga.
 .UNINDENT
 .UNINDENT
 .SS Saltify
@@ -16930,6 +16990,14 @@ make_salty:
     sudo: True
 .ft P
 .fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+In the cloud profile that uses this provider configuration, the syntax for the
+\fBprovider\fP required field would be \fBprovider: make_salty\fP\&.
 .UNINDENT
 .UNINDENT
 .SS Extending Profiles and Cloud Providers Configuration
@@ -22367,6 +22435,37 @@ ssh_agent: True
 .fi
 .UNINDENT
 .UNINDENT
+.SS File Map Upload
+.sp
+New in version 2014.7.0.
+
+.sp
+The \fBfile_map\fP option allows an arbitrary group of files to be uploaded to the
+target system before running the deploy script. This functionality requires a
+provider uses salt.utils.cloud.bootstrap(), which is currently limited to the ec2,
+gce, openstack and nova drivers.
+.sp
+The \fBfile_map\fP can be configured globally in \fB/etc/salt/cloud\fP, or in any cloud
+provider or profile file. For example, to upload an extra package or a custom deploy
+script, a cloud profile using \fBfile_map\fP might look like:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ubuntu14:
+  provider: ec2\-config
+  image: ami\-98aa1cf0
+  size: t1.micro
+  ssh_username: root
+  securitygroup: default
+  file_map:
+    /local/path/to/custom/script: /remote/path/to/use/custom/script
+    /local/path/to/package: /remote/path/to/store/package
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS Troubleshooting Steps
 .SS Troubleshooting Salt Cloud
 .sp
@@ -24985,6 +25084,102 @@ T}	T{
 T}
 _
 T{
+list_nodes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}
+_
+T{
+list_nodes_full
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}
+_
+T{
+list_nodes_select
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}	T{
+Yes
+T}
+_
+T{
 list_vlans
 T}	T{
 T}	T{
@@ -26428,7 +26623,7 @@ _
 T{
 \fByubico\fP
 T}	T{
-Provide authentication using YubiKey
+Provide authentication using YubiKey.
 T}
 _
 .TE
@@ -26966,7 +27161,15 @@ Try and authenticate
 .UNINDENT
 .SS salt.auth.yubico
 .sp
-Provide authentication using YubiKey
+Provide authentication using YubiKey.
+.sp
+New in version 2015.2.0.
+
+.INDENT 0.0
+.TP
+.B depends
+yubico\-client Python module
+.UNINDENT
 .sp
 To get your YubiKey API key you will need to visit the website below.
 .sp
@@ -27009,14 +27212,6 @@ external_auth:
 .sp
 Please wait five to ten minutes after generating the key before testing so that
 the API key will be updated on all the YubiCloud servers.
-.INDENT 0.0
-.TP
-.B depends
-.INDENT 7.0
-.IP \(bu 2
-yubico\-client Python module
-.UNINDENT
-.UNINDENT
 .INDENT 0.0
 .TP
 .B salt.auth.yubico.auth(username, password)
@@ -27184,12 +27379,11 @@ shorthand for having to type out complicated compound expressions.
 nodegroups:
  \ group1: \(aqL@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com\(aq
  \ group2: \(aqG@os:Debian and foo.domain.com\(aq
+ \ group3: \(aqG@os:Debian and N@group1\(aq
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
-.sp
-More info on using nodegroups can be found \fIhere\fP\&.
 .SS Calling the Function
 .sp
 The function to call on the specified target is placed after the target
@@ -27367,14 +27561,19 @@ on most systems is \fB/etc/salt\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully Default: False
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-g, \-\-grains
 Return the information generated by the Salt grains
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-m MODULE_DIRS, \-\-module\-dirs=MODULE_DIRS
-Specify an additional directories to pull modules from, multiple
-directories can be delimited by commas
+Specify an additional directory to pull modules from.  Multiple directories
+can be provided by passing \-m /\-\-module\-dirs multiple times.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -27401,6 +27600,43 @@ returners.
 .TP
 .B \-\-local
 Run salt\-call locally, as if there was no master running.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-file\-root=FILE_ROOT
+Set this directory as the base file root.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pillar\-root=PILLAR_ROOT
+Set this directory as the base pillar root.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-retcode\-passthrough
+Exit with the salt call retcode and not the salt binary retcode
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-metadata
+Print out the execution metadata as well as the return. This will print out
+the outputter data, the return code, etc.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-id=ID
+Specify the minion id to use. If this option is omitted, the id option from
+the minion config will be used.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-skip\-grains
+Do not load grains.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-refresh\-grains\-cache
+Force a refresh of the grains cache
 .UNINDENT
 .SS Logging Options
 .sp
@@ -27815,22 +28051,57 @@ clouds via a cleanly controlled profile and mapping system.
 .SS Options
 .INDENT 0.0
 .TP
+.B \-\-version
+Print the version of Salt that is running.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options.
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.SS Execution Options
+.INDENT 0.0
+.TP
+.B \-L LOCATION, \-\-location=LOCATION
+Specify which region to connect to.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a ACTION, \-\-action=ACTION
+Perform an action that may be specific to this cloud provider. This
+argument requires one or more instance names to be specified.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f <FUNC\-NAME> <PROVIDER>, \-\-function=<FUNC\-NAME> <PROVIDER>
+Perform an function that may be specific to this cloud provider, that does
+not apply to an instance. This argument requires a provider to be specified
+(i.e.: nova).
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-p PROFILE, \-\-profile=PROFILE
-Select a single profile to build the named cloud VMs from. The profile
-must be defined in the specified profiles file.
+Select a single profile to build the named cloud VMs from. The profile must
+be defined in the specified profiles file.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-m MAP, \-\-map=MAP
 Specify a map file to use. If used without any other options, this option
-will ensure that all of the mapped VMs are created. If VM names are
-also passed as arguments, they will be used to filter the map file.
-If the named VM already exists then it will be skipped.
+will ensure that all of the mapped VMs are created. If the named VM already
+exists then it will be skipped.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -27869,6 +28140,38 @@ in conjunction with \-m to display only information about the specified map.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-u, \-\-update\-bootstrap
+Update salt\-bootstrap to the latest develop version on GitHub.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-y, \-\-assume\-yes
+Default yes in answer to all confirmation questions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-k, \-\-keep\-tmp
+Do not remove files from /tmp/ after deploy.sh finishes.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-show\-deploy\-args
+Include the options used to deploy the minion in the data returned.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-script\-args=SCRIPT_ARGS
+Script arguments to be fed to the bootstrap script when deploying the VM.
+.UNINDENT
+.SS Query Options
+.INDENT 0.0
+.TP
+.B \-Q, \-\-query
+Execute a query and return some information about the nodes running on
+configured cloud providers
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-F, \-\-full\-query
 Execute a query and print out all available information about all cloud VMs.
 Can be used in conjunction with \-m to display only information about the
@@ -27896,58 +28199,98 @@ Display a list of configured profiles. Pass in a cloud provider to view
 the provider\(aqs associated profiles, such as \fBdigital_ocean\fP, or pass in
 \fBall\fP to list all the configured profiles.
 .UNINDENT
+.SS Cloud Providers Listings
 .INDENT 0.0
 .TP
-.B \-\-list\-images
-Display a list of images available in configured cloud providers.
-Pass the cloud provider that available images are desired on, aka
-"linode", or pass "all" to list images for all configured cloud providers.
+.B \-\-list\-locations=LIST_LOCATIONS
+Display a list of locations available in configured cloud providers. Pass
+the cloud provider that available locations are desired on, aka "linode",
+or pass "all" to list locations for all configured cloud providers
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-list\-sizes
+.B \-\-list\-images=LIST_IMAGES
+Display a list of images available in configured cloud providers. Pass the
+cloud provider that available images are desired on, aka "linode", or pass
+"all" to list images for all configured cloud providers
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-list\-sizes=LIST_SIZES
 Display a list of sizes available in configured cloud providers. Pass the
-cloud provider that available sizes are desired on, aka "aws", or pass
+cloud provider that available sizes are desired on, aka "AWS", or pass
 "all" to list sizes for all configured cloud providers
 .UNINDENT
+.SS Cloud Credentials
 .INDENT 0.0
 .TP
-.B \-C CLOUD_CONFIG, \-\-cloud\-config=CLOUD_CONFIG
-Specify an alternative location for the salt cloud configuration file.
-Default location is /etc/salt/cloud.
+.B \-\-set\-password=<USERNAME> <PROVIDER>
+Configure password for a cloud provider and save it to the keyring.
+PROVIDER can be specified with or without a driver, for example:
+"\-\-set\-password bob rackspace" or more specific "\-\-set\-password bob
+rackspace:openstack" DEPRECATED!
+.UNINDENT
+.SS Output Options
+.INDENT 0.0
+.TP
+.B \-\-out
+Pass in an alternative outputter to display the return of data. This
+outputter can be any of the available outputters:
+.INDENT 7.0
+.INDENT 3.5
+\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+.UNINDENT
+.UNINDENT
+.sp
+Some outputters are formatted only for data returned from specific
+functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
+data.
+.sp
+If an outputter is used that does not support the data passed into it, then
+Salt will fall back on the \fBpprint\fP outputter and display the return data
+using the Python \fBpprint\fP standard library module.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a JSON string for each minion.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-M MASTER_CONFIG, \-\-master\-config=MASTER_CONFIG
-Specify an alternative location for the salt master configuration file.
-The salt master configuration file is used to determine how to handle the
-minion RSA keys. Default location is /etc/salt/master.
+.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
+Print the output indented by the provided value in spaces. Negative values
+disable indentation. Only applicable in outputters that support
+indentation.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-V VM_CONFIG, \-\-profiles=VM_CONFIG, \-\-vm_config=VM_CONFIG
-Specify an alternative location for the salt cloud profiles file.
-Default location is /etc/salt/cloud.profiles.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-raw\-out
-Print the output from the salt command in raw python
-form, this is suitable for re\-reading the output into
-an executing python script with eval.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-out=OUTPUT, \-\-output=OUTPUT
-Print the output from the salt\-cloud command using the specified outputter. The
-builtins are \(aqraw\(aq, \(aqcompact\(aq, \(aqno_return\(aq, \(aqgrains\(aq, \(aqoverstatestage\(aq, \(aqpprint\(aq,
-\(aqjson\(aq, \(aqnested\(aq, \(aqyaml\(aq, \(aqhighstate\(aq, \(aqquiet\(aq, \(aqkey\(aq, \(aqtxt\(aq, \(aqnewline_values_only\(aq,
-\(aqvirt_query\(aq.
+.B \-\-out\-file=OUTPUT_FILE, \-\-output\-file=OUTPUT_FILE
+Write the output to the specified file.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-\-no\-color
-Disable all colored output.
+Disable all colored output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-force\-color
+Force colored output
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+When using colored output the color codes are as follows:
+.sp
+\fBgreen\fP denotes success, \fBred\fP denotes failure, \fBblue\fP denotes
+changes and success and \fByellow\fP denotes a expected future change in configuration.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .SS Examples
 .sp
@@ -28197,6 +28540,17 @@ on most systems is \fB/etc/salt\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-u USER, \-\-user=USER
+Specify user to run salt\-key
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully. Default is
+False.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-q, \-\-quiet
 Suppress output
 .UNINDENT
@@ -28204,6 +28558,13 @@ Suppress output
 .TP
 .B \-y, \-\-yes
 Answer \(aqYes\(aq to all questions presented, defaults to False
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-rotate\-aes\-key=ROTATE_AES_KEY
+Setting this to False prevents the master from refreshing the key session
+when keys are deleted or rejected, this lowers the security of the key
+deletion/rejection operation. Default is True.
 .UNINDENT
 .SS Logging Options
 .sp
@@ -28372,6 +28733,35 @@ Set the keysize for the generated key, only works with
 the \(aq\-\-gen\-keys\(aq option, the key size must be 2048 or
 higher, otherwise it will be rounded up to 2048. The
 default is 2048.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-gen\-signature
+Create a signature file of the masters public\-key named
+master_pubkey_signature. The signature can be send to a minion in the
+masters auth\-reply and enables the minion to verify the masters public\-key
+cryptographically. This requires a new signing\-key\- pair which can be
+auto\-created with the \-\-auto\-create parameter.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-priv=PRIV
+The private\-key file to create a signature with
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-signature\-path=SIGNATURE_PATH
+The path where the signature file should be written
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pub=PUB
+The public\-key file to create a signature for
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-auto\-create
+Auto\-create a signing key\-pair if it does not yet exist
 .UNINDENT
 .SS See also
 .sp
@@ -28594,6 +28984,12 @@ on most systems is \fB/etc/salt\fP\&.
 The timeout in seconds to wait for replies from the Salt minions. The
 timeout number specifies how long the command line client will wait to
 query the minions and check on running jobs. Default: 1
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully. Default is
+False.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -28970,13 +29366,57 @@ The Salt API system manages network api connectors for the Salt Master
 .SS Options
 .INDENT 0.0
 .TP
-.B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options.
+.B \-\-version
+Print the version of Salt that is running.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-C CONFIG, \-\-config=CONFIG
-Specify an alternative location for the salt master configuration file.
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-daemon
+Run the salt\-api as a daemon
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pid\-file=PIDFILE
+Specify the location of the pidfile. Default: /var/run/salt\-api.pid
+.UNINDENT
+.SS Logging Options
+.sp
+Logging options which override any settings defined on the configuration files.
+.INDENT 0.0
+.TP
+.B \-l LOG_LEVEL, \-\-log\-level=LOG_LEVEL
+Console logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file=LOG_FILE
+Log file path. Default: /var/log/salt/api\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file\-level=LOG_LEVEL_LOGFILE
+Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
 .UNINDENT
 .SS See also
 .sp
@@ -29109,7 +29549,7 @@ This is useful for master\-side operations like
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.config.minion_config(path, env_var=\(aqSALT_MINION_CONFIG\(aq, defaults=None, minion_id=False)
+.B salt.config.minion_config(path, env_var=\(aqSALT_MINION_CONFIG\(aq, defaults=None, cache_minion_id=False)
 Reads in the minion configuration file and sets up special options
 .sp
 This is useful for Minion\-side operations, such as the
@@ -29171,7 +29611,7 @@ __salt__[\(aqtest.ping\(aq]()
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.loader.raw_mod(opts, _, functions, mod=\(aqmodules\(aq)
+.B salt.loader.raw_mod(opts, name, functions, mod=\(aqmodules\(aq)
 Returns a single module loaded raw and bypassing the __virtual__ function
 .INDENT 7.0
 .INDENT 3.5
@@ -29363,6 +29803,8 @@ The type of \fBtgt\fP\&. Allowed values:
 \fBgrain_pcre\fP \- Grain comparison with a regex
 .IP \(bu 2
 \fBpillar\fP \- Pillar data comparison
+.IP \(bu 2
+\fBpillar_pcre\fP \- Pillar data comparison with a regex
 .IP \(bu 2
 \fBnodegroup\fP \- Match on nodegroup
 .IP \(bu 2
@@ -30022,6 +30464,24 @@ Query basic instance information
 .TP
 .B select_query(query_type=\(aqlist_nodes_select\(aq)
 Query select instance information
+.UNINDENT
+.UNINDENT
+.SS SSHClient
+.INDENT 0.0
+.TP
+.B class salt.client.ssh.client.SSHClient(c_path=\(aq/etc/salt/master\(aq, mopts=None)
+Create a client object for executing routines via the salt\-ssh backend
+.INDENT 7.0
+.TP
+.B cmd(tgt, fun, arg=(), timeout=None, expr_form=\(aqglob\(aq, kwarg=None, **kwargs)
+Execute a single command via the salt\-ssh subsystem and return all
+routines at once
+.UNINDENT
+.INDENT 7.0
+.TP
+.B cmd_iter(tgt, fun, arg=(), timeout=None, expr_form=\(aqglob\(aq, ret=\(aq\(aq, kwarg=None, **kwargs)
+Execute a single command via the salt\-ssh subsystem and return a
+generator
 .UNINDENT
 .UNINDENT
 .SS Full list of Salt Cloud modules
@@ -36723,6 +37183,33 @@ ext_job_cache: redis
 .fi
 .UNINDENT
 .UNINDENT
+.SS \fBevent_return\fP
+.sp
+New in version 2015.2.0.
+
+.sp
+Default: \fB\(aq\(aq\fP
+.sp
+Specify the returner to use to log events. A returner may have installation and
+configuration requirements. Read the returner\(aqs documentation.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Not all returners support event returns. Verify that a returner has an
+\fBevent_return()\fP function before configuring this option with a returner.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+event_return: cassandra_cql
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .SS \fBmaster_job_cache\fP
 .sp
 New in version 2014.7.
@@ -37448,6 +37935,8 @@ New in version 2014.7.0.
 .sp
 Specify the provider to be used for gitfs. More information can be found in the
 \fIGitFS Walkthrough\fP\&.
+.sp
+Specify one value among valid values: \fBgitpython\fP, \fBpygit2\fP, \fBdulwich\fP
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -38855,10 +39344,13 @@ A group consists of a group name and a compound target.
 nodegroups:
   group1: \(aqL@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com\(aq
   group2: \(aqG@os:Debian and foo.domain.com\(aq
+  group3: \(aqG@os:Debian and N@group1\(aq
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+More information on using nodegroups can be found \fIhere\fP\&.
 .SS Range Cluster Settings
 .SS \fBrange_server\fP
 .sp
@@ -51192,7 +51684,7 @@ salt \(aq*\(aq cassandra.version
 Execute chef in server or solo mode
 .INDENT 0.0
 .TP
-.B salt.modules.chef.client(whyrun=False, localmode=False, logfile=\(aq/var/log/chef\-client.log\(aq, **kwargs)
+.B salt.modules.chef.client(whyrun=False, localmode=False, logfile=None, **kwargs)
 Execute a chef client run and return a dict with the stderr, stdout,
 return code, and pid.
 .sp
@@ -51268,7 +51760,7 @@ Enable whyrun mode when set to True
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.chef.solo(whyrun=False, logfile=\(aq/var/log/chef\-solo.log\(aq, **kwargs)
+.B salt.modules.chef.solo(whyrun=False, logfile=None, **kwargs)
 Execute a chef solo run and return a dict with the stderr, stdout,
 return code, and pid.
 .sp
@@ -52664,6 +53156,23 @@ remote shell command by manually specifying the kwarg:
 .nf
 .ft C
 salt \(aq*\(aq cmd.shell cmd=\(aqsed \-e s/=/:/g\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.cmdmod.shells()
+Lists the valid shells on this system via the /etc/shells file
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq cmd.shells
 .ft P
 .fi
 .UNINDENT
@@ -55778,7 +56287,7 @@ Compendium of generic DNS utilities
 .INDENT 0.0
 .TP
 .B salt.modules.dnsutil.A(host, nameserver=None)
-Return the A record for \(aqhost\(aq.
+Return the A record(s) for \fIhost\fP\&.
 .sp
 Always returns a list.
 .sp
@@ -55788,7 +56297,29 @@ CLI Example:
 .sp
 .nf
 .ft C
-salt ns1 dig.A www.google.com
+salt ns1 dnsutil.A www.google.com
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.dnsutil.AAAA(host, nameserver=None)
+Return the AAAA record(s) for \fIhost\fP\&.
+.sp
+Always returns a list.
+.sp
+New in version 2014.7.5.
+
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt ns1 dnsutil.AAAA www.google.com
 .ft P
 .fi
 .UNINDENT
@@ -56836,7 +57367,7 @@ container id
 remove a running container, Default is \fBFalse\fP
 .TP
 .B v
-verbose mode, Default is \fBFalse\fP
+remove the volumes associated to the container, Default is \fBFalse\fP
 .UNINDENT
 .sp
 CLI Example:
@@ -57113,6 +57644,9 @@ salt \(aq*\(aq docker.run_stdout <container id> \(aqls \-l /etc\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.dockerio.save(image, filename)
+New in version 2015.2.0.
+
+.sp
 Save the specified image to filename from docker
 e.g. \fIdocker save image > filename\fP
 .INDENT 7.0
@@ -65934,7 +66468,7 @@ Whether to use a passphrase with the signing key.  Passphrase is received from p
 .TP
 .B user
 Which user\(aqs keychain to access, defaults to user Salt is running as.  Passing
-the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpg.
+the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpgkeys.
 .UNINDENT
 .sp
 CLI Example:
@@ -66004,7 +66538,7 @@ Secret keys must be deleted before deleting any corresponding public keys.
 .TP
 .B user
 Which user\(aqs keychain to access, defaults to user Salt is running as.  Passing
-the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpg.
+the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpgkeys.
 .UNINDENT
 .sp
 CLI Example:
@@ -66220,7 +66754,7 @@ List keys in GPG keychain
 .TP
 .B user
 Which user\(aqs keychain to access, defaults to user Salt is running as.  Passing
-the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpg.
+the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpgkeys.
 .UNINDENT
 .sp
 CLI Example:
@@ -66243,7 +66777,7 @@ List secret keys in GPG keychain
 .TP
 .B user
 Which user\(aqs keychain to access, defaults to user Salt is running as.  Passing
-the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpg.
+the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpgkeys.
 .UNINDENT
 .sp
 CLI Example:
@@ -66306,7 +66840,7 @@ Keyserver to use for searching for GPG keys, defaults to pgp.mit.edu
 .TP
 .B user
 Which user\(aqs keychain to access, defaults to user Salt is running as.  Passing
-the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpg.
+the user as \(aqsalt\(aq will set the GPG home directory to /etc/salt/gpgkeys.
 .UNINDENT
 .sp
 CLI Example:
@@ -73772,7 +74306,7 @@ salt \(aq*\(aq lxc.list limit=running
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.lxc.ls_(active=None)
+.B salt.modules.lxc.ls_(active=None, cache=True)
 Return a list of the containers available on the minion
 .INDENT 7.0
 .TP
@@ -76493,6 +77027,42 @@ Deprecated since version 2014.7.0.
 
 .UNINDENT
 .UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.match.pillar_pcre(tgt, delimiter=\(aq:\(aq, delim=None)
+Return True if the minion matches the given pillar_pcre target. The
+\fBdelimiter\fP argument can be used to specify a different delimiter.
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq match.pillar_pcre \(aqcheese:(swiss|american)\(aq
+salt \(aq*\(aq match.pillar_pcre \(aqclone_url|https://github\e.com/.*\e.git\(aq delimiter=\(aq|\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.TP
+.B delimiter
+Specify an alternate delimiter to use when traversing a nested dict
+.sp
+New in version 2014.7.0.
+
+.TP
+.B delim
+Specify an alternate delimiter to use when traversing a nested dict
+.sp
+New in version 0.16.4.
+
+.sp
+Deprecated since version 2014.7.0.
+
+.UNINDENT
+.UNINDENT
 .SS salt.modules.mdadm
 .sp
 Salt module to manage RAID arrays with mdadm
@@ -76922,6 +77492,7 @@ grain
 grain_pcre
 compound
 pillar
+pillar_pcre
 .ft P
 .fi
 .UNINDENT
@@ -91252,6 +91823,8 @@ grain_pcre
 .IP \(bu 2
 pillar
 .IP \(bu 2
+pillar_pcre
+.IP \(bu 2
 ipcidr
 .IP \(bu 2
 range
@@ -92902,6 +93475,8 @@ grain
 grain_pcre
 .IP \(bu 2
 pillar
+.IP \(bu 2
+pillar_pcre
 .IP \(bu 2
 ipcidr
 .IP \(bu 2
@@ -104888,6 +105463,28 @@ salt \(aq*\(aq test.assert False
 .UNINDENT
 .INDENT 0.0
 .TP
+.B salt.modules.test.attr_call()
+Call grains.items via the attribute
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\&.. code\-block:: bash
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.INDENT 3.5
+salt \(aq*\(aq test.attr_call
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
 .B salt.modules.test.collatz(start)
 Execute the collatz conjecture from the passed starting number,
 returns the sequence and the time it took to compute. Used for
@@ -105035,6 +105632,29 @@ salt \(aq*\(aq test.kwarg num=1 txt="two" env=\(aq{a: 1, b: "hello"}\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.test.missing_func()
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.test.module_report()
+Return a dict containing all of the exeution modules with a report on
+the overall availability via different references
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\&.. code\-block:: bash
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 7.0
+.INDENT 3.5
+salt \(aq*\(aq test.module_report
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -105520,6 +106140,31 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq tls.cert_base_path
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.modules.tls.cert_info(cert_path, digest=\(aqsha256\(aq)
+Return information for a particular certificate
+.INDENT 7.0
+.TP
+.B cert_path
+path to the cert file
+.TP
+.B digest
+what digest to use for fingerprinting
+.UNINDENT
+.sp
+CLI Example:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt \(aq*\(aq tls.cert_info /dir/for/certs/cert.pem
 .ft P
 .fi
 .UNINDENT
@@ -113055,8 +113700,8 @@ salt \(aq*\(aq pkg.clean_metadata
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg.del_repo(repo, basedir=\(aq/etc/yum.repos.d\(aq, **kwargs)
-Delete a repo from <basedir> (default basedir: /etc/yum.repos.d).
+.B salt.modules.yumpkg.del_repo(repo, basedir=None, **kwargs)
+Delete a repo from <basedir> (default basedir: all dirs in \fIreposdir\fP yum option).
 .sp
 If the .repo file that the repo exists in does not contain any other repo
 configuration, the file itself will be deleted.
@@ -113069,6 +113714,7 @@ CLI Examples:
 .ft C
 salt \(aq*\(aq pkg.del_repo myrepo
 salt \(aq*\(aq pkg.del_repo myrepo basedir=/path/to/dir
+salt \(aq*\(aq pkg.del_repo myrepo basedir=/path/to/dir,/path/to/another/dir
 .ft P
 .fi
 .UNINDENT
@@ -113208,8 +113854,8 @@ salt \(aq*\(aq pkg.get_locked_packages
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg.get_repo(repo, basedir=\(aq/etc/yum.repos.d\(aq, **kwargs)
-Display a repo from <basedir> (default basedir: \fB/etc/yum.repos.d\fP).
+.B salt.modules.yumpkg.get_repo(repo, basedir=None, **kwargs)
+Display a repo from <basedir> (default basedir: all dirs in \fIreposdir\fP yum option).
 .sp
 CLI Examples:
 .INDENT 7.0
@@ -113219,6 +113865,7 @@ CLI Examples:
 .ft C
 salt \(aq*\(aq pkg.get_repo myrepo
 salt \(aq*\(aq pkg.get_repo myrepo basedir=/path/to/dir
+salt \(aq*\(aq pkg.get_repo myrepo basedir=/path/to/dir,/path/to/another/dir
 .ft P
 .fi
 .UNINDENT
@@ -113681,8 +114328,8 @@ salt \(aq*\(aq pkg.list_repo_pkgs \(aqsamba4*\(aq fromrepo=base,updates
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.modules.yumpkg.list_repos(basedir=\(aq/etc/yum.repos.d\(aq)
-Lists all repos in <basedir> (default: /etc/yum.repos.d/).
+.B salt.modules.yumpkg.list_repos(basedir=None)
+Lists all repos in <basedir> (default: all dirs in \fIreposdir\fP yum option).
 .sp
 CLI Example:
 .INDENT 7.0
@@ -113691,6 +114338,8 @@ CLI Example:
 .nf
 .ft C
 salt \(aq*\(aq pkg.list_repos
+salt \(aq*\(aq pkg.list_repos basedir=/path/to/dir
+salt \(aq*\(aq pkg.list_repos basedir=/path/to/dir,/path/to/another/dir
 .ft P
 .fi
 .UNINDENT
@@ -115859,10 +116508,12 @@ New in version 2014.7.0.
 .B depends
 .INDENT 7.0
 .IP \(bu 2
-CherryPy Python module (strongly recommend 3.2.x versions due to
+CherryPy Python module. Versions 3.2.{2,3,4} are strongly
 .UNINDENT
 .sp
-an as yet unknown SSL error).
+recommended due to a known \fI\%SSL error\fP
+introduced in version 3.2.5. The issue was reportedly resolved with
+CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 .TP
 .B optdepends
 .INDENT 7.0
@@ -118294,43 +118945,43 @@ data: {
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.SaltAPIHandler
-alias of \fB<Mock object at 0x2b40b3e3cd50>\fP
+alias of \fB<Mock object at 0x2aceee793110>\fP
 .UNINDENT
 .SS \fB/login\fP
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.SaltAuthHandler
-alias of \fB<Mock object at 0x2b40b3e3ce50>\fP
+alias of \fB<Mock object at 0x2acee84bc210>\fP
 .UNINDENT
 .SS \fB/minions\fP
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.MinionSaltAPIHandler
-alias of \fB<Mock object at 0x2b40af588350>\fP
+alias of \fB<Mock object at 0x2acee90f9390>\fP
 .UNINDENT
 .SS \fB/jobs\fP
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.JobsSaltAPIHandler
-alias of \fB<Mock object at 0x2b40b48c3b10>\fP
+alias of \fB<Mock object at 0x2acee882b5d0>\fP
 .UNINDENT
 .SS \fB/run\fP
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.RunSaltAPIHandler
-alias of \fB<Mock object at 0x2b40af588350>\fP
+alias of \fB<Mock object at 0x2aceebce1390>\fP
 .UNINDENT
 .SS \fB/events\fP
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.EventsSaltAPIHandler
-alias of \fB<Mock object at 0x2b40b69b5450>\fP
+alias of \fB<Mock object at 0x2acee5348290>\fP
 .UNINDENT
 .SS \fB/hook\fP
 .INDENT 0.0
 .TP
 .B salt.netapi.rest_tornado.saltnado.WebhookSaltAPIHandler
-alias of \fB<Mock object at 0x2b40b68d9690>\fP
+alias of \fB<Mock object at 0x2aceed8dc250>\fP
 .UNINDENT
 .SS rest_wsgi
 .SS A minimalist REST API for Salt
@@ -120216,7 +120867,7 @@ A list has the first entry used as the query, the second as the pillar depth.
 A mapping uses the keys "query" and "depth" as the tuple
 .UNINDENT
 .sp
-You can retrieve as many fields as you like, how the get used depends on the
+You can retrieve as many fields as you like, how they get used depends on the
 exact settings.
 .SS Configuring the mysql ext_pillar
 .sp
@@ -120999,6 +121650,7 @@ ext_pillar:
       key: ksladfDLKDALSFKSD93q032sdDasdfasdflsadkf
       multiple_env: False
       environment: base
+      prefix: somewhere/overthere
       verify_ssl: True
       service_url: s3.amazonaws.com
 .ft P
@@ -121021,6 +121673,11 @@ The \fBenvironment\fP defaults to \(aqbase\(aq. It specifies which environment t
 bucket represents when in single environments mode (see mode section below). It
 is ignored if multiple_env is True.
 .sp
+The \fBprefix\fP defaults to \(aq\(aq. It specifies a key prefix to use when searching
+for data in the bucket for the pillar. It works when multiple_env is True or False.
+Essentially it tells ext_pillar to look for your pillar data in a \(aqsubdirectory\(aq
+of your S3 bucket
+.sp
 The \fBverify_ssl\fP parameter defaults to True. It specifies whether to check for
 valid S3 SSL certificates. \fINOTE\fP If you use bucket names with periods, this
 must be set to False else an invalid certificate error will be thrown (issue
@@ -121038,7 +121695,7 @@ Single environment mode must have this bucket structure:
 .sp
 .nf
 .ft C
-s3://<bucket name>/<files>
+s3://<bucket name>/<prefix>/<files>
 .ft P
 .fi
 .UNINDENT
@@ -121050,18 +121707,23 @@ Multiple environment mode must have this bucket structure:
 .sp
 .nf
 .ft C
-s3://<bucket name>/<environment>/<files>
+s3://<bucket name>/<prefix>/<environment>/<files>
 .ft P
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+If you wish to define your pillar data entirely within S3 it\(aqs recommended
+that you use the \fIprefix=\fP parameter and specify one entry in ext_pillar
+for each environment rather than specifying multiple_env. This is due
+to issue #22471 (\fI\%https://github.com/saltstack/salt/issues/22471\fP)
 .INDENT 0.0
 .TP
 .B class salt.pillar.s3.S3Credentials(key, keyid, bucket, service_url, verify_ssl=True)
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.pillar.s3.ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl, multiple_env=False, environment=\(aqbase\(aq, service_url=None)
+.B salt.pillar.s3.ext_pillar(minion_id, pillar, bucket, key, keyid, verify_ssl, multiple_env=False, environment=\(aqbase\(aq, prefix=\(aq\(aq, service_url=None)
 Execute a command and read the output as YAML
 .UNINDENT
 .SS salt.pillar.svn_pillar
@@ -121573,7 +122235,7 @@ a string is found.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.renderers.gpg.render(data, saltenv=\(aqbase\(aq, sls=\(aq\(aq, argline=\(aq\(aq, **kwargs)
+.B salt.renderers.gpg.render(gpg_data, saltenv=\(aqbase\(aq, sls=\(aq\(aq, argline=\(aq\(aq, **kwargs)
 Create a gpg object given a gpg_keydir, and then use it to try to decrypt
 the data to be rendered.
 .UNINDENT
@@ -121725,8 +122387,19 @@ Saltstack extends \fI\%builtin filters\fP with these custom filters:
 Converts any time related object into a time based string. It requires a
 valid \fI\%strftime directives\fP\&. An
 \fI\%exhaustive list\fP can be found in
-the official Python documentation. Fuzzy dates are parsed by \fI\%timelib\fP python
-module. Some examples are available on this pages.
+the official Python documentation.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{% set curtime = None | strftime() %}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Fuzzy dates require the \fI\%timelib\fP Python module is installed.
 .INDENT 7.0
 .INDENT 3.5
 .sp
@@ -121735,7 +122408,7 @@ module. Some examples are available on this pages.
 {{ "2002/12/25"|strftime("%y") }}
 {{ "1040814000"|strftime("%Y\-%m\-%d") }}
 {{ datetime|strftime("%u") }}
-{{ "now"|strftime }}
+{{ "tomorrow"|strftime }}
 .ft P
 .fi
 .UNINDENT
@@ -123632,13 +124305,28 @@ In this scenario all three returners will be called and the data from the
 test.ping command will be sent out to the three named returners.
 .SS Writing a Returner
 .sp
-A returner is a Python module which contains a function called \fBreturner\fP\&.
+A returner is a Python module containing at minimum a \fBreturner\fP function.
+Other optional functions can be included to add support for
+\fImaster_job_cache\fP, \fIexternal_job_cache\fP, and \fI\%Event Returners\fP\&.
+.INDENT 0.0
+.TP
+.B \fBreturner\fP
+The \fBreturner\fP function must accept a single argument. The argument
+contains return data from the called minion function. If the minion
+function \fBtest.ping\fP is called, the value of the argument will be a
+dictionary. Run the following command from a Salt master to get a sample
+of the dictionary:
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
 .sp
-The \fBreturner\fP function must accept a single argument for the return data from
-the called minion function. So if the minion function \fBtest.ping\fP is called
-the value of the argument will be \fBTrue\fP\&.
-.sp
-A simple returner is implemented below:
+.nf
+.ft C
+salt\-call \-\-local \-\-metadata test.ping \-\-out=pprint
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -123667,6 +124355,263 @@ def returner(ret):
 .sp
 The above example of a returner set to send the data to a Redis server
 serializes the data as JSON and sets it in redis.
+.SS Master Job Cache Support
+.sp
+\fImaster_job_cache\fP, \fIexternal_job_cache\fP, and \fI\%Event Returners\fP\&.
+Salt\(aqs \fImaster_job_cache\fP allows returners to be used as a pluggable
+replacement for the \fIdefault_job_cache\fP\&. In order to do so, a returner
+must implement the following functions:
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+The code samples contained in this section were taken from the cassandra_cql
+returner.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \fBprep_jid\fP
+Ensures that job ids (jid) don\(aqt collide, unless passed_jid is provided.
+.sp
+\fBnochache\fP is an optional boolean that indicates if return data
+should be cached. \fBpassed_jid\fP is a caller provided jid which should be
+returned unconditionally.
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused\-argument
+    \(aq\(aq\(aq
+    Do any work necessary to prepare a JID, including sending a custom id
+    \(aq\(aq\(aq
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \fBsave_load\fP
+Save job information.  The \fBjid\fP is generated by \fBprep_jid\fP and should
+be considered a unique identifier for the job. The jid, for example, could
+be used as the primary/unique key in a database. The \fBload\fP is what is
+returned to a Salt master by a minion. The following code example stores
+the load as a JSON string in the salt.jids table.
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def save_load(jid, load):
+    \(aq\(aq\(aq
+    Save the load to the specified jid id
+    \(aq\(aq\(aq
+    query = \(aq\(aq\(aqINSERT INTO salt.jids (
+                 jid, load
+               ) VALUES (
+                 \(aq{0}\(aq, \(aq{1}\(aq
+               );\(aq\(aq\(aq.format(jid, json.dumps(load))
+
+    # cassandra_cql.cql_query may raise a CommandExecutionError
+    try:
+        __salt__[\(aqcassandra_cql.cql_query\(aq](query)
+    except CommandExecutionError:
+        log.critical(\(aqCould not save load in jids table.\(aq)
+        raise
+    except Exception as e:
+        log.critical(\(aq\(aq\(aqUnexpected error while inserting into
+         jids: {0}\(aq\(aq\(aq.format(str(e)))
+        raise
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \fBget_load\fP
+must accept a job id (jid) and return the job load stored by \fBsave_load\fP,
+or an empty dictionary when not found.
+.UNINDENT
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def get_load(jid):
+    \(aq\(aq\(aq
+    Return the load data that marks a specified jid
+    \(aq\(aq\(aq
+    query = \(aq\(aq\(aqSELECT load FROM salt.jids WHERE jid = \(aq{0}\(aq;\(aq\(aq\(aq.format(jid)
+
+    ret = {}
+
+    # cassandra_cql.cql_query may raise a CommandExecutionError
+    try:
+        data = __salt__[\(aqcassandra_cql.cql_query\(aq](query)
+        if data:
+            load = data[0].get(\(aqload\(aq)
+            if load:
+                ret = json.loads(load)
+    except CommandExecutionError:
+        log.critical(\(aqCould not get load from jids table.\(aq)
+        raise
+    except Exception as e:
+        log.critical(\(aq\(aq\(aqUnexpected error while getting load from
+         jids: {0}\(aq\(aq\(aq.format(str(e)))
+        raise
+
+    return ret
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS External Job Cache Support
+.sp
+Salt\(aqs \fIexternal_job_cache\fP extends the \fImaster_job_cache\fP\&. External
+Job Cache support requires the following functions in addition to what is
+required for Master Job Cache support:
+.INDENT 0.0
+.TP
+.B \fBget_jid\fP
+Return a dictionary containing the information (load) returned by each
+minion when the specified job id was executed.
+.UNINDENT
+.sp
+Sample:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "local": {
+        "master_minion": {
+            "fun_args": [],
+            "jid": "20150330121011408195",
+            "return": true,
+            "retcode": 0,
+            "success": true,
+            "cmd": "_return",
+            "_stamp": "2015\-03\-30T12:10:12.708663",
+            "fun": "test.ping",
+            "id": "master_minion"
+        }
+    }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \fBget_fun\fP
+Return a dictionary of minions that called a given Salt function as their
+last function call.
+.UNINDENT
+.sp
+Sample:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "local": {
+        "minion1": "test.ping",
+        "minion3": "test.ping",
+        "minion2": "test.ping"
+    }
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \fBget_jids\fP
+Return a list of all job ids.
+.UNINDENT
+.sp
+Sample:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+    "local": [
+        "20150330121011408195",
+        "20150330195922139916"
+    ]
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \fBget_minions\fP
+Returns a list of minions
+.UNINDENT
+.sp
+Sample:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+{
+     "local": [
+         "minion3",
+         "minion2",
+         "minion1",
+         "master_minion"
+     ]
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Please refer to one or more of the existing returners (i.e. mysql,
+cassandra_cql) if you need further clarification.
+.SS Event Support
+.sp
+An \fBevent_return\fP function must be added to the returner module to allow
+events to be logged from a master via the returner. A list of events are passed
+to the function by the master.
+.sp
+The following example was taken from the MySQL returner. In this example, each
+event is inserted into the salt_events table keyed on the event tag. The tag
+contains the jid and therefore is guaranteed to be unique.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+def event_return(events):
+ \(aq\(aq\(aq
+ Return event to mysql server
+
+ Requires that configuration be enabled via \(aqevent_return\(aq
+ option in master config.
+ \(aq\(aq\(aq
+ with _get_serv(events, commit=True) as cur:
+     for event in events:
+         tag = event.get(\(aqtag\(aq, \(aq\(aq)
+         data = event.get(\(aqdata\(aq, \(aq\(aq)
+         sql = \(aq\(aq\(aqINSERT INTO \(gasalt_events\(ga (\(gatag\(ga, \(gadata\(ga, \(gamaster_id\(ga )
+                  VALUES (%s, %s, %s)\(aq\(aq\(aq
+         cur.execute(sql, (tag, json.dumps(data), __opts__[\(aqid\(aq]))
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Custom Returners
 .sp
 Place custom returners in a \fB_returners\fP directory within the
 \fBfile_roots\fP specified by the master config file.
@@ -123683,6 +124628,7 @@ Place custom returners in a \fB_returners\fP directory within the
 Any custom returners which have been synced to a minion that are named the
 same as one of Salt\(aqs default set of returners will take the place of the
 default returner with the same name.
+.SS Naming the Returner
 .sp
 Note that a returner\(aqs default name is its filename (i.e. \fBfoo.py\fP becomes
 returner \fBfoo\fP), but that its name can be overridden by using a
@@ -123706,6 +124652,28 @@ def __virtual__():
     if not HAS_REDIS:
         return False
     return __virtualname__
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Testing the Returner
+.sp
+The \fBreturner\fP, \fBprep_jid\fP, \fBsave_load\fP, \fBget_load\fP, and
+\fBevent_return\fP functions can be tested by configuring the
+\fImaster_job_cache\fP and \fI\%Event Returners\fP in the master config
+file and submitting a job to \fBtest.ping\fP each minion from the master.
+.sp
+Once you have successfully exercised the Master Job Cache functions, test the
+External Job Cache functions using the \fBret\fP execution module.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-call ret.get_jids cassandra_cql \-\-output=json
+salt\-call ret.get_fun cassandra_cql test.ping \-\-output=json
+salt\-call ret.get_minions cassandra_cql \-\-output=json
+salt\-call ret.get_jid cassandra_cql 20150330121011408195 \-\-output=json
 .ft P
 .fi
 .UNINDENT
@@ -124008,7 +124976,7 @@ salt \(aq*\(aq test.ping \-\-return carbon \-\-return_config alternative
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.carbon_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.carbon_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124063,7 +125031,7 @@ salt \(aq*\(aq test.ping \-\-return cassandra
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.cassandra_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.cassandra_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124238,7 +125206,7 @@ part of the salt design document.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.couchdb_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.couchdb_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124296,7 +125264,7 @@ print(\(aqI received {0} from {1}\(aq.format(ret, sender))
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.django_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.django_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom ID
 .UNINDENT
 .INDENT 0.0
@@ -124393,7 +125361,7 @@ ext_job_cache: elasticsearch
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.elasticsearch_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.elasticsearch_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124496,7 +125464,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.etcd_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.etcd_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124712,7 +125680,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.memcache_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.memcache_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124734,6 +125702,14 @@ Required python modules: pymongo
 This returner will send data from the minions to a MongoDB server. To
 configure the settings for your MongoDB server, add the following lines
 to the minion config files:
+.sp
+You can also ask for indexes creation on the most common used fields, which
+should greatly improve performance. Indexes are not created by default.
+.INDENT 0.0
+.INDENT 3.5
+mongo.indexes: true
+.UNINDENT
+.UNINDENT
 .sp
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -124809,7 +125785,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.mongo_future_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.mongo_future_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124902,7 +125878,7 @@ Return the return information associated with a jid
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.mongo_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.mongo_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -124972,9 +125948,9 @@ python\-mysqldb
 all
 .UNINDENT
 .sp
-To enable this returner the minion will need the python client for mysql
+To enable this returner, the minion will need the python client for mysql
 installed and the following values configured in the minion or master
-config, these are the defaults:
+config. These are the defaults:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -124990,9 +125966,25 @@ mysql.port: 3306
 .UNINDENT
 .UNINDENT
 .sp
-Alternative configuration values can be used by prefacing the configuration.
-Any values not found in the alternative configuration will be pulled from
-the default location:
+SSL is optional. The defaults are set to None. If you do not want to use SSL,
+either exclude these options or set them to None.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+mysql.ssl_ca: None
+mysql.ssl_cert: None
+mysql.ssl_key: None
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Alternative configuration values can be used by prefacing the configuration
+with \fIalternative.\fP\&. Any values not found in the alternative configuration will
+be pulled from the default location. As stated above, SSL configuration is
+optional. The following ssl options are simply for illustration purposes:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -125003,6 +125995,9 @@ alternative.mysql.user: \(aqsalt\(aq
 alternative.mysql.pass: \(aqsalt\(aq
 alternative.mysql.db: \(aqsalt\(aq
 alternative.mysql.port: 3306
+alternative.mysql.ssl_ca: \(aq/etc/pki/mysql/certs/localhost.pem\(aq
+alternative.mysql.ssl_cert: \(aq/etc/pki/mysql/certs/localhost.crt\(aq
+alternative.mysql.ssl_key: \(aq/etc/pki/mysql/certs/localhost.key\(aq
 .ft P
 .fi
 .UNINDENT
@@ -125131,7 +126126,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.mysql.prep_jid(nocache, passed_jid=None)
+.B salt.returners.mysql.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -125345,7 +126340,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.odbc.prep_jid(nocache, passed_jid=None)
+.B salt.returners.odbc.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -125512,7 +126507,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.postgres.prep_jid(nocache, passed_jid=None)
+.B salt.returners.postgres.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -125755,7 +126750,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.redis_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.redis_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -125802,7 +126797,7 @@ The tags list (optional) specifies grains items that will be used as sentry tags
 in the sentry ui.
 .INDENT 0.0
 .TP
-.B salt.returners.sentry_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.sentry_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -125976,7 +126971,7 @@ salt \(aq*\(aq test.ping \-\-return smtp \-\-return_config alternative
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.smtp_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.smtp_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -126123,7 +127118,7 @@ Return a list of minions
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.sqlite3_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.sqlite3_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -126158,7 +127153,7 @@ salt \(aq*\(aq test.ping \-\-return syslog
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.returners.syslog_return.prep_jid(nocache, passed_jid=None)
+.B salt.returners.syslog_return.prep_jid(nocache=False, passed_jid=None)
 Do any work necessary to prepare a JID, including sending a custom id
 .UNINDENT
 .INDENT 0.0
@@ -126294,6 +127289,16 @@ T{
 \fBcloud\fP
 T}	T{
 Use the cloud cache on the master to derive IPv4 addresses based on minion ID.
+T}
+_
+T{
+\fBclustershell\fP
+T}	T{
+.INDENT 0.0
+.TP
+.B requires
+clustershell
+.UNINDENT
 T}
 _
 T{
@@ -126498,6 +127503,28 @@ Extract the preferred IP address from the ipv4 grain
 Return the targets from the flat yaml file, checks opts for location but
 defaults to /etc/salt/roster
 .UNINDENT
+.SS salt.roster.clustershell
+.INDENT 0.0
+.TP
+.B requires
+clustershell
+.UNINDENT
+.sp
+\fI\%https://github.com/cea\-hpc/clustershell\fP
+.sp
+This roster resolves hostname in a pdsh/clustershell style.
+.sp
+When you want to use host globs for target matching, use \-\-roster clustershell.
+.INDENT 0.0
+.TP
+.B Example:
+salt\-ssh \-\-roster clustershell \(aqserver_[1\-10,21\-30],test_server[5,7,9]\(aq test.ping
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.roster.clustershell.targets(tgt, tgt_type=\(aqglob\(aq, **kwargs)
+Return the targets
+.UNINDENT
 .SS salt.roster.flat
 .sp
 Read in the roster from a flat file using the renderer system
@@ -126514,6 +127541,11 @@ Return the configured ip
 .TP
 .B ret_glob_minions()
 Return minions that match via glob
+.UNINDENT
+.INDENT 7.0
+.TP
+.B ret_list_minions()
+Return minions that match via list
 .UNINDENT
 .INDENT 7.0
 .TP
@@ -126654,6 +127686,16 @@ T{
 \fBmine\fP
 T}	T{
 A runner to access data from the salt mine
+T}
+_
+T{
+\fBnacl\fP
+T}	T{
+.INDENT 0.0
+.TP
+.B requires
+libnacl
+.UNINDENT
 T}
 _
 T{
@@ -128384,6 +129426,98 @@ CLI Example:
 .nf
 .ft C
 salt\-run mine.get \(aq*\(aq network.interfaces
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.runners.nacl
+.INDENT 0.0
+.TP
+.B requires
+libnacl
+.UNINDENT
+.sp
+\fI\%https://github.com/saltstack/libnacl\fP
+.sp
+This runner helps create encrypted passwords that can be included in pillars.
+This is often usefull if you wish to store your pillars in source control or
+share your pillar data with others that you trust. I dont advise making your pillars public
+regardless if they are encrypted or not.
+.sp
+The following configurations can be defined in the master config
+so your users can create encrypted passwords using the runner nacl.
+.INDENT 0.0
+.INDENT 3.5
+cat /etc/salt/master.d/nacl.conf
+nacl.config:
+.INDENT 0.0
+.INDENT 3.5
+key: None
+keyfile: /root/.nacl
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+Now with the config in the master you can use the runner nacl like:
+.INDENT 0.0
+.INDENT 3.5
+salt\-run nacl.enc \(aqdata\(aq
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.nacl.dec(data, **kwargs)
+Takes a key generated from \fInacl.keygen\fP and decrypt some data.
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run nacl.dec pEXHQM6cuaF7A=
+salt\-run nacl.dec data=\(aqpEXHQM6cuaF7A=\(aq keyfile=/root/.nacl
+salt\-run nacl.dec data=\(aqpEXHQM6cuaF7A=\(aq key=\(aqcKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k=\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.nacl.enc(data, **kwargs)
+Takes a key generated from \fInacl.keygen\fP and encrypt some data.
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run nacl.enc datatoenc
+salt\-run nacl.enc datatoenc keyfile=/root/.nacl
+salt\-run nacl.enc datatoenc key=\(aqcKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k=\(aq
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.runners.nacl.keygen(keyfile=None)
+Use libnacl to generate a private key
+.sp
+CLI Examples:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-run nacl.keygen
+salt\-run nacl.keygen keyfile=/root/.nacl
+salt\-run \-\-out=newline_values_only nacl.keygen > /root/.nacl
 .ft P
 .fi
 .UNINDENT
@@ -132122,6 +133256,11 @@ The \fBunless\fP requisite specifies that a state should only run when any of
 the specified commands return \fBFalse\fP\&. The \fBunless\fP requisite operates
 as NOR and is useful in giving more granular control over when a state should
 execute.
+.sp
+\fBNOTE\fP: Under the hood \fBunless\fP calls \fBcmd.retcode\fP with
+\fBpython_shell=True\fP\&.  This means the commands referenced by unless will be
+parsed by a shell, so beware of side\-effects as this shell will be run with the
+same privileges as the salt\-minion.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -132144,7 +133283,7 @@ exist (returns \fBFalse\fP). The state will run if both commands return
 .sp
 However, the state will not run if both commands return \fBTrue\fP\&.
 .sp
-Unless requisites are resolved for each name to which they are associated.
+Unless checks are resolved for each name to which they are associated.
 .sp
 For example:
 .INDENT 0.0
@@ -132154,9 +133293,10 @@ For example:
 .ft C
 deploy_app:
   cmd.run:
-    \- first_deploy_cmd
-    \- second_deploy_cmd
-  \- unless: some_check
+    \- names:
+      \- first_deploy_cmd
+      \- second_deploy_cmd
+  \- unless: ls /usr/bin/vim
 .ft P
 .fi
 .UNINDENT
@@ -132172,6 +133312,11 @@ New in version 2014.7.0.
 \fBonlyif\fP is the opposite of \fBunless\fP\&. If all of the commands in \fBonlyif\fP
 return \fBTrue\fP, then the state is run. If any of the specified commands
 return \fBFalse\fP, the state will not run.
+.sp
+\fBNOTE\fP: Under the hood \fBonlyif\fP calls \fBcmd.retcode\fP with
+\fBpython_shell=True\fP\&.  This means the commands referenced by unless will be
+parsed by a shell, so beware of side\-effects as this shell will be run with the
+same privileges as the salt\-minion.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -132262,6 +133407,11 @@ New in version 2014.7.0.
 .sp
 Check Command is used for determining that a state did or did not run as
 expected.
+.sp
+\fBNOTE\fP: Under the hood \fBcheck_cmd\fP calls \fBcmd.retcode\fP with
+\fBpython_shell=True\fP\&.  This means the commands referenced by unless will be
+parsed by a shell, so beware of side\-effects as this shell will be run with the
+same privileges as the salt\-minion.
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -140293,10 +141443,9 @@ def run():
 \fBNOTE:\fP
 .INDENT 0.0
 .INDENT 3.5
-When using both the \fBdefaults\fP and \fBcontext\fP arguments, note the extra
-indentation (four spaces instead of the normal two). This is due to an
-idiosyncrasy of how PyYAML loads nested dictionaries, and is explained in
-greater detail \fIhere\fP\&.
+The \fBdefaults\fP and \fBcontext\fP arguments require extra indentation (four
+spaces instead of the normal two) in order to create a nested dictionary.
+\fIMore information\fP\&.
 .UNINDENT
 .UNINDENT
 .sp
@@ -143022,14 +144171,17 @@ grain_name:
 .INDENT 0.0
 .TP
 .B salt.states.grains.list_absent(name, value)
-Delete a value from a grain formed as a list
+Delete a value from a grain formed as a list.
+.sp
+New in version 2014.1.0.
+
 .INDENT 7.0
 .TP
 .B name
-The grain name
+The grain name.
 .TP
 .B value
-The value to delete from the grain list
+The value to delete from the grain list.
 .UNINDENT
 .sp
 The grain should be \fI\%list type\fP
@@ -143045,6 +144197,22 @@ roles:
 .fi
 .UNINDENT
 .UNINDENT
+.sp
+For multiple grains, the syntax looks like:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+roles:
+  grains.list_absent:
+    \- value:
+      \- web
+      \- dev
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -143052,14 +144220,14 @@ roles:
 New in version 2014.1.0.
 
 .sp
-Ensure the value is present in the list type grain
+Ensure the value is present in the list type grain.
 .INDENT 7.0
 .TP
 .B name
-The grain name
+The grain name.
 .TP
 .B value
-The value is present in the list type grain
+The value is present in the list type grain.
 .UNINDENT
 .sp
 The grain should be \fI\%list type\fP
@@ -143071,6 +144239,22 @@ The grain should be \fI\%list type\fP
 roles:
   grains.list_present:
     \- value: web
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For multiple grains, the syntax looks like:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+roles:
+  grains.list_present:
+    \- value:
+      \- web
+      \- dev
 .ft P
 .fi
 .UNINDENT
@@ -143236,6 +144420,9 @@ Include additional arguments and options to the hg command line
 .SS Send a message to Hipchat
 .sp
 This state is useful for sending messages to Hipchat during state runs.
+.sp
+New in version 2015.2.0.
+
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -151256,7 +152443,7 @@ The name of the init or rc script used to manage the service
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.states.service.mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False, **kwargs)
+.B salt.states.service.mod_watch(name, sfun=None, sig=None, reload=False, full_restart=False, force=False, **kwargs)
 The service watcher, called to invoke the watch command.
 .INDENT 7.0
 .TP
@@ -154569,6 +155756,18 @@ center;
 |l|l|.
 _
 T{
+\fBbtmp\fP
+T}	T{
+Beacon to fire events at failed login of users
+T}
+_
+T{
+\fBdiskusage\fP
+T}	T{
+Beacon to monitor disk usage.
+T}
+_
+T{
 \fBinotify\fP
 T}	T{
 Watch files and translate the changes into salt events
@@ -154578,6 +155777,30 @@ T{
 \fBjournald\fP
 T}	T{
 A simple beacon to watch journald for specific entries
+T}
+_
+T{
+\fBload\fP
+T}	T{
+Beacon to emit system load averages
+T}
+_
+T{
+\fBnetwork_info\fP
+T}	T{
+Beacon to monitor statistics from ethernet adapters
+T}
+_
+T{
+\fBservice\fP
+T}	T{
+Send events covering service status
+T}
+_
+T{
+\fBsh\fP
+T}	T{
+Watch the shell commands being executed actively.
 T}
 _
 T{
@@ -154593,6 +155816,67 @@ Beacon to fire events at login of users as registered in the wtmp file
 T}
 _
 .TE
+.SS salt.beacons.btmp
+.sp
+Beacon to fire events at failed login of users
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+beacons:
+  btmp: {}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B salt.beacons.btmp.beacon(config)
+Read the last btmp file and return information on the failed logins
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+beacons:
+  btmp: {}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.beacons.diskusage
+.sp
+Beacon to monitor disk usage.
+.sp
+New in version 2015.2.0.
+
+.INDENT 0.0
+.TP
+.B salt.beacons.diskusage.beacon(config)
+Monitor the disk usage of the minion
+.sp
+Specify thresholds for for each load average
+and only emit a beacon if any of them are
+exceeded.
+.sp
+code_block:: yaml
+.INDENT 7.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B beacons:
+.INDENT 7.0
+.IP \(bu 2
+diskusage:
+\- /: 63%
+\- /mnt/nfs: 50%
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
 .SS salt.beacons.inotify
 .sp
 Watch files and translate the changes into salt events
@@ -154668,6 +155952,210 @@ beacons:
         sshd:
             SYSLOG_IDENTIFIER: sshd
             PRIORITY: 6
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.beacons.load
+.sp
+Beacon to emit system load averages
+.INDENT 0.0
+.TP
+.B salt.beacons.load.beacon(config)
+Emit the load averages of this host.
+.sp
+Specify thresholds for for each load average
+and only emit a beacon if any of them are
+exceeded.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+beacons:
+  \- load:
+    \- 1m:
+      \- 0.0
+      \- 2.0
+    \- 5m:
+      \- 0.0
+      \- 1.5
+    \- 15m:
+      \- 0.1
+      \- 1.0
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.beacons.network_info
+.sp
+Beacon to monitor statistics from ethernet adapters
+.sp
+New in version 2015.2.0.
+
+.INDENT 0.0
+.TP
+.B salt.beacons.network_info.beacon(config)
+Emit the network statistics of this host.
+.sp
+Specify thresholds for for each network stat
+and only emit a beacon if any of them are
+exceeded.
+.sp
+code_block:: yaml
+.sp
+Emit beacon when any values are equal to
+configured values.
+.INDENT 7.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B beacons:
+.INDENT 7.0
+.TP
+.B network_info:
+.INDENT 7.0
+.TP
+.B eth0:
+.INDENT 7.0
+.IP \(bu 2
+type: equal
+.IP \(bu 2
+bytes_sent: 100000
+.IP \(bu 2
+bytes_recv: 100000
+.IP \(bu 2
+packets_sent: 100000
+.IP \(bu 2
+packets_recv: 100000
+.IP \(bu 2
+errin: 100
+.IP \(bu 2
+errout: 100
+.IP \(bu 2
+dropin: 100
+.IP \(bu 2
+dropout: 100
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+Emit beacon when any values are greater
+than to configured values.
+.INDENT 7.0
+.INDENT 3.5
+.INDENT 0.0
+.TP
+.B beacons:
+.INDENT 7.0
+.TP
+.B network_info:
+.INDENT 7.0
+.TP
+.B eth0:
+.INDENT 7.0
+.IP \(bu 2
+type: greater
+.IP \(bu 2
+bytes_sent: 100000
+.IP \(bu 2
+bytes_recv: 100000
+.IP \(bu 2
+packets_sent: 100000
+.IP \(bu 2
+packets_recv: 100000
+.IP \(bu 2
+errin: 100
+.IP \(bu 2
+errout: 100
+.IP \(bu 2
+dropin: 100
+.IP \(bu 2
+dropout: 100
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.beacons.service
+.sp
+Send events covering service status
+.INDENT 0.0
+.TP
+.B salt.beacons.service.beacon(config)
+Scan for the configured services and fire events
+.sp
+Example Config
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+beacons:
+  service:
+    salt\-master:
+    mysql:
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The config above sets up beacons to check for
+the salt\-master and mysql services.
+.sp
+The config also supports two other parameters for each service:
+.sp
+\fIonchangeonly\fP: when \fIonchangeonly\fP is True the beacon will fire
+events only when the service status changes.  Otherwise, it will fire an event
+at each beacon interval.  The default is False.
+.sp
+\fIuncleanshutdown\fP: If \fIuncleanshutdown\fP is present it should point to the location
+of a pid file for the service.  Most services will not clean up this pid file
+if they are shutdown uncleanly (e.g. via \fIkill \-9\fP) or if they are terminated
+through a crash such as a segmentation fault.  If the file is present, then
+the beacon will add \fIuncleanshutdown: True\fP to the event.  If not present,
+the field will be False.  The field is only added when the service is NOT running.
+Omitting the configuration variable altogether will turn this feature off.
+.sp
+Here is an example that will fire an event whenever the state of nginx changes
+and report an uncleanshutdown.  This example is for Arch, which places nginx\(aqs
+pid file in \fI/run\fP\&.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+beacons:
+  service:
+    nginx:
+      onchangeonly: True
+      uncleanshutdown: /run/nginx.pid
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS salt.beacons.sh
+.sp
+Watch the shell commands being executed actively. This beacon requires strace.
+.INDENT 0.0
+.TP
+.B salt.beacons.sh.beacon(config)
+Scan the shell execve routines. This beacon will convert all login shells
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+beacons:
+  sh: {}
 .ft P
 .fi
 .UNINDENT
