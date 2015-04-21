@@ -276,7 +276,8 @@ def _load_accumulators():
             with open(path, 'rb') as f:
                 loaded = serial.load(f)
                 return loaded if loaded else ret
-        except IOError:
+        except (IOError, NameError):
+            # NameError is a msgpack error from salt-ssh
             return ret
 
     loaded = _deserialize(_get_accumulator_filepath())
@@ -290,8 +291,12 @@ def _persist_accummulators(accumulators, accumulators_deps):
                    'accumulators_deps': accumulators_deps}
 
     serial = salt.payload.Serial(__opts__)
-    with open(_get_accumulator_filepath(), 'w+b') as f:
-        serial.dump(accumm_data, f)
+    try:
+        with open(_get_accumulator_filepath(), 'w+b') as f:
+            serial.dump(accumm_data, f)
+    except NameError:
+        # msgpack error from salt-ssh
+        pass
 
 
 def _check_user(user, group):

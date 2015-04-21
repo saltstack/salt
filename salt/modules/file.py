@@ -1696,7 +1696,7 @@ def replace(path,
             raise CommandExecutionError("Exception: {0}".format(exc))
 
     if not found and (append_if_not_found or prepend_if_not_found):
-        if None == not_found_content:
+        if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
             new_file.insert(0, not_found_content + '\n')

@@ -41,6 +41,7 @@ Var MinionName_State
 !define MUI_ABORTWARNING
 !define MUI_ICON "salt.ico"
 !define MUI_UNICON "salt.ico"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
 ; Welcome page
 !insertmacro MUI_PAGE_WELCOME
