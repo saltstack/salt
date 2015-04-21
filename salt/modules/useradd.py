@@ -111,10 +111,14 @@ def add(name,
         except OSError:
             log.debug('Error reading /etc/login.defs', exc_info=True)
 
-    if createhome:
-        cmd.append('-m')
-    elif createhome is False:
-        cmd.append('-M')
+    if isinstance(createhome, bool):
+        if createhome:
+            cmd.append('-m')
+        else:
+            cmd.append('-M')
+    else:
+        log.error('Value passes to ``createhome`` must be a boolean')
+        return False
 
     if home is not None:
         cmd.extend(['-d', home])
