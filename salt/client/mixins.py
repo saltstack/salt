@@ -148,7 +148,7 @@ class SyncClientMixin(object):
 
         return ret['data']['return']
 
-    def cmd(self, fun, arg=None, pub_data=None, **kwarg):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
         '''
         Execute a function
 
