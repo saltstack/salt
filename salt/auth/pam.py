@@ -36,13 +36,14 @@ CALLOC.argtypes = [c_uint, c_uint]
 
 STRDUP = LIBC.strdup
 STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char) # NOT c_char_p !!!!
+STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
 PAM_PROMPT_ECHO_ON = 2
 PAM_ERROR_MSG = 3
 PAM_TEXT_INFO = 4
+
 
 class PamHandle(Structure):
     '''
@@ -56,6 +57,7 @@ class PamHandle(Structure):
         Structure.__init__(self)
         self.handle = 0
 
+
 class PamMessage(Structure):
     '''
     Wrapper class for pam_message structure
@@ -66,7 +68,8 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return "<PamMessage %i '%s'>" % (self.msg_style, self.msg)
+        return "<PamMessage {0:d} '{1}'>".format(self.msg_style, self.msg)
+
 
 class PamResponse(Structure):
     '''
@@ -78,11 +81,12 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return "<PamResponse %i '%s'>" % (self.resp_retcode, self.resp)
+        return "<PamResponse {0:d} '{1}'>".format(self.resp_retcode, self.resp)
 
 CONV_FUNC = CFUNCTYPE(c_int,
         c_int, POINTER(POINTER(PamMessage)),
                POINTER(POINTER(PamResponse)), c_void_p)
+
 
 class PamConv(Structure):
     '''
@@ -110,7 +114,7 @@ try:
     PAM_SETCRED = LIBPAM.pam_setcred
     PAM_SETCRED.restype = c_int
     PAM_SETCRED.argtypes = [PamHandle, c_int]
- 
+
     PAM_OPEN_SESSION = LIBPAM.pam_open_session
     PAM_OPEN_SESSION.restype = c_int
     PAM_OPEN_SESSION.argtypes = [PamHandle, c_int]
@@ -129,6 +133,7 @@ def __virtual__():
     Only load on Linux systems
     '''
     return HAS_PAM
+
 
 def authenticate(username, password, service='login'):
     '''
@@ -172,7 +177,7 @@ def authenticate(username, password, service='login'):
     if retval != 0:
         PAM_END(handle, retval)
         return False
- 
+
     retval = PAM_SETCRED(handle, 0)
     if retval != 0:
         PAM_END(handle, retval)
