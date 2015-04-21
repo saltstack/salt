@@ -234,7 +234,9 @@ def gen_locale(locale, **kwargs):
     .. versionadded:: 2014.7.0
 
     :param locale: Any locale listed in /usr/share/i18n/locales or
-        /usr/share/i18n/SUPPORTED for debian and gentoo based distros
+        /usr/share/i18n/SUPPORTED for Debian and Gentoo based distributions,
+        which require the charmap to be specified as part of the locale
+        when generating it.
 
     verbose
         Show extra warnings about errors that are normally ignored.
@@ -244,7 +246,7 @@ def gen_locale(locale, **kwargs):
     .. code-block:: bash
 
         salt '*' locale.gen_locale en_US.UTF-8
-        salt '*' locale.gen_locale 'en_IE@euro ISO-8859-15'
+        salt '*' locale.gen_locale 'en_IE.UTF-8 UTF-8'    # Debian/Gentoo only
     '''
     on_debian = __grains__.get('os') == 'Debian'
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
@@ -312,4 +314,4 @@ def gen_locale(locale, **kwargs):
     if kwargs.get('verbose'):
         return res
     else:
-        return res['retcode']
+        return res['retcode'] == 0
