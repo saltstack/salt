@@ -17,19 +17,16 @@ Implemented using ctypes, so no compilation is necessary.
     The Python interface to PAM does not support authenticating as ``root``.
 
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Salt libs
+from salt.utils import get_group_list
+
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
-# Import Salt libs
-from salt.utils import get_group_list
-from salt.ext.six.moves import range
-
-LIBPAM = CDLL(find_library('pam'))
-LIBC = CDLL(find_library('c'))
+LIBPAM = CDLL(find_library("pam"))
+LIBC = CDLL(find_library("c"))
 
 CALLOC = LIBC.calloc
 CALLOC.restype = c_void_p
@@ -37,7 +34,7 @@ CALLOC.argtypes = [c_uint, c_uint]
 
 STRDUP = LIBC.strdup
 STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
+STRDUP.restype = POINTER(c_char) # NOT c_char_p !!!!
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
@@ -45,74 +42,72 @@ PAM_PROMPT_ECHO_ON = 2
 PAM_ERROR_MSG = 3
 PAM_TEXT_INFO = 4
 
-
 class PamHandle(Structure):
-    '''
-    Wrapper class for pam_handle_t
-    '''
+    """wrapper class for pam_handle_t"""
     _fields_ = [
-            ('handle', c_void_p)
+            ("handle", c_void_p)
             ]
 
     def __init__(self):
         Structure.__init__(self)
         self.handle = 0
 
-
 class PamMessage(Structure):
-    '''
-    Wrapper class for pam_message structure
-    '''
+    """wrapper class for pam_message structure"""
     _fields_ = [
             ("msg_style", c_int),
-            ("msg", c_char_p),
+            ("msg", POINTER(c_char)),
             ]
 
     def __repr__(self):
-        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
-
+        return "<PamMessage %i '%s'>" % (self.msg_style, self.msg)
 
 class PamResponse(Structure):
-    '''
-    Wrapper class for pam_response structure
-    '''
+    """wrapper class for pam_response structure"""
     _fields_ = [
-            ('resp', c_char_p),
-            ('resp_retcode', c_int),
+            ("resp", POINTER(c_char)),
+            ("resp_retcode", c_int),
             ]
 
     def __repr__(self):
-        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
-
+        return "<PamResponse %i '%s'>" % (self.resp_retcode, self.resp)
 
 CONV_FUNC = CFUNCTYPE(c_int,
         c_int, POINTER(POINTER(PamMessage)),
                POINTER(POINTER(PamResponse)), c_void_p)
 
-
 class PamConv(Structure):
-    '''
-    Wrapper class for pam_conv structure
-    '''
+    """wrapper class for pam_conv structure"""
     _fields_ = [
-            ('conv', CONV_FUNC),
-            ('appdata_ptr', c_void_p)
+            ("conv", CONV_FUNC),
+            ("appdata_ptr", c_void_p)
             ]
-
 
 try:
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
     PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-            POINTER(PamHandle)]
+        POINTER(PamHandle)]
+
+    PAM_END = LIBPAM.pam_end
+    PAM_END.restpe = c_int
+    PAM_END.argtypes = [PamHandle, c_int]
 
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
     PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
 
-    PAM_END = LIBPAM.pam_end
-    PAM_END.restype = c_int
-    PAM_END.argtypes = [PamHandle, c_int]
+    PAM_SETCRED = LIBPAM.pam_setcred
+    PAM_SETCRED.restype = c_int
+    PAM_SETCRED.argtypes = [PamHandle, c_int]
+ 
+    PAM_OPEN_SESSION = LIBPAM.pam_open_session
+    PAM_OPEN_SESSION.restype = c_int
+    PAM_OPEN_SESSION.argtypes = [PamHandle, c_int]
+
+    PAM_CLOSE_SESSION = LIBPAM.pam_close_session
+    PAM_CLOSE_SESSION.restype = c_int
+    PAM_CLOSE_SESSION.argtypes = [PamHandle, c_int]
 except Exception:
     HAS_PAM = False
 else:
@@ -125,32 +120,27 @@ def __virtual__():
     '''
     return HAS_PAM
 
-
 def authenticate(username, password, service='login'):
-    '''
-    Returns True if the given username and password authenticate for the
+    """Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
-
+    
     ``username``: the username to authenticate
-
+    
     ``password``: the password in plain text
-
+    
     ``service``: the PAM service to authenticate against.
-                 Defaults to 'login'
-    '''
+                 Defaults to 'login'"""
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
-        '''
-        Simple conversation function that responds to any
-        prompt where the echo is off with the supplied password
-        '''
+        """Simple conversation function that responds to any
+        prompt where the echo is off with the supplied password"""
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
         p_response[0] = cast(addr, POINTER(PamResponse))
         for i in range(n_messages):
             if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
                 pw_copy = STRDUP(str(password))
-                p_response.contents[i].resp = cast(pw_copy, c_char_p)
+                p_response.contents[i].resp = pw_copy
                 p_response.contents[i].resp_retcode = 0
         return 0
 
@@ -165,7 +155,26 @@ def authenticate(username, password, service='login'):
         return False
 
     retval = PAM_AUTHENTICATE(handle, 0)
-    PAM_END(handle, 0)
+    if retval != 0:
+        PAM_END(handle, retval)
+        return False
+ 
+    retval = PAM_SETCRED(handle, 0)
+    if retval != 0:
+        PAM_END(handle, retval)
+        return False
+
+    retval = PAM_OPEN_SESSION(handle, 0)
+    if retval != 0:
+        PAM_END(handle, retval)
+        return False
+
+    retval = PAM_CLOSE_SESSION(handle, 0)
+    if retval != 0:
+        PAM_END(handle, retval)
+        return False
+
+    retval = PAM_END(handle, retval)
     return retval == 0
 
 
@@ -173,7 +182,7 @@ def auth(username, password, **kwargs):
     '''
     Authenticate via pam
     '''
-    return authenticate(username, password, kwargs.get('service', 'login'))
+    return authenticate(username, password, kwargs.get('service', 'system-auth'))
 
 
 def groups(username, *args, **kwargs):
