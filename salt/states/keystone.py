@@ -102,7 +102,16 @@ def user_present(name,
         Availability state for this user
 
     roles
-        The roles the user should have under tenants
+        The roles the user should have under given tenants.
+        Passed as a dictionary mapping tenant names to a list
+        of roles in this tenant, i.e.::
+
+            roles:
+                admin:   # tenant
+                  - admin  # role
+                service:
+                  - admin
+                  - Member
     '''
     ret = {'name': name,
            'changes': {},
