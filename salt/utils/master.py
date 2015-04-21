@@ -25,6 +25,7 @@ import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
+from salt.utils.cache import CacheCli as cache_cli
 
 # Import third party libs
 import salt.ext.six as six
@@ -441,6 +442,31 @@ class CacheTimer(Thread):
                 count = 0
 
 
+class CacheWorker(multiprocessing.Process):
+    '''
+    Worker for ConnectedCache which runs in its
+    own process to prevent blocking of ConnectedCache
+    main-loop when refreshing minion-list
+    '''
+
+    def __init__(self, opts):
+        '''
+        Sets up the zmq-connection to the ConCache
+        '''
+        super(CacheWorker, self).__init__()
+        self.opts = opts
+
+    def run(self):
+        '''
+        Gather currently connected minions and update the cache
+        '''
+        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
+        cc = cache_cli(self.opts)
+        cc.get_cached()
+        cc.put_cache([new_mins])
+        log.debug('ConCache CacheWorker update finished')
+
+
 class ConnectedCache(multiprocessing.Process):
     '''
     Provides access to all minions ids that the master has
@@ -480,17 +506,6 @@ class ConnectedCache(multiprocessing.Process):
         handle signals and shutdown
         '''
         self.stop()
-
-    def renew(self):
-        '''
-        compares the current minion list against the ips
-        connected on the master publisher port and updates
-        the minion list accordingly
-        '''
-        log.debug('ConCache renewing minion cache')
-        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
-        self.minions = new_mins
-        log.debug('ConCache received {0} minion ids'.format(len(new_mins)))
 
     def cleanup(self):
         '''
@@ -581,7 +596,7 @@ class ConnectedCache(multiprocessing.Process):
             # check for next cache-request
             if socks.get(creq_in) == zmq.POLLIN:
                 msg = serial.loads(creq_in.recv())
-                log.trace('ConCache Received request: {0}'.format(msg))
+                log.debug('ConCache Received request: {0}'.format(msg))
 
                 # requests to the minion list are send as str's
                 if isinstance(msg, str):
@@ -590,12 +605,8 @@ class ConnectedCache(multiprocessing.Process):
                         reply = serial.dumps(self.minions)
                         creq_in.send(reply)
 
-                else:
-                    reply = serial.dumps(False)
-                    creq_in.send(reply)
-
             # check for next cache-update from workers
-            elif socks.get(cupd_in) == zmq.POLLIN:
+            if socks.get(cupd_in) == zmq.POLLIN:
                 new_c_data = serial.loads(cupd_in.recv())
                 # tell the worker to exit
                 #cupd_in.send(serial.dumps('ACK'))
@@ -608,27 +619,41 @@ class ConnectedCache(multiprocessing.Process):
 
                 # the cache will receive lists of minions
                 # 1. if the list only has 1 item, its from an MWorker, we append it
-                # 2. anything else is considered malformed
+                # 2. if the list contains another list, its from a CacheWorker and
+                #    the currently cached minions are replaced with that list
+                # 3. anything else is considered malformed
 
-                if len(new_c_data) == 0:
-                    log.debug('ConCache Got empty update from worker')
-                elif len(new_c_data) == 1:
-                    if new_c_data[0] not in self.minions:
-                        log.trace('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
-                        self.minions.append(new_c_data[0])
-                else:
+                try:
+
+                    if len(new_c_data) == 0:
+                        log.debug('ConCache Got empty update from worker')
+                        continue
+
+                    data = new_c_data[0]
+
+                    if isinstance(data, str):
+                        if data not in self.minions:
+                            log.debug('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
+                            self.minions.append(data)
+
+                    elif isinstance(data, list):
+                        log.debug('ConCache Replacing minion list from worker')
+                        self.minions = data
+
+                except IndexError:
                     log.debug('ConCache Got malformed result dict from worker')
                     del new_c_data
 
                 log.info('ConCache {0} entries in cache'.format(len(self.minions)))
 
             # check for next timer-event to start new jobs
-            elif socks.get(timer_in) == zmq.POLLIN:
+            if socks.get(timer_in) == zmq.POLLIN:
                 sec_event = serial.loads(timer_in.recv())
 
                 # update the list every 30 seconds
-                if (sec_event == 31) or (sec_event == 1):
-                    self.renew()
+                if int(sec_event % 30) == 0:
+                    cw = CacheWorker(self.opts)
+                    cw.start()
 
         self.stop()
         creq_in.close()
