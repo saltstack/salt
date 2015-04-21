@@ -1,28 +1,24 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-import new
 import sys
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY, call
+from salttesting.helpers import ensure_in_syspath, MockModules
+
 ensure_in_syspath('../../')
 
-# wmi and pythoncom modules are platform specific...
-wmi = new.module('wmi')
-sys.modules['wmi'] = wmi
+if not NO_MOCK:
+    mock_modules = MockModules()
+    wmi = mock_modules.add('wmi')
+    pythoncom = mock_modules.add('pythoncom')
 
-pythoncom = new.module('pythoncom')
-sys.modules['pythoncom'] = pythoncom
-
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
-
-if NO_MOCK is False:
     WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
-    pythoncom.CoInitialize = Mock()
-    pythoncom.CoUninitialize = Mock()
+    sys.modules['wmi'].WMI = Mock(return_value=WMI)
+    sys.modules['pythoncom'].CoInitialize = Mock()
+    sys.modules['pythoncom'].CoUninitialize = Mock()
 
 # This is imported late so mock can do its job
 import salt.modules.win_status as status
@@ -146,6 +142,12 @@ class TestProcsWMIGetOwnerErrorsAreLogged(TestProcsBase):
     def setUp(self):
         self.expected_error_code = 8
         self.add_process(get_owner_result=self.expected_error_code)
+
+    def test_zzzzz_tearDown(self):
+        '''
+        remove mocked modules
+        '''
+        mock_modules.remove()
 
     def test_error_logged_if_process_get_owner_fails(self):
         with patch('salt.modules.win_status.log') as log:
