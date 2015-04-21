@@ -66,18 +66,13 @@ from __future__ import absolute_import
 
 # Import python libs
 import sys
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
 
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-from salt.modules.aptpkg import _get_ppa_info_from_launchpad
 
 
 def __virtual__():
@@ -179,8 +174,8 @@ def managed(name, **kwargs):
        for.  (e.g. unstable)
 
     keyid
-       The KeyID of the GPG key to install.  This option also requires
-       the 'keyserver' option to be set.
+       The KeyID of the GPG key to install. This option also requires
+       the ``keyserver`` option to be set.
 
     keyserver
        This is the name of the keyserver to retrieve gpg keys from.  The
@@ -358,6 +353,8 @@ def absent(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
+    **UBUNTU-SPECIFIC OPTIONS**
+
     ppa
         On Ubuntu, you can take advantage of Personal Package Archives on
         Launchpad simply by specifying the user and archive name.
@@ -371,7 +368,7 @@ def absent(name, **kwargs):
     ppa_auth
         For Ubuntu PPAs there can be private PPAs that require authentication
         to access. For these PPAs the username/password can be specified.  This
-        is required for matching if the name format uses the "ppa:" specifier
+        is required for matching if the name format uses the ``ppa:`` specifier
         and is private (requires username/password to access, which is encoded
         in the URI).
 
@@ -381,14 +378,19 @@ def absent(name, **kwargs):
               pkgrepo.absent:
                 - ppa: wolfnet/logstash
                 - ppa_auth: username:password
-    keyid
-        The KeyID of the GPG key to remove, only valid for Ubuntu &
-        Debian systems.
-    keyid_ppa
-        If True, automatically get the keyid to remove from
-        ppa.launchpad.net and ignore the keyid argument. Only valid if
-        ppa argument is present.
 
+    keyid
+        If passed, then the GPG key corresponding to the passed KeyID will also
+        be removed.
+
+    keyid_ppa : False
+        If set to ``True``, the GPG key's ID will be looked up from
+        ppa.launchpad.net and removed, and the ``keyid`` argument will be
+        ignored.
+
+        .. note::
+            This option will be disregarded unless the ``ppa`` argument is
+            present.
     '''
     ret = {'name': name,
            'changes': {},
@@ -399,6 +401,14 @@ def absent(name, **kwargs):
         name = kwargs.pop('ppa')
         if not name.startswith('ppa:'):
             name = 'ppa:' + name
+
+    remove_key = any(kwargs.get(x) is not None
+                     for x in ('keyid', 'keyid_ppa'))
+    if remove_key and 'pkg.del_repo_key' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = \
+            'Repo key management is not implemented for this platform'
+        return ret
 
     try:
         repo = __salt__['pkg.get_repo'](
@@ -414,6 +424,7 @@ def absent(name, **kwargs):
         ret['comment'] = 'Package repo {0} is absent'.format(name)
         ret['result'] = True
         return ret
+
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be removed. This may '
                           'cause pkg states to behave differently than stated '
@@ -421,36 +432,40 @@ def absent(name, **kwargs):
                           'to the differences in the configured repositories.'
                           .format(name))
         return ret
-    __salt__['pkg.del_repo'](repo=name, **kwargs)
+
+    try:
+        __salt__['pkg.del_repo'](repo=name, **kwargs)
+    except (CommandExectionError, SaltInvocationError) as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
+
     repos = __salt__['pkg.list_repos']()
     if name not in repos:
-        ret['result'] = True
-        ret['changes'] = {'repo': name}
-        ret['comment'] = 'Removed package repo {0}'.format(name)
+        ret['changes']['repo'] = name
+        ret['comment'] = 'Removed repo {0}'.format(name)
 
-        if name.startswith('ppa:') and kwargs.get('keyid_ppa', False):
-            owner_name, ppa_name = name[4:].split('/')
-            ppa_info = _get_ppa_info_from_launchpad(
-                owner_name, ppa_name)
-            kwargs['keyid'] = ppa_info['signing_key_fingerprint']
-
-        if 'keyid' in kwargs and __grains__['os_family'] == 'Debian':
-            cmd = 'apt-key del {0}'.format(_cmd_quote(kwargs['keyid']))
-            cmd_ret = __salt__['cmd.run_all'](cmd)
-            if cmd_ret['retcode'] != 0:
+        if not remove_key:
+            ret['result'] = True
+        else:
+            try:
+                removed_keyid = __salt__['pkg.del_repo_key'](name, **kwargs)
+            except (CommandExecutionError, SaltInvocationError) as exc:
                 ret['result'] = False
-                ret['comment'] += '\nFailed to remove keyid: {0}'.format(
-                    kwargs['keyid'])
+                ret['comment'] += ', but failed to remove key: {0}'.format(exc)
             else:
-                ret['comment'] += '\nRemoved GPG keyid: {0}'.format(
-                    kwargs['keyid'])
+                ret['result'] = True
+                ret['changes']['keyid'] = removed_keyid
+                ret['comment'] += ', and keyid {0}'.format(removed_keyid)
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to remove repo {0}'.format(name)
+
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
     if ret['changes']:
         sys.modules[
             __salt__['test.ping'].__module__
         ].__context__.pop('pkg._avail', None)
+
     return ret
