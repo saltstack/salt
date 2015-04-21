@@ -203,7 +203,7 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     if results:
         for result in results:
             values = {}
-            for key, value in result.iteritems():
+            for key, value in six.iteritems(result):
                 # Salt won't return dictionaries with odd types like uuid.UUID
                 if not isinstance(value, six.text_type):
                     value = str(value)

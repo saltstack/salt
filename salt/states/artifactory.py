@@ -81,9 +81,9 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         log.debug("ret=%s", str(ret))
 
         return ret
-    except Exception as e:
+    except Exception as exc:
         ret['result'] = False
-        ret['comment'] = e
+        ret['comment'] = exc
         return ret
 
 
