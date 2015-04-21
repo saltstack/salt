@@ -707,7 +707,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  whitelist=None,
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
-        super(LazyLoader, self).__init__()  # init the lazy loader
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -734,6 +733,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.refresh_file_mapping()
 
+        super(LazyLoader, self).__init__()  # late init the lazy loader
         # create all of the import namespaces
         _generate_module('{0}.int'.format(self.loaded_base_name))
         _generate_module('{0}.int.{1}'.format(self.loaded_base_name, tag))
