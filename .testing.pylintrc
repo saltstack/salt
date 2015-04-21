@@ -68,6 +68,7 @@ disable=R,
   W0631,
   W0704,
   W1202,
+  W1307,
   F0220,
   F0401,
   E8501,
@@ -117,6 +118,7 @@ disable=R,
 # F0220 (unresolved-interface)
 # F0401 (import-error)
 # W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
+# W1307 (invalid-format-index) Using invalid lookup key '%s' in format specifier "0['%s']"
 #
 # E812* All PEP8 E12*
 # E8265 PEP8 E265 - block comment should start with "# "
