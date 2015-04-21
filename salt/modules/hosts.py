@@ -32,6 +32,8 @@ def _get_or_create_hostfile():
     does not exist.
     '''
     hfn = __get_hosts_filename()
+    if hfn is None:
+        hfn = ''
     if not os.path.exists(hfn):
         salt.utils.fopen(hfn, 'w').close()
     return hfn

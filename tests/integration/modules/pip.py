@@ -181,10 +181,11 @@ class PipModuleTest(integration.ModuleCase):
         )
         try:
             self.assertEqual(ret['retcode'], 0)
-            self.assertIn(
-                'Successfully installed pep8 Blinker SaltTesting',
-                ret['stdout']
-            )
+            for package in ('Blinker', 'SaltTesting', 'pep8'):
+                self.assertRegexpMatches(
+                    ret['stdout'],
+                    r'(?:.*)(Successfully installed)(?:.*)({0})(?:.*)'.format(package)
+                )
         except AssertionError:
             import pprint
             pprint.pprint(ret)
