@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+:codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 
 # Import Python Libs
@@ -98,12 +98,6 @@ class SysmodTestCase(TestCase):
         Test if it return the docstrings for all modules.
         '''
         self.assertDictEqual(sysmod.doc(), {})
-
-        ret = ("str(object='') -> string\n\nReturn a nice string"
-               " representation of the object.\nIf the argument is a string,"
-               " the return value is the same object.")
-        with patch.dict(sysmod.__salt__, {'sys.doc': ''}):
-            self.assertDictEqual(sysmod.doc('sys.doc'), {'sys.doc': ret})
 
     # 'state_doc' function tests: 1
 
