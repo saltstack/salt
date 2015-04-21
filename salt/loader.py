@@ -5,7 +5,6 @@ Routines to set up a minion
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import os
 import imp
 import sys
@@ -34,7 +33,6 @@ import salt.ext.six as six
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
 }
-_grains = {}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
@@ -722,12 +720,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
         super(LazyLoader, self).__init__()  # init the lazy loader
-        self.tag = tag
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
+        self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
@@ -869,11 +867,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self._pillar = opts['pillar']
         else:
             self._pillar = {}
-        if self.tag not in ['grains'] and not self._grains:
-            if not _grains:
-                # memoize cache the grains, not to reload each run
-                _grains.update(grains(opts))
-            self._grains.update(copy.deepcopy(_grains))
 
         mod_opts = {}
         for key, val in list(opts.items()):
