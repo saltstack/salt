@@ -66,6 +66,10 @@ from __future__ import absolute_import
 
 # Import python libs
 import sys
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -73,6 +77,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
+from salt.modules.aptpkg import _get_ppa_info_from_launchpad
 
 
 def __virtual__():
@@ -376,6 +381,14 @@ def absent(name, **kwargs):
               pkgrepo.absent:
                 - ppa: wolfnet/logstash
                 - ppa_auth: username:password
+    keyid
+        The KeyID of the GPG key to remove, only valid for Ubuntu &
+        Debian systems.
+    keyid_ppa
+        If True, automatically get the keyid to remove from
+        ppa.launchpad.net and ignore the keyid argument. Only valid if
+        ppa argument is present.
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -414,6 +427,23 @@ def absent(name, **kwargs):
         ret['result'] = True
         ret['changes'] = {'repo': name}
         ret['comment'] = 'Removed package repo {0}'.format(name)
+
+        if name.startswith('ppa:') and kwargs.get('keyid_ppa', False):
+            owner_name, ppa_name = name[4:].split('/')
+            ppa_info = _get_ppa_info_from_launchpad(
+                owner_name, ppa_name)
+            kwargs['keyid'] = ppa_info['signing_key_fingerprint']
+
+        if 'keyid' in kwargs and __grains__['os_family'] == 'Debian':
+            cmd = 'apt-key del {0}'.format(_cmd_quote(kwargs['keyid']))
+            cmd_ret = __salt__['cmd.run_all'](cmd)
+            if cmd_ret['retcode'] != 0:
+                ret['result'] = False
+                ret['comment'] += '\nFailed to remove keyid: {0}'.format(
+                    kwargs['keyid'])
+            else:
+                ret['comment'] += '\nRemoved GPG keyid: {0}'.format(
+                    kwargs['keyid'])
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to remove repo {0}'.format(name)
