@@ -17,7 +17,7 @@ ${StrLoc}
 ${StrStrAdv}
 
 !ifdef SaltVersion
-  !define PRODUCT_VERSION ${SaltVersion}
+  !define PRODUCT_VERSION "${SaltVersion}"
 !else
   !define PRODUCT_VERSION "Undefined Version"
 !endif
