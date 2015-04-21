@@ -229,17 +229,17 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
-        if type(multiprocessing.Process) == type(tgt) and issubclass(tgt, multiprocessing.Process):
-            p = tgt(*args, **kwargs)
+        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
+            process = tgt(*args, **kwargs)
         else:
-            p = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
+            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
-        p.start()
-        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, p.pid))
-        self._process_map[p.pid] = {'tgt': tgt,
-                                    'args': args,
-                                    'kwargs': kwargs,
-                                    'Process': p}
+        process.start()
+        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, process.pid))
+        self._process_map[process.pid] = {'tgt': tgt,
+                                          'args': args,
+                                          'kwargs': kwargs,
+                                          'Process': process}
 
     def restart_process(self, pid):
         '''

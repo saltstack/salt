@@ -2075,7 +2075,7 @@ def create(vm_=None, call=None):
     )
 
     try:
-        node_data = conn.create_node(**kwargs)  # pylint: disable=W0142
+        node_data = conn.create_node(**kwargs)
     except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on GCE\n\n'
@@ -2171,7 +2171,6 @@ def create(vm_=None, call=None):
             transport=__opts__['transport']
         )
 
-        # pylint: disable=W0142
         deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
         if deployed:
             log.info('Salt installed on {0}'.format(vm_['name']))
