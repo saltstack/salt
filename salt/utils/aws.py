@@ -155,7 +155,7 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
-    querystring = urlencode(list(zip(keys, values)))
+    querystring = urlencode(list(zip(keys, values))).replace('+', '%20')
 
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
