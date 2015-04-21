@@ -17,6 +17,7 @@ Implemented using ctypes, so no compilation is necessary.
     The Python interface to PAM does not support authenticating as ``root``.
 
 '''
+from __future__ import absolute_import
 
 # Import Python Lobs
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
@@ -44,7 +45,9 @@ PAM_ERROR_MSG = 3
 PAM_TEXT_INFO = 4
 
 class PamHandle(Structure):
-    """wrapper class for pam_handle_t"""
+    '''
+    Wrapper class for pam_handle_t
+    '''
     _fields_ = [
             ("handle", c_void_p)
             ]
@@ -54,7 +57,9 @@ class PamHandle(Structure):
         self.handle = 0
 
 class PamMessage(Structure):
-    """wrapper class for pam_message structure"""
+    '''
+    Wrapper class for pam_message structure
+    '''
     _fields_ = [
             ("msg_style", c_int),
             ("msg", POINTER(c_char)),
@@ -64,7 +69,9 @@ class PamMessage(Structure):
         return "<PamMessage %i '%s'>" % (self.msg_style, self.msg)
 
 class PamResponse(Structure):
-    """wrapper class for pam_response structure"""
+    '''
+    Wrapper class for pam_response structure
+    '''
     _fields_ = [
             ("resp", POINTER(c_char)),
             ("resp_retcode", c_int),
@@ -78,7 +85,9 @@ CONV_FUNC = CFUNCTYPE(c_int,
                POINTER(POINTER(PamResponse)), c_void_p)
 
 class PamConv(Structure):
-    """wrapper class for pam_conv structure"""
+    '''
+    Wrapper class for pam_conv structure
+    '''
     _fields_ = [
             ("conv", CONV_FUNC),
             ("appdata_ptr", c_void_p)
@@ -122,19 +131,23 @@ def __virtual__():
     return HAS_PAM
 
 def authenticate(username, password, service='login'):
-    """Returns True if the given username and password authenticate for the
+    '''
+    Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
-    
+
     ``username``: the username to authenticate
-    
+
     ``password``: the password in plain text
-    
+
     ``service``: the PAM service to authenticate against.
-                 Defaults to 'login'"""
+                 Defaults to 'login'
+    '''
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
-        """Simple conversation function that responds to any
-        prompt where the echo is off with the supplied password"""
+        '''
+        Simple conversation function that responds to any
+        prompt where the echo is off with the supplied password
+        '''
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
         p_response[0] = cast(addr, POINTER(PamResponse))
@@ -183,7 +196,7 @@ def auth(username, password, **kwargs):
     '''
     Authenticate via pam
     '''
-    return authenticate(username, password, kwargs.get('service', 'system-auth'))
+    return authenticate(username, password, kwargs.get('service', 'login'))
 
 
 def groups(username, *args, **kwargs):
