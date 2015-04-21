@@ -254,6 +254,7 @@ import yaml
 import salt
 import salt.auth
 import salt.utils.event
+import salt.utils.minions
 
 # Import salt-api libs
 import salt.netapi
@@ -1386,7 +1387,25 @@ class Login(LowDataAdapter):
         # Grab eauth config for the current backend for the current user
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
-            perms = eauth.get(token['name'], eauth.get('*'))
+
+            group_perm_keys = filter(lambda(item): item.endswith('%'), eauth)  # The configured auth groups
+
+            # First we need to know if the user is allowed to proceed via any of their group memberships.
+            group_auth_match = False
+            for group_config in group_perm_keys:
+                group_config = group_config.rstrip('%')
+                for group in token['groups']:
+                    if group == group_config:
+                        group_auth_match = True
+
+            perms = []
+
+            if '*' in eauth:
+                perms.append(eauth['*'])
+            if token['name'] in self.opts['external_auth'][token['eauth']]:
+                perms.append(eauth[token['name']])
+            if group_auth_match:
+                perms = self.ckminions.fill_auth_list_from_groups(eauth, token['groups'], perms)
 
             if perms is None:
                 raise ValueError("Eauth permission list not found.")
