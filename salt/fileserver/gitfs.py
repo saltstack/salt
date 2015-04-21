@@ -49,7 +49,7 @@ Walkthrough <tutorial-gitfs>`.
 # Import python libs
 from __future__ import absolute_import
 import copy
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
 import glob
