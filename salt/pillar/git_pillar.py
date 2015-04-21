@@ -2,6 +2,8 @@
 '''
 Clone a remote git repository and use the filesystem as a Pillar source
 
+Currently GitPython is the only supported provider for git Pillars
+
 This external Pillar source can be configured in the master config file like
 so:
 
