@@ -1064,6 +1064,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if the key doesn't have a '.' then it isn't valid for this mod dict
         if not isinstance(key, six.string_types):
             raise KeyError
+        if key in ['copy']:
+            raise AttributeError(key)
         if '.' not in key:
             mod_name = key
         else:
