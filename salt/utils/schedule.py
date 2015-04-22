@@ -842,6 +842,21 @@ class Schedule(object):
                     self.loop_interval = seconds
             run = False
 
+            if 'splay' in data:
+                if 'when' in data:
+                    log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
+                elif 'cron' in data:
+                    log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
+                else:
+                    if '_seconds' not in data:
+                        log.debug('The _seconds parameter is missing, '
+                                  'most likely the first run or the schedule '
+                                  'has been refreshed refresh.')
+                        if 'seconds' in data:
+                            data['_seconds'] = data['seconds']
+                        else:
+                            data['_seconds'] = 0
+
             if job in self.intervals:
                 if 'when' in data:
                     if seconds == 0:
@@ -855,17 +870,6 @@ class Schedule(object):
                     if now - self.intervals[job] >= seconds:
                         run = True
             else:
-                if 'splay' in data:
-                    if 'when' in data:
-                        log.error('Unable to use "splay" with "when" option at this time. Ignoring.')
-                    elif 'cron' in data:
-                        log.error('Unable to use "splay" with "cron" option at this time. Ignoring.')
-                    else:
-                        if 'seconds' in data:
-                            data['_seconds'] = data['seconds']
-                        else:
-                            data['_seconds'] = 0
-
                 if 'when' in data:
                     if seconds == 0:
                         if data['_when_run']:

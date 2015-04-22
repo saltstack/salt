@@ -1480,6 +1480,12 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             help=('Display a progress graph')
         )
         self.add_option(
+            '--failhard',
+            default=False,
+            action='store_true',
+            help=('Stop batch execution upon first "bad" return')
+        )
+        self.add_option(
             '--async',
             default=False,
             dest='async',
