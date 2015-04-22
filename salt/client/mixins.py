@@ -270,8 +270,6 @@ class SyncClientMixin(object):
             # namespace only once per module-- not per func
             completed_funcs = []
             for mod_name in self.functions:
-                if '.' not in mod_name:
-                    continue
                 mod, _ = mod_name.split('.', 1)
                 if mod in completed_funcs:
                     continue
