@@ -63,6 +63,14 @@ def __virtual__():
     return True
 
 
+def _is_valid_resource(_type):
+    if _type in ('A', 'CNAME', 'MX'):
+        return True
+    else:
+        log.error('{0} is an unsupported resource type.'.format(_type))
+        return False
+
+
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                keyid=None, profile=None):
     '''
@@ -82,36 +90,28 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
         return None
     _type = record_type.upper()
     ret = odict.OrderedDict()
+
+    if not _is_valid_resource(_type):
+        return None
+
     if _type == 'A':
         _record = _zone.get_a(name, fetch_all)
-        if _record:
-            ret['name'] = _record.name
-            ret['value'] = _record.to_print()
-            ret['record_type'] = _record.type
-            ret['ttl'] = _record.ttl
     elif _type == 'CNAME':
         _record = _zone.get_cname(name, fetch_all)
-        if _record:
-            ret['name'] = _record.name
-            ret['value'] = _record.to_print()
-            ret['record_type'] = _record.type
-            ret['ttl'] = _record.ttl
     elif _type == 'MX':
         _record = _zone.get_mx(name, fetch_all)
-        if _record:
-            ret['name'] = _record.name
-            ret['value'] = _record.to_print()
-            ret['record_type'] = _record.type
-            ret['ttl'] = _record.ttl
-    else:
-        msg = '{0} is an unsupported resource type.'.format(_type)
-        log.error(msg)
-        return None
+
+    if _record:
+        ret['name'] = _record.name
+        ret['value'] = _record.to_print()
+        ret['record_type'] = _record.type
+        ret['ttl'] = _record.ttl
+
     return ret
 
 
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
-               region=None, key=None, keyid=None, profile=None):
+               region=None, key=None, keyid=None, profile=None, sync_wait=False):
     '''
     Add a record to a zone.
 
@@ -128,24 +128,29 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
         log.error(msg)
         return False
     _type = record_type.upper()
+
+    if not _is_valid_resource(_type):
+        return False
+
     if _type == 'A':
         status = _zone.add_a(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
     elif _type == 'CNAME':
         status = _zone.add_cname(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
     elif _type == 'MX':
         status = _zone.add_mx(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+
+    if sync_wait:
+        if _wait_for_sync(status.id, conn):
+            return True
+        else:
+            log.error('Failed to add route53 record {0}.'.format(name))
+            return False
     else:
-        msg = '{0} is an unsupported resource type.'.format(_type)
-        log.error(msg)
-    log.error('Failed to add route53 record {0}.'.format(name))
-    return False
+        return True
 
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None, sync_wait=False):
     '''
     Modify a record in a zone.
 
@@ -162,24 +167,29 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         log.error(msg)
         return False
     _type = record_type.upper()
+
+    if not _is_valid_resource(_type):
+        return False
+
     if _type == 'A':
         status = _zone.update_a(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
     elif _type == 'CNAME':
         status = _zone.update_cname(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
     elif _type == 'MX':
         status = _zone.update_mx(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn)
+
+    if sync_wait:
+        if _wait_for_sync(status.id, conn):
+            return True
+        else:
+            log.error('Failed to update route53 record {0}.'.format(name))
+            return False
     else:
-        msg = '{0} is an unsupported resource type.'.format(_type)
-        log.error(msg)
-    log.error('Failed to update route53 record {0}.'.format(name))
-    return False
+        return True
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None, sync_wait=False):
     '''
     Modify a record in a zone.
 
@@ -196,32 +206,38 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         log.error(msg)
         return False
     _type = record_type.upper()
+
+    if not _is_valid_resource(_type):
+        return False
+
     if _type == 'A':
         status = _zone.delete_a(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
     elif _type == 'CNAME':
         status = _zone.delete_cname(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
     elif _type == 'MX':
         status = _zone.delete_mx(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn)
+
+    if sync_wait:
+        if _wait_for_sync(status.id, conn):
+            return True
+        else:
+            log.error('Failed to delete route53 record {0}.'.format(name))
+            return False
     else:
-        msg = '{0} is an unsupported resource type.'.format(_type)
-        log.error(msg)
-    log.error('Failed to delete route53 record {0}.'.format(name))
-    return False
+        return True
 
 
 def _wait_for_sync(status, conn):
-    retry = 30
+    retry = 10
     i = 0
     while i < retry:
         log.info('Getting route53 status (attempt {0})'.format(i + 1))
         change = conn.get_change(status)
+        log.debug(change.GetChangeResponse.ChangeInfo.Status)
         if change.GetChangeResponse.ChangeInfo.Status == 'INSYNC':
             return True
         i = i + 1
-        time.sleep(10)
+        time.sleep(20)
     log.error('Timed out waiting for Route53 status update.')
     return False
 
