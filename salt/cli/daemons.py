@@ -159,7 +159,7 @@ class Master(parsers.MasterOptionParser):
         logger.info('The salt master is shut down')
 
 
-class Minion(parsers.MinionOptionParser):
+class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -311,7 +311,7 @@ class Minion(parsers.MinionOptionParser):
         logger.info('The salt minion is shut down')
 
 
-class ProxyMinion(parsers.MinionOptionParser):
+class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
