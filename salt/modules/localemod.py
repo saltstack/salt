@@ -274,4 +274,4 @@ def gen_locale(locale):
         cmd.append('--generate')
     cmd.append(locale)
 
-    return __salt__['cmd.retcode'](cmd, python_shell=False)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
