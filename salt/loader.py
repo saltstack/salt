@@ -1064,6 +1064,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # if the key doesn't have a '.' then it isn't valid for this mod dict
         if not isinstance(key, six.string_types):
             raise KeyError
+        # We must limit ourselves here to only exceptions which are technically
+        # needed and not to prevent certain modules from loading.
+        # Indeed, for now, the only case we need to filter out is the
+        # is the mapping.copy method which is normal to be absent from the
+        # loader but from which other code will test and rely on the
+        # raised AttributeError to perform their own duty
+        if key in ['copy']:
+            raise AttributeError(key)
         if '.' not in key:
             mod_name = key
         else:
