@@ -6,7 +6,6 @@
 # Import Python Libs
 from __future__ import absolute_import
 import salt.utils
-import new
 import sys
 
 # Import Salt Testing Libs
@@ -19,17 +18,21 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, MockModules
 
 ensure_in_syspath('../../')
 
-# wmi modules are platform specific...
-wmi = new.module('wmi')
-sys.modules['wmi'] = wmi
+if not NO_MOCK:
+    mock_modules = MockModules()
+    wmi = mock_modules.add('wmi')
+    pythoncom = mock_modules.add('pythoncom')
 
-if NO_MOCK is False:
     WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
+    sys.modules['wmi'].WMI = Mock(return_value=WMI)
+    sys.modules['pythoncom'].CoInitialize = Mock()
+    sys.modules['pythoncom'].CoUninitialize = Mock()
+    wmi = sys.modules['wmi']
+    pythoncom = sys.modules['pythoncom']
 
 # Import Salt Libs
 from salt.modules import win_network
@@ -74,6 +77,13 @@ class WinNetworkTestCase(TestCase):
     '''
     Test cases for salt.modules.win_network
     '''
+
+    def test_zzzzz_tearDown(self):
+        '''
+        remove mocked modules
+        '''
+        mock_modules.remove()
+
     # 'ping' function tests: 1
 
     def test_ping(self):

@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import
-import new
 import sys
 
 # Import Salt Testing Libs
@@ -18,22 +17,21 @@ from salttesting.mock import (
     NO_MOCK_REASON
 )
 
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, MockModules
 
 ensure_in_syspath('../../')
 
-# wmi and pythoncom modules are platform specific...
-wmi = new.module('wmi')
-sys.modules['wmi'] = wmi
+if not NO_MOCK:
+    mock_modules = MockModules()
+    wmi = mock_modules.add('wmi')
+    pythoncom = mock_modules.add('pythoncom')
 
-pythoncom = new.module('pythoncom')
-sys.modules['pythoncom'] = pythoncom
-
-if NO_MOCK is False:
     WMI = Mock()
-    wmi.WMI = Mock(return_value=WMI)
-    pythoncom.CoInitialize = Mock()
-    pythoncom.CoUninitialize = Mock()
+    sys.modules['wmi'].WMI = Mock(return_value=WMI)
+    sys.modules['pythoncom'].CoInitialize = Mock()
+    sys.modules['pythoncom'].CoUninitialize = Mock()
+    wmi = sys.modules['wmi']
+    pythoncom = sys.modules['pythoncom']
 
 # Import Salt Libs
 from salt.modules import win_dns_client
@@ -84,6 +82,13 @@ class WinDnsClientTestCase(TestCase):
     '''
     Test cases for salt.modules.win_dns_client
     '''
+
+    def test_zzzzz_tearDown(self):
+        '''
+        remove mocked modules from `sys.modules`
+        '''
+        mock_modules.remove()
+
     # 'get_dns_servers' function tests: 1
 
     @patch('salt.utils', Mockwinapi)
