@@ -723,6 +723,43 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
     return snapshots
 
 
+def _upg_tools_helper(vm, reboot=False):
+    status = 'VMware tools could not be upgraded'
+    
+    # Exit if VMware tools is already up to date
+    if vm.guest.toolsStatus == "toolsOk":
+        status = 'VMware tools is already up to date'
+        return status
+
+    # Exit if VM is not powered on
+    if vm.summary.runtime.powerState != "poweredOn":
+        status = 'VM must be powered on to upgrade tools'
+        return status
+
+    # If vmware tools is out of date, check major OS family
+    # Upgrade tools on Linux and Windows guests
+    if vm.guest.toolsStatus == "toolsOld":
+        log.info('Upgrading VMware tools on {0}'.format(vm.name))
+        try:
+            if vm.guest.guestFamily == "windowsGuest" and not reboot:
+                log.info('Reboot suppressed on {0}'.format(vm.name))
+                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
+            elif vm.guest.guestFamily in ["linuxGuest", "windowsGuest"]:
+                task = vm.UpgradeTools()
+            else:
+                status = 'Only Linux and Windows guests are currently supported'
+                return status
+            _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
+        except Exception as exc:
+            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm.name, exc))
+            status = 'VMware tools upgrade failed'
+            return status
+        status = 'VMware tools upgrade succeeded'
+        return status
+
+    return status
+
+
 def get_vcenter_version(kwargs=None, call=None):
     '''
     Show the vCenter Server version with build number.
@@ -1891,62 +1928,6 @@ def create_cluster(kwargs=None, call=None):
     return False
 
 
-def upgrade_tools(name, reboot=False, call=None):
-    '''
-    To upgrade VMware Tools on a specified virtual machine.
-
-    .. note::
-
-        If the virtual machine is running Windows OS, use ``reboot=True``
-        to reboot the virtual machine after VMware tools upgrade. Default
-        is ``reboot=False``
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a upgrade_tools vmname
-        salt-cloud -a upgrade_tools vmname reboot=True
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
-        )
-
-    vm = _get_mor_by_property(vim.VirtualMachine, name)
-
-    tools_status = vm.guest.toolsStatus
-
-    # Exit if VMware tools is already up to date
-    if tools_status == "toolsOk":
-        return 'VMware tools is already up to date'
-
-    # Exit if VM is not powered on
-    if vm.summary.runtime.powerState != "poweredOn":
-        return 'Tools cannot be upgraded if the VM is not powered on'
-
-    # If vmware tools is out of date, check major OS family
-    # Upgrade tools on Linux and Windows guests
-    if tools_status == "toolsOld":
-        log.info('Upgrading VMware tools on {0}'.format(name))
-        os_family = vm.guest.guestFamily
-        try:
-            if os_family == "windowsGuest" and not reboot:
-                log.info('Reboot suppressed on {0}'.format(name))
-                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
-            elif os_family in ["linuxGuest", "windowsGuest"]:
-                task = vm.UpgradeTools()
-            else:
-                return 'VMware tools upgrade is currently supported only on Linux or Windows guests.'
-            _wait_for_task(task, name, "tools upgrade", 5, "info")
-        except Exception as exc:
-            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(name, exc))
-            return 'failed to upgrade VMware tools'
-        return 'VMware tools upgraded'
-
-    return 'VMware tools is not installed'
-
-
 def rescan_hba(kwargs=None, call=None):
     '''
     To rescan a specified HBA or all the HBAs on the Host System
@@ -1987,3 +1968,73 @@ def rescan_hba(kwargs=None, call=None):
         return {host_name: 'failed to rescan HBA'}
 
     return {host_name: ret}
+
+
+def upgrade_tools_all(call=None):
+    ''''
+    To upgrade VMware Tools for all hosts on a specified provider.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, this function
+        will attempt to suppress the automatic reboot caused by a
+        VMware Tools upgrade.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f upgrade_tools_all my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools_all function must be called with -f or --function.'
+        )
+
+    vm_properties = [
+        "name"
+    ]
+
+    # Create a list to store status information.
+    upg_status = []
+    # Get list of vm objects from provider.
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    # Call _upg_tools_helper function for each vm object
+    for object in vm_list:
+        vm = object['object']
+        status = _upg_tools_helper(vm)
+        # Append vm name and return status to upg_status list
+        upg_status.append(['{0}'.format(vm.name), '{0}'.format(status)])
+    
+    return { 'Tools Status' : upg_status }
+
+
+def upgrade_tools(name, reboot=False, call=None):
+    '''
+    To upgrade VMware Tools on a specified virtual machine.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, use ``reboot=True``
+        to reboot the virtual machine after VMware tools upgrade. Default
+        is ``reboot=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a upgrade_tools vmname
+        salt-cloud -a upgrade_tools vmname reboot=True
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools action must be called with -a or --action.'
+        )
+    # get vm object with provided name
+    vm = _get_mor_by_property(vim.VirtualMachine, name)
+
+    # Call _upg_tools_helper function for vm
+    status = _upg_tools_helper(vm, reboot)
+
+    return { 'Tools Status' : status }
