@@ -324,16 +324,21 @@ class SMinion(object):
                 masters = self.opts['master']
                 if self.opts['random_master'] is True:
                     shuffle(masters)
+                connected_master = False
                 for master in masters:
                     self.opts['master'] = master
                     self.opts.update(resolve_dns(opts))
                     try:
                         self.gen_modules()
+                        connected_master = True
                         break
                     except SaltClientError:
                         log.warning(('Attempted to authenticate with master '
                                      '{0} and failed'.format(master)))
                         continue
+                # if we are out of masters, lets raise an exception
+                if not connected_master:
+                    raise SaltClientError('Unable to connect to any master')
             else:
                 if self.opts['random_master'] is True:
                     log.warning('random_master is True but there is only one master specified. Ignoring.')
@@ -579,9 +584,10 @@ class Minion(MinionBase):
         Return a future which will complete when you are connected to a master
         '''
         master, self.pub_channel = yield self.eval_master(self.opts, self.timeout, self.safe)
-        self._post_master_init(master)
+        yield self._post_master_init(master)
 
     # TODO: better name...
+    @tornado.gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -591,7 +597,7 @@ class Minion(MinionBase):
         '''
         self.opts['master'] = master
 
-        self.opts['pillar'] = salt.pillar.get_pillar(
+        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
@@ -815,8 +821,7 @@ class Minion(MinionBase):
                         salt.utils.event.TAGEND,
                         serialized_data,
                 )
-                self.handle_event(event)
-                self.epub_sock.send(event)
+                self.event_publisher.handle_publish([event])
 
     def _load_modules(self, force_refresh=False, notify=False):
         '''
@@ -1286,13 +1291,15 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+    # TODO: only allow one future in flight at a time?
+    @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
         '''
         log.debug('Refreshing pillar')
         try:
-            self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
@@ -1417,6 +1424,7 @@ class Minion(MinionBase):
         ret = channel.send(load)
         return ret
 
+    @tornado.gen.coroutine
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1426,7 +1434,7 @@ class Minion(MinionBase):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
-            self.pillar_refresh()
+            yield self.pillar_refresh()
         elif package.startswith('manage_schedule'):
             self.manage_schedule(package)
         elif package.startswith('manage_beacons'):
@@ -1552,7 +1560,11 @@ class Minion(MinionBase):
         if start:
             self.sync_connect_master()
 
-        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
+        self.event_publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.handle_event,
+            io_loop=self.io_loop,
+        )
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
