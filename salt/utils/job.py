@@ -3,6 +3,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def get_retcode(ret):
     '''
     Determine a retcode for a given return
