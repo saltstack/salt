@@ -15,6 +15,7 @@ if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
 import contextlib
 import weakref
 
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     '''
