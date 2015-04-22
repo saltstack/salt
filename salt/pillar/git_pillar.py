@@ -312,8 +312,6 @@ def ext_pillar(minion_id,
     if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
         return {}
 
-    gitpil.update()
-
     opts = deepcopy(__opts__)
 
     opts['pillar_roots'][environment] = [pillar_dir]
