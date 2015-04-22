@@ -79,8 +79,6 @@ class SysModuleTest(integration.ModuleCase):
         )
 
         for fun in docs:
-            if '.' not in fun:
-                continue
             if fun.startswith('runtests_helpers'):
                 continue
             if fun in allow_failure:

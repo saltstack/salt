@@ -1396,7 +1396,7 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
         return config.master_config(self.get_config_file_path())
 
 
-class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):
+class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):  # pylint: disable=no-init
 
     description = (
         'The Salt minion, receives commands from a remote Salt master.'

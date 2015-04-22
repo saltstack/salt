@@ -939,6 +939,18 @@ class RemoteClient(Client):
         dest is omitted, then the downloaded file will be placed in the minion
         cache
         '''
+
+        # Check if file exists on server, before creating files and
+        # directories
+        hash_server = self.hash_file(path, saltenv)
+        if hash_server == '':
+            log.debug(
+                'Could not find file from saltenv {0!r}, {1!r}'.format(
+                    saltenv, path
+                )
+            )
+            return False
+
         if env is not None:
             salt.utils.warn_until(
                 'Boron',
@@ -971,7 +983,6 @@ class RemoteClient(Client):
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
-            hash_server = self.hash_file(path, saltenv)
             if hash_local == hash_server:
                 log.info(
                     'Fetching file from saltenv {0!r}, ** skipped ** '

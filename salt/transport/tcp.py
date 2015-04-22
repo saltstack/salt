@@ -42,6 +42,7 @@ import tornado.tcpserver
 import tornado.gen
 import tornado.concurrent
 import tornado.tcpclient
+import tornado.netutil
 
 log = logging.getLogger(__name__)
 
@@ -137,7 +138,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        self._package_load(self.auth.crypticle.dumps(load))
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
         aes = key.private_decrypt(ret['key'], 4)
@@ -385,6 +385,10 @@ class SaltMessageClient(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
+        # Configure the resolver to use a non-blocking one
+        # Not Threaded since we need to work on python2
+        tornado.netutil.Resolver.configure('tornado.netutil.ExecutorResolver')
+
         self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop)
 
         self._mid = 1
@@ -404,7 +408,7 @@ class SaltMessageClient(object):
     # TODO: timeout inflight sessions
     def destroy(self):
         self._closing = True
-        if hasattr(self, '_stream'):
+        if hasattr(self, '_stream') and not self._stream.closed():
             self._stream.close()
 
     def __del__(self):
@@ -437,7 +441,6 @@ class SaltMessageClient(object):
         '''
         while True:
             if self._closing:
-                self.destroy()
                 break
             try:
                 self._stream = yield self._tcp_client.connect(self.host, self.port)
@@ -469,7 +472,7 @@ class SaltMessageClient(object):
                     else:
                         log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
             except tornado.iostream.StreamClosedError as e:
-                log.debug('tcp stream to {0}:{1} closed, unable to send'.format(self.host, self.port))
+                log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
                 for future in self.send_future_map.itervalues():
                     future.set_exception(e)
                 self.send_future_map = {}

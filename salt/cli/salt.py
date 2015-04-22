@@ -6,8 +6,8 @@ import os
 import sys
 
 # Import Salt libs
-from salt._compat import string_types
 import salt.utils.job
+from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
 from salt.exceptions import (
         SaltClientError,
