@@ -1741,7 +1741,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
                 return status
             full_cmd = (
                 'nsenter --target {pid} --mount --uts --ipc --net --pid'
-                ' {cmd}'.format(pid=container_pid, cmd=cmd)
+                ' -- {cmd}'.format(pid=container_pid, cmd=cmd)
             )
         else:
             raise CommandExecutionError(
