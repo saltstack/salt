@@ -31,6 +31,17 @@ class NetapiClient(object):
     def __init__(self, opts):
         self.opts = opts
 
+    def is_master_running(self):
+        '''
+        Perform a lightweight check to see if the master daemon is running
+
+        Note, this will return an invalid success if the master crashed or was
+        not shut down cleanly.
+        '''
+        return os.path.exists(os.path.join(
+            self.opts['sock_dir'],
+            'workers.ipc'))
+
     def run(self, low):
         '''
         Execute the specified function in the specified client by passing the
