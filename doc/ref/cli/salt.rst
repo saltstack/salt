@@ -45,9 +45,10 @@ Options
 .. option:: --state-output=STATE_OUTPUT
 
     .. versionadded:: 0.17
-    
-    Override the configured state_output value for minion output.  Default: 
-    full
+
+    Override the configured ``state_output`` value for minion output. One of
+    ``full``, ``terse``, ``mixed``, ``changes`` or ``filter``.  Default:
+    ``full``.
 
 .. option:: --subset=SUBSET
 
