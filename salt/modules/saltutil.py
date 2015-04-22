@@ -850,7 +850,7 @@ def wheel(fun, **kwargs):
         salt '*' saltutil.wheel key.accept match=jerry
     '''
     wclient = salt.wheel.WheelClient(__opts__)
-    return wclient.cmd(fun, **kwargs)
+    return wclient.cmd(fun, kwarg=kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots

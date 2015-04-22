@@ -1196,6 +1196,9 @@ class AESFuncs(object):
         # Register the syndic
         syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
         if not os.path.exists(syndic_cache_path):
+            path_name = os.path.split(syndic_cache_path)[0]
+            if not os.path.exists(path_name):
+                os.makedirs(path_name)
             with salt.utils.fopen(syndic_cache_path, 'w') as f:
                 f.write('')
 

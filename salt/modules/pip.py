@@ -1,6 +1,77 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 Install Python packages with pip to either the system or a virtualenv
+
+Windows Support
+===============
+
+.. versionadded:: 2014.7.4
+
+Salt now uses a portable python. As a result the entire pip module is now
+functional on the salt installation itself. You can pip install dependencies
+for your custom modules. You can even upgrade salt itself using pip. For this
+to work properly, you must specify the Current Working Directory (``cwd``) and
+the Pip Binary (``bin_env``) salt should use.
+
+For example, the following command will list all software installed using pip
+to your current salt environment:
+
+.. code-block:: bat
+
+   salt <minion> pip.list cwd='C:\salt\bin\Scripts' bin_env='C:\salt\bin\Scripts\pip.exe'
+
+Specifying the ``cwd`` and ``bin_env`` options ensures you're modifying the
+salt environment. If these are omitted, it will default to the local
+installation of python. If python is not installed locally it will fail saying
+it couldn't find pip.
+
+State File Support
+------------------
+
+This functionality works in states as well. If you need to pip install colorama
+with a state, for example, the following will work:
+
+.. code-block:: yaml
+
+   install_colorama:
+     pip.installed:
+       - name: colorama
+       - cwd: 'C:\salt\bin\scripts'
+       - bin_env: 'C:\salt\bin\scripts\pip.exe'
+       - upgrade: True
+
+Upgrading Salt using Pip
+------------------------
+
+You can now update salt using pip to any version from the 2014.7 branch
+forward. Previous version require recompiling some of the dependencies which is
+painful in windows.
+
+To do this you just use pip with git to update to the version you want and then
+restart the service. Here is a sample state file that upgrades salt to the head
+of the 2015.2 branch:
+
+.. code-block:: yaml
+
+   install_salt:
+     pip.installed:
+       - cwd: 'C:\salt\bin\scripts'
+       - bin_env: 'C:\salt\bin\scripts\pip.exe'
+       - editable: git+https://github.com/saltstack/salt@2015.2#egg=salt
+       - upgrade: True
+
+   restart_service:
+     service.running:
+       - name: salt-minion
+       - enable: True
+       - watch:
+         - pip: install_salt
+
+.. note::
+   If you're having problems, you might try doubling the back slashes. For
+   example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
+   back slash is an escape character.
+
 '''
 from __future__ import absolute_import
 
@@ -55,8 +126,39 @@ def _get_pip_bin(bin_env):
     return bin_env
 
 
+def _process_salt_url(path, saltenv):
+    '''
+    Process 'salt://' and '?saltenv=' out of `path` and return the stripped
+    path and the saltenv.
+    '''
+    path = path.split('salt://', 1)[-1]
+
+    env_splitter = '?saltenv='
+    if '?env=' in path:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        env_splitter = '?env='
+    try:
+        path, saltenv = path.split(env_splitter)
+    except ValueError:
+        pass
+
+    return path, saltenv
+
+
 def _get_cached_requirements(requirements, saltenv):
-    '''Get the location of a cached requirements file; caching if necessary.'''
+    '''
+    Get the location of a cached requirements file; caching if necessary.
+    '''
+
+    requirements_file, saltenv = _process_salt_url(requirements, saltenv)
+    if requirements_file not in __salt__['cp.list_master'](saltenv):
+        # Requirements file does not exist in the given saltenv.
+        return False
+
     cached_requirements = __salt__['cp.is_cached'](
         requirements, saltenv
     )

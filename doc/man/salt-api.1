@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-API" "1" "March 09, 2015" "2015.2.0rc1-133-g24fa806" "Salt"
+.TH "SALT-API" "1" "April 21, 2015" "2015.2.0rc2-143-g32ef5ca" "Salt"
 .SH NAME
 salt-api \- salt-api Command
 .
@@ -49,13 +49,57 @@ The Salt API system manages network api connectors for the Salt Master
 .SH OPTIONS
 .INDENT 0.0
 .TP
-.B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options.
+.B \-\-version
+Print the version of Salt that is running.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-C CONFIG, \-\-config=CONFIG
-Specify an alternative location for the salt master configuration file.
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-daemon
+Run the salt\-api as a daemon
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pid\-file=PIDFILE
+Specify the location of the pidfile. Default: /var/run/salt\-api.pid
+.UNINDENT
+.SS Logging Options
+.sp
+Logging options which override any settings defined on the configuration files.
+.INDENT 0.0
+.TP
+.B \-l LOG_LEVEL, \-\-log\-level=LOG_LEVEL
+Console logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file=LOG_FILE
+Log file path. Default: /var/log/salt/api\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file\-level=LOG_LEVEL_LOGFILE
+Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
 .UNINDENT
 .SH SEE ALSO
 .sp
