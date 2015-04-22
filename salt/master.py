@@ -1104,6 +1104,8 @@ class AESFuncs(object):
             load.get('ext'),
             self.mminion.functions)
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+        # Cleanup file clients by reinstanciating fileserver
+        self.__setup_fileserver()
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
