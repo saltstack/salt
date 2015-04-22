@@ -126,8 +126,39 @@ def _get_pip_bin(bin_env):
     return bin_env
 
 
+def _process_salt_url(path, saltenv):
+    '''
+    Process 'salt://' and '?saltenv=' out of `path` and return the stripped
+    path and the saltenv.
+    '''
+    path = path.split('salt://', 1)[-1]
+
+    env_splitter = '?saltenv='
+    if '?env=' in path:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        env_splitter = '?env='
+    try:
+        path, saltenv = path.split(env_splitter)
+    except ValueError:
+        pass
+
+    return path, saltenv
+
+
 def _get_cached_requirements(requirements, saltenv):
-    '''Get the location of a cached requirements file; caching if necessary.'''
+    '''
+    Get the location of a cached requirements file; caching if necessary.
+    '''
+
+    requirements_file, saltenv = _process_salt_url(requirements, saltenv)
+    if requirements_file not in __salt__['cp.list_master'](saltenv):
+        # Requirements file does not exist in the given saltenv.
+        return False
+
     cached_requirements = __salt__['cp.is_cached'](
         requirements, saltenv
     )
