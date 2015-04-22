@@ -3298,8 +3298,7 @@ def manage_file(name,
                     # No changes actually made
                     ret['changes'].pop('diff', None)
                     return _error(ret, 'Parent directory not present')
-        else:
-            assert bool(source) is False
+        else:  # source != True
             if not os.path.isdir(contain_dir):
                 if makedirs:
                     _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
