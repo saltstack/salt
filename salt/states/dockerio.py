@@ -99,7 +99,7 @@ Available Functions
 
       /finish-install.sh:
         docker.run:
-          - container: mysuperdocker
+          - cid: mysuperdocker
           - unless: grep -q something /var/log/foo
           - docker_unless: grep -q done /install_log
 

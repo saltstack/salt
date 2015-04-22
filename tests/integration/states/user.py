@@ -63,6 +63,27 @@ class UserTest(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_user_present_when_home_dir_does_not_18843(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the minion.
+        And then destroys that user.
+        Assume that it will break any system you run it on.
+        '''
+        HOMEDIR = '/tmp/home_of_salt_test'
+        ret = self.run_state('user.present', name='salt_test',
+                             home=HOMEDIR)
+        self.assertSaltTrueReturn(ret)
+
+        self.run_function('file.absent', name=HOMEDIR)
+        ret = self.run_state('user.present', name='salt_test',
+                             home=HOMEDIR)
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_nondefault(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.

@@ -128,8 +128,9 @@ def lookup_jid(jid,
         else:
             ret[minion] = data[minion].get('return')
     if missing:
+        load = mminion.returners['{0}.get_load'.format(returner)](jid)
         ckminions = salt.utils.minions.CkMinions(__opts__)
-        exp = ckminions.check_minions(data['tgt'], data['tgt_type'])
+        exp = ckminions.check_minions(load['tgt'], load['tgt_type'])
         for minion_id in exp:
             if minion_id not in data:
                 ret[minion_id] = 'Minion did not return'
