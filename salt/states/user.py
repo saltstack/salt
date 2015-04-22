@@ -380,7 +380,8 @@ def present(name,
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
                 continue
-            if key == 'home':
+            # run chhome once to avoid any possible bad side-effect
+            if key == 'home' and 'homeDoesNotExist' not in changes:
                 __salt__['user.chhome'](name, val, False)
                 continue
             if key == 'homeDoesNotExist':
