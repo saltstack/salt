@@ -13,7 +13,11 @@ except ImportError:
     pass
 
 # Import 3rd party libs
-import salt.ext.six as six
+try:
+    import salt.ext.six as six
+except ImportError:
+    import six
+
 
 # Import salt libs
 import salt.utils
@@ -29,7 +33,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is FreeBSD
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['kernel'] in ['FreeBSD', 'Isilon OneFS']  else False
 
 
 def _get_gecos(name):
@@ -82,6 +86,7 @@ def add(name,
 
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('pw_user module does not support the \'system\' argument')
@@ -91,6 +96,8 @@ def add(name,
     if isinstance(groups, six.string_types):
         groups = groups.split(',')
     cmd = 'pw useradd '
+    if __grains__['kernel'] == 'Isilon OneFS':
+        cmd += ' {0} '.format(name)
     if uid:
         cmd += '-u {0} '.format(uid)
     if gid:
@@ -111,7 +118,8 @@ def add(name,
                                            homephone)
     cmd += '-c "{0}" '.format(gecos_field)
     cmd += '-n {0}'.format(name)
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    ret = __salt__['cmd.run_all'](cmd, python_shell=shell_flag)
 
     return not ret['retcode']
 
@@ -126,6 +134,7 @@ def delete(name, remove=False, force=False):
 
         salt '*' user.delete name remove=True force=True
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     if salt.utils.is_true(force):
         log.error('pw userdel does not support force-deleting user while '
                   'user is logged in')
@@ -134,7 +143,7 @@ def delete(name, remove=False, force=False):
         cmd += '-r '
     cmd += '-n ' + name
 
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=shell_flag)
 
     return not ret['retcode']
 
@@ -169,11 +178,12 @@ def chuid(name, uid):
 
         salt '*' user.chuid foo 4376
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     pre_info = info(name)
     if uid == pre_info['uid']:
         return True
     cmd = 'pw usermod -u {0} -n {1}'.format(uid, name)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['uid'] != pre_info['uid']:
         return post_info['uid'] == uid
@@ -190,11 +200,12 @@ def chgid(name, gid):
 
         salt '*' user.chgid foo 4376
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     pre_info = info(name)
     if gid == pre_info['gid']:
         return True
     cmd = 'pw usermod -g {0} -n {1}'.format(gid, name)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['gid'] != pre_info['gid']:
         return post_info['gid'] == gid
@@ -211,11 +222,12 @@ def chshell(name, shell):
 
         salt '*' user.chshell foo /bin/zsh
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     pre_info = info(name)
     if shell == pre_info['shell']:
         return True
     cmd = 'pw usermod -s {0} -n {1}'.format(shell, name)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['shell'] != pre_info['shell']:
         return post_info['shell'] == shell
@@ -233,13 +245,14 @@ def chhome(name, home, persist=False):
 
         salt '*' user.chhome foo /home/users/foo True
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     pre_info = info(name)
     if home == pre_info['home']:
         return True
     cmd = 'pw usermod {0} -d {1}'.format(name, home)
     if persist:
         cmd += ' -m '
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
         return post_info['home'] == home
@@ -257,6 +270,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     if isinstance(groups, six.string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
@@ -265,7 +279,7 @@ def chgroups(name, groups, append=False):
     if append:
         groups += ugrps
     cmd = 'pw usermod -G {0} -n {1}'.format(','.join(groups), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd, python_shell=shell_flag)
 
 
 def chfullname(name, fullname):
@@ -278,6 +292,7 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     fullname = str(fullname)
     pre_info = _get_gecos(name)
     if not pre_info:
@@ -287,7 +302,7 @@ def chfullname(name, fullname):
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['fullname'] = fullname
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['fullname'] != pre_info['fullname']:
         return post_info['fullname'] == fullname
@@ -304,6 +319,7 @@ def chroomnumber(name, roomnumber):
 
         salt '*' user.chroomnumber foo 123
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     roomnumber = str(roomnumber)
     pre_info = _get_gecos(name)
     if not pre_info:
@@ -313,7 +329,7 @@ def chroomnumber(name, roomnumber):
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['roomnumber'] = roomnumber
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['roomnumber'] != pre_info['roomnumber']:
         return post_info['roomnumber'] == roomnumber
@@ -330,6 +346,7 @@ def chworkphone(name, workphone):
 
         salt '*' user.chworkphone foo "7735550123"
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     workphone = str(workphone)
     pre_info = _get_gecos(name)
     if not pre_info:
@@ -339,7 +356,7 @@ def chworkphone(name, workphone):
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['workphone'] = workphone
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['workphone'] != pre_info['workphone']:
         return post_info['workphone'] == workphone
@@ -356,6 +373,7 @@ def chhomephone(name, homephone):
 
         salt '*' user.chhomephone foo "7735551234"
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     homephone = str(homephone)
     pre_info = _get_gecos(name)
     if not pre_info:
@@ -365,7 +383,7 @@ def chhomephone(name, homephone):
     gecos_field = copy.deepcopy(pre_info)
     gecos_field['homephone'] = homephone
     cmd = 'pw usermod {0} -c "{1}"'.format(name, _build_gecos(gecos_field))
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_info = info(name)
     if post_info['homephone'] != pre_info['homephone']:
         return post_info['homephone'] == homephone

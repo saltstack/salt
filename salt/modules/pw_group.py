@@ -27,7 +27,7 @@ def __virtual__():
     '''
     Set the user module if the kernel is Linux
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['kernel'] in ['FreeBSD', 'Isilon OneFS'] else False
 
 
 def add(name, gid=None, **kwargs):
@@ -40,6 +40,7 @@ def add(name, gid=None, **kwargs):
 
         salt '*' group.add foo 3456
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     kwargs = salt.utils.clean_kwargs(**kwargs)
     if salt.utils.is_true(kwargs.pop('system', False)):
         log.warning('pw_group module does not support the \'system\' argument')
@@ -50,7 +51,7 @@ def add(name, gid=None, **kwargs):
     if gid:
         cmd += '-g {0} '.format(gid)
     cmd = '{0} -n {1}'.format(cmd, name)
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=shell_flag)
 
     return not ret['retcode']
 
@@ -65,7 +66,8 @@ def delete(name):
 
         salt '*' group.delete foo
     '''
-    ret = __salt__['cmd.run_all']('pw groupdel {0}'.format(name), python_shell=False)
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
+    ret = __salt__['cmd.run_all']('pw groupdel {0}'.format(name), python_shell=shell_flag)
 
     return not ret['retcode']
 
@@ -121,11 +123,12 @@ def chgid(name, gid):
 
         salt '*' group.chgid foo 4376
     '''
+    shell_flag = {'FreeBSD': False, 'Isilon OneFS': True}[__grains__['kernel']]
     pre_gid = __salt__['file.group_to_gid'](name)
     if gid == pre_gid:
         return True
     cmd = 'pw groupmod {0} -g {1}'.format(name, gid)
-    __salt__['cmd.run'](cmd, python_shell=False)
+    __salt__['cmd.run'](cmd, python_shell=shell_flag)
     post_gid = __salt__['file.group_to_gid'](name)
     if post_gid != pre_gid:
         return post_gid == gid
