@@ -347,7 +347,7 @@ class CkMinions(object):
             os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
         log.debug('minions: {0}'.format(minions))
-        
+
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
