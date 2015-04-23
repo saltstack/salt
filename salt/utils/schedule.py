@@ -85,6 +85,18 @@ localtime.
             - Thursday 3:00pm
             - Friday 5:00pm
 
+This will schedule a job to run once on the specified date. The default date
+format is ISO 8601 but can be overridden by also specifying the ``once_fmt``
+option.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: test.ping
+        once: 2015-04-22T20:21:00
+        once_fmt: '%Y-%m-%dT%H:%M:%S'
+
 This will schedule the command: state.sls httpd test=True at 5pm on Monday,
 Wednesday and Friday, and 3pm on Tuesday and Thursday.
 
@@ -230,6 +242,7 @@ from __future__ import absolute_import
 import os
 import time
 import datetime
+import itertools
 import multiprocessing
 import threading
 import sys
@@ -650,7 +663,6 @@ class Schedule(object):
             seconds = 0
             cron = 0
             now = int(time.time())
-            time_conflict = False
 
             if 'until' in data:
                 if not _WHEN_SUPPORTED:
@@ -665,30 +677,54 @@ class Schedule(object):
                                   'skipping job: {0}.'.format(data['name']))
                         continue
 
-            for item in ['seconds', 'minutes', 'hours', 'days']:
-                if item in data and 'when' in data:
-                    time_conflict = True
-                if item in data and 'cron' in data:
-                    time_conflict = True
+            # Used for quick lookups when detecting invalid option combinations.
+            schedule_keys = set(data.keys())
 
-            if time_conflict:
-                log.error('Unable to use "seconds", "minutes",'
-                          '"hours", or "days" with '
-                          '"when" or "cron" options. Ignoring.')
+            time_elements = ('seconds', 'minutes', 'hours', 'days')
+            scheduling_elements = ('when', 'cron', 'once')
+
+            invalid_sched_combos = [set(i)
+                    for i in itertools.combinations(scheduling_elements, 2)]
+
+            if any(i <= schedule_keys for i in invalid_sched_combos):
+                log.error('Unable to use "{0}" options together. Ignoring.'
+                        .format('", "'.join(scheduling_elements)))
                 continue
 
-            if 'when' in data and 'cron' in data:
-                log.error('Unable to use "when" and "cron" options together.'
-                          'Ignoring.')
+            invalid_time_combos = []
+            for item in scheduling_elements:
+                all_items = itertools.chain([item], time_elements)
+                invalid_time_combos.append(
+                    set(itertools.combinations(all_items, 2)))
+
+            if any(set(x) <= schedule_keys for x in invalid_time_combos):
+                log.error('Unable to use "{0}" with "{1}" options. Ignoring'
+                        .format('", "'.join(time_elements),
+                            '", "'.join(scheduling_elements)))
                 continue
 
-            time_elements = ['seconds', 'minutes', 'hours', 'days']
             if True in [True for item in time_elements if item in data]:
                 # Add up how many seconds between now and then
                 seconds += int(data.get('seconds', 0))
                 seconds += int(data.get('minutes', 0)) * 60
                 seconds += int(data.get('hours', 0)) * 3600
                 seconds += int(data.get('days', 0)) * 86400
+            elif 'once' in data:
+                once_fmt = data.get('once_fmt', '%Y-%m-%dT%H:%M:%S')
+
+                try:
+                    once = datetime.datetime.strptime(data['once'], once_fmt)
+                    once = int(time.mktime(once.timetuple()))
+                except (TypeError, ValueError):
+                    log.error('Date string could not be parsed: %s, %s',
+                            data['once'], once_fmt)
+                    continue
+
+                if now != once:
+                    continue
+                else:
+                    seconds = 1
+
             elif 'when' in data:
                 if not _WHEN_SUPPORTED:
                     log.error('Missing python-dateutil.'

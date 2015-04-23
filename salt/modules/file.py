@@ -3124,7 +3124,9 @@ def get_managed(
     source_sum = {}
     if template and source:
         sfn = __salt__['cp.cache_file'](source, saltenv)
-        if not os.path.exists(sfn):
+        # exists doesn't play nice with sfn as bool
+        # but if cache failed, sfn == False
+        if not sfn or not os.path.exists(sfn):
             return sfn, {}, 'Source file {0} not found'.format(source)
         if sfn == name:
             raise SaltInvocationError(
