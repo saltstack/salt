@@ -280,7 +280,7 @@ class ScheduleTestCase(TestCase):
                                   'result': False})
 
         mock = MagicMock(side_effect=[{}, {'job1': {}}])
-        with patch.dict(schedule.__opts__, {'schedule': mock,'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': SOCK_DIR}):
             with patch.dict(schedule.__pillar__, {'schedule': {'job1': JOB1}}):
                 mock = MagicMock(return_value={})
                 with patch.dict(schedule.__salt__, {'publish.publish': mock}):
