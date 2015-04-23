@@ -182,6 +182,13 @@ class AuthorizationError(SaltException):
     '''
 
 
+class SaltDaemonNotRunning(SaltException):
+    '''
+    Throw when a running master/minion/syndic is not running but is needed to
+    perform the requested operation (e.g., eauth).
+    '''
+
+
 class SaltRunnerError(SaltException):
     '''
     Problem in runner
