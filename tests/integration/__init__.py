@@ -876,6 +876,7 @@ class TestDaemon(object):
             # we'll get this exception if the master process hasn't finished starting yet
             except SaltClientError:
                 time.sleep(0.1)
+                now = datetime.now()
                 continue
             for target in responses:
                 if target not in expected_connections:
