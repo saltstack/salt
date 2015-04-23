@@ -31,7 +31,7 @@ class NetapiClient(object):
     def __init__(self, opts):
         self.opts = opts
 
-    def is_master_running(self):
+    def _is_master_running(self):
         '''
         Perform a lightweight check to see if the master daemon is running
 
@@ -50,7 +50,7 @@ class NetapiClient(object):
         # Eauth currently requires a running daemon and commands run through
         # this method require eauth so perform a quick check to raise a
         # more meaningful error.
-        if not self.is_master_running():
+        if not self._is_master_running():
             raise salt.exceptions.SaltDaemonNotRunning(
                     'Salt Master is not available.')
 
