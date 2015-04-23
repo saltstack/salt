@@ -1401,7 +1401,7 @@ class Login(LowDataAdapter):
                 ]
             }}
         '''
-        if not self.api.is_master_running():
+        if not self.api._is_master_running():
             raise salt.exceptions.SaltDaemonNotRunning(
                 'Salt Master is not available.')
 
