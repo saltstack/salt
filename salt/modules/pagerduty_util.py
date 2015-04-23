@@ -191,7 +191,7 @@ def _query(method='GET', profile=None, url=None, path='api/v1',
             limit = next_page_results['limit']
             # merge results
             for k, v in result_json.items():
-                if type(v) == list:
+                if isinstance(v, list):
                     result_json[k] += next_page_results[k]
     return result_json
 
@@ -297,7 +297,7 @@ def create_or_update_resource(resource_name, identifier_fields, data, diff=None,
             # flush the resource_cache, because we're modifying a resource
             del __context__['pagerduty_util.resource_cache'][resource_name]
             resource_id = _get_resource_id(resource)
-            return _query(method='PUT', action='%s/%s' % (resource_name, resource_id), data=data_to_update,
+            return _query(method='PUT', action='{0}/{1}'.format(resource_name, resource_id), data=data_to_update,
                           profile=profile, subdomain=subdomain, api_key=api_key)
         else:
             return True
@@ -315,7 +315,7 @@ def delete_resource(resource_name, key, identifier_fields, profile='pagerduty', 
         # flush the resource_cache, because we're modifying a resource
         del __context__['pagerduty_util.resource_cache'][resource_name]
         resource_id = _get_resource_id(resource)
-        return _query(method='DELETE', action='%s/%s' % (resource_name, resource_id), profile=profile, subdomain=subdomain, api_key=api_key)
+        return _query(method='DELETE', action='{0}/{1}'.format(resource_name, resource_id), profile=profile, subdomain=subdomain, api_key=api_key)
     else:
         return True
 
@@ -376,7 +376,7 @@ def resource_absent(resource, identifier_fields, profile='pagerduty', subdomain=
                                  api_key=api_key)
         if result is None:
             ret['result'] = True
-            ret['comment'] = '%s deleted' % v
+            ret['comment'] = '{0} deleted'.format(v)
             return ret
         elif result is True:
             continue
