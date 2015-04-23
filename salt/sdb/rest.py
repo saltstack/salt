@@ -10,7 +10,7 @@ Generic REST API SDB Module
 
 This module allows access to a REST interface using an ``sdb://`` URI.
 
-Like all sdb modules, the etcd module requires a configuration profile to
+Like all REST modules, the REST module requires a configuration profile to
 be configured in either the minion or master configuration file. This profile
 requires very little. In the example:
 
