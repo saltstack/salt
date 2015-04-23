@@ -1394,7 +1394,7 @@ class Login(LowDataAdapter):
             group_auth_match = False
             for group_config in group_perm_keys:
                 group_config = group_config.rstrip('%')
-                for group in token['groups']:
+                for group in token.get('groups', []):
                     if group == group_config:
                         group_auth_match = True
 
@@ -1404,10 +1404,8 @@ class Login(LowDataAdapter):
                 perms.append(eauth['*'])
             if token['name'] in self.opts['external_auth'][token['eauth']]:
                 perms.append(eauth[token['name']])
-            if group_auth_match:
-                perms = self.ckminions.fill_auth_list_from_groups(eauth, token['groups'], perms)
 
-            if perms is None:
+            if perms is None and not group_auth_match:
                 raise ValueError("Eauth permission list not found.")
         except (AttributeError, IndexError, KeyError, ValueError):
             logger.debug("Configuration for external_auth malformed for "
@@ -1422,7 +1420,7 @@ class Login(LowDataAdapter):
             'start': token['start'],
             'user': token['name'],
             'eauth': token['eauth'],
-            'perms': perms,
+            # 'perms': perms,
         }]}
 
 

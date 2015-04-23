@@ -1910,6 +1910,7 @@ class ClearFuncs(object):
 
         Any return other than None is an eauth failure
         '''
+
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -2098,6 +2099,7 @@ class ClearFuncs(object):
         Create and return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
+
         if 'eauth' not in clear_load:
             log.warning('Authentication failure of type "eauth" occurred.')
             return ''
@@ -2118,6 +2120,8 @@ class ClearFuncs(object):
                 if not found:
                     log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
+                else:
+                    clear_load['groups'] = groups
             if not self.loadauth.time_auth(clear_load):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
