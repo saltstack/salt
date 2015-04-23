@@ -220,7 +220,7 @@ def managed(name, **kwargs):
                              'and the "ppa" argument.'
             return ret
         kwargs['repo'] = kwargs['name']
-    if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
+    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         # overload the name/repo value for PPAs cleanly
         # this allows us to have one code-path for PPAs
         repo_name = 'ppa:{0}'.format(kwargs['ppa'])
@@ -382,7 +382,7 @@ def absent(name, **kwargs):
            'result': None,
            'comment': ''}
     repo = {}
-    if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
+    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         name = kwargs.pop('ppa')
         if not name.startswith('ppa:'):
             name = 'ppa:' + name
