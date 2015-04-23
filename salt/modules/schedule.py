@@ -351,6 +351,7 @@ def add(name, **kwargs):
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Job: {0} would be added to schedule.'.format(name)
+        ret['result'] = True
     else:
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
