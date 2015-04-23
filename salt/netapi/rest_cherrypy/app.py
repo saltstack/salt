@@ -274,6 +274,41 @@ except ImportError:
     HAS_WEBSOCKETS = False
 
 
+def html_override_tool():
+    '''
+    Bypass the normal handler and serve HTML for all URLs
+
+    The ``app_path`` setting must be non-empty and the request must ask for
+    ``text/html`` in the ``Accept`` header.
+    '''
+    apiopts = cherrypy.config['apiopts']
+    request = cherrypy.request
+
+    url_blacklist = (
+        apiopts.get('app_path', '/app'),
+        apiopts.get('static_path', '/static'),
+    )
+
+    if 'app' not in cherrypy.config['apiopts']:
+        return
+
+    if request.path_info.startswith(url_blacklist):
+        return
+
+    if request.headers.get('Accept') == '*/*':
+        return
+
+    try:
+        wants_html = cherrypy.lib.cptools.accept('text/html')
+    except cherrypy.HTTPError:
+        return
+    else:
+        if wants_html != 'text/html':
+            return
+
+    raise cherrypy.InternalRedirect(apiopts.get('app_path', '/app'))
+
+
 def salt_token_tool():
     '''
     If the custom authentication header is supplied, put it in the cookie dict
@@ -577,6 +612,8 @@ def lowdata_fmt():
         cherrypy.serving.request.lowstate = data
 
 
+cherrypy.tools.html_override = cherrypy.Tool('on_start_resource',
+        html_override_tool, priority=53)
 cherrypy.tools.salt_token = cherrypy.Tool('on_start_resource',
         salt_token_tool, priority=55)
 cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
@@ -2219,6 +2256,7 @@ class API(object):
 
                 'tools.cpstats.on': self.apiopts.get('collect_stats', False),
 
+                'tools.html_override.on': True,
                 'tools.cors_tool.on': True,
             },
         }
