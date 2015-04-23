@@ -138,7 +138,12 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         salt.utils.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
-        self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                opts=self.opts,
+                listen=True)
         self.wrap = ReactWrap(self.opts)
 
         for data in self.event.iter_events(full=True):
