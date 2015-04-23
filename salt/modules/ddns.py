@@ -174,8 +174,9 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
 
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
+    keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
     if is_update:
         dns_update.replace(name, ttl, rdata)
     else:
@@ -206,8 +207,9 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1', **kwargs)
 
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
+    keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
 
     if rdtype:
         rdtype = dns.rdatatype.from_text(rdtype)
