@@ -2261,6 +2261,12 @@ class API(object):
             },
         }
 
+        if 'favicon' in self.apiopts:
+            conf['/favicon.ico'] = {
+                'tools.staticfile.on': True,
+                'tools.staticfile.filename': self.apiopts['favicon'],
+            }
+
         if self.apiopts.get('debug', False) is False:
             conf['global']['environment'] = 'production'
 
