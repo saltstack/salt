@@ -115,7 +115,7 @@ def _diff(state_data, resource_object):
         else:
             resource_value = resource_object[k]
         if v != resource_value:
-            objects_differ = '%s %s %s' % (k, v, resource_value)
+            objects_differ = '{0} {1} {2}'.format(k, v, resource_value)
             break
 
     if objects_differ:
