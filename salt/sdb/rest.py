@@ -79,6 +79,7 @@ __func_alias__ = {
     'set_': 'set'
 }
 
+
 def set_(key, value, service=None, profile=None):  # pylint: disable=W0613
     '''
     Set a key/value pair in the REST interface
