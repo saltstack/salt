@@ -398,6 +398,9 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
+    except (salt.exceptions.SaltDaemonNotRunning,
+            salt.exceptions.SaltReqTimeoutError) as exc:
+        raise cherrypy.HTTPError(503, exc.strerror)
     except cherrypy.CherryPyException:
         raise
     except Exception as exc:
@@ -1365,6 +1368,10 @@ class Login(LowDataAdapter):
                 ]
             }}
         '''
+        if not self.api.is_master_running():
+            raise salt.exceptions.SaltDaemonNotRunning(
+                'Salt Master is not available.')
+
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
             creds = cherrypy.serving.request.lowstate[0]
