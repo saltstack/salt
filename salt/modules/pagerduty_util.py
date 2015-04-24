@@ -253,7 +253,8 @@ def get_resource(resource_name, key, identifier_fields, profile='pagerduty', sub
 
 
 def create_or_update_resource(resource_name, identifier_fields, data, diff=None, profile='pagerduty', subdomain=None, api_key=None):
-    '''create or update any pagerduty resource
+    '''
+    create or update any pagerduty resource
     Helper method for present().
 
     Determining if two resources are the same is different for different PD resource, so this method accepts a diff function.
@@ -309,7 +310,8 @@ def create_or_update_resource(resource_name, identifier_fields, data, diff=None,
 
 
 def delete_resource(resource_name, key, identifier_fields, profile='pagerduty', subdomain=None, api_key=None):
-    '''delete any pagerduty resource
+    '''
+    delete any pagerduty resource
 
     Helper method for absent()
 
