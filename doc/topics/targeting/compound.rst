@@ -41,18 +41,11 @@ That same example expressed in a :term:`top file` looks like the following:
         - match: compound
         - webserver
 
-Note that a leading ``not`` is not supported in compound matches. Instead,
-something like the following must be done:
-
-.. code-block:: bash
-
-    salt -C '* and not G@kernel:Darwin' test.ping
-
 Excluding a minion based on its ID is also possible:
 
 .. code-block:: bash
 
-    salt -C '* and not web-dc1-srv' test.ping
+    salt -C 'not web-dc1-srv' test.ping
 
 Precedence Matching
 -------------------
