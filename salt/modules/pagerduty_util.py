@@ -261,6 +261,11 @@ def create_or_update_resource(resource_name, identifier_fields, data, diff=None,
     should return a dict of data to pass to the PagerDuty update API method, or None if no update
     is to be performed.  If no diff method is provided, the default behavor is to scan the keys in the state_information,
     comparing the matching values in the object_returned_from_pagerduty, and update any values that differ.
+
+    examples:
+        create_or_update_resource("user", ["id","name","email"])
+        create_or_update_resource("escalation_policies", ["id","name"], diff=my_diff_function)
+
     '''
     # try to locate the resource by any of the identifier_fields that are specified in data
     resource = None
@@ -307,6 +312,10 @@ def delete_resource(resource_name, key, identifier_fields, profile='pagerduty', 
     '''delete any pagerduty resource
 
     Helper method for absent()
+
+    example:
+            delete_resource("users", key, ["id","name","email"]) # delete by id or name or email
+
     '''
     resource = get_resource(resource_name, key, identifier_fields, profile, subdomain, api_key)
     if resource:
@@ -326,6 +335,9 @@ def resource_present(resource, identifier_fields, diff=None, profile='pagerduty'
     with a custom diff function.
 
     This method calls create_or_update_resource() and formats the result as a salt state return value.
+
+    example:
+            resource_present("users", ["id","name","email"])
     '''
 
     ret = {'name': kwargs['name'],
@@ -360,6 +372,9 @@ def resource_absent(resource, identifier_fields, profile='pagerduty', subdomain=
     with a custom diff function.
 
     This method calls delete_resource() and formats the result as a salt state return value.
+
+    example:
+            resource_absent("users", ["id","name","email"])
     '''
     ret = {'name': kwargs['name'],
            'changes': {},
