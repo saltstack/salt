@@ -115,6 +115,10 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         time.sleep(2)
         data = '\n'.join(self.run_salt('-N nodegroup_loop_a test.ping'))
         self.assertIn('No minions matched', data)
+        time.sleep(2)
+        data = self.run_salt("-N multiline_nodegroup test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
 
     def test_glob(self):
         '''

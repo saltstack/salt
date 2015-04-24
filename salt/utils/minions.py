@@ -16,7 +16,6 @@ import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -45,7 +44,16 @@ def parse_target(target_expression):
      `pattern` - returns a dict'''
 
     match = TARGET_REX.match(target_expression)
-    return match.groupdict() if match else None
+    if not match:
+        log.warning('Unable to parse target "{0}"'.format(target_expression))
+        ret = {
+            'engine': None,
+            'delimiter': None,
+            'pattern': target_expression,
+        }
+    else:
+        ret = match.groupdict()
+    return ret
 
 
 def get_minion_data(minion, opts):
@@ -103,25 +111,37 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
         log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
         return ''
 
-    skip.add(nodegroup)
     nglookup = nodegroups[nodegroup]
+    if isinstance(nglookup, six.string_types):
+        words = nglookup.split()
+    elif isinstance(nglookup, (list, tuple)):
+        words = nglookup
+    else:
+        log.error(
+            'Nodgroup is neither a string, list'
+            ' nor tuple: {0} = {1}'.format(nodegroup, nglookup)
+        )
+        return ''
 
+    skip.add(nodegroup)
     ret = []
     opers = ['and', 'or', 'not', '(', ')']
-    tokens = nglookup.split()
-    for match in tokens:
-        if match in opers:
-            ret.append(match)
-        elif len(match) >= 3 and match.startswith('N@'):
-            ret.append(nodegroup_comp(match[2:], nodegroups, skip=skip))
+    for word in words:
+        if word in opers:
+            ret.append(word)
+        elif len(word) >= 3 and word.startswith('N@'):
+            ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip))
         else:
-            ret.append(match)
+            ret.append(word)
+
+    if ret:
+        ret.insert(0, '(')
+        ret.append(')')
 
     skip.remove(nodegroup)
 
-    expanded = '( {0} )'.format(' '.join(ret)) if ret else ''
-    log.debug('nodegroup_comp("{0}") => {1}'.format(nodegroup, expanded))
-    return expanded
+    log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
+    return ret
 
 
 class CkMinions(object):
@@ -157,12 +177,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        if isinstance(expr, string_types):
+        if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for m in expr:
-            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, m)):
-                ret.append(m)
+        for minion in expr:
+            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, minion)):
+                ret.append(minion)
         return ret
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
@@ -362,6 +382,9 @@ class CkMinions(object):
         Return the minions found by looking via compound matcher
         '''
         log.debug('_check_compound_minions({0}, {1}, {2}, {3})'.format(expr, delimiter, greedy, pillar_exact))
+        if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
+            log.error('Compound target that is neither string, list nor tuple')
+            return []
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
@@ -384,7 +407,12 @@ class CkMinions(object):
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
-            words = expr.split()
+
+            if isinstance(expr, six.string_types):
+                words = expr.split()
+            else:
+                words = expr
+
             for word in words:
                 target_info = parse_target(word)
 
@@ -440,7 +468,7 @@ class CkMinions(object):
                             )
                             return []
 
-                elif target_info and target_info.get('engine'):
+                elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
                         # Nodegroups should already be expanded/resolved to other engines
                         log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
@@ -457,9 +485,9 @@ class CkMinions(object):
                         )
                         return []
 
-                    engine_args = [target_info.get('pattern')]
+                    engine_args = [target_info['pattern']]
                     if target_info['engine'] in ('G', 'P', 'I', 'J'):
-                        engine_args.append(target_info.get('delimiter') or ':')
+                        engine_args.append(target_info['delimiter'] or ':')
                     engine_args.append(True)
 
                     results.append(str(set(engine(*engine_args))))
@@ -474,8 +502,9 @@ class CkMinions(object):
                         results.append(')')
                         unmatched.pop()
 
-            for token in unmatched:
-                results.append(')')
+            # Add a closing ')' for each item left in unmatched
+            results.extend([')' for item in unmatched])
+
             results = ' '.join(results)
             log.debug('Evaluating final compound matching expr: {0}'
                       .format(results))
@@ -484,6 +513,7 @@ class CkMinions(object):
             except Exception:
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []
+
         return list(minions)
 
     def connected_ids(self, subset=None, show_ipv4=False):
@@ -581,8 +611,8 @@ class CkMinions(object):
         if not target_info:
             log.error('Failed to parse valid target "{0}"'.format(valid))
 
-        v_matcher = ref.get(target_info.get('engine'))
-        v_expr = target_info.get('pattern')
+        v_matcher = ref.get(target_info['engine'])
+        v_expr = target_info['pattern']
 
         if v_matcher in infinite:
             # We can't be sure what the subset is, only match the identical
@@ -663,7 +693,7 @@ class CkMinions(object):
         try:
             for fun in funs:
                 for ind in auth_list:
-                    if isinstance(ind, string_types):
+                    if isinstance(ind, six.string_types):
                         # Allowed for all minions
                         if self.match_check(ind, fun):
                             return True
@@ -678,7 +708,7 @@ class CkMinions(object):
                                 tgt,
                                 tgt_type):
                             # Minions are allowed, verify function in allowed list
-                            if isinstance(ind[valid], string_types):
+                            if isinstance(ind[valid], six.string_types):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
@@ -713,7 +743,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, string_types):
+            if isinstance(ind, six.string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@wheel':
@@ -725,7 +755,7 @@ class CkMinions(object):
                     continue
                 valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], string_types):
+                    if isinstance(ind[valid], six.string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -744,7 +774,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, string_types):
+            if isinstance(ind, six.string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@runners':
@@ -756,7 +786,7 @@ class CkMinions(object):
                     continue
                 valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], string_types):
+                    if isinstance(ind[valid], six.string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -778,7 +808,7 @@ class CkMinions(object):
         else:
             mod = fun
         for ind in auth_list:
-            if isinstance(ind, string_types):
+            if isinstance(ind, six.string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@{0}'.format(form):
@@ -790,7 +820,7 @@ class CkMinions(object):
                     continue
                 valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], string_types):
+                    if isinstance(ind[valid], six.string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):

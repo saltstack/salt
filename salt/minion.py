@@ -74,7 +74,7 @@ import salt.utils.jid
 import salt.pillar
 import salt.utils.args
 import salt.utils.event
-import salt.utils.minion
+import salt.utils.minions
 import salt.utils.schedule
 import salt.utils.error
 import salt.utils.zeromq
@@ -2308,10 +2308,10 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, six.string_types):
-            log.debug('Compound target received that is not a string')
+        if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
+            log.error('Compound target received that is neither string, list nor tuple')
             return False
-        log.debug('compound_match: {0} ? {1}'.format(tgt, self.opts['id']))
+        log.debug('compound_match: {0} ? {1}'.format(self.opts['id'], tgt))
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
@@ -2325,7 +2325,12 @@ class Matcher(object):
 
         results = []
         opers = ['and', 'or', 'not', '(', ')']
-        words = tgt.split()
+
+        if isinstance(tgt, six.string_types):
+            words = tgt.split()
+        else:
+            words = tgt
+
         for word in words:
             target_info = salt.utils.minions.parse_target(word)
 
@@ -2346,7 +2351,7 @@ class Matcher(object):
                         return False
                     results.append(word)
 
-            elif target_info and target_info.get('engine'):
+            elif target_info and target_info['engine']:
                 if 'N' == target_info['engine']:
                     # Nodegroups should already be expanded/resolved to other engines
                     log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
@@ -2358,13 +2363,13 @@ class Matcher(object):
                               ' target expression "{1}"'.format(
                                   target_info['engine'],
                                   word,
-                              )
-                    )
+                                )
+                        )
                     return False
 
                 engine_args = [target_info['pattern']]
                 engine_kwargs = {}
-                if target_info.get('delimiter'):
+                if target_info['delimiter']:
                     engine_kwargs['delimiter'] = target_info['delimiter']
 
                 results.append(
