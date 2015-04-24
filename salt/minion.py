@@ -125,6 +125,8 @@ def resolve_dns(opts):
         # Because I import salt.log below I need to re-import salt.utils here
         import salt.utils
         try:
+            if opts['master'] == '':
+                raise SaltSystemExit
             ret['master_ip'] = \
                     salt.utils.dns_check(opts['master'], True, opts['ipv6'])
         except SaltClientError:
@@ -148,8 +150,14 @@ def resolve_dns(opts):
             else:
                 ret['master_ip'] = '127.0.0.1'
         except SaltSystemExit:
-            err = 'Master address: {0} could not be resolved. Invalid or unresolveable address.'.format(
-                opts.get('master', 'Unknown'))
+            unknown_str = 'unknown address'
+            master = opts.get('master', unknown_str)
+            if master == '':
+                master = unknown_str
+            if opts.get('__role') == 'syndic':
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. Set \'syndic_master\' value in minion config.'.format(master)
+            else:
+                err = 'Master address: \'{0}\' could not be resolved. Invalid or unresolveable address. Set \'master\' value in minion config.'.format(master)
             log.error(err)
             raise SaltSystemExit(code=42, msg=err)
     else:
@@ -316,16 +324,21 @@ class SMinion(object):
                 masters = self.opts['master']
                 if self.opts['random_master'] is True:
                     shuffle(masters)
+                connected_master = False
                 for master in masters:
                     self.opts['master'] = master
                     self.opts.update(resolve_dns(opts))
                     try:
                         self.gen_modules()
+                        connected_master = True
                         break
                     except SaltClientError:
                         log.warning(('Attempted to authenticate with master '
                                      '{0} and failed'.format(master)))
                         continue
+                # if we are out of masters, lets raise an exception
+                if not connected_master:
+                    raise SaltClientError('Unable to connect to any master')
             else:
                 if self.opts['random_master'] is True:
                     log.warning('random_master is True but there is only one master specified. Ignoring.')
@@ -571,9 +584,10 @@ class Minion(MinionBase):
         Return a future which will complete when you are connected to a master
         '''
         master, self.pub_channel = yield self.eval_master(self.opts, self.timeout, self.safe)
-        self._post_master_init(master)
+        yield self._post_master_init(master)
 
     # TODO: better name...
+    @tornado.gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -583,7 +597,7 @@ class Minion(MinionBase):
         '''
         self.opts['master'] = master
 
-        self.opts['pillar'] = salt.pillar.get_pillar(
+        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
@@ -807,8 +821,7 @@ class Minion(MinionBase):
                         salt.utils.event.TAGEND,
                         serialized_data,
                 )
-                self.handle_event(event)
-                self.epub_sock.send(event)
+                self.event_publisher.handle_publish([event])
 
     def _load_modules(self, force_refresh=False, notify=False):
         '''
@@ -938,6 +951,21 @@ class Minion(MinionBase):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = cls(opts)
+            if not hasattr(minion_instance, 'functions'):
+                functions, returners, function_errors = (
+                    minion_instance._load_modules()
+                    )
+                minion_instance.functions = functions
+                minion_instance.returners = returners
+                minion_instance.function_errors = function_errors
+            if not hasattr(minion_instance, 'serial'):
+                minion_instance.serial = salt.payload.Serial(opts)
+            if not hasattr(minion_instance, 'proc_dir'):
+                uid = salt.utils.get_uid(user=opts.get('user', None))
+                minion_instance.proc_dir = (
+                    get_proc_dir(opts['cachedir'], uid=uid)
+                    )
+
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
             salt.utils.daemonize_if(opts)
@@ -1263,13 +1291,15 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+    # TODO: only allow one future in flight at a time?
+    @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
         '''
         log.debug('Refreshing pillar')
         try:
-            self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
@@ -1394,6 +1424,7 @@ class Minion(MinionBase):
         ret = channel.send(load)
         return ret
 
+    @tornado.gen.coroutine
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1403,7 +1434,7 @@ class Minion(MinionBase):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
-            self.pillar_refresh()
+            yield self.pillar_refresh()
         elif package.startswith('manage_schedule'):
             self.manage_schedule(package)
         elif package.startswith('manage_beacons'):
@@ -1529,7 +1560,11 @@ class Minion(MinionBase):
         if start:
             self.sync_connect_master()
 
-        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
+        self.event_publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.handle_event,
+            io_loop=self.io_loop,
+        )
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 

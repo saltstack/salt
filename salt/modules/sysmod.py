@@ -313,9 +313,9 @@ def renderer_doc(*args):
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):  # pylint: disable=incompatible-py3-code
-                docs[fun] = renderers_[fun].__doc__                # There's no problem feeding fnmatch.filter()
-                                                                   # with a Py3's dict_keys() instance
+            for fun in fnmatch.filter(renderers_.keys(), module):   # pylint: disable=incompatible-py3-code
+                docs[fun] = renderers_[fun].__doc__                 # There's no problem feeding fnmatch.filter()
+                                                                    # with a Py3's dict_keys() instance
         else:
             for fun in six.iterkeys(renderers_):
                 docs[fun] = renderers_[fun].__doc__

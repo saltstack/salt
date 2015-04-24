@@ -6,6 +6,7 @@ import os
 import sys
 
 # Import Salt libs
+import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
 from salt.exceptions import (
@@ -85,7 +86,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
-                    pass
+                    if self.options.failhard:
+                        for ret in res.itervalues():
+                            retcode = salt.utils.job.get_retcode(ret)
+                            if retcode != 0:
+                                sys.exit(retcode)
 
         else:
             if self.options.timeout <= 0:
@@ -295,8 +300,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-            if 'retcode' in data:
-                retcode = data['retcode']
+            ret_retcode = salt.utils.job.get_retcode(data)
+            if ret_retcode > retcode:
+                retcode = ret_retcode
         return ret, out, retcode
 
     def _format_error(self, minion_error):

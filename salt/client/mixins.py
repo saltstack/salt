@@ -84,7 +84,8 @@ class ClientFuncsDict(collections.MutableMapping):
             async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
 
             user = salt.utils.get_specific_user()
-            return self.client._proc_function(key,
+            return self.client._proc_function(
+                   key,
                    low,
                    user,
                    async_pub['tag'],  # TODO: fix

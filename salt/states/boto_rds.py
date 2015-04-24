@@ -3,7 +3,7 @@
 Manage RDSs
 =================
 
-.. versionadded:: 2014.7.1
+.. versionadded:: Beryllium
 
 Create and destroy RDS instances. Be aware that this interacts with Amazon's
 services, and so may incur charges.

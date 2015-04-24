@@ -26,12 +26,12 @@ returns a list of key/value pairs for all of the EC2 tags assigned to
 the instance.
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import re
 import logging
-from distutils.version import StrictVersion
+from distutils.version import StrictVersion  # pylint: disable=no-name-in-module
 
 # Import AWS Boto libs
 try:

@@ -292,9 +292,15 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
 
         self.workers = self.context.socket(zmq.DEALER)
-        self.w_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'workers.ipc')
-        )
+
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_workers', 4515)
+                )
+        else:
+            self.w_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'workers.ipc')
+                )
 
         log.info('Setting up the master communication server')
         self.clients.bind(self.uri)
@@ -331,9 +337,14 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
-        self.w_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'workers.ipc')
-            )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            self.w_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_workers', 4515)
+                )
+        else:
+            self.w_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'workers.ipc')
+                )
         log.info('Worker binding to socket {0}'.format(self.w_uri))
         self._socket.connect(self.w_uri)
 
@@ -423,9 +434,15 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**self.opts)
         # Prepare minion pull socket
         pull_sock = context.socket(zmq.PULL)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-        )
+
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_publish_pull', 4514)
+                )
+        else:
+            pull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                )
         salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
         # Start the minion command publisher
@@ -502,9 +519,14 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         # Send 0MQ to the publisher
         context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
-            )
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = 'tcp://127.0.0.1:{0}'.format(
+                self.opts.get('tcp_master_publish_pull', 4514)
+                )
+        else:
+            pull_uri = 'ipc://{0}'.format(
+                os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+                )
         pub_sock.connect(pull_uri)
         int_payload = {'payload': self.serial.dumps(payload)}
 

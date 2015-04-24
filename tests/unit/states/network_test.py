@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -57,6 +58,7 @@ class MockGrains(object):
         return {'A': 'B'}
 
 
+@skipIf(sys.version_info < (2, 7), 'This needs to be refactored to work with Python 2.6')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
     '''

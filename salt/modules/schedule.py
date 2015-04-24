@@ -36,6 +36,8 @@ SCHEDULE_CONF = [
         'splay',
         'range',
         'when',
+        'once',
+        'once_fmt',
         'returner',
         'jid_include',
         'args',
@@ -263,7 +265,8 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
-    for item in ['range', 'when', 'cron', 'returner', 'return_config', 'until']:
+    for item in ['range', 'when', 'once', 'once_fmt', 'cron', 'returner',
+            'return_config', 'until']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
 

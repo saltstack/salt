@@ -111,17 +111,23 @@ GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
 DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
-def decrypt_ciphertext(cypher, gpg):
+def decrypt_ciphertext(cypher, gpg, safe=False):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
+
+    :param safe: Raise an exception on failure instead of returning the ciphertext
     '''
     decrypted_data = gpg.decrypt(cypher)
     if not decrypted_data.ok:
-        log.info("Could not decrypt cipher {0}, received {1}".format(
-            cypher, decrypted_data.stderr))
-        return cypher
+        decrypt_err = "Could not decrypt cipher {0}, received {1}".format(
+                cypher, decrypted_data.stderr)
+        log.error(decrypt_err)
+        if safe:
+            raise SaltRenderError(decrypt_err)
+        else:
+            return cypher
     else:
         return str(decrypted_data)
 
@@ -163,6 +169,8 @@ def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
     log.debug('Reading GPG keys from: {0}'.format(homedir))
     try:
         gpg = gnupg.GPG(gnupghome=homedir)
+    except TypeError:
+        gpg = gnupg.GPG()
     except OSError:
         raise SaltRenderError('Cannot initialize gnupg')
     return decrypt_object(gpg_data, gpg)

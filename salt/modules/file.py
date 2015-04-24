@@ -1696,7 +1696,7 @@ def replace(path,
             raise CommandExecutionError("Exception: {0}".format(exc))
 
     if not found and (append_if_not_found or prepend_if_not_found):
-        if None == not_found_content:
+        if not_found_content is None:
             not_found_content = repl
         if prepend_if_not_found:
             new_file.insert(0, not_found_content + '\n')
@@ -3124,7 +3124,9 @@ def get_managed(
     source_sum = {}
     if template and source:
         sfn = __salt__['cp.cache_file'](source, saltenv)
-        if not os.path.exists(sfn):
+        # exists doesn't play nice with sfn as bool
+        # but if cache failed, sfn == False
+        if not sfn or not os.path.exists(sfn):
             return sfn, {}, 'Source file {0} not found'.format(source)
         if sfn == name:
             raise SaltInvocationError(

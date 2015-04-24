@@ -5,7 +5,6 @@ Routines to set up a minion
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import os
 import imp
 import sys
@@ -34,7 +33,6 @@ import salt.ext.six as six
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
 }
-_grains = {}
 log = logging.getLogger(__name__)
 
 SALT_BASE_PATH = os.path.abspath(os.path.dirname(salt.__file__))
@@ -526,8 +524,6 @@ def grains(opts, force_refresh=False):
 
     # Run the rest of the grains
     for key, fun in six.iteritems(funcs):
-        if '.' not in key:
-            continue
         if key.startswith('core.') or key == '_errors':
             continue
         try:
@@ -721,13 +717,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  whitelist=None,
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
-        super(LazyLoader, self).__init__()  # init the lazy loader
-        self.tag = tag
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
         if opts is None:
             opts = {}
+        self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
@@ -741,18 +736,36 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
-        self.loaded_modules = set()  # list of all modules that we have loaded
+        self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
         self.refresh_file_mapping()
 
+        super(LazyLoader, self).__init__()  # late init the lazy loader
         # create all of the import namespaces
         _generate_module('{0}.int'.format(self.loaded_base_name))
         _generate_module('{0}.int.{1}'.format(self.loaded_base_name, tag))
         _generate_module('{0}.ext'.format(self.loaded_base_name))
         _generate_module('{0}.ext.{1}'.format(self.loaded_base_name, tag))
+
+    def __getattr__(self, mod_name):
+        '''
+        Allow for "direct" attribute access-- this allows jinja templates to
+        access things like `salt.test.ping()`
+        '''
+        if mod_name not in self.loaded_modules and not self.loaded:
+            for name in self._iter_files(mod_name):
+                if name in self.loaded_files:
+                    continue
+                # if we got what we wanted, we are done
+                if self._load_module(name) and mod_name in self.loaded_modules:
+                    break
+        if mod_name in self.loaded_modules:
+            return self.loaded_modules[mod_name]
+        else:
+            raise AttributeError(mod_name)
 
     def missing_fun_string(self, function_name):
         '''
@@ -850,7 +863,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         super(LazyLoader, self).clear()  # clear the lazy loader
         self.loaded_files = set()
         self.missing_modules = {}
-        self.loaded_modules = set()
+        self.loaded_modules = {}
         # if we have been loaded before, lets clear the file mapping since
         # we obviously want a re-do
         if hasattr(self, 'opts'):
@@ -869,11 +882,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self._pillar = opts['pillar']
         else:
             self._pillar = {}
-        if self.tag not in ['grains'] and not self._grains:
-            if not _grains:
-                # memoize cache the grains, not to reload each run
-                _grains.update(grains(opts))
-            self._grains.update(copy.deepcopy(_grains))
 
         mod_opts = {}
         for key, val in list(opts.items()):
@@ -1036,7 +1044,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     module_name
                 )
             )
-        self._dict[module_name] = salt.utils.odict.OrderedDict()
+        mod_dict = salt.utils.odict.OrderedDict()
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1055,13 +1063,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
             # Save many references for lookups
             self._dict['{0}.{1}'.format(module_name, funcname)] = func
-            setattr(self._dict[module_name], funcname, func)
-            self._dict[module_name][funcname] = func
+            setattr(mod_dict, funcname, func)
+            mod_dict[funcname] = func
             self._apply_outputter(func, mod)
 
         # enforce depends
         Depends.enforce_dependencies(self._dict, self.tag)
-        self.loaded_modules.add(module_name)
+        self.loaded_modules[module_name] = mod_dict
         return True
 
     def _load(self, key):
@@ -1069,12 +1077,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Load a single item if you have it
         '''
         # if the key doesn't have a '.' then it isn't valid for this mod dict
-        if not isinstance(key, six.string_types):
+        if not isinstance(key, six.string_types) or '.' not in key:
             raise KeyError
-        if '.' not in key:
-            mod_name = key
-        else:
-            mod_name, _ = key.split('.', 1)
+        mod_name, _ = key.split('.', 1)
         if mod_name in self.missing_modules:
             return True
         # if the modulename isn't in the whitelist, don't bother

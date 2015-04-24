@@ -87,6 +87,7 @@ class Master(parsers.MasterOptionParser):
                         os.path.join(self.config['cachedir'], 'proc'),
                         self.config['sock_dir'],
                         self.config['token_dir'],
+                        self.config['syndic_dir'],
                         self.config['sqlite_queue_dir'],
                     ]
                 if self.config.get('transport') == 'raet':
@@ -106,6 +107,9 @@ class Master(parsers.MasterOptionParser):
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
                     verify_files([logfile], self.config['user'])
+                # Clear out syndics from cachedir
+                for syndic_file in os.listdir(self.config['syndic_dir']):
+                    os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
@@ -155,7 +159,7 @@ class Master(parsers.MasterOptionParser):
         logger.info('The salt master is shut down')
 
 
-class Minion(parsers.MinionOptionParser):
+class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -307,7 +311,7 @@ class Minion(parsers.MinionOptionParser):
         logger.info('The salt minion is shut down')
 
 
-class ProxyMinion(parsers.MinionOptionParser):
+class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
