@@ -13,6 +13,7 @@ import os.path
 import json
 import logging
 import salt.ext.six.moves.http_cookiejar  # pylint: disable=E0611
+import salt.ext.six.moves.urllib as urllib
 from salt.ext.six import string_types
 from salt._compat import ElementTree as ET
 
@@ -34,7 +35,6 @@ except ImportError:
         except ImportError:
             HAS_MATCHHOSTNAME = False
 import socket
-import urllib2
 import httplib
 
 # Import salt libs
@@ -265,10 +265,10 @@ def query(url,
         result_text = result.text
         result_cookies = result.cookies
     else:
-        request = urllib2.Request(url, data)
+        request = urllib.Request(url, data)
         handlers = [
-            urllib2.HTTPHandler,
-            urllib2.HTTPCookieProcessor(sess_cookies)
+            urllib.HTTPHandler,
+            urllib.HTTPCookieProcessor(sess_cookies)
         ]
 
         if url.startswith('https') or port == 443:
@@ -314,7 +314,7 @@ def query(url,
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
-                        handlers.append(urllib2.HTTPSHandler(context=context))  # pylint: disable=E1123
+                        handlers.append(urllib.HTTPSHandler(context=context))  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
                         cert_kwargs = {
@@ -326,7 +326,7 @@ def query(url,
                             cert_kwargs['key_file'] = cert_chain[1]
                         handlers[0] = httplib.HTTPSConnection(**cert_kwargs)
 
-        opener = urllib2.build_opener(*handlers)
+        opener = urllib.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
