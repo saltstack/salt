@@ -550,9 +550,9 @@ def __get_artifact(artifact, salt_source):
         try:
             fetch_result = __fetch_from_artifactory(artifact)
             log.debug('fetch_result={0}'.format(fetch_result))
-        except Exception as e:
+        except Exception as exception:
             log.debug(traceback.format_exc())
-            return None, e.message
+            return None, exception
 
         if fetch_result['status']:
             resolved_source = fetch_result['target_file']
