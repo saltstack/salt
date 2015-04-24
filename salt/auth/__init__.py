@@ -157,8 +157,11 @@ class LoadAuth(object):
                  'expire': time.time() + self.opts['token_expire'],
                  'name': fcall['args'][0],
                  'eauth': load['eauth'],
-                 'groups': load['groups'],
                  'token': tok}
+
+        if 'groups' in load:
+            tdata['groups'] = load['groups']
+
         with salt.utils.fopen(t_path, 'w+b') as fp_:
             fp_.write(self.serial.dumps(tdata))
         return tdata
