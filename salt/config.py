@@ -2327,7 +2327,7 @@ def get_id(opts, cache_minion_id=False):
         except (IOError, OSError):
             pass
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.debug('Guessing ID. The id can be explicitly in set {0}'
+        log.debug('Guessing ID. The id can be explicitly set in {0}'
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()

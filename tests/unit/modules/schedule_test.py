@@ -17,6 +17,10 @@ from salttesting.mock import (
 
 from salttesting.helpers import ensure_in_syspath
 
+import os
+import integration
+SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
+
 ensure_in_syspath('../../')
 
 # Import Salt Libs
@@ -250,7 +254,7 @@ class ScheduleTestCase(TestCase):
         comm1 = 'no servers answered the published schedule.add command'
         comm2 = 'the following minions return False'
         comm3 = 'Moved Job job1 from schedule.'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value={})
             with patch.dict(schedule.__salt__, {'publish.publish': mock}):
                 self.assertDictEqual(schedule.move('job1', 'minion1'),
@@ -276,7 +280,7 @@ class ScheduleTestCase(TestCase):
                                   'result': False})
 
         mock = MagicMock(side_effect=[{}, {'job1': {}}])
-        with patch.dict(schedule.__opts__, {'schedule': mock}):
+        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': SOCK_DIR}):
             with patch.dict(schedule.__pillar__, {'schedule': {'job1': JOB1}}):
                 mock = MagicMock(return_value={})
                 with patch.dict(schedule.__salt__, {'publish.publish': mock}):

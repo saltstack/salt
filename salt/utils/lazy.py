@@ -94,22 +94,6 @@ class LazyDict(collections.MutableMapping):
         else:
             return self._dict[key]
 
-    def __getattr__(self, name):
-        '''
-        Check if the name is in the dict and return it if it is
-        '''
-        if name not in self._dict and not self.loaded:
-            # load the item
-            if self._load(name):
-                log.debug('LazyLoaded {0}'.format(name))
-                return self._dict[name]
-            else:
-                log.debug('Could not LazyLoad {0}'.format(name))
-                raise KeyError(name)
-        elif name in self:
-            return self[name]
-        raise AttributeError(name)
-
     def __len__(self):
         # if not loaded,
         if not self.loaded:

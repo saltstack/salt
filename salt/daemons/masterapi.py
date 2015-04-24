@@ -709,7 +709,8 @@ class RemoteFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
-            os.rename(tmpfname, datap)
+            # On Windows, os.rename will fail if the destination file exists.
+            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
         return data
 
     def _minion_event(self, load):

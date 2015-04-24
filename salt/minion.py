@@ -324,16 +324,21 @@ class SMinion(object):
                 masters = self.opts['master']
                 if self.opts['random_master'] is True:
                     shuffle(masters)
+                connected_master = False
                 for master in masters:
                     self.opts['master'] = master
                     self.opts.update(resolve_dns(opts))
                     try:
                         self.gen_modules()
+                        connected_master = True
                         break
                     except SaltClientError:
                         log.warning(('Attempted to authenticate with master '
                                      '{0} and failed'.format(master)))
                         continue
+                # if we are out of masters, lets raise an exception
+                if not connected_master:
+                    raise SaltClientError('Unable to connect to any master')
             else:
                 if self.opts['random_master'] is True:
                     log.warning('random_master is True but there is only one master specified. Ignoring.')
@@ -579,9 +584,10 @@ class Minion(MinionBase):
         Return a future which will complete when you are connected to a master
         '''
         master, self.pub_channel = yield self.eval_master(self.opts, self.timeout, self.safe)
-        self._post_master_init(master)
+        yield self._post_master_init(master)
 
     # TODO: better name...
+    @tornado.gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -591,7 +597,7 @@ class Minion(MinionBase):
         '''
         self.opts['master'] = master
 
-        self.opts['pillar'] = salt.pillar.get_pillar(
+        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts['grains'],
             self.opts['id'],
@@ -815,8 +821,7 @@ class Minion(MinionBase):
                         salt.utils.event.TAGEND,
                         serialized_data,
                 )
-                self.handle_event(event)
-                self.epub_sock.send(event)
+                self.event_publisher.handle_publish([event])
 
     def _load_modules(self, force_refresh=False, notify=False):
         '''
@@ -946,6 +951,21 @@ class Minion(MinionBase):
         # multiprocessing communication.
         if not minion_instance:
             minion_instance = cls(opts)
+            if not hasattr(minion_instance, 'functions'):
+                functions, returners, function_errors = (
+                    minion_instance._load_modules()
+                    )
+                minion_instance.functions = functions
+                minion_instance.returners = returners
+                minion_instance.function_errors = function_errors
+            if not hasattr(minion_instance, 'serial'):
+                minion_instance.serial = salt.payload.Serial(opts)
+            if not hasattr(minion_instance, 'proc_dir'):
+                uid = salt.utils.get_uid(user=opts.get('user', None))
+                minion_instance.proc_dir = (
+                    get_proc_dir(opts['cachedir'], uid=uid)
+                    )
+
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
         if opts['multiprocessing']:
             salt.utils.daemonize_if(opts)
@@ -1271,13 +1291,15 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+    # TODO: only allow one future in flight at a time?
+    @tornado.gen.coroutine
     def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
         '''
         log.debug('Refreshing pillar')
         try:
-            self.opts['pillar'] = salt.pillar.get_pillar(
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
                 self.opts,
                 self.opts['grains'],
                 self.opts['id'],
@@ -1402,6 +1424,7 @@ class Minion(MinionBase):
         ret = channel.send(load)
         return ret
 
+    @tornado.gen.coroutine
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1411,7 +1434,7 @@ class Minion(MinionBase):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
             self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
-            self.pillar_refresh()
+            yield self.pillar_refresh()
         elif package.startswith('manage_schedule'):
             self.manage_schedule(package)
         elif package.startswith('manage_beacons'):
@@ -1537,7 +1560,11 @@ class Minion(MinionBase):
         if start:
             self.sync_connect_master()
 
-        salt.utils.event.AsyncEventPublisher(self.opts, self.handle_event, io_loop=self.io_loop)
+        self.event_publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.handle_event,
+            io_loop=self.io_loop,
+        )
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
@@ -2284,6 +2311,7 @@ class Matcher(object):
         if not isinstance(tgt, six.string_types):
             log.debug('Compound target received that is not a string')
             return False
+        log.debug('compound_match({0})'.format(tgt))
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
@@ -2298,37 +2326,40 @@ class Matcher(object):
         tokens = tgt.split()
         for match in tokens:
             # Try to match tokens from the compound target, first by using
-            # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
+            # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
-                comps = match.split('@')
+                comps = match.split('@', 1)
                 matcher = ref.get(comps[0])
                 if not matcher:
                     # If an unknown matcher is called at any time, fail out
+                    log.error('Invalid matcher: {0}'.format(comps[0]))
                     return False
                 results.append(
-                    str(
-                        getattr(self, '{0}_match'.format(matcher))(
-                            '@'.join(comps[1:])
-                        )
-                    )
+                    str(getattr(self, '{0}_match'.format(matcher))(comps[1]))
                 )
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
-                if results or match in ['(', ')']:
+                if results:
+                    if results[-1] == '(' and match in ('and', 'or'):
+                        log.error('Invalid beginning operator after "(": {0}'.format(match))
+                        return False
                     if match == 'not':
-                        match_suffix = results[-1]
-                        if not (match_suffix == 'and' or match_suffix == 'or'):
+                        if not results[-1] in ('and', 'or', '('):
                             results.append('and')
                     results.append(match)
                 else:
-                    # seq start with oper, fail
-                    if match not in ['(', ')']:
+                    # seq start with binary oper, fail
+                    if match not in ['(', 'not']:
+                        log.error('Invalid beginning operator: {0}'.format(match))
                         return False
+                    results.append(match)
+
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
         results = ' '.join(results)
+        log.debug('compound_match "{0}" => "{1}"'.format(tgt, results))
         try:
             return eval(results)  # pylint: disable=W0123
         except Exception:
