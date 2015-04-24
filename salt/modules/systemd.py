@@ -271,8 +271,6 @@ def _sysv_is_enabled(name):
     return not _sysv_is_disabled(name)
 
 
-
-
 def get_enabled():
     '''
     Return a list of all enabled services
