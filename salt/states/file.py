@@ -2423,16 +2423,64 @@ def replace(name,
             backup='.bak',
             show_changes=True):
     r'''
-    Maintain an edit in a file
+    Maintain an edit in a file.
 
     .. versionadded:: 0.17.0
 
-    Params are identical to the remote execution function :mod:`file.replace
-    <salt.modules.file.replace>`.
+    name
+        Filesystem path to the file to be edited.
 
-    For complex regex patterns it can be useful to avoid the need for complex
-    quoting and escape sequences by making use of YAML's multiline string
-    syntax.
+    pattern
+        Python's `regular expression search<https://docs.python.org/2/library/re.html>`_.
+
+    repl
+        The replacement text.
+
+    count
+        Maximum number of pattern occurrences to be replaced.
+
+    flags
+        A list of flags defined in the :ref:`re module documentation <contents-of-module-re>`.
+        Each list item should be a string that will correlate to the human-friendly flag name.
+        E.g., ``['IGNORECASE', 'MULTILINE']``. Note: multiline searches must specify ``file``
+        as the ``bufsize`` argument below. Defaults to 0 and can be a list or an int.
+
+    bufsize
+        How much of the file to buffer into memory at once. The default value ``1`` processes
+        one line at a time. The special value ``file`` may be specified which will read the
+        entire file into memory before processing. Note: multiline searches must specify ``file``
+        buffering. Can be an int or a str.
+
+    append_if_not_found
+        If pattern is not found and set to ``True`` then, the content will be appended to the file.
+
+        .. versionadded:: 2014.7.0
+
+    prepend_if_not_found
+        If pattern is not found and set to ``True`` then, the content will be prepended to the file.
+
+        .. versionadded:: 2014.7.0
+
+    not_found_content
+        Content to use for append/prepend if not found. If ``None`` (default), uses ``repl``. Useful
+        when ``repl``  uses references to group in pattern.
+
+        .. versionadded:: 2014.7.0
+
+    backup
+        The file extension to use for a backup of the file before editing. Set to ``False`` to skip
+        making a backup.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False`` return a boolean if any
+        changes were made. Returns a boolean or a string.
+
+        .. note:
+            Using this option will store two copies of the file in-memory (the original version and
+            the edited version) in order to generate the diff.
+
+    For complex regex patterns it can be useful to avoid the need for complex quoting and escape
+    sequences by making use of YAML's multiline string syntax.
 
     .. code-block:: yaml
 

@@ -131,12 +131,15 @@ def add(name,
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    if createhome:
-        cmd.append('-m')
-    elif (createhome is False
-          and __grains__['kernel'] != 'NetBSD'
-          and __grains__['kernel'] != 'OpenBSD'):
-        cmd.append('-M')
+    if isinstance(createhome, bool):
+        if createhome:
+            cmd.append('-m')
+        elif (__grains__['kernel'] != 'NetBSD'
+                and __grains__['kernel'] != 'OpenBSD'):
+            cmd.append('-M')
+    else:
+        log.error('Value passes to ``createhome`` must be a boolean')
+        return False
 
     if home is not None:
         cmd.extend(['-d', home])
@@ -310,8 +313,8 @@ def chshell(name, shell):
 
 def chhome(name, home, persist=False):
     '''
-    Change the home directory of the user, pass True for persist to copy files
-    to the new home dir
+    Change the home directory of the user, pass True for persist to move files
+    to the new home directory if the old home directory exist.
 
     CLI Example:
 
