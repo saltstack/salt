@@ -293,7 +293,7 @@ def insert(objects, collection, user=None, password=None,
     try:
         objects = _to_dict(objects)
     except Exception, err:
-        return err.message
+        return err
 
     try:
         log.info("Inserting %r into %s.%s", objects, database, collection)
@@ -302,8 +302,8 @@ def insert(objects, collection, user=None, password=None,
         ids = col.insert(objects)
         return ids
     except pymongo.errors.PyMongoError as err:
-        log.error("Inserting objects %r failed with error %s", objects, err.message)
-        return err.message
+        log.error("Inserting objects %r failed with error %s", objects, err)
+        return err
 
 
 def find(collection, query=None, user=None, password=None,
@@ -315,7 +315,7 @@ def find(collection, query=None, user=None, password=None,
     try:
         query = _to_dict(query)
     except Exception, err:
-        return err.message
+        return err
 
     try:
         log.info("Searching for %r in %s", query, collection)
@@ -324,8 +324,8 @@ def find(collection, query=None, user=None, password=None,
         ret = col.find(query)
         return list(ret)
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err.message)
-        return err.message
+        log.error("Removing objects failed with error: %s", err)
+        return err
 
 
 def remove(collection, query=None, user=None, password=None,
