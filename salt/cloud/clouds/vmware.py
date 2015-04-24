@@ -1972,7 +1972,8 @@ def rescan_hba(kwargs=None, call=None):
 
 def upgrade_tools_all(call=None):
     ''''
-    To upgrade VMware Tools for all hosts on a specified provider.
+    To upgrade VMware Tools on all virtual machines present in
+    the specified provider
 
     .. note::
 
@@ -1988,26 +1989,19 @@ def upgrade_tools_all(call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The upgrade_tools_all function must be called with -f or --function.'
+            'The upgrade_tools_all function must be called with '
+            '-f or --function.'
         )
 
-    vm_properties = [
-        "name"
-    ]
+    ret = {}
+    vm_properties = ["name"]
 
-    # Create a list to store status information.
-    upg_status = []
-    # Get list of vm objects from provider.
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
-    # Call _upg_tools_helper function for each vm object
-    for object in vm_list:
-        vm = object['object']
-        status = _upg_tools_helper(vm)
-        # Append vm name and return status to upg_status list
-        upg_status.append(['{0}'.format(vm.name), '{0}'.format(status)])
-    
-    return { 'Tools Status' : upg_status }
+    for vm in vm_list:
+        ret[vm['name']] = _upg_tools_helper(vm['object'])
+
+    return {'Tools Status': ret}
 
 
 def upgrade_tools(name, reboot=False, call=None):
@@ -2031,13 +2025,10 @@ def upgrade_tools(name, reboot=False, call=None):
         raise SaltCloudSystemExit(
             'The upgrade_tools action must be called with -a or --action.'
         )
-    # get vm object with provided name
-    vm = _get_mor_by_property(vim.VirtualMachine, name)
 
-    # Call _upg_tools_helper function for vm
-    status = _upg_tools_helper(vm, reboot)
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
 
-    return { 'Tools Status' : status }
+    return {'Tools Status': _upg_tools_helper(vm, reboot)}
 
 
 def list_hosts_by_cluster(kwargs=None, call=None):
