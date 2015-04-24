@@ -41,11 +41,26 @@ That same example expressed in a :term:`top file` looks like the following:
         - match: compound
         - webserver
 
+.. versionadded:: Beryllium
+
 Excluding a minion based on its ID is also possible:
 
 .. code-block:: bash
 
     salt -C 'not web-dc1-srv' test.ping
+
+Versions prior to Beryllium a leading ``not`` was not supported in compound
+matches. Instead, something like the following was required:
+
+.. code-block:: bash
+
+    salt -C '* and not G@kernel:Darwin' test.ping
+
+Excluding a minion based on its ID was also possible:
+
+.. code-block:: bash
+
+    salt -C '* and not web-dc1-srv' test.ping
 
 Precedence Matching
 -------------------
