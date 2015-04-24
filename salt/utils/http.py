@@ -126,7 +126,7 @@ def query(url,
                 os.path.join(syspaths.CONFIG_DIR, 'master')
             )
         elif node == 'minion':
-            opts = salt.config.master_config(
+            opts = salt.config.minion_config(
                 os.path.join(syspaths.CONFIG_DIR, 'minion')
             )
         else:
