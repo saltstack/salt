@@ -40,10 +40,6 @@ def __virtual__():
 
 def rest_auth_setup():
 
-    # Versions 1.7 and later of Django don't pull models until
-    # they are needed.  When using framework facilities outside the
-    # web application container we need to run django.setup() to
-    # get the model definitions cached.
     if '^url' in __opts__['external_auth']['rest']:
         return __opts__['external_auth']['rest']['^url']
     else
