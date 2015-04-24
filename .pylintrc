@@ -30,12 +30,17 @@ persistent=yes
 load-plugins=saltpylint.pep8,
   saltpylint.pep263,
   saltpylint.strings,
-  saltpylint.fileperms
+  saltpylint.fileperms,
+  saltpylint.pyminver
 
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
+
+
+# Minimum Python Version To Enforce
+minimum-python-version = 2.6
 
 [MESSAGES CONTROL]
 
