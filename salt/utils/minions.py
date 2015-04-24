@@ -342,9 +342,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via compound matcher
         '''
+        log.debug('_check_compound_minions({0})'.format(expr))
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
+        log.debug('minions: {0}'.format(minions))
+
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
@@ -365,30 +368,31 @@ class CkMinions(object):
                 # Try to match tokens from the compound target, first by using
                 # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
                 if '@' in match and match[1] == '@':
-                    comps = match.split('@')
+                    comps = match.split('@', 1)
                     matcher = ref.get(comps[0])
 
-                    matcher_args = ['@'.join(comps[1:])]
+                    matcher_args = [comps[1]]
                     if comps[0] in ('G', 'P', 'I', 'J'):
                         matcher_args.append(delimiter)
                     matcher_args.append(True)
 
                     if not matcher:
                         # If an unknown matcher is called at any time, fail out
+                        log.error('Unknown matcher: {0}'.format(comps[0]))
                         return []
+                    results.append(str(set(matcher(*matcher_args))))
                     if unmatched and unmatched[-1] == '-':
-                        results.append(str(set(matcher(*matcher_args))))
                         results.append(')')
                         unmatched.pop()
-                    else:
-                        results.append(str(set(matcher(*matcher_args))))
                 elif match in opers:
                     # We didn't match a target, so append a boolean operator or
                     # subexpression
                     if results:
+                        if results[-1] == '(' and match in ('and', 'or'):
+                            log.error('Invalid beginning operator after "(": {0}'.format(match))
+                            return []
                         if match == 'not':
-                            result_suffix = results[-1]
-                            if not (result_suffix == '&' or result_suffix == '|'):
+                            if not results[-1] in ('&', '|', '('):
                                 results.append('&')
                             results.append('(')
                             results.append(str(set(minions)))
@@ -418,10 +422,16 @@ class CkMinions(object):
                             return []
                     else:
                         # seq start with oper, fail
-                        if match == '(':
+                        if match == 'not':
+                            results.append('(')
+                            results.append(str(set(minions)))
+                            results.append('-')
+                            unmatched.append('-')
+                        elif match == '(':
                             results.append(match)
                             unmatched.append(match)
                         else:
+                            log.error('Expression cannot begin with binary operator: {0}'.format(match))
                             return []
                 else:
                     # The match is not explicitly defined, evaluate as a glob
@@ -536,7 +546,7 @@ class CkMinions(object):
             infinite.append('grain_pcre')
 
         if '@' in valid and valid[1] == '@':
-            comps = valid.split('@')
+            comps = valid.split('@', 1)
             v_matcher = ref.get(comps[0])
             v_expr = comps[1]
         else:

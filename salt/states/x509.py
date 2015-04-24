@@ -153,6 +153,8 @@ This state creates a private key then requests a certificate signed by ca accord
 from __future__ import absolute_import
 import datetime
 import os
+import re
+import copy
 
 # Import Salt Libs
 import salt.exceptions
@@ -377,9 +379,16 @@ def certificate_managed(name,
     if os.path.isfile(name):
         try:
             current = __salt__['x509.read_certificate'](certificate=name)
-            current_comp = current.copy()
+            current_comp = copy.deepcopy(current)
             if 'serial_number' not in kwargs:
                 current_comp.pop('Serial Number')
+                if 'signing_cert' not in kwargs:
+                    try:
+                        current_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
+                            re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
+                                current_comp['X509v3 Extensions']['authorityKeyIdentifier']))
+                    except KeyError:
+                        pass
             current_comp.pop('Not Before')
             current_comp.pop('MD5 Finger Print')
             current_comp.pop('SHA1 Finger Print')
@@ -401,10 +410,17 @@ def certificate_managed(name,
     new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
 
     if isinstance(new, dict):
-        new_comp = new.copy()
+        new_comp = copy.deepcopy(new)
         new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
+            if 'signing_cert' not in kwargs:
+                try:
+                    new_comp['X509v3 Extensions']['authorityKeyIdentifier'] = (
+                        re.sub(r'serial:([0-9A-F]{2}:)*[0-9A-F]{2}', 'serial:--',
+                            new_comp['X509v3 Extensions']['authorityKeyIdentifier']))
+                except KeyError:
+                    pass
         new_comp.pop('Not Before')
         new_comp.pop('Not After')
         new_comp.pop('MD5 Finger Print')

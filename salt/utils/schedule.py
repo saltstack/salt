@@ -336,11 +336,18 @@ class Schedule(object):
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
                 del self.opts['schedule'][name]
+            schedule = self.opts['schedule']
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
                 if name in self.opts['pillar']['schedule']:
                     del self.opts['pillar']['schedule'][name]
+            schedule = self.opts['pillar']['schedule']
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': schedule},
+                       tag='/salt/minion/minion_schedule_delete_complete')
 
         # remove from self.intervals
         if name in self.intervals:
@@ -367,7 +374,14 @@ class Schedule(object):
                      'job: {0}'.format(new_job))
         else:
             log.info('Added new job {0} to scheduler'.format(new_job))
+
         self.opts['schedule'].update(data)
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+                       tag='/salt/minion/minion_schedule_add_complete')
+
         self.persist()
 
     def enable_job(self, name, where=None):
@@ -376,8 +390,16 @@ class Schedule(object):
         '''
         if where == 'pillar':
             self.opts['pillar']['schedule'][name]['enabled'] = True
+            schedule = self.opts['pillar']['schedule']
         else:
             self.opts['schedule'][name]['enabled'] = True
+            schedule = self.opts['schedule']
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': schedule},
+                       tag='/salt/minion/minion_schedule_enabled_job_complete')
+
         log.info('Enabling job {0} in scheduler'.format(name))
 
     def disable_job(self, name, where=None):
@@ -386,8 +408,16 @@ class Schedule(object):
         '''
         if where == 'pillar':
             self.opts['pillar']['schedule'][name]['enabled'] = False
+            schedule = self.opts['pillar']['schedule']
         else:
             self.opts['schedule'][name]['enabled'] = False
+            schedule = self.opts['schedule']
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': schedule},
+                       tag='/salt/minion/minion_schedule_disabled_job_complete')
+
         log.info('Disabling job {0} in scheduler'.format(name))
 
     def modify_job(self, name, schedule, where=None):
@@ -447,11 +477,21 @@ class Schedule(object):
         '''
         self.opts['schedule']['enabled'] = True
 
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+                       tag='/salt/minion/minion_schedule_enabled_complete')
+
     def disable_schedule(self):
         '''
         Disable the scheduler.
         '''
         self.opts['schedule']['enabled'] = False
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
+                       tag='/salt/minion/minion_schedule_disabled_complete')
 
     def reload(self, schedule):
         '''

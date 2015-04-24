@@ -2,8 +2,9 @@
 Using Salt with Stormpath
 =========================
 
-Stormpath is a user management and authentication service. This tutorial covers
-using SaltStack to manage and take advantage of Stormpath's features.
+`Stormpath <https://stormpath.com/>`_ is a user management and authentication
+service. This tutorial covers using SaltStack to manage and take advantage of
+Stormpath's features.
 
 External Authentication
 -----------------------
@@ -17,6 +18,10 @@ of the ``application`` that is associated with the users to be authenticated:
       apiid: 367DFSF4FRJ8767FSF4G34FGH
       apikey: FEFREF43t3FEFRe/f323fwer4FWF3445gferWRWEer1
       application: 786786FREFrefreg435fr1
+
+.. note::
+    These values can be found in the `Stormpath dashboard
+    <https://api.stormpath.com/ui2/index.html#/>`_`.
 
 Users that are to be authenticated should be set up under the ``stormpath``
 dict under ``external_auth``:
@@ -45,17 +50,11 @@ order to use either, a minion must be configured with an API ID and key.
     stormpath:
       apiid: 367DFSF4FRJ8767FSF4G34FGH
       apikey: FEFREF43t3FEFRe/f323fwer4FWF3445gferWRWEer1
-      tenantid: ffwEWFEW3443GERG34greG
       directory: efreg435fr1786786FREFr
       application: 786786FREFrefreg435fr1
 
 Some functions in the ``stormpath`` modules can make use of other options. The
 following options are also available.
-
-tenantid
-````````
-The ID of the tenant is required for some functions to work properly. For
-instance, it is used with the ``stormpath.list_directories`` function.
 
 directory
 `````````
@@ -153,8 +152,7 @@ Delete an account from Stormpath.
 
 stormpath.list_directories
 ``````````````````````````
-Show all directories. A ``tenantid`` must be specified in the minion's
-configuration in order for this function to work.
+Show all directories associated with this tenant.
 
 .. code-block:: bash
 

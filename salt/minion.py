@@ -2311,6 +2311,7 @@ class Matcher(object):
         if not isinstance(tgt, six.string_types):
             log.debug('Compound target received that is not a string')
             return False
+        log.debug('compound_match({0})'.format(tgt))
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
@@ -2325,37 +2326,40 @@ class Matcher(object):
         tokens = tgt.split()
         for match in tokens:
             # Try to match tokens from the compound target, first by using
-            # the 'G, X, I, L, S, E' matcher types, then by hostname glob.
+            # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
             if '@' in match and match[1] == '@':
-                comps = match.split('@')
+                comps = match.split('@', 1)
                 matcher = ref.get(comps[0])
                 if not matcher:
                     # If an unknown matcher is called at any time, fail out
+                    log.error('Invalid matcher: {0}'.format(comps[0]))
                     return False
                 results.append(
-                    str(
-                        getattr(self, '{0}_match'.format(matcher))(
-                            '@'.join(comps[1:])
-                        )
-                    )
+                    str(getattr(self, '{0}_match'.format(matcher))(comps[1]))
                 )
             elif match in opers:
                 # We didn't match a target, so append a boolean operator or
                 # subexpression
-                if results or match in ['(', ')']:
+                if results:
+                    if results[-1] == '(' and match in ('and', 'or'):
+                        log.error('Invalid beginning operator after "(": {0}'.format(match))
+                        return False
                     if match == 'not':
-                        match_suffix = results[-1]
-                        if not (match_suffix == 'and' or match_suffix == 'or'):
+                        if not results[-1] in ('and', 'or', '('):
                             results.append('and')
                     results.append(match)
                 else:
-                    # seq start with oper, fail
-                    if match not in ['(', ')']:
+                    # seq start with binary oper, fail
+                    if match not in ['(', 'not']:
+                        log.error('Invalid beginning operator: {0}'.format(match))
                         return False
+                    results.append(match)
+
             else:
                 # The match is not explicitly defined, evaluate it as a glob
                 results.append(str(self.glob_match(match)))
         results = ' '.join(results)
+        log.debug('compound_match "{0}" => "{1}"'.format(tgt, results))
         try:
             return eval(results)  # pylint: disable=W0123
         except Exception:
