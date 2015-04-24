@@ -2365,7 +2365,7 @@ class Matcher(object):
                 engine_args = [target_info['pattern']]
                 engine_kwargs = {}
                 if target_info.get('delimiter'):
-                    engine_kwargs['delimiter'] = target_info.get['delimiter']
+                    engine_kwargs['delimiter'] = target_info['delimiter']
 
                 results.append(
                     str(getattr(self, '{0}_match'.format(engine))(*engine_args, **engine_kwargs))
