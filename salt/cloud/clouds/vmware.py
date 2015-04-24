@@ -2042,115 +2042,89 @@ def upgrade_tools(name, reboot=False, call=None):
 
 def list_hosts_by_cluster(kwargs=None, call=None):
     '''
-    To list all hosts in all clusters or all hosts in a specified cluster
+    List hosts for each cluster; or hosts for a specified cluster in
+    this VMware environment
+
+    To list hosts for each cluster:
 
     CLI Example:
 
     ..code-block:: bash
 
         salt-cloud -f list_hosts_by_cluster my-vmware-config
+
+    To list hosts for a specified cluster:
+
+    CLI Example:
+
+    ..code-block:: bash
+
         salt-cloud -f list_hosts_by_cluster my-vmware-config cluster="clusterName"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-                'The list_hosts_by_cluster function must be called with -f or --function'
+            'The list_hosts_by_cluster function must be called with '
+            '-f or --function'
         )
 
+    ret = {}
     cluster_name = kwargs.get('cluster') if kwargs else None
-    
-    properties_list = ["name"]
-    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, properties_list)
-    
-    ret=[]
- 
-    try:
-        if cluster_name:
-            if not any(cluster["name"] == cluster_name for cluster in cluster_list):
-                raise SaltCloudSystemExit(
-                    'Provided cluster name is not valid'
-                )
+    cluster_properties = ["name"]
 
-            for cluster in cluster_list:
-                if cluster["name"] == cluster_name:
-                    ret.append(cluster["name"])
-                    cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster["name"])
-                    
-                    for host in cluster_ref.host:
-                        ret.append("\t" + host.name)
-        else:
-            for cluster in cluster_list:
-                ret.append(cluster["name"])
-                cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster["name"])
-                
-                for host in cluster_ref.host:
-                    ret.append("\t" + host.name)
-    except Exception as exc:
-        log.error(exc)
+    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
+    
+    for cluster in cluster_list:
+        ret[cluster['name']] = []
+        for host in cluster['object'].host:
+            if isinstance(host, vim.HostSystem):
+                ret[cluster['name']].append(host.name)
+        if cluster_name and cluster_name == cluster['name']:
+            return {'Hosts by Cluster': {cluster_name: ret[cluster_name]}}
 
-    return {'Hosts': ret}
+    return {'Hosts by Cluster': ret}
 
 
 def list_hosts_by_datacenter(kwargs=None, call=None):
     '''
-    To list all hosts in all datacenters or all hosts in a specified datacenter
+    List hosts for each datacenter; or hosts for a specified datacenter in
+    this VMware environment
+
+    To list hosts for each datacenter:
 
     CLI Example:
 
     ..code-block:: bash
 
         salt-cloud -f list_hosts_by_datacenter my-vmware-config
+
+    To list hosts for a specified datacenter:
+
+    CLI Example:
+
+    ..code-block:: bash
+
         salt-cloud -f list_hosts_by_datacenter my-vmware-config datacenter="datacenterName"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_hosts_by_datacenter fucntion must be called with -f or --function'
+            'The list_hosts_by_datacenter function must be called with '
+            '-f or --function'
         )
 
+    ret = {}
     datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_properties = ["name"]
 
-    properties_list = ["name"]
-    datacenter_list = _get_mors_with_properties(vim.Datacenter, properties_list)
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
 
-    ret = []
-    try:
-        if datacenter_name:
-            if not any(datacenter["name"] == datacenter_name for datacenter in datacenter_list):
-                raise SaltCloudSystemExit(
-                    'Provided datacenter name is not valid'
-                )
+    for datacenter in datacenter_list:
+        ret[datacenter['name']] = []
+        for cluster in datacenter['object'].hostFolder.childEntity:
+            if isinstance(cluster, vim.ClusterComputeResource):
+                for host in cluster.host:
+                    if isinstance(host, vim.HostSystem):
+                        ret[datacenter['name']].append(host.name)
+        if datacenter_name and datacenter_name == datacenter['name']:
+            return {'Hosts by Datacenter': {datacenter_name: ret[datacenter_name]}}
 
-            for datacenter in datacenter_list:
-                if datacenter["name"] == datacenter_name:
-                    ret.append(datacenter["name"])
-                    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter["name"])
-
-                    for cluster_ref in datacenter_ref.hostFolder.childEntity:
-                        if isinstance(cluster_ref, vim.ClusterComputeResource):
-                            for host in cluster_ref.host:
-                                ret.append('\t' + host.name)
-
-                        elif isinstance(cluster_ref, vim.Folder):
-                            for cluster_folder in cluster_ref.childEntity:
-                                if isinstance(cluster_folder, vim.ClusterComputeResource):
-                                    for host in cluster_folder.host:
-                                        ret.append('\t' + host.name)
-        else:
-            for datacenter in datacenter_list:
-                ret.append(datacenter["name"])
-                datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter["name"])
-
-                for cluster_ref in datacenter_ref.hostFolder.childEntity:
-                    if isinstance(cluster_ref, vim.ClusterComputeResource):
-                        for host in cluster_ref.host:
-                            ret.append('\t' + host.name)
-
-                   elif isinstance(cluster_ref, vim.Folder):
-                        for cluster_folder in cluster_ref.childEntity:
-                            if isinstance(cluster_folder, vim.ClusterComputeResource):
-                                for host in cluster_folder.host:
-                                    ret.append('\t' + host.name)
-
-    except Exception as exc:
-        log.error(exc)
-
-    return {'Hosts': ret}
+    return {'Hosts by Datacenter': ret}
