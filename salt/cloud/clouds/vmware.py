@@ -1979,7 +1979,7 @@ def rescan_hba(kwargs=None, call=None):
 
 
 def upgrade_tools_all(call=None):
-    ''''
+    '''
     To upgrade VMware Tools on all virtual machines present in
     the specified provider
 
