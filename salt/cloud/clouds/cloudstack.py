@@ -289,7 +289,7 @@ def create(vm_):
                     'Error creating volume {0} on CLOUDSTACK\n\n'
                     'The following exception was thrown by libcloud when trying to '
                     'requesting a volume: \n{1}'.format(
-                        ex_blockdevicemapping['VirtualName'], exc.message
+                        ex_blockdevicemapping['VirtualName'], exc
                     ),
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG
@@ -319,7 +319,7 @@ def create(vm_):
                 'Error attaching volume {0} on CLOUDSTACK\n\n'
                 'The following exception was thrown by libcloud when trying to '
                 'attach a volume: \n{1}'.format(
-                    ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc.message
+                    ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc
                 ),
                 # Show the traceback if the debug logging level is enabled
                 exc_info=log.isEnabledFor(logging.DEBUG)
