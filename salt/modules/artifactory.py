@@ -185,8 +185,9 @@ def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_i
     artifact_metadata_url = _get_artifact_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
     try:
         artifact_metadata_xml = urllib2.urlopen(artifact_metadata_url).read()
-    except HTTPError as e:
-        raise Exception("Could not fetch data from url: {url}, HTTPError: {message}".format(url=artifact_metadata_url, message=e.message))
+    except HTTPError as http_error:
+        message = 'Could not fetch data from url: {url}, HTTPError: {error}'
+        raise Exception(message.format(url=artifact_metadata_url, error=http_error))
 
     log.debug('artifact_metadata_xml=%s', artifact_metadata_xml)
     return artifact_metadata_xml
@@ -222,8 +223,9 @@ def _get_snapshot_version_metadata_xml(artifactory_url, repository, group_id, ar
     snapshot_version_metadata_url = _get_snapshot_version_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
     try:
         snapshot_version_metadata_xml = urllib2.urlopen(snapshot_version_metadata_url).read()
-    except HTTPError as e:
-        raise Exception("Could not fetch data from url: {url}, HTTPError: {message}".format(url=snapshot_version_metadata_url, message=e.message))
+    except HTTPError as http_error:
+        message = 'Could not fetch data from url: {url}, HTTPError: {error}'
+        raise Exception(message.format(url=snapshot_version_metadata_url, error=http_error))
     log.debug('snapshot_version_metadata_xml=%s', snapshot_version_metadata_xml)
     return snapshot_version_metadata_xml
 
