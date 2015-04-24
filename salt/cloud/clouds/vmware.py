@@ -2084,6 +2084,50 @@ def list_hosts_by_cluster(kwargs=None, call=None):
     return {'Hosts by Cluster': ret}
 
 
+def list_clusters_by_datacenter(kwargs=None, call=None):
+    '''
+    List clusters for each datacenter; or clusters for a specified datacenter in
+    this VMware environment
+
+    To list clusters for each datacenter:
+
+    CLI Example:
+
+    ..code-block:: bash
+
+        salt-cloud -f list_clusters_by_datacenter my-vmware-config
+
+    To list clusters for a specified datacenter:
+
+    CLI Example:
+
+    ..code-block:: bash
+
+        salt-cloud -f list_clusters_by_datacenter my-vmware-config datacenter="datacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_clusters_by_datacenter function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_properties = ["name"]
+
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+
+    for datacenter in datacenter_list:
+        ret[datacenter['name']] = []
+        for cluster in datacenter['object'].hostFolder.childEntity:
+            if isinstance(cluster, vim.ClusterComputeResource):
+                ret[datacenter['name']].append(cluster.name)
+        if datacenter_name and datacenter_name == datacenter['name']:
+            return {'Clusters by Datacenter': {datacenter_name: ret[datacenter_name]}}
+
+    return {'Clusters by Datacenter': ret}
+
+
 def list_hosts_by_datacenter(kwargs=None, call=None):
     '''
     List hosts for each datacenter; or hosts for a specified datacenter in
