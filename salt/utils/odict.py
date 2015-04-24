@@ -22,7 +22,7 @@
 from collections import Callable
 
 try:
-    from collections import OrderedDict  # pylint: disable=E0611
+    from collections import OrderedDict  # pylint: disable=E0611,minimum-python-version
 except ImportError:
     try:
         from ordereddict import OrderedDict
