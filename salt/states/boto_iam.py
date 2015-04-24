@@ -39,7 +39,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
       boto_iam.user_present:
         - name: myuser
         - password: NewPassword$$1
-        - group: mygroup
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
@@ -314,7 +313,7 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
         return ret
 
 
-def user_present(name, password=None, path=None, group=None, region=None, key=None, keyid=None, profile=None):
+def user_present(name, password=None, path=None, region=None, key=None, keyid=None, profile=None):
     '''
 
     .. versionadded:: Beryllium
@@ -326,8 +325,6 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
     password (string) - The password for the new user. Must comply with account policy.
 
     path (string) - The path of the user. Default is '/'
-
-    group (string) - The name of the group to add the user to.
 
     region (string) - Region to connect to.
 
@@ -352,18 +349,10 @@ def user_present(name, password=None, path=None, group=None, region=None, key=No
             ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
                 ret = _case_password(ret, name, password, region, key, keyid, profile)
-            if group:
-                ret = _case_group(ret, name, group, region, key, keyid, profile)
     else:
         ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
-        if group:
-            if __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid,
-                                              profile=profile):
-                ret = _case_group(ret, name, group, region, key, keyid, profile)
-            else:
-                ret['comment'] = os.linesep.join([ret['comment'], 'Group {0} does not exist.'.format(group)])
     return ret
 
 
@@ -383,24 +372,6 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
     else:
         ret['result'] = False
         ret['comment'] = os.linesep.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
-    return ret
-
-
-def _case_group(ret, name, group, region=None, key=None, keyid=None, profile=None):
-    if __salt__['boto_iam.user_exists_in_group'](name, group, region, key, keyid, profile):
-        ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(name, group)])
-    else:
-        if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
-            ret['comment'] = 'User {0} does not exist.'.format(name)
-        if __opts__['test']:
-            ret['comment'] = 'User {0} is set to be added to group {1}.'.format(name, group)
-            ret['result'] = None
-            return ret
-        result = __salt__['boto_iam.add_user_to_group'](name, group, region, key, keyid, profile)
-        if result:
-            log.debug('Result of the group is : {0} '.format(result))
-            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(name, group)])
-            ret['changes'][name] = group
     return ret
 
 
@@ -478,28 +449,41 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
         return ret
     if users:
         log.debug('Users are : {0}.'.format(users))
-        for user in users:
-            log.debug('User is : {0}.'.format(user))
-            ret = _case_group(ret, user, name, region, key, keyid, profile)
-        for user in _case_delete(users, exists):
-            if __opts__['test']:
-                ret['comment'] = os.linesep.join([ret['comment'], 'User is set to be deleted {0}.'.format(user)])
-                ret['result'] = None
-            else:
-                __salt__['boto_iam.remove_user_from_group'](group_name=name, user_name=user, region=region,
-                                                            key=key, keyid=keyid, profile=profile)
-                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, name)])
-                ret['changes'][user] = 'Removed from group {0}.'.format(name)
+        ret = _case_group(ret, users, name, exists, region, key, keyid, profile)
     return ret
 
 
-def _case_delete(users, group):
-    # Returns a list of users that are not in the group
-    to_delete = []
-    for _users in group['get_group_response']['get_group_result']['users']:
-        if _users['user_name'] not in users:
-            to_delete.append(_users['user_name'])
-    return to_delete
+def _case_group(ret, users, group_name, group_result, region, key, keyid, profile):
+    _users = []
+    for user in group_result['get_group_response']['get_group_result']['users']:
+        _users.append(user['user_name'])
+    log.debug('upstream users are {0}'.format(_users))
+    for user in users:
+        log.debug('users are {0}'.format(user))
+        if user in _users:
+            log.debug('user exists')
+            ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is already a member of group {1}.'.format(user, group_name)])
+            continue
+        else:
+            log.debug('user is set to be added {0}'.format(user))
+            if __opts__['test']:
+                ret['comment'] = 'User {0} is set to be added to group {1}.'.format(user, group_name)
+                ret['result'] = None
+            else:
+                __salt__['boto_iam.add_user_to_group'](user, group_name, region, key, keyid, profile)
+                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(user, group_name)])
+                ret['changes'][user] = group_name
+    for user in _users:
+        if user not in users:
+            if __opts__['test']:
+                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is set to be removed from group {1}.'.format(user, group_name)])
+                ret['result'] = None
+            else:
+                __salt__['boto_iam.remove_user_from_group'](group_name=group_name, user_name=user, region=region,
+                                                            key=key, keyid=keyid, profile=profile)
+                ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, group_name)])
+                ret['changes'][user] = 'Removed from group {0}.'.format(group_name)
+    return ret
 
 
 def _group_policies_present(
