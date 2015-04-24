@@ -2048,7 +2048,7 @@ def list_hosts_by_cluster(kwargs=None, call=None):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_hosts_by_cluster my-vmware-config
 
@@ -2056,7 +2056,7 @@ def list_hosts_by_cluster(kwargs=None, call=None):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_hosts_by_cluster my-vmware-config cluster="clusterName"
     '''
@@ -2092,7 +2092,7 @@ def list_clusters_by_datacenter(kwargs=None, call=None):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_clusters_by_datacenter my-vmware-config
 
@@ -2100,7 +2100,7 @@ def list_clusters_by_datacenter(kwargs=None, call=None):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_clusters_by_datacenter my-vmware-config datacenter="datacenterName"
     '''
@@ -2136,7 +2136,7 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_hosts_by_datacenter my-vmware-config
 
@@ -2144,7 +2144,7 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
 
     CLI Example:
 
-    ..code-block:: bash
+    .. code-block:: bash
 
         salt-cloud -f list_hosts_by_datacenter my-vmware-config datacenter="datacenterName"
     '''
