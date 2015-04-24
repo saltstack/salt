@@ -5,6 +5,7 @@ After=syslog.target network.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/salt-minion
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
