@@ -2349,7 +2349,7 @@ class Matcher(object):
             elif target_info and target_info.get('engine'):
                 if 'N' == target_info['engine']:
                     # Nodegroups should already be expanded/resolved to other engines
-                    log.error('Detected nodegroup expansion failure of "{0}"'.format(match))
+                    log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
                     return False
                 engine = ref.get(target_info['engine'])
                 if not engine:
