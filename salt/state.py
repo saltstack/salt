@@ -2314,7 +2314,7 @@ class BaseHighState(object):
                     contents,
                     self.state.rend,
                     self.state.opts['renderer'],
-                    env=self.opts['environment']
+                    saltenv=self.opts['environment']
                 )
             ]
         else:
