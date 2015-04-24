@@ -724,8 +724,11 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
 
 
 def _upg_tools_helper(vm, reboot=False):
-    status = 'VMware tools could not be upgraded'
-    
+    # Exit if template
+    if vm.config.template:
+        status = 'VMware tools cannot be updated on a template'
+        return status
+
     # Exit if VMware tools is already up to date
     if vm.guest.toolsStatus == "toolsOk":
         status = 'VMware tools is already up to date'
@@ -734,6 +737,11 @@ def _upg_tools_helper(vm, reboot=False):
     # Exit if VM is not powered on
     if vm.summary.runtime.powerState != "poweredOn":
         status = 'VM must be powered on to upgrade tools'
+        return status
+
+    # Exit if VMware tools is either not running or not installed
+    if vm.guest.toolsStatus in ["toolsNotRunning", "toolsNotInstalled"]:
+        status = 'VMware tools is either not running or not installed'
         return status
 
     # If vmware tools is out of date, check major OS family
@@ -757,7 +765,7 @@ def _upg_tools_helper(vm, reboot=False):
         status = 'VMware tools upgrade succeeded'
         return status
 
-    return status
+    return 'VMware tools could not be upgraded'
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -2028,7 +2036,7 @@ def upgrade_tools(name, reboot=False, call=None):
 
     vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
 
-    return _upg_tools_helper(vm, reboot)
+    return _upg_tools_helper(vm_ref, reboot)
 
 
 def list_hosts_by_cluster(kwargs=None, call=None):
@@ -2063,7 +2071,7 @@ def list_hosts_by_cluster(kwargs=None, call=None):
     cluster_properties = ["name"]
 
     cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
-    
+
     for cluster in cluster_list:
         ret[cluster['name']] = []
         for host in cluster['object'].host:
