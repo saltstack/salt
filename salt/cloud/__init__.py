@@ -1329,8 +1329,13 @@ class Cloud(object):
         if not vm_overrides:
             vm_overrides = {}
 
-        with salt.utils.fopen(os.path.join(salt.syspaths.CONFIG_DIR, 'cloud'), 'r') as mcc:
-            main_cloud_config = yaml.safe_load(mcc)
+        try:
+            with salt.utils.fopen(self.opts['conf_file'], 'r') as mcc:
+                main_cloud_config = yaml.safe_load(mcc)
+        except KeyError:
+            main_cloud_config = {}
+        except IOError:
+            main_cloud_config = {}
 
         profile_details = self.opts['profiles'][profile]
         alias, driver = profile_details['provider'].split(':')
