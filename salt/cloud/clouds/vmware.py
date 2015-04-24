@@ -2001,7 +2001,7 @@ def upgrade_tools_all(call=None):
     for vm in vm_list:
         ret[vm['name']] = _upg_tools_helper(vm['object'])
 
-    return {'Tools Status': ret}
+    return ret
 
 
 def upgrade_tools(name, reboot=False, call=None):
@@ -2028,7 +2028,7 @@ def upgrade_tools(name, reboot=False, call=None):
 
     vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
 
-    return {'Tools Status': _upg_tools_helper(vm, reboot)}
+    return _upg_tools_helper(vm, reboot)
 
 
 def list_hosts_by_cluster(kwargs=None, call=None):
