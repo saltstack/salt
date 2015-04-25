@@ -310,7 +310,7 @@ class ProcessManager(object):
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:
-            for pid, p_map in six.iteritems(self._process_map):
+            for pid, p_map in self._process_map.items():
                 p_map['Process'].join(0)
 
                 # This is a race condition if a signal was passed to all children
