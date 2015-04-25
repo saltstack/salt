@@ -146,6 +146,11 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
         if cxkey in __context__:
             del __context__[cxkey]
             return True
+        elif resource_id in __context__.values():
+            ctx = dict((k, v) for k, v in __context__.items() if v != resource_id)
+            __context__.clear()
+            __context__.update(ctx)
+            return True
         else:
             return False
     if resource_id:
