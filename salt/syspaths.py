@@ -31,7 +31,7 @@ try:
 except ImportError:
     import imp
     __generated_syspaths = imp.new_module('salt._syspaths')
-    for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR','SOCK_DIR',
+    for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
                 'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'BASE_PILLAR_ROOTS_DIR',
                 'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR'):
         setattr(__generated_syspaths, key, None)
