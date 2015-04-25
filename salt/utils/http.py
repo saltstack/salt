@@ -12,8 +12,10 @@ import pprint
 import os.path
 import json
 import logging
-import salt.ext.six.moves.http_cookiejar  # pylint: disable=E0611
+# pylint: disable=no-name-in-module
+import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib as urllib
+# pylint: enable=no-name-in-module
 from salt.ext.six import string_types
 from salt._compat import ElementTree as ET
 
@@ -44,7 +46,7 @@ import salt.config
 import salt.version
 from salt.template import compile_template
 from salt import syspaths
-import salt.ext.six.moves.http_client
+import salt.ext.six.moves.http_client  # pylint: disable=no-name-in-module
 
 # Import 3rd party libs
 try:
