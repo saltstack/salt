@@ -19,7 +19,7 @@ def reactor_fork(self):
     '''
     Add a reactor object to the process manager
     '''
-    self.proc_mgr.add_process(
+    self.proc_mgr.value.add_process(
             salt.utils.reactor.Reactor,
             args=(self.opts.value,))
 
@@ -33,6 +33,6 @@ def event_return_fork(self):
     '''
     Add a reactor object to the process manager
     '''
-    self.proc_mgr.add_process(
+    self.proc_mgr.value.add_process(
             salt.utils.event.EventReturn,
             args=(self.opts.value,))
