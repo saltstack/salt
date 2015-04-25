@@ -70,6 +70,13 @@ try:
 except Exception:
     pass
 
+# Disable InsecureRequestWarning generated on python > 2.6
+try:
+    from requests.packages.urllib3 import disable_warnings
+    disable_warnings()
+except:
+    pass
+
 # Import third party libs
 import salt.ext.six as six
 
@@ -124,22 +131,43 @@ def _get_si():
     '''
     Authenticate with vCenter server and return service instance object.
     '''
+
+    url = config.get_cloud_config_value(
+        'url', get_configured_provider(), __opts__, search_global=False
+    )
+    username = config.get_cloud_config_value(
+        'user', get_configured_provider(), __opts__, search_global=False
+    )
+    password = config.get_cloud_config_value(
+        'password', get_configured_provider(), __opts__, search_global=False
+    )
+
     try:
         si = SmartConnect(
-                 host=config.get_cloud_config_value(
-                          'url', get_configured_provider(), __opts__, search_global=False
-                      ),
-                 user=config.get_cloud_config_value(
-                          'user', get_configured_provider(), __opts__, search_global=False
-                      ),
-                 pwd=config.get_cloud_config_value(
-                         'password', get_configured_provider(), __opts__, search_global=False
-                     ),
-             )
-    except:
-        raise SaltCloudSystemExit(
-            '\nCould not connect to the vCenter server using the specified username and password'
+            host=url,
+            user=username,
+            pwd=password
         )
+    except Exception as exc:
+        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
+            try:
+                import ssl
+                default_context = ssl._create_default_https_context
+                ssl._create_default_https_context = ssl._create_unverified_context
+                si = SmartConnect(
+                    host=url,
+                    user=username,
+                    pwd=password
+                )
+                ssl._create_default_https_context = default_context
+            except:
+                raise SaltCloudSystemExit(
+                    '\nCCould not connect to the vCenter server using the specified username and password'
+                )
+        else:
+            raise SaltCloudSystemExit(
+                '\nCould not connect to the vCenter server using the specified username and password'
+            )
 
     return si
 
