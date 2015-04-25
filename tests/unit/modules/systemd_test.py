@@ -61,8 +61,8 @@ class SystemdTestCase(TestCase):
                                         "a": "disabled",
                                         "b": "disabled",
                                         "e": "disabled"})
-        with patch("salt.modules.systemd._sysv_is_disabled", sysve):
-            with patch("salt.modules.systemd._service_is_sysv", sysv):
+        with patch.object(systemd, "_sysv_is_disabled", sysve):
+            with patch.object(systemd, "_service_is_sysv", sysv):
                 with patch.object(systemd, '_get_all_unit_files', mock):
                     with patch.object(systemd, '_get_all_units', lmock):
                         self.assertListEqual(
@@ -198,9 +198,9 @@ class SystemdTestCase(TestCase):
         with patch.object(systemd, '_untracked_custom_unit_found', mock):
             with patch.object(systemd, '_unit_file_changed', mock):
                 with patch.dict(systemd.__salt__, {'cmd.retcode': mock}):
-                    with patch("salt.modules.systemd._service_is_sysv", mock):
+                    with patch.object(systemd, "_service_is_sysv", mock):
                         self.assertTrue(systemd.enable("sshd"))
-                    with patch("salt.modules.systemd._service_is_sysv", tmock):
+                    with patch.object(systemd, "_service_is_sysv", tmock):
                         self.assertTrue(systemd.enable("sshd"))
 
     def test_disable(self):
@@ -213,9 +213,9 @@ class SystemdTestCase(TestCase):
         with patch.object(systemd, '_untracked_custom_unit_found', mock):
             with patch.object(systemd, '_unit_file_changed', mock):
                 with patch.dict(systemd.__salt__, {'cmd.retcode': mock}):
-                    with patch("salt.modules.systemd._service_is_sysv", mock):
+                    with patch.object(systemd, "_service_is_sysv", mock):
                         self.assertTrue(systemd.disable("sshd"))
-                    with patch("salt.modules.systemd._service_is_sysv", tmock):
+                    with patch.object(systemd, "_service_is_sysv", tmock):
                         self.assertTrue(systemd.disable("sshd"))
 
     def test_enabled(self):
