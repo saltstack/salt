@@ -938,7 +938,8 @@ def get_all_user_policies(user_name, marker=None, max_items=None, region=None, k
         info = conn.get_all_user_policies(user_name, marker, max_items)
         if not info:
             return False
-        return info
+        _list = info.list_user_policies_response.list_user_policies_result
+        return _list.policy_names
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to get user {0} policy.'
@@ -959,7 +960,7 @@ def get_user_policy(user_name, policy_name, region=None, key=None, keyid=None, p
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         info = conn.get_user_policy(user_name, policy_name)
-        log.debug('Info for group policy is : {0}.'.format(info))
+        log.debug('Info for user policy is : {0}.'.format(info))
         if not info:
             return False
         info = info.get_user_policy_response.get_user_policy_result.policy_document
