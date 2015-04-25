@@ -1335,8 +1335,10 @@ def del_repo(repo, **kwargs):
         try:
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
         except SyntaxError:
-            error_str = 'Error: repo {0!r} not a well formatted definition'
-            return error_str.format(repo)
+            raise SaltInvocationError(
+                'Error: repo \'{0}\' not a well formatted definition'
+                .format(repo)
+            )
 
         for source in repos:
             if (source.type == repo_type and source.uri == repo_uri and
@@ -1352,8 +1354,9 @@ def del_repo(repo, **kwargs):
                             sources.remove(source)
                         except ValueError:
                             pass
-            # PPAs are special and can add deb-src where expand_ppa_line doesn't
-            # always reflect this.  Lets just cleanup here for good measure
+            # PPAs are special and can add deb-src where expand_ppa_line
+            # doesn't always reflect this.  Lets just cleanup here for good
+            # measure
             if (is_ppa and repo_type == 'deb' and source.type == 'deb-src' and
                     source.uri == repo_uri and source.dist == repo_dist):
 
@@ -1374,11 +1377,11 @@ def del_repo(repo, **kwargs):
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
             for repo_file, count in six.iteritems(deleted_from):
-                msg = 'Repo {0!r} has been removed from {1}.\n'
+                msg = 'Repo \'{0}\' has been removed from {1}.\n'
                 if count == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
-                        msg = ('File {1} containing repo {0!r} has been '
-                               'removed.\n')
+                        msg = ('File {1} containing repo \'{0}\' has been '
+                               'removed.')
                         try:
                             os.remove(repo_file)
                         except OSError:
@@ -1388,7 +1391,65 @@ def del_repo(repo, **kwargs):
             refresh_db()
             return ret
 
-    return "Repo {0} doesn't exist in the sources.list(s)".format(repo)
+    raise CommandExecutionError(
+        'Repo {0} doesn\'t exist in the sources.list(s)'.format(repo)
+    )
+
+
+def del_repo_key(name=None, **kwargs):
+    '''
+    .. versionadded:: Beryllium
+
+    Remove a repo key using ``apt-key del``
+
+    name
+        Repo from which to remove the key. Unnecessary if ``keyid`` is passed.
+
+    keyid
+        The KeyID of the GPG key to remove
+
+    keyid_ppa : False
+        If set to ``True``, the repo's GPG key ID will be looked up from
+        ppa.launchpad.net and removed.
+
+        .. note::
+
+            Setting this option to ``True`` requires that the ``name`` param
+            also be passed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.del_repo_key keyid=0123ABCD
+        salt '*' pkg.del_repo_key name='ppa:foo/bar' keyid_ppa=True
+    '''
+    if kwargs.get('keyid_ppa', False):
+        if isinstance(name, six.string_types) and name.startswith('ppa:'):
+            owner_name, ppa_name = name[4:].split('/')
+            ppa_info = _get_ppa_info_from_launchpad(
+                owner_name, ppa_name)
+            keyid = ppa_info['signing_key_fingerprint']
+        else:
+            raise SaltInvocationError(
+                'keyid_ppa requires that a PPA be passed'
+            )
+    else:
+        if 'keyid' in kwargs:
+            keyid = kwargs.get('keyid')
+        else:
+            raise SaltInvocationError(
+                'keyid or keyid_ppa and PPA name must be passed'
+            )
+
+    cmd = ['apt-key', 'del', keyid]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if result['retcode'] != 0:
+        msg = 'Failed to remove keyid {0}'
+        if result['stderr']:
+            msg += ': {0}'.format(result['stderr'])
+        raise CommandExecutionError(msg)
+    return keyid
 
 
 def mod_repo(repo, saltenv='base', **kwargs):
