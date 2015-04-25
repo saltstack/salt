@@ -313,7 +313,8 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
         return ret
 
 
-def user_present(name, password=None, path=None, region=None, key=None, keyid=None, profile=None):
+def user_present(name, policies=None, policies_from_pillars=None, password=None, path=None, region=None, key=None,
+                 keyid=None, profile=None):
     '''
 
     .. versionadded:: Beryllium
@@ -321,6 +322,18 @@ def user_present(name, password=None, path=None, region=None, key=None, keyid=No
     Ensure the IAM user is present
 
     name (string) – The name of the new user.
+
+    policies (dict)
+        A dict of IAM group policy documents.
+
+    policies_from_pillars (list)
+        A list of pillars that contain role policy dicts. Policies in the
+        pillars will be merged in the order defined in the list and key
+        conflicts will be handled by later defined keys overriding earlier
+        defined keys. The policies defined here will be merged with the
+        policies defined in the policies argument. If keys conflict, the keys
+        in the policies argument will override the keys defined in
+        policies_from_pillars.
 
     password (string) - The password for the new user. Must comply with account policy.
 
@@ -336,8 +349,16 @@ def user_present(name, password=None, path=None, region=None, key=None, keyid=No
     that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not policies:
+        policies = {}
+    if not policies_from_pillars:
+        policies_from_pillars = []
+    _policies = {}
+    for policy in policies_from_pillars:
+        _policy = __salt__['pillar.get'](policy)
+        _policies.update(_policy)
+    _policies.update(policies)
     exists = __salt__['boto_iam.get_user'](name, region, key, keyid, profile)
-    log.debug('getuser is {0}'.format(exists))
     if not exists:
         if __opts__['test']:
             ret['comment'] = 'IAM user {0} is set to be created.'.format(name)
@@ -349,10 +370,82 @@ def user_present(name, password=None, path=None, region=None, key=None, keyid=No
             ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been created.'.format(name)])
             if password:
                 ret = _case_password(ret, name, password, region, key, keyid, profile)
+            _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     else:
         ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is present.'.format(name)])
         if password:
             ret = _case_password(ret, name, password, region, key, keyid, profile)
+        _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    return ret
+
+
+def _user_policies_present(name, policies=None, region=None, key=None, keyid=None, profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    policies_to_create = {}
+    policies_to_delete = []
+    for policy_name, policy in six.iteritems(policies):
+        if isinstance(policy, string_types):
+            dict_policy = json.loads(
+                policy, object_pairs_hook=odict.OrderedDict
+            )
+        else:
+            dict_policy = policy
+        _policy = __salt__['boto_iam.get_user_policy'](
+            name, policy_name, region, key, keyid, profile
+        )
+        if _policy != dict_policy:
+            policies_to_create[policy_name] = policy
+    _list = __salt__['boto_iam.get_all_user_policies'](
+        user_name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    for policy_name in _list:
+        if policy_name not in policies:
+            policies_to_delete.append(policy_name)
+    if policies_to_create or policies_to_delete:
+        _to_modify = list(policies_to_delete)
+        _to_modify.extend(policies_to_create)
+        if __opts__['test']:
+            msg = '{0} policies to be modified on user {1}.'
+            ret['comment'] = msg.format(', '.join(_to_modify), name)
+            ret['result'] = None
+            return ret
+        ret['changes']['old'] = {'policies': _list}
+        for policy_name, policy in six.iteritems(policies_to_create):
+            policy_set = __salt__['boto_iam.put_user_policy'](
+                name, policy_name, policy, region, key, keyid, profile
+            )
+            if not policy_set:
+                _list = __salt__['boto_iam.get_all_user_policies'](
+                    user_name=name, region=region, key=key, keyid=keyid, profile=profile
+                )
+                ret['changes']['new'] = {'policies': _list}
+                ret['result'] = False
+                msg = 'Failed to add policy {0} for user {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        for policy_name in policies_to_delete:
+            policy_unset = __salt__['boto_iam.delete_user_policy'](
+                name, policy_name, region, key, keyid, profile
+            )
+            if not policy_unset:
+                _list = __salt__['boto_iam.get_all_user_policies'](
+                    user_name=name, region=region, key=key, keyid=keyid, profile=profile
+                )
+                ret['changes']['new'] = {'policies': _list}
+                ret['result'] = False
+                msg = 'Failed to add policy {0} to user {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        _list = __salt__['boto_iam.get_all_user_policies'](
+            user_name=name, region=region, key=key, keyid=keyid, profile=profile
+        )
+        ret['changes']['new'] = {'policies': _list}
+        msg = '{0} policies modified on user {1}.'
+        ret['comment'] = msg.format(', '.join(_list), name)
     return ret
 
 
