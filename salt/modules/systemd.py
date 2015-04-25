@@ -235,7 +235,10 @@ def _has_sysv_exec():
     if 'systemd._has_sysv_exec' not in __context__:
         try:
             __context__['systemd._has_sysv_exec'] = bool(_get_service_exec())
-        except salt.exceptions.CommandExecutionError:
+        except(
+            salt.exceptions.CommandExecutionError,
+            salt.exceptions.CommandNotFoundError
+        ):
             __context__['systemd._has_sysv_exec'] = False
     return __context__['systemd._has_sysv_exec']
 
