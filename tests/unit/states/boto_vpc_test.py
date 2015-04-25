@@ -15,7 +15,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
-from unit.modules.boto_vpc_test import BotoVpcTestCaseBase
+from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -66,7 +66,7 @@ dhcp_options_parameters.update(conn_parameters)
 opts = salt.config.DEFAULT_MINION_OPTS
 ctx = {}
 utils = salt.loader.utils(opts, context=ctx, whitelist=['boto'])
-funcs = salt.loader.minion_mods(opts, utils=utils, whitelist=['boto_vpc'])
+funcs = salt.loader.minion_mods(opts, context=ctx, utils=utils, whitelist=['boto_vpc'])
 salt_states = salt.loader.states(opts=opts, functions=funcs, whitelist=['boto_vpc'])
 
 
@@ -82,7 +82,7 @@ def _has_required_boto():
     else:
         return True
 
-class BotoVpcStateTestCaseBase(BotoVpcTestCaseBase):
+class BotoVpcStateTestCaseBase(TestCase):
     def setUp(self):
         ctx.clear()
 
@@ -92,7 +92,7 @@ class BotoVpcStateTestCaseBase(BotoVpcTestCaseBase):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
-class BotoVpcTestCase(BotoVpcStateTestCaseBase):
+class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     '''
     TestCase for salt.states.boto_vpc state.module
     '''
@@ -152,7 +152,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
-class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase):
+class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
 
     @mock_ec2
     def test_present_when_subnet_does_not_exist(self):
@@ -172,7 +172,6 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase):
         subnet = self._create_subnet(vpc_id=vpc.id, name='test')
         subnet_present_result = salt_states['boto_vpc.subnet_present']('test', cidr_block,
                                                                        vpc_name='test')
-        #print subnet_present_result
         self.assertTrue(subnet_present_result['result'])
         self.assertEqual(subnet_present_result['changes'], {})
 
@@ -212,3 +211,100 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase):
             subnet_absent_result = salt_states['boto_vpc.subnet_absent']('test')
             self.assertFalse(subnet_absent_result['result'])
             self.assertTrue('Mocked error' in subnet_absent_result['comment'])
+
+
+class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
+    resource_type = None
+    backend_create = None
+    backend_delete = None
+
+    def _create_resource(self, vpc_id=None, name=None):
+        _create = getattr(self, '_create_' + self.resource_type)
+        _create(vpc_id=vpc_id, name=name)
+
+    @mock_ec2
+    def test_present_when_resource_does_not_exist(self):
+        '''
+        Tests present on a resource that does not exist.
+        '''
+        vpc = self._create_vpc(name='test')
+        resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
+                name='test', vpc_name='test')
+
+        self.assertTrue(resource_present_result['result'])
+        
+        exists = funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')
+        self.assertTrue(exists)
+
+    @mock_ec2
+    def test_present_when_resource_exists(self):
+        vpc = self._create_vpc(name='test')
+        resource = self._create_resource(vpc_id=vpc.id, name='test')
+        resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
+                name='test', vpc_name='test')
+        self.assertTrue(resource_present_result['result'])
+        self.assertEqual(resource_present_result['changes'], {})
+
+    @mock_ec2
+    def test_present_with_failure(self):
+        vpc = self._create_vpc(name='test')
+        with patch('moto.ec2.models.{0}'.format(self.backend_create), side_effect=BotoServerError(400, 'Mocked error')):
+            resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
+                    name='test', vpc_name='test')
+
+            self.assertFalse(resource_present_result['result'])
+            self.assertTrue('Mocked error' in resource_present_result['comment'])
+
+    @mock_ec2
+    def test_absent_when_resource_does_not_exist(self):
+        '''
+        Tests absent on a resource that does not exist.
+        '''
+        resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
+        self.assertTrue(resource_absent_result['result'])
+        self.assertEqual(resource_absent_result['changes'], {})
+
+    @mock_ec2
+    def test_absent_when_resource_exists(self):
+        vpc = self._create_vpc(name='test')
+        resource = self._create_resource(vpc_id=vpc.id, name='test')
+ 
+        resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
+        self.assertTrue(resource_absent_result['result'])
+        self.assertEqual(resource_absent_result['changes']['new'][self.resource_type], None)
+        exists = funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')
+        self.assertFalse(exists)
+
+    @mock_ec2
+    def test_absent_with_failure(self):
+        vpc = self._create_vpc(name='test')
+        resource = self._create_resource(vpc_id=vpc.id, name='test')
+ 
+        with patch('moto.ec2.models.{0}'.format(self.backend_delete), side_effect=BotoServerError(400, 'Mocked error')):
+            resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
+            self.assertFalse(resource_absent_result['result'])
+            self.assertTrue('Mocked error' in resource_absent_result['comment'])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcInternetGatewayTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
+    resource_type = 'internet_gateway'
+    backend_create = 'InternetGatewayBackend.create_internet_gateway'
+    backend_delete = 'InternetGatewayBackend.delete_internet_gateway'
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
+    resource_type = 'route_table'
+    backend_create = 'RouteTableBackend.create_route_table'
+    backend_delete = 'RouteTableBackend.delete_route_table'
