@@ -513,15 +513,16 @@ def list_nodes_full(call=None):
             'The list_nodes_full function must be called with -f or --function.'
         )
 
-    zone = _get_specified_zone(kwargs=None, provider=get_configured_provider())
+    zone = _get_specified_zone()
 
     params = {
         'action': 'DescribeInstances',
         'zone': zone,
+        'status': ['pending', 'running', 'stopped', 'suspended'],
     }
     result = query(params=params)
 
-    log.debug('Total {0} instanceS found in Zone {1}'.format(
+    log.debug('Total {0} instances found in zone {1}'.format(
         result['total_count'], zone)
     )
 
@@ -685,9 +686,6 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
-    print('vm_')
-    pprint.pprint(vm_)
-
     # params
     params = {
         'action': 'RunInstances',
@@ -699,9 +697,6 @@ def create(vm_):
         'login_mode': vm_['login_mode'],
         'login_keypair': vm_['login_keypair'],
     }
-
-    print('params')
-    pprint.pprint(params)
 
     salt.utils.cloud.fire_event(
         'event',
