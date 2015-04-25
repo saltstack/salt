@@ -102,9 +102,11 @@ disable=R,
   W0631,
   W0704,
   W1202,
+  W1307,
   F0220,
   F0401,
   E8501,
+  E8116,
   E8121,
   E8122,
   E8123,
@@ -116,6 +118,7 @@ disable=R,
   E8129,
   E8131,
   E8265,
+  E8266,
   E8402,
   E8731
 
@@ -151,9 +154,12 @@ disable=R,
 # F0220 (unresolved-interface)
 # F0401 (import-error)
 # W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
+# W1307 (invalid-format-index) Using invalid lookup key '%s' in format specifier "0['%s']"
 #
+# E8116 PEP8 E116: unexpected indentation (comment)
 # E812* All PEP8 E12*
 # E8265 PEP8 E265 - block comment should start with "# "
+# E8266 PEP8 E266 - too many leading '#' for block comment
 # E8501 PEP8 line too long
 # E8402 module level import not at top of file
 # E8731 do not assign a lambda expression, use a def

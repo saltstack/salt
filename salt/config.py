@@ -1122,6 +1122,16 @@ def _validate_opts(opts):
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
 
+    # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
+    # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
+    # We don't expect the user to know this, so we will fix up their path for
+    # them if it isn't compliant.
+    if (salt.utils.is_windows() and opts.get('transport') == 'raet' and
+             'sock_dir' in opts and
+             not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
+        opts['sock_dir'] = (
+                '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
+
     for error in errors:
         log.warning(error)
     if errors:
@@ -1396,6 +1406,7 @@ def syndic_config(master_config_path,
         'id': minion_opts['id'],
         'pki_dir': minion_opts['pki_dir'],
         'master': opts['syndic_master'],
+        'interface': master_opts['interface'],
         'master_port': int(
             opts.get(
                 # The user has explicitly defined the syndic master port
@@ -2326,7 +2337,7 @@ def get_id(opts, cache_minion_id=False):
         except (IOError, OSError):
             pass
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.debug('Guessing ID. The id can be explicitly in set {0}'
+        log.debug('Guessing ID. The id can be explicitly set in {0}'
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()
@@ -2397,6 +2408,10 @@ def apply_minion_config(overrides=None,
 
     prepend_root_dir(opts, prepend_root_dirs)
 
+    # if there is no beacons option yet, add an empty beacons dict
+    if 'beacons' not in opts:
+        opts['beacons'] = {}
+
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
         opts['schedule'] = {}
@@ -2466,6 +2481,7 @@ def apply_master_config(overrides=None, defaults=None):
         os.path.join(opts['cachedir'], 'extmods')
     )
     opts['token_dir'] = os.path.join(opts['cachedir'], 'tokens')
+    opts['syndic_dir'] = os.path.join(opts['cachedir'], 'syndics')
 
     using_ip_for_id = False
     append_master = False
@@ -2484,7 +2500,8 @@ def apply_master_config(overrides=None, defaults=None):
     # Prepend root_dir to other paths
     prepend_root_dirs = [
         'pki_dir', 'cachedir', 'pidfile', 'sock_dir', 'extension_modules',
-        'autosign_file', 'autoreject_file', 'token_dir', 'sqlite_queue_dir'
+        'autosign_file', 'autoreject_file', 'token_dir', 'syndic_dir',
+        'sqlite_queue_dir'
     ]
 
     # These can be set to syslog, so, not actual paths on the system

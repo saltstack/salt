@@ -30,6 +30,7 @@ import salt.client
 import salt.loader
 import salt.utils
 import salt.utils.cloud
+import salt.syspaths
 from salt.utils import context
 from salt.ext.six import string_types
 from salt.template import compile_template
@@ -1335,11 +1336,18 @@ class Cloud(object):
         ret = {}
         if not vm_overrides:
             vm_overrides = {}
+
+        with salt.utils.fopen(os.path.join(salt.syspaths.CONFIG_DIR, 'cloud'), 'r') as mcc:
+            main_cloud_config = yaml.safe_load(mcc)
+
         profile_details = self.opts['profiles'][profile]
         alias, driver = profile_details['provider'].split(':')
         mapped_providers = self.map_providers_parallel()
         alias_data = mapped_providers.setdefault(alias, {})
         vms = alias_data.setdefault(driver, {})
+
+        provider_details = self.opts['providers'][alias][driver].copy()
+        del provider_details['profiles']
 
         for name in names:
             name_exists = False
@@ -1357,8 +1365,11 @@ class Cloud(object):
                 ret[name] = {'Error': msg}
                 continue
 
-            vm_ = profile_details.copy()
+            vm_ = main_cloud_config.copy()
+            vm_.update(provider_details)
+            vm_.update(profile_details)
             vm_.update(vm_overrides)
+
             vm_['name'] = name
             if self.opts['parallel']:
                 process = multiprocessing.Process(

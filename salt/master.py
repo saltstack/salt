@@ -100,8 +100,8 @@ class SMaster(object):
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.key = self.__prep_key()
 
-    # We need __setstate__ and __getstate__ to also pickle 'SMaster.aes'.
-    # Otherwise, 'SMaster.aes' won't be copied over to the spawned process
+    # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
+    # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
     # on Windows since spawning processes on Windows requires pickling.
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
@@ -109,13 +109,13 @@ class SMaster(object):
         self.opts = state['opts']
         self.master_key = state['master_key']
         self.key = state['key']
-        SMaster.aes = state['aes']
+        SMaster.secrets = state['secrets']
 
     def __getstate__(self):
         return {'opts': self.opts,
                 'master_key': self.master_key,
                 'key': self.key,
-                'aes': SMaster.aes}
+                'secrets': SMaster.secrets}
 
     def __prep_key(self):
         '''
@@ -387,6 +387,11 @@ class Master(SMaster):
         else:
             home = os.path.expanduser('~' + self.opts['user'])
         try:
+            if salt.utils.is_windows() and not os.path.isdir(home):
+                # On Windows, Service account home directories may not
+                # initially exist. If this is the case, make sure the
+                # directory exists before continuing.
+                os.mkdir(home, 0o755)
             os.chdir(home)
         except OSError as err:
             errors.append(
@@ -646,27 +651,27 @@ class MWorker(multiprocessing.Process):
         self.key = key
         self.k_mtime = 0
 
-    # We need __setstate__ and __getstate__ to also pickle 'SMaster.aes'.
-    # Otherwise, 'SMaster.aes' won't be copied over to the spawned process
+    # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
+    # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
     # on Windows since spawning processes on Windows requires pickling.
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
         multiprocessing.Process.__init__(self)
         self.opts = state['opts']
-        self.serial = state['serial']
+        self.req_channels = state['req_channels']
         self.mkey = state['mkey']
         self.key = state['key']
         self.k_mtime = state['k_mtime']
-        SMaster.aes = state['aes']
+        SMaster.secrets = state['secrets']
 
     def __getstate__(self):
         return {'opts': self.opts,
-                'serial': self.serial,
+                'req_channels': self.req_channels,
                 'mkey': self.mkey,
                 'key': self.key,
                 'k_mtime': self.k_mtime,
-                'aes': SMaster.aes}
+                'secrets': SMaster.secrets}
 
     def __bind(self):
         '''
@@ -1132,7 +1137,8 @@ class AESFuncs(object):
                         {'grains': load['grains'],
                          'pillar': data})
                     )
-            os.rename(tmpfname, datap)
+            # On Windows, os.rename will fail if the destination file exists.
+            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
         return data
 
     def _minion_event(self, load):
@@ -1186,6 +1192,15 @@ class AESFuncs(object):
         if load.get('load'):
             fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
             self.mminion.returners[fstr](load['jid'], load['load'])
+
+        # Register the syndic
+        syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
+        if not os.path.exists(syndic_cache_path):
+            path_name = os.path.split(syndic_cache_path)[0]
+            if not os.path.exists(path_name):
+                os.makedirs(path_name)
+            with salt.utils.fopen(syndic_cache_path, 'w') as f:
+                f.write('')
 
         # Format individual return loads
         for key, item in six.iteritems(load['return']):

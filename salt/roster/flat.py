@@ -76,6 +76,18 @@ class RosterMatcher(object):
         log.info('minions list: {0}'.format(minions))
         return minions
 
+    def ret_list_minions(self):
+        '''
+        Return minions that match via list
+        '''
+        minions = {}
+        for minion in self.raw:
+            if minion in self.tgt:
+                data = self.get_data(minion)
+                if data:
+                    minions[minion] = data
+        return minions
+
     def get_data(self, minion):
         '''
         Return the configured ip

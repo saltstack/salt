@@ -1,5 +1,4 @@
 !define PRODUCT_NAME "Salt Minion"
-!define PRODUCT_VERSION "{{ salt_version }}"
 !define PRODUCT_PUBLISHER "SaltStack, Inc"
 !define PRODUCT_WEB_SITE "http://saltstack.org"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\salt-minion.exe"
@@ -16,6 +15,12 @@
 !include "x64.nsh"
 ${StrLoc}
 ${StrStrAdv}
+
+!ifdef SaltVersion
+  !define PRODUCT_VERSION "${SaltVersion}"
+!else
+  !define PRODUCT_VERSION "Undefined Version"
+!endif
 
 !if "$%PROCESSOR_ARCHITECTURE%" == "AMD64"
   !define CPUARCH "AMD64"
@@ -36,6 +41,7 @@ Var MinionName_State
 !define MUI_ABORTWARNING
 !define MUI_ICON "salt.ico"
 !define MUI_UNICON "salt.ico"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
 ; Welcome page
 !insertmacro MUI_PAGE_WELCOME
@@ -148,13 +154,8 @@ Function MsiQueryProductState
 
 FunctionEnd
 
-!ifdef SaltVersion
-    Name "${PRODUCT_NAME} ${SaltVersion}"
-    OutFile "Salt-Minion-${SaltVersion}-${CPUARCH}-Setup.exe"
-!else
-    Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-    OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
-!endif
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show

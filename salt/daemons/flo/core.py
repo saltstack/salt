@@ -26,7 +26,7 @@ from raet.lane.stacking import LaneStack
 
 from salt import daemons
 from salt.daemons import salting
-from salt.utils import kinds
+from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
@@ -76,7 +76,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         '''
         Should only run once to cleanup stale lane uxd files.
         '''
-        if self.opts.value.get('sock_dir'):
+        if not is_windows() and self.opts.value.get('sock_dir'):
             sockdirpath = os.path.abspath(self.opts.value['sock_dir'])
             console.concise("Cleaning up uxd files in {0}\n".format(sockdirpath))
             protecteds = self.opts.value.get('raet_cleanup_protecteds', [])

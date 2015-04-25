@@ -80,6 +80,6 @@ class SyncWrapper(object):
         '''
         On deletion of the async wrapper, make sure to clean up the async stuff
         '''
-        self.io_loop.close()
         if hasattr(self, 'async'):
             del self.async
+        self.io_loop.close()

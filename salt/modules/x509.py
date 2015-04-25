@@ -27,6 +27,7 @@ import salt.utils
 import salt.exceptions
 from salt.utils.odict import OrderedDict
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
 
@@ -936,7 +937,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         public key in this certificate. Note that this is not the exact same hashing method used by
         OpenSSL when using the hash value.
 
-        ``authorityKeyIdentifier`` only supports the value ``keyid,issuer:always``. This value will
+        ``authorityKeyIdentifier`` Use values acceptable to the openssl CLI tools. This will
         automatically populate ``authorityKeyIdentifier`` with the ``subjectKeyIdentifier`` of
         ``signing_cert``. If this is a self-signed cert these values will be the same.
 
@@ -1057,8 +1058,13 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         if 'public_key' in kwargs:
             # Strip newlines to make passing through as cli functions easier
             kwargs['public_key'] = get_public_key(kwargs['public_key']).replace('\n', '')
+
         # Remove system entries in kwargs
-        kwargs = dict((k, v) for k, v in kwargs.iteritems() if not k.startswith('__'))
+        # Including listen_in and preqreuired because they are not included in STATE_INTERNAL_KEYWORDS
+        # for salt 2014.7.2
+        for ignore in list(_STATE_INTERNAL_KEYWORDS) + ['listen_in', 'preqrequired']:
+            kwargs.pop(ignore, None)
+
         cert_txt = __salt__['publish.publish'](tgt=ca_server,
                                                fun='x509.sign_remote_certificate',
                                                arg=str(kwargs))[ca_server]
@@ -1145,9 +1151,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
         issuer = None
         if extname == 'authorityKeyIdentifier':
-            if not extval == 'keyid,issuer:always':
-                raise salt.exceptions.SaltInvocationError(
-                    'authorityKeyIdentifier must be keyid,issuer:always')
             issuer = signing_cert
 
         ext = _new_extension(name=extname, value=extval, critical=critical, issuer=issuer)
