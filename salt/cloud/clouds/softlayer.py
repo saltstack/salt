@@ -573,6 +573,8 @@ def list_nodes(call=None):
             ret[node]['public_ips'] = nodes[node]['primaryIpAddress']
         if 'primaryBackendIpAddress' in nodes[node]:
             ret[node]['private_ips'] = nodes[node]['primaryBackendIpAddress']
+        if 'status' in nodes[node]:
+            ret[node]['state'] = str(nodes[node]['status']['name'])
     return ret
 
 
