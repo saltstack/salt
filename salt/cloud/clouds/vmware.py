@@ -49,7 +49,6 @@ cloud configuration at
 from __future__ import absolute_import
 from random import randint
 from re import match
-from requests.packages.urllib3 import disable_warnings
 import pprint
 import logging
 import time
@@ -71,14 +70,18 @@ try:
 except Exception:
     pass
 
+# Disable InsecureRequestWarning generated on python > 2.6
+try:
+    from requests.packages.urllib3 import disable_warnings
+    disable_warnings()
+except:
+    pass
+
 # Import third party libs
 import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-# Disable InsecureRequestWarning generated on newer python versions
-disable_warnings()
 
 
 # Only load in this module if the VMware configurations are in place
