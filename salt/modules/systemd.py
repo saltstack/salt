@@ -254,7 +254,6 @@ def _service_is_sysv(name):
     /etc/init.d.
     Return True only if the service doesnt also provide a systemd unit file.
     '''
-    script = '/etc/init.d/{0}'.format(name)
     return (_has_sysv_exec() and
             name in _get_all_units() and
             name not in _get_all_unit_files() and
