@@ -12,6 +12,7 @@ import glob
 # Import 3rd-party libs
 import salt.ext.six as six
 import salt.utils.systemd
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -227,13 +228,16 @@ def _get_service_exec():
     return executable
 
 
-def _has_update_rcd():
+def _has_sysv_exec():
     '''
     Return the current runlevel
     '''
-    if 'systemd._hasupdatercd' not in __context__:
-        __context__['systemd._hasupdatercd'] = _get_service_exec()
-    return __context__['systemd._hasupdatercd']
+    if 'systemd._has_sysv_exec' not in __context__:
+        try:
+            __context__['systemd._has_sysv_exec'] = bool(_get_service_exec())
+        except salt.exceptions.CommandExecutionError:
+            __context__['systemd._has_sysv_exec'] = False
+    return __context__['systemd._has_sysv_exec']
 
 
 def _sysv_exists(name):
@@ -248,7 +252,7 @@ def _service_is_sysv(name):
     Return True only if the service doesnt also provide a systemd unit file.
     '''
     script = '/etc/init.d/{0}'.format(name)
-    return (_has_update_rcd() and
+    return (_has_sysv_exec() and
             name in _get_all_units() and
             name not in _get_all_unit_files() and
             _sysv_exists(name))
