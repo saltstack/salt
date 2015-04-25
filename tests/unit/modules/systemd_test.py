@@ -208,6 +208,7 @@ class SystemdTestCase(TestCase):
             Test to disable the named service to not
             start when the system boots
         '''
+        exe = MagicMock(return_value='foo')
         tmock = MagicMock(return_value=True)
         mock = MagicMock(return_value=False)
         with patch.object(systemd, '_untracked_custom_unit_found', mock):
@@ -215,8 +216,9 @@ class SystemdTestCase(TestCase):
                 with patch.dict(systemd.__salt__, {'cmd.retcode': mock}):
                     with patch.object(systemd, "_service_is_sysv", mock):
                         self.assertTrue(systemd.disable("sshd"))
-                    with patch.object(systemd, "_service_is_sysv", tmock):
-                        self.assertTrue(systemd.disable("sshd"))
+                    with patch.object(systemd, "_get_service_exec", exe):
+                        with patch.object(systemd, "_service_is_sysv", tmock):
+                            self.assertTrue(systemd.disable("sshd"))
 
     def test_enabled(self):
         '''
