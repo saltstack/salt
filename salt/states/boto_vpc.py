@@ -144,6 +144,7 @@ def present(name, cidr_block, instance_tenancy=None, dns_support=None,
     if 'error' in r:
         ret['result'] = False
         ret['comment'] = 'Failed to create VPC: {0}.'.format(r['error']['message'])
+        return ret
 
     if not r.get('exists'):
         if __opts__['test']:
@@ -202,6 +203,7 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
     if 'error' in r:
         ret['result'] = False
         ret['comment'] = 'Failed to delete VPC: {0}.'.format(r['error']['message'])
+        return ret
 
     _id = r.get('id')
     if not _id:
@@ -279,7 +281,7 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
     if 'error' in r:
         ret['result'] = False
         ret['comment'] = 'Failed to create subnet: {0}.'.format(r['error']['message'])
-
+        return ret
 
     if not r.get('exists'):
         if __opts__['test']:
@@ -342,6 +344,7 @@ def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, 
     if 'error' in r:
         ret['result'] = False
         ret['comment'] = 'Failed to delete subnet: {0}.'.format(r['error']['message'])
+        return ret
 
     _id = r.get('id')
 
@@ -353,6 +356,7 @@ def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, 
         ret['comment'] = 'Subnet {0} ({1}) is set to be removed.'.format(name, r['id'])
         ret['result'] = None
         return ret
+
     r = __salt__['boto_vpc.delete_subnet'](subnet_name=name,
                                            region=region, key=key,
                                            keyid=keyid, profile=profile)
@@ -360,6 +364,7 @@ def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, 
         ret['result'] = False
         ret['comment'] = 'Failed to delete subnet: {0}'.format(r['error']['message'])
         return ret
+
     ret['changes']['old'] = {'subnet': _id}
     ret['changes']['new'] = {'subnet': None}
     ret['comment'] = 'Subnet {0} deleted.'.format(name)
@@ -405,26 +410,31 @@ def internet_gateway_present(name, vpc_name=None, vpc_id=None,
            'changes': {}
            }
 
-    exists = __salt__['boto_vpc.resource_exists']('internet_gateway', name=name,
-                                                  region=region, key=key,
-                                                  keyid=keyid, profile=profile)
-    if not exists:
+    r = __salt__['boto_vpc.resource_exists']('internet_gateway', name=name,
+                                             region=region, key=key,
+                                             keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create internet gateway: {0}.'.format(r['error']['message'])
+        return ret
+
+    if not r.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Internet gateway {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_vpc.create_internet_gateway'](internet_gateway_name=name,
-                                                               vpc_name=vpc_name, vpc_id=vpc_id,
-                                                               tags=tags, region=region,
-                                                               key=key, keyid=keyid,
-                                                               profile=profile)
-        if not created:
+        r = __salt__['boto_vpc.create_internet_gateway'](internet_gateway_name=name,
+                                                         vpc_name=vpc_name, vpc_id=vpc_id,
+                                                         tags=tags, region=region,
+                                                         key=key, keyid=keyid,
+                                                         profile=profile)
+        if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create internet gateway {0}.'.format(name)
+            ret['comment'] = 'Failed to create internet gateway: {0}'.format(r['error']['message'])
             return ret
 
         ret['changes']['old'] = {'internet_gateway': None}
-        ret['changes']['new'] = {'internet_gateway': created}
+        ret['changes']['new'] = {'internet_gateway': r['id']}
         ret['comment'] = 'Internet gateway {0} created.'.format(name)
         return ret
     ret['comment'] = 'Internet gateway {0} present.'.format(name)
@@ -462,9 +472,15 @@ def internet_gateway_absent(name, detach=False, region=None,
            'changes': {}
            }
 
-    igw_id = __salt__['boto_vpc.get_resource_id']('internet_gateway', name=name,
-                                                  region=region, key=key,
-                                                  keyid=keyid, profile=profile)
+    r = __salt__['boto_vpc.get_resource_id']('internet_gateway', name=name,
+                                             region=region, key=key,
+                                             keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete internet gateway: {0}.'.format(r['error']['message'])
+        return ret
+
+    igw_id = r['id']
     if not igw_id:
         ret['comment'] = 'Internet gateway {0} does not exist.'.format(name)
         return ret
@@ -473,13 +489,13 @@ def internet_gateway_absent(name, detach=False, region=None,
         ret['comment'] = 'Internet gateway {0} is set to be removed.'.format(name)
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_vpc.delete_internet_gateway'](internet_gateway_name=name,
-                                                           detach=detach, region=region,
-                                                           key=key, keyid=keyid,
-                                                           profile=profile)
-    if not deleted:
+    r = __salt__['boto_vpc.delete_internet_gateway'](internet_gateway_name=name,
+                                                     detach=detach, region=region,
+                                                     key=key, keyid=keyid,
+                                                     profile=profile)
+    if not r.get('deleted'):
         ret['result'] = False
-        ret['comment'] = 'Failed to delete internet gateway {0}.'.format(name)
+        ret['comment'] = 'Failed to delete internet gateway: {0}.'.format(r['error']['message'])
         return ret
     ret['changes']['old'] = {'internet_gateway': igw_id}
     ret['changes']['new'] = {'internet_gateway': None}
@@ -574,25 +590,34 @@ def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=Non
            'changes': {}
            }
 
-    exists = __salt__['boto_vpc.resource_exists'](resource='route_table', name=name, region=region, key=key, keyid=keyid,
-                                                  profile=profile)
-    if not exists:
+    r = __salt__['boto_vpc.get_resource_id'](resource='route_table', name=name, region=region, key=key, keyid=keyid,
+                                             profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create route table: {0}.'.format(r['error']['message'])
+        return ret
+    
+    _id = r.get('id')
+
+    if not _id:
         if __opts__['test']:
             msg = 'Route table {0} is set to be created.'.format(name)
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        created = __salt__['boto_vpc.create_route_table'](route_table_name=name, vpc_name=vpc_name, vpc_id=vpc_id, tags=tags,
-                                                          region=region, key=key, keyid=keyid, profile=profile)
-        if not created:
+
+        r = __salt__['boto_vpc.create_route_table'](route_table_name=name, vpc_name=vpc_name, vpc_id=vpc_id, tags=tags,
+                                                    region=region, key=key, keyid=keyid, profile=profile)
+        if not r.get('created'):
             ret['result'] = False
-            ret['comment'] = 'Failed to create route table {0}.'.format(name)
+            ret['comment'] = 'Failed to create route table: {0}.'.format(r['error']['message'])
             return ret
+
         ret['changes']['old'] = {'route_table': None}
-        ret['changes']['new'] = {'route_table': created}
+        ret['changes']['new'] = {'route_table': r['id']}
         ret['comment'] = 'Route table {0} created.'.format(name)
         return ret
-    ret['comment'] = 'Route table {0} present.'.format(name)
+    ret['comment'] = 'Route table {0} ({1}) present.'.format(name, _id)
     return ret
 
 
@@ -700,7 +725,7 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
     for item in to_create:
         if item['subnet_id'] is None:
             for subnet in all_subnets:
-                if subnet['tags']['Name'] == item['name']:
+                if subnet['tags'].get('Name') == item['name']:
                     item['subnet_id'] = subnet['id']
     # Build list of subnets to be disassociated
     to_delete = [x for x in route_subnets if not any(set(x.items()) & set(dict(f).items()) for f in subnets)]
@@ -738,7 +763,7 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
     return ret
 
 
-def route_table_absent(name, detach=False, region=None,
+def route_table_absent(name, region=None,
                        key=None, keyid=None, profile=None):
     '''
     Ensure the named route table is absent.
