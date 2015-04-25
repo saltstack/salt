@@ -723,6 +723,51 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
     return snapshots
 
 
+def _upg_tools_helper(vm, reboot=False):
+    # Exit if template
+    if vm.config.template:
+        status = 'VMware tools cannot be updated on a template'
+        return status
+
+    # Exit if VMware tools is already up to date
+    if vm.guest.toolsStatus == "toolsOk":
+        status = 'VMware tools is already up to date'
+        return status
+
+    # Exit if VM is not powered on
+    if vm.summary.runtime.powerState != "poweredOn":
+        status = 'VM must be powered on to upgrade tools'
+        return status
+
+    # Exit if VMware tools is either not running or not installed
+    if vm.guest.toolsStatus in ["toolsNotRunning", "toolsNotInstalled"]:
+        status = 'VMware tools is either not running or not installed'
+        return status
+
+    # If vmware tools is out of date, check major OS family
+    # Upgrade tools on Linux and Windows guests
+    if vm.guest.toolsStatus == "toolsOld":
+        log.info('Upgrading VMware tools on {0}'.format(vm.name))
+        try:
+            if vm.guest.guestFamily == "windowsGuest" and not reboot:
+                log.info('Reboot suppressed on {0}'.format(vm.name))
+                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
+            elif vm.guest.guestFamily in ["linuxGuest", "windowsGuest"]:
+                task = vm.UpgradeTools()
+            else:
+                status = 'Only Linux and Windows guests are currently supported'
+                return status
+            _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
+        except Exception as exc:
+            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm.name, exc))
+            status = 'VMware tools upgrade failed'
+            return status
+        status = 'VMware tools upgrade succeeded'
+        return status
+
+    return 'VMware tools could not be upgraded'
+
+
 def get_vcenter_version(kwargs=None, call=None):
     '''
     Show the vCenter Server version with build number.
@@ -1891,62 +1936,6 @@ def create_cluster(kwargs=None, call=None):
     return False
 
 
-def upgrade_tools(name, reboot=False, call=None):
-    '''
-    To upgrade VMware Tools on a specified virtual machine.
-
-    .. note::
-
-        If the virtual machine is running Windows OS, use ``reboot=True``
-        to reboot the virtual machine after VMware tools upgrade. Default
-        is ``reboot=False``
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a upgrade_tools vmname
-        salt-cloud -a upgrade_tools vmname reboot=True
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
-        )
-
-    vm = _get_mor_by_property(vim.VirtualMachine, name)
-
-    tools_status = vm.guest.toolsStatus
-
-    # Exit if VMware tools is already up to date
-    if tools_status == "toolsOk":
-        return 'VMware tools is already up to date'
-
-    # Exit if VM is not powered on
-    if vm.summary.runtime.powerState != "poweredOn":
-        return 'Tools cannot be upgraded if the VM is not powered on'
-
-    # If vmware tools is out of date, check major OS family
-    # Upgrade tools on Linux and Windows guests
-    if tools_status == "toolsOld":
-        log.info('Upgrading VMware tools on {0}'.format(name))
-        os_family = vm.guest.guestFamily
-        try:
-            if os_family == "windowsGuest" and not reboot:
-                log.info('Reboot suppressed on {0}'.format(name))
-                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
-            elif os_family in ["linuxGuest", "windowsGuest"]:
-                task = vm.UpgradeTools()
-            else:
-                return 'VMware tools upgrade is currently supported only on Linux or Windows guests.'
-            _wait_for_task(task, name, "tools upgrade", 5, "info")
-        except Exception as exc:
-            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(name, exc))
-            return 'failed to upgrade VMware tools'
-        return 'VMware tools upgraded'
-
-    return 'VMware tools is not installed'
-
-
 def rescan_hba(kwargs=None, call=None):
     '''
     To rescan a specified HBA or all the HBAs on the Host System
@@ -1987,3 +1976,198 @@ def rescan_hba(kwargs=None, call=None):
         return {host_name: 'failed to rescan HBA'}
 
     return {host_name: ret}
+
+
+def upgrade_tools_all(call=None):
+    '''
+    To upgrade VMware Tools on all virtual machines present in
+    the specified provider
+
+    .. note::
+
+        If the virtual machine is running Windows OS, this function
+        will attempt to suppress the automatic reboot caused by a
+        VMware Tools upgrade.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f upgrade_tools_all my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools_all function must be called with '
+            '-f or --function.'
+        )
+
+    ret = {}
+    vm_properties = ["name"]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        ret[vm['name']] = _upg_tools_helper(vm['object'])
+
+    return ret
+
+
+def upgrade_tools(name, reboot=False, call=None):
+    '''
+    To upgrade VMware Tools on a specified virtual machine.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, use ``reboot=True``
+        to reboot the virtual machine after VMware tools upgrade. Default
+        is ``reboot=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a upgrade_tools vmname
+        salt-cloud -a upgrade_tools vmname reboot=True
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools action must be called with -a or --action.'
+        )
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    return _upg_tools_helper(vm_ref, reboot)
+
+
+def list_hosts_by_cluster(kwargs=None, call=None):
+    '''
+    List hosts for each cluster; or hosts for a specified cluster in
+    this VMware environment
+
+    To list hosts for each cluster:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_cluster my-vmware-config
+
+    To list hosts for a specified cluster:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_cluster my-vmware-config cluster="clusterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hosts_by_cluster function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    cluster_name = kwargs.get('cluster') if kwargs else None
+    cluster_properties = ["name"]
+
+    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
+
+    for cluster in cluster_list:
+        ret[cluster['name']] = []
+        for host in cluster['object'].host:
+            if isinstance(host, vim.HostSystem):
+                ret[cluster['name']].append(host.name)
+        if cluster_name and cluster_name == cluster['name']:
+            return {'Hosts by Cluster': {cluster_name: ret[cluster_name]}}
+
+    return {'Hosts by Cluster': ret}
+
+
+def list_clusters_by_datacenter(kwargs=None, call=None):
+    '''
+    List clusters for each datacenter; or clusters for a specified datacenter in
+    this VMware environment
+
+    To list clusters for each datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_clusters_by_datacenter my-vmware-config
+
+    To list clusters for a specified datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_clusters_by_datacenter my-vmware-config datacenter="datacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_clusters_by_datacenter function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_properties = ["name"]
+
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+
+    for datacenter in datacenter_list:
+        ret[datacenter['name']] = []
+        for cluster in datacenter['object'].hostFolder.childEntity:
+            if isinstance(cluster, vim.ClusterComputeResource):
+                ret[datacenter['name']].append(cluster.name)
+        if datacenter_name and datacenter_name == datacenter['name']:
+            return {'Clusters by Datacenter': {datacenter_name: ret[datacenter_name]}}
+
+    return {'Clusters by Datacenter': ret}
+
+
+def list_hosts_by_datacenter(kwargs=None, call=None):
+    '''
+    List hosts for each datacenter; or hosts for a specified datacenter in
+    this VMware environment
+
+    To list hosts for each datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_datacenter my-vmware-config
+
+    To list hosts for a specified datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_datacenter my-vmware-config datacenter="datacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hosts_by_datacenter function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_properties = ["name"]
+
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+
+    for datacenter in datacenter_list:
+        ret[datacenter['name']] = []
+        for cluster in datacenter['object'].hostFolder.childEntity:
+            if isinstance(cluster, vim.ClusterComputeResource):
+                for host in cluster.host:
+                    if isinstance(host, vim.HostSystem):
+                        ret[datacenter['name']].append(host.name)
+        if datacenter_name and datacenter_name == datacenter['name']:
+            return {'Hosts by Datacenter': {datacenter_name: ret[datacenter_name]}}
+
+    return {'Hosts by Datacenter': ret}
