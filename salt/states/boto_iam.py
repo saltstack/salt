@@ -38,6 +38,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
     create-user:
       boto_iam.user_present:
         - name: myuser
+        - policies:
+            mypolicy: |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "*",
+                    "Resource": "*"}]
+                }
         - password: NewPassword$$1
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
@@ -51,8 +60,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - users:
           - myuser
           - myuser1
-        - policy_name: test1
-        - policy: '{ "Version": "2012-10-17", "Statement": [ { "Effect": "Allow", "Action": "*", "Resource": "*" }]}'
+        - policies:
+            mypolicy: |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "*",
+                    "Resource": "*"}]
+                }
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'safsdfsal;fdkjsafkljsASSADFalkfj'
@@ -127,18 +143,24 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
     Ensure the IAM user is absent. User cannot be deleted if it has keys.
 
-    name (string) – The name of the new user.
+    name (string)
+        The name of the new user.
 
-    delete_keys (bool) - Delete all keys from user.
+    delete_keys (bool)
+        Delete all keys from user.
 
-    region (string) - Region to connect to.
+    region (string)
+        Region to connect to.
 
-    key (string) - Secret key to be used.
+    key (string)
+        Secret key to be used.
 
-    keyid (string) - Access key to be used.
+    keyid (string)
+        Access key to be used.
 
-    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
-    that contains a dict with region, key and keyid.
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
@@ -181,21 +203,28 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
 
     Ensure the IAM access keys are present.
 
-    name (string) – The name of the new user.
+    name (string)
+        The name of the new user.
 
-    number (int) - Number of keys that user should have.
+    number (int)
+        Number of keys that user should have.
 
-    save_dir (string) - The directory that the key/keys will be saved. Keys are saved to a file named according
-    to the username privided.
+    save_dir (string)
+        The directory that the key/keys will be saved. Keys are saved to a file named according
+        to the username privided.
 
-    region (string) - Region to connect to.
+    region (string)
+        Region to connect to.
 
-    key (string) - Secret key to be used.
+    key (string)
+        Secret key to be used.
 
-    keyid (string) - Access key to be used.
+    keyid (string)
+        Access key to be used.
 
-    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
-    that contains a dict with region, key and keyid.
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](name, region, key, keyid, profile):
@@ -262,18 +291,24 @@ def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profi
 
     Ensure the IAM user access_key_id is absent.
 
-    access_key_id (list) – A list of access key ids
+    access_key_id (list)
+        A list of access key ids
 
-    user_name (string) - The username of the user
+    user_name (string)
+        The username of the user
 
-    region (string) - Region to connect to.
+    region (string)
+        Region to connect to.
 
-    key (string) - Secret key to be used.
+    key (string)
+        Secret key to be used.
 
-    keyid (string) - Access key to be used.
+    keyid (string)
+        Access key to be used.
 
-    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
-    that contains a dict with region, key and keyid.
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
     '''
     ret = {'name': access_keys, 'result': True, 'comment': '', 'changes': {}}
     if not __salt__['boto_iam.get_user'](user_name, region, key, keyid, profile):
@@ -321,7 +356,8 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
 
     Ensure the IAM user is present
 
-    name (string) – The name of the new user.
+    name (string)
+        The name of the new user.
 
     policies (dict)
         A dict of IAM group policy documents.
@@ -335,18 +371,24 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
         in the policies argument will override the keys defined in
         policies_from_pillars.
 
-    password (string) - The password for the new user. Must comply with account policy.
+    password (string)
+        The password for the new user. Must comply with account policy.
 
-    path (string) - The path of the user. Default is '/'
+    path (string)
+        The path of the user. Default is '/'
 
-    region (string) - Region to connect to.
+    region (string)
+        Region to connect to.
 
-    key (string) - Secret key to be used.
+    key (string)
+        Secret key to be used.
 
-    keyid (string) - Access key to be used.
+    keyid (string)
+        Access key to be used.
 
-    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
-    that contains a dict with region, key and keyid.
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if not policies:
@@ -664,39 +706,51 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
 
     .. versionadded:: Beryllium
 
-    allow_users_to_change_password (bool) – Allows all IAM users in your account to
-    use the AWS Management Console to change their own passwords.
+    allow_users_to_change_password (bool)
+        Allows all IAM users in your account to
+        use the AWS Management Console to change their own passwords.
 
-    hard_expiry (bool) – Prevents IAM users from setting a new password after their
-    password has expired.
+    hard_expiry (bool)
+        Prevents IAM users from setting a new password after their
+        password has expired.
 
-    max_password_age (int) – The number of days that an IAM user password is valid.
+    max_password_age (int)
+        The number of days that an IAM user password is valid.
 
-    minimum_password_length (int) – The minimum number of characters allowed in an
-    IAM user password.
+    minimum_password_length (int)
+        The minimum number of characters allowed in an IAM user password.
 
-    password_reuse_prevention (int) – Specifies the number of previous passwords
-    that IAM users are prevented from reusing.
+    password_reuse_prevention (int)
+        Specifies the number of previous passwords
+        that IAM users are prevented from reusing.
 
-    require_lowercase_characters (bool) – Specifies whether IAM user passwords
-    must contain at least one lowercase character from the ISO basic Latin alphabet (a to z).
+    require_lowercase_characters (bool)
+        Specifies whether IAM user passwords
+        must contain at least one lowercase character from the ISO basic Latin alphabet (a to z).
 
-    require_numbers (bool) – Specifies whether IAM user passwords must contain at
-    least one numeric character (0 to 9).
+    require_numbers (bool)
+        Specifies whether IAM user passwords must contain at
+        least one numeric character (0 to 9).
 
-    require_symbols (bool) – Specifies whether IAM user passwords must contain at
-    least one of the following non-alphanumeric characters: ! @ # $ % ^ & * ( ) _ + - = [ ] { } | '
+    require_symbols (bool)
+        Specifies whether IAM user passwords must contain at
+        least one of the following non-alphanumeric characters: ! @ # $ % ^ & * ( ) _ + - = [ ] { } | '
 
-    require_uppercase_characters (bool) – Specifies whether IAM user passwords must
-    contain at least one uppercase character from the ISO basic Latin alphabet (A to Z).
+    require_uppercase_characters (bool)
+        Specifies whether IAM user passwords must
+        contain at least one uppercase character from the ISO basic Latin alphabet (A to Z).
 
-    region (string) - Region to connect to.
+    region (string)
+        Region to connect to.
 
-    key (string) - Secret key to be used.
+    key (string)
+        Secret key to be used.
 
-    keyid (string) - Access key to be used.
+    keyid (string)
+        Access key to be used.
 
-    profile (dict) - A dict with region, key and keyid, or a pillar key (string)
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
     '''
     config = locals()
     ret = {'name': 'Account Policy', 'result': True, 'comment': '', 'changes': {}}
@@ -741,15 +795,20 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: Beryllium
 
-    name (string) - The name for the server certificate. Do not include the path in this value.
+    name (string)
+        The name for the server certificate. Do not include the path in this value.
 
-    region (string) - The name of the region to connect to.
+    region (string)
+        The name of the region to connect to.
 
-    key (string) - The key to be used in order to connect
+    key (string)
+        The key to be used in order to connect
 
-    keyid (string) - The keyid to be used in order to connect
+    keyid (string)
+        The keyid to be used in order to connect
 
-    profile (string) - The profile that contains a dict of region, key, keyid
+    profile (string)
+        The profile that contains a dict of region, key, keyid
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.get_server_certificate'](name, region, key, keyid, profile)
@@ -777,24 +836,33 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
 
     .. versionadded:: Beryllium
 
-    name (string) - The name for the server certificate. Do not include the path in this value.
+    name (string)
+        The name for the server certificate. Do not include the path in this value.
 
-    public_key (string) -  The contents of the public key certificate in PEM-encoded format.
+    public_key (string)
+        The contents of the public key certificate in PEM-encoded format.
 
-    private_key (string) - The contents of the private key in PEM-encoded format.
+    private_key (string)
+        The contents of the private key in PEM-encoded format.
 
-    cert_chain (string) - The contents of the certificate chain. This is typically a
-    concatenation of the PEM-encoded public key certificates of the chain.
+    cert_chain (string)
+        The contents of the certificate chain. This is typically a
+        concatenation of the PEM-encoded public key certificates of the chain.
 
-    path (string) - The path for the server certificate.
+    path (string)
+        The path for the server certificate.
 
-    region (string) - The name of the region to connect to.
+    region (string)
+        The name of the region to connect to.
 
-    key (string) - The key to be used in order to connect
+    key (string)
+        The key to be used in order to connect
 
-    keyid (string) - The keyid to be used in order to connect
+    keyid (string)
+        The keyid to be used in order to connect
 
-    profile (string) - The profile that contains a dict of region, key, keyid
+    profile (string)
+        The profile that contains a dict of region, key, keyid
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_iam.get_server_certificate'](name, region, key, keyid, profile)
