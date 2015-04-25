@@ -301,7 +301,6 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
             return ret
         _describe = __salt__['boto_vpc.describe_subnet'](r['id'], region=region, key=key,
                                                          keyid=keyid, profile=profile)
- 
         ret['changes']['old'] = {'subnet': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'Subnet {0} created.'.format(name)
@@ -596,7 +595,7 @@ def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=Non
         ret['result'] = False
         ret['comment'] = 'Failed to create route table: {0}.'.format(r['error']['message'])
         return ret
-    
+
     _id = r.get('id')
 
     if not _id:
