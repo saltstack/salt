@@ -2171,3 +2171,69 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
             return {'Hosts by Datacenter': {datacenter_name: ret[datacenter_name]}}
 
     return {'Hosts by Datacenter': ret}
+
+
+def list_hba(kwargs=None, call=None):
+    '''
+    List all HBAs for this VMware environment, all HBAs on a
+    specific host, and/or all HBAs of a specific type.
+
+   .. note::
+
+       Accepted values for hbatype are:
+       "parallel", "iscsi", "fibre", "block"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hba my-vmware-config
+        salt-cloud -f list_hba my-vmware-config host="HostSystemName"
+        salt-cloud -f list_hba my-vmware-config hbatype="HBAtype"
+        salt-cloud -f list_hba my-vmware-config host="HostSystemName" hbatype="HBAtype"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hba function must be called with -f or --function.'
+        )
+
+    hbatype = kwargs.get('hbatype') if kwargs else None
+    host = kwargs.get('host') if kwargs else None
+
+    ret = {}
+    host_hbas = {}
+    dev_list = {}
+    host_properties = [
+        "name",
+        "config.storageDevice.hostBusAdapter"
+        ]
+
+    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+
+    for host_ref in host_list:
+        if host is None or host_ref['name'] == host:
+            dev_list[host_ref['name']] = host_ref['config.storageDevice.hostBusAdapter']
+            for val in dev_list.values():
+                for obj in val:
+                    if obj.status == "offline" or obj.status == "unbound":
+                        continue
+                    if hbatype is None or hbatype == "parallel":
+                        if isinstance(obj, vim.host.ParallelScsiHba):
+                            if obj.device not in host_hbas.keys():
+                                host_hbas[obj.device] = obj.model
+                    if hbatype is None or hbatype == "block":
+                        if isinstance(obj, vim.host.BlockHba):
+                            if obj.device not in host_hbas.keys():
+                                host_hbas[obj.device] = obj.model
+                    if hbatype is None or hbatype == "iscsi":
+                        if isinstance(obj, vim.host.InternetScsiHba):
+                            if obj.device not in host_hbas.keys():
+                                host_hbas[obj.device] = obj.model
+                    if hbatype is None or hbatype == "fibre":
+                        if isinstance(obj, vim.host.FibreChannelHba):
+                            if obj.device not in host_hbas.keys():
+                                host_hbas[obj.device] = obj.model
+
+            ret[host_ref['name']] = host_hbas
+
+    return {'HBAs by Host' : ret}
