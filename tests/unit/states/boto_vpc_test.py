@@ -18,7 +18,6 @@ import salt.loader
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
-import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import boto
@@ -197,7 +196,6 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     def test_absent_when_subnet_exists(self):
         vpc = self._create_vpc(name='test')
         subnet = self._create_subnet(vpc_id=vpc.id, name='test')
- 
         subnet_absent_result = salt_states['boto_vpc.subnet_absent']('test')
         self.assertTrue(subnet_absent_result['result'])
         self.assertEqual(subnet_absent_result['changes']['new']['subnet'], None)
@@ -206,7 +204,7 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name='test')
         subnet = self._create_subnet(vpc_id=vpc.id, name='test')
- 
+
         with patch('moto.ec2.models.SubnetBackend.delete_subnet', side_effect=BotoServerError(400, 'Mocked error')):
             subnet_absent_result = salt_states['boto_vpc.subnet_absent']('test')
             self.assertFalse(subnet_absent_result['result'])
@@ -229,10 +227,10 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         '''
         vpc = self._create_vpc(name='test')
         resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
-                name='test', vpc_name='test')
+            name='test', vpc_name='test')
 
         self.assertTrue(resource_present_result['result'])
-        
+
         exists = funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')
         self.assertTrue(exists)
 
@@ -267,8 +265,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     @mock_ec2
     def test_absent_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
-        resource = self._create_resource(vpc_id=vpc.id, name='test')
- 
+        self._create_resource(vpc_id=vpc.id, name='test')
+
         resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes']['new'][self.resource_type], None)
@@ -278,8 +276,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     @mock_ec2
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name='test')
-        resource = self._create_resource(vpc_id=vpc.id, name='test')
- 
+        self._create_resource(vpc_id=vpc.id, name='test')
+
         with patch('moto.ec2.models.{0}'.format(self.backend_delete), side_effect=BotoServerError(400, 'Mocked error')):
             resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
             self.assertFalse(resource_absent_result['result'])

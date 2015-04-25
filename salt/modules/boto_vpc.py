@@ -2052,7 +2052,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
-    if not any(route_table_id, route_table_name, tags):
+    if not any((route_table_id, route_table_name, tags)):
         raise SaltInvocationError('At least one of the following must be specified: '
                                   'route table id, route table name, or tags.')
 
