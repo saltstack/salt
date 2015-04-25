@@ -247,6 +247,19 @@ def get_error(e):
     return r
 
 
+def exactly_n(l, n=1):
+    '''
+    Tests that exactly N items in an iterable are "truthy" (neither None,
+    False, nor 0).
+    '''
+    i = iter(l)
+    return all(any(i) for j in range(n)) and not any(i)
+
+
+def exactly_one(l):
+    return exactly_n(l)
+
+
 def assign_funcs(modname, service, module=None):
     '''
     Assign _get_conn and _cache_id functions to the named module.
@@ -258,3 +271,7 @@ def assign_funcs(modname, service, module=None):
     mod = sys.modules[modname]
     setattr(mod, '_get_conn', get_connection_func(service, module=module))
     setattr(mod, '_cache_id', cache_id_func(service))
+
+    # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
+    # Leaving this way for now so boto modules can be back ported
+    setattr(mod, '_exactly_one', exactly_one)

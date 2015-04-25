@@ -68,7 +68,9 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 import salt.utils.boto
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.utils import exactly_one
+# from salt.utils import exactly_one
+# TODO: Uncomment this and s/_exactly_one/exactly_one/
+# See note in utils.boto
 
 log = logging.getLogger(__name__)
 
@@ -119,7 +121,7 @@ def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     CommandExecutionError if the VPC does not exist.
     '''
 
-    if not exactly_one((vpc_name, vpc_id)):
+    if not _exactly_one((vpc_name, vpc_id)):
         raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
                                   'must be provided.')
     if vpc_name:
@@ -186,7 +188,7 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
     Delete a VPC resource. Returns True if successful, otherwise False.
     '''
 
-    if not exactly_one((name, resource_id)):
+    if not _exactly_one((name, resource_id)):
         raise SaltInvocationError('One (but not both) of name or id must be '
                                   'provided.')
 
@@ -232,7 +234,7 @@ def _get_resource(resource, name=None, resource_id=None, region=None,
     Cache the id if name was provided.
     '''
 
-    if not exactly_one((name, resource_id)):
+    if not _exactly_one((name, resource_id)):
         raise SaltInvocationError('One (but not both) of name or id must be '
                                   'provided.')
 
@@ -563,7 +565,7 @@ def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not exactly_one((vpc_name, vpc_id)):
+    if not _exactly_one((vpc_name, vpc_id)):
         raise SaltInvocationError('One (but not both) of vpc_name or vpc_id must be '
                                   'provided.')
     try:
@@ -1516,7 +1518,7 @@ def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_
 
     '''
 
-    if not exactly_one((subnet_name, subnet_id)):
+    if not _exactly_one((subnet_name, subnet_id)):
         raise SaltInvocationError('One (but not both) of subnet_id or subnet_name '
                                   'must be provided.')
 
@@ -1552,7 +1554,7 @@ def _create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=No
     else:
         rkey = 'created'
 
-    if not exactly_one((network_acl_name, network_acl_id)):
+    if not _exactly_one((network_acl_name, network_acl_id)):
         raise SaltInvocationError('One (but not both) of network_acl_id or '
                                   'network_acl_name must be provided.')
 
@@ -1651,7 +1653,7 @@ def delete_network_acl_entry(network_acl_id=None, rule_number=None, egress=None,
         salt myminion boto_vpc.delete_network_acl_entry 'acl-5fb85d36' '32767'
 
     '''
-    if not exactly_one((network_acl_name, network_acl_id)):
+    if not _exactly_one((network_acl_name, network_acl_id)):
         raise SaltInvocationError('One (but not both) of network_acl_id or '
                                   'network_acl_name must be provided.')
 
@@ -1925,7 +1927,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
 
     '''
 
-    if not exactly_one((route_table_name, route_table_id)):
+    if not _exactly_one((route_table_name, route_table_id)):
         raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
                                   'must be provided.')
 
@@ -1964,7 +1966,7 @@ def delete_route(route_table_id=None, destination_cidr_block=None,
 
     '''
 
-    if not exactly_one((route_table_name, route_table_id)):
+    if not _exactly_one((route_table_name, route_table_id)):
         raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
                                   'must be provided.')
 
@@ -2003,7 +2005,7 @@ def replace_route(route_table_id=None, destination_cidr_block=None,
 
     '''
 
-    if not exactly_one((route_table_name, route_table_id)):
+    if not _exactly_one((route_table_name, route_table_id)):
         raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
                                   'must be provided.')
 
