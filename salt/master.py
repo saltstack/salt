@@ -2223,9 +2223,9 @@ class ClearFuncs(object):
             auth_list = []
 
             if '*' in self.opts['external_auth'][token['eauth']]:
-                auth_list.append(self.opts['external_auth'][token['eauth']]['*'])
+                auth_list.extend(self.opts['external_auth'][token['eauth']]['*'])
             if token['name'] in self.opts['external_auth'][token['eauth']]:
-                auth_list.append(self.opts['external_auth'][token['eauth']][token['name']])
+                auth_list.extend(self.opts['external_auth'][token['eauth']][token['name']])
             if group_auth_match:
                 auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][token['eauth']], token['groups'], auth_list)
 
