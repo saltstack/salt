@@ -520,22 +520,22 @@ def list_nodes_full(call=None):
         'zone': zone,
         'status': ['pending', 'running', 'stopped', 'suspended'],
     }
-    result = query(params=params)
+    items = query(params=params)
 
     log.debug('Total {0} instances found in zone {1}'.format(
-        result['total_count'], zone)
+        items['total_count'], zone)
     )
 
-    ret = {}
+    result = {}
 
-    if result['total_count'] == 0:
-        return ret
+    if items['total_count'] == 0:
+        return result
 
-    for node in result['instance_set']:
+    for node in items['instance_set']:
         normalized_node = _show_normalized_node(node)
         node.update(normalized_node)
 
-        ret[node['instance_id']] = node
+        result[node['instance_id']] = node
 
     provider = __active_provider_name__ or 'qingcloud'
     if ':' in provider:
@@ -543,9 +543,9 @@ def list_nodes_full(call=None):
         provider = comps[0]
 
     __opts__['update_cachedir'] = True
-    salt.utils.cloud.cache_node_list(ret, provider, __opts__)
+    salt.utils.cloud.cache_node_list(result, provider, __opts__)
 
-    return ret
+    return result
 
 
 def list_nodes(call=None):
@@ -873,6 +873,7 @@ def destroy(instance_id, call=None):
 
     instance_data = show_instance(instance_id, call='action')
     name = instance_data['instance_name']
+
 
     salt.utils.cloud.fire_event(
         'event',
