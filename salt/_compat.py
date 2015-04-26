@@ -127,6 +127,9 @@ def string_io(data=None):  # cStringIO can't handle unicode
 
 if sys.version_info < (2, 7):
 
+    # Backport of Python's 2.7 subprocess methods not found in 2.6
+    # This code comes directly from the 2.7 subprocess module
+
     def check_output(*popenargs, **kwargs):
         r"""Run command with arguments and return its output as a byte string.
 
