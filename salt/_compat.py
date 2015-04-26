@@ -127,7 +127,7 @@ def string_io(data=None):  # cStringIO can't handle unicode
 
 if sys.version_info < (2, 7):
 
-    def check_output(*popenargs, **kwargs):  # pylint: disable=function-redefined
+    def check_output(*popenargs, **kwargs):
         r"""Run command with arguments and return its output as a byte string.
 
         If the exit code was non-zero it raises a CalledProcessError.  The
