@@ -2299,6 +2299,33 @@ def list_dvs(kwargs=None, call=None):
     return {'Distributed Virtual Switches': distributed_vswitches}
 
 
+def list_vapps(kwargs=None, call=None):
+    '''
+    List all the vApps for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_vapps my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vapps function must be called with '
+            '-f or --function.'
+        )
+
+    vapps = []
+    vapp_properties = ["name"]
+
+    vapp_list = _get_mors_with_properties(vim.VirtualApp, vapp_properties)
+
+    for vapp in vapp_list:
+        vapps.append(vapp["name"])
+
+    return {'vApps': vapps}
+
+
 def enter_maintenance_mode(kwargs=None, call=None):
     '''
     To put the specified host system in maintenance mode in this VMware environment
