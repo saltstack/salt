@@ -14,7 +14,7 @@ import logging
 # Import Salt Libs
 import salt.utils
 import salt.utils.event
-import salt.utils.sprocess as subprocess
+from salt._compat import subprocess
 from salt.utils.network import host_to_ip as _host_to_ip
 
 log = logging.getLogger(__name__)

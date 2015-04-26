@@ -23,7 +23,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-import salt.utils.sprocess as subprocess
+from salt._compat import subprocess
 
 
 log = logging.getLogger(__name__)
