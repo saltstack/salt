@@ -1423,7 +1423,18 @@ class Login(LowDataAdapter):
         # Grab eauth config for the current backend for the current user
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
-            perms = eauth.get(token['name'], eauth.get('*'))
+
+            if 'groups' in token:
+                user_groups = set(token['groups'])
+                eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
+
+                perms = []
+                for group in user_groups & eauth_groups:
+                    perms.extend(eauth['{0}%'.format(group)])
+
+                perms = perms or None
+            else:
+                perms = eauth.get(token['name'], eauth.get('*'))
 
             if perms is None:
                 raise ValueError("Eauth permission list not found.")
