@@ -74,7 +74,7 @@ except Exception:
 try:
     from requests.packages.urllib3 import disable_warnings
     disable_warnings()
-except:
+except Exception:
     pass
 
 # Import third party libs
