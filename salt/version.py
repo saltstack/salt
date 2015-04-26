@@ -3,6 +3,8 @@
 Set up the version of Salt
 '''
 
+# pylint: disable=incompatible-py3-code
+
 # Import python libs
 from __future__ import absolute_import, print_function
 import re
