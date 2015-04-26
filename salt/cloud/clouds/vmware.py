@@ -2270,3 +2270,93 @@ def list_hbas(kwargs=None, call=None):
             return {'HBAs by Host': {host_name: ret[host_name]}}
 
     return {'HBAs by Host': ret}
+
+
+def enter_maintenance_mode(kwargs=None, call=None):
+    '''
+    To put the specified host system in maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f enter_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The enter_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already in maintenance mode'}
+
+    try:
+        task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
+        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} in maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to enter maintenance mode'}
+
+    return {host_name: 'entered maintenance mode'}
+
+
+def exit_maintenance_mode(kwargs=None, call=None):
+    '''
+    To take the specified host system out of maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f exit_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The exit_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already not in maintenance mode'}
+
+    try:
+        task = host_ref.ExitMaintenanceMode(timeout=0)
+        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} out of maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to exit maintenance mode'}
+
+    return {host_name: 'exited maintenance mode'}
