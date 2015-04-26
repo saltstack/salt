@@ -2269,4 +2269,4 @@ def list_hbas(kwargs=None, call=None):
         if host['name'] == host_name:
             return {'HBAs by Host': {host_name: ret[host_name]}}
 
-    return {'HBAs by Host' : ret}
+    return {'HBAs by Host': ret}
