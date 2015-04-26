@@ -6,14 +6,16 @@ These data can be useful for compiling into stats later.
 :depends:   - pythoncom
             - wmi
 '''
-from __future__ import absolute_import
 
-import subprocess
+# Import Python Libs
+from __future__ import absolute_import
 import logging
+
+# Import Salt Libs
 import salt.utils
 import salt.utils.event
+import salt.utils.subprocess as subprocess
 from salt.utils.network import host_to_ip as _host_to_ip
-
 
 log = logging.getLogger(__name__)
 
