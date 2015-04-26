@@ -287,7 +287,7 @@ import salt.utils
 # Only used when called from a terminal
 log = None
 if __name__ == '__main__':
-    import argparse
+    import argparse  # pylint: disable=minimum-python-version
 
     parser = argparse.ArgumentParser()
     parser.add_argument('hostname', help='Hostname')
