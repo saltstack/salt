@@ -52,6 +52,7 @@ from re import match
 import pprint
 import logging
 import time
+import os.path
 
 # Import salt libs
 import salt.utils.cloud
@@ -2414,3 +2415,80 @@ def exit_maintenance_mode(kwargs=None, call=None):
         return {host_name: 'failed to exit maintenance mode'}
 
     return {host_name: 'exited maintenance mode'}
+
+
+def create_folder(kwargs=None, call=None):
+    '''
+    Create the specified folder path in this VMware environment
+
+    .. note::
+
+        To create a Host and Cluster Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/host/yourFolderName"``
+
+        To create a Network Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/network/yourFolderName"``
+
+        To create a Storage Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/datastore/yourFolderName"``
+
+        To create a VM and Template Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/vm/yourFolderName"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_folder my-vmware-config path="/Local/a/b/c"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/vm/MyVMFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/host/MyHostFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/network/MyNetworkFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/storage/MyStorageFolder"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_folder function must be called with '
+            '-f or --function.'
+        )
+
+    # Get the service instance object
+    si = _get_si()
+
+    folder_path = kwargs.get('path') if kwargs else None
+
+    if not folder_path:
+        raise SaltCloudSystemExit(
+            'You must specify a non empty folder path'
+        )
+
+    folder_refs = []
+    inventory_path = '/'
+    path_exists = True
+
+    # Split the path in a list and loop over it to check for its existence
+    for index, folder_name in enumerate(os.path.normpath(folder_path.strip('/')).split('/')):
+        inventory_path = os.path.join(inventory_path, folder_name)
+        folder_ref = si.content.searchIndex.FindByInventoryPath(inventoryPath=inventory_path)
+        if isinstance(folder_ref, vim.Folder):
+            # This is a folder that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        elif isinstance(folder_ref, vim.Datacenter):
+            # This is a datacenter that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        else:
+            path_exists = False
+            if not folder_refs:
+                # If this is the first folder, create it under the rootFolder
+                log.debug("Creating folder {0} under rootFolder in the inventory".format(folder_name))
+                folder_refs.append(si.content.rootFolder.CreateFolder(folder_name))
+            else:
+                # Create the folder under the parent folder
+                log.debug("Creating path {0}/ in the inventory".format(inventory_path))
+                folder_refs.append(folder_refs[index-1].CreateFolder(folder_name))
+
+    if path_exists:
+        return {inventory_path: 'specfied path already exists'}
+    else:
+        return {inventory_path: 'created the specified path'}
