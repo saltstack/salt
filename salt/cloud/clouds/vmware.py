@@ -2190,10 +2190,10 @@ def list_hbas(kwargs=None, call=None):
     system; or HBAs of specified type for each host system; or HBAs of
     specified type for a specified host system in this VMware environment
 
-   .. note::
+    .. note::
 
-       You can specify type as either ``parallel``, ``iscsi``, ``block``
-       or ``fibre``.
+        You can specify type as either ``parallel``, ``iscsi``, ``block``
+        or ``fibre``.
 
     To list all HBAs for each host system:
 
