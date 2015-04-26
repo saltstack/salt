@@ -2201,7 +2201,7 @@ def list_hbas(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f list_hba my-vmware-config
+        salt-cloud -f list_hbas my-vmware-config
 
     To list all HBAs for a specified host system:
 
@@ -2209,7 +2209,7 @@ def list_hbas(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f list_hba my-vmware-config host="hostSystemName"
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName"
 
     To list HBAs of specified type for each host system:
 
@@ -2217,7 +2217,7 @@ def list_hbas(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f list_hba my-vmware-config type="HBAType"
+        salt-cloud -f list_hbas my-vmware-config type="HBAType"
 
     To list HBAs of specified type for a specified host system:
 
@@ -2225,7 +2225,7 @@ def list_hbas(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f list_hba my-vmware-config host="hostSystemName" type="HBAtype"
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName" type="HBAtype"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -2270,6 +2270,33 @@ def list_hbas(kwargs=None, call=None):
             return {'HBAs by Host': {host_name: ret[host_name]}}
 
     return {'HBAs by Host': ret}
+
+
+def list_dvs(kwargs=None, call=None):
+    '''
+    List all the distributed virtual switches for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_dvs my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_dvs function must be called with '
+            '-f or --function.'
+        )
+
+    distributed_vswitches = []
+    dvs_properties = ["name"]
+
+    dvs_list = _get_mors_with_properties(vim.DistributedVirtualSwitch, dvs_properties)
+
+    for dvs in dvs_list:
+        distributed_vswitches.append(dvs["name"])
+
+    return {'Distributed Virtual Switches': distributed_vswitches}
 
 
 def enter_maintenance_mode(kwargs=None, call=None):
