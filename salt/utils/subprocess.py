@@ -8,13 +8,14 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import sys
-from subprocess import *
+from subprocess import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 
 if sys.version_info < (2, 7):
 
-    def check_output(*popenargs, **kwargs):
+    def check_output(*popenargs, **kwargs):  # pylint: disable=function-redefined
         r"""Run command with arguments and return its output as a byte string.
 
         If the exit code was non-zero it raises a CalledProcessError.  The
