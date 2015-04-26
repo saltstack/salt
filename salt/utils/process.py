@@ -11,12 +11,12 @@ import multiprocessing
 import signal
 
 import threading
-import Queue
 
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
 import salt.ext.six as six
+from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -158,12 +158,12 @@ class ThreadPool(object):
         self.num_threads = num_threads
 
         # create a task queue of queue_size
-        self._job_queue = Queue.Queue(queue_size)
+        self._job_queue = queue.Queue(queue_size)
 
         self._workers = []
 
         # create worker threads
-        for idx in xrange(num_threads):
+        for _ in range(num_threads):
             thread = threading.Thread(target=self._thread_target)
             thread.daemon = True
             thread.start()
@@ -180,7 +180,7 @@ class ThreadPool(object):
         try:
             self._job_queue.put_nowait((func, args, kwargs))
             return True
-        except Queue.Full:
+        except queue.Full:
             return False
 
     def _thread_target(self):
@@ -189,7 +189,7 @@ class ThreadPool(object):
             try:
                 func, args, kwargs = self._job_queue.get(timeout=1)
                 self._job_queue.task_done()  # Mark the task as done once we get it
-            except Queue.Empty:
+            except queue.Empty:
                 continue
             try:
                 log.debug('ThreadPool executing func: {0} with args:{1}'
@@ -304,7 +304,7 @@ class ProcessManager(object):
             else:
                 return
 
-        for pid, p_map in self._process_map.items():
+        for p_map in six.itervalues(self._process_map):
             p_map['Process'].terminate()
 
         end_time = time.time() + self.wait_for_kill  # when to die

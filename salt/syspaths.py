@@ -29,20 +29,12 @@ try:
     # installation time.
     import salt._syspaths as __generated_syspaths  # pylint: disable=no-name-in-module
 except ImportError:
-    class __generated_syspaths(object):
-        __slots__ = ('ROOT_DIR',
-                     'CONFIG_DIR',
-                     'CACHE_DIR',
-                     'SOCK_DIR',
-                     'SRV_ROOT_DIR',
-                     'BASE_FILE_ROOTS_DIR',
-                     'BASE_PILLAR_ROOTS_DIR',
-                     'BASE_MASTER_ROOTS_DIR',
-                     'LOGS_DIR',
-                     'PIDFILE_DIR')
-        ROOT_DIR = CONFIG_DIR = CACHE_DIR = SOCK_DIR = None
-        SRV_ROOT_DIR = BASE_FILE_ROOTS_DIR = BASE_PILLAR_ROOTS_DIR = None
-        BASE_MASTER_ROOTS_DIR = LOGS_DIR = PIDFILE_DIR = None
+    import imp
+    __generated_syspaths = imp.new_module('salt._syspaths')
+    for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
+                'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'BASE_PILLAR_ROOTS_DIR',
+                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR'):
+        setattr(__generated_syspaths, key, None)
 
 
 # Let's find out the path of this module
