@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.subprocess
-    ~~~~~~~~~~~~~~~~~~~~~
+    salt.utils.sprocess
+    ~~~~~~~~~~~~~~~~~~~
 
     Backport of Python's 2.7 subprocess methods not found in 2.6
     This code comes directly from the 2.7 subprocess module.
