@@ -15,14 +15,9 @@ ensure_in_syspath('../../')
 import salt.loader
 import salt.config
 import salt.utils
+from salt.utils.odict import OrderedDict
 from salt.state import HighState
 from integration import TMP
-
-try:
-    from collections import OrderedDict
-    OD_AVAILABLE = True
-except ImportError:
-    OD_AVAILABLE = False
 
 GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
 
@@ -83,7 +78,6 @@ class GPGTestCase(TestCase):
         decrypted_data_mock.__str__ = lambda x: DECRYPTED_STRING
         return decrypted_data_mock
 
-    @skipIf(not OD_AVAILABLE, 'OrderedDict not available. Skipping.')
     def make_nested_object(self, s):
         return OrderedDict([
             ('array_key', [1, False, s]),
