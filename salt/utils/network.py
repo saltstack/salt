@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import socket
-import subprocess
 import shlex
 import re
 import logging
@@ -24,6 +23,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.subprocess as subprocess
 
 
 log = logging.getLogger(__name__)
