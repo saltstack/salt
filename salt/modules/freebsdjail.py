@@ -11,7 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
-import salt.utils.sprocess as subprocess
+from salt._compat import subprocess
 
 # Define the module's virtual name
 __virtualname__ = 'jail'
