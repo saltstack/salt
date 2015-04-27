@@ -3,13 +3,13 @@
 Amazon S3 Fileserver Backend
 
 This backend exposes directories in S3 buckets as Salt environments. To enable
-this backend, add ``s3`` to the :conf_master:`fileserver_backend` option in the
+this backend, add ``s3fs`` to the :conf_master:`fileserver_backend` option in the
 Master config file.
 
 .. code-block:: yaml
 
     fileserver_backend:
-      - s3
+      - s3fs
 
 S3 credentials must also be set in the master config file:
 
