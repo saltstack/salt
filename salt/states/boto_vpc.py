@@ -506,6 +506,23 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
                         region=None, key=None, keyid=None, profile=None):
     '''
     Ensure route table with routes exists and is associated to a VPC.
+
+
+    Example::
+
+    .. code-block:: yaml
+
+        boto_vpc.route_table_present:
+            - name: my_route_table
+            - vpc_id: vpc-123456
+            - routes:
+              - destination_cidr_block: 0.0.0.0/0
+                instance_id: i-123456
+                interface_id: eni-123456
+            - subnets:
+              - name: subnet1
+              - name: subnet2
+
     .. versionadded:: Beryllium
 
     name
@@ -519,19 +536,11 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
         Either vpc_name or vpc_id must be provided.
 
     routes
-        A list of route lists; example:
-            [
-                ['172.31.0.0/16', 'local', 'None', 'None'],
-                ['0.0.0.0/0', 'igw-0add326b', 'None', 'None']
-            ]
+        A list of routes. 
 
     subnets
-        A list of subnets lists; example:
-            [
-                ['test1', 'None'],
-                ['None', 'subnet-7102a3e0']
-            ]
-
+        A list of subnets.
+    
     tags
         A list of tags.
 
