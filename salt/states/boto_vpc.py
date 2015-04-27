@@ -714,9 +714,9 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
         ret['comment'] = msg
         ret['result'] = False
         return ret
-    subnets = r['subnets']
+    all_subnets = r['subnets']
     # Build subnets list with default keys from Salt
-    if not subnets:
+    if not all_subnets:
         subnets = []
     else:
         subnet_keys = ['name', 'id', 'subnet_id']
@@ -758,16 +758,16 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
                     ret['result'] = False
                 ret['comment'] = 'Dissociated subnet {0} from route table {1}.'.format(r_asc, route_table_name)
         if to_create:
-            for r in to_create:
+            for sn in to_create:
                 r = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table['id'],
-                                                               subnet_id=r['subnet_id'], region=region, key=key,
+                                                               subnet_id=sn['subnet_id'], region=region, key=key,
                                                                keyid=keyid, profile=profile)
                 if 'error' in r:
-                    msg = 'Failed to associate subnet {0} with route table {1}: {2}.'.format(r['name'], route_table_name,
+                    msg = 'Failed to associate subnet {0} with route table {1}: {2}.'.format(sn['name'] or sn['subnet_id'], route_table_name,
                                                                                              r['error']['message'])
                     ret['comment'] = msg
                     ret['result'] = False
-                ret['comment'] = 'Associated subnet {0} with route table {1}.'.format(r['name'], route_table_name)
+                ret['comment'] = 'Associated subnet {0} with route table {1}.'.format(sn['name'] or sn['subnet_id'], route_table_name)
         ret['changes']['old'] = {'subnets_associations': route_table['associations']}
         new_sub = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
                                                             keyid=keyid, profile=profile)
