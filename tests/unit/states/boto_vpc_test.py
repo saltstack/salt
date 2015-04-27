@@ -148,80 +148,15 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue('Mocked error' in vpc_absent_result['comment'])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
-@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
-                                       ' or equal to version {0}'
-        .format(required_boto_version))
-class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
-
-    @mock_ec2
-    def test_present_when_subnet_does_not_exist(self):
-        '''
-        Tests present on a subnet that does not exist.
-        '''
-        vpc = self._create_vpc(name='test')
-        subnet_present_result = salt_states['boto_vpc.subnet_present']('test', cidr_block,
-                                                                       vpc_name='test')
-
-        self.assertTrue(subnet_present_result['result'])
-        self.assertTrue('id' in subnet_present_result['changes']['new']['subnet'])
-
-    @mock_ec2
-    def test_present_when_subnet_exists(self):
-        vpc = self._create_vpc(name='test')
-        subnet = self._create_subnet(vpc_id=vpc.id, name='test')
-        subnet_present_result = salt_states['boto_vpc.subnet_present']('test', cidr_block,
-                                                                       vpc_name='test')
-        self.assertTrue(subnet_present_result['result'])
-        self.assertEqual(subnet_present_result['changes'], {})
-
-    @mock_ec2
-    def test_present_with_failure(self):
-        vpc = self._create_vpc(name='test')
-        with patch('moto.ec2.models.SubnetBackend.create_subnet', side_effect=BotoServerError(400, 'Mocked error')):
-            subnet_present_result = salt_states['boto_vpc.subnet_present']('test', cidr_block,
-                                                                           vpc_name='test')
-            self.assertFalse(subnet_present_result['result'])
-            self.assertTrue('Mocked error' in subnet_present_result['comment'])
-
-    @mock_ec2
-    def test_absent_when_subnet_does_not_exist(self):
-        '''
-        Tests absent on a subnet that does not exist.
-        '''
-        subnet_absent_result = salt_states['boto_vpc.subnet_absent']('test')
-        self.assertTrue(subnet_absent_result['result'])
-        self.assertEqual(subnet_absent_result['changes'], {})
-
-    @mock_ec2
-    def test_absent_when_subnet_exists(self):
-        vpc = self._create_vpc(name='test')
-        subnet = self._create_subnet(vpc_id=vpc.id, name='test')
-        subnet_absent_result = salt_states['boto_vpc.subnet_absent']('test')
-        self.assertTrue(subnet_absent_result['result'])
-        self.assertEqual(subnet_absent_result['changes']['new']['subnet'], None)
-
-    @mock_ec2
-    def test_absent_with_failure(self):
-        vpc = self._create_vpc(name='test')
-        subnet = self._create_subnet(vpc_id=vpc.id, name='test')
-
-        with patch('moto.ec2.models.SubnetBackend.delete_subnet', side_effect=BotoServerError(400, 'Mocked error')):
-            subnet_absent_result = salt_states['boto_vpc.subnet_absent']('test')
-            self.assertFalse(subnet_absent_result['result'])
-            self.assertTrue('Mocked error' in subnet_absent_result['comment'])
-
-
 class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     resource_type = None
     backend_create = None
     backend_delete = None
+    extra_kwargs = {}
 
     def _create_resource(self, vpc_id=None, name=None):
         _create = getattr(self, '_create_' + self.resource_type)
-        _create(vpc_id=vpc_id, name=name)
+        _create(vpc_id=vpc_id, name=name, **self.extra_kwargs)
 
     @mock_ec2
     def test_present_when_resource_does_not_exist(self):
@@ -230,7 +165,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         '''
         vpc = self._create_vpc(name='test')
         resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
-            name='test', vpc_name='test')
+            name='test', vpc_name='test', **self.extra_kwargs)
 
         self.assertTrue(resource_present_result['result'])
 
@@ -242,7 +177,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name='test')
         resource = self._create_resource(vpc_id=vpc.id, name='test')
         resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
-                name='test', vpc_name='test')
+                name='test', vpc_name='test', **self.extra_kwargs)
         self.assertTrue(resource_present_result['result'])
         self.assertEqual(resource_present_result['changes'], {})
 
@@ -251,7 +186,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name='test')
         with patch('moto.ec2.models.{0}'.format(self.backend_create), side_effect=BotoServerError(400, 'Mocked error')):
             resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
-                    name='test', vpc_name='test')
+                    name='test', vpc_name='test', **self.extra_kwargs)
 
             self.assertFalse(resource_present_result['result'])
             self.assertTrue('Mocked error' in resource_present_result['comment'])
@@ -285,6 +220,19 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
             self.assertFalse(resource_absent_result['result'])
             self.assertTrue('Mocked error' in resource_absent_result['comment'])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMixin):
+    resource_type = 'subnet'
+    backend_create = 'SubnetBackend.create_subnet'
+    backend_delete = 'SubnetBackend.delete_subnet'
+    extra_kwargs = {'cidr_block': cidr_block}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
