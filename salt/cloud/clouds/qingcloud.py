@@ -81,17 +81,6 @@ def get_configured_provider():
     )
 
 
-'''
- #######  ##     ## ######## ########  ##    ##
-##     ## ##     ## ##       ##     ##  ##  ##
-##     ## ##     ## ##       ##     ##   ####
-##     ## ##     ## ######   ########     ##
-##  ## ## ##     ## ##       ##   ##      ##
-##    ##  ##     ## ##       ##    ##     ##
- ##### ##  #######  ######## ##     ##    ##
-'''
-
-
 def _compute_signature(parameters, access_key_secret, method, path):
     '''
     Generate an API request signature. Detailed document can be found at:
@@ -192,17 +181,6 @@ def query(params=None):
     return result
 
 
-'''
-##        #######   ######     ###    ######## ####  #######  ##    ##
-##       ##     ## ##    ##   ## ##      ##     ##  ##     ## ###   ##
-##       ##     ## ##        ##   ##     ##     ##  ##     ## ####  ##
-##       ##     ## ##       ##     ##    ##     ##  ##     ## ## ## ##
-##       ##     ## ##       #########    ##     ##  ##     ## ##  ####
-##       ##     ## ##    ## ##     ##    ##     ##  ##     ## ##   ###
-########  #######   ######  ##     ##    ##    ####  #######  ##    ##
-'''
-
-
 def avail_locations(call=None):
     '''
     Return a dict of all available locations on the provider with
@@ -266,17 +244,6 @@ def _get_specified_zone(kwargs=None, provider=None):
 
     zone = provider['zone']
     return zone
-
-
-'''
-#### ##     ##    ###     ######   ########
- ##  ###   ###   ## ##   ##    ##  ##
- ##  #### ####  ##   ##  ##        ##
- ##  ## ### ## ##     ## ##   #### ######
- ##  ##     ## ######### ##    ##  ##
- ##  ##     ## ##     ## ##    ##  ##
-#### ##     ## ##     ##  ######   ########
-'''
 
 
 def avail_images(kwargs=None, call=None):
@@ -375,17 +342,6 @@ def show_image(kwargs, call=None):
     return result
 
 
-'''
- ######  #### ######## ########
-##    ##  ##       ##  ##
-##        ##      ##   ##
- ######   ##     ##    ######
-      ##  ##    ##     ##
-##    ##  ##   ##      ##
- ######  #### ######## ########
-'''
-
-
 # QingCloud doesn't provide an API of geting instance sizes
 QINGCLOUD_SIZES = {
     'pek2': {
@@ -459,17 +415,6 @@ def _get_size(vm_):
     raise SaltCloudNotFound(
         'The specified size, {0!r}, could not be found.'.format(vm_size)
     )
-
-
-'''
-#### ##    ##  ######  ########    ###    ##    ##  ######  ########
- ##  ###   ## ##    ##    ##      ## ##   ###   ## ##    ## ##
- ##  ####  ## ##          ##     ##   ##  ####  ## ##       ##
- ##  ## ## ##  ######     ##    ##     ## ## ## ## ##       ######
- ##  ##  ####       ##    ##    ######### ##  #### ##       ##
- ##  ##   ### ##    ##    ##    ##     ## ##   ### ##    ## ##
-#### ##    ##  ######     ##    ##     ## ##    ##  ######  ########
-'''
 
 
 def _show_normalized_node(full_node):
@@ -873,7 +818,6 @@ def destroy(instance_id, call=None):
 
     instance_data = show_instance(instance_id, call='action')
     name = instance_data['instance_name']
-
 
     salt.utils.cloud.fire_event(
         'event',
