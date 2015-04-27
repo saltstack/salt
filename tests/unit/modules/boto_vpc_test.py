@@ -1047,7 +1047,6 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         r = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
         self.assertFalse(r['exists'])
 
-
     @mock_ec2
     def test_that_when_checking_if_dhcp_options_exists_but_providing_no_filters_the_dhcp_options_exists_method_raises_a_salt_invocation_error(self):
         '''
