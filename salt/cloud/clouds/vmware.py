@@ -52,6 +52,7 @@ from re import match
 import pprint
 import logging
 import time
+import os.path
 
 # Import salt libs
 import salt.utils.cloud
@@ -794,6 +795,17 @@ def _upg_tools_helper(vm, reboot=False):
         return status
 
     return 'VMware tools could not be upgraded'
+
+
+def _get_hba_type(hba_type):
+    if hba_type == "parallel":
+        return vim.host.ParallelScsiHba
+    elif hba_type == "block":
+        return vim.host.BlockHba
+    elif hba_type == "iscsi":
+        return vim.host.InternetScsiHba
+    elif hba_type == "fibre":
+        return vim.host.FibreChannelHba
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -2199,3 +2211,312 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
             return {'Hosts by Datacenter': {datacenter_name: ret[datacenter_name]}}
 
     return {'Hosts by Datacenter': ret}
+
+
+def list_hbas(kwargs=None, call=None):
+    '''
+    List all HBAs for each host system; or all HBAs for a specified host
+    system; or HBAs of specified type for each host system; or HBAs of
+    specified type for a specified host system in this VMware environment
+
+    .. note::
+
+        You can specify type as either ``parallel``, ``iscsi``, ``block``
+        or ``fibre``.
+
+    To list all HBAs for each host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config
+
+    To list all HBAs for a specified host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName"
+
+    To list HBAs of specified type for each host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config type="HBAType"
+
+    To list HBAs of specified type for a specified host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName" type="HBAtype"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hbas function must be called with -f or --function.'
+        )
+
+    ret = {}
+    hba_type = kwargs.get('type').lower() if kwargs else None
+    host_name = kwargs.get('host') if kwargs else None
+    host_properties = [
+        "name",
+        "config.storageDevice.hostBusAdapter"
+    ]
+
+    if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
+        raise SaltCloudSystemExit(
+            'Specified hba type {0} currently not supported'.format(hba_type)
+        )
+
+    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+
+    for host in host_list:
+        ret[host['name']] = {}
+        for hba in host['config.storageDevice.hostBusAdapter']:
+            hba_spec = {
+                'driver': hba.driver,
+                'status': hba.status,
+                'type': type(hba).__name__.rsplit(".", 1)[1]
+            }
+            if hba_type:
+                if isinstance(hba, _get_hba_type(hba_type)):
+                    if hba.model in ret[host['name']]:
+                        ret[host['name']][hba.model][hba.device] = hba_spec
+                    else:
+                        ret[host['name']][hba.model] = {hba.device: hba_spec}
+            else:
+                if hba.model in ret[host['name']]:
+                    ret[host['name']][hba.model][hba.device] = hba_spec
+                else:
+                    ret[host['name']][hba.model] = {hba.device: hba_spec}
+        if host['name'] == host_name:
+            return {'HBAs by Host': {host_name: ret[host_name]}}
+
+    return {'HBAs by Host': ret}
+
+
+def list_dvs(kwargs=None, call=None):
+    '''
+    List all the distributed virtual switches for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_dvs my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_dvs function must be called with '
+            '-f or --function.'
+        )
+
+    distributed_vswitches = []
+    dvs_properties = ["name"]
+
+    dvs_list = _get_mors_with_properties(vim.DistributedVirtualSwitch, dvs_properties)
+
+    for dvs in dvs_list:
+        distributed_vswitches.append(dvs["name"])
+
+    return {'Distributed Virtual Switches': distributed_vswitches}
+
+
+def list_vapps(kwargs=None, call=None):
+    '''
+    List all the vApps for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_vapps my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vapps function must be called with '
+            '-f or --function.'
+        )
+
+    vapps = []
+    vapp_properties = ["name"]
+
+    vapp_list = _get_mors_with_properties(vim.VirtualApp, vapp_properties)
+
+    for vapp in vapp_list:
+        vapps.append(vapp["name"])
+
+    return {'vApps': vapps}
+
+
+def enter_maintenance_mode(kwargs=None, call=None):
+    '''
+    To put the specified host system in maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f enter_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The enter_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already in maintenance mode'}
+
+    try:
+        task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
+        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} in maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to enter maintenance mode'}
+
+    return {host_name: 'entered maintenance mode'}
+
+
+def exit_maintenance_mode(kwargs=None, call=None):
+    '''
+    To take the specified host system out of maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f exit_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The exit_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already not in maintenance mode'}
+
+    try:
+        task = host_ref.ExitMaintenanceMode(timeout=0)
+        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} out of maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to exit maintenance mode'}
+
+    return {host_name: 'exited maintenance mode'}
+
+
+def create_folder(kwargs=None, call=None):
+    '''
+    Create the specified folder path in this VMware environment
+
+    .. note::
+
+        To create a Host and Cluster Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/host/yourFolderName"``
+
+        To create a Network Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/network/yourFolderName"``
+
+        To create a Storage Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/datastore/yourFolderName"``
+
+        To create a VM and Template Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/vm/yourFolderName"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_folder my-vmware-config path="/Local/a/b/c"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/vm/MyVMFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/host/MyHostFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/network/MyNetworkFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/storage/MyStorageFolder"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_folder function must be called with '
+            '-f or --function.'
+        )
+
+    # Get the service instance object
+    si = _get_si()
+
+    folder_path = kwargs.get('path') if kwargs else None
+
+    if not folder_path:
+        raise SaltCloudSystemExit(
+            'You must specify a non empty folder path'
+        )
+
+    folder_refs = []
+    inventory_path = '/'
+    path_exists = True
+
+    # Split the path in a list and loop over it to check for its existence
+    for index, folder_name in enumerate(os.path.normpath(folder_path.strip('/')).split('/')):
+        inventory_path = os.path.join(inventory_path, folder_name)
+        folder_ref = si.content.searchIndex.FindByInventoryPath(inventoryPath=inventory_path)
+        if isinstance(folder_ref, vim.Folder):
+            # This is a folder that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        elif isinstance(folder_ref, vim.Datacenter):
+            # This is a datacenter that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        else:
+            path_exists = False
+            if not folder_refs:
+                # If this is the first folder, create it under the rootFolder
+                log.debug("Creating folder {0} under rootFolder in the inventory".format(folder_name))
+                folder_refs.append(si.content.rootFolder.CreateFolder(folder_name))
+            else:
+                # Create the folder under the parent folder
+                log.debug("Creating path {0}/ in the inventory".format(inventory_path))
+                folder_refs.append(folder_refs[index-1].CreateFolder(folder_name))
+
+    if path_exists:
+        return {inventory_path: 'specfied path already exists'}
+    else:
+        return {inventory_path: 'created the specified path'}
