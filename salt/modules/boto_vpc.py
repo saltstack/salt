@@ -195,23 +195,23 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
         raise SaltInvocationError('One (but not both) of name or id must be '
                                   'provided.')
 
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
     try:
-        delete_resource = getattr(conn, 'delete_' + resource)
-    except AttributeError:
-        raise AttributeError('{0} function does not exist for boto VPC '
-                             'connection.'.format('delete_' + resource))
-
-    if name:
-        resource_id = _get_resource_id(resource, name,
-                                       region=region, key=key,
-                                       keyid=keyid, profile=profile)
-        if not resource_id:
-            return {'deleted': False, 'error': {'message':
-                    '{0} {1} does not exist.'.format(resource, name)}}
-
-    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    
+        try:
+            delete_resource = getattr(conn, 'delete_' + resource)
+        except AttributeError:
+            raise AttributeError('{0} function does not exist for boto VPC '
+                                 'connection.'.format('delete_' + resource))
+    
+        if name:
+            resource_id = _get_resource_id(resource, name,
+                                           region=region, key=key,
+                                           keyid=keyid, profile=profile)
+            if not resource_id:
+                return {'deleted': False, 'error': {'message':
+                        '{0} {1} does not exist.'.format(resource, name)}}
+    
         if delete_resource(resource_id, **kwargs):
             _cache_id(name, sub_resource=resource,
                       resource_id=resource_id,
