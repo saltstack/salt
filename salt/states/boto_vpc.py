@@ -716,7 +716,7 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
         return ret
     all_subnets = r['subnets']
     # Build subnets list with default keys from Salt
-    if not all_subnets:
+    if not subnets:
         subnets = []
     else:
         subnet_keys = ['name', 'id', 'subnet_id']
