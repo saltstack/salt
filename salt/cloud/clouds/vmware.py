@@ -2522,7 +2522,7 @@ def create_snapshot(name, kwargs=None, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
+            'The create_snapshot action must be called with -a or --action.'
         )
 
     snapname = kwargs.get('snapname')
@@ -2587,7 +2587,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
+            'The revert_to_snapshot action must be called with -a or --action.'
         )
 
     suppressPowerOn = kwargs.get('PowerOff') if kwargs else None
@@ -2632,7 +2632,7 @@ def consolidate_snapshots(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
+            'The consolidate_snapshots action must be called with -a or --action.'
         )
 
     if not name:
