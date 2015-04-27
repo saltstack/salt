@@ -141,15 +141,15 @@ def _create_resource(resource, name=None, tags=None, region=None, key=None,
     Create a VPC resource. Returns the resource id if created, or False
     if not created.
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        create_resource = getattr(conn, 'create_' + resource)
-    except AttributeError:
-        raise AttributeError('{0} function does not exist for boto VPC '
-                             'connection.'.format('create_' + resource))
+        try:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            create_resource = getattr(conn, 'create_' + resource)
+        except AttributeError:
+            raise AttributeError('{0} function does not exist for boto VPC '
+                                 'connection.'.format('create_' + resource))
 
-    try:
         if name and _get_resource_id(resource, name, region=region, key=key,
                                      keyid=keyid, profile=profile):
             return {'created': False, 'error': {'message':
@@ -522,9 +522,9 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
 
     '''
 
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
         if vpc:
             log.info('The newly created VPC id is {0}'.format(vpc.id))
@@ -566,12 +566,11 @@ def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
                     'use vpc_name instead.')
         vpc_name = name
 
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
     if not _exactly_one((vpc_name, vpc_id)):
         raise SaltInvocationError('One (but not both) of vpc_name or vpc_id must be '
                                   'provided.')
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if not vpc_id:
             vpc_id = _get_id(vpc_name=vpc_name, tags=tags, region=region, key=key,
                              keyid=keyid, profile=profile)
@@ -613,12 +612,12 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
         salt myminion boto_vpc.describe vpc_name=myvpc
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not any((vpc_id, vpc_name)):
         raise SaltInvocationError('A valid vpc id or name needs to be specified.')
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'vpc': None}
@@ -657,7 +656,6 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
         salt myminion boto_vpc.describe_vpcs
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     keys = ('id',
             'cidr_block',
@@ -668,6 +666,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
             'instance_tenancy')
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         filter_parameters = {'filters': {}}
 
         if vpc_id:
@@ -813,14 +812,13 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
                     'use subnet_name instead.')
         subnet_name = name
 
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
     if not any((subnet_id, subnet_name, cidr, tags, zones)):
         raise SaltInvocationError('At least one of the following must be '
                                   'specified: subnet id, cidr, subnet_name, '
                                   'tags, or zones.')
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         filter_parameters = {'filters': {}}
 
         if subnet_id:
@@ -872,8 +870,9 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
         salt myminion boto_vpc.get_subnet_association ['subnet-61b47516','subnet-2cb9785b']
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
         # subnet_ids=subnets can accept either a string or a list
         subnets = conn.get_all_subnets(subnet_ids=subnets)
     except BotoServerError as e:
@@ -956,9 +955,9 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
         salt myminion boto_vpc.describe_subnets cidr=10.0.0.0/21
 
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         filter_parameters = {'filters': {}}
 
         if vpc_id:
@@ -1362,8 +1361,8 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
                          profile=profile)
 
     if r.get('created') and subnet_id:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        try:
+        try:    
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             association_id = conn.associate_network_acl(r['id'], subnet_id)
         except BotoServerError as e:
             return {'created': False, 'error': salt.utils.boto.get_error(e)}
