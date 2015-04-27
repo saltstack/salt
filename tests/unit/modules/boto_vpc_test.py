@@ -728,7 +728,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         with self.assertRaisesRegexp(SaltInvocationError,
                                      'At least one of the following must be specified: subnet id, cidr, subnet_name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
-    
+
     @mock_ec2
     def test_that_describe_subnet_by_id_for_existing_subnet_returns_correct_data(self):
         '''
@@ -817,7 +817,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         igw_creation_result = boto_vpc.create_internet_gateway()
         self.assertTrue(igw_creation_result.get('created'))
-        
+
     @mock_ec2
     def test_that_when_creating_an_internet_gateway_with_non_existent_vpc_the_create_internet_gateway_method_returns_an_error(self):
         '''
@@ -875,7 +875,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking if a subnet exists when it does exist
         '''
-        
+
         gw_creation_result = boto_vpc.create_customer_gateway('ipsec.1', '10.1.1.1', None)
         gw_exists_result = boto_vpc.customer_gateway_exists(customer_gateway_id=gw_creation_result['id'])
         self.assertTrue(gw_exists_result['exists'])

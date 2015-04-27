@@ -127,11 +127,10 @@ def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     if vpc_name:
         vpc_id = _get_id(vpc_name=vpc_name, region=region, key=key, keyid=keyid,
                          profile=profile)
-    else:
-        if not _find_vpcs(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                          profile=profile):
-                log.info('VPC {0} does not exist.'.format(vpc_id))
-                return None
+    elif not _find_vpcs(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                        profile=profile):
+        log.info('VPC {0} does not exist.'.format(vpc_id))
+        return None
     return vpc_id
 
 
@@ -197,13 +196,12 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    
+
         try:
             delete_resource = getattr(conn, 'delete_' + resource)
         except AttributeError:
             raise AttributeError('{0} function does not exist for boto VPC '
                                  'connection.'.format('delete_' + resource))
-    
         if name:
             resource_id = _get_resource_id(resource, name,
                                            region=region, key=key,
@@ -211,7 +209,7 @@ def _delete_resource(resource, name=None, resource_id=None, region=None,
             if not resource_id:
                 return {'deleted': False, 'error': {'message':
                         '{0} {1} does not exist.'.format(resource, name)}}
-    
+
         if delete_resource(resource_id, **kwargs):
             _cache_id(name, sub_resource=resource,
                       resource_id=resource_id,
@@ -521,7 +519,6 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
         salt myminion boto_vpc.create '10.0.0.0/24'
 
     '''
-
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1080,7 +1077,7 @@ def delete_internet_gateway(internet_gateway_id=None,
                                 region=region, key=key, keyid=keyid,
                                 profile=profile)
     except BotoServerError as e:
-            return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
 def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn,
@@ -1361,7 +1358,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
                          profile=profile)
 
     if r.get('created') and subnet_id:
-        try:    
+        try:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             association_id = conn.associate_network_acl(r['id'], subnet_id)
         except BotoServerError as e:

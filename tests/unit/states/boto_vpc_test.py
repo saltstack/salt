@@ -15,10 +15,11 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
+
+# pylint: disable=import-error
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
-# pylint: disable=import-error
 try:
     import boto
     from boto.exception import BotoServerError
@@ -81,9 +82,11 @@ def _has_required_boto():
     else:
         return True
 
+
 class BotoVpcStateTestCaseBase(TestCase):
     def setUp(self):
         ctx.clear()
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -312,7 +315,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         vpc = self._create_vpc(name='test')
         subnet1 = self._create_subnet(vpc_id=vpc.id, name='test1')
         subnet2 = self._create_subnet(vpc_id=vpc.id, name='test2')
- 
+
         route_table_present_result = salt_states['boto_vpc.route_table_present'](
                 name='test', vpc_name='test', subnets=[{'name': 'test1'}, {'subnet_id': subnet2.id}])
 
