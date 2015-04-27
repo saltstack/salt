@@ -16,20 +16,24 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has five output modes, `full`, `terse`, `mixed`,
-    `changes` and `filter`. The default is set to full, which will display many
-    lines of detailed information for each executed chunk. If the `state_output`
-    option is set to `terse` then the output is greatly simplified and shown in
-    only one line.  If `mixed` is used, then terse output will be used unless a
-    state failed, in which case full output will be used.  If `changes` is used,
-    then terse output will be used if there was no error and no changes,
-    otherwise full output will be used. If `filter` is used, then either or both
-    of two different filters can be used: `exclude` or `terse`. These can be set
-    as such from the command line, or in the Salt config as
-    `state_output_exclude` or `state_output_terse`, respectively. The values to
-    exclude must be a comma-separated list of `True`, `False` and/or `None`.
-    Because of parsing nuances, if only one of these is used, it must still
-    contain a comma. For instance: `exclude=True,`.
+    The highstate outputter has five output modes, ``full``, ``terse``,
+    ``mixed``, ``changes`` and ``filter``.
+
+    * The default is set to ``full``, which will display many lines of detailed
+      information for each executed chunk.
+    * If ``terse`` is used, then the output is greatly simplified and shown in
+      only one line.
+    * If ``mixed`` is used, then terse output will be used unless a state
+      failed, in which case full output will be used.
+    * If ``changes`` is used, then terse output will be used if there was no
+      error and no changes, otherwise full output will be used.
+    * If ``filter`` is used, then either or both of two different filters can be
+      used: ``exclude`` or ``terse``.
+      These can be set as such from the command line, or in the Salt config as
+      `state_output_exclude` or `state_output_terse`, respectively. The values to
+      exclude must be a comma-separated list of `True`, `False` and/or `None`.
+      Because of parsing nuances, if only one of these is used, it must still
+      contain a comma. For instance: `exclude=True,`.
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a

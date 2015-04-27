@@ -12,6 +12,11 @@ import pprint
 import os.path
 import json
 import logging
+# pylint: disable=no-name-in-module
+import salt.ext.six.moves.http_cookiejar
+import salt.ext.six.moves.urllib as urllib
+# pylint: enable=no-name-in-module
+from salt.ext.six import string_types
 from salt._compat import ElementTree as ET
 
 import ssl
@@ -42,6 +47,7 @@ import salt.config
 import salt.version
 from salt.template import compile_template
 from salt import syspaths
+import salt.ext.six.moves.http_client  # pylint: disable=no-name-in-module
 
 # Import 3rd party libs
 import salt.ext.six as six
@@ -267,10 +273,10 @@ def query(url,
         result_text = result.text
         result_cookies = result.cookies
     else:
-        request = urllib2.Request(url, data)
+        request = urllib.Request(url, data)
         handlers = [
-            urllib2.HTTPHandler,
-            urllib2.HTTPCookieProcessor(sess_cookies)
+            urllib.HTTPHandler,
+            urllib.HTTPCookieProcessor(sess_cookies)
         ]
 
         if url.startswith('https') or port == 443:
@@ -316,7 +322,7 @@ def query(url,
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
-                        handlers.append(urllib2.HTTPSHandler(context=context))  # pylint: disable=E1123
+                        handlers.append(urllib.HTTPSHandler(context=context))  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
                         cert_kwargs = {
@@ -328,7 +334,7 @@ def query(url,
                             cert_kwargs['key_file'] = cert_chain[1]
                         handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(**cert_kwargs)
 
-        opener = urllib2.build_opener(*handlers)
+        opener = urllib.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method

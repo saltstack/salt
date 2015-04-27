@@ -12,7 +12,6 @@ import sys
 import copy
 import json
 import time
-import errno
 import signal
 import shutil
 import pprint
@@ -286,6 +285,9 @@ class TestDaemon(object):
         #self.smaster_process = self.start_daemon(salt.daemons.flo.IofloMaster,
         #                                            self.syndic_master_opts,
         #                                            'start')
+        # smaster = salt.daemons.flo.IofloMaster(self.syndic_master_opts)
+        # self.smaster_process = multiprocessing.Process(target=smaster.start)
+        # self.smaster_process.start()
 
         # no raet syndic daemon yet
 
@@ -512,7 +514,7 @@ class TestDaemon(object):
             minion_opts['raet_port'] = 64510
             sub_minion_opts['transport'] = 'raet'
             sub_minion_opts['raet_port'] = 64520
-            #syndic_master_opts['transport'] = 'raet'
+            # syndic_master_opts['transport'] = 'raet'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = {
@@ -703,7 +705,7 @@ class TestDaemon(object):
         sync_needed = self.parser.options.clean
         if self.parser.options.clean is False:
             def sumfile(fpath):
-                # Since we will be do'in this for small files, it should be ok
+                # Since we will be doing this for small files, it should be ok
                 fobj = fopen(fpath)
                 m = md5()
                 while True:
