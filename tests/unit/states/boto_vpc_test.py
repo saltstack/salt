@@ -306,3 +306,53 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
     resource_type = 'route_table'
     backend_create = 'RouteTableBackend.create_route_table'
     backend_delete = 'RouteTableBackend.delete_route_table'
+
+    @mock_ec2
+    def test_present_with_subnets(self):
+        vpc = self._create_vpc(name='test')
+        subnet1 = self._create_subnet(vpc_id=vpc.id, name='test1')
+        subnet2 = self._create_subnet(vpc_id=vpc.id, name='test2')
+ 
+        route_table_present_result = salt_states['boto_vpc.route_table_present'](
+                name='test', vpc_name='test', subnets=[{'name': 'test1'}, {'subnet_id': subnet2.id}])
+
+        associations = route_table_present_result['changes']['new']['subnets_associations']
+
+        assoc_subnets = [x['subnet_id'] for x in associations]
+        self.assertEqual(set(assoc_subnets), set([subnet1.id, subnet2.id]))
+
+        route_table_present_result = salt_states['boto_vpc.route_table_present'](
+                name='test', vpc_name='test', subnets=[{'subnet_id': subnet2.id}])
+
+        changes = route_table_present_result['changes']
+
+        old_subnets = [x['subnet_id'] for x in changes['old']['subnets_associations']]
+        self.assertEqual(set(assoc_subnets), set(old_subnets))
+
+        new_subnets = changes['new']['subnets_associations']
+        self.assertEqual(new_subnets[0]['subnet_id'], subnet2.id)
+
+    @mock_ec2
+    def test_present_with_routes(self):
+        vpc = self._create_vpc(name='test')
+        igw = self._create_internet_gateway(name='test', vpc_id=vpc.id)
+
+        route_table_present_result = salt_states['boto_vpc.route_table_present'](
+                name='test', vpc_name='test', routes=[{'destination_cidr_block': '0.0.0.0/0',
+                                                       'gateway_id': igw.id},
+                                                      {'destination_cidr_block': '10.0.0.0/24',
+                                                       'gateway_id': 'local'}])
+        routes = [x['gateway_id'] for x in route_table_present_result['changes']['new']['routes']]
+
+        self.assertEqual(set(routes), set(['local', igw.id]))
+
+        route_table_present_result = salt_states['boto_vpc.route_table_present'](
+                name='test', vpc_name='test', routes=[{'destination_cidr_block': '10.0.0.0/24',
+                                                       'gateway_id': 'local'}])
+
+        changes = route_table_present_result['changes']
+
+        old_routes = [x['gateway_id'] for x in changes['old']['routes']]
+        self.assertEqual(set(routes), set(old_routes))
+
+        self.assertEqual(changes['new']['routes'][0]['gateway_id'], 'local')
