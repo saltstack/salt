@@ -152,7 +152,7 @@ if sys.version_info < (2, 7):
         """
         if 'stdout' in kwargs:
             raise ValueError('stdout argument not allowed, it will be overridden.')
-        process = subrocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
         output, unused_err = process.communicate()
         retcode = process.poll()
         if retcode:
