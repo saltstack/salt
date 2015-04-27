@@ -28,6 +28,20 @@ log = logging.getLogger(__name__)
 
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
+_valid_driver = {
+    'docker-ng': ('lxc-attach', 'nsenter', 'docker-exec'),
+    'lxc': ('lxc-attach',),
+    'nspawn': ('nsenter',),
+}
+
+
+def _get_ctype_and_exec_driver(**kwargs):
+    container_type = kwargs.get('container_type')
+    exec_driver = kwargs.get('exec_driver')
+    # guess the exec driver if we have at least a valid container type
+    if not exec_driver:
+        exec_driver = _valid_driver.get(container_type, [None])[0]
+    return container_type, exec_driver
 
 
 def _validate(wrapped):
@@ -36,22 +50,16 @@ def _validate(wrapped):
     '''
     @functools.wraps(wrapped)
     def wrapper(*args, **kwargs):
-        container_type = kwargs.get('container_type')
-        exec_driver = kwargs.get('exec_driver')
-        valid_driver = {
-            'docker-ng': ('lxc-attach', 'nsenter', 'docker-exec'),
-            'lxc': ('lxc-attach',),
-            'nspawn': ('nsenter',),
-        }
-        if container_type not in valid_driver:
+        container_type, exec_driver = _get_ctype_and_exec_driver(**kwargs)
+        if container_type not in _valid_driver:
             raise SaltInvocationError(
                 'Invalid container type \'{0}\'. Valid types are: {1}'
-                .format(container_type, ', '.join(sorted(valid_driver)))
+                .format(container_type, ', '.join(sorted(_valid_driver)))
             )
-        if exec_driver not in valid_driver[container_type]:
+        if exec_driver not in _valid_driver[container_type]:
             raise SaltInvocationError(
                 'Invalid command execution driver. Valid drivers are: {0}'
-                .format(', '.join(valid_driver[container_type]))
+                .format(', '.join(_valid_driver[container_type]))
             )
         if exec_driver == 'lxc-attach' and not salt.utils.which('lxc-attach'):
             raise SaltInvocationError(
@@ -135,6 +143,8 @@ def run(name,
         salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_driver=nsenter output=stdout
     '''
     valid_output = ('stdout', 'stderr', 'retcode', 'all')
+    container_type, exec_driver = _get_ctype_and_exec_driver(
+        container_type=container_type, exec_driver=exec_driver)
     if output is None:
         cmd_func = 'cmd.run'
     elif output not in valid_output:
@@ -274,6 +284,8 @@ def copy_to(name,
 
         salt myminion container_resource.copy_to mycontainer /local/file/path /container/file/path container_type=docker exec_driver=nsenter
     '''
+    container_type, exec_driver = _get_ctype_and_exec_driver(
+        container_type=container_type, exec_driver=exec_driver)
     # Get the appropriate functions
     state = __salt__['{0}.state'.format(container_type)]
     run_all = __salt__['{0}.run_all'.format(container_type)]

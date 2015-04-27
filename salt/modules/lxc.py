@@ -2861,27 +2861,12 @@ def _run(name,
     orig_state = state(name)
     try:
         if attachable(name):
-            if isinstance(keep_env, salt._compat.string_types):
-                keep_env = keep_env.split(',')
-            env = ' '.join(
-                ['--set-var {0}={1}'.format(x, pipes.quote(os.environ[x]))
-                 for x in keep_env
-                 if x in os.environ]
-            )
-            if 'PATH' not in keep_env:
-                # --clear-env results in a very restrictive PATH (/bin:/usr/bin),
-                # use the below path instead to prevent
-                env += ' --set-var {0}'.format(PATH)
-
-            full_cmd = (
-                'lxc-attach --clear-env {0} -n {1} -- {2}'
-                .format(env, pipes.quote(name), cmd)
-            )
-
             ret = __salt__['container_resource.run'](
                 name,
-                full_cmd,
+                cmd,
+                container_type='lxc',
                 output=output,
+                keep_env=keep_env,
                 no_start=no_start,
                 stdin=stdin,
                 python_shell=python_shell,
