@@ -629,8 +629,9 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
 
     route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
                                                             key=key, keyid=keyid, profile=profile)
-    if not route_table:
-        msg = 'Could not retrieve configuration for route table {0}.'.format(route_table_name)
+    if 'error' in route_table:
+        msg = 'Could not retrieve configuration for route table {0}: {1}`.'.format(route_table_name,
+                                                                                   route_table['error']['message'])
         ret['comment'] = msg
         ret['result'] = False
         return ret
@@ -698,12 +699,13 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
         ret['result'] = False
         return ret
     # Describe all subnets
-    all_subnets = __salt__['boto_vpc.describe_subnets'](region=region, key=key, keyid=keyid, profile=profile)
-    if not all_subnets:
-        msg = 'Could not retrieve subnets.'
+    r = __salt__['boto_vpc.describe_subnets'](region=region, key=key, keyid=keyid, profile=profile)
+    if 'error' in r:
+        msg = 'Could not retrieve subnets: {0}'.format(r['error']['message'])
         ret['comment'] = msg
         ret['result'] = False
         return ret
+    subnets = r['subnets']
     # Build subnets list with default keys from Salt
     if not subnets:
         subnets = []
@@ -739,22 +741,24 @@ def _subnets_present(route_table_name, subnets, tags=None, region=None, key=None
                 for rs in route_subnets:
                     if rs['subnet_id'] == s['subnet_id']:
                         r_asc = rs['id']
-                deleted = __salt__['boto_vpc.disassociate_route_table'](r_asc, region, key, keyid, profile)
-                if not deleted:
-                    msg = 'Failed to dissociate {0} from route table {1}.'.format(r_asc, route_table_name)
+                r = __salt__['boto_vpc.disassociate_route_table'](r_asc, region, key, keyid, profile)
+                if 'error' in r:
+                    msg = 'Failed to dissociate {0} from route table {1}: {2}.'.format(r_asc, route_table_name,
+                                                                                       r['error']['message'])
                     ret['comment'] = msg
                     ret['result'] = False
                 ret['comment'] = 'Dissociated subnet {0} from route table {1}.'.format(r_asc, route_table_name)
         if to_create:
             for r in to_create:
-                created = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table['id'],
-                                                                     subnet_id=r['subnet_id'], region=region, key=key,
-                                                                     keyid=keyid, profile=profile)
-                if not created:
-                    msg = 'Failed to associate subnet {0} with route table {1}.'.format(r['name'], route_table_name)
+                r = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table['id'],
+                                                               subnet_id=r['subnet_id'], region=region, key=key,
+                                                               keyid=keyid, profile=profile)
+                if 'error' in r:
+                    msg = 'Failed to associate subnet {0} with route table {1}: {2}.'.format(r['name'], route_table_name,
+                                                                                             r['error']['message'])
                     ret['comment'] = msg
                     ret['result'] = False
-                ret['comment'] = 'Assiciated subnet {0} with route table {1}.'.format(r['name'], route_table_name)
+                ret['comment'] = 'Associated subnet {0} with route table {1}.'.format(r['name'], route_table_name)
         ret['changes']['old'] = {'subnets_associations': route_table['associations']}
         new_sub = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
                                                             keyid=keyid, profile=profile)
@@ -790,9 +794,16 @@ def route_table_absent(name, region=None,
            'changes': {}
            }
 
-    rtbl_id = __salt__['boto_vpc.get_resource_id']('route_table', name=name,
-                                                   region=region, key=key,
-                                                   keyid=keyid, profile=profile)
+    r = __salt__['boto_vpc.get_resource_id']('route_table', name=name,
+                                             region=region, key=key,
+                                             keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = r['error']['message']
+        return ret
+
+    rtbl_id = r['id']
+
     if not rtbl_id:
         ret['comment'] = 'Route table {0} does not exist.'.format(name)
         return ret
@@ -801,13 +812,14 @@ def route_table_absent(name, region=None,
         ret['comment'] = 'Route table {0} is set to be removed.'.format(name)
         ret['result'] = None
         return ret
-    deleted = __salt__['boto_vpc.delete_route_table'](route_table_name=name,
-                                                      region=region,
-                                                      key=key, keyid=keyid,
-                                                      profile=profile)
-    if not deleted:
+
+    r = __salt__['boto_vpc.delete_route_table'](route_table_name=name,
+                                                region=region,
+                                                key=key, keyid=keyid,
+                                                profile=profile)
+    if 'error' in r:
         ret['result'] = False
-        ret['comment'] = 'Failed to delete route table {0}.'.format(name)
+        ret['comment'] = 'Failed to delete route table: {0}'.format(r['error']['message'])
         return ret
     ret['changes']['old'] = {'route_table': rtbl_id}
     ret['changes']['new'] = {'route_table': None}
