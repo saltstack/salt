@@ -212,7 +212,7 @@ class Query(object):
         Return all known local accounts to the system.
         '''
         users = dict()
-        for line in open("/etc/passwd").xreadlines():
+        for line in open("/etc/passwd").readlines():
             line = line.strip()
             if ":" not in line:
                 continue
@@ -235,7 +235,7 @@ class Query(object):
         Return all known local groups to the system.
         '''
         groups = dict()
-        for line in open("/etc/group").xreadlines():
+        for line in open("/etc/group").readlines():
             line = line.strip()
             if ":" not in line:
                 continue
