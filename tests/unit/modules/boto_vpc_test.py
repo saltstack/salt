@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# TODO: Update skipped tests to expect dicttionary results from the execution
+#       module functions.
+
 # Import Python libs
 from __future__ import absolute_import
 
