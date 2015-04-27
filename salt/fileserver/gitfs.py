@@ -503,12 +503,13 @@ def _get_tree_dulwich(repo, tgt_env):
     return None
 
 
-def _clean_stale(repo_obj, local_refs=None):
+def _clean_stale(repo, local_refs=None):
     '''
     Clean stale local refs so they don't appear as fileserver environments
     '''
     provider = _get_provider()
     cleaned = []
+    repo_obj = repo['repo']
     if provider == 'gitpython':
         for ref in repo_obj.remotes[0].stale_refs:
             if ref.name.startswith('refs/tags/'):
@@ -519,6 +520,15 @@ def _clean_stale(repo_obj, local_refs=None):
                 ref.delete(repo_obj, ref)
             cleaned.append(ref)
     elif provider == 'pygit2':
+        if isinstance(repo.get('credentials'),
+                      (pygit2.Keypair, pygit2.UserPass)):
+            log.debug(
+                'pygit2 does not support detecting stale refs for '
+                'authenticated remotes, saltenvs will not reflect '
+                'branches/tags removed from remote repository {0}'
+                .format(repo['url'])
+            )
+            return []
         if local_refs is None:
             local_refs = repo_obj.listall_references()
         remote_refs = []
@@ -1136,7 +1146,7 @@ def update():
                     fetch_results = origin.fetch()
                 except AssertionError:
                     fetch_results = origin.fetch()
-                cleaned = _clean_stale(repo['repo'])
+                cleaned = _clean_stale(repo)
                 if fetch_results or cleaned:
                     data['changed'] = True
             elif provider == 'pygit2':
@@ -1181,7 +1191,7 @@ def update():
                     )
                 # Clean up any stale refs
                 refs_post = repo['repo'].listall_references()
-                cleaned = _clean_stale(repo['repo'], refs_post)
+                cleaned = _clean_stale(repo, refs_post)
                 if received_objects or refs_pre != refs_post or cleaned:
                     data['changed'] = True
             elif provider == 'dulwich':
