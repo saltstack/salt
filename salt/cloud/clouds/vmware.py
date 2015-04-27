@@ -52,6 +52,7 @@ from re import match
 import pprint
 import logging
 import time
+import os.path
 
 # Import salt libs
 import salt.utils.cloud
@@ -67,6 +68,13 @@ try:
     from pyVim.connect import SmartConnect
     from pyVmomi import vim, vmodl
     HAS_LIBS = True
+except Exception:
+    pass
+
+# Disable InsecureRequestWarning generated on python > 2.6
+try:
+    from requests.packages.urllib3 import disable_warnings
+    disable_warnings()
 except Exception:
     pass
 
@@ -124,22 +132,43 @@ def _get_si():
     '''
     Authenticate with vCenter server and return service instance object.
     '''
+
+    url = config.get_cloud_config_value(
+        'url', get_configured_provider(), __opts__, search_global=False
+    )
+    username = config.get_cloud_config_value(
+        'user', get_configured_provider(), __opts__, search_global=False
+    )
+    password = config.get_cloud_config_value(
+        'password', get_configured_provider(), __opts__, search_global=False
+    )
+
     try:
         si = SmartConnect(
-                 host=config.get_cloud_config_value(
-                          'url', get_configured_provider(), __opts__, search_global=False
-                      ),
-                 user=config.get_cloud_config_value(
-                          'user', get_configured_provider(), __opts__, search_global=False
-                      ),
-                 pwd=config.get_cloud_config_value(
-                         'password', get_configured_provider(), __opts__, search_global=False
-                     ),
-             )
-    except:
-        raise SaltCloudSystemExit(
-            '\nCould not connect to the vCenter server using the specified username and password'
+            host=url,
+            user=username,
+            pwd=password
         )
+    except Exception as exc:
+        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
+            try:
+                import ssl
+                default_context = ssl._create_default_https_context
+                ssl._create_default_https_context = ssl._create_unverified_context
+                si = SmartConnect(
+                    host=url,
+                    user=username,
+                    pwd=password
+                )
+                ssl._create_default_https_context = default_context
+            except:
+                raise SaltCloudSystemExit(
+                    '\nCCould not connect to the vCenter server using the specified username and password'
+                )
+        else:
+            raise SaltCloudSystemExit(
+                '\nCould not connect to the vCenter server using the specified username and password'
+            )
 
     return si
 
@@ -721,6 +750,62 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
         if snapshot.childSnapshotList:
             snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
     return snapshots
+
+
+def _upg_tools_helper(vm, reboot=False):
+    # Exit if template
+    if vm.config.template:
+        status = 'VMware tools cannot be updated on a template'
+        return status
+
+    # Exit if VMware tools is already up to date
+    if vm.guest.toolsStatus == "toolsOk":
+        status = 'VMware tools is already up to date'
+        return status
+
+    # Exit if VM is not powered on
+    if vm.summary.runtime.powerState != "poweredOn":
+        status = 'VM must be powered on to upgrade tools'
+        return status
+
+    # Exit if VMware tools is either not running or not installed
+    if vm.guest.toolsStatus in ["toolsNotRunning", "toolsNotInstalled"]:
+        status = 'VMware tools is either not running or not installed'
+        return status
+
+    # If vmware tools is out of date, check major OS family
+    # Upgrade tools on Linux and Windows guests
+    if vm.guest.toolsStatus == "toolsOld":
+        log.info('Upgrading VMware tools on {0}'.format(vm.name))
+        try:
+            if vm.guest.guestFamily == "windowsGuest" and not reboot:
+                log.info('Reboot suppressed on {0}'.format(vm.name))
+                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
+            elif vm.guest.guestFamily in ["linuxGuest", "windowsGuest"]:
+                task = vm.UpgradeTools()
+            else:
+                status = 'Only Linux and Windows guests are currently supported'
+                return status
+            _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
+        except Exception as exc:
+            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm.name, exc))
+            status = 'VMware tools upgrade failed'
+            return status
+        status = 'VMware tools upgrade succeeded'
+        return status
+
+    return 'VMware tools could not be upgraded'
+
+
+def _get_hba_type(hba_type):
+    if hba_type == "parallel":
+        return vim.host.ParallelScsiHba
+    elif hba_type == "block":
+        return vim.host.BlockHba
+    elif hba_type == "iscsi":
+        return vim.host.InternetScsiHba
+    elif hba_type == "fibre":
+        return vim.host.FibreChannelHba
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -1891,62 +1976,6 @@ def create_cluster(kwargs=None, call=None):
     return False
 
 
-def upgrade_tools(name, reboot=False, call=None):
-    '''
-    To upgrade VMware Tools on a specified virtual machine.
-
-    .. note::
-
-        If the virtual machine is running Windows OS, use ``reboot=True``
-        to reboot the virtual machine after VMware tools upgrade. Default
-        is ``reboot=False``
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud -a upgrade_tools vmname
-        salt-cloud -a upgrade_tools vmname reboot=True
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
-        )
-
-    vm = _get_mor_by_property(vim.VirtualMachine, name)
-
-    tools_status = vm.guest.toolsStatus
-
-    # Exit if VMware tools is already up to date
-    if tools_status == "toolsOk":
-        return 'VMware tools is already up to date'
-
-    # Exit if VM is not powered on
-    if vm.summary.runtime.powerState != "poweredOn":
-        return 'Tools cannot be upgraded if the VM is not powered on'
-
-    # If vmware tools is out of date, check major OS family
-    # Upgrade tools on Linux and Windows guests
-    if tools_status == "toolsOld":
-        log.info('Upgrading VMware tools on {0}'.format(name))
-        os_family = vm.guest.guestFamily
-        try:
-            if os_family == "windowsGuest" and not reboot:
-                log.info('Reboot suppressed on {0}'.format(name))
-                task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
-            elif os_family in ["linuxGuest", "windowsGuest"]:
-                task = vm.UpgradeTools()
-            else:
-                return 'VMware tools upgrade is currently supported only on Linux or Windows guests.'
-            _wait_for_task(task, name, "tools upgrade", 5, "info")
-        except Exception as exc:
-            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(name, exc))
-            return 'failed to upgrade VMware tools'
-        return 'VMware tools upgraded'
-
-    return 'VMware tools is not installed'
-
-
 def rescan_hba(kwargs=None, call=None):
     '''
     To rescan a specified HBA or all the HBAs on the Host System
@@ -1987,3 +2016,507 @@ def rescan_hba(kwargs=None, call=None):
         return {host_name: 'failed to rescan HBA'}
 
     return {host_name: ret}
+
+
+def upgrade_tools_all(call=None):
+    '''
+    To upgrade VMware Tools on all virtual machines present in
+    the specified provider
+
+    .. note::
+
+        If the virtual machine is running Windows OS, this function
+        will attempt to suppress the automatic reboot caused by a
+        VMware Tools upgrade.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f upgrade_tools_all my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools_all function must be called with '
+            '-f or --function.'
+        )
+
+    ret = {}
+    vm_properties = ["name"]
+
+    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+
+    for vm in vm_list:
+        ret[vm['name']] = _upg_tools_helper(vm['object'])
+
+    return ret
+
+
+def upgrade_tools(name, reboot=False, call=None):
+    '''
+    To upgrade VMware Tools on a specified virtual machine.
+
+    .. note::
+
+        If the virtual machine is running Windows OS, use ``reboot=True``
+        to reboot the virtual machine after VMware tools upgrade. Default
+        is ``reboot=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a upgrade_tools vmname
+        salt-cloud -a upgrade_tools vmname reboot=True
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The upgrade_tools action must be called with -a or --action.'
+        )
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    return _upg_tools_helper(vm_ref, reboot)
+
+
+def list_hosts_by_cluster(kwargs=None, call=None):
+    '''
+    List hosts for each cluster; or hosts for a specified cluster in
+    this VMware environment
+
+    To list hosts for each cluster:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_cluster my-vmware-config
+
+    To list hosts for a specified cluster:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_cluster my-vmware-config cluster="clusterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hosts_by_cluster function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    cluster_name = kwargs.get('cluster') if kwargs else None
+    cluster_properties = ["name"]
+
+    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
+
+    for cluster in cluster_list:
+        ret[cluster['name']] = []
+        for host in cluster['object'].host:
+            if isinstance(host, vim.HostSystem):
+                ret[cluster['name']].append(host.name)
+        if cluster_name and cluster_name == cluster['name']:
+            return {'Hosts by Cluster': {cluster_name: ret[cluster_name]}}
+
+    return {'Hosts by Cluster': ret}
+
+
+def list_clusters_by_datacenter(kwargs=None, call=None):
+    '''
+    List clusters for each datacenter; or clusters for a specified datacenter in
+    this VMware environment
+
+    To list clusters for each datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_clusters_by_datacenter my-vmware-config
+
+    To list clusters for a specified datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_clusters_by_datacenter my-vmware-config datacenter="datacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_clusters_by_datacenter function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_properties = ["name"]
+
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+
+    for datacenter in datacenter_list:
+        ret[datacenter['name']] = []
+        for cluster in datacenter['object'].hostFolder.childEntity:
+            if isinstance(cluster, vim.ClusterComputeResource):
+                ret[datacenter['name']].append(cluster.name)
+        if datacenter_name and datacenter_name == datacenter['name']:
+            return {'Clusters by Datacenter': {datacenter_name: ret[datacenter_name]}}
+
+    return {'Clusters by Datacenter': ret}
+
+
+def list_hosts_by_datacenter(kwargs=None, call=None):
+    '''
+    List hosts for each datacenter; or hosts for a specified datacenter in
+    this VMware environment
+
+    To list hosts for each datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_datacenter my-vmware-config
+
+    To list hosts for a specified datacenter:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts_by_datacenter my-vmware-config datacenter="datacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hosts_by_datacenter function must be called with '
+            '-f or --function'
+        )
+
+    ret = {}
+    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_properties = ["name"]
+
+    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+
+    for datacenter in datacenter_list:
+        ret[datacenter['name']] = []
+        for cluster in datacenter['object'].hostFolder.childEntity:
+            if isinstance(cluster, vim.ClusterComputeResource):
+                for host in cluster.host:
+                    if isinstance(host, vim.HostSystem):
+                        ret[datacenter['name']].append(host.name)
+        if datacenter_name and datacenter_name == datacenter['name']:
+            return {'Hosts by Datacenter': {datacenter_name: ret[datacenter_name]}}
+
+    return {'Hosts by Datacenter': ret}
+
+
+def list_hbas(kwargs=None, call=None):
+    '''
+    List all HBAs for each host system; or all HBAs for a specified host
+    system; or HBAs of specified type for each host system; or HBAs of
+    specified type for a specified host system in this VMware environment
+
+    .. note::
+
+        You can specify type as either ``parallel``, ``iscsi``, ``block``
+        or ``fibre``.
+
+    To list all HBAs for each host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config
+
+    To list all HBAs for a specified host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName"
+
+    To list HBAs of specified type for each host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config type="HBAType"
+
+    To list HBAs of specified type for a specified host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName" type="HBAtype"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hbas function must be called with -f or --function.'
+        )
+
+    ret = {}
+    hba_type = kwargs.get('type').lower() if kwargs else None
+    host_name = kwargs.get('host') if kwargs else None
+    host_properties = [
+        "name",
+        "config.storageDevice.hostBusAdapter"
+    ]
+
+    if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
+        raise SaltCloudSystemExit(
+            'Specified hba type {0} currently not supported'.format(hba_type)
+        )
+
+    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+
+    for host in host_list:
+        ret[host['name']] = {}
+        for hba in host['config.storageDevice.hostBusAdapter']:
+            hba_spec = {
+                'driver': hba.driver,
+                'status': hba.status,
+                'type': type(hba).__name__.rsplit(".", 1)[1]
+            }
+            if hba_type:
+                if isinstance(hba, _get_hba_type(hba_type)):
+                    if hba.model in ret[host['name']]:
+                        ret[host['name']][hba.model][hba.device] = hba_spec
+                    else:
+                        ret[host['name']][hba.model] = {hba.device: hba_spec}
+            else:
+                if hba.model in ret[host['name']]:
+                    ret[host['name']][hba.model][hba.device] = hba_spec
+                else:
+                    ret[host['name']][hba.model] = {hba.device: hba_spec}
+        if host['name'] == host_name:
+            return {'HBAs by Host': {host_name: ret[host_name]}}
+
+    return {'HBAs by Host': ret}
+
+
+def list_dvs(kwargs=None, call=None):
+    '''
+    List all the distributed virtual switches for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_dvs my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_dvs function must be called with '
+            '-f or --function.'
+        )
+
+    distributed_vswitches = []
+    dvs_properties = ["name"]
+
+    dvs_list = _get_mors_with_properties(vim.DistributedVirtualSwitch, dvs_properties)
+
+    for dvs in dvs_list:
+        distributed_vswitches.append(dvs["name"])
+
+    return {'Distributed Virtual Switches': distributed_vswitches}
+
+
+def list_vapps(kwargs=None, call=None):
+    '''
+    List all the vApps for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_vapps my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vapps function must be called with '
+            '-f or --function.'
+        )
+
+    vapps = []
+    vapp_properties = ["name"]
+
+    vapp_list = _get_mors_with_properties(vim.VirtualApp, vapp_properties)
+
+    for vapp in vapp_list:
+        vapps.append(vapp["name"])
+
+    return {'vApps': vapps}
+
+
+def enter_maintenance_mode(kwargs=None, call=None):
+    '''
+    To put the specified host system in maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f enter_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The enter_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already in maintenance mode'}
+
+    try:
+        task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
+        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} in maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to enter maintenance mode'}
+
+    return {host_name: 'entered maintenance mode'}
+
+
+def exit_maintenance_mode(kwargs=None, call=None):
+    '''
+    To take the specified host system out of maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f exit_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The exit_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already not in maintenance mode'}
+
+    try:
+        task = host_ref.ExitMaintenanceMode(timeout=0)
+        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} out of maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to exit maintenance mode'}
+
+    return {host_name: 'exited maintenance mode'}
+
+
+def create_folder(kwargs=None, call=None):
+    '''
+    Create the specified folder path in this VMware environment
+
+    .. note::
+
+        To create a Host and Cluster Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/host/yourFolderName"``
+
+        To create a Network Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/network/yourFolderName"``
+
+        To create a Storage Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/datastore/yourFolderName"``
+
+        To create a VM and Template Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/vm/yourFolderName"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_folder my-vmware-config path="/Local/a/b/c"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/vm/MyVMFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/host/MyHostFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/network/MyNetworkFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/storage/MyStorageFolder"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_folder function must be called with '
+            '-f or --function.'
+        )
+
+    # Get the service instance object
+    si = _get_si()
+
+    folder_path = kwargs.get('path') if kwargs else None
+
+    if not folder_path:
+        raise SaltCloudSystemExit(
+            'You must specify a non empty folder path'
+        )
+
+    folder_refs = []
+    inventory_path = '/'
+    path_exists = True
+
+    # Split the path in a list and loop over it to check for its existence
+    for index, folder_name in enumerate(os.path.normpath(folder_path.strip('/')).split('/')):
+        inventory_path = os.path.join(inventory_path, folder_name)
+        folder_ref = si.content.searchIndex.FindByInventoryPath(inventoryPath=inventory_path)
+        if isinstance(folder_ref, vim.Folder):
+            # This is a folder that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        elif isinstance(folder_ref, vim.Datacenter):
+            # This is a datacenter that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        else:
+            path_exists = False
+            if not folder_refs:
+                # If this is the first folder, create it under the rootFolder
+                log.debug("Creating folder {0} under rootFolder in the inventory".format(folder_name))
+                folder_refs.append(si.content.rootFolder.CreateFolder(folder_name))
+            else:
+                # Create the folder under the parent folder
+                log.debug("Creating path {0}/ in the inventory".format(inventory_path))
+                folder_refs.append(folder_refs[index-1].CreateFolder(folder_name))
+
+    if path_exists:
+        return {inventory_path: 'specfied path already exists'}
+    else:
+        return {inventory_path: 'created the specified path'}
