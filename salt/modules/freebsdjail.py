@@ -121,7 +121,7 @@ def show_config(jail):
     '''
     ret = {}
     if subprocess.call(["jls", "-nq", "-j", jail]) == 0:
-        jls = subprocess.check_output(["jls", "-nq", "-j", jail])
+        jls = subprocess.check_output(["jls", "-nq", "-j", jail])  # pylint: disable=minimum-python-version
         jailopts = shlex.split(jls)
         for jailopt in jailopts:
             if '=' not in jailopt:
