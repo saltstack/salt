@@ -1159,7 +1159,7 @@ def init(name,
         try:
             clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
-            ret['comment'] = exc.message
+            ret['comment'] = exc.strerror
             if changes:
                 ret['changes'] = changes_dict
             return ret
