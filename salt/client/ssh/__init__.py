@@ -20,6 +20,7 @@ import yaml
 import uuid
 import tempfile
 import binascii
+import sys
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -526,6 +527,11 @@ class SSH(object):
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
+            final_exit = 0
+            host_ret = ret[host].get('retcode')
+            if host_ret != 0:
+                final_exit = 1
+
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
@@ -554,6 +560,7 @@ class SSH(object):
                     outputter,
                     self.opts)
 
+        sys.exit(final_exit)
 
 class Single(object):
     '''
