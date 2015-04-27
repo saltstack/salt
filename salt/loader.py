@@ -1006,7 +1006,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_init(self.opts)
             except TypeError as e:
                 log.error(e)
-                pass
         module_name = mod.__name__.rsplit('.', 1)[-1]
 
         # if virtual modules are enabled, we need to look for the
