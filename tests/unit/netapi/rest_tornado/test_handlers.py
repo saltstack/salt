@@ -63,10 +63,6 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.get_config('master', from_scratch=True)
 
     @property
-    def mod_opts(self):
-        return self.get_config('minion', from_scratch=True)
-
-    @property
     def auth(self):
         if not hasattr(self, '__auth'):
             self.__auth = salt.auth.LoadAuth(self.opts)
@@ -94,7 +90,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 
         application.auth = self.auth
         application.opts = self.opts
-        application.mod_opts = self.mod_opts
+        application.mod_opts = {}
 
         return application
 
