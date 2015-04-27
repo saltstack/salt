@@ -2214,7 +2214,7 @@ class BaseHighState(object):
         Gather the lists of available sls data from the master
         '''
         avail = {}
-        for saltenv in self.client.envs():
+        for saltenv in self._get_envs():
             avail[saltenv] = self.client.list_states(saltenv)
         return avail
 
@@ -2258,6 +2258,15 @@ class BaseHighState(object):
             opts['jinja_trim_blocks'] = mopts.get('jinja_trim_blocks', False)
         return opts
 
+    def _get_envs(self):
+        '''
+        Pull the file server environments out of the master options
+        '''
+        envs = set(['base'])
+        if 'file_roots' in self.opts:
+            envs.update(list(self.opts['file_roots']))
+        return envs
+
     def get_tops(self):
         '''
         Gather the top files
@@ -2279,7 +2288,7 @@ class BaseHighState(object):
                         )
                     ]
         else:
-            for saltenv in self.client.envs():
+            for saltenv in self._get_envs():
                 tops[saltenv].append(
                         compile_template(
                             self.client.cache_file(
