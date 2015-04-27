@@ -89,7 +89,7 @@ def _compute_signature(parameters, access_key_secret, method, path):
     '''
     parameters['signature_method'] = 'HmacSHA256'
 
-    string_to_sign = '%s\n%s\n' % (method.upper(), path)
+    string_to_sign = '{0}\n{1}\n'.format(method.upper(), path)
 
     keys = sorted(parameters.keys())
     pairs = []
@@ -138,9 +138,9 @@ def query(params=None):
                             if isinstance(sv, dict) or isinstance(sv, list):
                                 # sv = json_dump(sv)
                                 sv = json.dumps(sv, separators=(',', ':'))
-                            real_parameters['%s.%d.%s' % (key, i, sk)] = sv
+                            real_parameters['{0}.{1}.{2}'.format(key, i, sk)] = sv
                     else:
-                        real_parameters['%s.%d' % (key, i)] = value[i - 1]
+                        real_parameters['{0}.{1}'.format(key, i)] = value[i - 1]
             else:
                 real_parameters[key] = value
 
