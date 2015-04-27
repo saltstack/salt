@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+# Import Python Libs
+from __future__ import absolute_import
 import os
 import time
 import logging
 
-import salt
+# Import Salt Libs
 import salt.utils.network
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
@@ -212,7 +213,7 @@ class Query(object):
         Return all known local accounts to the system.
         '''
         users = dict()
-        for line in open("/etc/passwd").xreadlines():
+        for line in open("/etc/passwd"):
             line = line.strip()
             if ":" not in line:
                 continue
@@ -235,7 +236,7 @@ class Query(object):
         Return all known local groups to the system.
         '''
         groups = dict()
-        for line in open("/etc/group").xreadlines():
+        for line in open("/etc/group"):
             line = line.strip()
             if ":" not in line:
                 continue
