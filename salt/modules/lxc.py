@@ -11,7 +11,6 @@ lxc >= 1.0 (even beta alpha) is required
 # Import python libs
 from __future__ import absolute_import, print_function
 import datetime
-import pipes
 import copy
 import difflib
 import logging
@@ -48,16 +47,16 @@ __func_alias__ = {
     'ls_': 'ls'
 }
 
+__virtualname__ = 'lxc'
 DEFAULT_NIC = 'eth0'
 SEED_MARKER = '/lxc.initial_seed'
-PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
-       '/usr/local/bin:/usr/local/sbin'
+EXEC_DRIVER = 'lxc-attach'
 _marker = object()
 
 
 def __virtual__():
     if salt.utils.which('lxc-start'):
-        return True
+        return __virtualname__
     # To speed up the whole thing, we decided to not use the
     # subshell way and assume things are in place for lxc
     # Discussion made by @kiorky and @thatch45
@@ -545,7 +544,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     if isinstance(nic, six.string_types):
         nicp = get_network_profile(nic)
         if nic_opts:
-            for dev, args in nic_opts.items():
+            for dev, args in six.iteritems(nic_opts):
                 ethx = nicp.setdefault(dev, {})
                 try:
                     ethx = salt.utils.dictupdate.update(ethx, args)
@@ -662,7 +661,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             new[iface]['lxc.network.hwaddr'] = omac
 
     ret = []
-    for val in new.values():
+    for val in six.itervalues(new):
         for row in val:
             ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
     return ret
@@ -782,13 +781,13 @@ class _LXCConfig(object):
         if self.name:
             self.path = '/var/lib/lxc/{0}/config'.format(self.name)
             if os.path.isfile(self.path):
-                with salt.utils.fopen(self.path) as f:
-                    for l in f.readlines():
-                        match = self.pattern.findall((l.strip()))
+                with salt.utils.fopen(self.path) as fhr:
+                    for line in fhr.readlines():
+                        match = self.pattern.findall((line.strip()))
                         if match:
                             self.data.append((match[0][0], match[0][-1]))
                         match = self.non_interpretable_pattern.findall(
-                            (l.strip()))
+                            (line.strip()))
                         if match:
                             self.data.append(('', match[0][0]))
         else:
@@ -800,7 +799,7 @@ class _LXCConfig(object):
                 self.data.append((key, val))
 
         default_data = _get_lxc_default_data(**kwargs)
-        for key, val in default_data.items():
+        for key, val in six.iteritems(default_data):
             _replace(key, val)
         old_net = self._filter_data('lxc.network')
         net_datas = _network_conf(conf_tuples=old_net, **kwargs)
@@ -809,9 +808,9 @@ class _LXCConfig(object):
                 self.data.extend(list(row.items()))
 
         # be sure to reset harmful settings
-        for i in ['lxc.cgroup.memory.limit_in_bytes']:
-            if not default_data.get(i):
-                self._filter_data(i)
+        for idx in ['lxc.cgroup.memory.limit_in_bytes']:
+            if not default_data.get(idx):
+                self._filter_data(idx)
 
     def as_string(self):
         chunks = ('{0[0]}{1}{0[1]}'.format(item, (' = ' if item[0] else '')) for item in self.data)
@@ -829,23 +828,23 @@ class _LXCConfig(object):
     def tempfile(self):
         # this might look like the function name is shadowing the
         # module, but it's not since the method belongs to the class
-        f = tempfile.NamedTemporaryFile()
-        f.write(self.as_string())
-        f.flush()
-        return f
+        ntf = tempfile.NamedTemporaryFile()
+        ntf.write(self.as_string())
+        ntf.flush()
+        return ntf
 
     def _filter_data(self, pattern):
         '''
         Removes parameters which match the pattern from the config data
         '''
         removed = []
-        data = []
+        filtered = []
         for param in self.data:
             if not param[0].startswith(pattern):
-                data.append(param)
+                filtered.append(param)
             else:
                 removed.append(param)
-        self.data = data
+        self.data = filtered
         return removed
 
 
@@ -1160,7 +1159,7 @@ def init(name,
         try:
             clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
-            ret['comment'] = exc.strerror
+            ret['comment'] = exc.message
             if changes:
                 ret['changes'] = changes_dict
             return ret
@@ -1677,7 +1676,7 @@ def create(name,
                     .format(', '.join(missing_deps))
                 )
         cmd += ' --'
-        for key, val in options.items():
+        for key, val in six.iteritems(options):
             cmd += ' --{0} {1}'.format(key, val)
 
     ret = __salt__['cmd.run_all'](cmd,
@@ -1974,11 +1973,15 @@ def _ensure_running(name, no_start=False):
         return start(name)
     elif pre == 'stopped':
         if no_start:
-            return False
+            raise CommandExecutionError(
+                'Container \'{0}\' is not running'.format(name)
+            )
         return start(name)
     elif pre == 'frozen':
         if no_start:
-            return False
+            raise CommandExecutionError(
+                'Container \'{0}\' is not running'.format(name)
+            )
         return unfreeze(name)
 
 
@@ -2159,6 +2162,9 @@ def destroy(name, stop=False):
             'Container \'{0}\' is not stopped'.format(name)
         )
     return _change_state('lxc-destroy', name, None)
+
+# Compatibility between LXC and nspawn
+remove = destroy
 
 
 def exists(name):
@@ -2562,6 +2568,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
         salt myminion lxc.set_dns ubuntu "['8.8.8.8', '4.4.4.4']"
 
     '''
+    ret = {'result': False}
     if dnsservers is None:
         dnsservers = ['8.8.8.8', '4.4.4.4']
     elif not isinstance(dnsservers, list):
@@ -2583,47 +2590,10 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns = ['nameserver {0}'.format(x) for x in dnsservers]
     dns.extend(['search {0}'.format(x) for x in searchdomains])
     dns = '\n'.join(dns) + '\n'
-    # we may be using resolvconf in the container
-    # We need to handle that case with care:
-    #  - we create the resolv.conf runtime directory (the
-    #   linked directory) as anyway it will be shadowed when the real
-    #   runned tmpfs mountpoint will be mounted.
-    #   ( /etc/resolv.conf -> ../run/resolvconf/resolv.conf)
-    #   Indeed, it can save us in any other case (running, eg, in a
-    #   bare chroot when repairing or preparing the container for
-    #   operation.
-    #  - We also teach resolvconf to use the aforementioned dns.
-    #  - We finally also set /etc/resolv.conf in all cases
-    rstr = __salt__['test.rand_str']()
-    # no tmp here, apparmor wont let us execute !
-    script = '/sbin/{0}_dns.sh'.format(rstr)
-    DNS_SCRIPT = "\n".join([
-        # 'set -x',
-        'if [ -h /etc/resolv.conf ];then',
-        ' if [ "x$(readlink /etc/resolv.conf)"'
-        ' = "x../run/resolvconf/resolv.conf" ];then',
-        '  if [ ! -d /run/resolvconf/ ];then',
-        '   mkdir -p /run/resolvconf',
-        '  fi',
-        '  cat > /etc/resolvconf/resolv.conf.d/head <<EOF',
-        dns,
-        'EOF',
-        '',
-        ' fi',
-        'fi',
-        'cat > /etc/resolv.conf <<EOF',
-        dns,
-        'EOF',
-        ''])
-    result = run_all(
-        name, 'tee {0}'.format(script), stdin=DNS_SCRIPT, python_shell=True)
-    if result['retcode'] == 0:
-        result = run_all(
-            name, 'sh -c "chmod +x {0};{0}"'.format(script), python_shell=True)
-    # blindly delete the setter file
-    run_all(name,
-            'if [ -f "{0}" ];then rm -f "{0}";fi'.format(script),
-            python_shell=True)
+    result = run_all(name,
+                     'tee /etc/resolv.conf',
+                     stdin=dns,
+                     python_shell=False)
     if result['retcode'] != 0:
         error = ('Unable to write to /etc/resolv.conf in container \'{0}\''
                  .format(name))
@@ -2633,7 +2603,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     return True
 
 
-def _need_install(name):
+def _needs_install(name):
     ret = 0
     has_minion = retcode(name, "command -v salt-minion")
     # we assume that installing is when no minion is running
@@ -2641,11 +2611,11 @@ def _need_install(name):
     # installs where the bootstrap can do much more than installing
     # the bare salt binaries.
     if has_minion:
-        processes = run_stdout(name, "ps aux")
+        processes = run_stdout(name, 'ps aux')
         if 'salt-minion' not in processes:
             ret = 1
         else:
-            retcode(name, "salt-call --local service.stop salt-minion")
+            retcode(name, 'salt-call --local service.stop salt-minion')
     else:
         ret = 1
     return ret
@@ -2655,7 +2625,8 @@ def bootstrap(name,
               config=None,
               approve_key=True,
               install=True,
-              pub_key=None, priv_key=None,
+              pub_key=None,
+              priv_key=None,
               bootstrap_url=None,
               force_install=False,
               unconditional_install=False,
@@ -2745,7 +2716,7 @@ def bootstrap(name,
     if not orig_state:
         return orig_state
     if not force_install:
-        needs_install = _need_install(name)
+        needs_install = _needs_install(name)
     else:
         needs_install = True
     seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
@@ -2756,7 +2727,7 @@ def bootstrap(name,
         ret = False
         cfg_files = __salt__['seed.mkconfig'](
             config, tmp=tmp, id_=name, approve_key=approve_key,
-            priv_key=priv_key, pub_key=pub_key)
+            pub_key=pub_key, priv_key=priv_key)
         if needs_install or force_install or unconditional_install:
             if install:
                 rstr = __salt__['test.rand_str']()
@@ -2776,15 +2747,15 @@ def bootstrap(name,
                             ('tmpdir {0} creation'
                              ' failed ({1}').format(dest_dir, cmd))
                         return False
-                cp(name,
-                   bs_,
-                   '{0}/bootstrap.sh'.format(dest_dir))
-                cp(name, cfg_files['config'],
-                   os.path.join(configdir, 'minion'))
-                cp(name, cfg_files['privkey'],
-                   os.path.join(configdir, 'minion.pem'))
-                cp(name, cfg_files['pubkey'],
-                   os.path.join(configdir, 'minion.pub'))
+                copy_to(name,
+                        bs_,
+                        '{0}/bootstrap.sh'.format(dest_dir))
+                copy_to(name, cfg_files['config'],
+                        os.path.join(configdir, 'minion'))
+                copy_to(name, cfg_files['privkey'],
+                        os.path.join(configdir, 'minion.pem'))
+                copy_to(name, cfg_files['pubkey'],
+                        os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
                 cmd = ('{0} {2}/bootstrap.sh {1}'
                        .format(bootstrap_shell,
@@ -2801,9 +2772,13 @@ def bootstrap(name,
         else:
             minion_config = salt.config.minion_config(cfg_files['config'])
             pki_dir = minion_config['pki_dir']
-            cp(name, cfg_files['config'], '/etc/salt/minion')
-            cp(name, cfg_files['privkey'], os.path.join(pki_dir, 'minion.pem'))
-            cp(name, cfg_files['pubkey'], os.path.join(pki_dir, 'minion.pub'))
+            copy_to(name, cfg_files['config'], '/etc/salt/minion')
+            copy_to(name,
+                    cfg_files['privkey'],
+                    os.path.join(pki_dir, 'minion.pem'))
+            copy_to(name,
+                    cfg_files['pubkey'],
+                    os.path.join(pki_dir, 'minion.pub'))
             run(name,
                 'salt-call --local service.enable salt-minion',
                 python_shell=False)
@@ -2864,15 +2839,16 @@ def _run(name,
             ret = __salt__['container_resource.run'](
                 name,
                 cmd,
-                container_type='lxc',
+                container_type=__virtualname__,
+                exec_driver=EXEC_DRIVER,
                 output=output,
-                keep_env=keep_env,
                 no_start=no_start,
                 stdin=stdin,
                 python_shell=python_shell,
                 output_loglevel=output_loglevel,
                 ignore_retcode=ignore_retcode,
-                use_vt=use_vt)
+                use_vt=use_vt,
+                keep_env=keep_env)
         else:
             rootfs = info(name).get('rootfs')
             # Set context var to make cmd.run_chroot run cmd.run instead of
@@ -3257,6 +3233,12 @@ def run_all(name,
 
     Run :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` within a container
 
+    .. note::
+
+        While the command is run within the container, it is initiated from the
+        host. Therefore, the PID in the return dict is from the host, not from
+        the container.
+
     .. warning::
 
         Many shell builtins do not work, failing with stderr similar to the
@@ -3327,9 +3309,14 @@ def _get_md5(name, path):
         return None
 
 
-def cp(name, source, dest, makedirs=False):
+def copy_to(name, source, dest, overwrite=False, makedirs=False):
     '''
-    Copy a file or directory from the host into a container.
+    .. versionchanged:: Beryllium
+        Function renamed from ``lxc.cp`` to ``lxc.copy_to`` for consistency
+        with other container types. ``lxc.cp`` will continue to work, however.
+        For versions 2015.2.x and earlier, use ``lxc.cp``.
+
+    Copy a file or directory from the host into a container
 
     name
         Container name
@@ -3344,6 +3331,12 @@ def cp(name, source, dest, makedirs=False):
             If the destination is a directory, the file will be copied into
             that directory.
 
+    overwrite : False
+        Unless this option is set to ``True``, then if a file exists at the
+        location specified by the ``dest`` argument, an error will be raised.
+
+        .. versionadded:: Beryllium
+
     makedirs : False
 
         Create the parent directory on the container if it does not already
@@ -3355,78 +3348,20 @@ def cp(name, source, dest, makedirs=False):
 
     .. code-block:: bash
 
+        salt 'minion' lxc.copy_to /tmp/foo /root/foo
         salt 'minion' lxc.cp /tmp/foo /root/foo
     '''
-    c_state = state(name)
-    if c_state != 'running':
-        raise CommandExecutionError(
-            'Container \'{0}\' {1}'.format(
-                name,
-                'is {0}'.format(c_state)
-                    if c_state is not None
-                    else 'does not exist'
-            )
-        )
+    _ensure_running(name, no_start=True)
+    return __salt__['container_resource.copy_to'](
+        name,
+        source,
+        dest,
+        container_type=__virtualname__,
+        exec_driver=EXEC_DRIVER,
+        overwrite=overwrite,
+        makedirs=makedirs)
 
-    log.debug('Copying {0} to container \'{1}\' as {2}'
-              .format(source, name, dest))
-
-    # Source file sanity checks
-    if not os.path.isabs(source):
-        raise SaltInvocationError('Source path must be absolute')
-    elif not os.path.exists(source):
-        raise SaltInvocationError(
-            'Source file {0} does not exist'.format(source)
-        )
-    elif not os.path.isfile(source):
-        raise SaltInvocationError('Source must be a regular file')
-    source_dir, source_name = os.path.split(source)
-
-    # Destination file sanity checks
-    if not os.path.isabs(dest):
-        raise SaltInvocationError('Destination path must be absolute')
-    if retcode(name,
-                   'test -d \'{0}\''.format(dest),
-                   ignore_retcode=True) == 0:
-        # Destination is a directory, full path to dest file will include the
-        # basename of the source file.
-        dest = os.path.join(dest, source_name)
-    else:
-        # Destination was not a directory. We will check to see if the parent
-        # dir is a directory, and then (if makedirs=True) attempt to create the
-        # parent directory.
-        dest_dir, dest_name = os.path.split(dest)
-        if retcode(name,
-                       'test -d \'{0}\''.format(dest_dir),
-                       ignore_retcode=True) != 0:
-            if makedirs:
-                result = run_all(name, 'mkdir -p \'{0}\''.format(dest_dir))
-                if result['retcode'] != 0:
-                    error = ('Unable to create destination directory {0} in '
-                             'container \'{1}\''.format(dest_dir, name))
-                    if result['stderr']:
-                        error += ': {0}'.format(result['stderr'])
-                    raise CommandExecutionError(error)
-            else:
-                raise SaltInvocationError(
-                    'Directory {0} does not exist on container \'{1}\''
-                    .format(dest_dir, name)
-                )
-
-    # Before we try to replace the file, compare checksums.
-    source_md5 = __salt__['file.get_sum'](source, 'md5')
-    if source_md5 != _get_md5(name, dest):
-        # Using cat here instead of opening the file, reading it into memory,
-        # and passing it as stdin to run(). This will keep down memory
-        # usage for the minion and make the operation run quicker.
-        __salt__['cmd.run_stdout'](
-            'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
-            'tee "{3}"'.format(source, PATH, name, dest),
-            python_shell=True
-        )
-        return source_md5 == _get_md5(name, dest)
-    # Checksums matched, no need to copy, just return True
-    return True
+cp = copy_to
 
 
 def read_conf(conf_file, out_format='simple'):
@@ -3644,6 +3579,148 @@ def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, 
         return data
     write_conf(conf_file, data)
     return read_conf(conf_file, out_format)
+
+
+def reboot(name):
+    '''
+    Reboot a container.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.reboot myvm
+
+    '''
+    ret = {'result': True,
+           'changes': {},
+           'comment': '{0} rebooted'.format(name)}
+    does_exist = exists(name)
+    if does_exist and (state(name) == 'running'):
+        try:
+            stop(name)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = 'Unable to stop container: {0}'.format(exc)
+            ret['result'] = False
+            return ret
+    if does_exist and (state(name) != 'running'):
+        try:
+            start(name)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            ret['comment'] = 'Unable to stop container: {0}'.format(exc)
+            ret['result'] = False
+            return ret
+    ret['changes'][name] = 'rebooted'
+    return ret
+
+
+def reconfigure(name,
+                cpu=None,
+                cpuset=None,
+                cpushare=None,
+                memory=None,
+                profile=None,
+                network_profile=None,
+                nic_opts=None,
+                bridge=None,
+                gateway=None,
+                autostart=None,
+                **kwargs):
+    '''
+    Reconfigure a container.
+
+    This only applies to a few property
+
+    name
+        Name of the container.
+    cpu
+        Select a random number of cpu cores and assign it to the cpuset, if the
+        cpuset option is set then this option will be ignored
+    cpuset
+        Explicitly define the cpus this container will be bound to
+    cpushare
+        cgroups cpu shares.
+    autostart
+        autostart container on reboot
+    memory
+        cgroups memory limit, in MB.
+        (0 for nolimit, None for old default 1024MB)
+    gateway
+        the ipv4 gateway to use
+        the default does nothing more than lxcutils does
+    bridge
+        the bridge to use
+        the default does nothing more than lxcutils does
+    nic
+        Network interfaces profile (defined in config or pillar).
+
+    nic_opts
+        Extra options for network interfaces, will override
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1", "ipv6": "2001:db8::ff00:42:8329"}}``
+
+        or
+
+        ``{"eth0": {"mac": "aa:bb:cc:dd:ee:ff", "ipv4": "10.1.1.1/24", "ipv6": "2001:db8::ff00:42:8329"}}``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call -lall mc_lxc_fork.reconfigure foobar nic_opts="{'eth1': {'mac': '00:16:3e:dd:ee:44'}}" memory=4
+
+    '''
+    changes = {}
+    ret = {'name': name,
+           'comment': 'config for {0} up to date'.format(name),
+           'result': True,
+           'changes': changes}
+    profile = get_container_profile(copy.deepcopy(profile))
+    kw_overrides = copy.deepcopy(kwargs)
+
+    def select(key, default=None):
+        kw_overrides_match = kw_overrides.pop(key, _marker)
+        profile_match = profile.pop(key, default)
+        # let kwarg overrides be the preferred choice
+        if kw_overrides_match is _marker:
+            return profile_match
+        return kw_overrides_match
+    if nic_opts is not None and not network_profile:
+        network_profile = 'eth0'
+
+    if autostart is not None:
+        autostart = select('autostart', autostart)
+    else:
+        autostart = 'keep'
+    path = os.path.join('/var/lib/lxc/{0}/config'.format(name))
+    if os.path.exists(path):
+        old_chunks = read_conf(path, out_format='commented')
+        make_kw = salt.utils.odict.OrderedDict([
+            ('autostart', autostart),
+            ('cpu', cpu),
+            ('gateway', gateway),
+            ('cpuset', cpuset),
+            ('cpushare', cpushare),
+            ('network_profile', network_profile),
+            ('nic_opts', nic_opts),
+            ('bridge', bridge)])
+        # match 0 and none as memory = 0 in lxc config is harmful
+        if memory:
+            make_kw['memory'] = memory
+        kw = salt.utils.odict.OrderedDict()
+        for key, val in six.iteritems(make_kw):
+            if val is not None:
+                kw[key] = val
+        new_cfg = _config_list(conf_tuples=old_chunks, **kw)
+        if new_cfg:
+            edit_conf(path, out_format='commented', lxc_config=new_cfg)
+        chunks = read_conf(path, out_format='commented')
+        if old_chunks != chunks:
+            ret['comment'] = '{0} lxc config updated'.format(name)
+            if state(name) == 'running':
+                cret = reboot(name)
+                ret['result'] = cret['result']
+    return ret
 
 
 def apply_network_profile(name, network_profile, nic_opts=None):
