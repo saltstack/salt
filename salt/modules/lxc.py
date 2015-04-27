@@ -2568,7 +2568,6 @@ def set_dns(name, dnsservers=None, searchdomains=None):
         salt myminion lxc.set_dns ubuntu "['8.8.8.8', '4.4.4.4']"
 
     '''
-    ret = {'result': False}
     if dnsservers is None:
         dnsservers = ['8.8.8.8', '4.4.4.4']
     elif not isinstance(dnsservers, list):
@@ -2590,10 +2589,47 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns = ['nameserver {0}'.format(x) for x in dnsservers]
     dns.extend(['search {0}'.format(x) for x in searchdomains])
     dns = '\n'.join(dns) + '\n'
-    result = run_all(name,
-                     'tee /etc/resolv.conf',
-                     stdin=dns,
-                     python_shell=False)
+    # we may be using resolvconf in the container
+    # We need to handle that case with care:
+    #  - we create the resolv.conf runtime directory (the
+    #   linked directory) as anyway it will be shadowed when the real
+    #   runned tmpfs mountpoint will be mounted.
+    #   ( /etc/resolv.conf -> ../run/resolvconf/resolv.conf)
+    #   Indeed, it can save us in any other case (running, eg, in a
+    #   bare chroot when repairing or preparing the container for
+    #   operation.
+    #  - We also teach resolvconf to use the aforementioned dns.
+    #  - We finally also set /etc/resolv.conf in all cases
+    rstr = __salt__['test.rand_str']()
+    # no tmp here, apparmor wont let us execute !
+    script = '/sbin/{0}_dns.sh'.format(rstr)
+    DNS_SCRIPT = "\n".join([
+        # 'set -x',
+        'if [ -h /etc/resolv.conf ];then',
+        ' if [ "x$(readlink /etc/resolv.conf)"'
+        ' = "x../run/resolvconf/resolv.conf" ];then',
+        '  if [ ! -d /run/resolvconf/ ];then',
+        '   mkdir -p /run/resolvconf',
+        '  fi',
+        '  cat > /etc/resolvconf/resolv.conf.d/head <<EOF',
+        dns,
+        'EOF',
+        '',
+        ' fi',
+        'fi',
+        'cat > /etc/resolv.conf <<EOF',
+        dns,
+        'EOF',
+        ''])
+    result = run_all(
+        name, 'tee {0}'.format(script), stdin=DNS_SCRIPT, python_shell=True)
+    if result['retcode'] == 0:
+        result = run_all(
+            name, 'sh -c "chmod +x {0};{0}"'.format(script), python_shell=True)
+    # blindly delete the setter file
+    run_all(name,
+            'if [ -f "{0}" ];then rm -f "{0}";fi'.format(script),
+            python_shell=True)
     if result['retcode'] != 0:
         error = ('Unable to write to /etc/resolv.conf in container \'{0}\''
                  .format(name))
