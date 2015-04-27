@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+# Import Python Libs
+from __future__ import absolute_import
 import os
 import time
 import logging
 
-import salt
+# Import Salt Libs
 import salt.utils.network
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorQueryException, SIException)
@@ -212,21 +213,23 @@ class Query(object):
         Return all known local accounts to the system.
         '''
         users = dict()
-        for line in open("/etc/passwd").xreadlines():
-            line = line.strip()
-            if ":" not in line:
-                continue
-            name, password, uid, gid, gecos, directory, shell = line.split(":")
-            active = not (password == "*" or password.startswith("!"))
-            if (disabled is False and active) or (disabled is True and not active) or disabled is None:
-                users[name] = {
-                    'uid': uid,
-                    'git': gid,
-                    'info': gecos,
-                    'home': directory,
-                    'shell': shell,
-                    'disabled': not active
-                }
+        path = '/etc/passwd'
+        with salt.utils.fopen(path, 'r') as fp_:
+            for line in fp_:
+                line = line.strip()
+                if ':' not in line:
+                    continue
+                name, password, uid, gid, gecos, directory, shell = line.split(':')
+                active = not (password == '*' or password.startswith('!'))
+                if (disabled is False and active) or (disabled is True and not active) or disabled is None:
+                    users[name] = {
+                        'uid': uid,
+                        'git': gid,
+                        'info': gecos,
+                        'home': directory,
+                        'shell': shell,
+                        'disabled': not active
+                    }
 
         return users
 
@@ -235,17 +238,19 @@ class Query(object):
         Return all known local groups to the system.
         '''
         groups = dict()
-        for line in open("/etc/group").xreadlines():
-            line = line.strip()
-            if ":" not in line:
-                continue
-            name, password, gid, users = line.split(":")
-            groups[name] = {
-                'gid': gid,
-            }
+        path = '/etc/group'
+        with salt.utils.fopen(path, 'r') as fp_:
+            for line in fp_:
+                line = line.strip()
+                if ':' not in line:
+                    continue
+                name, password, gid, users = line.split(':')
+                groups[name] = {
+                    'gid': gid,
+                }
 
-            if users:
-                groups[name]['users'] = users.split(',')
+                if users:
+                    groups[name]['users'] = users.split(',')
 
         return groups
 
