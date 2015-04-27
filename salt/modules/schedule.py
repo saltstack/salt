@@ -52,6 +52,7 @@ SCHEDULE_CONF = [
         'metadata',
         'cron',
         'until',
+        'after',
 ]
 
 
