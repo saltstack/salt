@@ -2589,7 +2589,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns = ['nameserver {0}'.format(x) for x in dnsservers]
     dns.extend(['search {0}'.format(x) for x in searchdomains])
     dns = '\n'.join(dns) + '\n'
-    # we may be using resolvconf in the container; thus resolvconf
+    # we may be using resolvconf in the container
     # We need to handle that case with care:
     #  - we create the resolv.conf runtime directory (the
     #   linked directory) as anyway it will be shadowed when the real
