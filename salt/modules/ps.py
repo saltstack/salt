@@ -47,7 +47,10 @@ def _get_proc_cmdline(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.cmdline() if PSUTIL2 else proc.cmdline
+    try:
+        return proc.cmdline() if PSUTIL2 else proc.cmdline
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return ''
 
 
 def _get_proc_create_time(proc):
@@ -56,7 +59,10 @@ def _get_proc_create_time(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.create_time() if PSUTIL2 else proc.create_time
+    try:
+        return proc.create_time() if PSUTIL2 else proc.create_time
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_name(proc):
@@ -65,12 +71,10 @@ def _get_proc_name(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    ret = []
     try:
-        ret = proc.name() if PSUTIL2 else proc.name
+        return proc.name() if PSUTIL2 else proc.name
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        pass
-    return ret
+        return []
 
 
 def _get_proc_status(proc):
@@ -79,7 +83,10 @@ def _get_proc_status(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.status() if PSUTIL2 else proc.status
+    try:
+        return proc.status() if PSUTIL2 else proc.status
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_username(proc):
@@ -88,7 +95,10 @@ def _get_proc_username(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.username() if PSUTIL2 else proc.username
+    try:
+        return proc.username() if PSUTIL2 else proc.username
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_pid(proc):
@@ -138,7 +148,7 @@ def top(num_processes=5, interval=3):
         if num_processes and idx >= num_processes:
             break
         if len(_get_proc_cmdline(process)) == 0:
-            cmdline = [_get_proc_name(process)]
+            cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)
         info = {'cmd': cmdline,
