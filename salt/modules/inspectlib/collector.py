@@ -153,7 +153,7 @@ class Inspector(object):
         links = set()
         files = set()
 
-        for line in os.popen("rpm -qlav").xreadlines():
+        for line in os.popen("rpm -qlav").readlines():
             line = line.strip()
             if not line:
                 continue
