@@ -159,18 +159,21 @@ def _create_resource(resource, name=None, tags=None, region=None, key=None,
         r = create_resource(**kwargs)
 
         if r:
-            log.info('A {0} with id {1} was created'.format(resource, r.id))
-            _maybe_set_name_tag(name, r)
-            _maybe_set_tags(tags, r)
+            if isinstance(r, bool):
+                return {'created': True}
+            else:
+                log.info('A {0} with id {1} was created'.format(resource, r.id))
+                _maybe_set_name_tag(name, r)
+                _maybe_set_tags(tags, r)
 
-            if name:
-                _cache_id(name,
-                          sub_resource=resource,
-                          resource_id=r.id,
-                          region=region,
-                          key=key, keyid=keyid,
-                          profile=profile)
-            return {'created': True, 'id': r.id}
+                if name:
+                    _cache_id(name,
+                              sub_resource=resource,
+                              resource_id=r.id,
+                              region=region,
+                              key=key, keyid=keyid,
+                              profile=profile)
+                return {'created': True, 'id': r.id}
         else:
             if name:
                 e = '{0} {1} was not created.'.format(resource, name)
