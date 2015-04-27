@@ -536,11 +536,11 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None, subnets=N
         Either vpc_name or vpc_id must be provided.
 
     routes
-        A list of routes. 
+        A list of routes.
 
     subnets
         A list of subnets.
-    
+
     tags
         A list of tags.
 
