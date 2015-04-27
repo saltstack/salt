@@ -2584,17 +2584,18 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     dns.extend(['search {0}'.format(x) for x in searchdomains])
     dns = '\n'.join(dns) + '\n'
     # we may be using resolvconf in the container; thus resolvconf
-    # is a special beast to deal with.
-    # (at least ubuntu-vivid default template does)
-    # we want here to force to use a real file where we set the dns
-    # In this case:
-    #  - we create the file in the linked directory as anyway
-    #   it will be shadowed when the real run tmpfs mountpoint will be mounted.
-    #   Although it can save us in any other case (running, eg, in a
-    #   bare chroot.
-    #  - and we also teach resolvconf to use the aforementioned dns.
+    # We need to handle that case with care:
+    #  - we create the resolv.conf runtime directory (the
+    #   linked directory) as anyway it will be shadowed when the real
+    #   runned tmpfs mountpoint will be mounted.
+    #   ( /etc/resolv.conf -> ../run/resolv.conf)
+    #   Indeed, it can save us in any other case (running, eg, in a
+    #   bare chroot when repairing or preparing the container for
+    #   operation.
+    #  - We also teach resolvconf to use the aforementioned dns.
+    #  - We finally also set /etc/resolv.conf in all cases
     rstr = __salt__['test.rand_str']()
-    # no tmp here, apparmor wont let do execute !
+    # no tmp here, apparmor wont let us execute !
     script = '/sbin/{0}_dns.sh'.format(rstr)
     DNS_SCRIPT = "\n".join([
         # 'set -x',
