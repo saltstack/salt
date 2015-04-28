@@ -1745,7 +1745,7 @@ class ClearFuncs(object):
                     log.warning('Authentication failure of type "token" occurred.')
                     return ''
 
-            group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][token['eauth']])  # The configured auth groups
+            group_perm_keys = [item for item in self.opts['external_auth'][token['eauth']] if item.endswith('%')]  # The configured auth groups
 
             # First we need to know if the user is allowed to proceed via any of their group memberships.
             group_auth_match = False
