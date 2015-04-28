@@ -88,6 +88,7 @@ import salt.utils.dictupdate as dictupdate
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if boto is available.
@@ -711,7 +712,7 @@ def _subnets_present(route_table_name, subnet_ids=None, subnet_names=None, tags=
     # Look up subnet ids
     if subnet_names:
         for i in subnet_names:
-            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i,region=region,
+            r = __salt__['boto_vpc.get_resource_id']('subnet', name=i, region=region,
                                                      key=key, keyid=keyid, profile=profile)
 
             if 'error' in r:
