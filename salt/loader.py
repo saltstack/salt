@@ -755,6 +755,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Allow for "direct" attribute access-- this allows jinja templates to
         access things like `salt.test.ping()`
         '''
+        # if we have an attribute named that, lets return it.
+        try:
+            return object.__getattr__(self, mod_name)
+        except AttributeError:
+            pass
+
+        # otherwise we assume its jinja template access
         if mod_name not in self.loaded_modules and not self.loaded:
             for name in self._iter_files(mod_name):
                 if name in self.loaded_files:

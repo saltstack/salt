@@ -1030,8 +1030,9 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         group.add_option(
             '--state-output', '--state_output',
             default='full',
-            help=('Override the configured state_output value for minion output'
-                  '. Default: full')
+            help=('Override the configured state_output value for minion '
+                  'output. One of full, terse, mixed, changes or filter. '
+                  'Default: full.')
         )
 
         for option in self.output_options_group.option_list:
