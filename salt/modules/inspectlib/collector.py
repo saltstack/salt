@@ -14,11 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Import Python Libs
+from __future__ import absolute_import
 import os
 import sys
 import stat
 from subprocess import Popen, PIPE, STDOUT
 
+# Import Salt Libs
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 from salt.utils import fsutils
@@ -153,7 +156,9 @@ class Inspector(object):
         links = set()
         files = set()
 
-        for line in os.popen("rpm -qlav").xreadlines():
+        cmd = __salt__['cmd.run_stdout']('rpm -qlav')
+
+        for line in cmd:
             line = line.strip()
             if not line:
                 continue
