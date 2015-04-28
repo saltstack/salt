@@ -20,6 +20,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
+import salt.utils.odict
 import salt.utils.event
 import salt.utils.odict
 
@@ -244,14 +245,17 @@ def returners(opts, functions, whitelist=None, context=None):
                             '__context__': context})
 
 
-def utils(opts, whitelist=None):
+def utils(opts, whitelist=None, context=None):
     '''
     Returns the utility modules
     '''
+    if context is None:
+        context = {}
     return LazyLoader(_module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
                       opts,
                       tag='utils',
-                      whitelist=whitelist)
+                      whitelist=whitelist,
+                      pack={'__context__': context})
 
 
 def pillars(opts, functions):
@@ -1007,8 +1011,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if inspect.isfunction(module_init):
             try:
                 module_init(self.opts)
-            except TypeError:
-                pass
+            except TypeError as e:
+                log.error(e)
         module_name = mod.__name__.rsplit('.', 1)[-1]
 
         # if virtual modules are enabled, we need to look for the
