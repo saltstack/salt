@@ -806,8 +806,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.file_mapping = {}
 
         for mod_dir in self.module_dirs:
+            files = []
             try:
-                for filename in os.listdir(mod_dir):
+                files = os.listdir(mod_dir)
+            except OSError:
+                continue
+            for filename in files:
+                try:
                     if filename.startswith('_'):
                         # skip private modules
                         # log messages omitted for obviousness
@@ -845,8 +850,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         curr_ext = self.file_mapping[f_noext][1]
                         if suffix_order.index(ext) < suffix_order.index(curr_ext):
                             self.file_mapping[f_noext] = (fpath, ext)
-            except OSError:
-                continue
+                except OSError:
+                    continue
 
     def clear(self):
         '''
