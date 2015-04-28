@@ -501,7 +501,7 @@ def install(name=None,
                                                         ver2=cver,
                                                         cmp_func=version_cmp):
                     downgrade = True
-                targets.append('{0}={1}'.format(param, version_num.lstrip('=')))
+                targets.append('{0}={1}'.format(param, str(version_num).lstrip('=')))
         if fromrepo:
             log.info('Targeting repo {0!r}'.format(fromrepo))
         cmd = ['apt-get', '-q', '-y']
