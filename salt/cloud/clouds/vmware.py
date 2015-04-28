@@ -2661,21 +2661,23 @@ def remove_all_snapshots(name, kwargs=None, call=None):
 
     .. note::
 
-        To avoid merging the virtual disk of the deleted snapshot with other
-        disks, set ``merge_disks=False``. Default is ``merge_disks=True``.
+        All the snapshots higher up in the hierarchy of the current snapshot tree
+        are consolidated and their virtual disks are merged. To override this
+        behavior and only remove all snapshots, set ``merge_snapshots=False``.
+        Default is ``merge_snapshots=True``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -a remove_all_snapshots vmname [merge_disks=False]
+        salt-cloud -a remove_all_snapshots vmname [merge_snapshots=False]
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The remove_all_snapshots action must be called with -a or --action.'
         )
 
-    consolidate = _str_to_bool(kwargs.get('merge_disks')) if kwargs and 'merge_disks' in kwargs else True
+    consolidate = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
 
     vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
 
