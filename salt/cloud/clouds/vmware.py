@@ -2619,8 +2619,8 @@ def revert_to_snapshot(name, kwargs=None, call=None):
         the snapshot when it was created was set to "Powered On". Set
         ``power_off=True`` so that the virtual machine stays powered
         off regardless of the power state of the snapshot when it was
-        created. Default is ``power_off=False``. 
-        
+        created. Default is ``power_off=False``.
+
         If the power state of the snapshot when it was created was
         "Powered On" and if ``power_off=True``, the VM will be put in
         suspended state after it has been reverted to the snapshot.
