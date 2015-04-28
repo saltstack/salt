@@ -385,8 +385,9 @@ def volume_attached(name, server_name, provider=None, **kwargs):
 
     if name in volumes and volumes[name]['attachments']:
         volume = volumes[name]
-        ret['comment'] = ('Volume {name} is already'
-                          'attached: {attachments}').format(**volumes[name])
+        ret['comment'] = (
+                          'Volume {0} is already attached: {attachments}'
+                          ).format(name, **volumes[name])
         ret['result'] = True
         return ret
     elif name not in volumes:
@@ -444,8 +445,8 @@ def volume_detached(name, server_name=None, provider=None, **kwargs):
     if name in volumes and not volumes[name]['attachments']:
         volume = volumes[name]
         ret['comment'] = (
-            'Volume {name} is not currently attached to anything.'
-        ).format(**volumes[name])
+            'Volume {0} is not currently attached to anything.'
+        ).format(name, **volumes[name])
         ret['result'] = True
         return ret
     elif name not in volumes:
