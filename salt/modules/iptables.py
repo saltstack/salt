@@ -857,7 +857,7 @@ def _parser():
         parser = optparse.OptionParser()
         add_arg = parser.add_option
     else:
-        import argparse
+        import argparse  # pylint: disable=minimum-python-version
         parser = argparse.ArgumentParser()
         add_arg = parser.add_argument
 
