@@ -1448,6 +1448,10 @@ def managed(name,
             if isinstance(cret, dict):
                 ret.update(cret)
                 return ret
+            # Since we generated a new tempfile and we are not returning here
+            # lets change the original sfn to the new tempfile or else we will
+            # get file not found
+            sfn = tmp_filename
         else:
             ret = {'changes': {},
                    'comment': '',
