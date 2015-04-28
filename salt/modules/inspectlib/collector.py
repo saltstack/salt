@@ -156,7 +156,9 @@ class Inspector(object):
         links = set()
         files = set()
 
-        for line in os.popen("rpm -qlav"):
+        cmd = __salt__['cmd.run_stdout']('rpm -qlav')
+
+        for line in cmd:
             line = line.strip()
             if not line:
                 continue
