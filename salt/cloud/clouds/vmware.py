@@ -52,6 +52,7 @@ from re import match
 import pprint
 import logging
 import time
+import os.path
 
 # Import salt libs
 import salt.utils.cloud
@@ -67,6 +68,13 @@ try:
     from pyVim.connect import SmartConnect
     from pyVmomi import vim, vmodl
     HAS_LIBS = True
+except Exception:
+    pass
+
+# Disable InsecureRequestWarning generated on python > 2.6
+try:
+    from requests.packages.urllib3 import disable_warnings
+    disable_warnings()
 except Exception:
     pass
 
@@ -120,26 +128,57 @@ def script(vm_):
     )
 
 
+def _str_to_bool(var):
+    if isinstance(var, bool):
+        return var
+
+    if isinstance(var, six.string_types):
+        return True if var.lower() == 'true' else False
+
+    return None
+
+
 def _get_si():
     '''
     Authenticate with vCenter server and return service instance object.
     '''
+
+    url = config.get_cloud_config_value(
+        'url', get_configured_provider(), __opts__, search_global=False
+    )
+    username = config.get_cloud_config_value(
+        'user', get_configured_provider(), __opts__, search_global=False
+    )
+    password = config.get_cloud_config_value(
+        'password', get_configured_provider(), __opts__, search_global=False
+    )
+
     try:
         si = SmartConnect(
-                 host=config.get_cloud_config_value(
-                          'url', get_configured_provider(), __opts__, search_global=False
-                      ),
-                 user=config.get_cloud_config_value(
-                          'user', get_configured_provider(), __opts__, search_global=False
-                      ),
-                 pwd=config.get_cloud_config_value(
-                         'password', get_configured_provider(), __opts__, search_global=False
-                     ),
-             )
-    except:
-        raise SaltCloudSystemExit(
-            '\nCould not connect to the vCenter server using the specified username and password'
+            host=url,
+            user=username,
+            pwd=password
         )
+    except Exception as exc:
+        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
+            try:
+                import ssl
+                default_context = ssl._create_default_https_context
+                ssl._create_default_https_context = ssl._create_unverified_context
+                si = SmartConnect(
+                    host=url,
+                    user=username,
+                    pwd=password
+                )
+                ssl._create_default_https_context = default_context
+            except:
+                raise SaltCloudSystemExit(
+                    '\nCCould not connect to the vCenter server using the specified username and password'
+                )
+        else:
+            raise SaltCloudSystemExit(
+                '\nCould not connect to the vCenter server using the specified username and password'
+            )
 
     return si
 
@@ -706,7 +745,7 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
-def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
     snapshots = {}
     for snapshot in snapshot_list:
         snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
@@ -717,9 +756,17 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
             'state': snapshot.state,
             'path': snapshot_path,
         }
+
+        if current_snapshot and current_snapshot == snapshot.snapshot:
+            return snapshots[snapshot_path]
+
         # Check if child snapshots exist
         if snapshot.childSnapshotList:
-            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+            ret = _get_snapshots(snapshot.childSnapshotList, current_snapshot, snapshot_path)
+            if current_snapshot:
+                return ret
+            snapshots.update(ret)
+
     return snapshots
 
 
@@ -766,6 +813,17 @@ def _upg_tools_helper(vm, reboot=False):
         return status
 
     return 'VMware tools could not be upgraded'
+
+
+def _get_hba_type(hba_type):
+    if hba_type == "parallel":
+        return vim.host.ParallelScsiHba
+    elif hba_type == "block":
+        return vim.host.BlockHba
+    elif hba_type == "iscsi":
+        return vim.host.InternetScsiHba
+    elif hba_type == "fibre":
+        return vim.host.FibreChannelHba
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -1363,7 +1421,8 @@ def start(name, call=None):
                 return ret
             try:
                 log.info('Starting VM {0}'.format(name))
-                vm["object"].PowerOn()
+                task = vm["object"].PowerOn()
+                _wait_for_task(task, name, "power on")
             except Exception as exc:
                 log.error('Could not power on VM {0}: {1}'.format(name, exc))
                 return 'failed to power on'
@@ -1401,7 +1460,8 @@ def stop(name, call=None):
                 return ret
             try:
                 log.info('Stopping VM {0}'.format(name))
-                vm["object"].PowerOff()
+                task = vm["object"].PowerOff()
+                _wait_for_task(task, name, "power off")
             except Exception as exc:
                 log.error('Could not power off VM {0}: {1}'.format(name, exc))
                 return 'failed to power off'
@@ -1443,7 +1503,8 @@ def suspend(name, call=None):
                 return ret
             try:
                 log.info('Suspending VM {0}'.format(name))
-                vm["object"].Suspend()
+                task = vm["object"].Suspend()
+                _wait_for_task(task, name, "suspend")
             except Exception as exc:
                 log.error('Could not suspend VM {0}: {1}'.format(name, exc))
                 return 'failed to suspend'
@@ -1481,7 +1542,8 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                vm["object"].Reset()
+                task = vm["object"].Reset()
+                _wait_for_task(task, name, "reset")
             except Exception as exc:
                 log.error('Could not reset VM {0}: {1}'.format(name, exc))
                 return 'failed to reset'
@@ -2171,3 +2233,463 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
             return {'Hosts by Datacenter': {datacenter_name: ret[datacenter_name]}}
 
     return {'Hosts by Datacenter': ret}
+
+
+def list_hbas(kwargs=None, call=None):
+    '''
+    List all HBAs for each host system; or all HBAs for a specified host
+    system; or HBAs of specified type for each host system; or HBAs of
+    specified type for a specified host system in this VMware environment
+
+    .. note::
+
+        You can specify type as either ``parallel``, ``iscsi``, ``block``
+        or ``fibre``.
+
+    To list all HBAs for each host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config
+
+    To list all HBAs for a specified host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName"
+
+    To list HBAs of specified type for each host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config type="HBAType"
+
+    To list HBAs of specified type for a specified host system:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hbas my-vmware-config host="hostSystemName" type="HBAtype"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_hbas function must be called with -f or --function.'
+        )
+
+    ret = {}
+    hba_type = kwargs.get('type').lower() if kwargs else None
+    host_name = kwargs.get('host') if kwargs else None
+    host_properties = [
+        "name",
+        "config.storageDevice.hostBusAdapter"
+    ]
+
+    if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
+        raise SaltCloudSystemExit(
+            'Specified hba type {0} currently not supported'.format(hba_type)
+        )
+
+    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+
+    for host in host_list:
+        ret[host['name']] = {}
+        for hba in host['config.storageDevice.hostBusAdapter']:
+            hba_spec = {
+                'driver': hba.driver,
+                'status': hba.status,
+                'type': type(hba).__name__.rsplit(".", 1)[1]
+            }
+            if hba_type:
+                if isinstance(hba, _get_hba_type(hba_type)):
+                    if hba.model in ret[host['name']]:
+                        ret[host['name']][hba.model][hba.device] = hba_spec
+                    else:
+                        ret[host['name']][hba.model] = {hba.device: hba_spec}
+            else:
+                if hba.model in ret[host['name']]:
+                    ret[host['name']][hba.model][hba.device] = hba_spec
+                else:
+                    ret[host['name']][hba.model] = {hba.device: hba_spec}
+        if host['name'] == host_name:
+            return {'HBAs by Host': {host_name: ret[host_name]}}
+
+    return {'HBAs by Host': ret}
+
+
+def list_dvs(kwargs=None, call=None):
+    '''
+    List all the distributed virtual switches for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_dvs my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_dvs function must be called with '
+            '-f or --function.'
+        )
+
+    distributed_vswitches = []
+    dvs_properties = ["name"]
+
+    dvs_list = _get_mors_with_properties(vim.DistributedVirtualSwitch, dvs_properties)
+
+    for dvs in dvs_list:
+        distributed_vswitches.append(dvs["name"])
+
+    return {'Distributed Virtual Switches': distributed_vswitches}
+
+
+def list_vapps(kwargs=None, call=None):
+    '''
+    List all the vApps for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_vapps my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vapps function must be called with '
+            '-f or --function.'
+        )
+
+    vapps = []
+    vapp_properties = ["name"]
+
+    vapp_list = _get_mors_with_properties(vim.VirtualApp, vapp_properties)
+
+    for vapp in vapp_list:
+        vapps.append(vapp["name"])
+
+    return {'vApps': vapps}
+
+
+def enter_maintenance_mode(kwargs=None, call=None):
+    '''
+    To put the specified host system in maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f enter_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The enter_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already in maintenance mode'}
+
+    try:
+        task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
+        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} in maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to enter maintenance mode'}
+
+    return {host_name: 'entered maintenance mode'}
+
+
+def exit_maintenance_mode(kwargs=None, call=None):
+    '''
+    To take the specified host system out of maintenance mode in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f exit_maintenance_mode my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The exit_maintenance_mode function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs else None
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+
+    if not host_name or not host_ref:
+        raise SaltCloudSystemExit(
+            'You must pass a valid name of the host system'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode:
+        return {host_name: 'already not in maintenance mode'}
+
+    try:
+        task = host_ref.ExitMaintenanceMode(timeout=0)
+        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+    except Exception as exc:
+        log.error(
+            'Error while moving host system {0} out of maintenance mode: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return {host_name: 'failed to exit maintenance mode'}
+
+    return {host_name: 'exited maintenance mode'}
+
+
+def create_folder(kwargs=None, call=None):
+    '''
+    Create the specified folder path in this VMware environment
+
+    .. note::
+
+        To create a Host and Cluster Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/host/yourFolderName"``
+
+        To create a Network Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/network/yourFolderName"``
+
+        To create a Storage Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/datastore/yourFolderName"``
+
+        To create a VM and Template Folder under a Datacenter, specify
+        ``path="/yourDatacenterName/vm/yourFolderName"``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_folder my-vmware-config path="/Local/a/b/c"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/vm/MyVMFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/host/MyHostFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/network/MyNetworkFolder"
+        salt-cloud -f create_folder my-vmware-config path="/MyDatacenter/storage/MyStorageFolder"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The create_folder function must be called with '
+            '-f or --function.'
+        )
+
+    # Get the service instance object
+    si = _get_si()
+
+    folder_path = kwargs.get('path') if kwargs else None
+
+    if not folder_path:
+        raise SaltCloudSystemExit(
+            'You must specify a non empty folder path'
+        )
+
+    folder_refs = []
+    inventory_path = '/'
+    path_exists = True
+
+    # Split the path in a list and loop over it to check for its existence
+    for index, folder_name in enumerate(os.path.normpath(folder_path.strip('/')).split('/')):
+        inventory_path = os.path.join(inventory_path, folder_name)
+        folder_ref = si.content.searchIndex.FindByInventoryPath(inventoryPath=inventory_path)
+        if isinstance(folder_ref, vim.Folder):
+            # This is a folder that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        elif isinstance(folder_ref, vim.Datacenter):
+            # This is a datacenter that exists so just append and skip it
+            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            folder_refs.append(folder_ref)
+        else:
+            path_exists = False
+            if not folder_refs:
+                # If this is the first folder, create it under the rootFolder
+                log.debug("Creating folder {0} under rootFolder in the inventory".format(folder_name))
+                folder_refs.append(si.content.rootFolder.CreateFolder(folder_name))
+            else:
+                # Create the folder under the parent folder
+                log.debug("Creating path {0}/ in the inventory".format(inventory_path))
+                folder_refs.append(folder_refs[index-1].CreateFolder(folder_name))
+
+    if path_exists:
+        return {inventory_path: 'specfied path already exists'}
+    else:
+        return {inventory_path: 'created the specified path'}
+
+
+def create_snapshot(name, kwargs=None, call=None):
+    '''
+    Create a snapshot of the specified virtual machine in this VMware
+    environment
+
+    .. note::
+
+        If the VM is powered on, the internal state of the VM (memory
+        dump) is included in the snapshot by default which will also set
+        the power state of the snapshot to "powered on". You can set
+        ``memdump=False`` to override this. This field is ignored if
+        the virtual machine is powered off or if the VM does not support
+        snapshots with memory dumps. Default is ``memdump=True``
+
+    .. note::
+
+        If the VM is powered on when the snapshot is taken, VMware Tools
+        can be used to quiesce the file system in the virtual machine by
+        setting ``quiesce=True``. This field is ignored if the virtual
+        machine is powered off; if VMware Tools are not available or if
+        ``memdump=True``. Default is ``quiesce=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=False] [quiesce=True]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_snapshot action must be called with -a or --action.'
+        )
+
+    snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
+
+    if not snapshot_name:
+        raise SaltCloudSystemExit(
+            'You must provide a snapshot name for the snapshot to be created.'
+        )
+
+    memdump = _str_to_bool(kwargs.get('memdump', True))
+    quiesce = _str_to_bool(kwargs.get('quiesce', False))
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    if vm_ref.summary.runtime.powerState != "poweredOn":
+        log.debug('VM {0} is not powered on. Setting both memdump and quiesce to False'.format(name))
+        memdump = False
+        quiesce = False
+
+    if memdump and quiesce:
+        # Either memdump or quiesce should be set to True
+        log.warning('You can only set either memdump or quiesce to True. Setting quiesce=False')
+        quiesce = False
+
+    desc = kwargs.get('description') if 'description' in kwargs else ''
+
+    try:
+        task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
+        _wait_for_task(task, name, "create snapshot", 5, 'info')
+    except Exception as exc:
+        log.error('Error while creating snapshot of {0}: {1}'.format(name, exc))
+        return 'failed to create snapshot'
+
+    return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList, vm_ref.snapshot.currentSnapshot)}
+
+
+def revert_to_snapshot(name, kwargs=None, call=None):
+    '''
+    Revert virtual machine to it's current snapshot. If no snapshot
+    exists, the state of the virtual machine remains unchanged
+
+    .. note::
+
+        The virtual machine will be powered on if the power state of
+        the snapshot when it was created was set to "Powered On". Set
+        ``power_off=True`` so that the virtual machine stays powered
+        off regardless of the power state of the snapshot when it was
+        created. Default is ``power_off=False``.
+
+        If the power state of the snapshot when it was created was
+        "Powered On" and if ``power_off=True``, the VM will be put in
+        suspended state after it has been reverted to the snapshot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a revert_to_snapshot vmame [power_off=True]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The revert_to_snapshot action must be called with -a or --action.'
+        )
+
+    suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    if not vm_ref.rootSnapshot:
+        log.error('VM {0} does not contain any current snapshots'.format(name))
+        return 'revert failed'
+
+    try:
+        task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
+        _wait_for_task(task, name, "revert to snapshot", 5, 'info')
+
+    except Exception as exc:
+        log.error('Error while reverting VM {0} to snapshot: {1}'.format(name, exc))
+        return 'revert failed'
+
+    return 'reverted to current snapshot'
+
+
+def remove_all_snapshots(name, kwargs=None, call=None):
+    '''
+    Remove all the snapshots present for the specified virtual machine.
+
+    .. note::
+
+        All the snapshots higher up in the hierarchy of the current snapshot tree
+        are consolidated and their virtual disks are merged. To override this
+        behavior and only remove all snapshots, set ``merge_snapshots=False``.
+        Default is ``merge_snapshots=True``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a remove_all_snapshots vmname [merge_snapshots=False]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The remove_all_snapshots action must be called with -a or --action.'
+        )
+
+    consolidate = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    try:
+        task = vm_ref.RemoveAllSnapshots()
+        _wait_for_task(task, name, "remove snapshots", 5, 'info')
+    except Exception as exc:
+        log.error('Error while removing snapshots on VM {0}: {1}'.format(name, exc))
+        return 'failed to remove snapshots'
+
+    return 'removed all snapshots'

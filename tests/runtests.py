@@ -191,11 +191,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
         if self.options.coverage and any((
-                self.options.module, self.options.cli, self.options.client,
-                self.options.shell, self.options.unit, self.options.state,
-                self.options.runners, self.options.loader, self.options.name,
-                self.options.outputter, self.options.fileserver,
-                self.options.wheel, os.geteuid() != 0,
+                self.options.module,
+                self.options.cli,
+                self.options.client,
+                self.options.shell,
+                self.options.unit,
+                self.options.state,
+                self.options.runners,
+                self.options.loader,
+                self.options.name,
+                self.options.outputter,
+                self.options.fileserver,
+                self.options.wheel,
+                self.options.api,
+                os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
@@ -342,6 +351,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.fileserver or
                  self.options.wheel or
                  self.options.cloud_provider_tests or
+                 self.options.api or
                  named_tests):
             # We're either not running any of runners, state, module and client
             # tests, or, we're only running unittests by passing --unit or by

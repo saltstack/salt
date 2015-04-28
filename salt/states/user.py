@@ -405,7 +405,7 @@ def present(name,
             if key == 'homeDoesNotExist':
                 __salt__['user.chhome'](name, val, True)
                 if not os.path.isdir(val):
-                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0755)
+                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)

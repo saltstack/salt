@@ -127,6 +127,17 @@ class OptionParser(optparse.OptionParser, object):
 
     def parse_args(self, args=None, values=None):
         options, args = optparse.OptionParser.parse_args(self, args, values)
+        if 'args_stdin' in options.__dict__ and options.args_stdin is True:
+            # Read additional options and/or arguments from stdin and combine
+            # them with the options and arguments from the command line.
+            new_inargs = sys.stdin.readlines()
+            new_inargs = [arg.rstrip('\r\n') for arg in new_inargs]
+            new_options, new_args = optparse.OptionParser.parse_args(
+                    self,
+                    new_inargs)
+            options.__dict__.update(new_options.__dict__)
+            args.extend(new_args)
+
         if options.versions_report:
             self.print_versions_report()
 
@@ -965,6 +976,20 @@ class TimeoutMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class ArgsStdinMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 10
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--args-stdin',
+            default=False,
+            dest='args_stdin',
+            action='store_true',
+            help=('Read additional options and/or arguments from stdin. '
+                  'Each entry is newline separated.')
+        )
+
+
 class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     _mixin_prio_ = 40
@@ -1030,8 +1055,9 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         group.add_option(
             '--state-output', '--state_output',
             default='full',
-            help=('Override the configured state_output value for minion output'
-                  '. Default: full')
+            help=('Override the configured state_output value for minion '
+                  'output. One of full, terse, mixed, changes or filter. '
+                  'Default: full.')
         )
 
         for option in self.output_options_group.option_list:
@@ -1447,7 +1473,8 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                                              OutputOptionsMixIn,
                                              LogLevelMixIn,
                                              HardCrashMixin,
-                                             SaltfileMixIn)):
+                                             SaltfileMixIn,
+                                             ArgsStdinMixIn)):
 
     default_timeout = 5
 
@@ -2018,7 +2045,8 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               LogLevelMixIn,
                                               OutputOptionsMixIn,
                                               HardCrashMixin,
-                                              SaltfileMixIn)):
+                                              SaltfileMixIn,
+                                              ArgsStdinMixIn)):
 
     description = ('Salt call is used to execute module functions locally '
                    'on a minion')
@@ -2220,7 +2248,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              LogLevelMixIn,
                                              HardCrashMixin,
                                              SaltfileMixIn,
-                                             OutputOptionsMixIn)):
+                                             OutputOptionsMixIn,
+                                             ArgsStdinMixIn)):
 
     default_timeout = 1
 

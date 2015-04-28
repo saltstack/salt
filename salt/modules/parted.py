@@ -173,7 +173,7 @@ def list_(device, unit=None):
     else:
         cmd = 'parted -m -s {0} print'.format(device)
 
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run_stdout'](cmd).splitlines()
     ret = {'info': {}, 'partitions': {}}
     mode = 'info'
     for line in out:
