@@ -43,6 +43,16 @@ else:
     import exceptions  # pylint: disable=incompatible-py3-code
 
 
+if not hasattr(ElementTree, 'ParseError'):
+    class ParseError(Exception):
+        '''
+        older versions of ElementTree do not have ParseError
+        '''
+        pass
+
+    ElementTree.ParseError = ParseError
+
+
 def text_(s, encoding='latin-1', errors='strict'):
     '''
     If ``s`` is an instance of ``binary_type``, return

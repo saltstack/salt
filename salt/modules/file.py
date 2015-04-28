@@ -3858,8 +3858,30 @@ def manage_file(name,
         if sfn:
             __clean_tmp(sfn)
         return ret
-    else:
-        # Only set the diff if the file contents is managed
+    else:  # target file does not exist
+        contain_dir = os.path.dirname(name)
+
+        def _set_mode_and_make_dirs(name, dir_mode, mode, user, group):
+            # check for existence of windows drive letter
+            if salt.utils.is_windows():
+                drive, _ = os.path.splitdrive(name)
+                if drive and not os.path.exists(drive):
+                    __clean_tmp(sfn)
+                    return _error(ret,
+                                  '{0} drive not present'.format(drive))
+            if dir_mode is None and mode is not None:
+                # Add execute bit to each nonzero digit in the mode, if
+                # dir_mode was not specified. Otherwise, any
+                # directories created with makedirs_() below can't be
+                # listed via a shell.
+                mode_list = [x for x in str(mode)][-3:]
+                for idx in range(len(mode_list)):
+                    if mode_list[idx] != '0':
+                        mode_list[idx] = str(int(mode_list[idx]) | 1)
+                dir_mode = ''.join(mode_list)
+            makedirs_(name, user=user,
+                      group=group, mode=dir_mode)
+
         if source:
             # It is a new file, set the diff accordingly
             ret['changes']['diff'] = 'New file'
@@ -3881,43 +3903,18 @@ def manage_file(name,
                                                dl_sum)
                     ret['result'] = False
                     return ret
-            if not os.path.isdir(os.path.dirname(name)):
+            if not os.path.isdir(contain_dir):
                 if makedirs:
-                    # check for existence of windows drive letter
-                    if salt.utils.is_windows():
-                        drive, _ = os.path.splitdrive(name)
-                        if drive and not os.path.exists(drive):
-                            __clean_tmp(sfn)
-                            return _error(ret,
-                                         '{0} drive not present'.format(drive))
-                    if dir_mode is None and mode is not None:
-                        # Add execute bit to each nonzero digit in the mode, if
-                        # dir_mode was not specified. Otherwise, any
-                        # directories created with makedirs_() below can't be
-                        # listed via a shell.
-                        mode_list = [x for x in str(mode)][-3:]
-                        for idx in range(len(mode_list)):
-                            if mode_list[idx] != '0':
-                                mode_list[idx] = str(int(mode_list[idx]) | 1)
-                        dir_mode = ''.join(mode_list)
-                    makedirs_(name, user=user, group=group, mode=dir_mode)
+                    _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
                 else:
                     __clean_tmp(sfn)
                     # No changes actually made
                     ret['changes'].pop('diff', None)
                     return _error(ret, 'Parent directory not present')
-        else:
-            if not os.path.isdir(os.path.dirname(name)):
+        else:  # source != True
+            if not os.path.isdir(contain_dir):
                 if makedirs:
-                    # check for existence of windows drive letter
-                    if salt.utils.is_windows():
-                        drive, _ = os.path.splitdrive(name)
-                        if drive and not os.path.exists(drive):
-                            __clean_tmp(sfn)
-                            return _error(ret,
-                                         '{0} drive not present'.format(drive))
-                    makedirs_(name, user=user, group=group,
-                              mode=dir_mode or mode)
+                    _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
                 else:
                     __clean_tmp(sfn)
                     # No changes actually made
