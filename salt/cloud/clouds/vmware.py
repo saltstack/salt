@@ -745,7 +745,7 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
-def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
     snapshots = {}
     for snapshot in snapshot_list:
         snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
@@ -756,9 +756,16 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
             'state': snapshot.state,
             'path': snapshot_path,
         }
+
+        if current_snapshot and current_snapshot == snapshot.snapshot:
+            return snapshots[snapshot_path]
+
         # Check if child snapshots exist
         if snapshot.childSnapshotList:
-            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+            ret = _get_snapshots(snapshot.childSnapshotList, current_snapshot, snapshot_path)
+            if current_snapshot:
+                return ret
+            snapshots.update(ret)
 
     return snapshots
 
@@ -2598,7 +2605,7 @@ def create_snapshot(name, kwargs=None, call=None):
         log.error('Error while creating snapshot of {0}: {1}'.format(name, exc))
         return 'failed to create snapshot'
 
-    return 'created snapshot {0}'.format(snapshot_name)
+    return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList, vm_ref.snapshot.currentSnapshot)}
 
 
 def revert_to_snapshot(name, kwargs=None, call=None):
