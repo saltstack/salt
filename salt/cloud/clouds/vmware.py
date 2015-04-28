@@ -128,6 +128,16 @@ def script(vm_):
     )
 
 
+def _str_to_bool(var):
+    if isinstance(var, bool):
+        return var
+
+    if isinstance(var, six.string_types):
+        return True if var.lower() == 'true' else False
+
+    return None
+
+
 def _get_si():
     '''
     Authenticate with vCenter server and return service instance object.
@@ -735,7 +745,7 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
-def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
     snapshots = {}
     for snapshot in snapshot_list:
         snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
@@ -746,9 +756,17 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
             'state': snapshot.state,
             'path': snapshot_path,
         }
+
+        if current_snapshot and current_snapshot == snapshot.snapshot:
+            return snapshots[snapshot_path]
+
         # Check if child snapshots exist
         if snapshot.childSnapshotList:
-            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+            ret = _get_snapshots(snapshot.childSnapshotList, current_snapshot, snapshot_path)
+            if current_snapshot:
+                return ret
+            snapshots.update(ret)
+
     return snapshots
 
 
@@ -2524,3 +2542,154 @@ def create_folder(kwargs=None, call=None):
         return {inventory_path: 'specfied path already exists'}
     else:
         return {inventory_path: 'created the specified path'}
+
+
+def create_snapshot(name, kwargs=None, call=None):
+    '''
+    Create a snapshot of the specified virtual machine in this VMware
+    environment
+
+    .. note::
+
+        If the VM is powered on, the internal state of the VM (memory
+        dump) is included in the snapshot by default which will also set
+        the power state of the snapshot to "powered on". You can set
+        ``memdump=False`` to override this. This field is ignored if
+        the virtual machine is powered off or if the VM does not support
+        snapshots with memory dumps. Default is ``memdump=True``
+
+    .. note::
+
+        If the VM is powered on when the snapshot is taken, VMware Tools
+        can be used to quiesce the file system in the virtual machine by
+        setting ``quiesce=True``. This field is ignored if the virtual
+        machine is powered off; if VMware Tools are not available or if
+        ``memdump=True``. Default is ``quiesce=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=False] [quiesce=True]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_snapshot action must be called with -a or --action.'
+        )
+
+    snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
+
+    if not snapshot_name:
+        raise SaltCloudSystemExit(
+            'You must provide a snapshot name for the snapshot to be created.'
+        )
+
+    memdump = _str_to_bool(kwargs.get('memdump', True))
+    quiesce = _str_to_bool(kwargs.get('quiesce', False))
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    if vm_ref.summary.runtime.powerState != "poweredOn":
+        log.debug('VM {0} is not powered on. Setting both memdump and quiesce to False'.format(name))
+        memdump = False
+        quiesce = False
+
+    if memdump and quiesce:
+        # Either memdump or quiesce should be set to True
+        log.warning('You can only set either memdump or quiesce to True. Setting quiesce=False')
+        quiesce = False
+
+    desc = kwargs.get('description') if 'description' in kwargs else ''
+
+    try:
+        task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
+        _wait_for_task(task, name, "create snapshot", 5, 'info')
+    except Exception as exc:
+        log.error('Error while creating snapshot of {0}: {1}'.format(name, exc))
+        return 'failed to create snapshot'
+
+    return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList, vm_ref.snapshot.currentSnapshot)}
+
+
+def revert_to_snapshot(name, kwargs=None, call=None):
+    '''
+    Revert virtual machine to it's current snapshot. If no snapshot
+    exists, the state of the virtual machine remains unchanged
+
+    .. note::
+
+        The virtual machine will be powered on if the power state of
+        the snapshot when it was created was set to "Powered On". Set
+        ``power_off=True`` so that the virtual machine stays powered
+        off regardless of the power state of the snapshot when it was
+        created. Default is ``power_off=False``.
+
+        If the power state of the snapshot when it was created was
+        "Powered On" and if ``power_off=True``, the VM will be put in
+        suspended state after it has been reverted to the snapshot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a revert_to_snapshot vmame [power_off=True]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The revert_to_snapshot action must be called with -a or --action.'
+        )
+
+    suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    if not vm_ref.rootSnapshot:
+        log.error('VM {0} does not contain any current snapshots'.format(name))
+        return 'revert failed'
+
+    try:
+        task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
+        _wait_for_task(task, name, "revert to snapshot", 5, 'info')
+
+    except Exception as exc:
+        log.error('Error while reverting VM {0} to snapshot: {1}'.format(name, exc))
+        return 'revert failed'
+
+    return 'reverted to current snapshot'
+
+
+def remove_all_snapshots(name, kwargs=None, call=None):
+    '''
+    Remove all the snapshots present for the specified virtual machine.
+
+    .. note::
+
+        All the snapshots higher up in the hierarchy of the current snapshot tree
+        are consolidated and their virtual disks are merged. To override this
+        behavior and only remove all snapshots, set ``merge_snapshots=False``.
+        Default is ``merge_snapshots=True``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a remove_all_snapshots vmname [merge_snapshots=False]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The remove_all_snapshots action must be called with -a or --action.'
+        )
+
+    consolidate = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    try:
+        task = vm_ref.RemoveAllSnapshots()
+        _wait_for_task(task, name, "remove snapshots", 5, 'info')
+    except Exception as exc:
+        log.error('Error while removing snapshots on VM {0}: {1}'.format(name, exc))
+        return 'failed to remove snapshots'
+
+    return 'removed all snapshots'
