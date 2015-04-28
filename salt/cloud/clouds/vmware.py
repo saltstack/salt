@@ -2548,11 +2548,11 @@ def create_snapshot(name, kwargs=None, call=None):
     .. note::
 
         If the VM is powered on, the internal state of the VM (memory
-        dump) can be included in the snapshot by setting ``memdump=True``
-        which will also set the power state of the snapshot to "powered on".
-        This field is ignored if the virtual machine is powered off or if
-        the VM does not support snapshots with memory dumps. Default is
-        ``memdump=False``
+        dump) is included in the snapshot by default which will also set
+        the power state of the snapshot to "powered on". You can set
+        ``memdump=False`` to override this. This field is ignored if
+        the virtual machine is powered off or if the VM does not support
+        snapshots with memory dumps. Default is ``memdump=True``
 
     .. note::
 
@@ -2567,7 +2567,7 @@ def create_snapshot(name, kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
-        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=True] [quiesce=True]
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=False] [quiesce=True]
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2581,7 +2581,7 @@ def create_snapshot(name, kwargs=None, call=None):
             'You must provide a snapshot name for the snapshot to be created.'
         )
 
-    memdump = _str_to_bool(kwargs.get('memdump', False))
+    memdump = _str_to_bool(kwargs.get('memdump', True))
     quiesce = _str_to_bool(kwargs.get('quiesce', False))
 
     vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
