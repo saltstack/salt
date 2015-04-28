@@ -41,7 +41,6 @@ import salt.config
 import salt.version
 from salt.template import compile_template
 from salt import syspaths
-import salt.ext.six.moves.http_client  # pylint: disable=no-name-in-module
 
 # Import 3rd party libs
 import salt.ext.six as six
