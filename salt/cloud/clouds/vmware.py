@@ -1403,7 +1403,8 @@ def start(name, call=None):
                 return ret
             try:
                 log.info('Starting VM {0}'.format(name))
-                vm["object"].PowerOn()
+                task = vm["object"].PowerOn()
+                _wait_for_task(task, name, "power on")
             except Exception as exc:
                 log.error('Could not power on VM {0}: {1}'.format(name, exc))
                 return 'failed to power on'
@@ -1441,7 +1442,8 @@ def stop(name, call=None):
                 return ret
             try:
                 log.info('Stopping VM {0}'.format(name))
-                vm["object"].PowerOff()
+                task = vm["object"].PowerOff()
+                _wait_for_task(task, name, "power off")
             except Exception as exc:
                 log.error('Could not power off VM {0}: {1}'.format(name, exc))
                 return 'failed to power off'
@@ -1483,7 +1485,8 @@ def suspend(name, call=None):
                 return ret
             try:
                 log.info('Suspending VM {0}'.format(name))
-                vm["object"].Suspend()
+                task = vm["object"].Suspend()
+                _wait_for_task(task, name, "suspend")
             except Exception as exc:
                 log.error('Could not suspend VM {0}: {1}'.format(name, exc))
                 return 'failed to suspend'
@@ -1521,7 +1524,8 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                vm["object"].Reset()
+                task = vm["object"].Reset()
+                _wait_for_task(task, name, "reset")
             except Exception as exc:
                 log.error('Could not reset VM {0}: {1}'.format(name, exc))
                 return 'failed to reset'
