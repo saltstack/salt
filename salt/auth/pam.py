@@ -19,18 +19,17 @@ Implemented using ctypes, so no compilation is necessary.
 '''
 from __future__ import absolute_import
 
-# Import Python Lobs
-from __future__ import absolute_import
+# Import python libs
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
-# Import Salt Libs
+# Import Salt libs
 from salt.utils import get_group_list
 from salt.ext.six.moves import range
 
-LIBPAM = CDLL(find_library("pam"))
-LIBC = CDLL(find_library("c"))
+LIBPAM = CDLL(find_library('pam'))
+LIBC = CDLL(find_library('c'))
 
 CALLOC = LIBC.calloc
 CALLOC.restype = c_void_p
@@ -52,7 +51,7 @@ class PamHandle(Structure):
     Wrapper class for pam_handle_t
     '''
     _fields_ = [
-            ("handle", c_void_p)
+            ('handle', c_void_p)
             ]
 
     def __init__(self):
@@ -66,11 +65,11 @@ class PamMessage(Structure):
     '''
     _fields_ = [
             ("msg_style", c_int),
-            ("msg", POINTER(c_char)),
+            ("msg", c_char_p),
             ]
 
     def __repr__(self):
-        return "<PamMessage {0:d} '{1}'>".format(self.msg_style, self.msg)
+        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -78,12 +77,13 @@ class PamResponse(Structure):
     Wrapper class for pam_response structure
     '''
     _fields_ = [
-            ("resp", POINTER(c_char)),
-            ("resp_retcode", c_int),
+            ('resp', c_char_p),
+            ('resp_retcode', c_int),
             ]
 
     def __repr__(self):
-        return "<PamResponse {0:d} '{1}'>".format(self.resp_retcode, self.resp)
+        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
+
 
 CONV_FUNC = CFUNCTYPE(c_int,
         c_int, POINTER(POINTER(PamMessage)),
@@ -95,35 +95,24 @@ class PamConv(Structure):
     Wrapper class for pam_conv structure
     '''
     _fields_ = [
-            ("conv", CONV_FUNC),
-            ("appdata_ptr", c_void_p)
+            ('conv', CONV_FUNC),
+            ('appdata_ptr', c_void_p)
             ]
+
 
 try:
     PAM_START = LIBPAM.pam_start
     PAM_START.restype = c_int
     PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-        POINTER(PamHandle)]
-
-    PAM_END = LIBPAM.pam_end
-    PAM_END.restpe = c_int
-    PAM_END.argtypes = [PamHandle, c_int]
+            POINTER(PamHandle)]
 
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
     PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
 
-    PAM_SETCRED = LIBPAM.pam_setcred
-    PAM_SETCRED.restype = c_int
-    PAM_SETCRED.argtypes = [PamHandle, c_int]
-
-    PAM_OPEN_SESSION = LIBPAM.pam_open_session
-    PAM_OPEN_SESSION.restype = c_int
-    PAM_OPEN_SESSION.argtypes = [PamHandle, c_int]
-
-    PAM_CLOSE_SESSION = LIBPAM.pam_close_session
-    PAM_CLOSE_SESSION.restype = c_int
-    PAM_CLOSE_SESSION.argtypes = [PamHandle, c_int]
+    PAM_END = LIBPAM.pam_end
+    PAM_END.restype = c_int
+    PAM_END.argtypes = [PamHandle, c_int]
 except Exception:
     HAS_PAM = False
 else:
@@ -161,7 +150,7 @@ def authenticate(username, password, service='login'):
         for i in range(n_messages):
             if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
                 pw_copy = STRDUP(str(password))
-                p_response.contents[i].resp = pw_copy
+                p_response.contents[i].resp = cast(pw_copy, c_char_p)
                 p_response.contents[i].resp_retcode = 0
         return 0
 
@@ -176,26 +165,7 @@ def authenticate(username, password, service='login'):
         return False
 
     retval = PAM_AUTHENTICATE(handle, 0)
-    if retval != 0:
-        PAM_END(handle, retval)
-        return False
-
-    retval = PAM_SETCRED(handle, 0)
-    if retval != 0:
-        PAM_END(handle, retval)
-        return False
-
-    retval = PAM_OPEN_SESSION(handle, 0)
-    if retval != 0:
-        PAM_END(handle, retval)
-        return False
-
-    retval = PAM_CLOSE_SESSION(handle, 0)
-    if retval != 0:
-        PAM_END(handle, retval)
-        return False
-
-    retval = PAM_END(handle, retval)
+    PAM_END(handle, 0)
     return retval == 0
 
 
