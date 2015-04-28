@@ -759,6 +759,7 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
         # Check if child snapshots exist
         if snapshot.childSnapshotList:
             snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+
     return snapshots
 
 
@@ -2544,23 +2545,22 @@ def create_snapshot(name, kwargs=None, call=None):
         which will also set the power state of the snapshot to "powered on".
         This field is ignored if the virtual machine is powered off or if
         the VM does not support snapshots with memory dumps. Default is
-        ``memdump=True``
+        ``memdump=False``
 
     .. note::
 
         If the VM is powered on when the snapshot is taken, VMware Tools
         can be used to quiesce the file system in the virtual machine by
         setting ``quiesce=True``. This field is ignored if the virtual
-        machine is powered off; if VMware Tools are not available or when
+        machine is powered off; if VMware Tools are not available or if
         ``memdump=True``. Default is ``quiesce=False``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" description="My snapshot"
-        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" description="My snapshot" memdump=True
-        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" description="My snapshot" quiesce=True
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=True] [quiesce=True]
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2594,7 +2594,6 @@ def create_snapshot(name, kwargs=None, call=None):
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
         _wait_for_task(task, name, "create snapshot", 5, 'info')
-        log.debug("snapshot task")
     except Exception as exc:
         log.error('Error while creating snapshot of {0}: {1}'.format(name, exc))
         return 'failed to create snapshot'
@@ -2612,8 +2611,8 @@ def revert_to_snapshot(name, kwargs=None, call=None):
         The virtual machine will be powered on if the power state of
         the snapshot when it was created was set to "Powered On". Set
         ``power_off=True`` so that the virtual machine stays powered
-        powered off regardless of the power state of the snapshot when
-        it was created. Default is ``power_off=False``. 
+        off regardless of the power state of the snapshot when it was
+        created. Default is ``power_off=False``. 
         
         If the power state of the snapshot when it was created was
         "Powered On" and if ``power_off=True``, the VM will be put in
