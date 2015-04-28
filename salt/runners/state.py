@@ -123,9 +123,15 @@ sls = orchestrate  # pylint: disable=invalid-name
 
 def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):
     '''
-    versionadded:: 2015.2
-
     Execute a single state orchestration routine
+
+    .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run state.orchestrate_single fun=salt.wheel name=key.list_all
     '''
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError(
@@ -147,9 +153,22 @@ def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs)
 
 def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     '''
-    versionadded:: 2015.2
-
     Execute a single state orchestration routine
+
+    .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run state.orchestrate_high '{
+            stage_one:
+                {salt.state: [{tgt: "db*"}, {sls: postgres_setup}]},
+            stage_two:
+                {salt.state: [{tgt: "web*"}, {sls: apache_setup}, {
+                    require: [{salt: stage_one}],
+                }]},
+            }'
     '''
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError(
