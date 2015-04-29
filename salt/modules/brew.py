@@ -66,8 +66,9 @@ def _call_brew(cmd):
     Calls the brew command with the user user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
+    runas = user if user != __opts__['user'] else None
     return __salt__['cmd.run_all'](cmd,
-                                   runas=user,
+                                   runas=runas,
                                    output_loglevel='trace',
                                    python_shell=False)
 
