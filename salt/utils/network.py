@@ -25,6 +25,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt._compat import subprocess
 
 log = logging.getLogger(__name__)
 
@@ -1059,7 +1060,7 @@ def _sunos_remotes_on(port, which_end):
     '''
     remotes = set()
     try:
-        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed netstat')
         raise
@@ -1105,7 +1106,7 @@ def _freebsd_remotes_on(port, which_end):
 
     try:
         cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
-        data = subprocess.check_output(cmd)
+        data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
@@ -1155,7 +1156,7 @@ def _windows_remotes_on(port, which_end):
     '''
     remotes = set()
     try:
-        data = subprocess.check_output(['netstat', '-n'])
+        data = subprocess.check_output(['netstat', '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed netstat')
         raise
@@ -1201,7 +1202,7 @@ def remotes_on_local_tcp_port(port):
         return _windows_remotes_on(port, 'local_port')
 
     try:
-        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
+        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
@@ -1254,7 +1255,7 @@ def remotes_on_remote_tcp_port(port):
         return _windows_remotes_on(port, 'remote_port')
 
     try:
-        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
+        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise

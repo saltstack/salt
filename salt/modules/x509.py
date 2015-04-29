@@ -17,7 +17,6 @@ import random
 import ctypes
 import tempfile
 import yaml
-import subprocess
 import re
 import datetime
 import ast
@@ -121,8 +120,7 @@ def _parse_openssl_req(csr_filename):
     '''
     cmd = ('openssl req -text -noout -in {0}'.format(csr_filename))
 
-    output = subprocess.check_output(cmd.split(),
-        stderr=subprocess.STDOUT)
+    output = __salt__['cmd.run_stderr'](cmd)
 
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
@@ -159,8 +157,7 @@ def _parse_openssl_crl(crl_filename):
     '''
     cmd = ('openssl crl -text -noout -in {0}'.format(crl_filename))
 
-    output = subprocess.check_output(cmd.split(),
-        stderr=subprocess.STDOUT)
+    output = __salt__['cmd.run_stderr'](cmd)
 
     crl = {}
     for line in output.split('\n'):
@@ -1330,8 +1327,7 @@ def verify_crl(crl, cert):
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(crltempfile.name, certtempfile.name))
 
-    output = subprocess.check_output(cmd.split(),
-        stderr=subprocess.STDOUT)
+    output = __salt__['cmd.run_stderr'](cmd)
 
     crltempfile.close()
     certtempfile.close()

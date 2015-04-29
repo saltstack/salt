@@ -170,6 +170,19 @@ rendered SLS file (or any errors generated while rendering the SLS file).
 
         salt-master -l debug
 
+3.  Look for log entries in the form:
+
+    .. code-block:: text
+
+        [DEBUG   ] Gathering reactors for tag foo/bar
+        [DEBUG   ] Compiling reactions for tag foo/bar
+        [DEBUG   ] Rendered data from file: /path/to/the/reactor_file.sls:
+        <... Rendered output appears here. ...>
+
+    The rendered output is the result of the Jinja parsing and is a good way to
+    view the result of referencing Jinja variables. If the result is empty then
+    Jinja produced an empty result and the Reactor will ignore it.
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 
