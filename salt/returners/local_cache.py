@@ -121,10 +121,10 @@ def prep_jid(nocache=False, passed_jid=None):
         if passed_jid is None:
             return prep_jid(nocache=nocache)
 
-    with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'w+') as fn_:
+    with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
         fn_.write(jid)
     if nocache:
-        with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'w+') as fn_:
+        with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
             fn_.write('')
 
     return jid
@@ -304,7 +304,7 @@ def clean_old_jobs():
                     # No jid file means corrupted cache entry, scrub it
                     shutil.rmtree(f_path)
                 else:
-                    with salt.utils.fopen(jid_file, 'r') as fn_:
+                    with salt.utils.fopen(jid_file, 'rb') as fn_:
                         jid = fn_.read()
                     if len(jid) < 18:
                         # Invalid jid, scrub the dir
