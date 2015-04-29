@@ -47,6 +47,13 @@ try:
 except ImportError:
     HAS_SLLIBS = False
 
+# Attempt to import libcloud
+try:
+    import libcloud
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -60,6 +67,9 @@ def __virtual__():
     Set up the libcloud functions and check for SoftLayer configurations.
     '''
     if not HAS_SLLIBS:
+        return False
+
+    if not HAS_LIBCLOUD:
         return False
 
     if get_configured_provider() is False:
