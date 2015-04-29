@@ -10,7 +10,7 @@ This state is useful for sending messages to Slack during state runs.
 .. code-block:: yaml
 
     slack-message:
-      slack.send_message:
+      slack.post_message:
         - channel: '#general'
         - from_name: SuperAdmin
         - message: 'This state was executed successfully.'
@@ -38,12 +38,12 @@ def post_message(name,
                  message,
                  api_key=None):
     '''
-    Send a message to a Slack room.
+    Send a message to a Slack channel.
 
     .. code-block:: yaml
 
         slack-message:
-          slack.send_message:
+          slack.post_message:
             - channel: '#general'
             - from_name: SuperAdmin
             - message: 'This state was executed successfully.'
@@ -55,16 +55,16 @@ def post_message(name,
         The unique name for this event.
 
     channel
-        The room to send the message to. Can either be the ID or the name.
+        The channel to send the message to. Can either be the ID or the name.
 
     from_name
         The name of that is to be shown in the "from" field.
-        If not specified, defaults to.
 
     message
-        The message that is to be sent to the Hipchat room.
+        The message that is to be sent to the Slack channel.
 
     The following parameters are optional:
+
     api_key
         The api key for Slack to use for authentication,
         if not specified in the configuration options of master or minion.

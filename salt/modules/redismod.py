@@ -15,6 +15,9 @@ Module to provide redis functionality to Salt
     redis.password: None
 '''
 
+# Import Pytho libs
+from __future__ import absolute_import
+
 # Import third party libs
 try:
     import redis

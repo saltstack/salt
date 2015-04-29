@@ -21,6 +21,12 @@ from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
+
 
 @depends('non_existantmodulename')
 def missing_func():
@@ -156,7 +162,7 @@ def version():
 
 def versions_information():
     '''
-    Returns versions of components used by salt as a dict
+    Report the versions of dependent and system software
 
     CLI Example:
 
@@ -164,7 +170,7 @@ def versions_information():
 
         salt '*' test.versions_information
     '''
-    return dict(salt.version.versions_information())
+    return salt.version.versions_information()
 
 
 def versions_report():
@@ -178,6 +184,9 @@ def versions_report():
         salt '*' test.versions_report
     '''
     return '\n'.join(salt.version.versions_report())
+
+
+versions = versions_report
 
 
 def conf_test():
@@ -296,8 +305,10 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return the num-th Fibonacci number, and the time it took to compute in
+    seconds. Used for performance tests.
+
+    This function is designed to have terrible performance.
 
     CLI Example:
 
@@ -307,12 +318,18 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    fib_a, fib_b = 0, 1
-    ret = [0]
-    while fib_b < num:
-        ret.append(fib_b)
-        fib_a, fib_b = fib_b, fib_a + fib_b
-    return ret, time.time() - start
+    if num < 2:
+        return num, time.time() - start
+    return _fib(num-1) + _fib(num-2), time.time() - start
+
+
+def _fib(num):
+    '''
+    Helper method for test.fib, doesn't calculate the time.
+    '''
+    if num < 2:
+        return num
+    return _fib(num-1) + _fib(num-2)
 
 
 def collatz(start):
@@ -543,3 +560,29 @@ def assertion(assertion):
         salt '*' test.assert False
     '''
     assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False

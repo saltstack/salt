@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Pytohn libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -88,6 +91,20 @@ sass (3.1.15, 3.1.7)
                  'responds_to_parent': ['1.0.20091013'],
                  'sass': ['3.1.15', '3.1.7']},
                 gem.list_())
+
+    def test_list_upgrades(self):
+        output = '''
+arel (5.0.1.20140414130214 < 6.0.0)
+rails (4.1.9 < 4.2.0)
+rake (10.3.2 < 10.4.2)
+'''
+        mock = MagicMock(return_value=output)
+        with patch.object(gem, '_gem', new=mock):
+            self.assertEqual(
+                {'arel': '6.0.0',
+                 'rails': '4.2.0',
+                 'rake': '10.4.2'}, gem.list_upgrades()
+            )
 
     def test_sources_list(self):
         output = '''*** CURRENT SOURCES ***

@@ -7,9 +7,14 @@ Beacon to fire events at failed login of users
     beacons:
       btmp: {}
 '''
+
 # Import python libs
+from __future__ import absolute_import
 import os
 import struct
+
+# Import Salt Libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'
@@ -42,6 +47,16 @@ def _get_loc():
     '''
     if LOC_KEY in __context__:
         return __context__[LOC_KEY]
+
+
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for load beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False
+    return True
 
 
 # TODO: add support for only firing events for specific users and login times

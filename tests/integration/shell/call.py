@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import re
@@ -33,18 +34,14 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         out = self.run_call('-l quiet test.fib 3')
 
         expect = ['local:',
-                  '    |_',
-                  '      - 0',
-                  '      - 1',
-                  '      - 1',
-                  '      - 2']
+                  '    - 2']
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
         out = self.run_call('-l quiet --out txt test.fib 3')
 
         expect = [
-            'local: ([0, 1, 1, 2]'
+            'local: (2'
         ]
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
@@ -337,7 +334,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(integration.TMP, 'issue-14979')
-        current_umask = os.umask(0077)
+        current_umask = os.umask(0o077)
         try:
             # Let's create an initial output file with some data
             self.run_script(
@@ -352,7 +349,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stat1 = os.stat(output_file)
 
             # Let's change umask
-            os.umask(0777)
+            os.umask(0o777)
 
             self.run_script(
                 'salt-call',

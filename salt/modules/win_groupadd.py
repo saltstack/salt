@@ -346,7 +346,7 @@ def members(name, members_list):
 
         salt '*' group.members foo 'user1,user2,user3'
 
-        if using LDAP DNs, usernames must be seperated with a ", "
+        if using LDAP DNs, usernames must be separated with a ", "
 
         salt '*' group.members name='cn=foo,dc=domain,dc=com' members_list='cn=user1,cn=Users,dc=domain,dc=com, cn=user2,ou=Test,dc=domain,dc=com'
 

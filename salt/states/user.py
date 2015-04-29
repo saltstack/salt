@@ -23,14 +23,17 @@ as either absent or present
     testuser:
       user.absent
 '''
-from __future__ import absolute_import
 
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
+import logging
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -197,7 +200,7 @@ def present(name,
         will be assigned
 
     gid
-        The default group id
+        The default group id. Also accepts group name.
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
@@ -379,7 +382,7 @@ def present(name,
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in six.iteritems(changes):
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
@@ -388,7 +391,7 @@ def present(name,
         if __grains__['kernel'] == 'OpenBSD':
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in six.iteritems(changes):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
@@ -402,7 +405,7 @@ def present(name,
             if key == 'homeDoesNotExist':
                 __salt__['user.chhome'](name, val, True)
                 if not os.path.isdir(val):
-                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0755)
+                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)

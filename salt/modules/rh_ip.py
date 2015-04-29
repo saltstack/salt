@@ -70,7 +70,7 @@ _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
-    'ipip',
+    'ipip', 'ib',
 ]
 
 
@@ -621,6 +621,8 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _raise_error_iface(iface, opts[opt], ['1.2.3.4'])
             else:
                 result[opt] = opts[opt]
+    if iface_type == 'ib':
+        result['devtype'] = 'InfiniBand'
 
     for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
@@ -676,6 +678,29 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             _raise_error_iface(iface, opts['userctl'], valid)
     else:
         result['userctl'] = 'no'
+
+    # This vlan is in opts, and should be only used in range interface
+    # will affect jinja template for interface generating
+    if 'vlan' in opts:
+        if opts['vlan'] in _CONFIG_TRUE:
+            result['vlan'] = 'yes'
+        elif opts['vlan'] in _CONFIG_FALSE:
+            result['vlan'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['vlan'], valid)
+
+    if 'arpcheck' in opts:
+        if opts['arpcheck'] in _CONFIG_FALSE:
+            result['arpcheck'] = 'no'
+
+    if 'ipaddr_start' in opts:
+        result['ipaddr_start'] = opts['ipaddr_start']
+
+    if 'ipaddr_end' in opts:
+        result['ipaddr_end'] = opts['ipaddr_end']
+
+    if 'clonenum_start' in opts:
+        result['clonenum_start'] = opts['clonenum_start']
 
     return result
 
@@ -898,7 +923,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))

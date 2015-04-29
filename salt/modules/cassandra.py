@@ -179,7 +179,7 @@ def column_families(keyspace=None):
         return ret
 
 
-def column_family_definition(keyspace=None, column_family=None):
+def column_family_definition(keyspace, column_family):
     '''
     Return a dictionary of column family definitions for the given
     keyspace/column_family

@@ -231,7 +231,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None):
+def host_keys(keydir=None, private=True):
     '''
     Return the minion's host keys
 
@@ -240,6 +240,8 @@ def host_keys(keydir=None):
     .. code-block:: bash
 
         salt '*' ssh.host_keys
+        salt '*' ssh.host_keys keydir=/etc/ssh
+        salt '*' ssh.host_keys keydir=/etc/ssh private=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -251,6 +253,10 @@ def host_keys(keydir=None):
     keys = {}
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
+            if fn_.endswith('.pub') is False and private is False:
+                log.info('Skipping private key file {0} as private is set to False'.format(fn_))
+                continue
+
             top = fn_.split('.')
             comps = top[0].split('_')
             kname = comps[2]
@@ -325,7 +331,7 @@ def check_key_file(user,
 
     .. code-block:: bash
 
-        salt '*' root salt://ssh/keyfile
+        salt '*' ssh.check_key_file root salt://ssh/keyfile
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -399,6 +405,65 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     else:
         return 'add'
     return 'exists'
+
+
+def rm_auth_key_from_file(user,
+             source,
+             config='.ssh/authorized_keys',
+             saltenv='base',
+             env=None):
+    '''
+    Remove an authorized key from the specified user's authorized key file, using a file as source
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.rm_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
+    '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
+    lfile = __salt__['cp.cache_file'](source, saltenv)
+    if not os.path.isfile(lfile):
+        raise CommandExecutionError(
+            'Failed to pull key file from salt file server'
+        )
+
+    s_keys = _validate_keys(lfile)
+    if not s_keys:
+        err = (
+            'No keys detected in {0}. Is file properly formatted?'.format(
+                source
+            )
+        )
+        log.error(err)
+        __context__['ssh_auth.error'] = err
+        return 'fail'
+    else:
+        rval = ''
+        for key in s_keys:
+            rval += rm_auth_key(
+                user,
+                key,
+                config
+            )
+        # Due to the ability for a single file to have multiple keys, it's
+        # possible for a single call to this function to have both "replace"
+        # and "new" as possible valid returns. I ordered the following as I
+        # thought best.
+        if 'Key not removed' in rval:
+            return 'Key not removed'
+        elif 'Key removed' in rval:
+            return 'Key removed'
+        else:
+            return 'Key not present'
 
 
 def rm_auth_key(user, key, config='.ssh/authorized_keys'):
@@ -790,6 +855,7 @@ def set_known_host(user=None,
         return {'status': 'error',
                 'error': 'hostname argument required'}
     update_required = False
+    check_required = False
     stored_host = get_known_host(user, hostname, config)
 
     if not stored_host:
@@ -798,9 +864,11 @@ def set_known_host(user=None,
         update_required = True
     elif key and key != stored_host['key']:
         update_required = True
+    elif key != stored_host['key']:
+        check_required = True
 
-    if not update_required:
-        return {'status': 'exists', 'key': stored_host}
+    if not update_required and not check_required:
+        return {'status': 'exists', 'key': stored_host['key']}
 
     if not key:
         remote_host = recv_known_host(hostname,
@@ -815,6 +883,10 @@ def set_known_host(user=None,
             return {'status': 'error',
                     'error': ('Remote host public key found but its fingerprint '
                               'does not match one you have provided')}
+
+        if check_required:
+            if remote_host['key'] == stored_host['key']:
+                return {'status': 'exists', 'key': stored_host['key']}
 
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)

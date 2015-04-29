@@ -126,7 +126,7 @@ def resize2fs(device):
     ret = {}
     cmd = 'resize2fs {0}'.format(device)
     try:
-        out = __salt__['cmd.run_all'](cmd)
+        out = __salt__['cmd.run_all'](cmd, python_shell=False)
     except subprocess.CalledProcessError as err:
         return False
     if out['retcode'] == 0:

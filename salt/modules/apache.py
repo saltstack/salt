@@ -9,16 +9,14 @@ Support for Apache
     Debian-based system is detected.
 '''
 
-# Python3 generators
-from __future__ import generators, print_function, with_statement
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import, generators, print_function, with_statement
 import re
 import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
 from salt.ext.six.moves import cStringIO
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.request import (
@@ -413,7 +411,7 @@ def _parse_config(conf, slot=None):
             file=ret
         )
         del conf['this']
-        for key, value in conf.items():
+        for key, value in six.iteritems(conf):
             if isinstance(value, str):
                 print('{0} {1}'.format(key, value), file=ret)
             elif isinstance(value, list):
@@ -448,7 +446,7 @@ def config(name, config, edit=True):
     '''
 
     for entry in config:
-        key = next(entry.iterkeys())
+        key = next(six.iterkeys(entry))
         configs = _parse_config(entry[key], key)
         if edit:
             with salt.utils.fopen(name, 'w') as configfile:

@@ -8,19 +8,16 @@ Manage the registry on Windows
 # TODO: Figure out the exceptions _winreg can raise and properly  catch
 #       them instead of a bare except that catches any exception at all
 
+# Import python libs
+from __future__ import absolute_import
+import logging
+
 # Import third party libs
 try:
-    import _winreg
+    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
     HAS_WINDOWS_MODULES = True
 except ImportError:
-    try:
-        import winreg as _winreg
-        HAS_WINDOWS_MODULES = True
-    except ImportError:
-        HAS_WINDOWS_MODULES = False
-
-# Import python libs
-import logging
+    HAS_WINDOWS_MODULES = False
 
 # Import salt libs
 import salt.utils

@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 
+<<<<<<< HEAD
 # Import Salt Testing Libs
 from salttesting.case import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+=======
+# import Python Libs
+from __future__ import absolute_import
+from collections import OrderedDict
+>>>>>>> ee91670a7ff0dd0824d1791435e0f568921b7e8b
 
 # Import Salt Libs
 from salt.states import boto_secgroup

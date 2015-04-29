@@ -10,7 +10,7 @@ prefix or in `sysexits.h`).
 EX_GENERIC = 1
 
 # Salt SSH "Thin" deployment failures
-EX_THIN_PYTHON_OLD = 10
+EX_THIN_PYTHON_INVALID = 10
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
@@ -27,3 +27,8 @@ EX_UNAVAILABLE = 69
 EX_CANTCREAT = 73
 EX_SOFTWARE = 70
 EX_USAGE = 64
+
+# The Salt specific exit codes are defined below:
+
+# SALT_BUILD_FAIL is used when salt fails to build something, like a container
+SALT_BUILD_FAIL = 101

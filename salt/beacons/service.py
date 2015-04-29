@@ -3,12 +3,26 @@
 Send events covering service status
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
 import os
 import logging
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 last_status = {}
+
+
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for service beacon should be a list of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for service beacon must be a dictionary.')
+        return False
+    return True
 
 
 def beacon(config):

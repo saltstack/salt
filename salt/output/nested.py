@@ -38,10 +38,10 @@ class NestDisplay(object):
     Manage the nested display contents
     '''
     def __init__(self):
-        self.colors = get_colors(__opts__.get('color'))
         self.__dict__.update(
             get_colors(
-                __opts__.get('color')
+                __opts__.get('color'),
+                __opts__.get('color_theme')
             )
         )
         self.strip_colors = __opts__.get('strip_colors', True)
@@ -72,7 +72,7 @@ class NestDisplay(object):
             out.append(
                 self.ustring(
                     indent,
-                    self.YELLOW,
+                    self.LIGHT_YELLOW,
                     ret,
                     prefix=prefix
                 )
@@ -83,7 +83,7 @@ class NestDisplay(object):
             out.append(
                 self.ustring(
                     indent,
-                    self.YELLOW,
+                    self.LIGHT_YELLOW,
                     ret,
                     prefix=prefix
                 )

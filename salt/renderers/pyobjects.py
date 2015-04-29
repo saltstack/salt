@@ -138,8 +138,8 @@ renderer will take care of fetching the file for you, parsing it with all of
 the pyobjects features available and then place the requested objects in the
 global scope of the template being rendered.
 
-This works for both types of import statements, ``import X`` and
-``from X import Y``.
+This works for all types of import statements; ``import X``,
+``from X import Y``, and ``from X import Y as Z``.
 
 .. code-block:: python
    :linenos:
@@ -148,17 +148,16 @@ This works for both types of import statements, ``import X`` and
 
     import salt://myfile.sls
     from salt://something/data.sls import Object
+    from salt://something/data.sls import Object as Other
 
 
 See the Map Data section for a more practical use.
 
 Caveats:
 
-* You cannot use the ``as`` syntax, you can only import objects using their
-  existing name.
-
 * Imported objects are ALWAYS put into the global scope of your template,
   regardless of where your import statement is.
+
 
 Salt object
 ^^^^^^^^^^^
@@ -259,22 +258,23 @@ TODO
 * Interface for working with reactor files
 '''
 
+# Import Python Libs
 from __future__ import absolute_import
-
 import logging
 import re
-from salt.ext.six import exec_
 
+# Import Salt Libs
+from salt.ext.six import exec_
 import salt.utils
 import salt.loader
-
 from salt.fileclient import get_file_client
 from salt.utils.pyobjects import Registry, StateFactory, SaltObject, Map
+import salt.ext.six as six
 
 # our import regexes
-FROM_RE = r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$'
-IMPORT_RE = r'^\s*import\s+(salt:\/\/.*)$'
-FROM_AS_RE = r'^(.*) as (.*)$'
+FROM_RE = re.compile(r'^\s*from\s+(salt:\/\/.*)\s+import (.*)$')
+IMPORT_RE = re.compile(r'^\s*import\s+(salt:\/\/.*)$')
+FROM_AS_RE = re.compile(r'^(.*) as (.*)$')
 
 log = logging.getLogger(__name__)
 
@@ -290,7 +290,7 @@ def load_states():
     '''
     states = {}
 
-    # the loader expects to find pillar & grian data
+    # the loader expects to find pillar & grain data
     __opts__['grains'] = __grains__
     __opts__['pillar'] = __pillar__
 
@@ -305,7 +305,9 @@ def load_states():
     )
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
-    for key, func in lazy_states.iteritems():
+    for key, func in six.iteritems(lazy_states):
+        if '.' not in key:
+            continue
         mod_name, func_name = key.split('.', 1)
         if mod_name not in states:
             states[mod_name] = {}
@@ -388,7 +390,7 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         line = line.rstrip('\r\n')
         matched = False
         for RE in (IMPORT_RE, FROM_RE):
-            matches = re.match(RE, line)
+            matches = RE.match(line)
             if not matches:
                 continue
 
@@ -411,12 +413,12 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
             exec_(state_contents, _globals, state_locals)
 
             if imports is None:
-                imports = list(state_locals.keys())
+                imports = list(state_locals)
 
             for name in imports:
                 name = alias = name.strip()
 
-                matches = re.match(FROM_AS_RE, name)
+                matches = FROM_AS_RE.match(name)
                 if matches is not None:
                     name = matches.group(1).strip()
                     alias = matches.group(2).strip()

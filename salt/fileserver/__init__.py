@@ -2,9 +2,9 @@
 '''
 File server pluggable modules and generic backend functions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import errno
 import fnmatch
 import logging
@@ -15,7 +15,8 @@ import time
 # Import salt libs
 import salt.loader
 import salt.utils
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -285,7 +286,7 @@ class Fileserver(object):
         ret = []
         if not back:
             back = self.opts['fileserver_backend']
-        if isinstance(back, string_types):
+        if isinstance(back, six.string_types):
             back = back.split(',')
         if all((x.startswith('-') for x in back)):
             # Only subtracting backends from enabled ones
@@ -345,7 +346,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 msg = 'Setting update lock for {0} remotes'.format(fsb)
                 if remote:
-                    if not isinstance(remote, string_types):
+                    if not isinstance(remote, six.string_types):
                         errors.append(
                             'Badly formatted remote pattern \'{0}\''
                             .format(remote)
@@ -632,7 +633,7 @@ class Fileserver(object):
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = dict([
-                (x, y) for x, y in ret.items() if x.startswith(prefix)
+                (x, y) for x, y in six.iteritems(ret) if x.startswith(prefix)
             ])
         return ret
 

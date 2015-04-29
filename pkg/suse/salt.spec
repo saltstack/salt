@@ -16,13 +16,16 @@
 #
 
 Name:           salt
-Version:        2014.7.0
+Version:        2014.7.2
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
 Group:          System/Monitoring
 Url:            http://saltstack.org/
 Source0:        http://pypi.python.org/packages/source/s/%{name}/%{name}-%{version}.tar.gz
+
+# FIX_UPSTREAM_TARBALL no zsh completion
+Source1:		zsh_completion.zsh
 
 # PATCH-FIX-OPENSUSE use-forking-daemon.patch tserong@suse.com -- We don't have python-systemd, so notify can't work
 Patch1:         use-forking-daemon.patch
@@ -262,6 +265,7 @@ cd doc && make html && rm _build/html/.buildinfo && rm _build/html/_images/proxy
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
 %fdupes %{buildroot}%{_prefix}
+%fdupes $RPM_BUILD_ROOT%{python_sitelib}
 
 ## create missing directories
 mkdir -p %{buildroot}%{_sysconfdir}/salt/master.d
@@ -322,7 +326,8 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 ## install completion scripts
 %if %with_bashcomp
 install -Dpm 0644 pkg/salt.bash %{buildroot}/etc/bash_completion.d/%{name}
-install -Dpm 0644 scripts/completion/zsh_completion.zsh %{buildroot}/etc/zsh_completion.d/%{name}
+#install -Dpm 0644 scripts/completion/zsh_completion.zsh #%%{buildroot}/etc/zsh_completion.d/#%%{name}
+install -Dpm 0644 %{SOURCE1} %{buildroot}/etc/zsh_completion.d/%{name}
 %endif #with_bashcomp
 
 #%%check
@@ -500,10 +505,10 @@ install -Dpm 0644 scripts/completion/zsh_completion.zsh %{buildroot}/etc/zsh_com
 %{_bindir}/salt-key
 %{_bindir}/salt-run
 %{_mandir}/man1/salt-master.1.gz
-%{_mandir}/man1/salt.1.gz
 %{_mandir}/man1/salt-cp.1.gz
 %{_mandir}/man1/salt-key.1.gz
 %{_mandir}/man1/salt-run.1.gz
+%{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/master
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/roster
@@ -529,7 +534,6 @@ install -Dpm 0644 scripts/completion/zsh_completion.zsh %{buildroot}/etc/zsh_com
 %{_bindir}/salt-unity
 %{_mandir}/man1/salt-unity.1.gz
 %{_mandir}/man1/salt-call.1.gz
-%{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %attr(755,root,root)%{python_sitelib}/salt/cloud/deploy/*.sh
 %{python_sitelib}/*

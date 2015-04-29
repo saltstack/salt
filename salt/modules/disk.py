@@ -224,9 +224,13 @@ def blkid(device=None):
 
     ret = {}
     blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
+
     if blkid_result['retcode'] > 0:
         return ret
-    for line in blkid_result['stdout'].split('\n'):
+
+    for line in blkid_result['stdout'].splitlines():
+        if not line:
+            continue
         comps = line.split()
         device = comps[0][:-1]
         info = {}

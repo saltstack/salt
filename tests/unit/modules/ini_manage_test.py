@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
+
+# Import python libs
+from __future__ import absolute_import
 import os
 import tempfile
 
+# Import Salt Testing libs
 from salttesting.unit import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
 import salt.utils
 from salt.modules import ini_manage as ini
 

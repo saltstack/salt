@@ -37,14 +37,19 @@ Example:
     'server_name':
       serverdensity_device.monitored
 '''
+
+# Import python libs
 from __future__ import absolute_import
+import logging
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # TODO:
 #
 #  Add a plugin support
 #  Add notification support
 
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -137,8 +142,8 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
 
     # override salt_params with given params
     if salt_params:
-        for k, v in params.items():
-            params_from_salt[k] = v
+        for key, value in six.iteritems(params):
+            params_from_salt[key] = value
         params_to_use = params_from_salt
     else:
         params_to_use = params

@@ -1,6 +1,0 @@
--r _requirements.txt
--e git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting
-
-mock
-boto>=2.32.1
-moto>=0.3.6

@@ -11,7 +11,10 @@ be used by Salt SSH to log into any minion in the index.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os.path
+
+# Import 3rd-party libs
 import msgpack
 
 # Import Salt libs

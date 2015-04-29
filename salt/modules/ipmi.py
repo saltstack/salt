@@ -272,7 +272,7 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
         api_pass=example
         api_port=623
 
-    :return: A Python dict with the following keys/values:
+    :return: A Python dict with the following keys/values::
         {
         - alerting:
         - per_msg_auth:
@@ -288,7 +288,7 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
             2: 'user',
             3: 'operator',
             4: 'administrator',
-            5: 'proprietary',
+            5: 'proprietary'
             }
         }
 
@@ -314,11 +314,11 @@ def get_channel_info(channel=14, **kwargs):
         api_port=623
 
     :return:
-    session_support:
-        no_session: channel is session-less
-        single: channel is single-session
-        multi: channel is multi-session
-        auto: channel is session-based (channel could alternate between
+        session_support:
+            no_session: channel is session-less
+            single: channel is single-session
+            multi: channel is multi-session
+            auto: channel is session-based (channel could alternate between
             single- and multi-session operation, as can occur with a
             serial/modem channel that supports connection mode auto-detect)
 
@@ -358,13 +358,13 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
     authentication itself is a global setting for the channel and is
     enabled/disabled via the serial/modem configuration parameters.
 
-    :param ipmi_msg: User IPMI Messaginge:
+    :param ipmi_msg: User IPMI Messaging:
     (used to enable/disable whether
     this user's name and password information will be used for IPMI
     Messaging. In this case, 'IPMI Messaging' refers to the ability to
     execute generic IPMI commands that are not associated with a
     particular payload type. For example, if IPMI Messaging is disabled for
-    a user, but that user is enabled for activatallow_authing the SOL
+    a user, but that user is enabled for activating the SOL
     payload type, then IPMI commands associated with SOL and session
     management, such as Get SOL Configuration Parameters and Close Session
     are available, but generic IPMI commands such as Get SEL Time are

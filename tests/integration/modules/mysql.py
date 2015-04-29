@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import Salt Testing libs
@@ -15,11 +16,15 @@ ensure_in_syspath('../../')
 import integration
 from salt.modules import mysql as mysqlmod
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 log = logging.getLogger(__name__)
 
 NO_MYSQL = False
 try:
-    import MySQLdb  # pylint: disable=W0611
+    import MySQLdb  # pylint: disable=import-error,unused-import
 except Exception:
     NO_MYSQL = True
 
@@ -391,7 +396,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
                       'B%table \'`2': 'InnoDB',
                       'Ctable --`3': 'MEMORY'
                      }
-        for tablename, engine in iter(sorted(tablenames.iteritems())):
+        for tablename, engine in sorted(six.iteritems(tablenames)):
             # prepare queries
             create_query = ('CREATE TABLE {tblname} ('
                 ' id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,'
@@ -513,7 +518,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
           connection_pass=self.password
         )
         expected = []
-        for tablename, engine in iter(sorted(tablenames.iteritems())):
+        for tablename, engine in sorted(six.iteritems(tablenames)):
             if engine is 'MEMORY':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
@@ -538,7 +543,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
           connection_pass=self.password
         )
         expected = []
-        for tablename, engine in iter(sorted(tablenames.iteritems())):
+        for tablename, engine in sorted(six.iteritems(tablenames)):
             if engine is 'MYISAM':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
@@ -564,7 +569,7 @@ class MysqlModuleDbTest(integration.ModuleCase,
         )
 
         expected = []
-        for tablename, engine in iter(sorted(tablenames.iteritems())):
+        for tablename, engine in sorted(six.iteritems(tablenames)):
             if engine is 'MYISAM':
                 expected.append([{
                     'Table': dbname+'.'+tablename,
@@ -1334,7 +1339,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         else:
             self.skipTest('No MySQL Server running, or no root access on it.')
         # Create some users and a test db
-        for user, userdef in self.users.iteritems():
+        for user, userdef in six.iteritems(self.users):
             self._userCreation(uname=userdef['name'], password=userdef['pwd'])
         self.run_function(
             'mysql.db_create',
@@ -1382,7 +1387,7 @@ class MysqlModuleUserGrantTest(integration.ModuleCase,
         '''
         Removes created users and db
         '''
-        for user, userdef in self.users.iteritems():
+        for user, userdef in six.iteritems(self.users):
             self._userRemoval(uname=userdef['name'], password=userdef['pwd'])
         self.run_function(
             'mysql.db_remove',

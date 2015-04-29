@@ -21,7 +21,6 @@ Full list of Salt Cloud modules
     joyent
     libcloud_aws
     linode
-    linodepy
     lxc
     msazure
     nova
@@ -34,4 +33,5 @@ Full list of Salt Cloud modules
     saltify
     softlayer
     softlayer_hw
+    vmware
     vsphere

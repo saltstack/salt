@@ -7,7 +7,7 @@ In its most typical use, Salt is a software application in which clients,
 called "minions" can be commanded and controlled from a central command server
 called a "master".
 
-Commands are normally issued to the minions (via the master) by calling a a
+Commands are normally issued to the minions (via the master) by calling a
 client script simply called, 'salt'.
 
 Salt features a pluggable transport system to issue commands from a master to

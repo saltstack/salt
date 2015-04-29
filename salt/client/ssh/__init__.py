@@ -3,8 +3,7 @@
 Create ssh executor system
 '''
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import copy
 import getpass
 import json
@@ -15,12 +14,12 @@ import hashlib
 import tarfile
 import os
 import re
+import sys
 import time
 import yaml
 import uuid
 import tempfile
 import binascii
-from salt.ext.six.moves import input
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -40,8 +39,11 @@ import salt.utils.atomicfile
 import salt.utils.thin
 import salt.utils.verify
 import salt.utils.network
-from salt.ext.six import string_types
 from salt.utils import is_windows
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
 
 try:
     import zmq
@@ -50,7 +52,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%__salt'
+DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -96,7 +98,7 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 
 # NOTE: there are two passes of formatting:
 # 1) Substitute in static values
-#   - EX_THIN_PYTHON_OLD  - exit code if a suitable python is not found
+#   - EX_THIN_PYTHON_INVALID  - exit code if a suitable python is not found
 # 2) Substitute in instance-specific commands
 #   - DEBUG       - enable shim debugging (any non-zero string enables)
 #   - SUDO        - load python and execute as root (any non-zero string enables)
@@ -121,20 +123,20 @@ SUDO=""
 if [ -n "{{SUDO}}" ]
 then SUDO="sudo "
 fi
-EX_PYTHON_OLD={EX_THIN_PYTHON_OLD}
+EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not sys.hexversion >= 0x02060000);" >/dev/null 2>&1
-then py_cmd_path=`"$py_cmd" -c 'import sys; print sys.executable;'`
-exec $SUDO "$py_cmd_path" -c 'exec """{{SSH_PY_CODE}}""".decode("base64")'
+do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info[0] == {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
+then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
+exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
 exit 0
 else continue
 fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
-exit $EX_PYTHON_OLD
+exit $EX_PYTHON_INVALID
 EOF'''.format(
-    EX_THIN_PYTHON_OLD=salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,
+    EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
 )
 
 if not is_windows():
@@ -191,11 +193,12 @@ class SSH(object):
                         'salt-ssh.rsa'
                         )
                     )
-        if not os.path.isfile(priv):
-            try:
-                salt.client.ssh.shell.gen_key(priv)
-            except OSError:
-                raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
+        if priv != 'agent-forwarding':
+            if not os.path.isfile(priv):
+                try:
+                    salt.client.ssh.shell.gen_key(priv)
+                except OSError:
+                    raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
         self.defaults = {
             'user': self.opts.get(
                 'ssh_user',
@@ -463,7 +466,7 @@ class SSH(object):
         self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
 
         for ret in self.handle_ssh(mine=mine):
-            host = next(ret.iterkeys())
+            host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             if self.event:
                 self.event.fire_event(
@@ -522,7 +525,7 @@ class SSH(object):
         sret = {}
         outputter = self.opts.get('output', 'nested')
         for ret in self.handle_ssh():
-            host = next(ret.iterkeys())
+            host = next(six.iterkeys(ret))
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
@@ -605,7 +608,7 @@ class Single(object):
         self.context = {'master_opts': self.opts,
                         'fileclient': self.fsclient}
 
-        if isinstance(argv, string_types):
+        if isinstance(argv, six.string_types):
             self.argv = [argv]
         else:
             self.argv = argv
@@ -729,7 +732,7 @@ class Single(object):
         if self.opts.get('refresh_cache'):
             refresh = True
         conf_grains = {}
-        #Save conf file grains before they get clobbered
+        # Save conf file grains before they get clobbered
         if 'ssh_grains' in self.opts:
             conf_grains = self.opts['ssh_grains']
         if not data_cache:
@@ -757,7 +760,7 @@ class Single(object):
             opts_pkg['id'] = self.id
 
             if '_error' in opts_pkg:
-                #Refresh failed
+                # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
                 return ret
 
@@ -881,6 +884,7 @@ ARGS = {9}\n'''.format(self.minion_config,
             DEBUG=debug,
             SUDO=sudo,
             SSH_PY_CODE=py_code_enc,
+            HOST_PY_MAJOR=sys.version_info[0],
         )
 
         return cmd
@@ -1028,9 +1032,9 @@ ARGS = {9}\n'''.format(self.minion_config,
                 'sudo expected a password, NOPASSWD required'
             ),
             (
-                (salt.defaults.exitcodes.EX_THIN_PYTHON_OLD,),
+                (salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,),
                 'Python interpreter is too old',
-                'salt requires python 2.6 or newer on target hosts'
+                'salt requires python 2.6 or newer on target hosts, must have same major version as origin host'
             ),
             (
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),

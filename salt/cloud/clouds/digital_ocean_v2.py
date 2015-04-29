@@ -18,9 +18,9 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import copy
 import time
@@ -39,6 +39,9 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -83,7 +86,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['regions']:
         ret[region['name']] = {}
-        for item in region.keys():
+        for item in six.iterkeys(region):
             ret[region['name']][item] = str(region[item])
 
     return ret
@@ -108,11 +111,14 @@ def avail_images(call=None):
 
         for image in items['images']:
             ret[image['id']] = {}
-            for item in image.keys():
+            for item in six.iterkeys(image):
                 ret[image['id']][item] = str(image[item])
 
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
 
     return ret
 
@@ -131,7 +137,7 @@ def avail_sizes(call=None):
     ret = {}
     for size in items['sizes']:
         ret[size['slug']] = {}
-        for item in size.keys():
+        for item in six.iterkeys(size):
             ret[size['slug']][item] = str(size[item])
 
     return ret
@@ -146,17 +152,26 @@ def list_nodes(call=None):
             'The list_nodes function must be called with -f or --function.'
         )
 
-    items = query(method='droplets')
-
+    fetch = True
+    page = 1
     ret = {}
-    for node in items['droplets']:
-        ret[node['name']] = {
-            'id': node['id'],
-            'image': node['image']['name'],
-            'networks': str(node['networks']),
-            'size': node['size_slug'],
-            'state': str(node['status']),
-        }
+
+    while fetch:
+        items = query(method='droplets', command='?page=' + str(page))
+        for node in items['droplets']:
+            ret[node['name']] = {
+                'id': node['id'],
+                'image': node['image']['name'],
+                'networks': str(node['networks']),
+                'size': node['size_slug'],
+                'state': str(node['status']),
+            }
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
     return ret
 
 
@@ -169,16 +184,24 @@ def list_nodes_full(call=None, forOutput=True):
             'The list_nodes_full function must be called with -f or --function.'
         )
 
-    items = query(method='droplets')
-
+    fetch = True
+    page = 1
     ret = {}
-    for node in items['droplets']:
-        ret[node['name']] = {}
-        for item in node.keys():
-            value = node[item]
-            if value is not None and forOutput:
-                value = str(value)
-            ret[node['name']][item] = value
+
+    while fetch:
+        items = query(method='droplets', command='?page=' + str(page))
+        for node in items['droplets']:
+            ret[node['name']] = {}
+            for item in six.iterkeys(node):
+                value = node[item]
+                if value is not None and forOutput:
+                    value = str(value)
+                ret[node['name']][item] = value
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
     return ret
 
 
@@ -565,7 +588,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
             'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.status_code,
-                #request.read()
+                # request.read()
                 request.text
             )
         )
@@ -648,7 +671,7 @@ def list_keypairs(call=None):
     ret = {}
     for keypair in items['ssh_keys']:
         ret[keypair['name']] = {}
-        for item in keypair.keys():
+        for item in six.iterkeys(keypair):
             ret[keypair['name']][item] = str(keypair[item])
 
     return ret
@@ -678,6 +701,53 @@ def show_keypair(kwargs=None, call=None):
     details = query(method='account/keys', command=keyid)
 
     return details
+
+
+def create_key(kwargs=None, call=None):
+    '''
+    Upload a public key
+    '''
+    if call != 'function':
+        log.error(
+            'The create_key function must be called with -f or --function.'
+        )
+        return False
+
+    try:
+        result = query(
+            method='account',
+            command='keys',
+            args={'name': kwargs['name'], 'public_key': kwargs['public_key']},
+            http_method='post'
+        )
+    except KeyError:
+        log.info('`name` and `public_key` arguments must be specified')
+        return False
+
+    return result
+
+
+def remove_key(kwargs=None, call=None):
+    '''
+    Delete public key
+    '''
+    if call != 'function':
+        log.error(
+            'The create_key function must be called with -f or --function.'
+        )
+        return False
+
+    try:
+        result = query(
+            method='account',
+            command='keys/' + kwargs['id'],
+            http_method='delete'
+        )
+    except KeyError:
+        log.info('`id` argument must be specified')
+        return False
+
+    return result
 
 
 def get_keyid(keyname):

@@ -2,14 +2,18 @@
 '''
 Manage Django sites
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt libs
 import salt.utils
 import salt.exceptions
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'django'
@@ -62,7 +66,7 @@ def command(settings_module,
     for arg in args:
         cmd = '{0} --{1}'.format(cmd, arg)
 
-    for key, value in kwargs.items():
+    for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             cmd = '{0} --{1}={2}'.format(cmd, key, value)
     return __salt__['cmd.run'](cmd, env=env, python_shell=False)

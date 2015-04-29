@@ -2,13 +2,14 @@
 '''
 Scan a netmask or ipaddr for open ssh ports
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import socket
 
 # Import salt libs
 import salt.ext.ipaddr
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 
 def targets(tgt, tgt_type='glob', **kwargs):

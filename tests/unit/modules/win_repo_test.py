@@ -24,6 +24,7 @@ ensure_in_syspath('../../')
 from salt.modules import win_repo
 
 win_repo.__opts__ = {}
+win_repo.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -31,6 +32,8 @@ class WinRepoTestCase(TestCase):
     '''
         Test cases for salt.modules.win_repo
     '''
+
+    @patch('salt.loader.render', MagicMock(return_valu=''))
     def test_genrepo(self):
         '''
             Test to generate win_repo_cachefile

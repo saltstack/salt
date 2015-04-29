@@ -67,9 +67,9 @@ the ``ext_pillar:`` configuration would be like:
 .. code-block:: yaml
 
     ext_pillar:
-      - git: _ git://gitserver/git-pillar.git root=pillar
+      - git: __env__ git://gitserver/git-pillar.git root=pillar
 
-The (optinal) root=pillar defines the directory that contains the pillar data.
+The (optional) root=pillar defines the directory that contains the pillar data.
 The corresponding ``top.sls`` would be like:
 
 .. code-block:: yaml
@@ -313,8 +313,6 @@ def ext_pillar(minion_id,
     # function
     if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
         return {}
-
-    gitpil.update()
 
     opts = deepcopy(__opts__)
 

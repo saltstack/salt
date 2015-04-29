@@ -31,19 +31,24 @@ Full list of builtin execution modules
     boto_cfn
     boto_cloudwatch
     boto_dynamodb
+    boto_ec2
     boto_elasticache
     boto_elb
     boto_iam
+    boto_rds
     boto_route53
     boto_secgroup
     boto_sns
     boto_sqs
     boto_vpc
+    bower
     brew
     bridge
     bsd_shadow
     btrfs
+    cabal
     cassandra
+    cassandra_cql
     chef
     chocolatey
     cloud
@@ -56,10 +61,12 @@ Full list of builtin execution modules
     cron
     cyg
     daemontools
+    darwin_pkgutil
     darwin_sysctl
     data
     ddns
     deb_apache
+    deb_postgres
     debconfmod
     debian_ip
     debian_service
@@ -71,6 +78,7 @@ Full list of builtin execution modules
     dnsmasq
     dnsutil
     dockerio
+    dockerng
     dpkg
     drac
     drbd
@@ -90,7 +98,6 @@ Full list of builtin execution modules
     freebsdpkg
     freebsdports
     freebsdservice
-    fsutils
     gem
     genesis
     gentoo_service
@@ -118,11 +125,13 @@ Full list of builtin execution modules
     influx
     ini_manage
     introspect
+    ipmi
     ipset
     iptables
     jboss7
     jboss7_cli
     junos
+    kerberos
     key
     keyboard
     keystone
@@ -153,9 +162,12 @@ Full list of builtin execution modules
     monit
     moosefs
     mount
+    mssql
     munin
     mysql
+    nacl
     nagios
+    nagios_rpc
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -166,6 +178,7 @@ Full list of builtin execution modules
     nginx
     nova
     npm
+    nspawn
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -173,6 +186,7 @@ Full list of builtin execution modules
     openbsdservice
     openstack_config
     oracle
+    osquery
     osxdesktop
     pacman
     pagerduty
@@ -193,6 +207,7 @@ Full list of builtin execution modules
     ps
     publish
     puppet
+    pushover_notify
     pw_group
     pw_user
     pyenv
@@ -232,6 +247,7 @@ Full list of builtin execution modules
     slack_notify
     smartos_imgadm
     smartos_vmadm
+    smbios
     smf
     smtp
     softwareupdate
@@ -261,8 +277,10 @@ Full list of builtin execution modules
     timezone
     tls
     tomcat
+    tuned
     twilio_notify
     upstart
+    uptime
     useradd
     uwsgi
     varnish
@@ -270,6 +288,7 @@ Full list of builtin execution modules
     virt
     virtualenv_mod
     win_autoruns
+    win_dacl
     win_disk
     win_dns_client
     win_file
@@ -289,6 +308,7 @@ Full list of builtin execution modules
     win_timezone
     win_update
     win_useradd
+    x509
     xapi
     xfs
     xmpp

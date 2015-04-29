@@ -5,18 +5,13 @@ and the like, but also useful for basic HTTP testing.
 
 .. versionaddedd:: 2015.2
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
 import os.path
 import json
 import logging
-# pylint: disable=no-name-in-module
-import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib as urllib
-# pylint: enable=no-name-in-module
-from salt.ext.six import string_types
 from salt._compat import ElementTree as ET
 
 import ssl
@@ -46,9 +41,14 @@ import salt.config
 import salt.version
 from salt.template import compile_template
 from salt import syspaths
-import salt.ext.six.moves.http_client  # pylint: disable=no-name-in-module
 
 # Import 3rd party libs
+import salt.ext.six as six
+# pylint: disable=import-error,no-name-in-module
+import salt.ext.six.moves.http_client
+import salt.ext.six.moves.http_cookiejar
+import salt.ext.six.moves.urllib as urllib
+# pylint: enable=import-error,no-name-in-module
 try:
     import requests
     HAS_REQUESTS = True
@@ -245,7 +245,7 @@ def query(url,
 
         # Client-side cert handling
         if cert is not None:
-            if isinstance(cert, string_types):
+            if isinstance(cert, six.string_types):
                 if os.path.exists(cert):
                     req_kwargs['cert'] = cert
             elif isinstance(cert, tuple):
@@ -303,7 +303,7 @@ def query(url,
                 # Client-side cert handling
                 if cert is not None:
                     cert_chain = None
-                    if isinstance(cert, string_types):
+                    if isinstance(cert, six.string_types):
                         if os.path.exists(cert):
                             cert_chain = (cert)
                     elif isinstance(cert, tuple):
@@ -518,7 +518,7 @@ def update_ca_bundle(
     )
 
     if merge_files is not None:
-        if isinstance(merge_files, string_types):
+        if isinstance(merge_files, six.string_types):
             merge_files = [merge_files]
 
         if not isinstance(merge_files, list):

@@ -77,6 +77,7 @@ Ensure DynamoDB table exists:
 
 '''
 # Import Python libs
+from __future__ import absolute_import
 import sys
 import logging
 

@@ -4,7 +4,12 @@ After=syslog.target network.target
 
 [Service]
 Type=notify
+# see system.directives(7)
+# LimitNOFILE=16384
 ExecStart=/usr/bin/salt-master
+
+
 
 [Install]
 WantedBy=multi-user.target
+

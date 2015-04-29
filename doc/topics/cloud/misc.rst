@@ -159,35 +159,38 @@ wait_for_ip_timeout
 ~~~~~~~~~~~~~~~~~~~
 
 The amount of time Salt Cloud should wait for a VM to start and get an IP back
-from the cloud provider. Default: 5 minutes.
+from the cloud provider. 
+Default: varies by cloud provider ( between 5 and 25 minutes)
 
 
 wait_for_ip_interval
 ~~~~~~~~~~~~~~~~~~~~
 
 The amount of time Salt Cloud should sleep while querying for the VM's IP.
-Default: 5 seconds.
+Default: varies by cloud provider ( between .5 and 10 seconds)
 
 
 ssh_connect_timeout
 ~~~~~~~~~~~~~~~~~~~
 
 The amount of time Salt Cloud should wait for a successful SSH connection to
-the VM. Default: 5 minutes.
+the VM. 
+Default: varies by cloud provider  (between 5 and 15 minutes)
 
 
 wait_for_passwd_timeout
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The amount of time until an ssh connection can be established via password or
-ssh key. Default 15 seconds.
+ssh key. 
+Default: varies by cloud provider (mostly 15 seconds)
 
 
 wait_for_passwd_maxtries
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 The number of attempts to connect to the VM until we abandon.
-Default 15 attempts
+Default: 15 attempts
 
 
 wait_for_fun_timeout
@@ -195,7 +198,8 @@ wait_for_fun_timeout
 
 Some cloud drivers check for an available IP or a successful SSH connection
 using a function, namely, SoftLayer, and SoftLayer-HW. So, the amount of time
-Salt Cloud should retry such functions before failing. Default: 5 minutes.
+Salt Cloud should retry such functions before failing. 
+Default: 15 minutes.
 
 
 wait_for_spot_timeout
@@ -203,6 +207,7 @@ wait_for_spot_timeout
 
 The amount of time Salt Cloud should wait before an EC2 Spot instance is
 available. This setting is only available for the EC2 cloud driver.
+Default: 10  minutes
 
 
 Salt Cloud Cache

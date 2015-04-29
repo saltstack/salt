@@ -13,6 +13,16 @@ key in one step:
 
     sudo add-apt-repository ppa:saltstack/salt
 
+In addition to the main repository, there are secondary repositories for each
+individual major release. These repositories receive security and point releases
+but will not upgrade to any subsequent major release.  There are currently four
+available repos: salt16, salt17, salt2014-1, salt2014-7. For example to follow
+2014.7.x releases:
+
+.. code-block:: bash
+
+    sudo add-apt-repository ppa:saltstack/salt2014-7
+
 .. admonition:: add-apt-repository: command not found?
 
     The ``add-apt-repository`` command is not always present on Ubuntu systems.
@@ -66,6 +76,20 @@ may be given at a time:
 .. code-block:: bash
 
     sudo apt-get install salt-syndic
+
+Some core components are packaged separately in the Ubuntu repositories.  These should be installed as well: salt-cloud, salt-ssh, salt-api
+
+.. code-block:: bash
+
+    sudo apt-get install salt-cloud
+    
+.. code-block:: bash
+
+    sudo apt-get install salt-ssh
+    
+.. code-block:: bash
+
+    sudo apt-get install salt-api
 
 .. _ubuntu-config:
 

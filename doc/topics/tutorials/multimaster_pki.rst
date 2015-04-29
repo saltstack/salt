@@ -297,7 +297,6 @@ To avoid that, the master can use a pre-created signature of its public-key.
 The signature is saved as a base64 encoded string which the master reads
 once when starting and attaches only that string to auth-replies.
 
-DO ME HERE
 Enabling this also gives paranoid users the possibility, to have the signing
 key-pair on a different system than the actual salt-master and create the public
 keys signature there. Probably on a system with more restrictive firewall rules,

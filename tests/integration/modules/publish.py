@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+# Import Python libs
+from __future__ import absolute_import, print_function
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -87,10 +88,10 @@ class PublishModuleTest(integration.ModuleCase,
         '''
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.fib', 40]
+            ['minion', 'test.fib', 20]
         )
         self.assertTrue(ret)
-        self.assertEqual(ret['minion']['ret'][0][-1], 34)
+        self.assertEqual(ret['minion']['ret'][0], 6765)
 
     def test_kwarg(self):
         '''

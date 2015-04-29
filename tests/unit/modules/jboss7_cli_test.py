@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
+
+# Import python libs
+from __future__ import absolute_import
 import re
-import __builtin__
+
+# Import salt testing libs
+from salttesting.unit import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 from salt.modules import jboss7_cli
 from salt.exceptions import CommandExecutionError
 
-from salttesting import TestCase
 
 try:
     # will pass if executed along with other tests
     __salt__
 except NameError:
     # if executed separately we need to export __salt__ dictionary ourselves
+    from salt.ext.six.moves import builtins as __builtin__
     __builtin__.__salt__ = {}
 
 

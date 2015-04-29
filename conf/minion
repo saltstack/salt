@@ -70,6 +70,7 @@
 #  cab_u: 14-15
 #
 # Where cache data goes.
+# This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
 
 # Verify and set permissions on configuration directories at startup.
@@ -332,9 +333,7 @@
 # failure detected in the state execution. Defaults to False.
 #failhard: False
 #
-# autoload_dynamic_modules turns on automatic loading of modules found in the
-# environments on the master. This is turned on by default. To turn of
-# autoloading modules when states run, set this value to False.
+# Reload the modules prior to a highstate run.
 #autoload_dynamic_modules: True
 #
 # clean_dynamic_modules keeps the dynamic modules on the minion in sync with
@@ -461,8 +460,12 @@
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 
+# The state_output_profile setting changes whether profile information
+# will be shown for each state run.
+#state_output_profile: True
+
 # Fingerprint of the master public key to double verify the master is valid,
-# the master fingerprint can be found by running "salt-key -F master" on the
+# the master fingerprint can be found by running "salt-key -f master.pub" on the
 # salt master.
 #master_finger: ''
 
@@ -506,6 +509,18 @@
 
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
+#
+# Console log colors are specified by these additional formatters:
+#
+# %(colorlevel)s
+# %(colorname)s
+# %(colorprocess)s
+# %(colormsg)s
+#
+# Since it is desirable to include the surrounding brackets, '[' and ']', in
+# the coloring of the messages, these color formatters also include padding as
+# well.  Color LogRecord attributes are only available for console logging.
+#
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 

@@ -2,12 +2,15 @@
 '''
 Neutron class
 '''
-from __future__ import with_statement
+
 
 # Import python libs
+from __future__ import absolute_import, with_statement
 import logging
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 HAS_NEUTRON = False
 try:
     from neutronclient.v2_0 import client
@@ -16,6 +19,7 @@ try:
     HAS_NEUTRON = True
 except ImportError:
     pass
+# pylint: enable=import-error
 
 # Import salt libs
 from salt import exceptions
@@ -36,7 +40,7 @@ def sanitize_neutronclient(kwargs):
         'ca_cert', 'retries', 'raise_error', 'session', 'auth'
     )
     ret = {}
-    for var in kwargs.keys():
+    for var in six.iterkeys(kwargs):
         if var in variables:
             ret[var] = kwargs[var]
 

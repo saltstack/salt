@@ -17,6 +17,7 @@ authentication, it is also possible to pass private keys to use explicitly.
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import logging
 import os
 import os.path
@@ -47,6 +48,7 @@ def latest(name,
            bare=False,
            remote_name='origin',
            always_fetch=False,
+           fetch_tags=True,
            depth=None,
            identity=None,
            https_user=None,
@@ -235,6 +237,9 @@ def latest(name,
                     fetch_opts = remote_name
                 else:
                     fetch_opts = ''
+
+                if fetch_tags:
+                    fetch_opts += ' --tags'
 
                 # check remote if fetch_url not == name set it
                 remote = __salt__['git.remote_get'](target,
@@ -594,6 +599,8 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
     * unless succeeded (unless == 0)
     else return True
     '''
+    cmd_kwargs = copy.deepcopy(cmd_kwargs)
+    cmd_kwargs['python_shell'] = True
     if onlyif:
         if __salt__['cmd.retcode'](onlyif, **cmd_kwargs) != 0:
             return {'comment': 'onlyif execution failed',

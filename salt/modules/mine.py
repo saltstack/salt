@@ -2,9 +2,9 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import time
@@ -16,6 +16,9 @@ import salt.utils
 import salt.utils.network
 import salt.utils.event
 from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 MINE_INTERNAL_KEYWORDS = frozenset([
     '__pub_user',
@@ -54,18 +57,11 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    if opts.get('transport', '') == 'zeromq':
-        try:
-            load['tok'] = _auth().gen_token('salt')
-        except AttributeError:
-            log.error('Mine could not authenticate with master. '
-                      'Mine data not sent.')
-            return False
     eventer = salt.utils.event.MinionEvent(opts)
     event_ret = eventer.fire_event(load, '_minion_mine')
     # We need to pause here to allow for the decoupled nature of
     # events time to allow the mine to propagate
-    time.sleep(2.0)
+    time.sleep(0.5)
     return event_ret
 
 
@@ -330,12 +326,12 @@ def get_docker(interfaces=None, cidrs=None):
     proxy_lists = {}
 
     # Process docker info
-    for host, containers in docker_hosts.items():
+    for containers in six.itervalues(docker_hosts):
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for iface, info in containers['host']['interfaces'].items():
+            for info in six.itervalues(containers['host']['interfaces']):
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
@@ -362,14 +358,17 @@ def get_docker(interfaces=None, cidrs=None):
                 if container['Image'] not in proxy_lists:
                     proxy_lists[container['Image']] = {}
                 for dock_port in container['Ports']:
+                    # IP exists only if port is exposed
+                    ip_address = dock_port.get('IP')
                     # If port is 0.0.0.0, then we must get the docker host IP
-                    if dock_port['IP'] == '0.0.0.0':
+                    if ip_address == '0.0.0.0':
                         for ip_ in host_ips:
                             proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                                 '{0}:{1}'.format(ip_, dock_port['PublicPort']))
                             proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
-                    elif dock_port['IP']:
+                    elif ip_address:
                         proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
                             '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
                         proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
+
     return proxy_lists

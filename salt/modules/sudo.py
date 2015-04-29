@@ -2,8 +2,11 @@
 '''
 Allow for the calling of execution modules via sudo
 '''
+
 # Import python libs
+from __future__ import absolute_import
 import json
+
 # Import salt libs
 import salt.utils
 import salt.syspaths

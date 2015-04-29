@@ -806,7 +806,7 @@ different from the base must be specified of the alternates:
             'python': 'dev-python/mysql-python',
         },
     },
-    merge=salt['pillar.get']('mysql:lookup'), base='default') %}
+    merge=salt['pillar.get']('mysql:lookup'), default='default') %}
 
 
 Overriding values in the lookup table

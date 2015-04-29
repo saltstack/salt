@@ -5,6 +5,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import pwd
 import grp
@@ -20,6 +21,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 from salt.utils.pycrypto import gen_hash
 import integration
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def gen_password():
