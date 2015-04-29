@@ -40,6 +40,7 @@ from hashlib import sha256
 # Import 3rd-party libs
 import requests
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves import range
 
 # Import salt cloud libs
 import salt.utils.cloud
