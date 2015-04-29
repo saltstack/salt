@@ -265,7 +265,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         subnet2 = self._create_subnet(vpc_id=vpc.id, name='test2')
 
         route_table_present_result = salt_states['boto_vpc.route_table_present'](
-                name='test', vpc_name='test', subnets=[{'name': 'test1'}, {'subnet_id': subnet2.id}])
+                name='test', vpc_name='test', subnet_names=['test1'], subnet_ids=[subnet2.id])
 
         associations = route_table_present_result['changes']['new']['subnets_associations']
 
@@ -273,7 +273,7 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
         self.assertEqual(set(assoc_subnets), set([subnet1.id, subnet2.id]))
 
         route_table_present_result = salt_states['boto_vpc.route_table_present'](
-                name='test', vpc_name='test', subnets=[{'subnet_id': subnet2.id}])
+                name='test', vpc_name='test', subnet_ids=[subnet2.id])
 
         changes = route_table_present_result['changes']
 

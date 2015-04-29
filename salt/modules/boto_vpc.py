@@ -837,10 +837,10 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
         subnets = conn.get_all_subnets(**filter_parameters)
         log.debug('The filters criteria {0} matched the following subnets:{1}'.format(filter_parameters, subnets))
         if subnets:
-            log.info('Subnet {0} exists.'.format(subnet_id))
+            log.info('Subnet {0} exists.'.format(subnet_name or subnet_id))
             return {'exists': True}
         else:
-            log.info('Subnet {0} does not exist.'.format(subnet_id))
+            log.info('Subnet {0} does not exist.'.format(subnet_name or subnet_id))
             return {'exists': False}
     except BotoServerError as e:
         return {'error': salt.utils.boto.get_error(e)}
