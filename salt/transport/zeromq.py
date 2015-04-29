@@ -76,7 +76,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     def __key(cls, opts, **kwargs):
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
-                opts['master_uri'],  # master ID
+                kwargs.get('master_uri', opts.get('master_uri')),  # master ID
                 kwargs.get('crypt', 'aes'),  # TODO: use the same channel for crypt
                 )
 
