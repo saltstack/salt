@@ -2,16 +2,16 @@
 '''
 The jail module for FreeBSD
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
-import subprocess
 import shlex
 import re
 
 # Import salt libs
 import salt.utils
+from salt._compat import subprocess
 
 # Define the module's virtual name
 __virtualname__ = 'jail'
@@ -121,7 +121,7 @@ def show_config(jail):
     '''
     ret = {}
     if subprocess.call(["jls", "-nq", "-j", jail]) == 0:
-        jls = subprocess.check_output(["jls", "-nq", "-j", jail])
+        jls = subprocess.check_output(["jls", "-nq", "-j", jail])  # pylint: disable=minimum-python-version
         jailopts = shlex.split(jls)
         for jailopt in jailopts:
             if '=' not in jailopt:
