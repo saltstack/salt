@@ -713,9 +713,9 @@ class RemoteFuncs(object):
                 self.event.fire_event(event, event['tag'])  # old dup event
                 if load.get('pretag') is not None:
                     if 'data' in event:
-                        self.fire_event(event['data'], tagify(event['tag'], base=load['pretag']))
+                        self.event.fire_event(event['data'], tagify(event['tag'], base=load['pretag']))
                     else:
-                        self.fire_event(event, tagify(event['tag'], base=load['pretag']))
+                        self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag)
