@@ -297,7 +297,7 @@ class Schedule(object):
                 'minion.d',
                 '_schedule.conf')
         try:
-            with salt.utils.fopen(schedule_conf, 'w+') as fp_:
+            with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule')
@@ -487,7 +487,7 @@ class Schedule(object):
                               'in another thread, skipping.'.format(
                                   basefilename))
                     continue
-                with salt.utils.fopen(fn_, 'r') as fp_:
+                with salt.utils.fopen(fn_, 'rb') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
                     if job:
                         if 'schedule' in job:
@@ -520,7 +520,7 @@ class Schedule(object):
             log.debug('schedule.handle_func: adding this job to the jobcache '
                       'with data {0}'.format(ret))
             # write this to /var/cache/salt/minion/proc
-            with salt.utils.fopen(proc_fn, 'w+') as fp_:
+            with salt.utils.fopen(proc_fn, 'wb+') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
         args = tuple()
