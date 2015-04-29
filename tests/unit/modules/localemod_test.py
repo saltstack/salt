@@ -79,8 +79,8 @@ class LocalemodTestCase(TestCase):
         '''
         Test for Check if a locale is available
         '''
-        with patch.object(localemod, '_normalize_locale',
-                          return_value='en_US.UTF-8 UTF-8'):
+        with patch('salt.utils.locales.normalize_locale',
+                   MagicMock(return_value='en_US.UTF-8 UTF-8')):
             with patch.dict(localemod.__salt__,
                             {'locale.list_avail':
                              MagicMock(return_value=['A', 'B'])}):
