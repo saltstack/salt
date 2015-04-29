@@ -326,7 +326,7 @@ def _gen_keep_files(name, require):
 
         relative = os.path.relpath(path, directory)
 
-        return (not relative.startswith(os.pardir))
+        return not relative.startswith(os.pardir)
 
     def _process(name):
         ret = set()
