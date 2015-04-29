@@ -245,6 +245,9 @@ def state(
 
         m_ret = False
 
+        if 'return' in mdata and 'ret' not in mdata:
+            mdata['ret'] = mdata.pop('return')
+
         if mdata.get('failed', False):
             m_state = False
         else:

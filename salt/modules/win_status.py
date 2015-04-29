@@ -9,21 +9,27 @@ or for problem solving if your minion is having problems.
 :depends:   - pythoncom
             - wmi
 '''
-from __future__ import absolute_import
 
-import subprocess
+# Import Python Libs
+from __future__ import absolute_import
 import logging
+
+# Import Salt Libs
 import salt.utils
 import salt.ext.six as six
 import salt.utils.event
+from salt._compat import subprocess
 from salt.utils.network import host_to_ip as _host_to_ip
 
+<<<<<<< HEAD
+=======
 import os
 import ctypes
 import sys
 import time
 from subprocess import list2cmdline
 
+>>>>>>> ee91670a7ff0dd0824d1791435e0f568921b7e8b
 log = logging.getLogger(__name__)
 
 try:
@@ -336,7 +342,7 @@ def master(master=None, connected=True):
         '''
         remotes = set()
         try:
-            data = subprocess.check_output(['netstat', '-n', '-p', 'TCP'])
+            data = subprocess.check_output(['netstat', '-n', '-p', 'TCP'])  # pylint: disable=minimum-python-version
         except subprocess.CalledProcessError:
             log.error('Failed netstat')
             raise

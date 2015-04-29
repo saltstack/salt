@@ -30,6 +30,9 @@ load-plugins=saltpylint.pep8,
   saltpylint.pep263,
   saltpylint.strings,
   saltpylint.fileperms,
+<<<<<<< HEAD
+  saltpylint.minpyver
+=======
   saltpylint.py3modernize,
   saltpylint.smartup
 
@@ -45,14 +48,21 @@ unsafe-load-any-extension=no
 # be loaded. Extensions are loading into the active Python interpreter and may
 # run arbitrary code
 extension-pkg-whitelist=
+>>>>>>> ee91670a7ff0dd0824d1791435e0f568921b7e8b
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
+<<<<<<< HEAD
+
+# Minimum Python Version To Enforce
+minimum-python-version = 2.6
+=======
 # Py3 Modernize PyLint Plugin Settings
 modernize-nofix = libmodernize.fixes.fix_dict_six
 
+>>>>>>> ee91670a7ff0dd0824d1791435e0f568921b7e8b
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show

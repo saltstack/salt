@@ -26,7 +26,7 @@ from salt.ext.six.moves import range
 from salt.ext.six.moves import map
 
 try:
-    import importlib
+    import importlib  # pylint: disable=minimum-python-version
     HAS_IMPORTLIB = True
 except ImportError:
     # Python < 2.7 does not have importlib
