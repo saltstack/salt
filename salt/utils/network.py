@@ -1156,7 +1156,7 @@ def _windows_remotes_on(port, which_end):
     '''
     remotes = set()
     try:
-        data = subprocess.check_output(['netstat', '-n'])
+        data = subprocess.check_output(['netstat', '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed netstat')
         raise
