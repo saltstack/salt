@@ -43,8 +43,8 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 from functools import partial
 
 # Import salt libs
-from salt.ext.six import string_types
-from salt.ext.six.move import range
+from salt.ext.six import string_types # pylint: disable=import-error 
+from salt.ext.six.moves import range # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt._compat import ElementTree as ET
 
@@ -95,7 +95,7 @@ def _option(value):
 
 def _get_profile(service, region, key, keyid, profile):
     if profile:
-        if isinstance(profile, six.string_types):
+        if isinstance(profile, string_types):
             _profile = _option(profile)
         elif isinstance(profile, dict):
             _profile = profile
