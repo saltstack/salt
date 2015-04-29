@@ -63,7 +63,7 @@ def _homebrew_bin():
 
 def _call_brew(cmd):
     '''
-    Calls the brew command with the user user account of brew
+    Calls the brew command with the user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
     runas = user if user != __opts__['user'] else None

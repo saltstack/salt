@@ -40,10 +40,10 @@ class BrewTestCase(TestCase):
         '''
         mock_taps = MagicMock(return_value={'stdout': TAPS_STRING})
         mock_user = MagicMock(return_value='foo')
-        moca_cmd = MagicMock(return_value='')
+        mock_cmd = MagicMock(return_value='')
         with patch.dict(brew.__salt__, {'file.get_user': mock_user,
                                         'cmd.run_all': mock_taps,
-                                        'cmd.run': moca_cmd}):
+                                        'cmd.run': mock_cmd}):
             self.assertEqual(brew._list_taps(), TAPS_LIST)
 
     # '_tap' function tests: 3
