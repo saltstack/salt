@@ -52,6 +52,7 @@ class AsyncChannel(object):
         cls._resolver = ThreadedResolver()
         cls._resolver.initialize(num_threads=num_threads)
 
+
 # TODO: better doc strings
 class AsyncReqChannel(AsyncChannel):
     '''
