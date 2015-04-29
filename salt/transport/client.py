@@ -37,12 +37,28 @@ class ReqChannel(object):
 
 
 # TODO: better doc strings
-class AsyncReqChannel(object):
+class AsyncChannel(object):
+    '''
+    Parent class for Async communication channels
+    '''
+    # Resolver used by Tornado TCPClient
+    # This static field is shared between
+    # AsyncReqChannel and AsyncPubChannel
+    _resolver = None
+
+    @classmethod
+    def _init_resolver(cls, num_threads=10):
+        from tornado.netutil import ThreadedResolver
+        cls._resolver = ThreadedResolver()
+        cls._resolver.initialize(num_threads=num_threads)
+
+# TODO: better doc strings
+class AsyncReqChannel(AsyncChannel):
     '''
     Factory class to create a Async communication channels to the ReqServer
     '''
-    @staticmethod
-    def factory(opts, **kwargs):
+    @classmethod
+    def factory(cls, opts, **kwargs):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
@@ -60,8 +76,11 @@ class AsyncReqChannel(object):
             import salt.transport.raet
             return salt.transport.raet.AsyncRAETReqChannel(opts, **kwargs)
         elif ttype == 'tcp':
+            if not cls._resolver:
+                # TODO: add opt to specify number of resolver threads
+                AsyncChannel._init_resolver()
             import salt.transport.tcp
-            return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
+            return salt.transport.tcp.AsyncTCPReqChannel(opts, resolver=cls._resolver, **kwargs)
         elif ttype == 'local':
             import salt.transport.local
             return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
@@ -83,12 +102,12 @@ class AsyncReqChannel(object):
         raise NotImplementedError()
 
 
-class AsyncPubChannel(object):
+class AsyncPubChannel(AsyncChannel):
     '''
     Factory class to create subscription channels to the master's Publisher
     '''
-    @staticmethod
-    def factory(opts, **kwargs):
+    @classmethod
+    def factory(cls, opts, **kwargs):
         # Default to ZeroMQ for now
         ttype = 'zeromq'
 
@@ -106,6 +125,9 @@ class AsyncPubChannel(object):
             import salt.transport.raet
             return salt.transport.raet.AsyncRAETPubChannel(opts, **kwargs)
         elif ttype == 'tcp':
+            if not cls._resolver:
+                # TODO: add opt to specify number of resolver threads
+                AsyncChannel._init_resolver()
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
