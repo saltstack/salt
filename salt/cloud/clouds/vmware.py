@@ -2720,7 +2720,7 @@ def add_host(kwargs=None, call=None):
 
             vmware-vcenter01:
               provider: vmware
-              user: DOMAIN\user
+              user: DOMAIN\\user
               password: "verybadpass"
               url: vcenter01.domain.com
               esxi_host_user: root
