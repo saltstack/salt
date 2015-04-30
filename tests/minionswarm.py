@@ -263,6 +263,8 @@ class MinionSwarm(Swarm):
             data['raet_port'] = self.raet_port
             data['pki_dir'] = os.path.join(dpath, 'pki')
             self.raet_port += 1
+        elif self.opts['transport'] == 'tcp':
+            data['transport'] = 'tcp'
 
         if self.opts['root_dir']:
             data['root_dir'] = self.opts['root_dir']
