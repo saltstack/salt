@@ -10,7 +10,7 @@ Configure Apt
 -------------
 
 
-Squeeze (Old Stable)
+Squeeze (Old Old Stable)
 --------------------
 
 For squeeze, you will need to enable the Debian backports repository
@@ -21,11 +21,11 @@ following to ``/etc/apt/sources.list`` or a file in
 .. code-block:: bash
 
     deb http://debian.saltstack.com/debian squeeze-saltstack main
-    deb http://backports.debian.org/debian-backports squeeze-backports main contrib non-free
+    deb http://backports.debian.org/debian-backports squeeze-backports main
 
 
 
-Wheezy (Stable)
+Wheezy (Old Stable)
 ---------------
 
 For wheezy, the following line is needed in either
@@ -35,7 +35,7 @@ For wheezy, the following line is needed in either
 
     deb http://debian.saltstack.com/debian wheezy-saltstack main
 
-Jessie (Testing)
+Jessie (Stable)
 ----------------
 
 For jessie, the following line is needed in either
@@ -109,20 +109,3 @@ Post-installation tasks
 Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
 
 
-Notes
------
-
-1. These packages will be backported from the packages intended to be
-uploaded into Debian unstable. This means that the packages will be
-built for unstable first and then backported over the next day or so.
-
-2. These packages will be tracking the released versions of salt
-rather than maintaining a stable fixed feature set. If a fixed version
-is what you desire, then either pinning or manual installation may be
-more appropriate for you.
-
-3. The version numbering and backporting process should provide clean
-upgrade paths between Debian versions.
-
-If you have any questions regarding these, please email the mailing
-list or look for joehh on IRC.
