@@ -16,9 +16,9 @@ This is the state module to accompany the :mod:`docker-ng
 '''
 
 from __future__ import absolute_import
+import copy
 import logging
 import sys
-import time
 import traceback
 
 # Import salt libs
@@ -26,6 +26,7 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: disable=no-name-in-module,import-error
 from salt.modules.dockerng import (
     CLIENT_TIMEOUT,
+    STOP_TIMEOUT,
     VALID_CREATE_OPTS,
     VALID_RUNTIME_OPTS,
     _validate_input,
@@ -356,81 +357,192 @@ def _compare(actual, create_kwargs, runtime_kwargs):
     return ret
 
 
-def running(name,
-            pull=None,
-            build=None,
-            load=None,
-            update=False,
-            force=False,
-            stop_timeout=10,
-            insecure_registry=False,
-            validate_ip_addrs=True,
-            client_timeout=CLIENT_TIMEOUT,
-            **kwargs):
+def image_present(name,
+                  build=None,
+                  load=None,
+                  force=False,
+                  insecure_registry=False,
+                  client_timeout=CLIENT_TIMEOUT):
     '''
-    Ensures that a container is running
+    Ensure that an image is present. The image can either be pulled from a
+    Docker registry, built from a Dockerfile, or loaded from a saved image.
+    Image names can be specified either using ``repo:tag`` notation, or just
+    the repo name (in which case a tag of ``latest`` is assumed).
 
-    name
-        Name of the container
+    If neither of the ``build`` or ``load`` arguments are used, then Salt will
+    pull from the :ref:`configured registries <docker-authentication>`. If the
+    specified image already exists, it will not be pulled unless ``force`` is
+    set to ``True``. Here is an example of a state that will pull an image from
+    the Docker Hub:
 
-    pull
-        Name or ID of an image from a Docker registry. Image names can be
-        specified either using ``repo:tag`` notation, or just the repo name (in
-        which case a tag of ``latest`` is assumed). If the image is not
-        present, it will be pulled.
+    .. code-block:: yaml
 
-        If the specified image already exists, it will not be pulled unless
-        ``update`` is set to ``True``.
+        myuser/myimage:mytag:
+          docker-ng.image_present
 
-        .. code-block:: yaml
-
-            mycontainer:
-              docker-ng.running:
-                - pull: myuser/myimage:mytag
     build
         Path to directory on the Minion containing a Dockerfile
 
         .. code-block:: yaml
 
-            mycontainer:
-              docker-ng.running:
-                - build:
-                    - myuser/myimage:mytag: /home/myuser/docker/myimage
+            myuser/myimage:mytag:
+              docker-ng.image_present:
+                - build: /home/myuser/docker/myimage
 
         The image will be built using :py:func:`docker-ng.build
         <salt.modules.dockerng.build>` and the specified image name and tag
-        applied to it.
-
-        If the specified image already exists, then the build will not be
-        performed unless ``update`` is set to ``True``.
+        will be applied to it.
 
     load
         Loads a tar archive created with :py:func:`docker-ng.load
         <salt.modules.dockerng.load>` (or the ``docker load`` Docker CLI
-        command). Here's a usage example:
+        command), and assigns it the specified repo and tag.
 
         .. code-block:: yaml
 
-            mycontainer:
-              docker-ng.running:
-                - load:
-                  - myuser/myimage:mytag: salt://path/to/image.tar
-
-        The image will be loaded using :py:func:`docker-ng.load
-        <salt.modules.dockerng.load>`, and then tagged.
-
-        If the specified image already exists, then the build will not be
-        performed unless ``update`` is set to ``True``.
-
-    update : False
-        Set this parameter to ``True`` to make Salt pull/build/load the image
-        even if the named container exists and matches the specified image. If
-        the pull/build/load results in a new ID for the image, then the
-        container will be replaced with the updated image.
+            myuser/myimage:mytag:
+              docker-ng.image_present:
+                - load: salt://path/to/image.tar
 
     force : False
         Set this parameter to ``True`` to force Salt to pull/build/load the
-        image and replace the container.
+        image even if it is already present.
+
+    client_timeout
+        Timeout in seconds for the Docker client. This is not a timeout for
+        the state, but for receiving a response from the API.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    if build is not None and load is not None:
+        ret['comment'] = 'Only one of \'build\' or \'load\' is permitted.'
+        return ret
+
+    # Ensure that we have repo:tag notation
+    image = ':'.join(_get_repo_tag(name))
+    all_tags = __salt__['docker-ng.list_tags']()
+
+    if image not in pre_tags and not force:
+        ret['result'] = True
+        ret['comment'] = 'Image \'{0}\' already present'.format(name)
+        return ret
+
+    if image in pre_tags:
+        try:
+            image_info = __salt__['docker-ng.inspect_image'](name)
+        except Exception as exc:
+            ret['comment'] = \
+                'Unable to get info for image \'{0}\': {1}'.format(name, exc)
+            return ret
+    else:
+        image_info = None
+
+    if build:
+        action = 'built'
+    elif load:
+        action = 'loaded'
+    else:
+        action = 'pulled'
+
+    if __opts__['test']:
+        ret['result'] = None
+        if (image in pre_tags and force) or image not in pre_tags:
+            ret['comment'] = 'Image \'{0}\' will be {1}'.format(name, action)
+            return ret
+
+    if build:
+        try:
+            image_update = __salt__['docker-ng.build'](path=build, image=image)
+        except Exception as exc:
+            ret['comment'] = (
+                'Encountered error building {0} as {1}: {2}'
+                .format(build, image, exc)
+            )
+            return ret
+        if image_info is None or image_update['Id'] != image_info['Id'][:12]:
+            ret['changes'] = image_update
+
+    elif load:
+        try:
+            image_update = __salt__['docker-ng.load'](path=load, image=image)
+        except Exception as exc:
+            ret['comment'] = (
+                'Encountered error loading {0} as {1}: {2}'
+                .format(load, image, exc)
+            )
+            return ret
+        if image_info is None or image_update.get('Layers', []):
+            ret['changes'] = image_update
+
+    else:
+        try:
+            image_update = __salt__['docker-ng.pull'](
+                image,
+                insecure_registry=insecure_registry
+            )
+        except Exception as exc:
+            ret['comment'] = (
+                'Encountered error pulling {0}: {1}'
+                .format(image, exc)
+            )
+            return ret
+        # Only add to the changes dict if layers were pulled
+        if image_info is None or image_update.get('Layers', {}).get('Pulled'):
+            ret['changes'] = image_update
+
+    ret['result'] = image in __salt__['docker-ng.list_tags']()
+
+    if not ret['result']:
+        # This shouldn't happen, failure to pull should be caught above
+        ret['comment'] = 'Image \'{0}\' could not be {1}'.format(name, action)
+    elif not ret['changes']:
+        ret['comment'] = (
+            'Image \'{0}\' was {1}, but there were no changes'
+            .format(name, action)
+        )
+    else:
+        ret['comment'] = 'Image \'{0}\' was {1}'.format(name, action)
+    return ret
+
+
+def image_absent(name=None, images=None, force=False):
+    '''
+    Ensure that an image is absent from the Minion. Image names can be
+    specified either using ``repo:tag`` notation, or just the repo name (in
+    which case a tag of ``latest`` is assumed).
+
+    images
+        Run this state on more than one image at a time. The following two
+        examples accomplish the same thing:
+
+        .. code-block:: yaml
+
+            remove_images:
+              docker-ng.image_absent:
+                - names:
+                  - busybox
+                  - centos:6
+                  - nginx
+
+        .. code-block:: yaml
+
+            remove_images:
+              docker-ng.image_absent:
+                - images:
+                  - busybox
+                  - centos:6
+                  - nginx
+
+        However, the second example will be a bit quicker since Salt will do
+        all the deletions in a single run, rather than executing the state
+        separately on each image (as it would in the first example).
+
+    force : False
+        Salt will fail to remove any images currently in use by a container.
+        Set this option to true to remove the image even if it is already
+        present.
 
         .. note::
 
@@ -441,14 +553,126 @@ def running(name,
 
             .. code-block:: bash
 
-                salt myminion state.sls docker_stuff pillar="{docker-ng.running.force: True}"
+                salt myminion state.sls docker_stuff pillar="{docker-ng.force: True}"
 
             If this pillar variable is present and set to ``False``, then it
             will turn off this option.
 
             For more granular control, setting a pillar variable named
-            ``docker-ng.running.force.container_name`` will affect only the
-            named container.
+            ``docker-ng.force.image_name`` will affect only the named image.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if not name and not images:
+        ret['comment'] = 'One of \'name\' and \'images\' must be provided'
+        return ret
+    elif images is not None:
+        targets = []
+        for target in images:
+            try:
+                targets.append(':'.join(_get_repo_tag(target)))
+            except TypeError:
+                # Don't stomp on images with unicode characters in Python 2,
+                # only force image to be a str if it wasn't already (which is
+                # very unlikely).
+                targets.append(':'.join(_get_repo_tag(str(target))))
+    elif name:
+        try:
+            targets = [':'.join(_get_repo_tag(name))]
+        except TypeError:
+            targets = [':'.join(_get_repo_tag(str(name)))]
+
+    pre_tags = __salt__['docker-ng.list_tags']()
+    to_delete = [x for x in targets if x in pre_tags]
+    log.debug('targets = {0}'.format(targets))
+    log.debug('to_delete = {0}'.format(to_delete))
+
+    if not to_delete:
+        ret['result'] = True
+        if len(targets) == 1:
+            ret['comment'] = 'Image \'{0}\' is not present'.format(name)
+        else:
+            ret['comment'] = 'All specified images are not present'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        if len(to_delete) == 1:
+            ret['comment'] = ('Image \'{0}\' will be removed'
+                              .format(to_delete[0]))
+        else:
+            ret['comment'] = ('The following images will be removed: {0}'
+                              .format(', '.join(to_delete)))
+        return ret
+
+    result = __salt__['docker-ng.rmi'](*to_delete, force=force)
+    post_tags = __salt__['docker-ng.list_tags']()
+    failed = [x for x in to_delete if x in post_tags]
+
+    if failed:
+        if [x for x in to_delete if x not in post_tags]:
+            ret['changes'] = result
+            ret['comment'] = (
+                'The following image(s) failed to be removed: {0}'
+                .format(', '.join(failed))
+            )
+        else:
+            ret['comment'] = 'None of the specified images were removed'
+            if 'Errors' in result:
+                ret['comment'] += (
+                    '. The following errors were encountered: {0}'
+                    .format('; '.join(result['Errors']))
+                )
+    else:
+        ret['changes'] = result
+        if len(to_delete) == 1:
+            ret['comment'] = 'Image \'{0}\' was removed'.format(to_delete[0])
+        else:
+            ret['comment'] = (
+                'The following images were removed: {0}'
+                .format(', '.join(to_delete))
+            )
+        ret['result'] = True
+
+    return ret
+
+
+def running(name,
+            image=None,
+            force=False,
+            stop_timeout=STOP_TIMEOUT,
+            validate_ip_addrs=True,
+            watch_action='force',
+            client_timeout=CLIENT_TIMEOUT,
+            **kwargs):
+    '''
+    Ensure that a container with a specific configuration is present and
+    running
+
+    name
+        Name of the container
+
+    image
+        Image to use for the container. Image names can be specified either
+        using ``repo:tag`` notation, or just the repo name (in which case a tag
+        of ``latest`` is assumed).
+
+        .. note::
+
+            This state will pull the image if it is not present. However, if
+            the image needs to be built from a Dockerfile or loaded from a
+            saved image, or if you would like to use requisites to trigger a
+            replacement of the container when the image is updated, then the
+            :py:func:`docker-ng.image_present
+            <salt.modules.dockerng.image_present>` should be used to manage the
+            image.
+
+    force : False
+        Set this parameter to ``True`` to force Salt to re-create the container
+        irrespective of whether or not it is configured as desired.
 
     stop_timeout : 10
         If the container needs to be replaced, the container will be stopped
@@ -457,18 +681,41 @@ def running(name,
         <salt.modules.dockerng.stop>` as the ``timeout`` value, telling Docker
         how long to wait for a graceful shutdown before killing the container.
 
-    insecure_registry : False
-        If ``True``, the Docker client will permit the use of insecure
-        (non-HTTPS) registries. This only applies if the ``pull`` argument is
-        used.
-
     validate_ip_addrs : True
         For parameters which accept IP addresses as input, IP address
         validation will be performed. To disable, set this to ``False``
 
+    watch_action : force
+        Control what type of action is taken when this state :ref:`watches
+        <requisites-watch>` another state that has changes. The default action
+        is ``force``, which runs the state with ``force`` set to ``True``,
+        triggering a rebuild of the container.
+
+        If any other value is passed, it will be assumed to be a kill signal.
+        If the container matches the specified configuration, and is running,
+        then the action will be to send that signal to the container. Kill
+        signals can be either strings or numbers, and are defined in the
+        **Standard Signals** section of the ``signal(7)`` manpage. Run ``man 7
+        signal`` on a Linux host to browse this manpage. For example:
+
+        .. code-block:: yaml
+
+            mycontainer:
+              docker-ng.running:
+                - image: busybox
+                - watch_action: SIGHUP
+                - watch:
+                  - file: some_file
+
+        .. note::
+
+            If the container differs from the specified configuration, or is
+            not running, then instead of sending a signal to the container, the
+            container will be re-created/started and no signal will be sent.
+
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
-        the state, but for receiving a response from the API.
+        this function, but for receiving a response from the API.
 
         .. note::
 
@@ -484,7 +731,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - command: bash
 
     hostname
@@ -496,7 +743,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - hostname: web1
 
         .. warning::
@@ -508,7 +755,7 @@ def running(name,
 
                 foo:
                   docker-ng.running:
-                    - pull: bar/baz:latest
+                    - image: bar/baz:latest
                     - hostname: web1
                     - network_mode: host
 
@@ -519,7 +766,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - hostname: domain.tld
 
 
@@ -530,7 +777,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - interactive: True
 
     tty : False
@@ -540,7 +787,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - tty: True
 
     detach : True
@@ -550,7 +797,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - detach: False
 
     user
@@ -560,7 +807,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - user: foo
 
     memory : 0
@@ -572,7 +819,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - memory: 512M
 
     memory_swap : -1
@@ -583,7 +830,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - memory_swap: 1G
 
     mac_address
@@ -594,7 +841,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - mac_address: 01:23:45:67:89:0a
 
     network_disabled : False
@@ -604,7 +851,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - network_disabled: True
 
     working_dir
@@ -614,7 +861,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - working_dir: /var/log/nginx
 
     entrypoint
@@ -624,7 +871,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - entrypoint: "mycmd --arg1 --arg2"
 
         The entrypoint can also be specified as a list of arguments:
@@ -633,7 +880,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - entrypoint:
                   - mycmd
                   - --arg1
@@ -647,7 +894,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - environment:
                   - VAR1: value
                   - VAR2: value
@@ -656,7 +903,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - environment:
                   - VAR1=value
                   - VAR2=value
@@ -671,14 +918,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - ports: 1111,2222/udp
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - ports:
                   - 1111
                   - 2222/udp
@@ -692,14 +939,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - volumes: /mnt/vol1,/mnt/vol2
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - volumes:
                   - /mnt/vol1
                   - /mnt/vol2
@@ -711,7 +958,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - cpu_shares: 0.5
 
     cpuset
@@ -723,7 +970,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - cpuset: "0,1"
 
     binds
@@ -736,7 +983,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - binds: /srv/www:/var/www:ro,/etc/foo.conf:/usr/local/etc/foo.conf:rw
 
         Binds can be passed as a YAML list instead of a comma-separated list:
@@ -745,7 +992,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - binds:
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf:rw
@@ -758,7 +1005,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - binds:
                   - /srv/www:/var/www:ro
                   - /home/myuser/conf/foo.conf:/etc/foo.conf
@@ -783,14 +1030,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - port_bindings: "5000:5000,2123:2123/udp,8080"
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - port_bindings:
                   - 5000:5000
                   - 2123:2123/udp
@@ -810,7 +1057,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - lxc_conf:
                   - lxc.utsname: docker
 
@@ -828,7 +1075,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - ports: 8080
                 - publish_all_ports: True
 
@@ -842,14 +1089,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - links: web1:link1,web2:link2
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - links:
                   - web1:link1
                   - web2:link2
@@ -862,14 +1109,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - dns: 8.8.8.8,8.8.4.4
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - dns:
                   - 8.8.8.8
                   - 8.8.4.4
@@ -886,14 +1133,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - dns_search: foo1.domain.tld,foo2.domain.tld
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - dns_search:
                   - foo1.domain.tld
                   - foo2.domain.tld
@@ -907,14 +1154,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - volumes_from: foo
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - volumes_from:
                   - foo
 
@@ -938,7 +1185,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - network_mode: null
 
     restart_policy
@@ -952,12 +1199,12 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - restart_policy: on-failure:5
 
             bar:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - restart_policy: always
 
     cap_add
@@ -969,14 +1216,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - cap_add: SYS_ADMIN,MKNOD
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - cap_add:
                   - SYS_ADMIN
                   - MKNOD
@@ -994,14 +1241,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - cap_drop: SYS_ADMIN,MKNOD
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - cap_drop:
                   - SYS_ADMIN
                   - MKNOD
@@ -1019,14 +1266,14 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - extra_hosts: web1:10.9.8.7,web2:10.9.8.8
 
         .. code-block:: yaml
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - extra_hosts:
                   - web1:10.9.8.7
                   - web2:10.9.8.8
@@ -1047,7 +1294,7 @@ def running(name,
 
             foo:
               docker-ng.running:
-                - pull: bar/baz:latest
+                - image: bar/baz:latest
                 - pid_mode: host
 
         .. note::
@@ -1058,15 +1305,15 @@ def running(name,
            'changes': {},
            'result': False,
            'comment': ''}
-    num_of_image_args = len([x for x in (pull, build, load) if x is not None])
-    if num_of_image_args == 0:
-        ret['comment'] = ('Missing required argument. One of \'pull\', '
-                          '\'build\', or \'load\' is required.')
+
+    if image is None:
+        ret['comment'] = 'The \'image\' argument is required'
         return ret
-    elif num_of_image_args > 1:
-        ret['comment'] = ('Only one of \'pull\', \'build\', or \'load\' is '
-                          'permitted.')
-        return ret
+
+    try:
+        image = ':'.join(_get_repo_tag(image))
+    except TypeError:
+        image = ':'.join(_get_repo_tag(str(image)))
 
     if name not in __salt__['docker-ng.list_containers'](all=True):
         pre_config = {}
@@ -1089,49 +1336,6 @@ def running(name,
                               'container \'{0}\': {1}'.format(name, exc))
             return ret
 
-    if pull:
-        action = 'pulled'
-        # Ensure that we have repo:tag notation
-        desired_image = ':'.join(_get_repo_tag(pull))
-        image_path = None
-    else:
-        if build:
-            action = 'built'
-            repacked = salt.utils.repack_dictlist(build)
-        elif load:
-            action = 'loaded'
-            repacked = salt.utils.repack_dictlist(load)
-        if len(repacked) != 1:
-            ret['comment'] = ('Invalid configuration for \'{0}\'. See the '
-                              'documentation for proper usage.'.format(action))
-            return ret
-        key = next(iter(repacked))
-        image_path = repacked[key]
-        # Ensure that we have repo:tag notation
-        desired_image = ':'.join(_get_repo_tag(key))
-
-    # Find out if the image needs to be updated
-    update_image = not pre_config or force or update or \
-        desired_image not in __salt__['docker-ng.list_tags']()
-
-    force_pillar = __pillar__.get('docker-ng.running.force.' + name, NOTSET)
-    if force_pillar is not NOTSET:
-        # Handles cases where pillar variable was set to 1 or 'foo'
-        force = bool(force_pillar)
-        log.debug(
-            'Setting force={0} via Pillar item docker-ng.running.force.{1}'
-            .format(force, name)
-        )
-    else:
-        force_pillar = __pillar__.get('docker-ng.running.force', NOTSET)
-        if force_pillar is not NOTSET:
-            # Handles cases where pillar variable was set to 1 or 'foo'
-            force = bool(force_pillar)
-            log.debug(
-                'Setting force={0} via Pillar item docker-ng.running.force'
-                .format(force)
-            )
-
     # If a container is using binds, don't let it also define data-only volumes
     if kwargs.get('volumes') is not None and kwargs.get('binds') is not None:
         ret['comment'] = 'Cannot mix data-only volumes and bind mounts'
@@ -1152,7 +1356,10 @@ def running(name,
     invalid_kwargs = []
     create_kwargs = {}
     runtime_kwargs = {}
-    for key, val in six.iteritems(salt.utils.clean_kwargs(**kwargs)):
+    kwargs_copy = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    send_signal = kwargs_copy.pop('send_signal', False)
+
+    for key, val in six.iteritems(kwargs_copy):
         if key in VALID_CREATE_OPTS:
             create_kwargs[key] = val
         elif key in VALID_RUNTIME_OPTS:
@@ -1214,7 +1421,7 @@ def running(name,
         if not pre_config:
             new_container = True
         else:
-            if current_image != desired_image:
+            if current_image != image:
                 # Image name doesn't match, so there's no need to check the
                 # container configuration.
                 new_container = True
@@ -1251,87 +1458,21 @@ def running(name,
 
     if __opts__['test']:
         if not new_container:
+            ret['result'] = True
             ret['comment'] = (
                 'Container \'{0}\' is already configured as specified'
                 .format(name)
             )
-            if update:
-                ret['result'] = None
-                ret['comment'] += (
-                    ', however image \'{0}\' will be {1} and if this results '
-                    'in an updated image, the container will be replaced.'
-                    .format(desired_image, action)
-                )
-            else:
-                ret['result'] = True
-            return ret
         else:
             ret['result'] = None
-            if not pre_config:
-                ret['comment'] = (
-                    'Image \'{0}\' will be {1}, and container \'{2}\' will be '
-                    'created'.format(desired_image, action, name)
-                )
+            ret['comment'] = 'Container \'{0}\' will be '.format(name)
+            if pre_config and force:
+                ret['comment'] += 'forcibly replaced'
             else:
-                if update_image:
-                    ret['comment'] = (
-                        'Image \'{0}\' will be {1}, and container \'{2}\' '
-                        'will be replaced'.format(desired_image, action, name)
-                    )
-                else:
-                    ret['comment'] = \
-                        'Container \'{0}\' will be replaced'.format(name)
-            return ret
+                ret['comment'] += 'created' if not pre_config else 'replaced'
+        return ret
 
     comments = []
-    if update_image:
-        if pull:
-            try:
-                image_update = __salt__['docker-ng.pull'](
-                    desired_image,
-                    insecure_registry=insecure_registry
-                )
-            except Exception as exc:
-                ret['comment'] = (
-                    'Encountered error pulling {0}: {1}'
-                    .format(desired_image, exc)
-                )
-                return ret
-            # Only add to the changes dict if layers were pulled
-            if image_update.get('Layers', {}).get('Pulled'):
-                ret['changes']['pull'] = image_update
-
-        if build:
-            try:
-                image_update = __salt__['docker-ng.build'](
-                    path=image_path,
-                    image=desired_image
-                )
-            except Exception as exc:
-                ret['comment'] = (
-                    'Encountered error building {0} as {1}: {2}'
-                    .format(image_path, desired_image, exc)
-                )
-                return ret
-            if image_update['Id'] != pre_config['Id'][:12]:
-                ret['changes']['build'] = image_update
-
-        if load:
-            try:
-                image_update = __salt__['docker-ng.load'](
-                    path=image_path,
-                    image=desired_image
-                )
-            except Exception as exc:
-                ret['comment'] = (
-                    'Encountered error loading {0} as {1}: {2}'
-                    .format(image_path, desired_image, exc)
-                )
-                return ret
-            if image_update.get('Layers', []):
-                ret['changes']['load'] = image_update
-        comments.append('Image \'{0}\' was {1}'.format(desired_image, action))
-
     if not pre_config:
         pre_state = None
     else:
@@ -1361,16 +1502,30 @@ def running(name,
 
             # Removal was successful, add the list of removed IDs to the
             # changes dict.
-            ret['changes'].setdefault('container', {})['removed'] = removed_ids
+            ret['changes']['removed'] = removed_ids
+
+        if image not in __salt__['docker-ng.list_tags']():
+            try:
+                # Pull image
+                pull_result = __salt__['docker-ng.pull'](
+                    image,
+                    client_timeout=client_timeout,
+                )
+            except Exception as exc:
+                comments.append('Failed to pull {0}: {1}'.format(image, exc))
+                ret['comment'] = _format_comments(comments)
+                return ret
+            else:
+                ret['changes']['image'] = pull_result
 
         try:
             # Create new container
             create_result = __salt__['docker-ng.create'](
-                desired_image,
+                image,
                 name=name,
-                client_timeout=client_timeout,
                 # Already validated input
                 validate_input=False,
+                client_timeout=client_timeout,
                 **create_kwargs
             )
         except Exception as exc:
@@ -1380,7 +1535,7 @@ def running(name,
 
         # Creation of new container was successful, add the return data to the
         # changes dict.
-        ret['changes'].setdefault('container', {})['added'] = create_result
+        ret['changes']['added'] = create_result
 
     if new_container or pre_state != 'running':
         try:
@@ -1400,14 +1555,11 @@ def running(name,
             ret['comment'] = _format_comments(comments)
             return ret
 
-        time.sleep(2)
         post_state = __salt__['docker-ng.state'](name)
         if pre_state != post_state:
             # If the container changed states at all, note this change in the
             # return dict.
-            ret['changes'].setdefault('container', {})['state'] = {
-                'old': pre_state, 'new': post_state
-            }
+            ret['changes']['state'] = {'old': pre_state, 'new': post_state}
 
     if changes_needed:
         try:
@@ -1439,8 +1591,7 @@ def running(name,
             return ret
 
         if changes_still_needed:
-            diff = ret['changes'].setdefault(
-                'container', {}).setdefault('diff', {})
+            diff = ret['changes'].setdefault('diff', {})
             failed = []
             for key in changes_needed:
                 if key not in changes_still_needed:
@@ -1463,33 +1614,279 @@ def running(name,
             # No necessary changes detected on post-container-replacement
             # check. The diffs will be the original changeset detected in
             # pre-flight check.
-            ret['changes'].setdefault('container', {})['diff'] = changes_needed
+            ret['changes']['diff'] = changes_needed
             comments.append('Container \'{0}\' was replaced'.format(name))
     else:
         if not new_container:
-            # Container was not replaced, and no necessary changes detected in
-            # pre-flight check.
-            comments.append(
-                'Container \'{0}\' is already configured as specified'
-                .format(name)
-            )
-        else:
-            comments.append(
-                'Container \'{0}\' was {1}'.format(
-                    name,
-                    'replaced' if pre_config else 'added'
+            if send_signal:
+                try:
+                    __salt__['docker-ng.signal'](name, signal=watch_action)
+                except CommandExecutionError as exc:
+                    comments.append(
+                        'Failed to signal container: {0}'.format(exc)
+                    )
+                    ret['comment'] = _format_comments(comments)
+                    return ret
+                else:
+                    ret['changes']['signal'] = watch_action
+                    comments.append(
+                        'Sent signal {0} to container'.format(watch_action)
+                    )
+            else:
+                # Container was not replaced, no necessary changes detected
+                # in pre-flight check, and no signal sent to container
+                comments.append(
+                    'Container \'{0}\' is already configured as specified'
+                    .format(name)
                 )
-            )
-            if desired_image != pre_config['Config']['Image']:
-                diff = ret['changes'].setdefault(
-                    'container', {}).setdefault('diff', {})
+        else:
+            msg = 'Container \'{0}\' was '.format(name)
+            if pre_config and force:
+                msg += 'forcibly replaced'
+            else:
+                msg += 'created' if not pre_config else 'replaced'
+            comments.append(msg)
+
+            if pre_config and image != pre_config['Config']['Image']:
+                diff = ret['changes'].setdefault('diff', {})
                 diff['image'] = {'old': pre_config['Config']['Image'],
-                                 'new': desired_image}
+                                 'new': image}
                 comments.append(
                     'Image changed from \'{0}\' to \'{1}\''
-                    .format(pre_config['Config']['Image'], desired_image)
+                    .format(pre_config['Config']['Image'], image)
                 )
 
     ret['comment'] = _format_comments(comments)
     ret['result'] = True
     return ret
+
+
+def stopped(name=None,
+            containers=None,
+            stop_timeout=STOP_TIMEOUT,
+            unpause=False,
+            error_on_absent=True):
+    '''
+    Ensure that a container (or containers) is stopped
+
+    name
+        Name or ID of the container
+
+    containers
+        Run this state on more than one container at a time. The following two
+        examples accomplish the same thing:
+
+        .. code-block:: yaml
+
+            stopped_containers:
+              docker-ng.stopped:
+                - names:
+                  - foo
+                  - bar
+                  - baz
+
+        .. code-block:: yaml
+
+            stopped_containers:
+              docker-ng.stopped:
+                - containers:
+                  - foo
+                  - bar
+                  - baz
+
+        However, the second example will be a bit quicker since Salt will stop
+        all specified containers in a single run, rather than executing the
+        state separately on each image (as it would in the first example).
+
+    stop_timeout : 10
+        Timeout for graceful shutdown of the container. If this timeout is
+        exceeded, the container will be killed.
+
+    unpause : False
+        Set to ``True`` to unpause any paused containers before stopping. If
+        unset, then an error will be raised for any container that was paused.
+
+    error_on_absent : True
+        By default, this state will return an error if any of the specified
+        containers are absent. Set this to ``False`` to suppress that error.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if not name and not containers:
+        ret['comment'] = 'One of \'name\' and \'containers\' must be provided'
+        return ret
+    if containers is not None:
+        if not isinstance(containers, list):
+            ret['comment'] = 'containers must be a list'
+            return ret
+        targets = []
+        for target in containers:
+            if not isinstance(target, six.string_types):
+                target = str(target)
+            targets.append(target)
+    elif name:
+        if not isinstance(name, six.string_types):
+            targets = [str(name)]
+        else:
+            targets = [name]
+
+    containers = {}
+    for target in targets:
+        try:
+            c_state = __salt__['docker-ng.state'](target)
+        except CommandExecutionError:
+            containers.setdefault('absent', []).append(target)
+        else:
+            containers.setdefault(c_state, []).append(target)
+
+    errors = []
+    if error_on_absent and 'absent' in containers:
+        errors.append(
+            'The following container(s) are absent: {0}'.format(
+                ', '.join(containers['absent'])
+            )
+        )
+
+    if not unpause and 'paused' in containers:
+        ret['result'] = False
+        errors.append(
+            'The following container(s) are paused: {0}'.format(
+                ', '.join(containers['paused'])
+            )
+        )
+
+    if errors:
+        ret['result'] = False
+        ret['comment'] = '. '.join(errors)
+        return ret
+
+    to_stop = containers.get('running', []) + containers.get('paused', [])
+
+    if not to_stop:
+        ret['result'] = True
+        if len(targets) == 1:
+            ret['comment'] = 'Container \'{0}\' is '.format(targets[0])
+        else:
+            ret['comment'] = 'All specified containers are '
+        if 'absent' in containers:
+            ret['comment'] += 'absent or '
+        ret['comment'] += 'not running'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = (
+            'The following container(s) will be stopped: {0}'
+            .format(', '.join(to_stop))
+        )
+        return ret
+
+    stop_errors = []
+    for target in to_stop:
+        changes = __salt__['docker-ng.stop'](target,
+                                             timeout=stop_timeout,
+                                             unpause=unpause)
+        if changes['result'] is True:
+            ret['changes'][target] = changes
+        else:
+            if 'comment' in changes:
+                stop_errors.append(changes['comment'])
+            else:
+                stop_errors.append(
+                    'Failed to stop container \'{0}\''.format(target)
+                )
+
+    if stop_errors:
+        ret['comment'] = '; '.join(stop_errors)
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = (
+        'The following container(s) were stopped: {0}'
+        .format(', '.join(to_stop))
+    )
+    return ret
+
+
+def absent(name, force=False):
+    '''
+    Ensure that a container is absent
+
+    name
+        Name of the container
+
+    force : False
+        Set to ``True`` to remove the container even if it is running
+
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        mycontainer:
+          docker-ng.absent
+
+        multiple_containers:
+          docker-ng.absent:
+            - names:
+              - foo
+              - bar
+              - baz
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if name not in __salt__['docker-ng.list_containers'](all=True):
+        ret['result'] = True
+        ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
+        return ret
+
+    pre_state = __salt__['docker-ng.state'](name)
+    if pre_state != 'stopped' and not force:
+        ret['comment'] = ('Container is running, set force to True to '
+                          'forcibly remove it')
+        return ret
+
+    try:
+        ret['changes']['removed'] = __salt__['docker-ng.rm'](name, force=force)
+    except Exception as exc:
+        ret['comment'] = ('Failed to remove container: {1}'
+                          .format(name, exc))
+        return ret
+
+    if name in __salt__['docker-ng.list_containers'](all=True):
+        ret['comment'] = 'Failed to remove container \'{0}\''.format(name)
+    else:
+        if force and pre_state != 'stopped':
+            method = 'Forcibly'
+        else:
+            method = 'Successfully'
+        ret['comment'] = '{0} removed container \'{1}\''.format(method, name)
+        ret['result'] = True
+    return ret
+
+
+def mod_watch(name, sfun=None, **kwargs):
+    if sfun == 'running':
+        watch_kwargs = copy.deepcopy(kwargs)
+        if watch_kwargs.get('watch_action', 'force') == 'force':
+            watch_kwargs['force'] = True
+        else:
+            watch_kwargs['send_signal'] = True
+            watch_kwargs['force'] = False
+        return running(name, **watch_kwargs)
+
+    if sfun == 'image_present':
+        # Force image to be updated
+        kwargs['force'] = True
+        return image_present(name, **kwargs)
+
+    return {'name': name,
+            'changes': {},
+            'result': False,
+            'comment': ('watch requisite is not'
+                        ' implemented for {0}'.format(sfun))}
