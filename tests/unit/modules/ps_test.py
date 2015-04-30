@@ -16,7 +16,7 @@ HAS_PSUTIL = ps.__virtual__()
 HAS_PSUTIL_VERSION = False
 
 if HAS_PSUTIL:
-    import psutil
+    import salt.utils.psutil_compat as psutil
     from collections import namedtuple
 
     PSUTIL2 = psutil.version_info >= (2, 0)

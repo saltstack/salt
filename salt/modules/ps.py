@@ -17,7 +17,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
 
     HAS_PSUTIL = True
     PSUTIL2 = psutil.version_info >= (2, 0)
