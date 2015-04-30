@@ -2818,10 +2818,10 @@ def add_host(kwargs=None, call=None):
                 ret = _add_host_helper(spec, data)
             except Exception as new_exc:
                 log.error('Error while adding host {0}: {1}'.format(host_name, new_exc))
-                return 'failed to add host'
+                return {host_name: 'failed to add host'}
         else:
             log.error('Error while adding host {0}: {1}'.format(host_name, exc))
-            return 'failed to add host'
+            return {host_name: 'failed to add host'}
 
     return {host_name: ret}
 
@@ -2865,6 +2865,90 @@ def remove_host(kwargs=None, call=None):
         _wait_for_task(task, host_name, "remove host", 1, 'info')
     except Exception as exc:
         log.error('Error while removing host {0}: {1}'.format(host_name, exc))
-        return 'failed to remove host'
+        return {host_name: 'failed to remove host'}
 
     return {host_name: 'removed host from vcenter'}
+
+
+def connect_host(kwargs=None, call=None):
+    '''
+    Connect the specified host system in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f connect_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The connect_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'connected':
+        return {host_name: 'host system already connected'}
+
+    try:
+        task = host_ref.ReconnectHost_Task()
+        _wait_for_task(task, host_name, "connect host", 5, 'info')
+    except Exception as exc:
+        log.error('Error while connecting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to connect host'}
+
+    return {host_name: 'connected host'}
+
+
+def disconnect_host(kwargs=None, call=None):
+    '''
+    Disconnect the specified host system in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f disconnect_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The disconnect_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'disconnected':
+        return {host_name: 'host system already disconnected'}
+
+    try:
+        task = host_ref.DisconnectHost_Task()
+        _wait_for_task(task, host_name, "disconnect host", 1, 'info')
+    except Exception as exc:
+        log.error('Error while disconnecting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to disconnect host'}
+
+    return {host_name: 'disconnected host'}
