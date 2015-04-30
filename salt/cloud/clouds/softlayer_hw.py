@@ -35,10 +35,9 @@ import logging
 import time
 
 # Import salt cloud libs
+import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-from salt.utils import namespaced_function
 
 # Attempt to import softlayer lib
 try:
@@ -49,10 +48,6 @@ except ImportError:
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-
-# Redirect SoftLayer functions to this module namespace
-script = namespaced_function(script, globals())
 
 
 # Only load in this module if the SoftLayer configurations are in place
@@ -78,6 +73,21 @@ def get_configured_provider():
         __active_provider_name__ or 'softlayer_hw',
         ('apikey',)
     )
+
+
+def script(vm_):
+    '''
+    Return the script deployment object
+    '''
+    deploy_script = salt.utils.cloud.os_script(
+        config.get_cloud_config_value('script', vm_, __opts__),
+        vm_,
+        __opts__,
+        salt.utils.cloud.salt_config_to_yaml(
+            salt.utils.cloud.minion_config(__opts__, vm_)
+        )
+    )
+    return deploy_script
 
 
 def get_conn(service='SoftLayer_Hardware'):
@@ -365,7 +375,7 @@ def create(vm_):
             'host': ip_address,
             'username': ssh_username,
             'password': passwd,
-            'script': deploy_script.script,
+            'script': deploy_script,
             'name': vm_['name'],
             'tmp_dir': config.get_cloud_config_value(
                 'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
