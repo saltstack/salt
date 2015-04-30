@@ -926,6 +926,13 @@ class RemoteClient(Client):
         else:
             self.auth = ''
 
+    def _refresh_channel(self):
+        '''
+        Reset the channel, in the event of an interruption
+        '''
+        self.channel = salt.transport.Channel.factory(self.opts)
+        return self.channel
+
     def get_file(self,
                  path,
                  dest='',
@@ -1026,6 +1033,7 @@ class RemoteClient(Client):
             data = self.channel.send(load)
             if 'data' not in data:
                 log.error('Data is {0}'.format(data))
+                self._refresh_channel()
             if not data['data']:
                 if not fn_ and data['dest']:
                     # This is a 0 byte file on the master
