@@ -307,6 +307,7 @@ def _get_rule_changes(rules, _rules):
 def _rules_present(
         name,
         rules,
+        rules_egress,
         vpc_id,
         region,
         key,
@@ -343,7 +344,8 @@ def _rules_present(
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
-    if to_create or to_delete:
+    to_delete_egress, to_create_egress = _get_rule_changes(rules, sg['rules_egress'])
+    if to_create or to_delete or to_create_egress or to_delete_egress:
         if __opts__['test']:
             msg = 'Security group {0} set to have rules modified.'.format(name)
             ret['comment'] = msg
@@ -379,6 +381,39 @@ def _rules_present(
                 msg = 'Failed to create rules on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
+
+        if to_delete_egress:
+            deleted = True
+            for rule in to_delete:
+                _deleted = __salt__['boto_secgroup.revoke'](
+                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                    profile=profile, egress=True, **rule)
+                if not _deleted:
+                    deleted = False
+            if deleted:
+                msg = 'Removed rules on {0} security group.'.format(name)
+                ret['comment'] = msg
+            else:
+                msg = 'Failed to remove rules on {0} security group.'
+                ret['comment'] = msg.format(name)
+                ret['result'] = False
+        
+        if to_create_egress:
+            created = True
+            for rule in to_create:
+                _created = __salt__['boto_secgroup.authorize'](
+                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                    profile=profile, egress=True, **rule)
+                if not _created:
+                    created = False
+            if created:
+                msg = 'Created rules on {0} security group.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+            else:
+                msg = 'Failed to create rules on {0} security group.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+                ret['result'] = False
+
         ret['changes']['old'] = {'rules': sg['rules']}
         sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
                                                   keyid, profile, vpc_id)
