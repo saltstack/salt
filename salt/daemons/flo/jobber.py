@@ -274,7 +274,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        with salt.utils.fopen(fn_, 'w+') as fp_:
+        with salt.utils.fopen(fn_, 'w+b') as fp_:
             fp_.write(self.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']

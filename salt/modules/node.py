@@ -19,7 +19,6 @@ Module for full system inspection.
 '''
 from __future__ import absolute_import
 import logging
-import importlib
 from salt.modules.inspectlib.exceptions import (InspectorQueryException,
                                                 InspectorSnapshotException)
 
@@ -46,7 +45,12 @@ def _(module):
     :return:
     '''
 
-    mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
+    # importlib is unavailable on python 2.6
+    if module == 'collector':
+        mod = salt.modules.inspectlib.collector
+    elif module == 'query':
+        mod = salt.modules.inspectlib.query
+
     mod.__grains__ = __grains__
     mod.__pillar__ = __pillar__
     mod.__salt__ = __salt__

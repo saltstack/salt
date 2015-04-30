@@ -6,6 +6,31 @@ Boto Common Utils
 Note: This module depends on the dicts packed by the loader and,
 therefore, must be accessed via the loader or from the __utils__ dict.
 
+The __utils__ dict will not be automatically available to execution modules
+until Beryllium. The `salt.utils.compat.pack_dunder` helper function
+provides backwards compatibility.
+
+This module provides common functionality for the boto execution modules.
+The expected usage is to call `apply_funcs` from the `__virtual__` function
+of the module. This will bring properly initilized partials of  `_get_conn`
+and `_cache_id` into the module's namespace.
+
+Example Usage:
+
+    .. code-block:: python
+
+        import salt.utils.boto
+
+        def __virtual__():
+            # only required in 2015.2
+            salt.utils.compat.pack_dunder(__name__)
+
+            __utils__['boto.apply_funcs'](__name__, 'vpc')
+
+        def test():
+            conn = _get_conn()
+            vpc_id = _cache_id('test-vpc')
+
 .. versionadded:: Beryllium
 '''
 
@@ -19,7 +44,7 @@ from functools import partial
 
 # Import salt libs
 import salt.ext.six as six
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError
 from salt._compat import ElementTree as ET
 
 # Import third party libs
@@ -28,7 +53,6 @@ try:
     # pylint: disable=import-error
     import boto
     import boto.exception
-    from boto.exception import BotoServerError
     # pylint: enable=import-error
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -122,6 +146,11 @@ def cache_id(service, name, sub_resource=None, resource_id=None,
         if cxkey in __context__:
             del __context__[cxkey]
             return True
+        elif resource_id in __context__.values():
+            ctx = dict((k, v) for k, v in __context__.items() if v != resource_id)
+            __context__.clear()
+            __context__.update(ctx)
+            return True
         else:
             return False
     if resource_id:
@@ -175,8 +204,6 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
         raise SaltInvocationError('No authentication credentials found when '
                                   'attempting to make boto {0} connection to '
                                   'region "{1}".'.format(service, region))
-    except BotoServerError as exc:
-        raise BotoExecutionError(exc)
     __context__[cxkey] = conn
     return conn
 
@@ -193,28 +220,44 @@ def get_connection_func(service, module=None):
     return partial(get_connection, service, module=module)
 
 
-class BotoExecutionError(CommandExecutionError):
-    def __init__(self, boto_exception):
-        self.status = boto_exception.status
-        self.reason = boto_exception.reason
+def get_error(e):
+    aws = {}
+    if e.status:
+        aws['status'] = e.status
+    if e.reason:
+        aws['reason'] = e.reason
 
-        try:
-            body = boto_exception.body or ''
-            error = ET.fromstring(body).find('Errors').find('Error')
-            self.error = {'code': error.find('Code').text,
-                          'message': error.find('Message').text}
-        except (AttributeError, ET.ParseError):
-            self.error = None
+    try:
+        body = e.body or ''
+        error = ET.fromstring(body).find('Errors').find('Error')
+        error = {'code': error.find('Code').text,
+                 'message': error.find('Message').text}
+    except (AttributeError, ET.ParseError):
+        error = None
 
-        status = self.status or ''
-        reason = self.reason or ''
-        error = self.error or {}
+    if error:
+        aws.update(error)
+        message = '{0}: {1}'.format(aws.get('reason', ''),
+                                    error['message'])
+    else:
+        message = aws.get('reason')
+    r = {'message': message}
+    if aws:
+        r['aws'] = aws
+    return r
 
-        if error:
-            message = '{0} {1}: {2}'.format(status, reason, error.get('message'))
-        else:
-            message = '{0} {1}'.format(status, reason)
-        super(BotoExecutionError, self).__init__(message)
+
+def exactly_n(l, n=1):
+    '''
+    Tests that exactly N items in an iterable are "truthy" (neither None,
+    False, nor 0).
+    '''
+    i = iter(l)
+    return all(any(i) for j in range(n)) and not any(i)
+
+
+def exactly_one(l):
+    return exactly_n(l)
 
 
 def assign_funcs(modname, service, module=None):
@@ -228,3 +271,7 @@ def assign_funcs(modname, service, module=None):
     mod = sys.modules[modname]
     setattr(mod, '_get_conn', get_connection_func(service, module=module))
     setattr(mod, '_cache_id', cache_id_func(service))
+
+    # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
+    # Leaving this way for now so boto modules can be back ported
+    setattr(mod, '_exactly_one', exactly_one)

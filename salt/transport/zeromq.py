@@ -9,6 +9,7 @@ import logging
 import os
 import errno
 import hashlib
+import weakref
 from random import randint
 
 # Import Salt Libs
@@ -29,6 +30,8 @@ import zmq.eventloop.ioloop
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import zmq.eventloop.zmqstream
+import zmq.utils.monitor
+EVENT_MAP = None
 
 # Import Tornado Libs
 import tornado
@@ -44,8 +47,47 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     ZMQ Channels default to 'crypt=aes'
     '''
+    # This class is only a singleton per minion/master pair
+    # mapping of io_loop -> {key -> channel}
+    instance_map = weakref.WeakKeyDictionary()
 
+    def __new__(cls, opts, **kwargs):
+        '''
+        Only create one instance of channel per __key()
+        '''
+        # do we have any mapping for this io_loop
+        io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        if io_loop not in cls.instance_map:
+            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
+        loop_instance_map = cls.instance_map[io_loop]
+
+        key = cls.__key(opts, **kwargs)
+        if key not in loop_instance_map:
+            log.debug('Initializing new AsyncZeroMQReqChannel for {0}'.format(key))
+            # we need to make a local variable for this, as we are going to store
+            # it in a WeakValueDictionary-- which will remove the item if no one
+            # references it-- this forces a reference while we return to the caller
+            new_obj = object.__new__(cls)
+            new_obj.__singleton_init__(opts, **kwargs)
+            loop_instance_map[key] = new_obj
+        else:
+            log.debug('Re-using AsyncZeroMQReqChannel for {0}'.format(key))
+        return loop_instance_map[key]
+
+    @classmethod
+    def __key(cls, opts, **kwargs):
+        return (opts['pki_dir'],     # where the keys are stored
+                opts['id'],          # minion ID
+                kwargs.get('master_uri', opts.get('master_uri')),  # master ID
+                kwargs.get('crypt', 'aes'),  # TODO: use the same channel for crypt
+                )
+
+    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts, **kwargs):
         self.opts = dict(opts)
         self.ttype = 'zeromq'
 
@@ -213,7 +255,41 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
+        self._init_monitor()
+
+    def _init_monitor(self):
+        if not self.opts['zmq_monitor']:
+            return
+
+        global EVENT_MAP
+        EVENT_MAP = {}
+        for name in dir(zmq):
+            if name.startswith('EVENT_'):
+                value = getattr(zmq, name)
+                EVENT_MAP[value] = name
+
+        def monitor_callback(msg):
+            evt = zmq.utils.monitor.parse_monitor_message(msg)
+            evt['description'] = EVENT_MAP[evt['event']]
+            log.debug("ZeroMQ event: {0}".format(evt))
+            if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
+                self._stop_monitor()
+
+        self._monitor_socket = self._socket.get_monitor_socket()
+        self._monitor_stream = zmq.eventloop.zmqstream.ZMQStream(self._monitor_socket, io_loop=self.io_loop)
+        self._monitor_stream.on_recv(monitor_callback)
+
+    def _stop_monitor(self):
+        if not hasattr(self, '_monitor_socket') or self._monitor_socket is None:
+            return
+        self._socket.disable_monitor()
+        self._monitor_stream.close()
+        self._monitor_socket = None
+        self._monitor_stream = None
+        log.trace("Event monitor done!")
+
     def destroy(self):
+        self._stop_monitor()
         if hasattr(self, '_stream'):
             # TODO: Optionally call stream.close() on newer pyzmq? Its broken on some
             self._stream.io_loop.remove_handler(self._stream.socket)

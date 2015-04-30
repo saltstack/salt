@@ -479,7 +479,7 @@ class AsyncAuth(object):
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 raise tornado.gen.Return('retry')
-            raise SaltClientError('Attempt to authenticate with the salt master failed')
+            raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         if 'load' in payload:
             if 'ret' in payload['load']:
                 if not payload['load']['ret']:

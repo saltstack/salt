@@ -49,10 +49,12 @@ cloud configuration at
 from __future__ import absolute_import
 from random import randint
 from re import match
+import atexit
 import pprint
 import logging
 import time
 import os.path
+import subprocess
 
 # Import salt libs
 import salt.utils.cloud
@@ -65,7 +67,7 @@ import salt.config as config
 # Attempt to import pyVim and pyVmomi libs
 HAS_LIBS = False
 try:
-    from pyVim.connect import SmartConnect
+    from pyVim.connect import SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
     HAS_LIBS = True
 except Exception:
@@ -128,6 +130,16 @@ def script(vm_):
     )
 
 
+def _str_to_bool(var):
+    if isinstance(var, bool):
+        return var
+
+    if isinstance(var, six.string_types):
+        return True if var.lower() == 'true' else False
+
+    return None
+
+
 def _get_si():
     '''
     Authenticate with vCenter server and return service instance object.
@@ -169,6 +181,8 @@ def _get_si():
             raise SaltCloudSystemExit(
                 '\nCould not connect to the vCenter server using the specified username and password'
             )
+
+    atexit.register(Disconnect, si)
 
     return si
 
@@ -735,7 +749,7 @@ def _format_instance_info(vm):
     return vm_full_info
 
 
-def _get_snapshots(snapshot_list, parent_snapshot_path=""):
+def _get_snapshots(snapshot_list, current_snapshot=None, parent_snapshot_path=""):
     snapshots = {}
     for snapshot in snapshot_list:
         snapshot_path = "{0}/{1}".format(parent_snapshot_path, snapshot.name)
@@ -746,9 +760,17 @@ def _get_snapshots(snapshot_list, parent_snapshot_path=""):
             'state': snapshot.state,
             'path': snapshot_path,
         }
+
+        if current_snapshot and current_snapshot == snapshot.snapshot:
+            return snapshots[snapshot_path]
+
         # Check if child snapshots exist
         if snapshot.childSnapshotList:
-            snapshots.update(_get_snapshots(snapshot.childSnapshotList, snapshot_path))
+            ret = _get_snapshots(snapshot.childSnapshotList, current_snapshot, snapshot_path)
+            if current_snapshot:
+                return ret
+            snapshots.update(ret)
+
     return snapshots
 
 
@@ -1403,7 +1425,8 @@ def start(name, call=None):
                 return ret
             try:
                 log.info('Starting VM {0}'.format(name))
-                vm["object"].PowerOn()
+                task = vm["object"].PowerOn()
+                _wait_for_task(task, name, "power on")
             except Exception as exc:
                 log.error('Could not power on VM {0}: {1}'.format(name, exc))
                 return 'failed to power on'
@@ -1441,7 +1464,8 @@ def stop(name, call=None):
                 return ret
             try:
                 log.info('Stopping VM {0}'.format(name))
-                vm["object"].PowerOff()
+                task = vm["object"].PowerOff()
+                _wait_for_task(task, name, "power off")
             except Exception as exc:
                 log.error('Could not power off VM {0}: {1}'.format(name, exc))
                 return 'failed to power off'
@@ -1483,7 +1507,8 @@ def suspend(name, call=None):
                 return ret
             try:
                 log.info('Suspending VM {0}'.format(name))
-                vm["object"].Suspend()
+                task = vm["object"].Suspend()
+                _wait_for_task(task, name, "suspend")
             except Exception as exc:
                 log.error('Could not suspend VM {0}: {1}'.format(name, exc))
                 return 'failed to suspend'
@@ -1521,7 +1546,8 @@ def reset(name, call=None):
                 return ret
             try:
                 log.info('Resetting VM {0}'.format(name))
-                vm["object"].Reset()
+                task = vm["object"].Reset()
+                _wait_for_task(task, name, "reset")
             except Exception as exc:
                 log.error('Could not reset VM {0}: {1}'.format(name, exc))
                 return 'failed to reset'
@@ -2520,3 +2546,416 @@ def create_folder(kwargs=None, call=None):
         return {inventory_path: 'specfied path already exists'}
     else:
         return {inventory_path: 'created the specified path'}
+
+
+def create_snapshot(name, kwargs=None, call=None):
+    '''
+    Create a snapshot of the specified virtual machine in this VMware
+    environment
+
+    .. note::
+
+        If the VM is powered on, the internal state of the VM (memory
+        dump) is included in the snapshot by default which will also set
+        the power state of the snapshot to "powered on". You can set
+        ``memdump=False`` to override this. This field is ignored if
+        the virtual machine is powered off or if the VM does not support
+        snapshots with memory dumps. Default is ``memdump=True``
+
+    .. note::
+
+        If the VM is powered on when the snapshot is taken, VMware Tools
+        can be used to quiesce the file system in the virtual machine by
+        setting ``quiesce=True``. This field is ignored if the virtual
+        machine is powered off; if VMware Tools are not available or if
+        ``memdump=True``. Default is ``quiesce=False``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=False] [quiesce=True]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The create_snapshot action must be called with -a or --action.'
+        )
+
+    snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
+
+    if not snapshot_name:
+        raise SaltCloudSystemExit(
+            'You must provide a snapshot name for the snapshot to be created.'
+        )
+
+    memdump = _str_to_bool(kwargs.get('memdump', True))
+    quiesce = _str_to_bool(kwargs.get('quiesce', False))
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    if vm_ref.summary.runtime.powerState != "poweredOn":
+        log.debug('VM {0} is not powered on. Setting both memdump and quiesce to False'.format(name))
+        memdump = False
+        quiesce = False
+
+    if memdump and quiesce:
+        # Either memdump or quiesce should be set to True
+        log.warning('You can only set either memdump or quiesce to True. Setting quiesce=False')
+        quiesce = False
+
+    desc = kwargs.get('description') if 'description' in kwargs else ''
+
+    try:
+        task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
+        _wait_for_task(task, name, "create snapshot", 5, 'info')
+    except Exception as exc:
+        log.error('Error while creating snapshot of {0}: {1}'.format(name, exc))
+        return 'failed to create snapshot'
+
+    return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList, vm_ref.snapshot.currentSnapshot)}
+
+
+def revert_to_snapshot(name, kwargs=None, call=None):
+    '''
+    Revert virtual machine to it's current snapshot. If no snapshot
+    exists, the state of the virtual machine remains unchanged
+
+    .. note::
+
+        The virtual machine will be powered on if the power state of
+        the snapshot when it was created was set to "Powered On". Set
+        ``power_off=True`` so that the virtual machine stays powered
+        off regardless of the power state of the snapshot when it was
+        created. Default is ``power_off=False``.
+
+        If the power state of the snapshot when it was created was
+        "Powered On" and if ``power_off=True``, the VM will be put in
+        suspended state after it has been reverted to the snapshot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a revert_to_snapshot vmame [power_off=True]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The revert_to_snapshot action must be called with -a or --action.'
+        )
+
+    suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    if not vm_ref.rootSnapshot:
+        log.error('VM {0} does not contain any current snapshots'.format(name))
+        return 'revert failed'
+
+    try:
+        task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
+        _wait_for_task(task, name, "revert to snapshot", 5, 'info')
+
+    except Exception as exc:
+        log.error('Error while reverting VM {0} to snapshot: {1}'.format(name, exc))
+        return 'revert failed'
+
+    return 'reverted to current snapshot'
+
+
+def remove_all_snapshots(name, kwargs=None, call=None):
+    '''
+    Remove all the snapshots present for the specified virtual machine.
+
+    .. note::
+
+        All the snapshots higher up in the hierarchy of the current snapshot tree
+        are consolidated and their virtual disks are merged. To override this
+        behavior and only remove all snapshots, set ``merge_snapshots=False``.
+        Default is ``merge_snapshots=True``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a remove_all_snapshots vmname [merge_snapshots=False]
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The remove_all_snapshots action must be called with -a or --action.'
+        )
+
+    consolidate = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
+
+    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+
+    try:
+        task = vm_ref.RemoveAllSnapshots()
+        _wait_for_task(task, name, "remove snapshots", 5, 'info')
+    except Exception as exc:
+        log.error('Error while removing snapshots on VM {0}: {1}'.format(name, exc))
+        return 'failed to remove snapshots'
+
+    return 'removed all snapshots'
+
+
+def add_host(kwargs=None, call=None):
+    '''
+    Add a host system to the specified cluster or datacenter in this VMware environment
+
+    .. note::
+
+        To use this function, you need to specify ``esxi_host_user`` and
+        ``esxi_host_password`` under your provider configuration set up at
+        ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
+
+        .. code-block:: yaml
+
+            vmware-vcenter01:
+              provider: vmware
+              user: DOMAIN\\user
+              password: "verybadpass"
+              url: vcenter01.domain.com
+
+              # Required when adding a host system
+              esxi_host_user: root
+              esxi_host_password: "myhostpassword"
+              # Optional fields that can be specified when adding a host system
+              esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+
+        The SSL thumbprint of the host system can be optionally specified by setting
+        ``esxi_host_ssl_thumbprint`` under your provider configuration. To get the SSL
+        thumbprint of the host system, execute the following command from a remote
+        server:
+
+        .. code-block:: bash
+
+            echo -n | openssl s_client -connect <YOUR-HOSTSYSTEM-DNS/IP>:443 2>/dev/null | openssl x509 -noout -fingerprint -sha1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f add_host my-vmware-config host="myHostSystemName" cluster="myClusterName"
+        salt-cloud -f add_host my-vmware-config host="myHostSystemName" datacenter="myDatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    cluster_name = kwargs.get('cluster') if kwargs and 'cluster' in kwargs else None
+    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
+
+    host_user = config.get_cloud_config_value(
+        'esxi_host_user', get_configured_provider(), __opts__, search_global=False
+    )
+    host_password = config.get_cloud_config_value(
+        'esxi_host_password', get_configured_provider(), __opts__, search_global=False
+    )
+    host_ssl_thumbprint = config.get_cloud_config_value(
+        'esxi_host_ssl_thumbprint', get_configured_provider(), __opts__, search_global=False
+    )
+
+    if not host_user:
+        raise SaltCloudSystemExit(
+            'You must provide the ESXi host username in your providers config'
+        )
+
+    if not host_password:
+        raise SaltCloudSystemExit(
+            'You must provide the ESXi host password in your providers config'
+        )
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must pass either an IP or DNS name for the Host system'
+        )
+
+    if (cluster_name and datacenter_name) or not(cluster_name or datacenter_name):
+        raise SaltCloudSystemExit(
+            'You must specify either the cluster name or the datacenter name'
+        )
+
+    if cluster_name:
+        cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+        if not cluster_ref:
+            raise SaltCloudSystemExit(
+                'Specified cluster does not exist'
+            )
+
+    if datacenter_name:
+        datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+        if not datacenter_ref:
+            raise SaltCloudSystemExit(
+                'Specified datacenter does not exist'
+            )
+
+    spec = vim.host.ConnectSpec(
+        hostName=host_name,
+        userName=host_user,
+        password=host_password,
+    )
+
+    if host_ssl_thumbprint:
+        spec.sslThumbprint = host_ssl_thumbprint
+    else:
+        log.warning('SSL thumbprint has not been specified in provider configuration')
+        try:
+            log.debug('Trying to get the SSL thumbprint directly from the host system')
+            p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ssl_thumbprint = p3.stdout.read().split('=')[-1].strip()
+            log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
+            spec.sslThumbprint = ssl_thumbprint
+        except Exception as exc:
+            log.error('Error while trying to get SSL thumbprint of host {0}: {1}'.format(host_name, exc))
+            return {host_name: 'failed to add host'}
+
+    try:
+        if cluster_name:
+            task = cluster_ref.AddHost(spec=spec, asConnected=True)
+            ret = 'added host system to cluster {0}'.format(cluster_name)
+        if datacenter_name:
+            task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
+            ret = 'added host system to datacenter {0}'.format(datacenter_name)
+        _wait_for_task(task, host_name, "add host system", 5, 'info')
+    except Exception as exc:
+        if isinstance(exc, vim.fault.SSLVerifyFault):
+            log.error('Authenticity of the host\'s SSL certificate is not verified')
+            log.info('Try again after setting the esxi_host_ssl_thumbprint to {0} in provider configuration'.format(exc.thumbprint))
+        log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to add host'}
+
+    return {host_name: ret}
+
+
+def remove_host(kwargs=None, call=None):
+    '''
+    Remove the specified host system from this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f remove_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The remove_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    try:
+        if isinstance(host_ref.parent, vim.ComputeResource):
+            # This is a standalone host system
+            task = host_ref.parent.Destroy_Task()
+        else:
+            # This is a host system that is part of a Cluster
+            task = host_ref.Destroy_Task()
+        _wait_for_task(task, host_name, "remove host", 1, 'info')
+    except Exception as exc:
+        log.error('Error while removing host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to remove host'}
+
+    return {host_name: 'removed host from vcenter'}
+
+
+def connect_host(kwargs=None, call=None):
+    '''
+    Connect the specified host system in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f connect_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The connect_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'connected':
+        return {host_name: 'host system already connected'}
+
+    try:
+        task = host_ref.ReconnectHost_Task()
+        _wait_for_task(task, host_name, "connect host", 5, 'info')
+    except Exception as exc:
+        log.error('Error while connecting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to connect host'}
+
+    return {host_name: 'connected host'}
+
+
+def disconnect_host(kwargs=None, call=None):
+    '''
+    Disconnect the specified host system in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f disconnect_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The disconnect_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'disconnected':
+        return {host_name: 'host system already disconnected'}
+
+    try:
+        task = host_ref.DisconnectHost_Task()
+        _wait_for_task(task, host_name, "disconnect host", 1, 'info')
+    except Exception as exc:
+        log.error('Error while disconnecting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to disconnect host'}
+
+    return {host_name: 'disconnected host'}
