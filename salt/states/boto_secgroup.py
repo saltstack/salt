@@ -47,6 +47,17 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   cidr_ip:
                     - 10.0.0.0/0
                     - 192.168.0.0/0
+                - ip_protocol: icmp
+                  from_port: -1
+                  to_port: -1
+                  source_group_name: mysecgroup
+            - rules_egress:
+                - ip_protocol: all
+                  from_port: -1
+                  to_port: -1
+                  cidr_ip:
+                    - 10.0.0.0/0
+                    - 192.168.0.0/0
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -94,6 +105,7 @@ def present(
         description,
         vpc_id=None,
         rules=None,
+        rules_egress=None,
         region=None,
         key=None,
         keyid=None,
@@ -112,6 +124,9 @@ def present(
 
     rules
         A list of ingress rule dicts.
+
+    rules_egress
+        A list of egress rule dicts.
 
     region
         Region to connect to.
@@ -137,7 +152,7 @@ def present(
             return ret
     if not rules:
         rules = []
-    _ret = _rules_present(name, rules, vpc_id, region, key, keyid, profile)
+    _ret = _rules_present(name, rules, rules_egress, vpc_id, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
