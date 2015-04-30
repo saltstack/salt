@@ -43,7 +43,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 from functools import partial
 
 # Import salt libs
-from salt.ext.six import string_types  # pylint: disable=import-error 
+from salt.ext.six import string_types  # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
 from salt._compat import ElementTree as ET
