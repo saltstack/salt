@@ -978,7 +978,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return mod
+            return False
         except Exception as error:
             log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
@@ -987,7 +987,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return mod
+            return False
         except SystemExit:
             log.error(
                 'Failed to import {0} {1} as the module called exit()\n'.format(
@@ -995,7 +995,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return mod
+            return False
         finally:
             sys.path.pop()
 
@@ -1011,6 +1011,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for p_name, p_value in six.iteritems(self.pack):
             setattr(mod, p_name, p_value)
 
+        module_name = mod.__name__.rsplit('.', 1)[-1]
+
         # Call a module's initialization method if it exists
         module_init = getattr(mod, '__init__', None)
         if inspect.isfunction(module_init):
@@ -1018,7 +1020,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_init(self.opts)
             except TypeError as e:
                 log.error(e)
-        module_name = mod.__name__.rsplit('.', 1)[-1]
+            except Exception:
+                err_string = '__init__ failed'
+                log.debug(
+                    'Error loading {0}.{1}: {2}'.format(
+                        self.tag,
+                        module_name,
+                        err_string),
+                    exc_info=True)
+                self.missing_modules[module_name] = err_string
+                self.missing_modules[name] = err_string
+                return False
 
         # if virtual modules are enabled, we need to look for the
         # __virtual__() function inside that module and run it.
