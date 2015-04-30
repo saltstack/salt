@@ -493,10 +493,10 @@ def _virtual(osdata):
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('dmidecode', 'dmesg', 'systemd-detect-virt', 'virt-what')
+            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg')
         else:
-            _cmds = ('dmidecode', 'lspci', 'dmesg',
-                     'systemd-detect-virt', 'virt-what')
+            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
+                     'dmesg')
 
     failed_commands = set()
     for command in _cmds:
