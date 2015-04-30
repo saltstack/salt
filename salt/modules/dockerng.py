@@ -274,6 +274,9 @@ VERSION_RE = r'([\d.]+)'
 # Default timeout as of docker-py 1.0.0
 CLIENT_TIMEOUT = 60
 
+# Timeout for stopping the container, before a kill is invoked
+STOP_TIMEOUT = 10
+
 NOTSET = object()
 
 # Define the module's virtual name
@@ -3630,7 +3633,7 @@ def push(image,
     return ret
 
 
-def rmi(name, force=False, prune=True):
+def rmi(*names, **kwargs):
     '''
     Removes an image
 
@@ -3652,6 +3655,7 @@ def rmi(name, force=False, prune=True):
 
     - ``Layers`` - A list of the IDs of image layers that were removed
     - ``Tags`` - A list of the tags that were removed
+    - ``Errors`` - A list of any errors that were encountered
 
 
     CLI Examples:
@@ -3660,38 +3664,46 @@ def rmi(name, force=False, prune=True):
 
         salt myminion docker-ng.rmi busybox
         salt myminion docker-ng.rmi busybox force=True
+        salt myminion docker-ng.rmi foo bar baz
     '''
-    image_id = inspect_image(name)['Id']
     pre_images = images(all=True)
     pre_tags = list_tags()
-    try:
-        _client_wrapper('remove_image',
-                        image_id,
-                        force=force,
-                        noprune=not prune,
-                        catch_api_errors=False)
-        _clear_context()
-    except docker.errors.APIError as exc:
-        if exc.response.status_code == 409:
-            err = ('Unable to remove image {0} because it is in use by '
-                   .format(name))
-            deps = depends(name)
-            if deps['Containers']:
-                err += 'container(s): {0}'.format(
-                    ', '.join(deps['Containers'])
-                )
-            if deps['Images']:
+    force = kwargs.get('force', False)
+    noprune = not kwargs.get('prune', True)
+
+    errors = []
+    for name in names:
+        image_id = inspect_image(name)['Id']
+        try:
+            _client_wrapper('remove_image',
+                            image_id,
+                            force=kwargs.get('force', False),
+                            noprune=not kwargs.get('prune', True),
+                            catch_api_errors=False)
+        except docker.errors.APIError as exc:
+            if exc.response.status_code == 409:
+                err = ('Unable to remove image \'{0}\' because it is in '
+                       'use by '.format(name))
+                deps = depends(name)
                 if deps['Containers']:
-                    err += ' and '
-                err += 'image(s): {0}'.format(', '.join(deps['Images']))
-            raise CommandExecutionError(err)
-        else:
-            raise CommandExecutionError(
-                'Error {0}: {1}'.format(exc.response.status_code,
-                                        exc.explanation)
-            )
-    return {'Layers': [x for x in pre_images if x not in images(all=True)],
-            'Tags': [x for x in pre_tags if x not in list_tags()]}
+                    err += 'container(s): {0}'.format(
+                        ', '.join(deps['Containers'])
+                    )
+                if deps['Images']:
+                    if deps['Containers']:
+                        err += ' and '
+                    err += 'image(s): {0}'.format(', '.join(deps['Images']))
+                errors.append(err)
+            else:
+                errors.append('Error {0}: {1}'.format(exc.response.status_code,
+                                                      exc.explanation))
+
+    _clear_context()
+    ret = {'Layers': [x for x in pre_images if x not in images(all=True)],
+           'Tags': [x for x in pre_tags if x not in list_tags()]}
+    if errors:
+        ret['Errors'] = errors
+    return ret
 
 
 def save(name,
@@ -3940,7 +3952,6 @@ def kill(name):
     name
         Container name or ID
 
-
     **RETURN DATA**
 
     A dictionary will be returned, containing the following keys:
@@ -4032,6 +4043,33 @@ def restart(name, timeout=10):
     if ret['result']:
         ret['restarted'] = True
     return ret
+
+
+@_ensure_exists
+def signal(name, signal):
+    '''
+    Send a signal to a container. Signals can be either strings or numbers, and
+    are defined in the **Standard Signals** section of the ``signal(7)``
+    manpage. Run ``man 7 signal`` on a Linux host to browse this manpage.
+
+    name
+        Container name or ID
+
+    signal
+
+    **RETURN DATA**
+
+    If the signal was successfully sent, ``True`` will be returned. Otherwise,
+    an error will be raised.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion docker-ng.signal mycontainer SIGHUP
+    '''
+    _client_wrapper('kill', name, signal=signal)
+    return True
 
 
 @_ensure_exists
@@ -4249,7 +4287,7 @@ def start(name, validate_ip_addrs=True, **kwargs):
 
 
 @_ensure_exists
-def stop(name, timeout=10, **kwargs):
+def stop(name, timeout=STOP_TIMEOUT, **kwargs):
     '''
     Stops a running container
 
