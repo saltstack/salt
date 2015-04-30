@@ -49,6 +49,7 @@ cloud configuration at
 from __future__ import absolute_import
 from random import randint
 from re import match
+import atexit
 import pprint
 import logging
 import time
@@ -65,7 +66,7 @@ import salt.config as config
 # Attempt to import pyVim and pyVmomi libs
 HAS_LIBS = False
 try:
-    from pyVim.connect import SmartConnect
+    from pyVim.connect import SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
     HAS_LIBS = True
 except Exception:
@@ -179,6 +180,8 @@ def _get_si():
             raise SaltCloudSystemExit(
                 '\nCould not connect to the vCenter server using the specified username and password'
             )
+
+    atexit.register(Disconnect, si)
 
     return si
 
@@ -824,6 +827,18 @@ def _get_hba_type(hba_type):
         return vim.host.InternetScsiHba
     elif hba_type == "fibre":
         return vim.host.FibreChannelHba
+
+
+def _add_host_helper(spec, data):
+    if 'cluster_ref' in data.keys():
+        task = data['cluster_ref'].AddHost(spec=spec, asConnected=True)
+        ret = 'added host system to cluster {0}'.format(data['cluster_name'])
+    if 'datacenter_ref' in data.keys():
+        task = data['datacenter_ref'].hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
+        ret = 'added host system to datacenter {0}'.format(data['datacenter_name'])
+    _wait_for_task(task, spec.hostName, "add host system", 5, 'info')
+
+    return ret
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -2689,3 +2704,123 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         return 'failed to remove snapshots'
 
     return 'removed all snapshots'
+
+
+def add_host(kwargs=None, call=None):
+    '''
+    Add a host system to the specified cluster/datacenter in this VMware environment
+
+    .. note::
+
+        To use this function, you need to specify ``esxi_host_user``, ``esxi_host_password``
+        and ``esxi_host_ssl_thumbprint`` under your provider configuration set up at
+        ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
+
+        .. code-block:: yaml
+
+            vmware-vcenter01:
+              provider: vmware
+              user: DOMAIN\user
+              password: "verybadpass"
+              url: vcenter01.domain.com
+              esxi_host_user: root
+              esxi_host_password: "myhostpassword"
+              esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f add_host my-vmware-config host="myHostSystemName" cluster="myClusterName"
+        salt-cloud -f add_host my-vmware-config host="myHostSystemName" datacenter="myDatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    cluster_name = kwargs.get('cluster') if kwargs and 'cluster' in kwargs else None
+    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
+
+    host_user = config.get_cloud_config_value(
+        'esxi_host_user', get_configured_provider(), __opts__, search_global=False
+    )
+    host_password = config.get_cloud_config_value(
+        'esxi_host_password', get_configured_provider(), __opts__, search_global=False
+    )
+    host_ssl_thumbprint = config.get_cloud_config_value(
+        'esxi_host_ssl_thumbprint', get_configured_provider(), __opts__, search_global=False
+    )
+
+    if not host_user:
+        raise SaltCloudSystemExit(
+            'You must provide the ESXi host username in your providers config'
+        )
+
+    if not host_password:
+        raise SaltCloudSystemExit(
+            'You must provide the ESXi host password in your providers config'
+        )
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must pass either an IP or DNS name for the Host system'
+        )
+
+    if (cluster_name and datacenter_name) or not(cluster_name or datacenter_name):
+        raise SaltCloudSystemExit(
+            'You must specify either the cluster name or the datacenter name'
+        )
+
+    if cluster_name:
+        cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+        if not cluster_ref:
+            raise SaltCloudSystemExit(
+                'Specified cluster does not exist'
+            )
+        data = {
+            'cluster_ref': cluster_ref,
+            'cluster_name': cluster_name
+        }
+
+    if datacenter_name:
+        datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+        if not datacenter_ref:
+            raise SaltCloudSystemExit(
+                'Specified datacenter does not exist'
+            )
+        data = {
+            'datacenter_ref': datacenter_ref,
+            'datacenter_name': datacenter_name
+        }
+
+    spec = vim.host.ConnectSpec(
+        hostName=host_name,
+        userName=host_user,
+        password=host_password,
+    )
+
+    if host_ssl_thumbprint:
+        spec.sslThumbprint = host_ssl_thumbprint
+    else:
+        log.warning('SSL thumbprint has not been specified in provider configuration')
+
+    try:
+        ret = _add_host_helper(spec, data)
+    except Exception as exc:
+        if isinstance(exc, vim.fault.SSLVerifyFault):
+            log.error('Authenticity of the host\'s SSL certificate is not verified')
+            try:
+                spec.sslThumbprint = exc.thumbprint
+                log.info('Trying to add the host system again using the SSL thumbprint returned by it')
+                ret = _add_host_helper(spec, data)
+            except:
+                log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+                return 'failed to add host'
+        else:
+            log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+            return 'failed to add host'
+
+    return {host_name: ret}
