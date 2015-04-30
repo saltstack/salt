@@ -1318,14 +1318,15 @@ def mkstemp(*args, **kwargs):
 
 def clean_kwargs(**kwargs):
     '''
-    Clean out the __pub* keys from the kwargs dict passed into the execution
-    module functions. The __pub* keys are useful for tracking what was used to
-    invoke the function call, but they may not be desierable to have if
-    passing the kwargs forward wholesale.
+    Return a dict without any of the __pub* keys (or any other keys starting
+    with a dunder) from the kwargs dict passed into the execution module
+    functions. These keys are useful for tracking what was used to invoke
+    the function call, but they may not be desierable to have if passing the
+    kwargs forward wholesale.
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):
-        if not key.startswith('__pub'):
+        if not key.startswith('__'):
             ret[key] = val
     return ret
 
