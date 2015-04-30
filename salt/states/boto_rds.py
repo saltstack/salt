@@ -256,6 +256,8 @@ def _rds_present(name, allocated_storage, storage_type, db_instance_class,
         ret['changes']['old'] = {'rds': None}
         ret['changes']['new'] = {'rds': _describe}
         ret['comment'] = 'RDS {0} created.'.format(name)
+    else:
+        ret['comment'] = 'RDS replica {0} exists.'.format(name)
     return ret
 
 
