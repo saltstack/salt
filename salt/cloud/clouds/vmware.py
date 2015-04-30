@@ -49,10 +49,12 @@ cloud configuration at
 from __future__ import absolute_import
 from random import randint
 from re import match
+import atexit
 import pprint
 import logging
 import time
 import os.path
+import subprocess
 
 # Import salt libs
 import salt.utils.cloud
@@ -65,7 +67,7 @@ import salt.config as config
 # Attempt to import pyVim and pyVmomi libs
 HAS_LIBS = False
 try:
-    from pyVim.connect import SmartConnect
+    from pyVim.connect import SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
     HAS_LIBS = True
 except Exception:
@@ -179,6 +181,8 @@ def _get_si():
             raise SaltCloudSystemExit(
                 '\nCould not connect to the vCenter server using the specified username and password'
             )
+
+    atexit.register(Disconnect, si)
 
     return si
 
@@ -2693,3 +2697,265 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         return 'failed to remove snapshots'
 
     return 'removed all snapshots'
+
+
+def add_host(kwargs=None, call=None):
+    '''
+    Add a host system to the specified cluster or datacenter in this VMware environment
+
+    .. note::
+
+        To use this function, you need to specify ``esxi_host_user`` and
+        ``esxi_host_password`` under your provider configuration set up at
+        ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
+
+        .. code-block:: yaml
+
+            vmware-vcenter01:
+              provider: vmware
+              user: DOMAIN\\user
+              password: "verybadpass"
+              url: vcenter01.domain.com
+
+              # Required when adding a host system
+              esxi_host_user: root
+              esxi_host_password: "myhostpassword"
+              # Optional fields that can be specified when adding a host system
+              esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+
+        The SSL thumbprint of the host system can be optionally specified by setting
+        ``esxi_host_ssl_thumbprint`` under your provider configuration. To get the SSL
+        thumbprint of the host system, execute the following command from a remote
+        server:
+
+        .. code-block:: bash
+
+            echo -n | openssl s_client -connect <YOUR-HOSTSYSTEM-DNS/IP>:443 2>/dev/null | openssl x509 -noout -fingerprint -sha1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f add_host my-vmware-config host="myHostSystemName" cluster="myClusterName"
+        salt-cloud -f add_host my-vmware-config host="myHostSystemName" datacenter="myDatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    cluster_name = kwargs.get('cluster') if kwargs and 'cluster' in kwargs else None
+    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
+
+    host_user = config.get_cloud_config_value(
+        'esxi_host_user', get_configured_provider(), __opts__, search_global=False
+    )
+    host_password = config.get_cloud_config_value(
+        'esxi_host_password', get_configured_provider(), __opts__, search_global=False
+    )
+    host_ssl_thumbprint = config.get_cloud_config_value(
+        'esxi_host_ssl_thumbprint', get_configured_provider(), __opts__, search_global=False
+    )
+
+    if not host_user:
+        raise SaltCloudSystemExit(
+            'You must provide the ESXi host username in your providers config'
+        )
+
+    if not host_password:
+        raise SaltCloudSystemExit(
+            'You must provide the ESXi host password in your providers config'
+        )
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must pass either an IP or DNS name for the Host system'
+        )
+
+    if (cluster_name and datacenter_name) or not(cluster_name or datacenter_name):
+        raise SaltCloudSystemExit(
+            'You must specify either the cluster name or the datacenter name'
+        )
+
+    if cluster_name:
+        cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+        if not cluster_ref:
+            raise SaltCloudSystemExit(
+                'Specified cluster does not exist'
+            )
+
+    if datacenter_name:
+        datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+        if not datacenter_ref:
+            raise SaltCloudSystemExit(
+                'Specified datacenter does not exist'
+            )
+
+    spec = vim.host.ConnectSpec(
+        hostName=host_name,
+        userName=host_user,
+        password=host_password,
+    )
+
+    if host_ssl_thumbprint:
+        spec.sslThumbprint = host_ssl_thumbprint
+    else:
+        log.warning('SSL thumbprint has not been specified in provider configuration')
+        try:
+            log.debug('Trying to get the SSL thumbprint directly from the host system')
+            p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ssl_thumbprint = p3.stdout.read().split('=')[-1].strip()
+            log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
+            spec.sslThumbprint = ssl_thumbprint
+        except Exception as exc:
+            log.error('Error while trying to get SSL thumbprint of host {0}: {1}'.format(host_name, exc))
+            return {host_name: 'failed to add host'}
+
+    try:
+        if cluster_name:
+            task = cluster_ref.AddHost(spec=spec, asConnected=True)
+            ret = 'added host system to cluster {0}'.format(cluster_name)
+        if datacenter_name:
+            task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
+            ret = 'added host system to datacenter {0}'.format(datacenter_name)
+        _wait_for_task(task, host_name, "add host system", 5, 'info')
+    except Exception as exc:
+        if isinstance(exc, vim.fault.SSLVerifyFault):
+            log.error('Authenticity of the host\'s SSL certificate is not verified')
+            log.info('Try again after setting the esxi_host_ssl_thumbprint to {0} in provider configuration'.format(exc.thumbprint))
+        log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to add host'}
+
+    return {host_name: ret}
+
+
+def remove_host(kwargs=None, call=None):
+    '''
+    Remove the specified host system from this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f remove_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The remove_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    try:
+        if isinstance(host_ref.parent, vim.ComputeResource):
+            # This is a standalone host system
+            task = host_ref.parent.Destroy_Task()
+        else:
+            # This is a host system that is part of a Cluster
+            task = host_ref.Destroy_Task()
+        _wait_for_task(task, host_name, "remove host", 1, 'info')
+    except Exception as exc:
+        log.error('Error while removing host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to remove host'}
+
+    return {host_name: 'removed host from vcenter'}
+
+
+def connect_host(kwargs=None, call=None):
+    '''
+    Connect the specified host system in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f connect_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The connect_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'connected':
+        return {host_name: 'host system already connected'}
+
+    try:
+        task = host_ref.ReconnectHost_Task()
+        _wait_for_task(task, host_name, "connect host", 5, 'info')
+    except Exception as exc:
+        log.error('Error while connecting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to connect host'}
+
+    return {host_name: 'connected host'}
+
+
+def disconnect_host(kwargs=None, call=None):
+    '''
+    Disconnect the specified host system in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f disconnect_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The disconnect_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'disconnected':
+        return {host_name: 'host system already disconnected'}
+
+    try:
+        task = host_ref.DisconnectHost_Task()
+        _wait_for_task(task, host_name, "disconnect host", 1, 'info')
+    except Exception as exc:
+        log.error('Error while disconnecting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to disconnect host'}
+
+    return {host_name: 'disconnected host'}
