@@ -2824,3 +2824,47 @@ def add_host(kwargs=None, call=None):
             return 'failed to add host'
 
     return {host_name: ret}
+
+
+def remove_host(kwargs=None, call=None):
+    '''
+    Remove the specified host system from this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f remove_host my-vmware-config host="myHostSystemName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The remove_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    try:
+        if isinstance(host_ref.parent, vim.ComputeResource):
+            # This is a standalone host system
+            task = host_ref.parent.Destroy_Task()
+        else:
+            # This is a host system that is part of a Cluster
+            task = host_ref.Destroy_Task()
+        _wait_for_task(task, host_name, "remove host", 1, 'info')
+    except Exception as exc:
+        log.error('Error while removing host {0}: {1}'.format(host_name, exc))
+        return 'failed to remove host'
+
+    return {host_name: 'removed host from vcenter'}
