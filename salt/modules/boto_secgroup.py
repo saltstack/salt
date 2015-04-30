@@ -166,6 +166,40 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pyl
     else:
         return None
 
+def _parse_rules(sg, rules):
+    _rules = []
+    for rule in rules:
+            log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
+            attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
+            _rule = odict.OrderedDict()
+            for attr in attrs:
+                val = getattr(rule, attr)
+                if not val:
+                    continue
+                if attr == 'grants':
+                    _grants = []
+                    for grant in val:
+                        log.debug('examining grant {0} for'.format(grant))
+                        g_attrs = {'name': 'source_group_name',
+                                   'owner_id': 'source_group_owner_id',
+                                   'group_id': 'source_group_group_id',
+                                   'cidr_ip': 'cidr_ip'}
+                        _grant = odict.OrderedDict()
+                        for g_attr, g_attr_map in six.iteritems(g_attrs):
+                            g_val = getattr(grant, g_attr)
+                            if not g_val:
+                                continue
+                            _grant[g_attr_map] = g_val
+                        _grants.append(_grant)
+                    _rule['grants'] = _grants
+                elif attr == 'from_port':
+                    _rule[attr] = int(val)
+                elif attr == 'to_port':
+                    _rule[attr] = int(val)
+                else:
+                    _rule[attr] = val
+            _rules.append(_rule)
+    return _rules
 
 def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=None):
     '''
@@ -234,39 +268,10 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         ret['owner_id'] = sg.owner_id
         ret['description'] = sg.description
         # TODO: add support for tags
-        _rules = []
-        for rule in sg.rules:
-            log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
-            attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
-            _rule = odict.OrderedDict()
-            for attr in attrs:
-                val = getattr(rule, attr)
-                if not val:
-                    continue
-                if attr == 'grants':
-                    _grants = []
-                    for grant in val:
-                        log.debug('examining grant {0} for'.format(grant))
-                        g_attrs = {'name': 'source_group_name',
-                                   'owner_id': 'source_group_owner_id',
-                                   'group_id': 'source_group_group_id',
-                                   'cidr_ip': 'cidr_ip'}
-                        _grant = odict.OrderedDict()
-                        for g_attr, g_attr_map in six.iteritems(g_attrs):
-                            g_val = getattr(grant, g_attr)
-                            if not g_val:
-                                continue
-                            _grant[g_attr_map] = g_val
-                        _grants.append(_grant)
-                    _rule['grants'] = _grants
-                elif attr == 'from_port':
-                    _rule[attr] = int(val)
-                elif attr == 'to_port':
-                    _rule[attr] = int(val)
-                else:
-                    _rule[attr] = val
-            _rules.append(_rule)
+        _rules = _parse_rules(sg, sg.rules)
+        _rules_egress = _parse_rules(sg, sg.rules_egress)
         ret['rules'] = _split_rules(_rules)
+        ret['rules_egress'] = _split_rules(_rules_egress)
         return ret
     else:
         return None
@@ -275,7 +280,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
 def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
            profile=None):
     '''
-    Create an autoscale group.
+    Create a security group.
 
     CLI example::
 
@@ -296,7 +301,7 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
 def delete(name=None, group_id=None, region=None, key=None, keyid=None,
            profile=None, vpc_id=None):
     '''
-    Delete an autoscale group.
+    Delete a security group.
 
     CLI example::
 
@@ -324,7 +329,7 @@ def authorize(name=None, source_group_name=None,
               source_group_owner_id=None, ip_protocol=None,
               from_port=None, to_port=None, cidr_ip=None, group_id=None,
               source_group_group_id=None, region=None, key=None,
-              keyid=None, profile=None, vpc_id=None):
+              keyid=None, profile=None, vpc_id=None, egress=False):
     '''
     Add a new rule to an existing security group.
 
@@ -337,12 +342,19 @@ def authorize(name=None, source_group_name=None,
     group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
-            added = conn.authorize_security_group(
-                src_security_group_name=source_group_name,
-                src_security_group_owner_id=source_group_owner_id,
-                ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
-                cidr_ip=cidr_ip, group_id=group.id,
-                src_security_group_group_id=source_group_group_id)
+            added = None
+            if not egress:
+                added = conn.authorize_security_group(
+                    src_security_group_name=source_group_name,
+                    src_security_group_owner_id=source_group_owner_id,
+                    ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+                    cidr_ip=cidr_ip, group_id=group.id,
+                    src_security_group_group_id=source_group_group_id)
+            else:
+                added = conn.authorize_security_group_egress(
+                    ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+                    cidr_ip=cidr_ip, group_id=group.id,
+                    src_group_id=source_group_group_id)
             if added:
                 log.info('Added rule to security group {0} with id {1}'
                          .format(group.name, group.id))
@@ -367,7 +379,7 @@ def revoke(name=None, source_group_name=None,
            source_group_owner_id=None, ip_protocol=None,
            from_port=None, to_port=None, cidr_ip=None, group_id=None,
            source_group_group_id=None, region=None, key=None,
-           keyid=None, profile=None, vpc_id=None):
+           keyid=None, profile=None, vpc_id=None, egress=False):
     '''
     Remove a rule from an existing security group.
 
@@ -380,12 +392,20 @@ def revoke(name=None, source_group_name=None,
     group = _get_group(conn, name, vpc_id, group_id, region)
     if group:
         try:
-            revoked = conn.revoke_security_group(
-                src_security_group_name=source_group_name,
-                src_security_group_owner_id=source_group_owner_id,
-                ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
-                cidr_ip=cidr_ip, group_id=group.id,
-                src_security_group_group_id=source_group_group_id)
+            revoked = None
+            if not egress:
+                revoked = conn.revoke_security_group(
+                    src_security_group_name=source_group_name,
+                    src_security_group_owner_id=source_group_owner_id,
+                    ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+                    cidr_ip=cidr_ip, group_id=group.id,
+                    src_security_group_group_id=source_group_group_id)
+            else:
+                revoked = conn.revoke_security_group_egress(
+                    ip_protocol=ip_protocol, from_port=from_port, to_port=to_port,
+                    cidr_ip=cidr_ip, group_id=group.id,
+                    src_group_id=source_group_group_id)
+
             if revoked:
                 log.info('Removed rule from security group {0} with id {1}.'
                          .format(group.name, group.id))
