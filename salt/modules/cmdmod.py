@@ -1438,10 +1438,26 @@ def tty(device, echo=None):
         }
 
 
-def run_chroot(root, cmd,
+def run_chroot(root,
+               cmd,
+               cwd=None,
                stdin=None,
-               output_loglevel='debug',
-               **kw):
+               runas=None,
+               shell=DEFAULT_SHELL,
+               python_shell=True,
+               env=None,
+               clean_env=False,
+               template=None,
+               rstrip=True,
+               umask=None,
+               output_loglevel='quiet',
+               quiet=False,
+               timeout=None,
+               reset_system_locale=True,
+               ignore_retcode=False,
+               saltenv='base',
+               use_vt=False,
+               **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -1479,16 +1495,30 @@ def run_chroot(root, cmd,
     if os.path.isfile(os.path.join(root, 'bin/bash')):
         sh_ = '/bin/bash'
 
-    cmd = 'chroot {0} {1} -c {2!r}'.format(
-        root,
-        sh_,
-        cmd)
+    if isinstance(cmd, (list, tuple)):
+        cmd = ' '.join([str(i) for i in cmd])
+    cmd = 'chroot {0} {1} -c {2!r}'.format(root, sh_, cmd)
+
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
-    # forward keywords, and filter pub ones
-    run_kw = copy.deepcopy(kw)
-    for a in [a for a in six.iterkeys(kw) if a.startswith('__')]:
-        run_kw.pop(a, None)
-    ret = run_func(cmd, stdin=stdin, output_loglevel=output_loglevel, **kw)
+
+    res = run_func(cmd,
+                   runas=runas,
+                   cwd=cwd,
+                   stdin=stdin,
+                   shell=shell,
+                   python_shell=python_shell,
+                   env=env,
+                   clean_env=clean_env,
+                   template=template,
+                   rstrip=rstrip,
+                   umask=umask,
+                   output_loglevel=output_loglevel,
+                   quiet=quiet,
+                   timeout=timeout,
+                   reset_system_locale=reset_system_locale,
+                   ignore_retcode=ignore_retcode,
+                   saltenv=saltenv,
+                   use_vt=use_vt)
 
     # Kill processes running in the chroot
     for i in range(6):
