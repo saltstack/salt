@@ -54,6 +54,7 @@ import pprint
 import logging
 import time
 import os.path
+import subprocess
 
 # Import salt libs
 import salt.utils.cloud
@@ -827,18 +828,6 @@ def _get_hba_type(hba_type):
         return vim.host.InternetScsiHba
     elif hba_type == "fibre":
         return vim.host.FibreChannelHba
-
-
-def _add_host_helper(spec, data):
-    if 'cluster_ref' in data.keys():
-        task = data['cluster_ref'].AddHost(spec=spec, asConnected=True)
-        ret = 'added host system to cluster {0}'.format(data['cluster_name'])
-    if 'datacenter_ref' in data.keys():
-        task = data['datacenter_ref'].hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
-        ret = 'added host system to datacenter {0}'.format(data['datacenter_name'])
-    _wait_for_task(task, spec.hostName, "add host system", 5, 'info')
-
-    return ret
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -2712,8 +2701,8 @@ def add_host(kwargs=None, call=None):
 
     .. note::
 
-        To use this function, you need to specify ``esxi_host_user``, ``esxi_host_password``
-        and ``esxi_host_ssl_thumbprint`` under your provider configuration set up at
+        To use this function, you need to specify ``esxi_host_user`` and
+        ``esxi_host_password`` under your provider configuration set up at
         ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
         .. code-block:: yaml
@@ -2723,9 +2712,21 @@ def add_host(kwargs=None, call=None):
               user: DOMAIN\\user
               password: "verybadpass"
               url: vcenter01.domain.com
+
+              # Required when adding a host system
               esxi_host_user: root
               esxi_host_password: "myhostpassword"
+              # Optional fields that can be specified when adding a host system
               esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+
+        The SSL thumbprint of the host system can be optionally specified by setting
+        ``esxi_host_ssl_thumbprint`` under your provider configuration. To get the SSL
+        thumbprint of the host system, execute the following command from a remote
+        server:
+
+        .. code-block:: bash
+
+            echo -n | openssl s_client -connect <YOUR-HOSTSYSTEM-DNS/IP>:443 2>/dev/null | openssl x509 -noout -fingerprint -sha1
 
     CLI Example:
 
@@ -2780,10 +2781,6 @@ def add_host(kwargs=None, call=None):
             raise SaltCloudSystemExit(
                 'Specified cluster does not exist'
             )
-        data = {
-            'cluster_ref': cluster_ref,
-            'cluster_name': cluster_name
-        }
 
     if datacenter_name:
         datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
@@ -2791,10 +2788,6 @@ def add_host(kwargs=None, call=None):
             raise SaltCloudSystemExit(
                 'Specified datacenter does not exist'
             )
-        data = {
-            'datacenter_ref': datacenter_ref,
-            'datacenter_name': datacenter_name
-        }
 
     spec = vim.host.ConnectSpec(
         hostName=host_name,
@@ -2806,22 +2799,32 @@ def add_host(kwargs=None, call=None):
         spec.sslThumbprint = host_ssl_thumbprint
     else:
         log.warning('SSL thumbprint has not been specified in provider configuration')
+        try:
+            log.debug('Trying to get the SSL thumbprint directly from the host system')
+            p1 = subprocess.Popen(('echo', '-n'), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p2 = subprocess.Popen(('openssl', 's_client', '-connect', '{0}:443'.format(host_name)), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            ssl_thumbprint = p3.stdout.read().split('=')[-1].strip()
+            log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
+            spec.sslThumbprint = ssl_thumbprint
+        except Exception as exc:
+            log.error('Error while trying to get SSL thumbprint of host {0}: {1}'.format(host_name, exc))
+            return {host_name: 'failed to add host'}
 
     try:
-        ret = _add_host_helper(spec, data)
+        if cluster_name:
+            task = cluster_ref.AddHost(spec=spec, asConnected=True)
+            ret = 'added host system to cluster {0}'.format(cluster_name)
+        if datacenter_name:
+            task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
+            ret = 'added host system to datacenter {0}'.format(datacenter_name)
+        _wait_for_task(task, host_name, "add host system", 5, 'info')
     except Exception as exc:
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
-            try:
-                spec.sslThumbprint = exc.thumbprint
-                log.info('Trying to add the host system again using the SSL thumbprint returned by it')
-                ret = _add_host_helper(spec, data)
-            except Exception as new_exc:
-                log.error('Error while adding host {0}: {1}'.format(host_name, new_exc))
-                return {host_name: 'failed to add host'}
-        else:
-            log.error('Error while adding host {0}: {1}'.format(host_name, exc))
-            return {host_name: 'failed to add host'}
+            log.info('Try again after setting the esxi_host_ssl_thumbprint to {0} in provider configuration'.format(exc.thumbprint))
+        log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to add host'}
 
     return {host_name: ret}
 
