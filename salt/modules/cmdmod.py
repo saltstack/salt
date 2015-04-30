@@ -8,7 +8,6 @@ access to the master root execution access to all salt minions.
 from __future__ import absolute_import
 
 # Import python libs
-import copy
 import time
 import functools
 import glob
@@ -1501,7 +1500,7 @@ def run_chroot(root,
 
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
 
-    res = run_func(cmd,
+    ret = run_func(cmd,
                    runas=runas,
                    cwd=cwd,
                    stdin=stdin,
