@@ -32,6 +32,8 @@ except ImportError:
         except ImportError:
             HAS_MATCHHOSTNAME = False
 import socket
+import urllib2
+from urllib2 import URLError
 
 # Import salt libs
 import salt.utils
@@ -49,6 +51,12 @@ import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib as urllib
 # pylint: enable=import-error,no-name-in-module
+
+# Don't need a try/except block, since Salt depends on tornado
+import cookielib
+import tornado.httputil
+from tornado.httpclient import HTTPClient
+
 try:
     import requests
     HAS_REQUESTS = True
@@ -104,6 +112,7 @@ def query(url,
           node='minion',
           port=80,
           opts=None,
+          backend='tornado',
           requests_lib=None,
           ca_bundle=None,
           verify_ssl=None,
@@ -136,11 +145,17 @@ def query(url,
         requests_lib = opts.get('requests_lib', False)
 
     if requests_lib is True:
+        log.warn('Please set "backend" to "requests" instead of setting '
+                 '"requests_lib" to "True"')
+
         if HAS_REQUESTS is False:
             ret['error'] = ('http.query has been set to use requests, but the '
                             'requests library does not seem to be installed')
             log.error(ret['error'])
             return ret
+
+        backend = 'requests'
+
     else:
         requests_log = logging.getLogger('requests')
         requests_log.setLevel(logging.WARNING)
@@ -203,14 +218,21 @@ def query(url,
     else:
         auth = None
 
-    if requests_lib is True:
+    if agent == USERAGENT:
+        agent = '{0} http.query()'.format(agent)
+    header_dict['User-agent'] = agent
+
+    if backend == 'requests':
         sess = requests.Session()
         sess.auth = auth
         sess.headers.update(header_dict)
         log.trace('Request Headers: {0}'.format(sess.headers))
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
+    elif backend == 'urllib2':
+        sess_cookies = None
     else:
+        # Tornado
         sess_cookies = None
 
     if cookies is not None:
@@ -223,10 +245,6 @@ def query(url,
         else:
             sess_cookies.load()
 
-    if agent == USERAGENT:
-        agent = '{0} http.query()'.format(agent)
-    header_dict['User-agent'] = agent
-
     if test is True:
         if test_url is None:
             return {}
@@ -234,7 +252,7 @@ def query(url,
             url = test_url
             ret['test'] = True
 
-    if requests_lib is True:
+    if backend == 'requests':
         req_kwargs = {}
         if stream is True:
             if requests.__version__[0] == '0':
@@ -266,14 +284,16 @@ def query(url,
         result_headers = result.headers
         result_text = result.text
         result_cookies = result.cookies
-    else:
-        request = urllib.request.Request(url, data)
+    elif backend == 'urllib2':
+        request = urllib2.Request(url, data)
         handlers = [
             urllib.request.HTTPHandler,
             urllib.request.HTTPCookieProcessor(sess_cookies)
         ]
 
         if url.startswith('https') or port == 443:
+            hostname = request.get_host()
+            handlers[0] = urllib2.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warn(('match_hostname() not available, SSL hostname checking '
                          'not available. THIS CONNECTION MAY NOT BE SECURE!'))
@@ -281,7 +301,6 @@ def query(url,
                 log.warn(('SSL certificate verification has been explicitly '
                          'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
             else:
-                hostname = request.get_host()
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((hostname, 443))
                 sockwrap = ssl.wrap_socket(
@@ -332,13 +351,56 @@ def query(url,
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
-        result = opener.open(request)
+        try:
+            result = opener.open(request)
+        except URLError as exc:
+            return {'Error': str(exc)}
         if stream is True or handle is True:
             return {'handle': result}
 
         result_status_code = result.code
         result_headers = result.headers.headers
         result_text = result.read()
+    else:
+        # Tornado
+        req_kwargs = {}
+
+        # Client-side cert handling
+        if cert is not None:
+            if isinstance(cert, six.string_types):
+                if os.path.exists(cert):
+                    req_kwargs['client_cert'] = cert
+            elif isinstance(cert, tuple):
+                if os.path.exists(cert[0]) and os.path.exists(cert[1]):
+                    req_kwargs['client_cert'] = cert[0]
+                    req_kwargs['client_key'] = cert[1]
+            else:
+                log.error('The client-side certificate path that was passed is '
+                          'not valid: {0}'.format(cert))
+
+        result = HTTPClient().fetch(
+            tornado.httputil.url_concat(url, params),
+            method=method,
+            headers=header_dict,
+            auth_username=username,
+            auth_password=password,
+            body=data,
+            validate_cert=verify_ssl,
+            **req_kwargs
+        )
+
+        if stream is True or handle is True:
+            return {'handle': result}
+
+        result_status_code = result.code
+        result_headers = result.headers
+        result_text = result.body
+        if 'Set-Cookie' in result_headers.keys():
+            result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
+            for item in result_cookies:
+                sess_cookies.set_cookie(item)
+        else:
+            result_cookies = None
 
     if isinstance(result_headers, list):
         result_headers_dict = {}
@@ -572,3 +634,95 @@ def _render(template, render, renderer, template_dict, opts):
         return compile_template(template, rend, renderer, **template_dict)
     with salt.utils.fopen(template, 'r') as fh_:
         return fh_.read()
+
+
+def parse_cookie_header(header):
+    '''
+    Parse the "Set-cookie" header, and return a list of cookies.
+
+    This function is here because Tornado's HTTPClient doesn't handle cookies.
+    '''
+    attribs = ('expires', 'path', 'domain', 'version', 'httponly', 'secure', 'comment', 'max-age')
+
+    # Split into cookie(s); handles headers with multiple cookies defined
+    morsels = []
+    for item in header.split(';'):
+        item = item.strip()
+        if ',' in item and 'expires' not in item:
+            for part in item.split(','):
+                morsels.append(part)
+        else:
+            morsels.append(item)
+
+    # Break down morsels into actual cookies
+    cookies = []
+    cookie = {}
+    value_set = False
+    for morsel in morsels:
+        parts = morsel.split('=')
+        if parts[0].lower() in attribs:
+            if parts[0] in cookie:
+                cookies.append(cookie)
+                cookie = {}
+            if len(parts) > 1:
+                cookie[parts[0]] = '='.join(parts[1:])
+            else:
+                cookie[parts[0]] = True
+        else:
+            if value_set is True:
+                # This is a new cookie; save the old one and clear for this one
+                cookies.append(cookie)
+                cookie = {}
+                value_set = False
+            cookie[parts[0]] = '='.join(parts[1:])
+            value_set = True
+
+    if cookie:
+        # Set the last cookie that was processed
+        cookies.append(cookie)
+
+    # These arguments are required by cookielib.Cookie()
+    reqd = (
+        'version',
+        'port',
+        'port_specified',
+        'domain',
+        'domain_specified',
+        'domain_initial_dot',
+        'path',
+        'path_specified',
+        'secure',
+        'expires',
+        'discard',
+        'comment',
+        'comment_url',
+        'rest',
+    )
+
+    ret = []
+    for cookie in cookies:
+        name = None
+        value = None
+        for item in cookie.keys():
+            if item in attribs:
+                continue
+            name = item
+            value = cookie[item]
+            del cookie[name]
+
+        # cookielib.Cookie() requires an epoch
+        if 'expires' in cookie:
+            cookie['expires'] = cookielib.http2time(cookie['expires'])
+
+        # Fill in missing required fields
+        for req in reqd:
+            if not req in cookie.keys():
+                cookie[req] = None
+        if cookie['version'] is None:
+            cookie['version'] = 0
+        if cookie['rest'] is None:
+            cookie['rest'] = {}
+
+        ret.append(cookielib.Cookie(name=name, value=value, **cookie))
+
+    return ret
