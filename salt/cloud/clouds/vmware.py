@@ -569,6 +569,34 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
         raise task.info.error
 
 
+def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
+    time_counter = 0
+    while host_ref.runtime.connectionState != 'notResponding':
+        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    while host_ref.runtime.connectionState != 'connected':
+        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    if host_ref.runtime.connectionState == 'connected':
+        message = "[ {0} ] Successfully completed host {1} in {2} seconds".format(host_ref.name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+    else:
+        log.error('Could not connect back to the host system')
+
+
 def _format_instance_info_select(vm, selection):
     vm_select_info = {}
 
@@ -2955,3 +2983,66 @@ def disconnect_host(kwargs=None, call=None):
         return {host_name: 'failed to disconnect host'}
 
     return {host_name: 'disconnected host'}
+
+
+def reboot_host(kwargs=None, call=None):
+    '''
+    Reboot the specified host system in this VMware environment
+
+    .. note::
+
+        If the host system is not in maintenance mode, it will not be rebooted. If you
+        want to reboot the host system regardless of whether it is in maintenance mode,
+        set ``force=True``. Default is ``force=False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f reboot_host my-vmware-config host="myHostSystemName" [force=True]
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The reboot_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    force = _str_to_bool(kwargs.get('force')) if kwargs and 'force' in kwargs else False
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'notResponding':
+        raise SaltCloudSystemExit(
+            'Specified host system cannot be rebooted in its current state (not responding)'
+        )
+
+    if not host_ref.capability.rebootSupported:
+        raise SaltCloudSystemExit(
+            'Specified host system does not support reboot'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode:
+        raise SaltCloudSystemExit(
+            'Specified host system is not in maintenance mode. Specify force=True to '
+            'force reboot even if there are virtual machines running or other operations '
+            'in progress'
+        )
+
+    try:
+        host_ref.RebootHost_Task(force)
+        _wait_for_host(host_ref, "reboot", 10, 'info')
+    except Exception as exc:
+        log.error('Error while rebooting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to reboot host'}
+
+    return {host_name: 'rebooted host'}
