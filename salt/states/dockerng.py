@@ -424,12 +424,12 @@ def image_present(name,
     image = ':'.join(_get_repo_tag(name))
     all_tags = __salt__['docker-ng.list_tags']()
 
-    if image not in pre_tags and not force:
+    if image not in all_tags and not force:
         ret['result'] = True
         ret['comment'] = 'Image \'{0}\' already present'.format(name)
         return ret
 
-    if image in pre_tags:
+    if image in all_tags:
         try:
             image_info = __salt__['docker-ng.inspect_image'](name)
         except Exception as exc:
@@ -448,7 +448,7 @@ def image_present(name,
 
     if __opts__['test']:
         ret['result'] = None
-        if (image in pre_tags and force) or image not in pre_tags:
+        if (image in all_tags and force) or image not in all_tags:
             ret['comment'] = 'Image \'{0}\' will be {1}'.format(name, action)
             return ret
 
@@ -480,7 +480,8 @@ def image_present(name,
         try:
             image_update = __salt__['docker-ng.pull'](
                 image,
-                insecure_registry=insecure_registry
+                insecure_registry=insecure_registry,
+                client_timeout=client_timeout
             )
         except Exception as exc:
             ret['comment'] = (
@@ -1854,7 +1855,7 @@ def absent(name, force=False):
     try:
         ret['changes']['removed'] = __salt__['docker-ng.rm'](name, force=force)
     except Exception as exc:
-        ret['comment'] = ('Failed to remove container: {1}'
+        ret['comment'] = ('Failed to remove container \'{0}\': {1}'
                           .format(name, exc))
         return ret
 

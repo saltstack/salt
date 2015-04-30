@@ -262,6 +262,7 @@ __func_alias__ = {
     'import_': 'import',
     'ps_': 'ps',
     'rm_': 'rm',
+    'signal_': 'signal',
     'tag_': 'tag',
 }
 
@@ -3677,8 +3678,8 @@ def rmi(*names, **kwargs):
         try:
             _client_wrapper('remove_image',
                             image_id,
-                            force=kwargs.get('force', False),
-                            noprune=not kwargs.get('prune', True),
+                            force=force,
+                            noprune=noprune,
                             catch_api_errors=False)
         except docker.errors.APIError as exc:
             if exc.response.status_code == 409:
@@ -4046,7 +4047,7 @@ def restart(name, timeout=10):
 
 
 @_ensure_exists
-def signal(name, signal):
+def signal_(name, signal):
     '''
     Send a signal to a container. Signals can be either strings or numbers, and
     are defined in the **Standard Signals** section of the ``signal(7)``
@@ -4056,6 +4057,7 @@ def signal(name, signal):
         Container name or ID
 
     signal
+        Signal to send to container
 
     **RETURN DATA**
 
