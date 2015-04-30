@@ -398,7 +398,8 @@ def mod_watch(name,
               user=None,
               runas=None,
               conf_file=None,
-              bin_env=None):
+              bin_env=None,
+              **kwargs):
     # Always restart on watch
     return running(
         name,
