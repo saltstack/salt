@@ -716,7 +716,7 @@ def parse_cookie_header(header):
 
         # Fill in missing required fields
         for req in reqd:
-            if not req in cookie.keys():
+            if req not in cookie.keys():
                 cookie[req] = None
         if cookie['version'] is None:
             cookie['version'] = 0
