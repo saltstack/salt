@@ -2708,7 +2708,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
 
 def add_host(kwargs=None, call=None):
     '''
-    Add a host system to the specified cluster/datacenter in this VMware environment
+    Add a host system to the specified cluster or datacenter in this VMware environment
 
     .. note::
 
@@ -2816,8 +2816,8 @@ def add_host(kwargs=None, call=None):
                 spec.sslThumbprint = exc.thumbprint
                 log.info('Trying to add the host system again using the SSL thumbprint returned by it')
                 ret = _add_host_helper(spec, data)
-            except:
-                log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+            except Exception as new_exc:
+                log.error('Error while adding host {0}: {1}'.format(host_name, new_exc))
                 return 'failed to add host'
         else:
             log.error('Error while adding host {0}: {1}'.format(host_name, exc))
