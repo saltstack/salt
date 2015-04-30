@@ -233,3 +233,18 @@ class ReactWrap(object):
             log.warning('Attempt to in reactor by whell. Ignored.')
         except Exception as exc:
             log.warning('Exception caught by reactor: {0}'.format(exc))
+
+    def caller(self, fun, *args, **kwargs):
+        '''
+        Wrap Caller to enable executing :ref:`caller modules <all-salt.caller>`
+        '''
+        log.debug("in caller with fun {0} args {1} kwargs {2}".format(fun, args, kwargs))
+        args = kwargs['args']
+        if 'caller' not in self.client_cache:
+            self.client_cache['caller'] = salt.client.Caller(self.opts['conf_file'])
+        try:
+            self.client_cache['caller'].function(fun, *args)
+        except SystemExit:
+            log.warning('Attempt to exit reactor. Ignored.')
+        except Exception as exc:
+            log.warning('Exception caught by reactor: {0}'.format(exc))
