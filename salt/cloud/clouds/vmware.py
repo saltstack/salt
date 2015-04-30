@@ -1798,7 +1798,7 @@ def create(vm_):
             config=config_spec
         )
 
-        if specs['nics_map']:
+        if devices and 'nics_map' in specs.keys():
             if "Windows" not in object_ref.config.guestFullName:
                 global_ip = vim.vm.customization.GlobalIPSettings()
                 if vm_['dns_servers']:
