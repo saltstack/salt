@@ -3,7 +3,7 @@
 Manage VPCs
 =================
 
-.. versionadded:: 2014.7.1
+.. versionadded:: Beryllium
 
 Create and destroy VPCs. Be aware that this interacts with Amazon's services,
 and so may incur charges.
@@ -315,7 +315,6 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
 def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure subnet with passed properties is absent.
-    .. versionadded:: Beryllium
 
     name
         Name of the subnet.
@@ -526,8 +525,6 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
             - subnet_names:
               - subnet1
               - subnet2
-
-    .. versionadded:: Beryllium
 
     name
         Name of the route table.
