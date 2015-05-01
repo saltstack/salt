@@ -320,6 +320,34 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
         after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
         del kwargs['set-mark']
 
+    if 'log' in kwargs:
+        after_jump.append('--log {0} '.format(kwargs['log']))
+        del kwargs['log']
+
+    if 'log-level' in kwargs:
+        after_jump.append('--log-level {0} '.format(kwargs['log-level']))
+        del kwargs['log-level']
+
+    if 'log-prefix' in kwargs:
+        after_jump.append('--log-prefix {0} '.format(kwargs['log-prefix']))
+        del kwargs['log-prefix']
+
+    if 'log-tcp-sequence' in kwargs:
+        after_jump.append('--log-tcp-sequence {0} '.format(kwargs['log-tcp-sequence']))
+        del kwargs['log-tcp-sequence']
+
+    if 'log-tcp-options' in kwargs:
+        after_jump.append('--log-tcp-options {0} '.format(kwargs['log-tcp-options']))
+        del kwargs['log-tcp-options']
+
+    if 'log-ip-options' in kwargs:
+        after_jump.append('--log-ip-options {0} '.format(kwargs['log-ip-options']))
+        del kwargs['log-ip-options']
+
+    if 'log-uid' in kwargs:
+        after_jump.append('--log-uid {0} '.format(kwargs['log-uid']))
+        del kwargs['log-uid']
+
     for item in kwargs:
         if str(kwargs[item]).startswith('!') or str(kwargs[item]).startswith('not'):
             kwargs[item] = re.sub(bang_not_pat, '', kwargs[item])
