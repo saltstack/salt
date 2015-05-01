@@ -10,12 +10,10 @@ Built off of http://grodola.blogspot.com/2014/01/psutil-20-porting.html
 
 from __future__ import absolute_import
 
-#log = logging.getLogger(__name__)
-
 # No exception handling, as we want ImportError if psutil doesn't exist
 import psutil
 
-if psutil.__version__ >= (2, 0):
+if psutil.version_info >= (2, 0):
     from psutil import *
 else:
     # Import hack to work around bugs in old psutil's
