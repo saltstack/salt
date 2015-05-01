@@ -69,7 +69,6 @@ MOCK_MODULES = [
     'libcloud.loadbalancer.providers',
     'libcloud.common',
     'libcloud.common.google',
-    'linodepy',
 
     # third-party libs for netapi modules
     'cherrypy',
