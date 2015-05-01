@@ -29,16 +29,16 @@ else:
     # Alias new module functions
     def boot_time():
         return psutil.BOOT_TIME
-    
+
     def cpu_count():
         return psutil.NUM_CPUS
-    
+
     # Alias renamed module functions
     pids = psutil.get_pid_list
     users = psutil.get_users
 
     # Alias renamed Process functions
-    _PROCESS_FUNCTION_MAP = { 
+    _PROCESS_FUNCTION_MAP = {
         "children": "get_children",
         "connections": "get_connections",
         "cpu_affinity": "get_cpu_affinity",
@@ -70,4 +70,3 @@ else:
             setattr(Process, new, psutil.Process.__dict__[old])
         except KeyError:
             pass
-
