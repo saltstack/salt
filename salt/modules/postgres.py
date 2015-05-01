@@ -467,6 +467,146 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
     return ret['retcode'] == 0
 
 
+# Tablespace related actions
+
+def tablespace_list(user=None, host=None, port=None, maintenance_db=None,
+                    password=None, runas=None):
+    '''
+    Return dictionary with information about tablespaces of a Postgres server.
+    CLI Example:
+    .. code-block:: bash
+        salt '*' postgres.tablespace_list
+    '''
+
+    ret = {}
+
+    query = (
+        'SELECT spcname as "Name", pga.rolname as "Owner", spcacl as "ACL", '
+        'spcoptions as "Opts", pg_tablespace_location(pgts.oid) as "Location" '
+        'FROM pg_tablespace pgts, pg_roles pga WHERE pga.oid = pgts.spcowner'
+    )
+
+    rows = __salt__['postgres.psql_query'](query, runas=runas, host=host,
+                                           user=user, port=port,
+                                           maintenance_db=maintenance_db,
+                                           password=password)
+
+    for row in rows:
+        ret[row['Name']] = row
+        ret[row['Name']].pop('Name')
+
+    return ret
+
+
+def tablespace_exists(name, user=None, host=None, port=None, maintenance_db=None,
+              password=None, runas=None):
+    '''
+    Checks if a tablespace exists on the Postgres server.
+    CLI Example:
+    .. code-block:: bash
+        salt '*' postgres.tablespace_exists 'dbname'
+    '''
+
+    tablespaces = tablespace_list(user=user, host=host, port=port,
+                        maintenance_db=maintenance_db,
+                        password=password, runas=runas)
+    return name in tablespaces
+
+
+def tablespace_create(name, location, options=None, owner=None, user=None,
+                      host=None, port=None, maintenance_db=None, password=None,
+                      runas=None):
+    '''
+    Adds a tablespace to the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.tablespace_create tablespacename '/path/datadir'
+    '''
+    owner_query = ''
+    options_query = ''
+    if owner:
+        owner_query = 'OWNER {}'.format(owner)
+        # should come out looking like: 'OWNER postgres'
+    if options:
+        optionstext = ['{} = {}'.format(k, v) for k, v in options.items()]
+        options_query = 'WITH ( {} )'.format(', '.join(optionstext))
+        # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
+    query = 'CREATE TABLESPACE {} {} LOCATION \'{}\' {}'.format(name,
+                                                                owner_query,
+                                                                location,
+                                                                options_query)
+
+    # Execute the command
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user, host=host, port=port,
+                                maintenance_db=maintenance_db,
+                                password=password, runas=runas)
+    return ret['retcode'] == 0
+
+
+def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
+                     password=None, new_name=None, new_owner=None,
+                     set_option=None, reset_option=None, runas=None):
+    '''
+    Change tablespace name, owner, or options.
+    CLI Example:
+    .. code-block:: bash
+        salt '*' postgres.tablespace_alter tsname new_owner=otheruser
+        salt '*' postgres.tablespace_alter index_space new_name=fast_raid
+        salt '*' postgres.tablespace_alter test set_option="{'seq_page_cost': '1.1'}"
+        salt '*' postgres.tablespace_alter tsname reset_option=seq_page_cost
+    '''
+    if not any([new_name, new_owner, set_option, reset_option]):
+        return True  # Nothing todo?
+
+    queries = []
+
+    if new_name:
+        queries.append('ALTER TABLESPACE {} RENAME TO {}'.format(
+                       name, new_name))
+    if new_owner:
+        queries.append('ALTER TABLESPACE {} OWNER TO {}'.format(
+                       name, new_owner))
+    if set_option:
+        queries.append('ALTER TABLESPACE {} SET ({} = {})'.format(
+                       name, set_option.keys()[0], set_option.values()[0]))
+    if reset_option:
+        queries.append('ALTER TABLESPACE {} RESET ({})'.format(
+                       name, reset_option))
+
+    for query in queries:
+        ret = _psql_prepare_and_run(['-c', query],
+                                    user=user, host=host, port=port,
+                                    maintenance_db=maintenance_db,
+                                    password=password, runas=runas)
+        if ret['retcode'] != 0:
+            return False
+
+    return True
+
+
+def tablespace_remove(name, user=None, host=None, port=None,
+                      maintenance_db=None, password=None, runas=None):
+    '''
+    Removes a tablespace from the Postgres server.
+    CLI Example:
+    .. code-block:: bash
+        salt '*' postgres.tablespace_remove tsname
+    '''
+    query = 'DROP TABLESPACE {}'.format(name)
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                runas=runas,
+                                maintenance_db=maintenance_db,
+                                password=password)
+    return ret['retcode'] == 0
+
+
 # User related actions
 
 def user_list(user=None, host=None, port=None, maintenance_db=None,
