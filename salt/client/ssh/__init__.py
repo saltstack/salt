@@ -570,7 +570,7 @@ class Single(object):
                     'id': self.id,
                     'sock_dir': '/',
                 })
-        self.minion_config = yaml.dump(minion_opts, width=1000).strip()
+        self.minion_config = yaml.dump(minion_opts).strip()
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
@@ -771,7 +771,10 @@ class Single(object):
             debug = '1'
         arg_str = '''
 OPTIONS = OBJ()
-OPTIONS.config = '{0}'
+OPTIONS.config = \
+"""
+{0}
+"""
 OPTIONS.delimiter = '{1}'
 OPTIONS.saltdir = '{2}'
 OPTIONS.checksum = '{3}'
