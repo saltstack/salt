@@ -14,7 +14,6 @@ import json
 import logging
 # pylint: disable=no-name-in-module
 import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib as urllib
 import salt.ext.six.moves.urllib.request as urllib_request
 # pylint: enable=no-name-in-module
 from salt.ext.six import string_types
