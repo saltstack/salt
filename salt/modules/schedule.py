@@ -8,6 +8,7 @@ Module for managing the Salt schedule on a minion
 from __future__ import absolute_import
 
 # Import Python libs
+import copy as pycopy
 import difflib
 import os
 import yaml
@@ -78,7 +79,7 @@ def list_(show_all=False, return_yaml=True):
             del schedule[job]
             continue
 
-        for item in schedule[job]:
+        for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
                 continue
