@@ -273,12 +273,11 @@ def generate_minion_id():
     '''
     possible_ids = get_hostnames()
 
-    ip_addresses = [IPv4Address(addr) for addr
-                    in salt.utils.network.ip_addrs(include_loopback=True)
-                    if not addr.startswith('127.')]
-
     # include public and private ipaddresses
-    for addr in ip_addresses:
+    for addr in salt.utils.network.ip_addrs():
+        addr = ipaddress.ip_address(addr)
+        if addr.is_loopback:
+            continue
         possible_ids.append(str(addr))
 
     possible_ids = _filter_localhost_names(possible_ids)
