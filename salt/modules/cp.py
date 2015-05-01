@@ -642,7 +642,7 @@ def hash_file(path, saltenv='base', env=None):
     return __context__['cp.fileclient'].hash_file(path, saltenv)
 
 
-def push(path, keep_symlinks=False):
+def push(path, keep_symlinks=False, upload_path=None):
     '''
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
@@ -656,12 +656,16 @@ def push(path, keep_symlinks=False):
     keep_symlinks
         Keep the path value without resolving its canonical form
 
+    upload_path
+        Provide a different path inside the master's minion files cachedir
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' cp.push /etc/fstab
         salt '*' cp.push /etc/system-release keep_symlinks=True
+        salt '*' cp.push /etc/fstab upload_path='/new/path/fstab'
     '''
     log.debug('Trying to copy {0!r} to master'.format(path))
     if '../' in path or not os.path.isabs(path):
@@ -674,9 +678,17 @@ def push(path, keep_symlinks=False):
         return False
     auth = _auth()
 
+    if upload_path:
+        if '../' in upload_path:
+            log.debug('Path must be absolute, returning False')
+            log.debug('Bad path: {0}'.format(upload_path))
+            return False
+        load_path = upload_path.lstrip(os.sep)
+    else:
+        load_path = path.lstrip(os.sep)
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
-            'path': path.lstrip(os.sep),
+            'path': load_path,
             'tok': auth.gen_token('salt')}
     channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.fopen(path, 'rb') as fp_:
