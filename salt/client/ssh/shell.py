@@ -317,7 +317,9 @@ class Shell(object):
                 cmd,
                 shell=True,
                 log_stdout=True,
+                log_stdout_level='trace',
                 log_stderr=True,
+                log_stderr_level='trace',
                 stream_stdout=False,
                 stream_stderr=False)
         sent_passwd = 0
