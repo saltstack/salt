@@ -1617,6 +1617,145 @@ def uptodate(name, refresh=False, **kwargs):
     return ret
 
 
+def group_installed(name, skip=None, include=None, **kwargs):
+    '''
+    .. versionadded:: Beryllium
+
+    Ensure that an entire package group is installed. This state is only
+    supported for the :mod:`yum <salt.modules.yumpkg>` package manager.
+
+    skip
+        Packages that would normally be installed by the package group
+        ("default" packages), which should not be installed.
+
+        .. code-block:: yaml
+
+            Load Balancer:
+              pkg.group_installed:
+                - skip:
+                  - piranha
+
+    include
+        Packages which are included in a group, which would not normally be
+        installed by a ``yum groupinstall`` ("optional" packages). Note that
+        this will not enforce group membership; if you include packages which
+        are not members of the specified groups, they will still be installed.
+        Can be passed either as a comma-separated list or a python list.
+
+        .. code-block:: yaml
+
+            Load Balancer:
+              pkg.group_installed:
+                - include:
+                  - haproxy
+
+    .. note::
+
+        Because this is essentially a wrapper around :py:func:`pkg.install
+        <salt.modules.yumpkg.install>`, any argument which can be passed to
+        pkg.install may also be included here, and it will be passed along
+        wholesale.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if 'pkg.group_diff' not in __salt__:
+        ret['comment'] = 'pkg.group_install not implemented for this platform'
+        return ret
+
+    if skip is not None:
+        if isinstance(skip, six.string_types):
+            skip = skip.split(',')
+        elif isinstance(skip, (float, six.integer_types)):
+            skip = [str(skip)]
+        if not isinstance(skip, list):
+            ret['comment'] = 'skip must be formatted as a list'
+            return ret
+        for idx, item in enumerate(skip):
+            if isinstance(item, (float, six.integer_types)):
+                skip[idx] = str(item)
+            if not isinstance(skip[idx], six.string_types):
+                ret['comment'] = 'Invalid \'skip\' item {0}'.format(skip[idx])
+                return ret
+    else:
+        skip = []
+
+    if include is not None:
+        if isinstance(include, six.string_types):
+            include = include.split(',')
+        elif isinstance(include, (float, six.integer_types)):
+            include = [str(include)]
+        if not isinstance(include, list):
+            ret['comment'] = 'include must be formatted as a list'
+            return ret
+        for idx, item in enumerate(include):
+            if isinstance(item, (float, six.integer_types)):
+                include[idx] = str(item)
+            if not isinstance(include[idx], six.string_types):
+                ret['comment'] = \
+                    'Invalid \'include\' item {0}'.format(include[idx])
+                return ret
+    else:
+        include = []
+
+    diff = __salt__['pkg.group_diff'](name)
+    mandatory = diff['mandatory packages']['installed'] + \
+        diff['mandatory packages']['not installed']
+    default = diff['default packages']['not installed']
+
+    invalid_skip = [x for x in mandatory if x in skip]
+    if invalid_skip:
+        ret['comment'] = (
+            'The following mandatory packages cannot be skipped: {0}'
+            .format(', '.join(invalid_skip))
+        )
+        return ret
+
+    targets = diff['mandatory packages']['not installed']
+    targets.extend([x for x in diff['default packages']['not installed']
+                    if x not in skip])
+    targets.extend(include)
+
+    if not targets:
+        ret['result'] = True
+        ret['comment'] = 'Group \'{0}\' is already installed'.format(name)
+        return ret
+
+    partially_installed = diff['mandatory packages']['installed'] \
+        or diff['default packages']['installed'] \
+        or diff['optional packages']['installed']
+
+    if __opts__['test']:
+        ret['result'] = None
+        if partially_installed:
+            ret['comment'] = (
+                'Group \'{0}\' is partially installed and will be updated'
+                .format(name)
+            )
+        else:
+            ret['comment'] = 'Group \'{0}\' will be installed'.format(name)
+        return ret
+
+    ret['changes'] = __salt__['pkg.install'](pkgs=targets, **kwargs)
+
+    failed = [x for x in targets if x not in __salt__['pkg.list_pkgs']()]
+    if failed:
+        ret['comment'] = (
+            'Failed to install the following packages: {0}'
+            .format(', '.join(failed))
+        )
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Group \'{0}\' was {1}'.format(
+        name,
+        'updated' if partially_installed else 'installed'
+    )
+    return ret
+
+
 def mod_init(low):
     '''
     Set a flag to tell the install functions to refresh the package database.
