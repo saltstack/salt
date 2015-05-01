@@ -256,6 +256,8 @@ def _rds_present(name, allocated_storage, storage_type, db_instance_class,
         ret['changes']['old'] = {'rds': None}
         ret['changes']['new'] = {'rds': _describe}
         ret['comment'] = 'RDS {0} created.'.format(name)
+    else:
+        ret['comment'] = 'RDS replica {0} exists.'.format(name)
     return ret
 
 
@@ -281,6 +283,10 @@ def replica_present(name, source, db_instance_class=None, availability_zone=None
     replica_exists = __salt__['boto_rds.exists'](name, tags, region, key,
                                                  keyid, profile)
     if not replica_exists:
+        if __opts__['test']:
+            ret['comment'] = 'RDS read replica {0} is set to be created '.format(name)
+            ret['result'] = None
+            return ret
         created = __salt__['boto_rds.create_read_replica'](name, source,
                                                            db_instance_class,
                                                            availability_zone, port,

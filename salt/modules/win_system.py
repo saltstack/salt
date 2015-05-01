@@ -15,6 +15,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -213,7 +214,10 @@ def set_computer_desc(desc):
 
         salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
     '''
-    cmd = ['net', 'config', 'server', u'/srvcomment:{0}'.format(salt.utils.sdecode(desc))]
+    cmd = ['net',
+           'config',
+           'server',
+           u'/srvcomment:{0}'.format(salt.utils.locales.sdecode(desc))]
     __salt__['cmd.run'](cmd, python_shell=False)
     return {'Computer Description': get_computer_desc()}
 

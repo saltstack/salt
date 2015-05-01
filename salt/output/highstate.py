@@ -69,6 +69,7 @@ import textwrap
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.output
 
 # Import 3rd-party libs
@@ -228,7 +229,7 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = salt.utils.sdecode(ret['comment'])
+                comment = salt.utils.locales.sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)

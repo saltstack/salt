@@ -31,6 +31,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -313,10 +314,11 @@ def present(name,
         Date that account expires, represented in days since epoch (January 1,
         1970).
     '''
-    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
-    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
-    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
-    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
+
+    fullname = salt.utils.locales.sdecode(fullname)
+    roomnumber = salt.utils.locales.sdecode(roomnumber)
+    workphone = salt.utils.locales.sdecode(workphone)
+    homephone = salt.utils.locales.sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},

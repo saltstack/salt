@@ -15,6 +15,7 @@ import time
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.utils.locales
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -542,7 +543,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # upgrade all set elements to a common encoding
-        ret = [salt.utils.sdecode(f) for f in ret]
+        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -570,7 +571,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # upgrade all set elements to a common encoding
-        ret = [salt.utils.sdecode(f) for f in ret]
+        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -598,7 +599,7 @@ class Fileserver(object):
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # upgrade all set elements to a common encoding
-        ret = [salt.utils.sdecode(f) for f in ret]
+        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -627,7 +628,7 @@ class Fileserver(object):
                 ret = self.servers[symlstr](load)
         # upgrade all set elements to a common encoding
         ret = dict([
-            (salt.utils.sdecode(x), salt.utils.sdecode(y)) for x, y in ret.items()
+            (salt.utils.locales.sdecode(x), salt.utils.locales.sdecode(y)) for x, y in ret.items()
         ])
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')

@@ -30,7 +30,6 @@ import time
 import types
 import warnings
 import string
-import locale
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -2453,51 +2452,6 @@ def chugid_and_umask(runas, umask):
 def rand_string(size=32):
     key = os.urandom(size)
     return key.encode('base64').replace('\n', '')
-
-
-@real_memoize
-def get_encodings():
-    '''
-    return a list of string encodings to try
-    '''
-    encodings = []
-
-    try:
-        loc_enc = locale.getdefaultlocale()[-1]
-    except (ValueError, IndexError):  # system locale is nonstandard or malformed
-        loc_enc = None
-    if loc_enc:
-        encodings.append(loc_enc)
-
-    try:
-        enc = sys.getdefaultencoding()
-    except ValueError:  # system encoding is nonstandard or malformed
-        enc = None
-    if enc:
-        encodings.append(enc)
-
-    encodings.extend(['utf-8', 'latin-1'])
-    return encodings
-
-
-def sdecode(string_):
-    '''
-    Since we don't know where a string is coming from and that string will
-    need to be safely decoded, this function will attempt to decode the string
-    until if has a working string that does not stack trace
-    '''
-    if not isinstance(string_, str):
-        return string_
-    encodings = get_encodings()
-    for encoding in encodings:
-        try:
-            decoded = string_.decode(encoding)
-            # Make sure unicode string ops work
-            u' ' + decoded  # pylint: disable=W0104
-            return decoded
-        except UnicodeDecodeError:
-            continue
-    return string_
 
 
 def relpath(path, start='.'):
