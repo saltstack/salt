@@ -1340,6 +1340,8 @@ class Cloud(object):
         try:
             with salt.utils.fopen(self.opts['conf_file'], 'r') as mcc:
                 main_cloud_config = yaml.safe_load(mcc)
+            if not main_cloud_config:
+                main_cloud_config = {}
         except KeyError:
             main_cloud_config = {}
         except IOError:
