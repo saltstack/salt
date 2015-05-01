@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Management of PostgreSQL tablespace
 ==================================
@@ -18,6 +19,7 @@ def __virtual__():
     Only load if the postgres module is present and is new enough (has ts funcs)
     '''
     return 'postgres.tablespace_exists' in __salt__
+
 
 def present(name,
             directory,
@@ -106,7 +108,7 @@ def present(name,
         # {seq_page_cost=1.1,random_page_cost=3.9}
         # TODO remove options that exist if possible
         for k, v in options:
-            if '{}={}'.format(k, v) not in tblspaces[name]['Opts']:
+            if '{0}={1}'.format(k, v) not in tblspaces[name]['Opts']:
                 # if 'seq_page_cost=1.1' not in '{seq_page_cost=1.1,...}'
                 if __opts__['test']:
                     ret['result'] = None

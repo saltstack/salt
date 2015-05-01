@@ -528,13 +528,13 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
     owner_query = ''
     options_query = ''
     if owner:
-        owner_query = 'OWNER {}'.format(owner)
+        owner_query = 'OWNER {0}'.format(owner)
         # should come out looking like: 'OWNER postgres'
     if options:
-        optionstext = ['{} = {}'.format(k, v) for k, v in options.items()]
-        options_query = 'WITH ( {} )'.format(', '.join(optionstext))
+        optionstext = ['{0} = {1}'.format(k, v) for k, v in options.items()]
+        options_query = 'WITH ( {0} )'.format(', '.join(optionstext))
         # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
-    query = 'CREATE TABLESPACE {} {} LOCATION \'{}\' {}'.format(name,
+    query = 'CREATE TABLESPACE {0} {1} LOCATION \'{2}\' {3}'.format(name,
                                                                 owner_query,
                                                                 location,
                                                                 options_query)
@@ -565,16 +565,16 @@ def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
     queries = []
 
     if new_name:
-        queries.append('ALTER TABLESPACE {} RENAME TO {}'.format(
+        queries.append('ALTER TABLESPACE {0} RENAME TO {1}'.format(
                        name, new_name))
     if new_owner:
-        queries.append('ALTER TABLESPACE {} OWNER TO {}'.format(
+        queries.append('ALTER TABLESPACE {0} OWNER TO {1}'.format(
                        name, new_owner))
     if set_option:
-        queries.append('ALTER TABLESPACE {} SET ({} = {})'.format(
+        queries.append('ALTER TABLESPACE {0} SET ({1} = {2})'.format(
                        name, set_option.keys()[0], set_option.values()[0]))
     if reset_option:
-        queries.append('ALTER TABLESPACE {} RESET ({})'.format(
+        queries.append('ALTER TABLESPACE {0} RESET ({1})'.format(
                        name, reset_option))
 
     for query in queries:
@@ -596,7 +596,7 @@ def tablespace_remove(name, user=None, host=None, port=None,
     .. code-block:: bash
         salt '*' postgres.tablespace_remove tsname
     '''
-    query = 'DROP TABLESPACE {}'.format(name)
+    query = 'DROP TABLESPACE {0}'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
