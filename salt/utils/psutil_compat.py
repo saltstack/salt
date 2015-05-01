@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Version agnostic psutil hack to fully support both old (<2.0) and new (>=2.0) psutil versions.
+Version agnostic psutil hack to fully support both old (<2.0) and new (>=2.0)
+psutil versions.
+
 The old <1.0 psutil API is dropped in psutil 3.0
 
 Should be removed once support for psutil <2.0 is dropped. (eg RHEL 6)
@@ -37,32 +39,50 @@ else:
     pids = psutil.get_pid_list
     users = psutil.get_users
 
+    class Process(psutil.Process):
+        # Reimplement overloaded getters/setters
+        def cpu_affinity(self, *args, **kwargs):
+            if args or kwargs:
+                return self.set_cpu_affinity(*args, **kwargs)
+            else:
+                return self.get_cpu_affinity()
+
+        def ionice(self, *args, **kwargs):
+            if args or kwargs:
+                return self.set_ionice(*args, **kwargs)
+            else:
+                return self.get_ionice()
+
+        def nice(self, *args, **kwargs):
+            if args or kwargs:
+                return self.set_nice(*args, **kwargs)
+            else:
+                return self.get_nice()
+
+        def rlimit(self, *args, **kwargs):
+            if args or kwargs:
+                return self.set_rlimit(*args, **kwargs)
+            else:
+                return self.get_rlimit()
+
     # Alias renamed Process functions
     _PROCESS_FUNCTION_MAP = {
         "children": "get_children",
         "connections": "get_connections",
-        "cpu_affinity": "get_cpu_affinity",
         "cpu_percent": "get_cpu_percent",
         "cpu_times": "get_cpu_times",
         "io_counters": "get_io_counters",
-        "ionice": "get_ionice",
         "memory_info": "get_memory_info",
         "memory_info_ex": "get_ext_memory_info",
         "memory_maps": "get_memory_maps",
         "memory_percent": "get_memory_percent",
-        "nice": "get_nice",
         "num_ctx_switches": "get_num_ctx_switches",
         "num_fds": "get_num_fds",
         "num_threads": "get_num_threads",
         "open_files": "get_open_files",
-        "rlimit": "get_rlimit",
         "threads": "get_threads",
         "cwd": "getcwd",
 
-        "cpu_affinity": "set_cpu_affinity",
-        "ionice": "set_ionice",
-        "nice": "set_nice",
-        "rlimit": "set_rlimit",
     }
 
     for new, old in _PROCESS_FUNCTION_MAP.iteritems():
