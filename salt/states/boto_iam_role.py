@@ -212,8 +212,6 @@ def _role_present(
             policy = __salt__['boto_iam.build_policy'](region, key, keyid,
                                                        profile)
             if role['assume_role_policy_document'] != policy:
-                print role['assume_role_policy_document']
-                print policy
                 update_needed = True
                 _policy_document = policy
         else:
