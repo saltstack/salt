@@ -8,7 +8,8 @@ from __future__ import absolute_import
 import socket
 
 # Import salt libs
-import salt.ext.ipaddr
+import salt.utils.network
+import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 
@@ -41,20 +42,18 @@ class RosterMatcher(object):
             # Comma-separate list of integers
             ports = list(map(int, str(ports).split(',')))
         try:
-            salt.ext.ipaddr.IPAddress(self.tgt)
-            addrs = [self.tgt]
+            addrs = [ipaddress.ip_address(self.tgt)]
         except ValueError:
             try:
-                addrs = salt.ext.ipaddr.IPNetwork(self.tgt).iterhosts()
+                addrs = ipaddress.ip_network(self.tgt).hosts()
             except ValueError:
                 pass
         for addr in addrs:
-            addr = str(addr)
             for port in ports:
                 try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock = salt.utils.network.get_socket(addr, socket.SOCK_STREAM)
                     sock.settimeout(float(__opts__['ssh_scan_timeout']))
-                    sock.connect((addr, port))
+                    sock.connect((str(addr), port))
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
                     ret[addr] = {'host': addr, 'port': port}

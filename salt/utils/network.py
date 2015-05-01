@@ -15,6 +15,7 @@ from string import ascii_letters, digits
 
 # Import 3rd-party libs
 import salt.ext.six as six
+import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
@@ -288,6 +289,20 @@ def generate_minion_id():
 
     hosts = _sort_hostnames(possible_ids)
     return hosts[0]
+
+
+def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
+    '''
+    Return a socket object for the addr
+    IP-version agnostic
+    '''
+
+    version = ipaddress.ip_address(addr).version
+    if version == 4:
+        family = socket.AF_INET
+    elif version == 6:
+        family = socket.AF_INET6
+    return socket.socket(family, type, proto)
 
 
 def get_fqhostname():
