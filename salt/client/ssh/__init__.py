@@ -570,7 +570,7 @@ class Single(object):
                     'id': self.id,
                     'sock_dir': '/',
                 })
-        self.minion_config = yaml.dump(minion_opts).strip()
+        self.minion_config = yaml.dump(minion_opts)
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
