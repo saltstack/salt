@@ -235,6 +235,7 @@ A more complex ``recurse`` example:
 # Import python libs
 from __future__ import absolute_import
 import difflib
+import itertools
 import json
 import logging
 import os
@@ -320,9 +321,19 @@ def _gen_keep_files(name, require):
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
     '''
+    def _is_child(path, directory):
+        '''
+        Check whether ``path`` is child of ``directory``
+        '''
+        path = os.path.realpath(path)
+        directory = os.path.realpath(directory)
+
+        relative = os.path.relpath(path, directory)
+
+        return not relative.startswith(os.pardir)
+
     def _process(name):
         ret = set()
-        ret.add(name.rstrip('/'))
         if os.path.isdir(name):
             for root, dirs, files in os.walk(name):
                 for name in files:
@@ -330,16 +341,19 @@ def _gen_keep_files(name, require):
                 for name in dirs:
                     ret.add(os.path.join(root, name))
         return ret
+
     keep = set()
-    # Remove last slash if exists for all path
-    keep.add(name.rstrip('/'))
     if isinstance(require, list):
-        for comp in require:
-            if 'file' in comp:
-                keep.update(_process(comp['file']))
-                for low in __lowstate__:
-                    if low['__id__'] == comp['file']:
-                        keep.update(_process(low['name']))
+        required_files = [comp for comp in require if 'file' in comp]
+        for comp in required_files:
+            for low in __lowstate__:
+                if low['__id__'] == comp['file']:
+                    fn = low['name']
+                    if os.path.isdir(comp['file']):
+                        if _is_child(comp['file'], name):
+                            keep.update(_process(fn))
+                    else:
+                        keep.add(fn)
     return list(keep)
 
 
@@ -376,35 +390,23 @@ def _clean_dir(root, keep, exclude_pat):
                 if fn_ in ['/', ''.join([os.path.splitdrive(fn_)[0], '\\'])]:
                     break
 
-    for roots, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if os.path.join(root, d) not in keep]
-        for name in dirs:
-            nfn = os.path.join(roots, name)
-            if os.path.islink(nfn):
-                # the "directory" is in fact a symlink and cannot be
-                # removed by shutil.rmtree
-                files.append(nfn)
-                continue
-            if nfn not in real_keep:
-                # -- check if this is a part of exclude_pat(only). No need to
-                # check include_pat
-                if not salt.utils.check_include_exclude(
-                        nfn[len(root) + 1:], None, exclude_pat):
-                    continue
-                removed.add(nfn)
-                if not __opts__['test']:
-                    shutil.rmtree(nfn)
-        for name in files:
-            nfn = os.path.join(roots, name)
-            if nfn not in real_keep:
-                # -- check if this is a part of exclude_pat(only). No need to
-                # check include_pat
-                if not salt.utils.check_include_exclude(
-                        nfn[len(root) + 1:], None, exclude_pat):
-                    continue
-                removed.add(nfn)
-                if not __opts__['test']:
+    def _delete_not_kept(nfn):
+        if nfn not in real_keep:
+            # -- check if this is a part of exclude_pat(only). No need to
+            # check include_pat
+            if not salt.utils.check_include_exclude(
+                    os.path.relpath(nfn, root), None, exclude_pat):
+                return
+            removed.add(nfn)
+            if not __opts__['test']:
+                try:
                     os.remove(nfn)
+                except OSError:
+                    shutil.rmtree(nfn)
+
+    for roots, dirs, files in os.walk(root):
+        for name in itertools.chain(dirs, files):
+            _delete_not_kept(os.path.join(roots, name))
     return list(removed)
 
 
@@ -487,26 +489,23 @@ def _check_directory(name,
             changes[name] = fchange
     if clean:
         keep = _gen_keep_files(name, require)
+
+        def _check_changes(fname):
+            path = os.path.join(root, fname)
+            if path in keep:
+                return {}
+            else:
+                if not salt.utils.check_include_exclude(
+                        os.path.relpath(path, name), None, exclude_pat):
+                    return {}
+                else:
+                    return {path: {'removed': 'Removed due to clean'}}
+
         for root, dirs, files in os.walk(name):
             for fname in files:
-                fchange = {}
-                path = os.path.join(root, fname)
-                if path not in keep:
-                    if not salt.utils.check_include_exclude(
-                            path[len(name) + 1:], None, exclude_pat):
-                        continue
-                    fchange['removed'] = 'Removed due to clean'
-                    changes[path] = fchange
-            dirs[:] = [d for d in dirs if os.path.join(root, d) not in keep]
+                changes.update(_check_changes(fname))
             for name_ in dirs:
-                fchange = {}
-                path = os.path.join(root, name_)
-                if path not in keep:
-                    if not salt.utils.check_include_exclude(
-                            path[len(name) + 1:], None, exclude_pat):
-                        continue
-                    fchange['removed'] = 'Removed due to clean'
-                    changes[path] = fchange
+                changes.update(_check_changes(name_))
 
     if not os.path.isdir(name):
         changes[name] = {'directory': 'new'}
@@ -1875,6 +1874,8 @@ def directory(name,
 
     if clean:
         keep = _gen_keep_files(name, require)
+        log.debug('List of kept files when use file.directory with clean: %s',
+                  keep)
         removed = _clean_dir(name, list(keep), exclude_pat)
         if removed:
             ret['changes']['removed'] = removed
