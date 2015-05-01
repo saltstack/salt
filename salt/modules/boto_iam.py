@@ -932,9 +932,11 @@ def build_policy(region=None, key=None, keyid=None, profile=None):
     # into strings, so let's do the same here.
     for key, policy_val in policy.items():
         for statement in policy_val:
-            if len(statement['Action']) == 1:
+            if (isinstance(statement['Action'], list)
+                    and len(statement['Action']) == 1):
                 statement['Action'] = statement['Action'][0]
-            if len(statement['Principal']['Service']) == 1:
+            if (isinstance(statement['Principal']['Service'], list)
+                    and len(statement['Principal']['Service']) == 1):
                 statement['Principal']['Service'] = statement['Principal']['Service'][0]
     # build_policy doesn't add a version field, which AWS is going to set to a
     # default value, when we get it back, so let's set it.
