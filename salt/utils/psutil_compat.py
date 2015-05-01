@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import psutil
 
 if psutil.version_info >= (2, 0):
-    from psutil import *
+    from psutil import * #pylint: disable: wildcard-import
 else:
     # Import hack to work around bugs in old psutil's
     # Psuedo "from psutil import *"
@@ -39,7 +39,7 @@ else:
     pids = psutil.get_pid_list
     users = psutil.get_users
 
-    class Process(psutil.Process):
+    class Process(psutil.Process): #pylint: disable: no-init
         # Reimplement overloaded getters/setters
         def cpu_affinity(self, *args, **kwargs):
             if args or kwargs:
