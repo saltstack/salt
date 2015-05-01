@@ -3,6 +3,8 @@
 the locale utils used by salt
 '''
 
+from __future__ import absolute_import
+
 import sys
 import locale
 

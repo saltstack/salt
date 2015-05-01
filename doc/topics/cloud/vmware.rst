@@ -78,16 +78,19 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         network:
           Network adapter 1:
             name: 10.20.30-400-Test
+            switch_type: standard
             ip: 10.20.30.123
             gateway: [10.20.30.110]
             subnet_mask: 255.255.255.128
             domain: mycompany.com
           Network adapter 2:
             name: 10.30.40-500-Dev-DHCP
-            type: e1000
+            adapter_type: e1000
+            switch_type: distributed
           Network adapter 3:
             name: 10.40.50-600-Prod
-            type: vmxnet3
+            adapter_type: vmxnet3
+            switch_type: standard
             ip: 10.40.50.123
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
@@ -172,10 +175,16 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         name
             Enter the network name you want the network adapter to be mapped to.
 
-        type
+        adapter_type
             Enter the network adapter type you want to create. Currently supported
             types are vmxnet, vmxnet2, vmxnet3, e1000 and e1000e. If no type is
             specified, by default vmxnet3 will be used.
+
+        switch_type
+            Enter the type of switch to use. This decides whether to use a standard
+            switch network or a distributed virtual portgroup. Currently supported
+            types are ``standard`` to use a standard switch netowork and ``distributed``
+            to use a distributed virtual portgroup.
 
         ip
             Enter the static IP you want the network adapter to be mapped to. If the

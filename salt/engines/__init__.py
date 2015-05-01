@@ -11,6 +11,7 @@ import logging
 # Import salt libs
 import salt
 import salt.loader
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,14 @@ def start_engines(opts, proc_mgr):
     engines_opt = opts.get('engines', [])
     if isinstance(engines_opt, dict):
         engines_opt = [{k: v} for k, v in engines_opt.items()]
+
+    # Function references are not picklable. Windows needs to pickle when
+    # spawning processes. On Windows, these will need to be recalculated
+    # in the spawned child process.
+    if salt.utils.is_windows():
+        runners = None
+        utils = None
+        funcs = None
 
     for engine in engines_opt:
         if isinstance(engine, dict):
@@ -69,6 +78,15 @@ class Engine(multiprocessing.Process):
         '''
         Run the master service!
         '''
+        if salt.utils.is_windows():
+            # Calculate function references since they can't be pickled.
+            if self.opts['__role'] == 'master':
+                self.runners = salt.loader.runner(self.opts)
+            else:
+                self.runners = []
+            self.utils = salt.loader.utils(self.opts)
+            self.funcs = salt.loader.minion_mods(self.opts, utils=self.utils)
+
         self.engine = salt.loader.engines(self.opts,
                                           self.funcs,
                                           self.runners)

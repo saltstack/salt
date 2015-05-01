@@ -306,10 +306,28 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     return disk_spec
 
 
-def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
-    network_ref = _get_mor_by_property(vim.Network, new_network_name)
-    network_adapter.backing.deviceName = new_network_name
-    network_adapter.backing.network = network_ref
+def _edit_existing_network_adapter_helper(network_adapter, new_network_name, switch_type):
+    switch_type.strip().lower()
+    if switch_type == 'standard':
+        network_ref = _get_mor_by_property(vim.Network, new_network_name)
+        network_adapter.backing.deviceName = new_network_name
+        network_adapter.backing.network = network_ref
+    elif switch_type == 'distributed':
+        network_ref = _get_mor_by_property(vim.dvs.DistributedVirtualPortgroup, new_network_name)
+        dvs_port_connection = vim.dvs.PortConnection(
+            portgroupKey=network_ref.key,
+            switchUuid=network_ref.config.distributedVirtualSwitch.uuid
+        )
+        network_adapter.backing = vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
+        network_adapter.backing.port = dvs_port_connection
+    else:
+        # If switch type not specified or does not match, show error and return
+        if not switch_type:
+            err_msg = "The switch type to be used by {0} has not been specified".format(network_adapter.deviceInfo.label)
+        else:
+            err_msg = "Cannot create {0}. Invalid/unsupported switch type {1}".format(network_adapter.deviceInfo.label, switch_type)
+        raise SaltCloudSystemExit(err_msg)
+
     network_adapter.deviceInfo.summary = new_network_name
     network_adapter.connectable.allowGuestControl = True
     network_adapter.connectable.startConnected = True
@@ -320,10 +338,11 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name):
     return network_spec
 
 
-def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type):
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type):
     random_key = randint(-4099, -4000)
 
     adapter_type.strip().lower()
+    switch_type.strip().lower()
     network_spec = vim.vm.device.VirtualDeviceSpec()
 
     if adapter_type == "vmxnet":
@@ -343,10 +362,27 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
 
+    if switch_type == 'standard':
+        network_spec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
+        network_spec.device.backing.deviceName = network_name
+        network_spec.device.backing.network = _get_mor_by_property(vim.Network, network_name)
+    elif switch_type == 'distributed':
+        network_ref = _get_mor_by_property(vim.dvs.DistributedVirtualPortgroup, network_name)
+        dvs_port_connection = vim.dvs.PortConnection(
+            portgroupKey=network_ref.key,
+            switchUuid=network_ref.config.distributedVirtualSwitch.uuid
+        )
+        network_spec.device.backing = vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
+        network_spec.device.backing.port = dvs_port_connection
+    else:
+        # If switch type not specified or does not match, show error and return
+        if not switch_type:
+            err_msg = "The switch type to be used by {0} has not been specified".format(network_adapter_label)
+        else:
+            err_msg = "Cannot create {0}. Invalid/unsupported switch type {1}".format(network_adapter_label, switch_type)
+        raise SaltCloudSystemExit(err_msg)
+
     network_spec.device.key = random_key
-    network_spec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
-    network_spec.device.backing.deviceName = network_name
-    network_spec.device.backing.network = _get_mor_by_property(vim.Network, network_name)
     network_spec.device.deviceInfo = vim.Description()
     network_spec.device.deviceInfo.label = network_adapter_label
     network_spec.device.deviceInfo.summary = network_name
@@ -468,7 +504,8 @@ def _manage_devices(devices, vm):
                 existing_network_adapters_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in list(devices['network'].keys()):
                     network_name = devices['network'][device.deviceInfo.label]['name']
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name)
+                    switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name, switch_type)
                     adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
                     device_specs.append(network_spec)
                     nics_map.append(adapter_mapping)
@@ -507,9 +544,10 @@ def _manage_devices(devices, vm):
         log.debug("Networks to create: {0}".format(network_adapters_to_create))
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
-            adapter_type = devices['network'][network_adapter_label]['type']
+            adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
+            switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type)
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
             adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
@@ -567,6 +605,34 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
             log.debug(message)
     else:
         raise task.info.error
+
+
+def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
+    time_counter = 0
+    while host_ref.runtime.connectionState != 'notResponding':
+        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    while host_ref.runtime.connectionState != 'connected':
+        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+        time.sleep(int(sleep_seconds))
+        time_counter += int(sleep_seconds)
+    if host_ref.runtime.connectionState == 'connected':
+        message = "[ {0} ] Successfully completed host {1} in {2} seconds".format(host_ref.name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(message)
+        else:
+            log.debug(message)
+    else:
+        log.error('Could not connect back to the host system')
 
 
 def _format_instance_info_select(vm, selection):
@@ -1704,7 +1770,7 @@ def create(vm_):
         'template', vm_, __opts__, default=False
     )
     num_cpus = config.get_cloud_config_value(
-        'cpus', vm_, __opts__, default=None
+        'num_cpus', vm_, __opts__, default=None
     )
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
@@ -1798,7 +1864,7 @@ def create(vm_):
             config=config_spec
         )
 
-        if specs['nics_map']:
+        if devices and 'nics_map' in specs.keys():
             if "Windows" not in object_ref.config.guestFullName:
                 global_ip = vim.vm.customization.GlobalIPSettings()
                 if vm_['dns_servers']:
@@ -2959,3 +3025,66 @@ def disconnect_host(kwargs=None, call=None):
         return {host_name: 'failed to disconnect host'}
 
     return {host_name: 'disconnected host'}
+
+
+def reboot_host(kwargs=None, call=None):
+    '''
+    Reboot the specified host system in this VMware environment
+
+    .. note::
+
+        If the host system is not in maintenance mode, it will not be rebooted. If you
+        want to reboot the host system regardless of whether it is in maintenance mode,
+        set ``force=True``. Default is ``force=False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f reboot_host my-vmware-config host="myHostSystemName" [force=True]
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The reboot_host function must be called with '
+            '-f or --function.'
+        )
+
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
+    force = _str_to_bool(kwargs.get('force')) if kwargs and 'force' in kwargs else False
+
+    if not host_name:
+        raise SaltCloudSystemExit(
+            'You must specify the name of the Host system'
+        )
+
+    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    if not host_ref:
+        raise SaltCloudSystemExit(
+            'Specified host system does not exist'
+        )
+
+    if host_ref.runtime.connectionState == 'notResponding':
+        raise SaltCloudSystemExit(
+            'Specified host system cannot be rebooted in its current state (not responding)'
+        )
+
+    if not host_ref.capability.rebootSupported:
+        raise SaltCloudSystemExit(
+            'Specified host system does not support reboot'
+        )
+
+    if not host_ref.runtime.inMaintenanceMode:
+        raise SaltCloudSystemExit(
+            'Specified host system is not in maintenance mode. Specify force=True to '
+            'force reboot even if there are virtual machines running or other operations '
+            'in progress'
+        )
+
+    try:
+        host_ref.RebootHost_Task(force)
+        _wait_for_host(host_ref, "reboot", 10, 'info')
+    except Exception as exc:
+        log.error('Error while rebooting host {0}: {1}'.format(host_name, exc))
+        return {host_name: 'failed to reboot host'}
+
+    return {host_name: 'rebooted host'}
