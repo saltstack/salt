@@ -17,6 +17,10 @@ nodegroups. Here's an example nodegroup configuration within
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
+      group4:
+        - 'G@foo:bar'
+        - 'or'
+        - 'G@foo:baz'
 
 .. note::
 
@@ -24,11 +28,21 @@ nodegroups. Here's an example nodegroup configuration within
     group2 is matching specific grains. See the :doc:`compound matchers
     <compound>` documentation for more details.
 
+.. versionadded:: Beryllium
+
 .. note::
 
     Nodgroups can reference other nodegroups as seen in ``group3``.  Ensure
     that you do not have circular references.  Circular references will be
     detected and cause partial expansion with a logged error message.
+
+.. versionadded:: Beryllium
+
+Compound nodegroups can be either string values or lists of string values.
+When the nodegroup is A string value will be tokenized by splitting on
+whitespace.  This may be a problem if whitespace is necessary as part of a
+pattern.  When a nodegroup is a list of strings then tokenization will
+happen for each list element as a whole.
 
 To match a nodegroup on the CLI, use the ``-N`` command-line option:
 

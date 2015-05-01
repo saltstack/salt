@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
+
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
 
+# Import Salt libs
 import salt.utils.job
-from salt._compat import string_types
+from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
-from salt.utils.verify import verify_files
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
         EauthAuthenticationError
         )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class SaltCMD(parsers.SaltCMDOptionParser):
@@ -28,16 +31,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         import salt.auth
         import salt.client
         self.parse_args()
-
-        if self.config['verify_env']:
-            if not self.config['log_file'].startswith(('tcp://',
-                                                       'udp://',
-                                                       'file://')):
-                # Logfile is not using Syslog, verify
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user']
-                )
 
         # Setup file logging!
         self.setup_logfile_logger()
@@ -238,12 +231,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         return_counter = 0
         not_return_counter = 0
         not_return_minions = []
+        not_response_minions = []
+        not_connected_minions = []
         for each_minion in ret:
             minion_ret = ret[each_minion].get('ret')
             if (
                     isinstance(minion_ret, string_types)
                     and minion_ret.startswith("Minion did not return")
-            ):
+                    ):
+                if "Not connected" in ret[each_minion]:
+                    not_connected_minions.append(each_minion)
+                elif "No response" in ret[each_minion]:
+                    not_response_minions.append(each_minion)
                 not_return_counter += 1
                 not_return_minions.append(each_minion)
             else:
@@ -252,11 +251,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('-------------------------------------------')
         print_cli('Summary')
         print_cli('-------------------------------------------')
-        print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
-        print_cli('# of Minions Returned: {0}'.format(return_counter))
-        print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
+        print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of minions returned: {0}'.format(return_counter))
+        print_cli('# of minions that did not return: {0}'.format(not_return_counter))
         if self.options.verbose:
-            print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
+            if not_connected_minions:
+                print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
+            if not_response_minions:
+                print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
         print_cli('-------------------------------------------')
 
     def _progress_end(self, out):
@@ -294,7 +296,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         ret = {}
         out = ''
         retcode = 0
-        for key, data in full_ret.items():
+        for key, data in six.iteritems(full_ret):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
@@ -304,7 +306,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         return ret, out, retcode
 
     def _format_error(self, minion_error):
-        for minion, error_doc in minion_error.items():
+        for minion, error_doc in six.iteritems(minion_error):
             error = 'Minion [{0}] encountered exception \'{1}\''.format(minion, error_doc['message'])
         return error
 
@@ -326,6 +328,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if ret[host][fun]:
                         docs[fun] = ret[host][fun]
         for fun in sorted(docs):
-            salt.output.display_output(fun + ':', 'text', self.config)
+            salt.output.display_output(fun + ':', 'nested', self.config)
             print_cli(docs[fun])
             print_cli('')

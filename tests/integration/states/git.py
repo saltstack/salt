@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the Git state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 import socket
@@ -17,6 +17,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -62,7 +63,7 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         try:
             ret = self.run_state(
                 'git.latest',
-                name='https://youSpelledGithubWrong.com/saltstack/salt-test-repo.git',
+                name='https://youSpelledGitHubWrong.com/saltstack/salt-test-repo.git',
                 rev='develop',
                 target=name,
                 submodules=True
@@ -158,8 +159,10 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.mkdir(name)
         try:
             fname = os.path.join(name, 'stoptheprocess')
-            with file(fname, 'a'):
-                pass
+
+            with salt.utils.fopen(fname, 'a') as fh_:
+                fh_.write('')
+
             ret = self.run_state(
                 'git.present',
                 name=name,

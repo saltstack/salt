@@ -3,6 +3,10 @@
     :codeauthor: :email:`Rahul Handay <rahulha@saltstack.com>`
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+import yaml
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
@@ -15,7 +19,6 @@ from salttesting.mock import (
 # Import Salt Libs
 import salt.utils
 from salt.modules import pkg_resource
-import yaml
 
 # Globals
 pkg_resource.__grains__ = {}

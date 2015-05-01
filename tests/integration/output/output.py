@@ -4,13 +4,13 @@
 '''
 
 # Import Salt Libs
-import traceback
+from __future__ import absolute_import
 import os
 import copy
+import traceback
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath
-
 ensure_in_syspath('../../')
 
 # Import Salt libs

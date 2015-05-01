@@ -3,6 +3,10 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+import grp
+
 # Import Salt Testing Libs
 from salttesting import TestCase
 from salttesting.mock import MagicMock, patch
@@ -10,9 +14,6 @@ from salttesting.mock import MagicMock, patch
 # Import Salt Libs
 from salt.modules import mac_group
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-
-# Import python Libs
-import grp
 
 
 class MacGroupTestCase(TestCase):

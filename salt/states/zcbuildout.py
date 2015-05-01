@@ -38,6 +38,7 @@ Available Functions
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import sys
 
 # Import salt libs
@@ -45,6 +46,7 @@ from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -134,7 +136,8 @@ def installed(name,
               unless=None,
               onlyif=None,
               use_vt=False,
-              loglevel='debug'):
+              loglevel='debug',
+              **kwargs):
     '''
     Install buildout in a specific directory
 
@@ -202,6 +205,12 @@ def installed(name,
     '''
     ret = {}
 
+    if 'group' in kwargs:
+        log.warn('Passing \'group\' is deprecated, just remove it')
+    output_loglevel = kwargs.get('output_loglevel', None)
+    if output_loglevel and not loglevel:
+        log.warn('Passing \'output_loglevel\' is deprecated,'
+                 ' please use loglevel instead')
     try:
         test_release = int(test_release)
     except ValueError:

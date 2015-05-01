@@ -30,6 +30,7 @@ add the following to the Salt master config file.
         ssl_key: /etc/pki/api/certs/server.key
         debug: False
         disable_ssl: False
+        webhook_disable_auth: False
 
 
 .. _rest_tornado-auth:
@@ -150,25 +151,25 @@ a return like::
 '''
 # pylint: disable=W0232
 
+# Import Python libs
+from __future__ import absolute_import
+import time
+import math
+import fnmatch
 import logging
 from copy import copy
+from collections import defaultdict
 
-import time
-
+# pylint: disable=import-error
+import yaml
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import tornado.gen
-
 from tornado.concurrent import Future
-
-from collections import defaultdict
-
-import math
-import yaml
-import fnmatch
-
 from zmq.eventloop import ioloop, zmqstream
+import salt.ext.six as six
+# pylint: enable=import-error
 
 # instantiate the zmq IOLoop (specialized poller)
 ioloop.install()
@@ -324,7 +325,7 @@ class EventListener(object):
         '''
         mtag, data = self.event.unpack(raw[0], self.event.serial)
         # see if we have any futures that need this info:
-        for tag_prefix, futures in self.tag_map.items():
+        for tag_prefix, futures in six.iteritems(self.tag_map):
             if mtag.startswith(tag_prefix):
                 for future in futures:
                     if future.done():
@@ -372,7 +373,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         '''
         if client not in self.saltclients:
             self.set_status(400)
-            self.write("We don't serve your kind here")
+            self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
 
     @property
@@ -452,7 +453,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ignore the data passed in and just get the args from wherever they are
         '''
         data = {}
-        for key, val in self.request.arguments.iteritems():
+        for key, val in six.iteritems(self.request.arguments):
             if len(val) == 1:
                 data[key] = val[0]
             else:
@@ -690,7 +691,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
             {"clients": ["local", "local_batch", "local_async","runner"], "return": "Welcome"}
         '''
-        ret = {"clients": self.saltclients.keys(),
+        ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
         self.write(self.serialize(ret))
 
@@ -819,7 +820,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         if not isinstance(ping_ret, dict):
             raise tornado.gen.Return(chunk_ret)
-        minions = ping_ret.keys()
+        minions = list(ping_ret.keys())
 
         maxflight = get_batch_size(f_call['kwargs']['batch'], len(minions))
         inflight_futures = []
@@ -855,7 +856,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
     @tornado.gen.coroutine
     def _disbatch_local(self, chunk):
         '''
-        Disbatch local client commands
+        Dispatch local client commands
         '''
         chunk_ret = {}
 
@@ -1553,7 +1554,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
                       revision: {{ revision }}
             {% endif %}
         '''
-        if not self._verify_auth():
+        disable_auth = self.application.mod_opts.get('webhook_disable_auth')
+        if not disable_auth and not self._verify_auth():
             self.redirect('/login')
             return
 

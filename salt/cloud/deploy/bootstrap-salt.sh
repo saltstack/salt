@@ -1256,7 +1256,7 @@ __check_end_of_life_versions() {
 
     case "${DISTRO_NAME_L}" in
         debian)
-            # Debian versions bellow 6 are not supported
+            # Debian versions below 6 are not supported
             if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
@@ -3366,6 +3366,9 @@ install_amazon_linux_ami_testing_post() {
 #   Arch Install Functions
 #
 install_arch_linux_stable_deps() {
+
+    echoinfo "Running pacman db upgrade" 
+    pacman-db-upgrade || return 1
 
     if [ ! -f /etc/pacman.d/gnupg ]; then
         pacman-key --init && pacman-key --populate archlinux || return 1

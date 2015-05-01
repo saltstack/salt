@@ -206,7 +206,12 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
             for key, value in six.iteritems(result):
                 # Salt won't return dictionaries with odd types like uuid.UUID
                 if not isinstance(value, six.text_type):
-                    value = str(value)
+                    # Must support Cassandra collection types.
+                    # Namely, Cassandras set, list, and map collections.
+                    if not isinstance(value, set):
+                        if not isinstance(value, list):
+                            if not isinstance(value, dict):
+                                value = str(value)
                 values[key] = value
             ret.append(values)
 
@@ -647,6 +652,7 @@ def list_permissions(username=None, resource=None, resource_type='keyspace', per
     :rtype:                dict
 
     .. code-block:: bash
+
         salt 'minion1' cassandra_cql.list_permissions
 
         salt 'minion1' cassandra_cql.list_permissions username=joe resource=test_keyspace permission=select
@@ -702,6 +708,7 @@ def grant_permission(username, resource=None, resource_type='keyspace', permissi
     :rtype:
 
     .. code-block:: bash
+
         salt 'minion1' cassandra_cql.grant_permission
 
         salt 'minion1' cassandra_cql.grant_permission username=joe resource=test_keyspace permission=select

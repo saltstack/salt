@@ -170,6 +170,8 @@ this:
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
+.. include:: /_incl/sls_filename_cant_contain_period.rst
+
 But when using more than one single SLS file, more components can be added to
 the toolkit. Consider this SSH example:
 
@@ -467,7 +469,7 @@ times to call shell commands to gather data.
 
 
 Introducing the Python, PyDSL, and the Pyobjects Renderers
----------------------------------------------------------
+----------------------------------------------------------
 
 Sometimes the chosen default renderer might not have enough logical power to
 accomplish the needed task. When this happens, the Python renderer can be
@@ -517,7 +519,7 @@ The above example could be written as:
     Pkg.installed("django")
 
 
-This Python examples would look like this if they were written in YAML:
+These Python examples would look like this if they were written in YAML:
 
 .. code-block:: yaml
 

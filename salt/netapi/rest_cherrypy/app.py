@@ -12,6 +12,7 @@ A REST API for Salt
     <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
     introduced in version 3.2.5. The issue was reportedly resolved with
     CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
+            - salt-api package
 :optdepends:    - ws4py Python module for websockets support.
 :configuration: All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system which requires additional configuration not described
@@ -232,9 +233,8 @@ command sent to minions as well as a runner function on the master::
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import collections
 import itertools
 import functools
@@ -246,9 +246,13 @@ import time
 from multiprocessing import Process, Pipe
 
 # Import third-party libs
+# pylint: disable=import-error
 import cherrypy
 from cherrypy.lib import cpstats
 import yaml
+import salt.ext.six as six
+# pylint: enable=import-error
+
 
 # Import Salt libs
 import salt
@@ -2212,7 +2216,7 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in self.url_map.items():
+        for url, cls in six.iteritems(self.url_map):
             setattr(self, url, cls())
 
     def _update_url_map(self):

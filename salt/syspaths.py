@@ -24,6 +24,7 @@ import os.path
 
 __PLATFORM = sys.platform.lower()
 
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.

@@ -5,12 +5,10 @@ and special files on the minion, set/read user,
 group, mode, and data
 '''
 
-from __future__ import absolute_import
-
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
 # Import python libs
 import contextlib  # For < 2.7 compat
@@ -30,10 +28,12 @@ import sys
 import tempfile
 import time
 import glob
+import hashlib
+from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six import string_types
-from salt.ext.six.moves import range, reduce, zip
+import salt.ext.six as six
+from salt.ext.six.moves import range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -84,7 +84,7 @@ def __clean_tmp(sfn):
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any saltenv)
         all_roots = itertools.chain.from_iterable(
-                iter(__opts__['file_roots'].values()))
+                six.itervalues(__opts__['file_roots']))
         in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
@@ -686,7 +686,7 @@ def find(path, *args, **kwargs):
     except ValueError as ex:
         return 'error: {0}'.format(ex)
 
-    ret = [p for p in finder.find(os.path.expanduser(path))]
+    ret = [item for i in [finder.find(p) for p in glob.glob(os.path.expanduser(path))] for item in i]
     ret.sort()
     return ret
 
@@ -1116,6 +1116,335 @@ def _mkstemp_copy(path,
     return temp_file
 
 
+def _starts_till(src, probe, strip_comments=True):
+    '''
+    Returns True if src and probe at least begins till some point.
+    '''
+    def _strip_comments(txt):
+        '''
+        Strip possible comments.
+        Usually commends are one or two symbols
+        '''
+        buff = txt.split(" ", 1)
+        return len(buff) == 2 and len(buff[0]) < 2 and buff[1] or txt
+
+    def _to_words(txt):
+        '''
+        Split by words
+        '''
+        return txt and [w for w in txt.strip().split(" ") if w.strip()] or txt
+
+    no_match = -1
+    equal = 0
+    if not src or not probe:
+        return no_match
+
+    if src == probe:
+        return equal
+
+    src = _to_words(strip_comments and _strip_comments(src) or src)
+    probe = _to_words(strip_comments and _strip_comments(probe) or probe)
+
+    a_buff, b_buff = len(src) < len(probe) and (src, probe) or (probe, src)
+    b_buff = ' '.join(b_buff)
+    for idx in range(len(a_buff)):
+        prb = ' '.join(a_buff[:-(idx + 1)])
+        if prb and b_buff.startswith(prb):
+            return idx
+
+    return no_match
+
+
+def _regex_to_static(src, regex):
+    '''
+    Expand regular expression to static match.
+    '''
+    if not src or not regex:
+        return None
+
+    try:
+        src = re.search(regex, src)
+    except Exception as ex:
+        raise CommandExecutionError("{0}: '{1}'".format(ex.message, regex))
+
+    return src and src.group() or regex
+
+
+def _assert_occurrence(src, probe, target, amount=1):
+    '''
+    Raise an exception, if there are different amount of specified occurrences in src.
+    '''
+    occ = src.count(probe)
+    if occ > amount:
+        msg = 'more than'
+    elif occ < amount:
+        msg = 'less than'
+    elif not occ:
+        msg = 'no'
+    else:
+        msg = None
+
+    if msg:
+        raise CommandExecutionError('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
+
+
+def _get_line_indent(src, line, indent):
+    '''
+    Indent the line with the source line.
+    '''
+    if not (indent or line):
+        return line
+
+    idt = []
+    for c in src:
+        if c not in ['\t', ' ']:
+            break
+        idt.append(c)
+
+    return ''.join(idt) + line.strip()
+
+
+def line(path, content, match=None, mode=None, location=None,
+         before=None, after=None, show_changes=True, backup=False,
+         quiet=False, indent=True):
+    '''
+    .. versionadded:: Beryllium
+
+    Edit a line in the configuration file.
+
+    :param path:
+        Filesystem path to the file to be edited.
+
+    :param content:
+        Content of the line.
+
+    :param match:
+        Match the target line for an action by
+        a fragment of a string or regular expression.
+
+    :param mode:
+        Ensure
+            If line does not exist, it will be added.
+
+        Replace
+            If line already exist, it will be replaced.
+
+        Delete
+            Delete the line, once found.
+
+        Insert
+            Insert a line.
+
+    :param location:
+        start
+            Place the content at the beginning of the file.
+
+        end
+            Place the content at the end of the file.
+
+    :param before:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param after:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param show_changes
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
+
+    :param backup
+        Create a backup of the original file with the extension:
+        "Year-Month-Day-Hour-Minutes-Seconds".
+
+    :param quiet
+        Do not raise any exceptions. E.g. ignore the fact that the file that is
+        tried to be edited does not exist and nothing really happened.
+
+    :param indent
+        Keep indentation with the previous line.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns", after="hosts:.*?", mode='ensure'
+    '''
+    path = os.path.realpath(os.path.expanduser(path))
+    if not os.path.exists(path):
+        if not quiet:
+            raise CommandExecutionError('File "{0}" does not exists.'.format(path))
+        return False  # No changes had happened
+
+    mode = mode and mode.lower() or mode
+    if mode not in ['insert', 'ensure', 'delete', 'replace']:
+        if mode is None:
+            raise CommandExecutionError('Mode was not defined. How to process the file?')
+        else:
+            raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
+
+    # Before/after has privilege. If nothing defined, match is used by content.
+    if before is None and after is None and not match:
+        match = content
+
+    body = salt.utils.fopen(path, mode='rb').read()
+    body_before = hashlib.sha256(body).hexdigest()
+    after = _regex_to_static(body, after)
+    before = _regex_to_static(body, before)
+    match = _regex_to_static(body, match)
+
+    if mode == 'delete':
+        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
+
+    elif mode == 'replace':
+        body = os.linesep.join([(_get_line_indent(line, content, indent)
+                                if (line.find(match) > -1 and not line == content) else line)
+                                for line in body.split(os.linesep)])
+    elif mode == 'insert':
+        if not location and not before and not after:
+            raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
+
+        if not location:
+            if before and after:
+                _assert_occurrence(body, before, 'before')
+                _assert_occurrence(body, after, 'after')
+                out = []
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
+                        out.append(_get_line_indent(_line, content, indent))
+                        out.append(_line)
+                    else:
+                        out.append(_line)
+                body = os.linesep.join(out)
+
+            if before and not after:
+                _assert_occurrence(body, before, 'before')
+                out = []
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    if _line.find(before) > -1:
+                        cnd = _get_line_indent(_line, content, indent)
+                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
+                            out.append(cnd)
+                    out.append(_line)
+                body = os.linesep.join(out)
+
+            elif after and not before:
+                _assert_occurrence(body, after, 'after')
+                out = []
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    out.append(_line)
+                    cnd = _get_line_indent(_line, content, indent)
+                    if _line.find(after) > -1:
+                        # No dupes or append, if "after" is the last line
+                        if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
+                            out.append(cnd)
+                body = os.linesep.join(out)
+
+        else:
+            if location == 'start':
+                body = ''.join([content, body])
+            elif location == 'end':
+                body = ''.join([body, _get_line_indent(body[-1], content, indent) if body else content])
+
+    elif mode == 'ensure':
+        after = after and after.strip()
+        before = before and before.strip()
+        content = content and content.strip()
+
+        if before and after:
+            _assert_occurrence(body, before, 'before')
+            _assert_occurrence(body, after, 'after')
+
+            a_idx = b_idx = -1
+            idx = 0
+            body = body.split(os.linesep)
+            for _line in body:
+                idx += 1
+                if _line.find(before) > -1 and b_idx < 0:
+                    b_idx = idx
+                if _line.find(after) > -1 and a_idx < 0:
+                    a_idx = idx
+
+            # Add
+            if not b_idx - a_idx - 1:
+                body = body[:a_idx] + [content] + body[b_idx - 1:]
+            elif b_idx - a_idx - 1 == 1:
+                if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
+                    body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
+            else:
+                raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
+            body = os.linesep.join(body)
+
+        elif before and not after:
+            _assert_occurrence(body, before, 'before')
+            body = body.split(os.linesep)
+            out = []
+            for idx in range(len(body)):
+                if body[idx].find(before) > -1:
+                    prev = (idx > 0 and idx or 1) - 1
+                    out.append(_get_line_indent(body[prev], content, indent))
+                    if _starts_till(out[prev], content) > -1:
+                        del out[prev]
+                out.append(body[idx])
+            body = os.linesep.join(out)
+
+        elif not before and after:
+            _assert_occurrence(body, after, 'after')
+            body = body.split(os.linesep)
+            skip = None
+            out = []
+            for idx in range(len(body)):
+                if skip != body[idx]:
+                    out.append(body[idx])
+
+                if body[idx].find(after) > -1:
+                    next_line = idx + 1 < len(body) and body[idx + 1] or None
+                    if next_line is not None and _starts_till(next_line, content) > -1:
+                        skip = next_line
+                    out.append(_get_line_indent(body[idx], content, indent))
+            body = os.linesep.join(out)
+
+        else:
+            raise CommandExecutionError("Wrong conditions? "
+                                        "Unable to ensure line without knowing "
+                                        "where to put it before and/or after.")
+
+    changed = body_before != hashlib.sha256(body).hexdigest()
+
+    if backup and changed:
+        try:
+            temp_file = _mkstemp_copy(path=path, preserve_inode=True)
+            shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Unable to create the backup file of {0}. Exception: {1}".format(path, exc))
+
+    changes_diff = None
+
+    if changed:
+        if show_changes:
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'rb').readlines(), body.splitlines()))
+        fh_ = None
+        try:
+            fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+            fh_.write(body)
+        finally:
+            if fh_:
+                fh_.close()
+
+    return show_changes and changes_diff or changed
+
+
 def replace(path,
             pattern,
             repl,
@@ -1129,6 +1458,8 @@ def replace(path,
             dry_run=False,
             search_only=False,
             show_changes=True,
+            ignore_if_missing=False,
+            preserve_inode=True,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1195,6 +1526,23 @@ def replace(path,
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the
             diff.
+    ignore_if_missing
+        .. versionadded:: Beryllium
+
+        When this parameter is ``True``, ``file.replace`` will return ``False`` if the
+        file doesn't exist. When this parameter is ``False``, ``file.replace`` will
+        throw an error if the file doesn't exist.
+        Default is ``False`` (to maintain compatibility with prior behaviour).
+    preserve_inode
+        .. versionadded:: Beryllium
+
+        Preserve the inode of the file, so that any hard links continue to share the
+        inode with the original filename. This works by *copying* the file, reading
+        from the copy, and writing to the file at the original inode. If ``False``, the
+        file will be *moved* rather than copied, and a new file will be written to a
+        new inode, but using the original filename. Hard links will then share an inode
+        with the backup, instead (if using ``backup`` to create a backup copy).
+        Default is ``True``.
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1222,7 +1570,10 @@ def replace(path,
     path = os.path.realpath(os.path.expanduser(path))
 
     if not os.path.exists(path):
-        raise SaltInvocationError('File not found: {0}'.format(path))
+        if ignore_if_missing:
+            return False
+        else:
+            raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1312,7 +1663,8 @@ def replace(path,
         # Write the replacement text in this block.
         try:
             # Create a copy to read from and to use as a backup later
-            temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+            temp_file = _mkstemp_copy(path=path,
+                                      preserve_inode=preserve_inode)
         except (OSError, IOError) as exc:
             raise CommandExecutionError("Exception: {0}".format(exc))
 
@@ -1359,16 +1711,17 @@ def replace(path,
         if not dry_run:
             try:
                 # Create a copy to read from and for later use as a backup
-                temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+                temp_file = _mkstemp_copy(path=path,
+                                          preserve_inode=preserve_inode)
             except (OSError, IOError) as exc:
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
-                f = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    f.write(line)
+                    fh_.write(line)
             finally:
-                f.close()
+                fh_.close()
 
     if backup and has_changes and not dry_run:
         # keep the backup only if it was requested
@@ -1602,11 +1955,11 @@ def blockreplace(path,
 
             # write new content in the file while avoiding partial reads
             try:
-                f = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
                 for line in new_file:
-                    f.write(line)
+                    fh_.write(line)
             finally:
-                f.close()
+                fh_.close()
 
             # this may have overwritten file attrs
             check_perms(path,
@@ -1625,6 +1978,7 @@ def search(path,
         pattern,
         flags=0,
         bufsize=1,
+        ignore_if_missing=False,
         ):
     '''
     .. versionadded:: 0.17.0
@@ -1649,7 +2003,8 @@ def search(path,
             bufsize=bufsize,
             dry_run=True,
             search_only=True,
-            show_changes=False)
+            show_changes=False,
+            ignore_if_missing=ignore_if_missing)
 
 
 def patch(originalfile, patchfile, options='', dry_run=False):
@@ -2326,17 +2681,18 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in iter(modes.values()):
+    elif mode in six.itervalues(modes):
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
 
 
-def readlink(path):
+def readlink(path, canonicalize=False):
     '''
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
+    If canonicalize is set to True, then it return the final target
 
     CLI Example:
 
@@ -2352,7 +2708,10 @@ def readlink(path):
     if not os.path.islink(path):
         raise SaltInvocationError('A valid link was not specified.')
 
-    return os.readlink(path)
+    if canonicalize:
+        return os.path.realpath(path)
+    else:
+        return os.readlink(path)
 
 
 def readdir(path):
@@ -2696,7 +3055,7 @@ def source_list(source, source_hash, saltenv):
                     if fn_:
                         ret = (single_src, single_hash)
                         break
-            elif isinstance(single, string_types):
+            elif isinstance(single, six.string_types):
                 if single[7:] in mfiles or single[7:] in mdirs:
                     ret = (single, source_hash)
                     break
@@ -2811,7 +3170,7 @@ def get_managed(
                 if not source_sum:
                     return '', {}, 'Source file {0} not found'.format(source)
             elif source_hash:
-                protos = ['salt', 'http', 'https', 'ftp', 'swift']
+                protos = ['salt', 'http', 'https', 'ftp', 'swift', 's3']
                 if _urlparse(source_hash).scheme in protos:
                     # The source_hash is a file on a server
                     hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
@@ -3013,7 +3372,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, string_types):
+    if isinstance(orig_comment, six.string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
@@ -3076,7 +3435,7 @@ def check_managed(
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
         comments.extend('{0}: {1}\n'.format(key, val)
-                        for key, val in changes.items())
+                        for key, val in six.iteritems(changes))
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
@@ -3240,7 +3599,7 @@ def get_diff(
 
     ret = ''
 
-    if isinstance(env, string_types):
+    if isinstance(env, six.string_types):
         salt.utils.warn_until(
             'Boron',
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -3785,7 +4144,7 @@ def is_chrdev(name):
         stat_structure = os.stat(name)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            #If the character device does not exist in the first place
+            # If the character device does not exist in the first place
             return False
         else:
             raise
@@ -3834,7 +4193,7 @@ def mknod_chrdev(name,
             raise
         else:
             ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
-    #quick pass at verifying the permissions of the newly created character device
+    # quick pass at verifying the permissions of the newly created character device
     check_perms(name,
                 None,
                 user,
@@ -3860,7 +4219,7 @@ def is_blkdev(name):
         stat_structure = os.stat(name)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            #If the block device does not exist in the first place
+            # If the block device does not exist in the first place
             return False
         else:
             raise
@@ -3909,7 +4268,7 @@ def mknod_blkdev(name,
             raise
         else:
             ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
-    #quick pass at verifying the permissions of the newly created block device
+    # quick pass at verifying the permissions of the newly created block device
     check_perms(name,
                 None,
                 user,
@@ -3935,7 +4294,7 @@ def is_fifo(name):
         stat_structure = os.stat(name)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            #If the fifo does not exist in the first place
+            # If the fifo does not exist in the first place
             return False
         else:
             raise
@@ -3973,12 +4332,12 @@ def mknod_fifo(name,
                 ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
-        #be happy it is already there
+        # be happy it is already there
         if exc.errno != errno.EEXIST:
             raise
         else:
             ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
-    #quick pass at verifying the permissions of the newly created fifo
+    # quick pass at verifying the permissions of the newly created fifo
     check_perms(name,
                 None,
                 user,
@@ -4066,15 +4425,15 @@ def list_backups(path, limit=None):
         return {}
 
     files = {}
-    for fn in [x for x in os.listdir(bkdir)
-               if os.path.isfile(os.path.join(bkdir, x))]:
+    for fname in [x for x in os.listdir(bkdir)
+                  if os.path.isfile(os.path.join(bkdir, x))]:
         if salt.utils.is_windows():
             # ':' is an illegal filesystem path character on Windows
             strpfmt = '{0}_%a_%b_%d_%H-%M-%S_%f_%Y'.format(basename)
         else:
             strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
         try:
-            timestamp = datetime.datetime.strptime(fn, strpfmt)
+            timestamp = datetime.datetime.strptime(fname, strpfmt)
         except ValueError:
             # File didn't match the strp format string, so it's not a backup
             # for this file. Move on to the next one.
@@ -4085,7 +4444,7 @@ def list_backups(path, limit=None):
             str_format = '%a %b %d %Y %H:%M:%S.%f'
         files.setdefault(timestamp, {})['Backup Time'] = \
             timestamp.strftime(str_format)
-        location = os.path.join(bkdir, fn)
+        location = os.path.join(bkdir, fname)
         files[timestamp]['Size'] = os.stat(location).st_size
         files[timestamp]['Location'] = location
 
@@ -4134,7 +4493,7 @@ def list_backups_dir(path, limit=None):
     files = {}
     f = dict([(i, len(list(n))) for i, n in itertools.groupby([x.split("_")[0] for x in sorted(os.listdir(bkdir))])])
     ff = os.listdir(bkdir)
-    for i, n in f.items():
+    for i, n in six.iteritems(f):
         ssfile = {}
         for x in sorted(ff):
             basename = x.split('_')[0]

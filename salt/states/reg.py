@@ -74,7 +74,9 @@ def absent(name):
     '''
     Remove a registry key
 
-    Example::
+    Example:
+
+    .. code-block:: yaml
 
         'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
           reg.absent

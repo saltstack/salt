@@ -23,11 +23,17 @@ import logging
 
 # Import 3rd-party libs
 import json
-import requests
-from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
+
+try:
+    import requests
+    from requests.exceptions import ConnectionError
+    ENABLED = True
+except ImportError:
+    ENABLED = False
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'random_org'
@@ -65,6 +71,8 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
+    if not ENABLED:
+        return False
     return __virtualname__
 
 
@@ -102,14 +110,14 @@ def _query(api_version=None, data=None):
         ret['res'] = False
         return ret
 
-    if result.status_code == 200:
+    if result.status_code == salt.ext.six.moves.http_client.OK:
         result = result.json()
         if result.get('result'):
             return result.get('result')
         if result.get('error'):
             return result.get('error')
         return ret
-    elif result.status_code == 204:
+    elif result.status_code == salt.ext.six.moves.http_client.NO_CONTENT:
         return True
     else:
         log.debug('base_url {0}'.format(base_url))

@@ -2,14 +2,17 @@
 '''
 A collection of mixins useful for the various *Client interfaces
 '''
-from __future__ import print_function
-from __future__ import absolute_import
-import collections
-import logging
-import traceback
-import multiprocessing
-import weakref
 
+# Import Python libs
+from __future__ import absolute_import, print_function
+import copy
+import logging
+import weakref
+import traceback
+import collections
+import multiprocessing
+
+# Import Salt libs
 import salt.exceptions
 import salt.minion
 import salt.utils
@@ -21,6 +24,9 @@ from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +41,8 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     '__jid__',
     '__tag__',
     '__user__',
+    'username',
+    'password'
 ])
 
 
@@ -65,15 +73,19 @@ class ClientFuncsDict(collections.MutableMapping):
                    'kwargs': kwargs,
                    }
             pub_data = {}
+            # Copy kwargs so we can iterate over and pop the pub data
+            _kwargs = copy.deepcopy(kwargs)
+
             # pull out pub_data if you have it
-            for kwargs_key, kwargs_value in kwargs.items():
+            for kwargs_key, kwargs_value in six.iteritems(_kwargs):
                 if kwargs_key.startswith('__pub_'):
                     pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 
             async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
 
             user = salt.utils.get_specific_user()
-            return self.client._proc_function(key,
+            return self.client._proc_function(
+                   key,
                    low,
                    user,
                    async_pub['tag'],  # TODO: fix
@@ -229,6 +241,10 @@ class SyncClientMixin(object):
                 - __jid__: jid to run under
                 - __tag__: tag to run under
         '''
+        # fire the mminion loading (if not already done) here
+        # this is not to clutter the output with the module loading
+        # if we have a high debug level.
+        self.mminion  # pylint: disable=W0104
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
 
@@ -269,12 +285,14 @@ class SyncClientMixin(object):
             # Inject some useful globals to *all* the funciton's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            for mod_name in self.functions:
+            for mod_name in six.iterkeys(self.functions):
+                if '.' not in mod_name:
+                    continue
                 mod, _ = mod_name.split('.', 1)
                 if mod in completed_funcs:
                     continue
                 completed_funcs.append(mod)
-                for global_key, value in func_globals.iteritems():
+                for global_key, value in six.iteritems(func_globals):
                     self.functions[mod_name].__globals__[global_key] = value
 
             # There are some descrepencies of what a "low" structure is in the
@@ -316,7 +334,7 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except (Exception, SystemExit) as exc:
+        except (Exception, SystemExit):
             data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
                             self.client,
                             fun,

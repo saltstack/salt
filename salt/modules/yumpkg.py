@@ -24,8 +24,8 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six import string_types
-from salt.ext.six.moves import shlex_quote as _cmd_quote, range
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 try:
     import yum
@@ -348,7 +348,7 @@ def _normalize_basedir(basedir=None):
         basedir = []
 
     # if we are passed a string (for backward compatibility), convert to a list
-    if isinstance(basedir, basestring):
+    if isinstance(basedir, six.string_types):
         basedir = [x.strip() for x in basedir.split(',')]
 
     # nothing specified, so use the reposdir option as the default
@@ -449,9 +449,14 @@ def latest_version(*names, **kwargs):
         refresh_db(_get_branch_option(**kwargs), repo_arg, exclude_arg)
 
     # Get updates for specified package(s)
-    updates = _repoquery_pkginfo(
-        '{0} {1} --pkgnarrow=available {2}'
-        .format(repo_arg, exclude_arg, ' '.join(names))
+    # Sort by version number (highest to lowest) for loop below
+    updates = sorted(
+        _repoquery_pkginfo(
+            '{0} {1} --pkgnarrow=available {2}'
+            .format(repo_arg, exclude_arg, ' '.join(names))
+        ),
+        key=lambda pkginfo: _LooseVersion(pkginfo.version),
+        reverse=True
     )
 
     for name in names:
@@ -829,7 +834,7 @@ def group_install(name,
         which can be passed to pkg.install may also be included here, and it
         will be passed along wholesale.
     '''
-    groups = name.split(',') if isinstance(name, string_types) else name
+    groups = name.split(',') if isinstance(name, six.string_types) else name
 
     if not groups:
         raise SaltInvocationError('no groups specified')
@@ -837,12 +842,12 @@ def group_install(name,
         raise SaltInvocationError('\'groups\' must be a list')
 
     # pylint: disable=maybe-no-member
-    if isinstance(skip, string_types):
+    if isinstance(skip, six.string_types):
         skip = skip.split(',')
     if not isinstance(skip, (list, tuple)):
         raise SaltInvocationError('\'skip\' must be a list')
 
-    if isinstance(include, string_types):
+    if isinstance(include, six.string_types):
         include = include.split(',')
     if not isinstance(include, (list, tuple)):
         raise SaltInvocationError('\'include\' must be a list')
@@ -1099,17 +1104,26 @@ def install(name=None,
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+
+    versionName = pkgname
     ret = salt.utils.compare_dicts(old, new)
+
+    if sources is not None:
+        versionName = pkgname + '-' + new.get(pkgname, '')
+        if pkgname in ret:
+            ret[versionName] = ret.pop(pkgname)
     for pkgname in to_reinstall:
-        if not pkgname not in old:
-            ret.update({pkgname: {'old': old.get(pkgname, ''),
+        if not versionName not in old:
+            ret.update({versionName: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
         else:
-            if pkgname not in ret:
-                ret.update({pkgname: {'old': old.get(pkgname, ''),
+            if versionName not in ret:
+                ret.update({versionName: {'old': old.get(pkgname, ''),
                                       'new': new.get(pkgname, '')}})
     if ret:
         __context__.pop('pkg._avail', None)
+    elif sources is not None:
+        ret = {versionName: {}}
     return ret
 
 
@@ -1299,7 +1313,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         targets.extend(pkgs)
     elif sources:
         for source in sources:
-            targets.append(next(iter(source)))
+            targets.append(next(six.iterkeys(source)))
     else:
         ret = check_db(name)
         if not ret[name]['found']:
@@ -1312,7 +1326,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     ret = {}
     for target in targets:
         if isinstance(target, dict):
-            target = next(iter(target))
+            target = next(six.iterkeys(target))
 
         ret[target] = {'name': target,
                        'changes': {},
@@ -1395,7 +1409,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     ret = {}
     for target in targets:
         if isinstance(target, dict):
-            target = next(iter(target))
+            target = next(six.iterkeys(target))
 
         ret[target] = {'name': target,
                        'changes': {},
@@ -1506,21 +1520,27 @@ def group_list():
 
         salt '*' pkg.group_list
     '''
-    ret = {'installed': [], 'available': [], 'available languages': {}}
+    ret = {'installed': [], 'available': [], 'installed environments': [], 'available environments': [], 'available languages': {}}
     cmd = 'yum grouplist'
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
     for idx in range(len(out)):
-        if out[idx] == 'Installed Groups:':
+        if out[idx].lower() == 'installed groups:':
             key = 'installed'
             continue
-        elif out[idx] == 'Available Groups:':
+        elif out[idx].lower() == 'available groups:':
             key = 'available'
             continue
-        elif out[idx] == 'Available Language Groups:':
+        elif out[idx].lower() == 'installed environment groups:':
+            key = 'installed environments'
+            continue
+        elif out[idx].lower() == 'available environment groups:':
+            key = 'available environments'
+            continue
+        elif out[idx].lower() == 'available language groups:':
             key = 'available languages'
             continue
-        elif out[idx] == 'Done':
+        elif out[idx].lower() == 'done':
             continue
 
         if key is None:
@@ -1670,7 +1690,7 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in repos.keys():
+    for arepo in six.iterkeys(repos):
         if arepo == repo:
             repofile = repos[arepo]['file']
 
@@ -1712,7 +1732,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     # See if the repo is the only one in the file
     onlyrepo = True
-    for arepo in repos.keys():
+    for arepo in six.iterkeys(repos):
         if arepo == repo:
             continue
         if repos[arepo]['file'] == repofile:
@@ -1727,7 +1747,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     # There must be other repos in this file, write the file with them
     header, filerepos = _parse_repo_file(repofile)
     content = header
-    for stanza in filerepos.keys():
+    for stanza in six.iterkeys(filerepos):
         if stanza == repo:
             continue
         comments = ''
@@ -1844,32 +1864,32 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if 'baseurl' in todelete:
         if 'mirrorlist' not in repo_opts and 'mirrorlist' \
-                not in filerepos[repo].keys():
+                not in filerepos[repo]:
             raise SaltInvocationError(
                 'Cannot delete baseurl without specifying mirrorlist'
             )
     if 'mirrorlist' in todelete:
         if 'baseurl' not in repo_opts and 'baseurl' \
-                not in filerepos[repo].keys():
+                not in filerepos[repo]:
             raise SaltInvocationError(
                 'Cannot delete mirrorlist without specifying baseurl'
             )
 
     # Delete anything in the todelete list
     for key in todelete:
-        if key in filerepos[repo].keys():
+        if key in six.iterkeys(filerepos[repo].copy()):
             del filerepos[repo][key]
 
     # Old file or new, write out the repos(s)
     filerepos[repo].update(repo_opts)
     content = header
-    for stanza in filerepos.keys():
+    for stanza in six.iterkeys(filerepos):
         comments = ''
-        if 'comments' in filerepos[stanza].keys():
+        if 'comments' in six.iterkeys(filerepos[stanza]):
             comments = '\n'.join(filerepos[stanza]['comments'])
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
-        for line in filerepos[stanza].keys():
+        for line in six.iterkeys(filerepos[stanza]):
             content += '\n{0}={1}'.format(line, filerepos[stanza][line])
         content += '\n{0}\n'.format(comments)
 
@@ -2004,7 +2024,7 @@ def owner(*paths):
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return next(ret.itervalues())
+        return next(six.itervalues(ret))
     return ret
 
 

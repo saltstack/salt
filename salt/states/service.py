@@ -4,7 +4,12 @@ Starting or restarting of services and daemons
 ==============================================
 
 Services are defined as system daemons typically started with system init or
-rc scripts, services can be defined as running or dead.
+rc scripts.  Services can be defined as running or dead.
+
+.. note::
+    The current status of a service is determined by the return code of the init/rc
+    script status command. A status return code of 0 it is considered running.  Any
+    other return code is considered dead.
 
 .. code-block:: yaml
 
@@ -38,6 +43,10 @@ service, then set the reload value to True:
     :doc:`Requisites </ref/states/requisites>` documentation.
 
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+import time
 
 
 def __virtual__():
@@ -226,7 +235,7 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, **kwargs):
+def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     '''
     Verify that the service is running
 
@@ -240,6 +249,14 @@ def running(name, enable=None, sig=None, **kwargs):
 
     sig
         The string to search for when looking for the service process with ps
+
+    init_delay
+        Some services may not be truly available for a short period after their
+        startup script indicates to the system that they are. Provide an
+        'init_delay' to specify that this state should wait an additional given
+        number of seconds after a service has started before returning. Useful
+        for requisite states wherein a dependent state might assume a service
+        has started but is not yet fully initialized.
     '''
     ret = {'name': name,
            'changes': {},
@@ -287,6 +304,13 @@ def running(name, enable=None, sig=None, **kwargs):
             ret.update(_enable(name, True, **kwargs))
         elif enable is False:
             ret.update(_disable(name, True, **kwargs))
+
+    if init_delay:
+        time.sleep(init_delay)
+        ret['changes'] = (
+            '{0}\nDelayed return for {1} seconds'
+            .format(ret['commant'], init_delay)
+        )
     return ret
 
 
@@ -393,6 +417,7 @@ def mod_watch(name,
               sig=None,
               reload=False,
               full_restart=False,
+              init_delay=None,
               force=False,
               **kwargs):
     '''
@@ -439,6 +464,8 @@ def mod_watch(name,
                 func = __salt__['service.restart']
                 verb = 'restart'
         else:
+            if 'service.stop' in __salt__:
+                __salt__['service.stop'](name)
             func = __salt__['service.start']
             verb = 'start'
         if not past_participle:
@@ -454,6 +481,8 @@ def mod_watch(name,
         return ret
 
     result = func(name)
+    if init_delay:
+        time.sleep(init_delay)
 
     ret['changes'] = {name: result}
     ret['result'] = result

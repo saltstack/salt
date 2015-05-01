@@ -228,7 +228,8 @@ def get_load(jid):
     Return the load data that marks a specified jid
     '''
     jid_dir = _jid_dir(jid)
-    if not os.path.exists(jid_dir):
+    load_fn = os.path.join(jid_dir, LOAD_P)
+    if not os.path.exists(jid_dir) or not os.path.exists(load_fn):
         return {}
     serial = salt.payload.Serial(__opts__)
 

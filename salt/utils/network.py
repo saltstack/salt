@@ -2,18 +2,20 @@
 '''
 Define some generic socket functions for network modules
 '''
-from __future__ import absolute_import
 
 # Import python libs
-import socket
-import shlex
-import re
-import logging
+from __future__ import absolute_import
 import os
+import re
+import shlex
+import socket
+import logging
+import subprocess
 from string import ascii_letters, digits
-from salt.ext.six.moves import range
-import salt.ext.six as six
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
     import wmi
@@ -25,9 +27,7 @@ except ImportError:
 import salt.utils
 from salt._compat import subprocess
 
-
 log = logging.getLogger(__name__)
-
 
 # pylint: disable=C0103
 
@@ -127,6 +127,8 @@ def _sort_hostnames(hostname_list):
         'localhost',
         'ip6-localhost',
         'ip6-loopback',
+        'ipv6-localhost',
+        'ipv6-loopback',
         '127.0.2.1',
         '127.0.1.1',
         '127.0.0.1',
@@ -340,6 +342,54 @@ def ip_to_host(ip):
 # pylint: enable=C0103
 
 
+def _validate_ip(af, ip):
+    '''
+    Common logic for IPv4
+    '''
+    if af == socket.AF_INET6 and not socket.has_ipv6:
+        raise RuntimeError('IPv6 not supported')
+    try:
+        socket.inet_pton(af, ip)
+    except AttributeError:
+        if af == socket.AF_INET6:
+            raise RuntimeError('socket.inet_pton not available')
+        try:
+            socket.inet_aton(ip)
+        except socket.error:
+            return False
+    except (socket.error, TypeError):
+        return False
+    return True
+
+
+def is_ip(ip):
+    '''
+    Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
+
+    Will raise a RuntimeError if IPv6 is not supported on the host.
+    '''
+    for af in (socket.AF_INET, socket.AF_INET6):
+        if _validate_ip(af, ip):
+            return True
+    return False
+
+
+def is_ipv4(ip):
+    '''
+    Returns a bool telling if the value passed to it was a valid IPv4 address
+    '''
+    return _validate_ip(socket.AF_INET, ip)
+
+
+def is_ipv6(ip):
+    '''
+    Returns a bool telling if the value passed to it was a valid IPv6 address
+
+    Will raise a RuntimeError if IPv6 is not supported on the host.
+    '''
+    return _validate_ip(socket.AF_INET6, ip)
+
+
 def cidr_to_ipv4_netmask(cidr_bits):
     '''
     Returns an IPv4 netmask
@@ -550,7 +600,7 @@ def _interfaces_ifconfig(out):
             # status determines global interface status.
             #
             # merge items with higher priority for older values
-            ret[iface] = dict(data.items() + ret[iface].items())
+            ret[iface] = dict(list(data.items()) + list(ret[iface].items()))
         else:
             ret[iface] = data
         del data
@@ -702,6 +752,10 @@ def get_net_start(ipaddr, netmask):
 
 
 def get_net_size(mask):
+    '''
+    Turns an IPv4 netmask into it's corresponding prefix length
+    (255.255.255.0 -> 24 as in 192.168.1.10/24).
+    '''
     binary_str = ''
     for octet in mask.split('.'):
         binary_str += bin(int(octet))[2:].zfill(8)
@@ -709,6 +763,10 @@ def get_net_size(mask):
 
 
 def calculate_subnet(ipaddr, netmask):
+    '''
+    Takes IP and netmask and returns the network in CIDR-notation.
+    (The IP can be any IP inside this subnet.)
+    '''
     return '{0}/{1}'.format(get_net_start(ipaddr, netmask),
                             get_net_size(netmask))
 
@@ -796,7 +854,7 @@ def in_subnet(cidr, addrs=None):
     try:
         netstart, netsize = cidr.split('/')
         netsize = int(netsize)
-    except Exception:
+    except ValueError:
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
@@ -1080,6 +1138,44 @@ def _freebsd_remotes_on(port, which_end):
     return remotes
 
 
+def _windows_remotes_on(port, which_end):
+    r'''
+    Windows specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    C:\>netstat -n
+
+    Active Connections
+
+       Proto  Local Address          Foreign Address        State
+       TCP    10.2.33.17:3007        130.164.12.233:10123   ESTABLISHED
+       TCP    10.2.33.17:3389        130.164.30.5:10378     ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-n'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[1].rsplit(':', 1)
+        remote_host, remote_port = chunks[2].rsplit(':', 1)
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+    return remotes
+
+
 def remotes_on_local_tcp_port(port):
     '''
     Returns set of ipv4 host addresses of remote established connections
@@ -1102,6 +1198,8 @@ def remotes_on_local_tcp_port(port):
         return _sunos_remotes_on(port, 'local_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'local_port')
+    if salt.utils.is_windows():
+        return _windows_remotes_on(port, 'local_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
@@ -1153,6 +1251,8 @@ def remotes_on_remote_tcp_port(port):
         return _sunos_remotes_on(port, 'remote_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'remote_port')
+    if salt.utils.is_windows():
+        return _windows_remotes_on(port, 'remote_port')
 
     try:
         data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version

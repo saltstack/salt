@@ -3,10 +3,12 @@
 Alex Martelli's soulution for recursive dict update from
 http://stackoverflow.com/a/3233356
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import collections
+
+# Import 3rd-party libs
 import copy
 import logging
 import salt.ext.six as six
@@ -27,6 +29,7 @@ def update(dest, upd):
             dest_subkey = dest.get(key, klass())
         except AttributeError:
             dest_subkey = None
+
         if isinstance(dest_subkey, collections.Mapping) \
                 and isinstance(val, collections.Mapping):
             ret = update(dest_subkey, val)

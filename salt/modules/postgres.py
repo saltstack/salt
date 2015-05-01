@@ -27,13 +27,12 @@ Module to provide Postgres compatibility to salt.
 # Import python libs
 from __future__ import absolute_import
 import datetime
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import StringIO
 import hashlib
 import os
 import tempfile
-from salt.ext.six.moves import zip
 try:
     import pipes
     import csv
@@ -43,7 +42,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+
 
 log = logging.getLogger(__name__)
 
@@ -70,8 +73,7 @@ def __virtual__():
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
-              run_cmd='cmd.run_all'):
+def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     '''
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
@@ -111,7 +113,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
-    ret = __salt__[run_cmd](cmd, python_shell=False, **kwargs)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
     if ret.get('retcode', 0) != 0:
         log.error('Error connecting to Postgresql server')
@@ -381,7 +383,7 @@ def db_create(name,
         'TABLESPACE': tablespace,
     }
     with_chunks = []
-    for key, value in with_args.items():
+    for key, value in six.iteritems(with_args):
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -398,7 +400,7 @@ def db_create(name,
 
 
 def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
-             password=None, tablespace=None, owner=None,
+             password=None, tablespace=None, owner=None, owner_recurse=False,
              runas=None):
     '''
     Change tablespace or/and owner of database.
@@ -412,22 +414,31 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
     if not any((tablespace, owner)):
         return True  # Nothing todo?
 
-    queries = []
-    if owner:
-        queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
-            name, owner
-        ))
-    if tablespace:
-        queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
-            name, tablespace
-        ))
-    for query in queries:
-        ret = _psql_prepare_and_run(['-c', query],
-                                    user=user, host=host, port=port,
-                                    maintenance_db=maintenance_db,
-                                    password=password, runas=runas)
-        if ret['retcode'] != 0:
-            return False
+    if owner and owner_recurse:
+        ret = owner_to(name, owner,
+                       user=user,
+                       host=host,
+                       port=port,
+                       password=password,
+                       runas=runas)
+    else:
+        queries = []
+        if owner:
+            queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
+                name, owner
+            ))
+        if tablespace:
+            queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
+                name, tablespace
+            ))
+        for query in queries:
+            ret = _psql_prepare_and_run(['-c', query],
+                                        user=user, host=host, port=port,
+                                        maintenance_db=maintenance_db,
+                                        password=password, runas=runas)
+
+    if ret['retcode'] != 0:
+        return False
 
     return True
 
@@ -547,6 +558,35 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             retrow['password'] = row['password']
         ret[row['name']] = retrow
 
+    # for each role, determine the inherited roles
+    for role in six.iterkeys(ret):
+        rdata = ret[role]
+        groups = rdata.setdefault('groups', [])
+        query = (
+            'select rolname'
+            ' from pg_user'
+            ' join pg_auth_members'
+            '      on (pg_user.usesysid=pg_auth_members.member)'
+            ' join pg_roles '
+            '      on (pg_roles.oid=pg_auth_members.roleid)'
+            ' where pg_user.usename=\'{0}\''
+        ).format(role)
+        try:
+            rows = psql_query(query,
+                              runas=runas,
+                              host=host,
+                              user=user,
+                              port=port,
+                              maintenance_db=maintenance_db,
+                              password=password)
+            for row in rows:
+                if row['rolname'] not in groups:
+                    groups.append(row['rolname'])
+        except Exception:
+            # do not fail here, it is just a bonus
+            # to try to determine groups, but the query
+            # is not portable amongst all pg versions
+            continue
     return ret
 
 
@@ -668,14 +708,14 @@ def _role_cmd_args(name,
         # first is passwd set
         # second is for handling NOPASSWD
         and (
-            isinstance(rolepassword, string_types) and bool(rolepassword)
+            isinstance(rolepassword, six.string_types) and bool(rolepassword)
         )
         or (
             isinstance(rolepassword, bool)
         )
     ):
         skip_passwd = True
-    if isinstance(rolepassword, string_types) and bool(rolepassword):
+    if isinstance(rolepassword, six.string_types) and bool(rolepassword):
         escaped_password = '{0!r}'.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),

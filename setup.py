@@ -103,10 +103,10 @@ except ImportError:
 
 SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py')
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
-SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), '_requirements.txt')
-SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'zeromq-requirements.txt')
-SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'cloud-requirements.txt')
-SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'raet-requirements.txt')
+SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
+SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
+SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'cloud.txt')
+SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 
 # Salt SSH Packaging Detection
 PACKAGED_FOR_SALT_SSH_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), '.salt-ssh-package')
@@ -137,6 +137,7 @@ def _parse_requirements_file(requirements_file):
 class WriteSaltVersion(Command):
 
     description = 'Write salt\'s hardcoded version file'
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -164,6 +165,7 @@ class WriteSaltVersion(Command):
 class WriteSaltSshPackaingFile(Command):
 
     description = 'Write salt\'s ssh packaging file'
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -188,7 +190,7 @@ class Sdist(sdist):
     def make_release_tree(self, base_dir, files):
         if self.distribution.ssh_packaging:
             self.distribution.salt_ssh_packaging_file = PACKAGED_FOR_SALT_SSH_FILE
-            self.run_command('write-salt-ssh-packaging-file')
+            self.run_command('write_salt_ssh_packaging_file')
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
         sdist.make_release_tree(self, base_dir, files)
@@ -198,7 +200,7 @@ class Sdist(sdist):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             base_dir, 'salt', '_version.py'
         )
-        self.run_command('write-salt-version')
+        self.run_command('write_salt_version')
 
     def make_distribution(self):
         sdist.make_distribution(self)
@@ -385,7 +387,7 @@ class Build(build):
             # ahead and write our install time python modules.
 
             # Write the hardcoded salt version module salt/_version.py
-            self.run_command('write-salt-version')
+            self.run_command('write_salt_version')
 
             # Write the system paths file
             system_paths_file_path = os.path.join(
@@ -605,8 +607,8 @@ class SaltDistribution(distutils.dist.Distribution):
                               'build': Build,
                               'sdist': Sdist,
                               'install': Install,
-                              'write-salt-version': WriteSaltVersion,
-                              'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
+                              'write_salt_version': WriteSaltVersion,
+                              'write_salt_ssh_packaging_file': WriteSaltSshPackaingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
@@ -645,7 +647,7 @@ class SaltDistribution(distutils.dist.Distribution):
             modules.append(os.path.relpath(root, SETUP_DIRNAME).replace(os.sep, '.'))
         return modules
 
-    # ----- Static Data ---------------------------------------------------------------------------------------------
+    # ----- Static Data -------------------------------------------------------------------------------------------->
     @property
     def _property_classifiers(self):
         return ['Programming Language :: Python',

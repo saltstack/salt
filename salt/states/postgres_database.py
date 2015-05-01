@@ -27,6 +27,7 @@ def present(name,
             lc_collate=None,
             lc_ctype=None,
             owner=None,
+            owner_recurse=False,
             template=None,
             user=None,
             maintenance_db=None,
@@ -55,6 +56,9 @@ def present(name,
 
     owner
         The username of the database owner
+
+    owner_recurse
+        Recurse owner change to all relations in the database
 
     template
         The template database from which to build this database
@@ -139,7 +143,7 @@ def present(name,
         name in dbs and __salt__['postgres.db_alter'](
             name,
             tablespace=tablespace,
-            owner=owner, **db_args)
+            owner=owner, owner_recurse=owner_recurse, **db_args)
     ):
         ret['comment'] = ('Parameters for database {0} have been changed'
                           ).format(name)
@@ -169,7 +173,7 @@ def absent(name,
         The name of the database to remove
 
     db_user
-        database username if different from config or defaul
+        database username if different from config or default
 
     db_password
         user password if any password for a specified user

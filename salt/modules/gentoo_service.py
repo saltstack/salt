@@ -4,6 +4,9 @@ Top level package command wrapper, used to translate the os detected by grains
 to the correct service manager
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Define the module's virtual name
 __virtualname__ = 'service'
 

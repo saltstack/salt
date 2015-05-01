@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import textwrap
@@ -83,7 +84,7 @@ class CMDModuleTest(integration.ModuleCase):
 
         from salt.modules import cmdmod
 
-        cmdmod.__grains__ = {'os': 'darwin'}
+        cmdmod.__grains__ = {'os': 'Darwin', 'os_family': 'Solaris'}
         if sys.platform.startswith(('freebsd', 'openbsd')):
             shell = '/bin/sh'
         else:

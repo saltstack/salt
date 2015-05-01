@@ -234,6 +234,8 @@ Default: :file:`/var/cache/salt`
 The location used to store cache information, particularly the job information
 for executed salt commands.
 
+This directory may contain sensitive data and should be protected accordingly.
+
 .. code-block:: yaml
 
     cachedir: /var/cache/salt
@@ -1830,6 +1832,8 @@ configuration is the same as :conf_master:`file_roots`:
 ``ext_pillar``
 --------------
 
+.. _master-configuration-ext-pillar:
+
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
 functions. The available ext_pillar functions can be found herein:
@@ -2187,7 +2191,8 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly 
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 

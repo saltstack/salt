@@ -2,9 +2,9 @@
 '''
 Return/control aspects of the grains data
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import collections
 import math
 
@@ -12,6 +12,9 @@ import math
 import salt.utils
 import salt.utils.dictupdate
 from salt.exceptions import SaltException
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Seed the grains dict so cython will build
 __grains__ = {}
@@ -84,7 +87,7 @@ def items(sanitize=False):
     '''
     if salt.utils.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in _SANITIZERS.items():
+        for key, func in six.iteritems(_SANITIZERS):
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -116,7 +119,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.is_true(kwargs.get('sanitize')):
-        for arg, func in _SANITIZERS.items():
+        for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret

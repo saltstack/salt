@@ -18,13 +18,16 @@ import collections
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
-import integration
-
 ensure_in_syspath('../../')
 
+import tests.integration
+
 # Import Salt libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
+from salt.ext.six.moves import range
 from salt.config import minion_config
+# pylint: enable=no-name-in-module,redefined-builtin
 
 from salt.loader import LazyLoader, _module_dirs
 
@@ -183,7 +186,7 @@ class LazyLoaderReloadingTest(TestCase):
 
     def setUp(self):
         self.opts = _config = minion_config(None)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
 
         self.count = 0
 
@@ -307,7 +310,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
 
     def setUp(self):
         self.opts = _config = minion_config(None)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
         os.makedirs(self.module_dir)
 
         self.count = 0
@@ -450,7 +453,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
     def setUp(self):
         self.opts = _config = minion_config(None)
-        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
         os.makedirs(self.module_dir)
 
         self.lib_count = collections.defaultdict(int)  # mapping of path -> count

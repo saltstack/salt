@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 from contextlib import contextmanager
+
+# Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 

@@ -61,7 +61,8 @@ pygit2_ website has installation instructions here__. Keep in mind however that
 following these instructions will install libgit2 and pygit2_ without system
 packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
-libraries to be present before libgit2 is built.
+libraries to be present before libgit2 is built. On some distros (debian based)
+``pkg-config`` is also required to link libgit2 with libssh2.
 
 .. __: http://www.pygit2.org/install.html
 .. _libssh2: http://www.libssh2.org/
@@ -424,7 +425,7 @@ master, each configured git remote will be searched.
 
 
 Branches, Environments, and Top Files
-====================================
+=====================================
 
 When using the gitfs backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
@@ -443,8 +444,8 @@ be used:
 
 ``top.sls`` files from different branches will be merged into one at runtime.
 Since this can lead to overly complex configurations, the recommended setup is
-to have the ``top.sls`` file only in the master branch and use
-environment-specific branches for state definitions.
+to have a separate repository, containing only the ``top.sls`` file with just
+one single ``master`` branch.
 
 To map a branch other than ``master`` as the ``base`` environment, use the
 :conf_master:`gitfs_base` parameter.

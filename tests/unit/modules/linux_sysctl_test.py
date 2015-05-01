@@ -3,6 +3,9 @@
     :codeauthor: :email:`jmoney <justin@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.modules import linux_sysctl
 from salt.modules import systemd

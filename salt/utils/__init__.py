@@ -31,6 +31,8 @@ import types
 import warnings
 import string
 import locale
+
+# Import 3rd-party libs
 import salt.ext.six as six
 # pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
@@ -40,6 +42,7 @@ from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
 from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
+
 # Try to load pwd, fallback to getpass if unsuccessful
 try:
     import pwd
@@ -108,34 +111,13 @@ import salt.defaults.exitcodes
 import salt.log
 import salt.version
 from salt.utils.decorators import memoize as real_memoize
+from salt.textformat import TextFormat
 from salt.exceptions import (
     CommandExecutionError, SaltClientError,
     CommandNotFoundError, SaltSystemExit,
     SaltInvocationError
 )
 
-
-# Do not use these color declarations, use get_colors()
-# These color declarations will be removed in the future
-BLACK = '\033[0;30m'
-DARK_GRAY = '\033[1;30m'
-LIGHT_GRAY = '\033[0;37m'
-BLUE = '\033[0;34m'
-LIGHT_BLUE = '\033[1;34m'
-GREEN = '\033[0;32m'
-LIGHT_GREEN = '\033[1;32m'
-CYAN = '\033[0;36m'
-LIGHT_CYAN = '\033[1;36m'
-RED = '\033[0;31m'
-LIGHT_RED = '\033[1;31m'
-PURPLE = '\033[0;35m'
-LIGHT_PURPLE = '\033[1;35m'
-BROWN = '\033[0;33m'
-YELLOW = '\033[1;33m'
-WHITE = '\033[1;37m'
-DEFAULT_COLOR = '\033[00m'
-RED_BOLD = '\033[01;31m'
-ENDC = '\033[0m'
 
 log = logging.getLogger(__name__)
 _empty = object()
@@ -162,32 +144,64 @@ def is_empty(filename):
         return False
 
 
-def get_colors(use=True):
+def get_color_theme(theme):
     '''
-    Return the colors as an easy to use dict, pass False to return the colors
-    as empty strings so that they will not be applied
+    Return the color theme to use
     '''
+    # Keep the heavy lifting out of the module space
+    import yaml
+    if not os.path.isfile(theme):
+        log.warning('The named theme {0} if not available'.format(theme))
+    try:
+        with fopen(theme, 'rb') as fp_:
+            colors = yaml.safe_load(fp_.read())
+            ret = {}
+            for color in colors:
+                ret[color] = '\033[{0}m'.format(colors[color])
+            if not isinstance(colors, dict):
+                log.warning('The theme file {0} is not a dict'.format(theme))
+                return {}
+            return ret
+    except Exception:
+        log.warning('Failed to read the color theme {0}'.format(theme))
+        return {}
+
+
+def get_colors(use=True, theme=None):
+    '''
+    Return the colors as an easy to use dict.  Pass `False` to deactivate all
+    colors by setting them to empty strings.  Pass a string containing only the
+    name of a single color to be used in place of all colors.  Examples:
+
+    .. code-block:: python
+
+        colors = get_colors()  # enable all colors
+        no_colors = get_colors(False)  # disable all colors
+        red_colors = get_colors('RED')  # set all colors to red
+    '''
+
     colors = {
-        'BLACK': '\033[0;30m',
-        'DARK_GRAY': '\033[1;30m',
-        'LIGHT_GRAY': '\033[0;37m',
-        'BLUE': '\033[0;34m',
-        'LIGHT_BLUE': '\033[1;34m',
-        'GREEN': '\033[0;32m',
-        'LIGHT_GREEN': '\033[1;32m',
-        'CYAN': '\033[0;36m',
-        'LIGHT_CYAN': '\033[1;36m',
-        'RED': '\033[0;31m',
-        'LIGHT_RED': '\033[1;31m',
-        'PURPLE': '\033[0;35m',
-        'LIGHT_PURPLE': '\033[1;35m',
-        'BROWN': '\033[0;33m',
-        'YELLOW': '\033[1;33m',
-        'WHITE': '\033[1;37m',
-        'DEFAULT_COLOR': '\033[00m',
-        'RED_BOLD': '\033[01;31m',
-        'ENDC': '\033[0m',
+        'BLACK': TextFormat('black'),
+        'DARK_GRAY': TextFormat('bold', 'black'),
+        'RED': TextFormat('red'),
+        'LIGHT_RED': TextFormat('bold', 'red'),
+        'GREEN': TextFormat('green'),
+        'LIGHT_GREEN': TextFormat('bold', 'green'),
+        'YELLOW': TextFormat('yellow'),
+        'LIGHT_YELLOW': TextFormat('bold', 'yellow'),
+        'BLUE': TextFormat('blue'),
+        'LIGHT_BLUE': TextFormat('bold', 'blue'),
+        'MAGENTA': TextFormat('magenta'),
+        'LIGHT_MAGENTA': TextFormat('bold', 'magenta'),
+        'CYAN': TextFormat('cyan'),
+        'LIGHT_CYAN': TextFormat('bold', 'cyan'),
+        'LIGHT_GRAY': TextFormat('white'),
+        'WHITE': TextFormat('bold', 'white'),
+        'DEFAULT_COLOR': TextFormat('default'),
+        'ENDC': TextFormat('reset'),
     }
+    if theme:
+        colors.update(get_color_theme(theme))
 
     if not use:
         for color in colors:
@@ -196,6 +210,9 @@ def get_colors(use=True):
         # Try to set all of the colors to the passed color
         if use in colors:
             for color in colors:
+                # except for color reset
+                if color == 'ENDC':
+                    continue
                 colors[color] = colors[use]
 
     return colors
@@ -658,6 +675,7 @@ def backup_minion(path, bkroot):
     shutil.copyfile(path, bkpath)
     if not salt.utils.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
+        os.chmod(bkpath, fstat.st_mode)
 
 
 def path_join(*parts):
@@ -822,7 +840,7 @@ def format_call(fun,
     if aspec.keywords:
         # The function accepts **kwargs, any non expected extra keyword
         # arguments will made available.
-        for key, value in data.items():
+        for key, value in six.iteritems(data):
             if key in expected_extra_kws:
                 continue
             ret['kwargs'][key] = value
@@ -834,7 +852,7 @@ def format_call(fun,
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
     extra = {}
-    for key, value in data.items():
+    for key, value in six.iteritems(data):
         if key in expected_extra_kws:
             continue
         extra[key] = copy.deepcopy(value)
@@ -1307,7 +1325,7 @@ def clean_kwargs(**kwargs):
     passing the kwargs forward wholesale.
     '''
     ret = {}
-    for key, val in list(kwargs.items()):
+    for key, val in six.iteritems(kwargs):
         if not key.startswith('__pub'):
             ret[key] = val
     return ret
@@ -1462,7 +1480,7 @@ def check_state_result(running):
         return False
 
     ret = True
-    for state_result in running.values():
+    for state_result in six.itervalues(running):
         if not isinstance(state_result, dict):
             # return false when hosts return a list instead of a dict
             ret = False
@@ -1489,7 +1507,7 @@ def test_mode(**kwargs):
     "Test" in any variation on capitalization (i.e. "TEST", "Test", "TeSt",
     etc) contains a True value (as determined by salt.utils.is_true).
     '''
-    for arg, value in kwargs.items():
+    for arg, value in six.iteritems(kwargs):
         try:
             if arg.lower() == 'test' and is_true(value):
                 return True
@@ -1524,6 +1542,19 @@ def is_true(value=None):
         return str(value).lower() == 'true'
     else:
         return bool(value)
+
+
+def exactly_n(l, n=1):
+    '''
+    Tests that exactly N items in an iterable are "truthy" (neither None,
+    False, nor 0).
+    '''
+    i = iter(l)
+    return all(any(i) for j in range(n)) and not any(i)
+
+
+def exactly_one(l):
+    return exactly_n(l)
 
 
 def rm_rf(path):
@@ -1772,7 +1803,7 @@ def date_cast(date):
                 date = float(date)
 
         return datetime.datetime.fromtimestamp(date)
-    except Exception as e:
+    except Exception:
         if HAS_TIMELIB:
             raise ValueError('Unable to parse {0}'.format(date))
 
@@ -1973,6 +2004,7 @@ def version_cmp(pkg1, pkg2):
     making the comparison.
     '''
     try:
+        # pylint: disable=no-member
         if distutils.version.LooseVersion(pkg1) < \
                 distutils.version.LooseVersion(pkg2):
             return -1
@@ -1982,8 +2014,9 @@ def version_cmp(pkg1, pkg2):
         elif distutils.version.LooseVersion(pkg1) > \
                 distutils.version.LooseVersion(pkg2):
             return 1
-    except Exception as e:
-        log.exception(e)
+        # pylint: disable=no-member
+    except Exception as exc:
+        log.exception(exc)
     return None
 
 
@@ -2110,7 +2143,7 @@ def decode_dict(data):
     JSON decodes as unicode, Jinja needs bytes...
     '''
     rv = {}
-    for key, value in data.items():
+    for key, value in six.iteritems(data):
         if isinstance(key, six.text_type):
             key = key.encode('utf-8')
         if isinstance(value, six.text_type):
@@ -2174,6 +2207,22 @@ def is_bin_str(data):
     # If more than 30% non-text characters, then
     # this is considered a binary file
     if len(text) / len(data) > 0.30:
+        return True
+    return False
+
+
+def is_dictlist(data):
+    '''
+    Returns True if data is a list of one-element dicts (as found in many SLS
+    schemas), otherwise returns False
+    '''
+    if isinstance(data, list):
+        for element in data:
+            if isinstance(element, dict):
+                if len(element) != 1:
+                    return False
+            else:
+                return False
         return True
     return False
 
@@ -2293,7 +2342,10 @@ def get_gid_list(user=None, include_default=True):
         # We don't work on platforms that don't have grp and pwd
         # Just return an empty list
         return []
-    gid_list = [gid for (group, gid) in list(salt.utils.get_group_dict(user, include_default=include_default).items())]
+    gid_list = [
+            gid for (group, gid) in
+            six.iteritems(salt.utils.get_group_dict(user, include_default=include_default))
+    ]
     return sorted(set(gid_list))
 
 
@@ -2347,7 +2399,7 @@ def chugid(runas):
     # this does not appear to be strictly true.
     group_list = get_group_dict(runas, include_default=True)
     if sys.platform == 'darwin':
-        group_list = dict((k, v) for k, v in group_list.items()
+        group_list = dict((k, v) for k, v in six.iteritems(group_list)
                           if not k.startswith('_'))
     for group_name in group_list:
         gid = group_list[group_name]
@@ -2475,3 +2527,20 @@ def relpath(path, start='.'):
         return os.path.join(*rel_list)
 
     return os.path.relpath(path, start=start)
+
+
+def human_size_to_bytes(human_size):
+    '''
+    Convert human-readable units to bytes
+    '''
+    size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
+    human_size_str = str(human_size)
+    match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
+    if not match:
+        raise ValueError(
+            'Size must be all digits, with an optional unit type '
+            '(K, M, G, T, or P)'
+        )
+    size_num = int(match.group(1))
+    unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
+    return size_num * unit_multiplier

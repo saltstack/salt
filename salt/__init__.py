@@ -2,7 +2,9 @@
 '''
 Salt package
 '''
-# Import Python Libs
+
+# Import Python libs
+from __future__ import absolute_import
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
@@ -52,7 +54,7 @@ def __define_global_system_encoding_variable__():
     # than expected. See:
     #    https://github.com/saltstack/salt/issues/21036
     if sys.version_info[0] < 3:
-        import __builtin__ as builtins
+        import __builtin__ as builtins  # pylint: disable=incompatible-py3-code
     else:
         import builtins  # pylint: disable=import-error
 

@@ -54,7 +54,7 @@ try:
     HAS_SOFTWAREPROPERTIES = True
 except ImportError:
     HAS_SOFTWAREPROPERTIES = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -473,7 +473,7 @@ def install(name=None,
             refreshdb = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
-                    _name = next(pkg.iterkeys())
+                    _name = next(six.iterkeys(pkg))
                     _latest_version = latest_version(_name, refresh=False, show_installed=True)
                     _version = pkg[_name]
                     # If the versions don't match, refresh is True, otherwise no need to refresh
@@ -1035,7 +1035,7 @@ def list_pkgs(versions_as_list=False,
     return ret
 
 
-def _get_upgradable():
+def _get_upgradable(dist_upgrade=True):
     '''
     Utility function to get upgradable packages
 
@@ -1043,8 +1043,12 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'apt-get --just-print dist-upgrade'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['apt-get', '--just-print']
+    if dist_upgrade:
+        cmd.append('dist-upgrade')
+    else:
+        cmd.append('upgrade')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -1077,9 +1081,17 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, dist_upgrade=True):
     '''
     List all available package upgrades.
+
+    refresh
+        Whether to refresh the package database before listing upgrades.
+        Default: True.
+
+    dist_upgrade
+        Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
+        to use dist-upgrade.
 
     CLI Example:
 
@@ -1089,7 +1101,7 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    return _get_upgradable()
+    return _get_upgradable(dist_upgrade)
 
 
 def upgrade_available(name):
@@ -1223,7 +1235,7 @@ def get_repo(repo, **kwargs):
     ppa_auth = kwargs.get('ppa_auth', None)
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
-    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         dist = __grains__['lsb_distrib_codename']
@@ -1296,7 +1308,7 @@ def del_repo(repo, **kwargs):
     '''
     _check_apt()
     is_ppa = False
-    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
@@ -1323,8 +1335,10 @@ def del_repo(repo, **kwargs):
         try:
             repo_type, repo_uri, repo_dist, repo_comps = _split_repo_str(repo)
         except SyntaxError:
-            error_str = 'Error: repo {0!r} not a well formatted definition'
-            return error_str.format(repo)
+            raise SaltInvocationError(
+                'Error: repo \'{0}\' not a well formatted definition'
+                .format(repo)
+            )
 
         for source in repos:
             if (source.type == repo_type and source.uri == repo_uri and
@@ -1340,8 +1354,9 @@ def del_repo(repo, **kwargs):
                             sources.remove(source)
                         except ValueError:
                             pass
-            # PPAs are special and can add deb-src where expand_ppa_line doesn't
-            # always reflect this.  Lets just cleanup here for good measure
+            # PPAs are special and can add deb-src where expand_ppa_line
+            # doesn't always reflect this.  Lets just cleanup here for good
+            # measure
             if (is_ppa and repo_type == 'deb' and source.type == 'deb-src' and
                     source.uri == repo_uri and source.dist == repo_dist):
 
@@ -1362,11 +1377,11 @@ def del_repo(repo, **kwargs):
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
             for repo_file, count in six.iteritems(deleted_from):
-                msg = 'Repo {0!r} has been removed from {1}.\n'
+                msg = 'Repo \'{0}\' has been removed from {1}.\n'
                 if count == 0 and 'sources.list.d/' in repo_file:
                     if os.path.isfile(repo_file):
-                        msg = ('File {1} containing repo {0!r} has been '
-                               'removed.\n')
+                        msg = ('File {1} containing repo \'{0}\' has been '
+                               'removed.')
                         try:
                             os.remove(repo_file)
                         except OSError:
@@ -1376,7 +1391,65 @@ def del_repo(repo, **kwargs):
             refresh_db()
             return ret
 
-    return "Repo {0} doesn't exist in the sources.list(s)".format(repo)
+    raise CommandExecutionError(
+        'Repo {0} doesn\'t exist in the sources.list(s)'.format(repo)
+    )
+
+
+def del_repo_key(name=None, **kwargs):
+    '''
+    .. versionadded:: Beryllium
+
+    Remove a repo key using ``apt-key del``
+
+    name
+        Repo from which to remove the key. Unnecessary if ``keyid`` is passed.
+
+    keyid
+        The KeyID of the GPG key to remove
+
+    keyid_ppa : False
+        If set to ``True``, the repo's GPG key ID will be looked up from
+        ppa.launchpad.net and removed.
+
+        .. note::
+
+            Setting this option to ``True`` requires that the ``name`` param
+            also be passed.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.del_repo_key keyid=0123ABCD
+        salt '*' pkg.del_repo_key name='ppa:foo/bar' keyid_ppa=True
+    '''
+    if kwargs.get('keyid_ppa', False):
+        if isinstance(name, six.string_types) and name.startswith('ppa:'):
+            owner_name, ppa_name = name[4:].split('/')
+            ppa_info = _get_ppa_info_from_launchpad(
+                owner_name, ppa_name)
+            keyid = ppa_info['signing_key_fingerprint']
+        else:
+            raise SaltInvocationError(
+                'keyid_ppa requires that a PPA be passed'
+            )
+    else:
+        if 'keyid' in kwargs:
+            keyid = kwargs.get('keyid')
+        else:
+            raise SaltInvocationError(
+                'keyid or keyid_ppa and PPA name must be passed'
+            )
+
+    cmd = ['apt-key', 'del', keyid]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if result['retcode'] != 0:
+        msg = 'Failed to remove keyid {0}'
+        if result['stderr']:
+            msg += ': {0}'.format(result['stderr'])
+        raise CommandExecutionError(msg)
+    return keyid
 
 
 def mod_repo(repo, saltenv='base', **kwargs):
@@ -1411,7 +1484,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     if repo.startswith('ppa:'):
-        if __grains__['os'] == 'Ubuntu':
+        if __grains__['os'] in ('Ubuntu', 'Mint'):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
@@ -1611,23 +1684,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
             mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
 
-    # if all comps aren't part of the disable
-    # match, it is important we keep the comps
-    # not destined to be disabled/enabled in
-    # the original state
-    if ('disabled' in kwargs and
-            mod_source.disabled != kwargs['disabled']):
-
-        s_comps = set(mod_source.comps)
-        r_comps = set(repo_comps)
-        if s_comps.symmetric_difference(r_comps):
-            new_source = sourceslist.SourceEntry(source.line)
-            new_source.file = source.file
-            new_source.comps = list(r_comps.difference(s_comps))
-            source.comps = list(s_comps.difference(r_comps))
-            sources.insert(sources.index(source), new_source)
-            sources.save()
-
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
@@ -1706,7 +1762,7 @@ def expand_repo_def(repokwargs):
 
     sanitized = {}
     repo = _strip_uri(repokwargs['repo'])
-    if repo.startswith('ppa:') and __grains__['os'] == 'Ubuntu':
+    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
         if 'ppa_auth' in repokwargs:
@@ -1971,6 +2027,8 @@ def owner(*paths):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     '''
@@ -1985,5 +2043,5 @@ def owner(*paths):
         if 'no path found' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
-        return next(ret.itervalues())
+        return next(six.itervalues(ret))
     return ret

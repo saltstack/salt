@@ -164,7 +164,29 @@ The user to run the Salt processes
 
     user: root
 
+.. conf_minion:: sudo_runas
+
+``sudo_runas``
+--------------
+
+Default: None
+
+The user to run salt remote execution commands as via sudo. If this option is
+enabled then sudo will be used to change the active user executing the remote
+command. If enabled the user will need to be allowed access via the sudoers file
+for the user that the salt minion is configured to run as. The most common
+option would be to use the root user. If this option is set the ``user`` option
+should also be set to a non-root user. If migrating from a root minion to a non
+root minion the minion cache should be cleared and the minion pki directory will
+need to be changed to the ownership of the new user.
+
+.. code-block:: yaml
+
+    sudo_user: root
+
+
 .. conf_minion:: pidfile
+
 
 ``pidfile``
 -----------
@@ -248,6 +270,8 @@ FQDN (for instance, Solaris).
 Default: ``/var/cache/salt``
 
 The location for minion cache data.
+
+This directory may contain sensitive data and should be protected accordingly.
 
 .. code-block:: yaml
 
@@ -968,7 +992,8 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 

@@ -30,6 +30,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
@@ -46,6 +47,7 @@ if HAS_PIP is True:
         del pip
         if 'pip' in sys.modules:
             del sys.modules['pip']
+# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
@@ -455,6 +457,24 @@ def installed(name,
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
 
+
+    .. admonition:: Attention
+
+        Please set ``reload_modules: True`` to have the salt minion
+        import this module after installation.
+
+
+    Example:
+
+    .. code-block:: yaml
+
+        pyopenssl:
+            pip.installed:
+                - name: pyOpenSSL
+                - reload_modules: True
+                - exists_action: i
+
+
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
 
@@ -517,9 +537,9 @@ def installed(name,
         name = repo
 
     # Get the packages parsed name and version from the pip library.
-    # This only is done when there is no requirements parameter.
+    # This only is done when there is no requirements or editable parameter.
     pkgs_details = []
-    if pkgs and not requirements:
+    if pkgs and not (requirements or editable):
         comments = []
         for pkg in iter(pkgs):
             out = _check_pkg_version_format(pkg)
@@ -683,12 +703,11 @@ def installed(name,
                     # If we didnt find the package in the system after
                     # installing it report it
                     if not pipsearch:
-                        msg = (
+                        pkg_404_comms.append(
                             'There was no error installing package \'{0}\' '
                             'although it does not show when calling '
                             '\'pip.freeze\'.'.format(pkg)
                         )
-                        pkg_404_comms.append(msg)
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
                         ver = pipsearch[pkg_name]

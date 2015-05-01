@@ -7,6 +7,11 @@ External Authentication System
 Salt's External Authentication System (eAuth) allows for Salt to  pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
+.. note::
+
+    eAuth using the PAM external auth system requires salt-master to be run as 
+    root as this system needs root access to check authentication.
+
 Access Control System
 ---------------------
 
@@ -89,7 +94,7 @@ adding a ``-T`` option when authenticating:
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of 12 hours (by default).
-This token is stored in a file named ``.salt_token`` in the active user's home
+This token is stored in a file named ``salt_token`` in the active user's home
 directory.
 
 Once the token is created, it is sent with all subsequent communications.
@@ -100,6 +105,10 @@ Token expiration time can be set in the Salt master config file.
 
 LDAP and Active Directory
 -------------------------
+
+.. note::
+
+    LDAP usage requires that you have installed python-ldap.
 
 Salt supports both user and group authentication for LDAP (and Active Directory
 accessed via its LDAP interface)

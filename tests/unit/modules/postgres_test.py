@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+from mock import call
+import re
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
-import re
-
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -69,12 +69,39 @@ class PostgresTestCase(TestCase):
                           tablespace='testspace',
                           owner='otheruser',
                           runas='foo')
-        postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
-            '--host testhost --port testport --dbname maint_db '
-            '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
-            host='testhost', user='testuser',
-            password='foo', runas='foo', port='testport')
+        postgres._run_psql.assert_has_calls([
+            call('/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
+                 '--host testhost --port testport --dbname maint_db '
+                 '-c \'ALTER DATABASE "dbname" OWNER TO "otheruser"\'',
+                 host='testhost', user='testuser',
+                 password='foo', runas='foo', port='testport'),
+            call('/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
+                 '--host testhost --port testport --dbname maint_db '
+                 '-c \'ALTER DATABASE "dbname" SET TABLESPACE "testspace"\'',
+                 host='testhost', user='testuser',
+                 password='foo', runas='foo', port='testport')
+        ])
+
+    @patch('salt.modules.postgres.owner_to',
+           Mock(return_value={'retcode': None}))
+    def test_db_alter_owner_recurse(self):
+        postgres.db_alter('dbname',
+                          user='testuser',
+                          host='testhost',
+                          port='testport',
+                          maintenance_db='maint_db',
+                          password='foo',
+                          tablespace='testspace',
+                          owner='otheruser',
+                          owner_recurse=True,
+                          runas='foo')
+        postgres.owner_to.assert_called_once_with('dbname',
+                                                  'otheruser',
+                                                  user='testuser',
+                                                  host='testhost',
+                                                  port='testport',
+                                                  password='foo',
+                                                  runas='foo')
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': None}))
@@ -341,6 +368,7 @@ class PostgresTestCase(TestCase):
                           'expiry time': None,
                           'can login': True,
                           'can update system catalogs': True,
+                          'groups': [],
                           'inherits privileges': True}})
 
     @patch('salt.modules.postgres._run_psql',

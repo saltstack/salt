@@ -61,7 +61,7 @@ This makes 21 new developers since 0.9.4 was released!
 
 To keep up with the growing community follow Salt on Ohloh
 (http://www.ohloh.net/p/salt), to join the Salt development community, fork
-Salt on Github, and get coding (https://github.com/saltstack/salt)!
+Salt on GitHub, and get coding (https://github.com/saltstack/salt)!
 
 Major Features
 ==============

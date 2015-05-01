@@ -225,8 +225,8 @@ def _check_rule(rule, _rule):
     but may be functionally equivalent.
     '''
     if (rule['ip_protocol'] == _rule['ip_protocol'] and
-            rule['from_port'] == _rule['from_port'] and
-            rule['to_port'] == _rule['to_port']):
+            str(rule['from_port']) == str(_rule['from_port']) and
+            str(rule['to_port']) == str(_rule['to_port'])):
         _cidr_ip = _rule.get('cidr_ip')
         if _cidr_ip and _cidr_ip == rule.get('cidr_ip'):
             return True

@@ -10,6 +10,7 @@
 
 # pylint: disable=file-perms
 
+from __future__ import absolute_import
 import errno
 import glob
 import logging

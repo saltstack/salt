@@ -2,9 +2,9 @@
 '''
 Control the state system on the minion
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import json
 import copy
@@ -12,7 +12,6 @@ import shutil
 import time
 import logging
 import tarfile
-import datetime
 import tempfile
 
 # Import salt libs
@@ -21,9 +20,10 @@ import salt.utils
 import salt.utils.jid
 import salt.state
 import salt.payload
-from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
@@ -52,7 +52,7 @@ def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = dict((tag, value) for tag, value in runnings.items()
+    ret = dict((tag, value) for tag, value in six.iteritems(runnings)
                if not value['result'] or value['changes'])
     return ret
 
@@ -85,7 +85,7 @@ def _wait(jid):
     Wait for all previously started state jobs to finish running
     '''
     if jid is None:
-        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        jid = salt.utils.jid.gen_jid()
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
@@ -650,7 +650,7 @@ def sls(mods,
                 high_ = serial.load(fp_)
                 return st_.state.call_high(high_)
 
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         mods = mods.split(',')
 
     st_.push_active()
@@ -840,7 +840,7 @@ def sls_id(
     else:
         opts['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
     st_.push_active()
     try:
@@ -902,7 +902,7 @@ def show_low_sls(mods,
     else:
         opts['test'] = __opts__.get('test', None)
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         mods = mods.split(',')
     st_.push_active()
     try:
@@ -963,7 +963,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         )
 
     st_ = salt.state.HighState(opts, pillar)
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         mods = mods.split(',')
     st_.push_active()
     try:
@@ -1173,7 +1173,7 @@ def disable(states):
         'msg': ''
     }
 
-    if isinstance(states, string_types):
+    if isinstance(states, six.string_types):
         states = states.split(',')
 
     msg = []
@@ -1225,7 +1225,7 @@ def enable(states):
         'msg': ''
     }
 
-    if isinstance(states, string_types):
+    if isinstance(states, six.string_types):
         states = states.split(',')
     log.debug("states {0}".format(states))
 

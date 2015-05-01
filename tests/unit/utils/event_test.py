@@ -8,10 +8,16 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import hashlib
 import time
+from tornado.testing import AsyncTestCase
 import zmq
+import zmq.eventloop.ioloop
+# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 from contextlib import contextmanager
 from multiprocessing import Process
 
@@ -25,6 +31,9 @@ ensure_in_syspath('../../')
 import integration
 from salt.utils.process import clean_proc
 from salt.utils import event
+
+# Import 3rd-+arty libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
@@ -251,7 +260,7 @@ class TestSaltEvent(TestCase):
             # Fire events again
             me.fire_event({'data': 'foo3'}, 'evt3')
             me.fire_event({'data': 'foo4'}, 'evt4')
-            # We not force unrelated pending events not to be dropped, so both of the event bellow work and are not
+            # We not force unrelated pending events not to be dropped, so both of the event below work and are not
             # None
             evt2 = me.get_event(tag='evt4', use_pending=True)
             evt1 = me.get_event(tag='evt3', use_pending=True)
@@ -277,7 +286,7 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
-            for i in xrange(500):
+            for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
@@ -288,12 +297,51 @@ class TestSaltEvent(TestCase):
             me = event.MasterEvent(SOCK_DIR)
             me.subscribe()
             # Must not exceed zmq HWM
-            for i in xrange(500):
+            for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
-            for i in xrange(500):
+            for i in range(500):
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
+    # Test the fire_master function. As it wraps the underlying fire_event,
+    # we don't need to perform extensive testing.
+    def test_send_master_event(self):
+        '''Tests that sending an event through fire_master generates expected event'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR)
+            me.subscribe()
+            data = {'data': 'foo1'}
+            me.fire_master(data, 'test_master')
+
+            evt = me.get_event(tag='fire_master')
+            self.assertGotEvent(evt, {'data': data, 'tag': 'test_master', 'events': None, 'pretag': None})
+
+
+class TestAsyncEventPublisher(AsyncTestCase):
+    def get_new_ioloop(self):
+        return zmq.eventloop.ioloop.ZMQIOLoop()
+
+    def setUp(self):
+        super(TestAsyncEventPublisher, self).setUp()
+        self.publisher = event.AsyncEventPublisher(
+            {'sock_dir': SOCK_DIR},
+            self._handle_publish,
+            self.io_loop,
+        )
+
+    def _handle_publish(self, raw):
+        self.tag, self.data = event.SaltEvent.unpack(raw)
+        self.stop()
+
+    def test_event_subscription(self):
+        '''Test a single event is received'''
+        me = event.MinionEvent({'sock_dir': SOCK_DIR})
+        me.fire_event({'data': 'foo1'}, 'evt1')
+        self.wait()
+        evt1 = me.get_event(tag='evt1')
+        self.assertEqual(self.tag, 'evt1')
+        self.data.pop('_stamp')  # drop the stamp
+        self.assertEqual(self.data, {'data': 'foo1'})
 
 if __name__ == '__main__':
     from integration import run_tests

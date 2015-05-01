@@ -65,11 +65,10 @@ To use the EC2 cloud module, set up the cloud configuration at
 
 :depends: requests
 '''
-# pylint: disable=E0102
-
-from __future__ import absolute_import
+# pylint: disable=invalid-name,function-redefined
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import stat
@@ -78,22 +77,30 @@ import uuid
 import pprint
 import logging
 import yaml
-
-# Import 3rd-party libs
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import requests
-import salt.ext.six as six
-from salt.ext.six.moves import map, range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
-# pylint: enable=import-error,no-name-in-module
-
 # Import libs for talking to the EC2 API
 import hmac
 import hashlib
 import binascii
 import datetime
 import base64
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import requests
+import salt.ext.six as six
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+# pylint: enable=no-name-in-module
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
@@ -112,17 +119,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
-
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -1096,9 +1092,9 @@ def _request_eip(interface):
     return None
 
 
-def _create_eni(interface):
+def _create_eni_if_necessary(interface):
     '''
-    Create and return an Elastic Interface
+    Create an Elastic Interface if necessary and return a Network Interface Specification
     '''
     params = {'Action': 'DescribeSubnets'}
     subnet_query = aws.query(params,
@@ -1121,8 +1117,7 @@ def _create_eni(interface):
             'No such subnet <{0}>'.format(interface['SubnetId'])
         )
 
-    params = {'Action': 'CreateNetworkInterface',
-              'SubnetId': interface['SubnetId']}
+    params = {'SubnetId': interface['SubnetId']}
 
     for k in ('Description', 'PrivateIpAddress',
               'SecondaryPrivateIpAddressCount'):
@@ -1132,6 +1127,17 @@ def _create_eni(interface):
     for k in ('PrivateIpAddresses', 'SecurityGroupId'):
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
+
+    if 'AssociatePublicIpAddress' in interface:
+        # Associating a public address in a VPC only works when the interface is not
+        # created beforehand, but as a part of the machine creation request.
+        for k in ('DeviceIndex', 'AssociatePublicIpAddress', 'NetworkInterfaceId'):
+            if k in interface:
+                params[k] = interface[k]
+        params['DeleteOnTermination'] = interface.get('delete_interface_on_terminate', True)
+        return params
+
+    params['Action'] = 'CreateNetworkInterface'
 
     result = aws.query(params,
                        return_root=True,
@@ -1329,7 +1335,7 @@ def _param_from_config(key, data):
     param = {}
 
     if isinstance(data, dict):
-        for k, v in data.items():
+        for k, v in six.iteritems(data):
             param.update(_param_from_config('{0}.{1}'.format(key, k), v))
 
     elif isinstance(data, list) or isinstance(data, tuple):
@@ -1339,7 +1345,7 @@ def _param_from_config(key, data):
 
     else:
         if isinstance(data, bool):
-            # convert boolean Trur/False to 'true'/'false'
+            # convert boolean True/False to 'true'/'false'
             param.update({key: str(data).lower()})
         else:
             param.update({key: data})
@@ -1504,7 +1510,7 @@ def request_instance(vm_=None, call=None):
         eni_devices = []
         for interface in network_interfaces:
             log.debug('Create network interface: {0}'.format(interface))
-            _new_eni = _create_eni(interface)
+            _new_eni = _create_eni_if_necessary(interface)
             eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',
                                          eni_devices))
@@ -1776,7 +1782,7 @@ def query_instance(vm_=None, call=None):
 
     attempts = 5
     while attempts > 0:
-        data, requesturl = aws.query(params,  # pylint: disable=W0632
+        data, requesturl = aws.query(params,                # pylint: disable=unbalanced-tuple-unpacking
                                      location=location,
                                      provider=provider,
                                      opts=__opts__,
@@ -1812,7 +1818,7 @@ def query_instance(vm_=None, call=None):
             'An error occurred while creating VM: {0}'.format(data['error'])
         )
 
-    def __query_ip_address(params, url):
+    def __query_ip_address(params, url):  # pylint: disable=W0613
         data = aws.query(params,
                          #requesturl=url,
                          location=location,
@@ -2246,7 +2252,7 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
-    for key, value in salt.utils.cloud.bootstrap(vm_, __opts__).items():
+    for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -3290,7 +3296,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     else:
         params = {'Action': 'DescribeInstances',
                   'InstanceId.1': instance_id}
-        data, requesturl = aws.query(params,  # pylint: disable=W0632
+        data, requesturl = aws.query(params,                    # pylint: disable=unbalanced-tuple-unpacking
                                      return_url=True,
                                      location=get_location(),
                                      provider=get_provider(),
@@ -3384,7 +3390,7 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
 
     r_data = {}
     for d in data[0]:
-        for k, v in d.items():
+        for k, v in six.iteritems(d):
             r_data[k] = v
     volume_id = r_data['volumeId']
 
@@ -3684,7 +3690,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
 
     r_data = {}
     for d in data:
-        for k, v in d.items():
+        for k, v in six.iteritems(d):
             r_data[k] = v
     snapshot_id = r_data['snapshotId']
 
@@ -3872,10 +3878,10 @@ def get_console_output(
                      sigver='4')
 
     for item in data:
-        if next(item.iterkeys()) == 'output':
-            ret['output_decoded'] = binascii.a2b_base64(next(item.itervalues()))
+        if next(six.iterkeys(item)) == 'output':
+            ret['output_decoded'] = binascii.a2b_base64(next(six.itervalues(item)))
         else:
-            ret[next(item.iterkeys())] = next(item.itervalues())
+            ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     return ret
 
@@ -3935,7 +3941,7 @@ def get_password_data(
                      sigver='4')
 
     for item in data:
-        ret[item.keys()[0]] = item.values()[0]
+        ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     if not HAS_PYCRYPTO:
         return ret

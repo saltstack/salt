@@ -3,22 +3,19 @@
 This module contains the function calls to execute command line scripts
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
-import traceback
+import time
 import logging
 import threading
-import time
+import traceback
 from random import randint
 
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
-
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +80,7 @@ def minion_process(queue):
         minion = salt.cli.daemons.Minion()
         minion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.error(exc)
+        log.error('Minion failed to start: ', exc_info=True)
         restart = True
     except SystemExit as exc:
         restart = False
@@ -300,7 +297,8 @@ def salt_cloud():
     try:
         import salt.cloud.cli
         has_saltcloud = True
-    except ImportError:
+    except ImportError as e:
+        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
         has_saltcloud = False
     if '' in sys.path:
