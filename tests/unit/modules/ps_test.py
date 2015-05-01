@@ -79,7 +79,7 @@ class PsTestCase(TestCase):
             MOCK_PROC.name = 'test_mock_proc'
             MOCK_PROC.pid = 9999999999
 
-    @patch('psutil.get_pid_list', new=MagicMock(return_value=STUB_PID_LIST))
+    @patch('psutil.pid_list', new=MagicMock(return_value=STUB_PID_LIST))
     def test_get_pid_list(self):
         self.assertListEqual(STUB_PID_LIST, ps.get_pid_list())
 
@@ -161,7 +161,7 @@ class PsTestCase(TestCase):
             {'read_time': 2000, 'write_bytes': 600, 'read_bytes': 500, 'write_time': 3000, 'read_count': 1000,
              'write_count': 2000}, ps.disk_io_counters())
 
-    @patch('psutil.get_users', new=MagicMock(return_value=[STUB_USER]))
+    @patch('psutil.users', new=MagicMock(return_value=[STUB_USER]))
     def test_get_users(self):
         self.assertDictEqual({'terminal': 'ttys000', 'started': 0.0, 'host': 'localhost', 'name': 'bdobbs'},
                              ps.get_users()[0])
