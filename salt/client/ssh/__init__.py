@@ -561,12 +561,16 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods}
-        self.minion_config = yaml.dump(
-                {
+        minion_config_file = os.path.join(opts.get('config_dir', '/etc/salt'),
+                                          'minion')
+        minion_opts = salt.config.load_config(minion_config_file,
+                                              'SALT_MINION_CONFIG')
+        minion_opts.update({
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
-                }, width=1000).strip()
+                })
+        self.minion_config = yaml.dump(minion_opts, width=1000).strip()
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
