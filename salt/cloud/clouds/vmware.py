@@ -545,7 +545,7 @@ def _manage_devices(devices, vm):
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
-            switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
+            switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
             adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][network_adapter_label])
@@ -1742,7 +1742,7 @@ def create(vm_):
         'template', vm_, __opts__, default=False
     )
     num_cpus = config.get_cloud_config_value(
-        'cpus', vm_, __opts__, default=None
+        'num_cpus', vm_, __opts__, default=None
     )
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
