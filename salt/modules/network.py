@@ -21,6 +21,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
@@ -947,12 +948,14 @@ def is_private(ip_addr):
     Check if the given IP address is a private address
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Beryllium
+        IPv6 support
 
     CLI Example::
 
         salt '*' network.is_private 10.0.0.3
     '''
-    return salt.utils.network.IPv4Address(ip_addr).is_private
+    return ipaddress.ip_address(ip_addr).is_private
 
 
 def is_loopback(ip_addr):
@@ -960,17 +963,22 @@ def is_loopback(ip_addr):
     Check if the given IP address is a loopback address
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Beryllium
+        IPv6 support
 
     CLI Example::
 
         salt '*' network.is_loopback 127.0.0.1
     '''
-    return salt.utils.network.IPv4Address(ip_addr).is_loopback
+    return ipaddress.ip_address(ip_addr).is_loopback
 
 
 def reverse_ip(ip_addr):
     '''
     Returns the reversed IP address
+
+    .. versionchanged:: Beryllium
+        IPv6 support
 
     CLI Example:
 
@@ -978,7 +986,7 @@ def reverse_ip(ip_addr):
 
         salt '*' network.reverse_ip 172.17.0.4
     '''
-    return salt.utils.network.IPv4Address(ip_addr).reverse_pointer
+    return ipaddress.ip_address(ip_addr).reverse_pointer
 
 
 def _get_bufsize_linux(iface):
