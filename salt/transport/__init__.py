@@ -217,7 +217,7 @@ class ZeroMQChannel(Channel):
                         log.debug('Removed obsolete sreq-object from '
                                   'sreq_cache for master {0}'.format(check_key[0]))
 
-            ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri)
+            ZeroMQChannel.sreq_cache[key] = salt.payload.SREQ(self.master_uri, opts=self.opts)
 
         return ZeroMQChannel.sreq_cache[key]
 
