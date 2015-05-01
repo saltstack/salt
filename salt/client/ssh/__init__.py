@@ -561,10 +561,7 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods}
-        minion_config_file = os.path.join(opts.get('config_dir', '/etc/salt'),
-                                          'minion')
-        minion_opts = salt.config.load_config(minion_config_file,
-                                              'SALT_MINION_CONFIG')
+        minion_opts = opts.get('ssh_minion_opts', {})
         minion_opts.update({
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
