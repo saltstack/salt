@@ -97,7 +97,6 @@ MOCK_MODULES = [
     'ClusterShell',
     'ClusterShell.NodeSet',
     'django',
-    'fsutils',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
