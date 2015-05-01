@@ -272,7 +272,7 @@ class NetworkTestCase(TestCase):
         '''
         Test for Check if the given IP address is a private address
         '''
-        with patch.object(salt.utils.network.IPv4Address, 'is_private',
+        with patch.object(salt.ext.ipaddress.IPv4Address, 'is_private',
                           return_value=True):
             self.assertTrue(network.is_private('0.0.0.0'))
 
@@ -280,7 +280,7 @@ class NetworkTestCase(TestCase):
         '''
         Test for Check if the given IP address is a loopback address
         '''
-        with patch.object(salt.utils.network.IPv4Address, 'is_loopback',
+        with patch.object(salt.ext.ipaddress.IPv4Address, 'is_loopback',
                           return_value=False):
             self.assertFalse(network.is_private('0.0.0.0'))
 
