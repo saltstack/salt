@@ -581,8 +581,9 @@ def init(name,
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
 
-            except (IOError, OSError):
-                return False
+            except (IOError, OSError) as e:
+                raise CommandExecutionError('problem copying image. {0} - {1}'.format(image, e))
+
             seedable = True
         else:
             log.error('unsupported hypervisor when handling disk image')
