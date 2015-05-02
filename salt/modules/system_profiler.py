@@ -5,20 +5,22 @@ System Profiler Module
 Interface with Mac OSX's command-line System Profiler utility to get
 information about package receipts and installed applications.
 
+.. versionadded:: 2015.2.0
+
 '''
 
 import plistlib
 import subprocess
-import pprint
-import salt.utils.which
+import salt.utils
 
 PROFILER_BINARY = '/usr/sbin/system_profiler'
+
 
 def __virtual__():
     '''
     Check to see if the system_profiler binary is available
     '''
-    PROFILER_BINARY =  salt.utils.which('system_profiler')
+    PROFILER_BINARY = salt.utils.which('system_profiler')
 
     if PROFILER_BINARY:
         return True
@@ -32,9 +34,12 @@ def _call_system_profiler(datatype):
     of the stuff we are interested in.
     '''
 
-    plist = plistlib.readPlistFromString(subprocess.check_output(
+    p = subprocess.Popen(
         [PROFILER_BINARY, '-detailLevel', 'full',
-         '-xml', datatype]))
+         '-xml', datatype], stdout=subprocess.PIPE)
+    (sysprofresults, sysprof_stderr) = p.communicate(input=None)
+
+    plist = plistlib.readPlistFromString(sysprofresults)
 
     try:
         apps = plist[0]['_items']
@@ -43,9 +48,10 @@ def _call_system_profiler(datatype):
 
     return apps
 
+
 def receipts():
     '''
-    Return the results of a call to 
+    Return the results of a call to
     `system_profiler -xml -detail full
                      SPInstallHistoryDataType`
     as a dictionary.  Top-level keys of the dictionary
@@ -84,9 +90,10 @@ def receipts():
 
     return appdict
 
+
 def applications():
     '''
-    Return the results of a call to 
+    Return the results of a call to
     `system_profiler -xml -detail full
                      SPApplicationsDataType`
     as a dictionary.  Top-level keys of the dictionary
@@ -126,4 +133,3 @@ def applications():
         appdict[a['_name']].append(details)
 
     return appdict
-
