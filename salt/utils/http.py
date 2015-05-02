@@ -53,7 +53,6 @@ import salt.ext.six.moves.urllib as urllib
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
-import cookielib
 import tornado.httputil
 from tornado.httpclient import HTTPClient
 
@@ -712,7 +711,7 @@ def parse_cookie_header(header):
 
         # cookielib.Cookie() requires an epoch
         if 'expires' in cookie:
-            cookie['expires'] = cookielib.http2time(cookie['expires'])
+            cookie['expires'] = salt.ext.six.moves.http_cookiejar.http2time(cookie['expires'])
 
         # Fill in missing required fields
         for req in reqd:
@@ -723,6 +722,6 @@ def parse_cookie_header(header):
         if cookie['rest'] is None:
             cookie['rest'] = {}
 
-        ret.append(cookielib.Cookie(name=name, value=value, **cookie))
+        ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
