@@ -417,33 +417,6 @@ def _error(ret, err_msg):
     return ret
 
 
-def _get_recurse_dest(prefix, fn_, source, env):
-    '''
-    Return the destination path to copy the file path, fn_(as returned by
-    a call to __salt__['cp.cache_dir']), to.
-    '''
-    local_roots = []
-    if __opts__['file_client'] == 'local':
-        local_roots = __opts__['file_roots'][env]
-        local_roots.sort(key=len, reverse=True)
-
-    srcpath = source[7:]  # the path after "salt://"
-
-    # in solo mode (i.e., file_client=='local'), fn_ is a path below
-    # a file root; in remote mode, fn_ is a path below the cache_dir.
-    for root in local_roots:
-        rootlen = len(root)
-        # if root is the longest prefix path of fn_
-        if root == fn_[:rootlen]:
-            cachedir = os.path.join(root, srcpath)
-            break
-    else:
-        cachedir = os.path.join(
-            __opts__['cachedir'], 'files', env, srcpath)
-
-    return os.path.join(prefix, os.path.relpath(fn_, cachedir))
-
-
 def _check_directory(name,
                      user,
                      group,
