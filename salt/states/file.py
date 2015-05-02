@@ -248,6 +248,7 @@ import yaml
 import salt.payload
 import salt.utils
 import salt.utils.templates
+import salt.utils.url
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
@@ -2311,7 +2312,7 @@ def recurse(name,
             manage_directory(dirname)
             vdir.add(dirname)
 
-        src = u'salt://{0}'.format(fn_)
+        src = salt.utils.url.create(fn_)
         manage_file(dest, src)
 
     if include_empty:

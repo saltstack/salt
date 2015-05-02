@@ -30,6 +30,7 @@ import salt.minion
 import salt.pillar
 import salt.fileclient
 import salt.utils.event
+import salt.utils.url
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -2261,7 +2262,7 @@ class BaseHighState(object):
             # An error happened on the master
             opts['renderer'] = 'yaml_jinja'
             opts['failhard'] = False
-            opts['state_top'] = 'salt://top.sls'
+            opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}
             opts['file_roots'] = {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
         else:
@@ -2270,9 +2271,9 @@ class BaseHighState(object):
             if mopts['state_top'].startswith('salt://'):
                 opts['state_top'] = mopts['state_top']
             elif mopts['state_top'].startswith('/'):
-                opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
+                opts['state_top'] = salt.utils.url.create(mopts['state_top'][1:])
             else:
-                opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+                opts['state_top'] = salt.utils.url.create(mopts['state_top'])
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
                 'state_auto_order',

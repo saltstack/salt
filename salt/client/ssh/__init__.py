@@ -37,6 +37,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.atomicfile
 import salt.utils.thin
+import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
 from salt.utils import is_windows
@@ -1154,7 +1155,7 @@ def mod_data(fsclient):
             for fn_ in sorted(files):
                 if fn_.startswith(pref):
                     if fn_.endswith(('.py', '.so', '.pyx')):
-                        full = 'salt://{0}'.format(fn_)
+                        full = salt.utils.url.create(fn_)
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue
