@@ -237,9 +237,9 @@ def init(
         print('VM {0} was not initialized.'.format(name))
         return 'fail'
     for minion_id in ret:
-        if ret[minion_id]['ret'] != True:
-           print('VM {0} initialization failed. Returned error: {1}'.format(name, ret[minion_id]['ret']))
-           return 'fail'
+        if ret[minion_id]['ret'] is False:
+            print('VM {0} initialization failed. Returned error: {1}'.format(name, ret[minion_id]['ret']))
+            return 'fail'
 
     print('VM {0} initialized on hypervisor {1}'.format(name, hyper))
     return 'good'

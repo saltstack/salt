@@ -583,7 +583,7 @@ def init(name,
 
             except (IOError, OSError) as e:
                 raise CommandExecutionError('problem copying image. {0} - {1}'.format(image, e))
-                
+
             seedable = True
         else:
             log.error('unsupported hypervisor when handling disk image')
