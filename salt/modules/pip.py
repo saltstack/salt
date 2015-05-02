@@ -83,6 +83,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -126,36 +127,16 @@ def _get_pip_bin(bin_env):
     return bin_env
 
 
-def _process_salt_url(path, saltenv):
-    '''
-    Process 'salt://' and '?saltenv=' out of `path` and return the stripped
-    path and the saltenv.
-    '''
-    path = path.split('salt://', 1)[-1]
-
-    env_splitter = '?saltenv='
-    if '?env=' in path:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        env_splitter = '?env='
-    try:
-        path, saltenv = path.split(env_splitter)
-    except ValueError:
-        pass
-
-    return path, saltenv
-
-
 def _get_cached_requirements(requirements, saltenv):
     '''
     Get the location of a cached requirements file; caching if necessary.
     '''
 
-    requirements_file, saltenv = _process_salt_url(requirements, saltenv)
-    if requirements_file not in __salt__['cp.list_master'](saltenv):
+    req_file, senv = salt.utils.url.parse(requirements)
+    if senv:
+        saltenv = senv
+
+    if req_file not in __salt__['cp.list_master'](saltenv):
         # Requirements file does not exist in the given saltenv.
         return False
 

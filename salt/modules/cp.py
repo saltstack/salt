@@ -13,6 +13,7 @@ import fnmatch
 import salt.minion
 import salt.fileclient
 import salt.utils
+import salt.utils.url
 import salt.crypt
 import salt.transport
 from salt.exceptions import CommandExecutionError
@@ -329,21 +330,11 @@ def cache_file(path, saltenv='base', env=None):
         saltenv = env
 
     _mk_client()
-    if path.startswith('salt://|'):
-        # Strip pipe. Windows doesn't allow pipes in filenames
-        path = u'salt://{0}'.format(path[8:])
-    env_splitter = '?saltenv='
-    if '?env=' in path:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        env_splitter = '?env='
-    try:
-        path, saltenv = path.split(env_splitter)
-    except ValueError:
-        pass
+
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(
