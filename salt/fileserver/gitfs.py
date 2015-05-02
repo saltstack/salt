@@ -97,6 +97,7 @@ _INVALID_REPO = (
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 import salt.fileserver
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
@@ -767,7 +768,7 @@ def init():
             continue
 
         try:
-            repo_conf['mountpoint'] = salt.utils.strip_proto(
+            repo_conf['mountpoint'] = salt.utils.url.strip_proto(
                 repo_conf['mountpoint']
             )
         except TypeError:
