@@ -57,8 +57,7 @@ def receipts():
     as a dictionary.  Top-level keys of the dictionary
     are the names of each set of install receipts, since
     there can be multiple receipts with the same name.
-    Contents of each key are a list of dicttionaries.
-
+    Contents of each key are a list of dictionaries.
 
     CLI Example:
 
