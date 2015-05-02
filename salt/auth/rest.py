@@ -42,7 +42,7 @@ def rest_auth_setup():
 
     if '^url' in __opts__['external_auth']['rest']:
         return __opts__['external_auth']['rest']['^url']
-    else
+    else:
         return False
 
 
