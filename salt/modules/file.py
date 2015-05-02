@@ -49,6 +49,7 @@ import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.atomicfile
+import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -3009,30 +3010,16 @@ def source_list(source, source_hash, saltenv):
     '''
     # get the master file list
     if isinstance(source, list):
-        mfiles = __salt__['cp.list_master'](saltenv)
-        mdirs = __salt__['cp.list_master_dirs'](saltenv)
+        mfiles = [(f, saltenv) for f in __salt__['cp.list_master'](saltenv)]
+        mdirs = [(d, saltenv) for d in __salt__['cp.list_master_dirs'](saltenv)]
         for single in source:
             if isinstance(single, dict):
                 single = next(iter(single))
 
-            env_splitter = '?saltenv='
-            if '?env=' in single:
-                salt.utils.warn_until(
-                    'Boron',
-                    'Passing a salt environment should be done using '
-                    '\'saltenv\' not \'env\'. This functionality will be '
-                    'removed in Salt Boron.'
-                )
-                env_splitter = '?env='
-            try:
-                _, senv = single.split(env_splitter)
-            except ValueError:
-                continue
-            else:
-                mfiles += ['{0}?saltenv={1}'.format(f, senv)
-                           for f in __salt__['cp.list_master'](senv)]
-                mdirs += ['{0}?saltenv={1}'.format(d, senv)
-                          for d in __salt__['cp.list_master_dirs'](senv)]
+            path, senv = salt.utils.url.parse(single)
+            if senv:
+                mfiles += [(f, senv) for f in __salt__['cp.list_master'](senv)]
+                mdirs += [(d, senv) for d in __salt__['cp.list_master_dirs'](senv)]
 
         ret = None
         for single in source:
@@ -3045,7 +3032,10 @@ def source_list(source, source_hash, saltenv):
                 single_hash = single[single_src] if single[single_src] else source_hash
                 proto = _urlparse(single_src).scheme
                 if proto == 'salt':
-                    if single_src[7:] in mfiles or single_src[7:] in mdirs:
+                    path, senv = salt.utils.url.parse(single_src)
+                    if not senv:
+                        senv = saltenv
+                    if (path, saltenv) in mfiles or (path, saltenv) in mdirs:
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
@@ -3056,7 +3046,10 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
             elif isinstance(single, six.string_types):
-                if single[7:] in mfiles or single[7:] in mdirs:
+                path, senv = salt.utils.url.parse(single)
+                if not senv:
+                    senv = saltenv
+                if (path, senv) in mfiles or (path, senv) in mdirs:
                     ret = (single, source_hash)
                     break
         if ret is None:
