@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-salt:// URL utils
+URL utils
 '''
+
+# Import python libs
+import re
 
 # Import salt libs
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
@@ -68,3 +71,20 @@ def split_env(url):
 
     path, senv = parse(url)
     return create(path), senv
+
+
+def validate(url, protos):
+    '''
+    Return true if the passed URL scheme is in the list of accepted protos
+    '''
+    if urlparse(url).scheme in protos:
+        return True
+    return False
+
+
+def strip_proto(url):
+    '''
+    Return a copy of the string with the protocol designation stripped, if one
+    was present.
+    '''
+    return re.sub('^[^:/]+://', '', url)

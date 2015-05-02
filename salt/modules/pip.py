@@ -483,7 +483,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
-            if not (salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link)):
+            if not (salt.utils.url.validate(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
                     '{0!r} must be a valid URL or path'.format(link)
                 )
@@ -496,14 +496,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         )
 
     if index_url:
-        if not salt.utils.valid_url(index_url, VALID_PROTOS):
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(index_url)
             )
         cmd.append('--index-url={0!r}'.format(index_url))
 
     if extra_index_url:
-        if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(extra_index_url)
             )
