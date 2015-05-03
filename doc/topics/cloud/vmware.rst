@@ -90,7 +90,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           Network adapter 3:
             name: 10.40.50-600-Prod
             adapter_type: vmxnet3
-            switch_type: standard
+            switch_type: distributed
             ip: 10.40.50.123
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
@@ -123,8 +123,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       power_on: True
       extra_config:
         mem.hotadd: 'yes'
-        guestinfo.saltMaster: 10.20.30.140
+        guestinfo.foo: bar
         guestinfo.domain: foobar.com
+        guestinfo.customVariable: customValue
 
       deploy: True
       private_key: /root/.ssh/mykey.pem
@@ -166,25 +167,22 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         Enter the network adapter specification here. If the network adapter doesn\'t
         exist, a new network adapter will be created with the specified network name,
         type and other configuration. If the network adapter already exists, it will
-        be reconfigured with the specifications. Currently, only network adapters of
-        type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If the
-        specified network adapter type is not one of these, a network adapter of type
-        vmxnet3 will be created by default. The following additional options can be
-        specified per network adapter (See example above):
+        be reconfigured with the specifications. The following additional options can
+        be specified per network adapter (See example above):
 
         name
             Enter the network name you want the network adapter to be mapped to.
 
         adapter_type
             Enter the network adapter type you want to create. Currently supported
-            types are vmxnet, vmxnet2, vmxnet3, e1000 and e1000e. If no type is
-            specified, by default vmxnet3 will be used.
+            types are ``vmxnet``, ``vmxnet2``, ``vmxnet3``, ``e1000`` and ``e1000e``.
+            If no type is specified, by default ``vmxnet3`` will be used.
 
         switch_type
             Enter the type of switch to use. This decides whether to use a standard
             switch network or a distributed virtual portgroup. Currently supported
-            types are ``standard`` to use a standard switch netowork and ``distributed``
-            to use a distributed virtual portgroup.
+            types are ``standard`` for standard portgroups and ``distributed`` for
+            distributed virtual portgroups.
 
         ip
             Enter the static IP you want the network adapter to be mapped to. If the
@@ -205,14 +203,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     scsi
         Enter the SCSI adapter specification here. If the SCSI adapter doesn\'t exist,
         a new SCSI adapter will be created of the specified type. If the SCSI adapter
-        already exists, it will be reconfigured with the specifications. Currently, only
-        SCSI adapters of type lsilogic, lsilogic_sas and paravirtual can be created. The
-        following additional options can be specified per SCSI adapter:
+        already exists, it will be reconfigured with the specifications. The following
+        additional options can be specified per SCSI adapter:
 
         type
             Enter the SCSI adapter type you want to create. Currently supported
-            types are lsilogic, lsilogic_sas and paravirtual. Type must be specified
-            when creating a new SCSI adapter.
+            types are ``lsilogic``, ``lsilogic_sas`` and ``paravirtual``. Type must
+            be specified when creating a new SCSI adapter.
 
         bus_sharing
             Specify this if sharing of virtual disks between virtual machines is desired.
@@ -228,7 +225,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
                 Virtual disks cannot be shared between virtual machines.
 
 ``domain``
-    Enter the global domain name to be used for DNS.
+    Enter the global domain name to be used for DNS. If not specified and if the VM name
+    is a FQDN, ``domain`` is set to the domain from the VM name. Default is ``local``.
 
 ``dns_servers``
     Enter the list of DNS servers to use in order of priority.
