@@ -105,9 +105,8 @@ def version(family='ipv4'):
 def build_rule(table='filter', chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
-    Build a well-formatted iptables rule based on kwargs. Long options must be
-    used (`--jump` instead of `-j`) because they will have the `--` added to
-    them. A `table` and `chain` are not required, unless `full` is True.
+    Build a well-formatted iptables rule based on kwargs. A `table` and `chain`
+    are not required, unless `full` is True.
 
     If `full` is `True`, then `table`, `chain` and `command` are required.
     `command` may be specified as either a short option ('I') or a long option
@@ -118,6 +117,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     `position`. This will only be useful if `full` is True.
 
     If `connstate` is passed in, it will automatically be changed to `state`.
+
+    To pass in jump options that doesn't take arguments, pass in an empty
+    string.
 
     CLI Examples:
 
@@ -266,21 +268,53 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
+    # List of options fetched from http://www.iptables.info/en/iptables-targets-and-jumps.html
     after_jump_arguments = (
+        'j',  # j and jump needs to be first
         'jump',
-        'j',
-        'to-port',
-        'to-ports',
-        'to-destination',
-        'to-source',
+        'clamp-mss-to-pmtu',
+        'ecn-tcp-remove',  # no arg
+        'mask',  # only used with either save-mark or restore-mark
+        'nodst',
+        'queue-num',
         'reject-with',
-        'set-mark',
-        'set-xmark',
-        'log-level',
+        'restore',  # no arg
+        'restore-mark',  # no arg
+        #'save',  # no arg, problematic name: How do we avoid collision with this?
+        'save-mark',  # no arg
+        'selctx',
+        'set-dscp',
+        'set-dscp-class',
+        'set-mss',
+        'set-tos',
+        'ttl-dec',
+        'ttl-inc',
+        'ttl-set',
+        'ulog-cprange',
+        'ulog-nlgroup',
+        'ulog-prefix',
+        'ulog-qthreshold',
+        'clustermac',
+        'hash-init,'
+        'hashmode',
+        'local-node',
         'log-ip-options',
+        'log-level',
         'log-prefix',
         'log-tcp-options',
         'log-tcp-sequence',
+        'new',  # no arg
+        'reject-with',
+        'set-class',
+        'set-mark',
+        'set-xmark',
+        'to',
+        'to-destination',
+        'to-port',
+        'to-ports',
+        'to-source',
+        'total-nodes,'
+        'total-nodes',
     )
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
