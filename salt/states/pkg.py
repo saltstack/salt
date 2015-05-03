@@ -13,8 +13,6 @@ declarations are typically rather simple:
       pkg.installed
 
 A more involved example involves pulling from a custom repository.
-Note that the pkgrepo has a require_in clause.
-This is necessary and can not be replaced by a require clause in the pkg.
 
 .. code-block:: yaml
 
@@ -26,13 +24,33 @@ This is necessary and can not be replaced by a require clause in the pkg.
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
         - keyserver: keyserver.ubuntu.com
-        - require_in:
-          - pkg: logstash
 
     logstash:
       pkg.installed
-'''
+        - fromrepo: ppa:wolfnet/logstash
 
+Multiple packages can also be installed with the use of the pkgs
+state module
+
+.. code-block:: yaml
+    dotdeb.repo:
+      pkgrepo.managed:
+        - humanname: Dotdeb
+        - name: deb http://packages.dotdeb.org wheezy-php55 all
+        - dist: wheezy-php55
+        - file: /etc/apt/sources.list.d/dotbeb.list
+        - keyid: 89DF5277
+        - keyserver: keys.gnupg.net
+        - refresh_db: true
+
+    php.packages:
+      pkg.installed:
+        - fromrepo: wheezy-php55
+        - pkgs:
+          - php5-fpm
+          - php5-cli
+          - php5-curl
+'''
 
 # Import python libs
 from __future__ import absolute_import
