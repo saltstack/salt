@@ -1790,6 +1790,9 @@ def create(vm_):
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, search_global=False, default=True
     )
+    domain = config.get_cloud_config_value(
+        'domain', vm_, __opts__, search_global=False, default='local'
+    )
 
     if 'clonefrom' in vm_:
         # Clone VM/template from specified VM/template
@@ -1864,21 +1867,26 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'nics_map' in specs.keys():
-            if "Windows" not in object_ref.config.guestFullName:
-                global_ip = vim.vm.customization.GlobalIPSettings()
-                if vm_['dns_servers']:
-                    global_ip.dnsServerList = vm_['dns_servers']
-                identity = vim.vm.customization.LinuxPrep()
-                identity.domain = vm_['domain']
-                identity.hostName = vim.vm.customization.FixedName(name=vm_name)
+        if "Windows" not in object_ref.config.guestFullName:
+            global_ip = vim.vm.customization.GlobalIPSettings()
+            if 'dns_servers' in vm_.keys():
+                global_ip.dnsServerList = vm_['dns_servers']
 
-                custom_spec = vim.vm.customization.Specification(
-                    nicSettingMap=specs['nics_map'],
-                    globalIPSettings=global_ip,
-                    identity=identity
-                )
-                clone_spec.customization = custom_spec
+            identity = vim.vm.customization.LinuxPrep()
+            hostName = vm_name.split('.')[0]
+            domainName = vm_name.split('.', 1)[-1]
+            identity.hostName = vim.vm.customization.FixedName(name=hostName)
+            identity.domain = domainName if hostName != domainName else domain
+
+            custom_spec = vim.vm.customization.Specification(
+                globalIPSettings=global_ip,
+                identity=identity
+            )
+
+            if devices and 'nics_map' in specs.keys():
+                custom_spec.nicSettingMap = specs['nics_map']
+
+            clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
