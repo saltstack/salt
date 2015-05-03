@@ -10,7 +10,7 @@ import errno
 import logging
 import os
 import shutil
-import datetime
+import time
 import hashlib
 
 # Import salt libs
@@ -290,9 +290,9 @@ def clean_old_jobs():
     Clean out the old jobs from the job cache
     '''
     if __opts__['keep_jobs'] != 0:
-        cur = datetime.datetime.now()
-
+        cur = time.time()
         jid_root = _job_dir()
+
         if not os.path.exists(jid_root):
             return
 
@@ -305,26 +305,7 @@ def clean_old_jobs():
                     # No jid file means corrupted cache entry, scrub it
                     shutil.rmtree(f_path)
                 else:
-                    with salt.utils.fopen(jid_file, 'rb') as fn_:
-                        jid = fn_.read()
-                    if len(jid) < 18:
-                        # Invalid jid, scrub the dir
+                    jid_ctime = os.stat(jid_file).st_ctime()
+                    hours_difference = (cur - jid_ctime) / 3600.0
+                    if hours_difference > __opts__['keep_jobs']:
                         shutil.rmtree(f_path)
-                    else:
-                        # Parse the jid into a proper datetime object.
-                        # We only parse down to the minute, since keep
-                        # jobs is measured in hours, so a minute
-                        # difference is not important.
-                        try:
-                            jidtime = datetime.datetime(int(jid[0:4]),
-                                                        int(jid[4:6]),
-                                                        int(jid[6:8]),
-                                                        int(jid[8:10]),
-                                                        int(jid[10:12]))
-                        except ValueError:
-                            # Invalid jid, scrub the dir
-                            shutil.rmtree(f_path)
-                        difference = cur - jidtime
-                        hours_difference = salt.utils.total_seconds(difference) / 3600.0
-                        if hours_difference > __opts__['keep_jobs']:
-                            shutil.rmtree(f_path)
