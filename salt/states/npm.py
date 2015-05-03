@@ -119,7 +119,8 @@ def installed(name,
         :pkg str: The package to compare
         :installed_pkgs: A dictionary produced by npm list --json
         '''
-        if pkg_name in installed_pkgs:
+        if (pkg_name in installed_pkgs and
+            'version' in installed_pkgs[pkg_name]):
             return True
         # Check to see if we are trying to install from a URI
         elif '://' in pkg_name:  # TODO Better way?
@@ -140,21 +141,20 @@ def installed(name,
             pkgs_to_install.append(pkg)
             continue
 
-        if pkg_name in installed_pkgs:
-            installed_name_ver = '{0}@{1}'.format(pkg_name,
-                    installed_pkgs[pkg_name]['version'])
+        installed_name_ver = '{0}@{1}'.format(pkg_name,
+                installed_pkgs[pkg_name]['version'])
 
-            # If given an explicit version check the installed version matches.
-            if pkg_ver:
-                if installed_pkgs[pkg_name].get('version') != pkg_ver:
-                    pkgs_to_install.append(pkg)
-                else:
-                    pkgs_satisfied.append(installed_name_ver)
-
-                continue
+        # If given an explicit version check the installed version matches.
+        if pkg_ver:
+            if installed_pkgs[pkg_name].get('version') != pkg_ver:
+                pkgs_to_install.append(pkg)
             else:
                 pkgs_satisfied.append(installed_name_ver)
-                continue
+
+            continue
+        else:
+            pkgs_satisfied.append(installed_name_ver)
+            continue
 
     if __opts__['test']:
         ret['result'] = None
