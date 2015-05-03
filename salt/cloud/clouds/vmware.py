@@ -310,6 +310,7 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name, swi
     switch_type.strip().lower()
     if switch_type == 'standard':
         network_ref = _get_mor_by_property(vim.Network, new_network_name)
+        network_adapter.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
         network_adapter.backing.deviceName = new_network_name
         network_adapter.backing.network = network_ref
     elif switch_type == 'distributed':
@@ -483,7 +484,7 @@ def _manage_devices(devices, vm):
     # loop through all the devices the vm/template has
     # check if the device needs to be created or configured
     for device in vm.config.hardware.device:
-        if hasattr(device.backing, 'fileName'):
+        if isinstance(device, vim.vm.device.VirtualDisk):
             # this is a hard disk
             if 'disk' in list(devices.keys()):
                 # there is atleast one disk specified to be created/configured
@@ -497,7 +498,7 @@ def _manage_devices(devices, vm):
                         disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
                         device_specs.append(disk_spec)
 
-        elif hasattr(device.backing, 'network'):
+        elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
             # this is a network adapter
             if 'network' in list(devices.keys()):
                 # there is atleast one network adapter specified to be created/configured
@@ -1867,26 +1868,24 @@ def create(vm_):
             config=config_spec
         )
 
-        if "Windows" not in object_ref.config.guestFullName:
-            global_ip = vim.vm.customization.GlobalIPSettings()
-            if 'dns_servers' in vm_.keys():
-                global_ip.dnsServerList = vm_['dns_servers']
+        if devices and 'network' in devices.keys():
+            if "Windows" not in object_ref.config.guestFullName:
+                global_ip = vim.vm.customization.GlobalIPSettings()
+                if 'dns_servers' in vm_.keys():
+                    global_ip.dnsServerList = vm_['dns_servers']
 
-            identity = vim.vm.customization.LinuxPrep()
-            hostName = vm_name.split('.')[0]
-            domainName = vm_name.split('.', 1)[-1]
-            identity.hostName = vim.vm.customization.FixedName(name=hostName)
-            identity.domain = domainName if hostName != domainName else domain
+                identity = vim.vm.customization.LinuxPrep()
+                hostName = vm_name.split('.')[0]
+                domainName = vm_name.split('.', 1)[-1]
+                identity.hostName = vim.vm.customization.FixedName(name=hostName)
+                identity.domain = domainName if hostName != domainName else domain
 
-            custom_spec = vim.vm.customization.Specification(
-                globalIPSettings=global_ip,
-                identity=identity
-            )
-
-            if devices and 'nics_map' in specs.keys():
-                custom_spec.nicSettingMap = specs['nics_map']
-
-            clone_spec.customization = custom_spec
+                custom_spec = vim.vm.customization.Specification(
+                    globalIPSettings=global_ip,
+                    identity=identity,
+                    nicSettingMap=specs['nics_map']
+                )
+                clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
