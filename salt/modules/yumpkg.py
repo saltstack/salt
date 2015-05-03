@@ -777,102 +777,6 @@ def clean_metadata(**kwargs):
     return refresh_db(_get_branch_option(**kwargs), _get_repo_options(**kwargs), _get_excludes_option(**kwargs))
 
 
-def group_install(name,
-                  skip=(),
-                  include=(),
-                  **kwargs):
-    '''
-    .. versionadded:: 2014.1.0
-
-    Install the passed package group(s). This is basically a wrapper around
-    pkg.install, which performs package group resolution for the user. This
-    function is currently considered experimental, and should be expected to
-    undergo changes.
-
-    name
-        Package group to install. To install more than one group, either use a
-        comma-separated list or pass the value as a python list.
-
-        CLI Examples:
-
-        .. code-block:: bash
-
-            salt '*' pkg.group_install 'Group 1'
-            salt '*' pkg.group_install 'Group 1,Group 2'
-            salt '*' pkg.group_install '["Group 1", "Group 2"]'
-
-    skip
-        The name(s), in a list, of any packages that would normally be
-        installed by the package group ("default" packages), which should not
-        be installed. Can be passed either as a comma-separated list or a
-        python list.
-
-        CLI Examples:
-
-        .. code-block:: bash
-
-            salt '*' pkg.group_install 'My Group' skip='foo,bar'
-            salt '*' pkg.group_install 'My Group' skip='["foo", "bar"]'
-
-    include
-        The name(s), in a list, of any packages which are included in a group,
-        which would not normally be installed ("optional" packages). Note that
-        this will not enforce group membership; if you include packages which
-        are not members of the specified groups, they will still be installed.
-        Can be passed either as a comma-separated list or a python list.
-
-        CLI Examples:
-
-        .. code-block:: bash
-
-            salt '*' pkg.group_install 'My Group' include='foo,bar'
-            salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
-
-    .. note::
-
-        Because this is essentially a wrapper around pkg.install, any argument
-        which can be passed to pkg.install may also be included here, and it
-        will be passed along wholesale.
-    '''
-    groups = name.split(',') if isinstance(name, six.string_types) else name
-
-    if not groups:
-        raise SaltInvocationError('no groups specified')
-    elif not isinstance(groups, list):
-        raise SaltInvocationError('\'groups\' must be a list')
-
-    # pylint: disable=maybe-no-member
-    if isinstance(skip, six.string_types):
-        skip = skip.split(',')
-    if not isinstance(skip, (list, tuple)):
-        raise SaltInvocationError('\'skip\' must be a list')
-
-    if isinstance(include, six.string_types):
-        include = include.split(',')
-    if not isinstance(include, (list, tuple)):
-        raise SaltInvocationError('\'include\' must be a list')
-    # pylint: enable=maybe-no-member
-
-    targets = []
-    for group in groups:
-        group_detail = group_info(group)
-        targets.extend(group_detail.get('mandatory packages', []))
-        targets.extend(
-            [pkg for pkg in group_detail.get('default packages', [])
-             if pkg not in skip]
-        )
-    if include:
-        targets.extend(include)
-
-    # Don't install packages that are already installed, install() isn't smart
-    # enough to make this distinction.
-    pkgs = [x for x in targets if x not in list_pkgs()]
-    if not pkgs:
-        return {}
-
-    return install(pkgs=pkgs, **kwargs)
-
-
 def install(name=None,
             refresh=False,
             fromrepo=None,
@@ -1641,6 +1545,103 @@ def group_diff(name):
             else:
                 ret[key]['not installed'].append(member)
     return ret
+
+
+def group_install(name,
+                  skip=(),
+                  include=(),
+                  **kwargs):
+    '''
+    .. versionadded:: 2014.1.0
+
+    Install the passed package group(s). This is basically a wrapper around
+    :py:func:`pkg.install <salt.modules.yumpkg.install>`, which performs
+    package group resolution for the user. This function is currently
+    considered experimental, and should be expected to undergo changes.
+
+    name
+        Package group to install. To install more than one group, either use a
+        comma-separated list or pass the value as a python list.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.group_install 'Group 1'
+            salt '*' pkg.group_install 'Group 1,Group 2'
+            salt '*' pkg.group_install '["Group 1", "Group 2"]'
+
+    skip
+        Packages that would normally be installed by the package group
+        ("default" packages), which should not be installed. Can be passed
+        either as a comma-separated list or a python list.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.group_install 'My Group' skip='foo,bar'
+            salt '*' pkg.group_install 'My Group' skip='["foo", "bar"]'
+
+    include
+        Packages which are included in a group, which would not normally be
+        installed by a ``yum groupinstall`` ("optional" packages). Note that
+        this will not enforce group membership; if you include packages which
+        are not members of the specified groups, they will still be installed.
+        Can be passed either as a comma-separated list or a python list.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.group_install 'My Group' include='foo,bar'
+            salt '*' pkg.group_install 'My Group' include='["foo", "bar"]'
+
+    .. note::
+
+        Because this is essentially a wrapper around pkg.install, any argument
+        which can be passed to pkg.install may also be included here, and it
+        will be passed along wholesale.
+    '''
+    groups = name.split(',') if isinstance(name, six.string_types) else name
+
+    if not groups:
+        raise SaltInvocationError('no groups specified')
+    elif not isinstance(groups, list):
+        raise SaltInvocationError('\'groups\' must be a list')
+
+    # pylint: disable=maybe-no-member
+    if isinstance(skip, six.string_types):
+        skip = skip.split(',')
+    if not isinstance(skip, (list, tuple)):
+        raise SaltInvocationError('\'skip\' must be a list')
+
+    if isinstance(include, six.string_types):
+        include = include.split(',')
+    if not isinstance(include, (list, tuple)):
+        raise SaltInvocationError('\'include\' must be a list')
+    # pylint: enable=maybe-no-member
+
+    targets = []
+    for group in groups:
+        group_detail = group_info(group)
+        targets.extend(group_detail.get('mandatory packages', []))
+        targets.extend(
+            [pkg for pkg in group_detail.get('default packages', [])
+             if pkg not in skip]
+        )
+    if include:
+        targets.extend(include)
+
+    # Don't install packages that are already installed, install() isn't smart
+    # enough to make this distinction.
+    pkgs = [x for x in targets if x not in list_pkgs()]
+    if not pkgs:
+        return {}
+
+    return install(pkgs=pkgs, **kwargs)
+
+groupinstall = group_install
 
 
 def list_repos(basedir=None):

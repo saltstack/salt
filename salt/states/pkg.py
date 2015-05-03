@@ -161,7 +161,8 @@ def _find_remove_targets(name=None,
                     'comment': 'Invalidly formatted pkgs parameter. See '
                                'minion log.'}
     else:
-        _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+        _normalize_name = \
+            __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
         to_remove = {_normalize_name(name): version}
 
         cver = cur_pkgs.get(name, [])
@@ -195,7 +196,11 @@ def _find_remove_targets(name=None,
             if comparison in ['=', '']:
                 comparison = '=='
             if not _fulfills_version_spec(cver, comparison, verstr):
-                log.debug('Current version ({0} did not match ({1}) specified ({2}), skipping remove {3}'.format(cver, comparison, verstr, pkgname))
+                log.debug(
+                    'Current version ({0}) did not match ({1}) specified '
+                    '({2}), skipping remove {3}'
+                    .format(cver, comparison, verstr, pkgname)
+                )
             else:
                 targets.append(pkgname)
 
@@ -240,10 +245,11 @@ def _find_install_targets(name=None,
     # dict for packages that fail pkg.verify and their altered files
     altered_files = {}
     # Get the ignore_types list if any from the pkg_verify argument
-    if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
-                                        for x in pkg_verify
-                                        if isinstance(x, _OrderedDict)
-                                        and 'ignore_types' in x):
+    if isinstance(pkg_verify, list) \
+            and any(x.get('ignore_types') is not None
+                    for x in pkg_verify
+                    if isinstance(x, _OrderedDict)
+                    and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
                             if 'ignore_types' in x)
@@ -279,7 +285,8 @@ def _find_install_targets(name=None,
                 version = _get_latest_pkg_version(pkginfo)
 
         if normalize:
-            _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+            _normalize_name = \
+                __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
             desired = {_normalize_name(name): version}
         else:
             desired = {name: version}
@@ -363,7 +370,8 @@ def _find_install_targets(name=None,
             # No version specified and pkg is installed
             elif __salt__['pkg_resource.version_clean'](pkgver) is None:
                 if pkg_verify:
-                    retval = __salt__['pkg.verify'](pkgname, ignore_types=ignore_types)
+                    retval = __salt__['pkg.verify'](pkgname,
+                                                    ignore_types=ignore_types)
                     if retval:
                         to_reinstall[pkgname] = pkgver
                         altered_files[pkgname] = retval
@@ -386,10 +394,15 @@ def _find_install_targets(name=None,
                     if kwargs['allow_updates']:
                         comparison = '>='
                 if not _fulfills_version_spec(cver, comparison, verstr):
-                    log.debug('Current version ({0} did not match ({1}) desired ({2}), add to targets'.format(cver, comparison, verstr))
+                    log.debug(
+                        'Current version ({0}) did not match ({1}) desired '
+                        '({2}), add to targets'
+                        .format(cver, comparison, verstr)
+                    )
                     targets[pkgname] = pkgver
                 elif pkg_verify and comparison == '==':
-                    retval = __salt__['pkg.verify'](pkgname, ignore_types=ignore_types)
+                    retval = __salt__['pkg.verify'](pkgname,
+                                                    ignore_types=ignore_types)
                     if retval:
                         to_reinstall[pkgname] = pkgver
                         altered_files[pkgname] = retval
@@ -625,14 +638,15 @@ def installed(
 
     hold
         Force the package to be held at the current installed version.
-        Currently works with YUM & APT based systems.
+        Currently works with YUM & APT-based systems.
 
         .. versionadded:: 2014.7.0
 
     allow_updates
-        Allow the package to be updated outside Salt's control (e.g. auto updates on Windows).
-        This means a package on the Minion can have a newer version than the latest available
-        in the repository without enforcing a re-installation of the package.
+        Allow the package to be updated outside Salt's control (e.g. auto
+        updates on Windows). This means a package on the Minion can have a
+        newer version than the latest available in the repository without
+        enforcing a re-installation of the package.
 
         .. versionadded:: 2014.7.0
 
@@ -652,12 +666,13 @@ def installed(
     pkg_verify
         .. versionadded:: 2014.7.0
 
-        For requested packages that are already installed and would not be targeted for
-        upgrade or downgrade, use pkg.verify to determine if any of the files installed
-        by the package have been altered. If files have been altered, the reinstall
-        option of pkg.install is used to force a reinstall.  Types to ignore can be
-        passed to pkg.verify (see example below).  Currently, this option is supported
-        for the following pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+        For requested packages that are already installed and would not be
+        targeted for upgrade or downgrade, use pkg.verify to determine if any
+        of the files installed by the package have been altered. If files have
+        been altered, the reinstall option of pkg.install is used to force a
+        reinstall. Types to ignore can be passed to pkg.verify (see example
+        below). Currently, this option is supported for the following pkg
+        providers: :mod:`yumpkg <salt.modules.yumpkg>`.
 
     Examples:
 
@@ -680,10 +695,10 @@ def installed(
               - ignore_types: [config,doc]
 
     normalize
-        Normalize the package name by removing the architecture.  Default is True.
-        This is useful for poorly created packages which might include the
-        architecture as an actual part of the name such as kernel modules
-        which match a specific kernel version.
+        Normalize the package name by removing the architecture. Default is
+        ``True``.  This is useful for poorly created packages which might
+        include the architecture as an actual part of the name such as kernel
+        modules which match a specific kernel version.
 
         .. versionadded:: 2014.7.0
 
@@ -792,8 +807,8 @@ def installed(
               - qux: /minion/path/to/qux.rpm
 
     install_recommends
-        Whether to install the packages marked as recommended.  Default is True.
-        Currently only works with APT based systems.
+        Whether to install the packages marked as recommended. Default is
+        ``True``. Currently only works with APT-based systems.
 
         .. versionadded:: 2015.2.0
 
@@ -804,8 +819,8 @@ def installed(
             - install_recommends: False
 
     only_upgrade
-        Only upgrade the packages, if they are already installed. Default is False.
-        Currently only works with APT based systems.
+        Only upgrade the packages, if they are already installed. Default is
+        ``False``. Currently only works with APT-based systems.
 
         .. versionadded:: 2015.2.0
 
@@ -830,7 +845,8 @@ def installed(
     )
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
-    if (pkg_verify or isinstance(pkg_verify, list)) and 'pkg.verify' not in __salt__:
+    if (pkg_verify or isinstance(pkg_verify, list)) \
+            and 'pkg.verify' not in __salt__:
         return {'name': name,
                 'changes': {},
                 'result': False,
@@ -918,8 +934,10 @@ def installed(
         pkgs.extend([dict([(x, y)]) for x, y in six.iteritems(to_reinstall)])
     elif sources:
         oldsources = sources
-        sources = [x for x in oldsources if next(iter(list(x.keys()))) in targets]
-        sources.extend([x for x in oldsources if next(iter(list(x.keys()))) in to_reinstall])
+        sources = [x for x in oldsources
+                   if next(iter(list(x.keys()))) in targets]
+        sources.extend([x for x in oldsources
+                        if next(iter(list(x.keys()))) in to_reinstall])
 
     comment = []
     if __opts__['test']:
@@ -938,14 +956,17 @@ def installed(
                 .format(', '.join(to_unpurge))
             )
         if to_reinstall:
-            # Add a comment for each package in to_reinstall with its pkg.verify output
+            # Add a comment for each package in to_reinstall with its
+            # pkg.verify output
             for x in to_reinstall:
                 if sources:
                     pkgstr = x
                 else:
                     pkgstr = _get_desired_pkg(x, to_reinstall)
-                comment.append('\nPackage {0} is set to be reinstalled because the '
-                               'following files have been altered:'.format(pkgstr))
+                comment.append(
+                    '\nPackage {0} is set to be reinstalled because the '
+                    'following files have been altered:'.format(pkgstr)
+                )
                 comment.append('\n' + _nested_output(altered_files[x]))
         return {'name': name,
                 'changes': {},
@@ -960,15 +981,15 @@ def installed(
         reinstall = bool(to_reinstall)
         try:
             pkg_ret = __salt__['pkg.install'](name,
-                                            refresh=refresh,
-                                            version=version,
-                                            fromrepo=fromrepo,
-                                            skip_verify=skip_verify,
-                                            pkgs=pkgs,
-                                            sources=sources,
-                                            reinstall=reinstall,
-                                            normalize=normalize,
-                                            **kwargs)
+                                              refresh=refresh,
+                                              version=version,
+                                              fromrepo=fromrepo,
+                                              skip_verify=skip_verify,
+                                              pkgs=pkgs,
+                                              sources=sources,
+                                              reinstall=reinstall,
+                                              normalize=normalize,
+                                              **kwargs)
 
             if os.path.isfile(rtag) and refresh:
                 os.remove(rtag)
@@ -1024,7 +1045,9 @@ def installed(
     # Analyze pkg.install results for packages in targets
     if sources:
         modified = [x for x in changes['installed'] if x in targets]
-        not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
+        not_modified = [x for x in desired
+                        if x not in targets
+                        and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
         ok, failed = \
@@ -1034,7 +1057,9 @@ def installed(
                 )
             )
         modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok if x not in targets and x not in to_reinstall]
+        not_modified = [x for x in ok
+                        if x not in targets
+                        and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
 
     # If there was nothing unpurged, just set the changes dict to the contents
@@ -1112,10 +1137,11 @@ def installed(
         result = False
 
     # Get the ignore_types list if any from the pkg_verify argument
-    if isinstance(pkg_verify, list) and any(x.get('ignore_types') is not None
-                                        for x in pkg_verify
-                                        if isinstance(x, _OrderedDict)
-                                        and 'ignore_types' in x):
+    if isinstance(pkg_verify, list) \
+            and any(x.get('ignore_types') is not None
+                    for x in pkg_verify
+                    if isinstance(x, _OrderedDict)
+                    and 'ignore_types' in x):
         ignore_types = next(x.get('ignore_types')
                             for x in pkg_verify
                             if 'ignore_types' in x)
@@ -1140,8 +1166,10 @@ def installed(
                 pkgstr = x
             else:
                 pkgstr = _get_desired_pkg(x, desired)
-            comment.append('\nPackage {0} was reinstalled.  The following files '
-                           'were remediated:'.format(pkgstr))
+            comment.append(
+                '\nPackage {0} was reinstalled. The following files were '
+                'remediated:'.format(pkgstr)
+            )
             comment.append(_nested_output(altered_files[x]))
 
     if failed:
@@ -1152,8 +1180,8 @@ def installed(
             else:
                 pkgstr = _get_desired_pkg(x, desired)
             comment.append(
-                '\nReinstall was not successful for package {0}.  The following '
-                'files could not be remediated:'.format(pkgstr)
+                '\nReinstall was not successful for package {0}. The '
+                'following files could not be remediated:'.format(pkgstr)
             )
             comment.append(_nested_output(altered_files[x]))
         result = False
@@ -1208,8 +1236,8 @@ def latest(
               - baz
 
     install_recommends
-        Whether to install the packages marked as recommended.  Default is True.
-        Currently only works with APT based systems.
+        Whether to install the packages marked as recommended. Default is
+        ``True``. Currently only works with APT-based systems.
 
         .. versionadded:: 2015.2.0
 
@@ -1220,8 +1248,8 @@ def latest(
             - install_recommends: False
 
     only_upgrade
-        Only upgrade the packages, if they are already installed. Default is False.
-        Currently only works with APT based systems.
+        Only upgrade the packages, if they are already installed. Default is
+        ``False``. Currently only works with APT-based systems.
 
         .. versionadded:: 2015.2.0
 
@@ -1282,6 +1310,7 @@ def latest(
 
     targets = {}
     problems = []
+    cmp_func = __salt__.get('version_cmp')
     for pkg in desired_pkgs:
         if not avail[pkg]:
             if not cur[pkg]:
@@ -1289,11 +1318,10 @@ def latest(
                 log.error(msg)
                 problems.append(msg)
         elif not cur[pkg] \
-                or salt.utils.compare_versions(
-                    ver1=cur[pkg],
-                    oper='<',
-                    ver2=avail[pkg],
-                    cmp_func=__salt__.get('version_cmp')):
+                or salt.utils.compare_versions(ver1=cur[pkg],
+                                               oper='<',
+                                               ver2=avail[pkg],
+                                               cmp_func=cmp_func):
             targets[pkg] = avail[pkg]
 
     if problems:
@@ -1635,6 +1663,144 @@ def uptodate(name, refresh=False, **kwargs):
     return ret
 
 
+def group_installed(name, skip=None, include=None, **kwargs):
+    '''
+    .. versionadded:: Beryllium
+
+    Ensure that an entire package group is installed. This state is only
+    supported for the :mod:`yum <salt.modules.yumpkg>` package manager.
+
+    skip
+        Packages that would normally be installed by the package group
+        ("default" packages), which should not be installed.
+
+        .. code-block:: yaml
+
+            Load Balancer:
+              pkg.group_installed:
+                - skip:
+                  - piranha
+
+    include
+        Packages which are included in a group, which would not normally be
+        installed by a ``yum groupinstall`` ("optional" packages). Note that
+        this will not enforce group membership; if you include packages which
+        are not members of the specified groups, they will still be installed.
+        Can be passed either as a comma-separated list or a python list.
+
+        .. code-block:: yaml
+
+            Load Balancer:
+              pkg.group_installed:
+                - include:
+                  - haproxy
+
+    .. note::
+
+        Because this is essentially a wrapper around :py:func:`pkg.install
+        <salt.modules.yumpkg.install>`, any argument which can be passed to
+        pkg.install may also be included here, and it will be passed along
+        wholesale.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    if 'pkg.group_diff' not in __salt__:
+        ret['comment'] = 'pkg.group_install not implemented for this platform'
+        return ret
+
+    if skip is not None:
+        if isinstance(skip, six.string_types):
+            skip = skip.split(',')
+        elif isinstance(skip, (float, six.integer_types)):
+            skip = [str(skip)]
+        if not isinstance(skip, list):
+            ret['comment'] = 'skip must be formatted as a list'
+            return ret
+        for idx, item in enumerate(skip):
+            if isinstance(item, (float, six.integer_types)):
+                skip[idx] = str(item)
+            if not isinstance(skip[idx], six.string_types):
+                ret['comment'] = 'Invalid \'skip\' item {0}'.format(skip[idx])
+                return ret
+    else:
+        skip = []
+
+    if include is not None:
+        if isinstance(include, six.string_types):
+            include = include.split(',')
+        elif isinstance(include, (float, six.integer_types)):
+            include = [str(include)]
+        if not isinstance(include, list):
+            ret['comment'] = 'include must be formatted as a list'
+            return ret
+        for idx, item in enumerate(include):
+            if isinstance(item, (float, six.integer_types)):
+                include[idx] = str(item)
+            if not isinstance(include[idx], six.string_types):
+                ret['comment'] = \
+                    'Invalid \'include\' item {0}'.format(include[idx])
+                return ret
+    else:
+        include = []
+
+    diff = __salt__['pkg.group_diff'](name)
+    mandatory = diff['mandatory packages']['installed'] + \
+        diff['mandatory packages']['not installed']
+
+    invalid_skip = [x for x in mandatory if x in skip]
+    if invalid_skip:
+        ret['comment'] = (
+            'The following mandatory packages cannot be skipped: {0}'
+            .format(', '.join(invalid_skip))
+        )
+        return ret
+
+    targets = diff['mandatory packages']['not installed']
+    targets.extend([x for x in diff['default packages']['not installed']
+                    if x not in skip])
+    targets.extend(include)
+
+    if not targets:
+        ret['result'] = True
+        ret['comment'] = 'Group \'{0}\' is already installed'.format(name)
+        return ret
+
+    partially_installed = diff['mandatory packages']['installed'] \
+        or diff['default packages']['installed'] \
+        or diff['optional packages']['installed']
+
+    if __opts__['test']:
+        ret['result'] = None
+        if partially_installed:
+            ret['comment'] = (
+                'Group \'{0}\' is partially installed and will be updated'
+                .format(name)
+            )
+        else:
+            ret['comment'] = 'Group \'{0}\' will be installed'.format(name)
+        return ret
+
+    ret['changes'] = __salt__['pkg.install'](pkgs=targets, **kwargs)
+
+    failed = [x for x in targets if x not in __salt__['pkg.list_pkgs']()]
+    if failed:
+        ret['comment'] = (
+            'Failed to install the following packages: {0}'
+            .format(', '.join(failed))
+        )
+        return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Group \'{0}\' was {1}'.format(
+        name,
+        'updated' if partially_installed else 'installed'
+    )
+    return ret
+
+
 def mod_init(low):
     '''
     Set a flag to tell the install functions to refresh the package database.
@@ -1673,11 +1839,11 @@ def mod_aggregate(low, chunks, running):
     '''
     pkgs = []
     agg_enabled = [
-            'installed',
-            'latest',
-            'removed',
-            'purged',
-            ]
+        'installed',
+        'latest',
+        'removed',
+        'purged',
+    ]
     if low.get('fun') not in agg_enabled:
         return low
     for chunk in chunks:
