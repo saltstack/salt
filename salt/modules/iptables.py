@@ -101,9 +101,8 @@ def version(family='ipv4'):
 def build_rule(table=None, chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
-    Build a well-formatted iptables rule based on kwargs. Long options must be
-    used (`--jump` instead of `-j`) because they will have the `--` added to
-    them. A `table` and `chain` are not required, unless `full` is True.
+    Build a well-formatted iptables rule based on kwargs. A `table` and `chain`
+    are not required, unless `full` is True.
 
     If `full` is `True`, then `table`, `chain` and `command` are required.
     `command` may be specified as either a short option ('I') or a long option
@@ -114,6 +113,9 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     `position`. This will only be useful if `full` is True.
 
     If `connstate` is passed in, it will automatically be changed to `state`.
+
+    To pass in jump options that doesn't take arguments, pass in an empty
+    string.
 
     CLI Examples:
 
@@ -291,34 +293,62 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
-
-    if 'jump' in kwargs:
-        after_jump.append('--jump {0} '.format(kwargs['jump']))
-        del kwargs['jump']
-
-    if 'j' in kwargs:
-        after_jump.append('-j {0} '.format(kwargs['j']))
-        del kwargs['j']
-
-    if 'to-port' in kwargs:
-        after_jump.append('--to-port {0} '.format(kwargs['to-port']))
-        del kwargs['to-port']
-
-    if 'to-ports' in kwargs:
-        after_jump.append('--to-ports {0} '.format(kwargs['to-ports']))
-        del kwargs['to-ports']
-
-    if 'to-destination' in kwargs:
-        after_jump.append('--to-destination {0} '.format(kwargs['to-destination']))
-        del kwargs['to-destination']
-
-    if 'reject-with' in kwargs:
-        after_jump.append('--reject-with {0} '.format(kwargs['reject-with']))
-        del kwargs['reject-with']
-
-    if 'set-mark' in kwargs:
-        after_jump.append('--set-mark {0} '.format(kwargs['set-mark']))
-        del kwargs['set-mark']
+    # List of options fetched from http://www.iptables.info/en/iptables-targets-and-jumps.html
+    after_jump_arguments = (
+        'j',  # j and jump needs to be first
+        'jump',
+        'clamp-mss-to-pmtu',
+        'ecn-tcp-remove',  # no arg
+        'mask',  # only used with either save-mark or restore-mark
+        'nodst',
+        'queue-num',
+        'reject-with',
+        'restore',  # no arg
+        'restore-mark',  # no arg
+        #'save',  # no arg, problematic name: How do we avoid collision with this?
+        'save-mark',  # no arg
+        'selctx',
+        'set-dscp',
+        'set-dscp-class',
+        'set-mss',
+        'set-tos',
+        'ttl-dec',
+        'ttl-inc',
+        'ttl-set',
+        'ulog-cprange',
+        'ulog-nlgroup',
+        'ulog-prefix',
+        'ulog-qthreshold',
+        'clustermac',
+        'hash-init,'
+        'hashmode',
+        'local-node',
+        'log-ip-options',
+        'log-level',
+        'log-prefix',
+        'log-tcp-options',
+        'log-tcp-sequence',
+        'new',  # no arg
+        'reject-with',
+        'set-class',
+        'set-mark',
+        'set-xmark',
+        'to',
+        'to-destination',
+        'to-port',
+        'to-ports',
+        'to-source',
+        'total-nodes,'
+        'total-nodes',
+    )
+    for after_jump_argument in after_jump_arguments:
+        if after_jump_argument in kwargs:
+            value = kwargs[after_jump_argument]
+            if any(ws_char in str(value) for ws_char in string.whitespace):
+                after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
+            else:
+                after_jump.append('--{0} {1}'.format(after_jump_argument, value))
+            del kwargs[after_jump_argument]
 
     if 'log' in kwargs:
         after_jump.append('--log {0} '.format(kwargs['log']))
