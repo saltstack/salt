@@ -8,6 +8,7 @@ import tempfile
 import json
 import datetime
 import pprint
+import textwrap
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -210,13 +211,14 @@ class TestGetTemplate(TestCase):
         If we failed in a macro because of e.g. a TypeError, get
         more output from trace.
         '''
-        expected = r'''Jinja error:.*division.*
-.*/macrogeneral\(2\):
----
-\{% macro mymacro\(\) -%\}
-\{\{ 1/0 \}\}    <======================
-\{%- endmacro %\}
----.*'''
+        expected = textwrap.dedent(r'''
+                Jinja error:.*division.*
+                .*/macrogeneral\(2\):
+                ---
+                \{% macro mymacro\(\) -%\}
+                \{\{ 1/0 \}\}    <======================
+                \{%- endmacro %\}
+                ---.*''')
         filename = os.path.join(TEMPLATES_DIR,
                                 'files', 'test', 'hello_import_generalerror')
         fc = MockFileClient()
@@ -235,13 +237,14 @@ class TestGetTemplate(TestCase):
         If we failed in a macro because of undefined variables, get
         more output from trace.
         '''
-        expected = r'''Jinja variable 'b' is undefined
-.*/macroundefined\(2\):
----
-\{% macro mymacro\(\) -%\}
-\{\{b.greetee\}\} <-- error is here    <======================
-\{%- endmacro %\}
----'''
+        expected = textwrap.dedent(r'''
+                Jinja variable 'b' is undefined
+                .*/macroundefined\(2\):
+                ---
+                \{% macro mymacro\(\) -%\}
+                \{\{b.greetee\}\} <-- error is here    <======================
+                \{%- endmacro %\}
+                ---''')
         filename = os.path.join(TEMPLATES_DIR,
                                 'files', 'test', 'hello_import_undefined')
         fc = MockFileClient()
@@ -259,14 +262,15 @@ class TestGetTemplate(TestCase):
         '''
         If  we failed in a macro, get more output from trace.
         '''
-        expected = r'''Jinja syntax error: expected token .*end.*got '-'.*
-.*/macroerror\(2\):
----
-# macro
-\{% macro mymacro\(greeting, greetee='world'\) -\} <-- error is here    <======================
-\{\{ greeting ~ ' ' ~ greetee \}\} !
-\{%- endmacro %\}
----.*'''
+        expected = textwrap.dedent(r'''
+                Jinja syntax error: expected token .*end.*got '-'.*
+                .*/macroerror\(2\):
+                ---
+                # macro
+                \{% macro mymacro\(greeting, greetee='world'\) -\} <-- error is here    <======================
+                \{\{ greeting ~ ' ' ~ greetee \}\} !
+                \{%- endmacro %\}
+                ---.*''')
         filename = os.path.join(TEMPLATES_DIR,
                                 'files', 'test', 'hello_import_error')
         fc = MockFileClient()
