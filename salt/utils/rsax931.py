@@ -58,7 +58,7 @@ class RSAX931Signer:
         # Allocate a buffer large enough for the signature. Freed by ctypes.
         buf = create_string_buffer(libcrypto.RSA_size(self.__rsa))
         size = libcrypto.RSA_private_encrypt(len(msg), msg, buf, self.__rsa, RSA_X931_PADDING)
-        if size == 0:
+        if size < 0:
             raise ValueError('Unable to encrypt message')
         return buf[0:size]
 
@@ -94,6 +94,6 @@ class RSAX931Verifier:
         # Allocate a buffer large enough for the signature. Freed by ctypes.
         buf = create_string_buffer(libcrypto.RSA_size(self.__rsa))
         size = libcrypto.RSA_public_decrypt(len(signed), signed, buf, self.__rsa, RSA_X931_PADDING)
-        if size == 0:
+        if size < 0:
             raise ValueError('Unable to decrypt message')
         return buf[0:size]
