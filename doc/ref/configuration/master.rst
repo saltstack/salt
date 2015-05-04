@@ -430,8 +430,8 @@ that connect to a master via localhost.
     presence_events: False
 
 
-Salt-SSH Settings
-=================
+Salt-SSH Configuration
+======================
 
 .. conf_master:: roster_file
 
@@ -454,7 +454,8 @@ Pass in an alternative location for the salt-ssh roster file
 Default: None
 
 Pass in minion option overrides that will be inserted into the SHIM for
-salt-ssh calls. The local minion config is not used for salt-ssh.
+salt-ssh calls. The local minion config is not used for salt-ssh. Can be
+overridden on a per-minion basis in the roster (``minion_opts``)
 
 .. code-block:: yaml
 
