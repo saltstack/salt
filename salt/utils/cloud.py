@@ -1189,7 +1189,7 @@ def deploy_script(host,
                     continue
 
                 if os.path.isdir(local_file):
-                    dir_name = os.path.basename(local_file)
+                    dir_name  = os.path.basename(local_file)
                     remote_dir = os.path.join(os.path.dirname(remote_file),
                                               dir_name)
                 else:
@@ -1769,7 +1769,6 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         tmppath = local_file
         if os.path.isdir(local_file):
             put_args = ['-r']
-
 
     log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
 
