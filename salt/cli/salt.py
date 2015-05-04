@@ -53,7 +53,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             self.exit(2, '{0}\n'.format(exc))
             return
 
-        if self.options.batch:
+        if self.options.batch or self.options.static:
             import salt.cli.batch
             eauth = {}
             if 'token' in self.config:
@@ -77,6 +77,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 eauth['eauth'] = self.options.eauth
 
             if self.options.static:
+
+                if not self.options.batch:
+                    self.config['batch'] = '100%'
 
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
 
