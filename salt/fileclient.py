@@ -356,6 +356,8 @@ class Client(object):
 
         if path.startswith('salt://'):
             path, senv = salt.utils.url.parse(path)
+            if senv:
+                saltenv = senv
 
         localsfilesdest = os.path.join(
             self.opts['cachedir'], 'localfiles', path.lstrip('/'))
@@ -952,6 +954,10 @@ class RemoteClient(Client):
         dest is omitted, then the downloaded file will be placed in the minion
         cache
         '''
+
+        path, senv = salt.utils.url.split_env(path)
+        if senv:
+            saltenv = senv
 
         # Check if file exists on server, before creating files and
         # directories

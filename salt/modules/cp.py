@@ -169,6 +169,10 @@ def get_file(path,
 
     (path, dest) = _render_filenames(path, dest, saltenv, template)
 
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
     if not hash_file(path, saltenv):
         return ''
     else:
