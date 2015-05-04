@@ -1825,26 +1825,26 @@ def create(vm_):
                 'You must either specify a cluster or a resource pool when cloning from a template'
             )
         else:
-            log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+            log.debug('Using resource pool used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
             folder_ref = _get_mor_by_property(vim.Folder, folder)
             if not folder_ref:
-                log.error('Specified folder: {0} does not exist. '.format(folder))
-                log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+                log.error('Specified folder: {0} does not exist'.format(folder))
+                log.debug('Using folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
                 folder_ref = object_ref.parent
         elif datacenter:
             datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
             if not datacenter_ref:
                 log.error('Specified datacenter: {0} does not exist'.format(datacenter))
-                log.debug"Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+                log.debug('Using datacenter folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
                 folder_ref = object_ref.parent
             else:
                 folder_ref = datacenter_ref.vmFolder
         else:
-            log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+            log.debug('Using folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
 
         # Create the relocation specs
@@ -1860,16 +1860,16 @@ def create(vm_):
             if datastore_ref:
                 reloc_spec.datastore = datastore_ref
             else:
-                log.error("Specified datastore: {0} does not exist".format(datastore))
-                log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+                log.error('Specified datastore: {0} does not exist'.format(datastore))
+                log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
-                log.error("Specified host: {0} does not exist".format(host))
-                log.debug("Using host used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+                log.error('Specified host: {0} does not exist'.format(host))
+                log.debug('Using host used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
