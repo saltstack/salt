@@ -86,7 +86,7 @@ class FunctionWrapper(object):
                     mods=self.mods,
                     wipe=True,
                     fsclient=self.fsclient,
-                    minion_opts = self.minion_opts
+                    minion_opts = self.minion_opts,
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()
