@@ -9,7 +9,8 @@ Tablespaces can be set as either absent or present.
     ssd-tablespace:
       postgres_tablespace.present:
         - name: indexes
-        - path:
+        - directory: /mnt/ssd-data
+.. versionadded:: Beryllium
 '''
 from __future__ import absolute_import
 
