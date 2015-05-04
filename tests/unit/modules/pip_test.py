@@ -23,7 +23,7 @@ class PipTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(requirements='requirements.txt')
-            expected_cmd = 'pip install --requirement=\'requirements.txt\''
+            expected_cmd = 'pip install --requirement="requirements.txt"'
             mock.assert_called_once_with(
                 expected_cmd,
                 saltenv='base',
@@ -301,7 +301,7 @@ class PipTestCase(TestCase):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(requirements='salt://requirements.txt')
-            expected_cmd = 'pip install --requirement=\'my_cached_reqs\''
+            expected_cmd = 'pip install --requirement="my_cached_reqs"'
             mock.assert_called_once_with(
                 expected_cmd,
                 saltenv='base',
@@ -729,8 +729,8 @@ class PipTestCase(TestCase):
             pip.install(requirements=requirements)
             mock.assert_called_once_with(
                 'pip install '
-                '--requirement=\'my_cached_reqs-1\' '
-                '--requirement=\'my_cached_reqs-2\'',
+                '--requirement="my_cached_reqs-1" '
+                '--requirement="my_cached_reqs-2"',
                 saltenv='base',
                 runas=None,
                 cwd=None,
@@ -747,8 +747,8 @@ class PipTestCase(TestCase):
             pip.install(requirements=','.join(requirements))
             mock.assert_called_once_with(
                 'pip install '
-                '--requirement=\'my_cached_reqs-1\' '
-                '--requirement=\'my_cached_reqs-2\'',
+                '--requirement="my_cached_reqs-1" '
+                '--requirement="my_cached_reqs-2"',
                 saltenv='base',
                 runas=None,
                 cwd=None,
@@ -762,7 +762,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.install(requirements=requirements[0])
             mock.assert_called_once_with(
-                'pip install --requirement=\'my_cached_reqs-1\'',
+                'pip install --requirement="my_cached_reqs-1"',
                 saltenv='base',
                 runas=None,
                 cwd=None,
@@ -785,8 +785,8 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=requirements)
             mock.assert_called_once_with(
                 'pip uninstall -y '
-                '--requirement=\'my_cached_reqs-1\' '
-                '--requirement=\'my_cached_reqs-2\'',
+                '--requirement="my_cached_reqs-1" '
+                '--requirement="my_cached_reqs-2"',
                 saltenv='base',
                 runas=None,
                 cwd=None,
@@ -803,8 +803,8 @@ class PipTestCase(TestCase):
             pip.uninstall(requirements=','.join(requirements))
             mock.assert_called_once_with(
                 'pip uninstall -y '
-                '--requirement=\'my_cached_reqs-1\' '
-                '--requirement=\'my_cached_reqs-2\'',
+                '--requirement="my_cached_reqs-1" '
+                '--requirement="my_cached_reqs-2"',
                 saltenv='base',
                 runas=None,
                 cwd=None,
@@ -818,7 +818,7 @@ class PipTestCase(TestCase):
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             pip.uninstall(requirements=requirements[0])
             mock.assert_called_once_with(
-                'pip uninstall -y --requirement=\'my_cached_reqs-1\'',
+                'pip uninstall -y --requirement="my_cached_reqs-1"',
                 saltenv='base',
                 runas=None,
                 cwd=None,

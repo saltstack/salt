@@ -83,6 +83,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.utils.url
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
@@ -210,7 +211,7 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+            cmd.append('--requirement="{0}"'.format(treq or requirement))
     return cleanup_requirements, None
 
 
