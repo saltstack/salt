@@ -519,6 +519,7 @@ class Single(object):
             mods=None,
             fsclient=None,
             thin=None,
+            minion_opts=None,
             **kwargs):
         self.opts = opts
         self.tty = tty
@@ -561,13 +562,15 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods}
-        minion_opts = opts.get('ssh_minion_opts', {})
-        minion_opts.update({
+        self.minion_opts = opts.get('ssh_minion_opts', {})
+        if minion_opts is not None:
+            self.minion_opts.update(minion_opts)
+        self.minion_opts.update({
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
                 })
-        self.minion_config = yaml.dump(minion_opts)
+        self.minion_config = yaml.dump(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
