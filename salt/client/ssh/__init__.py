@@ -938,8 +938,8 @@ ARGS = {9}\n'''.format(self.minion_config,
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
 
-        log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
-        log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
+        log.trace('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
+        log.trace('STDERR {1}\n{0}'.format(stderr, self.target['host']))
         log.debug('RETCODE {1}: {0}'.format(retcode, self.target['host']))
 
         error = self.categorize_shim_errors(stdout, stderr, retcode)
