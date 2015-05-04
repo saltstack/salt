@@ -1088,7 +1088,7 @@ class RemoteClient(Client):
             )
         else:
             log.debug(
-                'In env {0!r}, we are ** missing ** the file {1!r}'.format(
+                'In saltenv {0!r}, we are ** missing ** the file {1!r}'.format(
                     saltenv, path
                 )
             )
