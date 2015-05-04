@@ -359,15 +359,18 @@ class Client(object):
             if senv:
                 saltenv = senv
 
+        escape = '|' if path.startswith('|') else ''
+
+        # also strip escape character '|'
         localsfilesdest = os.path.join(
-            self.opts['cachedir'], 'localfiles', path.lstrip('/'))
+            self.opts['cachedir'], 'localfiles', path.lstrip('|/'))
         filesdest = os.path.join(
-            self.opts['cachedir'], 'files', saltenv, path)
+            self.opts['cachedir'], 'files', saltenv, path.lstrip('|'))
 
         if os.path.exists(filesdest):
-            return filesdest
+            return u'{0}{1}'.format(escape, filesdest)
         elif os.path.exists(localsfilesdest):
-            return localsfilesdest
+            return u'{0}{1}'.format(escape, localsfilesdest)
 
         return ''
 
