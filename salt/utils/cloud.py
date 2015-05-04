@@ -1034,11 +1034,11 @@ def deploy_script(host,
                     continue
 
                 if os.path.isdir(local_file):
-                    dir_name  = os.path.basename(local_file)
+                    dir_name = os.path.basename(local_file)
                     remote_dir = os.path.join(os.path.dirname(remote_file),
                                               dir_name)
                 else:
-                    remote_dir = s.path.dirname(remote_file)
+                    remote_dir = os.path.dirname(remote_file)
 
                 if remote_dir not in remote_dirs:
                     root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **kwargs)
