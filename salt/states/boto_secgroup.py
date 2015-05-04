@@ -47,6 +47,17 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   cidr_ip:
                     - 10.0.0.0/0
                     - 192.168.0.0/0
+                - ip_protocol: icmp
+                  from_port: -1
+                  to_port: -1
+                  source_group_name: mysecgroup
+            - rules_egress:
+                - ip_protocol: all
+                  from_port: -1
+                  to_port: -1
+                  cidr_ip:
+                    - 10.0.0.0/0
+                    - 192.168.0.0/0
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -94,6 +105,7 @@ def present(
         description,
         vpc_id=None,
         rules=None,
+        rules_egress=None,
         region=None,
         key=None,
         keyid=None,
@@ -112,6 +124,9 @@ def present(
 
     rules
         A list of ingress rule dicts.
+
+    rules_egress
+        A list of egress rule dicts.
 
     region
         Region to connect to.
@@ -137,7 +152,7 @@ def present(
             return ret
     if not rules:
         rules = []
-    _ret = _rules_present(name, rules, vpc_id, region, key, keyid, profile)
+    _ret = _rules_present(name, rules, rules_egress, vpc_id, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -259,10 +274,13 @@ def _get_rule_changes(rules, _rules):
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
                                       ' rules.')
-        supported_protocols = ['tcp', 'udp', 'icmp', 'all']
+        supported_protocols = ['tcp', 'udp', 'icmp', 'all', '-1']
         if ip_protocol not in supported_protocols:
             msg = ('Invalid ip_protocol {0} specified in security group rule.')
             raise SaltInvocationError(msg.format(ip_protocol))
+        # For the 'all' case, we need to change the protocol name to '-1'.
+        if ip_protocol == 'all':
+            rule['ip_protocol'] = '-1'
         cidr_ip = rule.get('cidr_ip', None)
         group_name = rule.get('source_group_name', None)
         group_id = rule.get('source_group_group_id', None)
@@ -307,6 +325,7 @@ def _get_rule_changes(rules, _rules):
 def _rules_present(
         name,
         rules,
+        rules_egress,
         vpc_id,
         region,
         key,
@@ -318,6 +337,8 @@ def _rules_present(
     2. delete/revoke or authorize/create rules
     3. return 'old' and 'new' group rules
     '''
+    import itertools
+
     ret = {'result': True, 'comment': '', 'changes': {}}
     sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
                                               profile, vpc_id)
@@ -327,8 +348,9 @@ def _rules_present(
         ret['result'] = False
         return ret
     rules = _split_rules(rules)
+    rules_egress = _split_rules(rules_egress)
     if vpc_id:
-        for rule in rules:
+        for rule in itertools.chain(rules, rules_egress):
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
                 _group_id = __salt__['boto_secgroup.get_group_id'](
@@ -343,7 +365,8 @@ def _rules_present(
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
-    if to_create or to_delete:
+    to_delete_egress, to_create_egress = _get_rule_changes(rules_egress, sg['rules_egress'])
+    if to_create or to_delete or to_create_egress or to_delete_egress:
         if __opts__['test']:
             msg = 'Security group {0} set to have rules modified.'.format(name)
             ret['comment'] = msg
@@ -379,10 +402,43 @@ def _rules_present(
                 msg = 'Failed to create rules on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
-        ret['changes']['old'] = {'rules': sg['rules']}
+
+        if to_delete_egress:
+            deleted = True
+            for rule in to_delete_egress:
+                _deleted = __salt__['boto_secgroup.revoke'](
+                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                    profile=profile, egress=True, **rule)
+                if not _deleted:
+                    deleted = False
+            if deleted:
+                msg = 'Removed egress rules on {0} security group.'.format(name)
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+            else:
+                msg = 'Failed to remove egress rules on {0} security group.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+                ret['result'] = False
+
+        if to_create_egress:
+            created = True
+            for rule in to_create_egress:
+                _created = __salt__['boto_secgroup.authorize'](
+                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
+                    profile=profile, egress=True, **rule)
+                if not _created:
+                    created = False
+            if created:
+                msg = 'Created egress rules on {0} security group.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+            else:
+                msg = 'Failed to create egress rules on {0} security group.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+                ret['result'] = False
+
+        ret['changes']['old'] = {'rules': sg['rules'], 'rules_egress': sg['rules_egress']}
         sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
                                                   keyid, profile, vpc_id)
-        ret['changes']['new'] = {'rules': sg['rules']}
+        ret['changes']['new'] = {'rules': sg['rules'], 'rules_egress': sg['rules_egress']}
     return ret
 
 
