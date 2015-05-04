@@ -52,6 +52,13 @@ section below.)
 Feature Requests
 ~~~~~~~~~~~~~~~~
 
+The ``Feature Request`` label should be applied when a user is requesting entirely new functionality. This can include
+new functions, modules, states, modular systems, flags for existing functions, etc. Features *do not* receive severity
+or priority labels, as those labels are only used for bugs. However, they may receive "Functional Area" labels or "ZD".
+
+Feature request issues will be prioritized on an "as-needed" basis using milestones during SaltStack's feature release
+and sprint planning processes.
+
 Bugs
 ~~~~
 
