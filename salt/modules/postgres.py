@@ -476,6 +476,7 @@ def tablespace_list(user=None, host=None, port=None, maintenance_db=None,
     CLI Example:
     .. code-block:: bash
         salt '*' postgres.tablespace_list
+    .. versionadded:: Beryllium
     '''
 
     ret = {}
@@ -505,6 +506,7 @@ def tablespace_exists(name, user=None, host=None, port=None, maintenance_db=None
     CLI Example:
     .. code-block:: bash
         salt '*' postgres.tablespace_exists 'dbname'
+    .. versionadded:: Beryllium
     '''
 
     tablespaces = tablespace_list(user=user, host=host, port=port,
@@ -524,6 +526,7 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
     .. code-block:: bash
 
         salt '*' postgres.tablespace_create tablespacename '/path/datadir'
+    .. versionadded:: Beryllium
     '''
     owner_query = ''
     options_query = ''
@@ -558,6 +561,7 @@ def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
         salt '*' postgres.tablespace_alter index_space new_name=fast_raid
         salt '*' postgres.tablespace_alter test set_option="{'seq_page_cost': '1.1'}"
         salt '*' postgres.tablespace_alter tsname reset_option=seq_page_cost
+    .. versionadded:: Beryllium
     '''
     if not any([new_name, new_owner, set_option, reset_option]):
         return True  # Nothing todo?
@@ -595,6 +599,7 @@ def tablespace_remove(name, user=None, host=None, port=None,
     CLI Example:
     .. code-block:: bash
         salt '*' postgres.tablespace_remove tsname
+    .. versionadded:: Beryllium
     '''
     query = 'DROP TABLESPACE {0}'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
