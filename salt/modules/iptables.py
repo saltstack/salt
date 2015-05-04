@@ -486,7 +486,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
     if _has_option('--check', family):
         cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
     else:
         _chain_name = hex(uuid.getnode())
 
