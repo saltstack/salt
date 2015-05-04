@@ -16,7 +16,7 @@ import salt.utils
 
 class CPModuleTest(integration.ModuleCase):
     '''
-    Validate the test module
+    Validate the cp module
     '''
     def test_get_file(self):
         '''
