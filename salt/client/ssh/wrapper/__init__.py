@@ -110,7 +110,7 @@ class FunctionWrapper(object):
                     fsclient=self.fsclient,
                     **self.kwargs
             )
-            stdout, stderr, _ = single.cmd_block()
+            stdout, stderr, retcode = single.cmd_block()
             if stderr.count('Permission Denied'):
                 return {'_error': 'Permission Denied',
                         'stdout': stdout,
@@ -123,7 +123,8 @@ class FunctionWrapper(object):
             except ValueError:
                 ret = {'_error': 'Failed to return clean data',
                        'stderr': stderr,
-                       'stdout': stdout}
+                       'stdout': stdout,
+                       'retcode': retcode}
             return ret
         return caller
 

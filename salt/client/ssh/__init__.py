@@ -707,7 +707,7 @@ class Single(object):
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         elif self.fun in self.wfuncs or self.mine:
-            stdout = self.run_wfunc()
+            stdout, retcode = self.run_wfunc()
 
         else:
             stdout, stderr, retcode = self.cmd_block()
@@ -769,7 +769,8 @@ class Single(object):
             if '_error' in opts_pkg:
                 # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
-                return ret
+                retcode = opts_pkg['retcode']
+                return ret, retcode
 
             pillar = salt.pillar.Pillar(
                     opts_pkg,
