@@ -306,21 +306,48 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     return disk_spec
 
 
-def _edit_existing_network_adapter_helper(network_adapter, new_network_name, switch_type):
+def _get_network_adapter_type(adapter_type):
+    if adapter_type == "vmxnet":
+        return vim.vm.device.VirtualVmxnet()
+    elif adapter_type == "vmxnet2":
+        return vim.vm.device.VirtualVmxnet2()
+    elif adapter_type == "vmxnet3":
+        return vim.vm.device.VirtualVmxnet3()
+    elif adapter_type == "e1000":
+        return vim.vm.device.VirtualE1000()
+    elif adapter_type == "e1000e":
+        return vim.vm.device.VirtualE1000e()
+
+
+def _edit_existing_network_adapter_helper(network_adapter, new_network_name, adapter_type, switch_type):
+    adapter_type.strip().lower()
     switch_type.strip().lower()
+
+    if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
+        edited_network_adapter = _get_network_adapter_type(adapter_type)
+        if isinstance(network_adapter, type(edited_network_adapter)):
+            edited_network_adapter = network_adapter
+        else:
+            log.debug("Changing type of {0} from {1} to {2}".format(network_adapter.deviceInfo.label, type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(), adapter_type))
+    else:
+        # If type not specified or does not match, dont change adapter type
+        if adapter_type:
+            log.error("Cannot change type of {0} to {1}. Not changing type".format(network_adapter.deviceInfo.label, adapter_type))
+        edited_network_adapter = network_adapter
+
     if switch_type == 'standard':
         network_ref = _get_mor_by_property(vim.Network, new_network_name)
-        network_adapter.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
-        network_adapter.backing.deviceName = new_network_name
-        network_adapter.backing.network = network_ref
+        edited_network_adapter.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
+        edited_network_adapter.backing.deviceName = new_network_name
+        edited_network_adapter.backing.network = network_ref
     elif switch_type == 'distributed':
         network_ref = _get_mor_by_property(vim.dvs.DistributedVirtualPortgroup, new_network_name)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
         )
-        network_adapter.backing = vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
-        network_adapter.backing.port = dvs_port_connection
+        edited_network_adapter.backing = vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
+        edited_network_adapter.backing.port = dvs_port_connection
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
@@ -329,12 +356,19 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name, swi
             err_msg = "Cannot create {0}. Invalid/unsupported switch type {1}".format(network_adapter.deviceInfo.label, switch_type)
         raise SaltCloudSystemExit(err_msg)
 
-    network_adapter.deviceInfo.summary = new_network_name
-    network_adapter.connectable.allowGuestControl = True
-    network_adapter.connectable.startConnected = True
+    edited_network_adapter.key = network_adapter.key
+    edited_network_adapter.deviceInfo = network_adapter.deviceInfo
+    edited_network_adapter.deviceInfo.summary = new_network_name
+    edited_network_adapter.connectable = network_adapter.connectable
+    edited_network_adapter.slotInfo = network_adapter.slotInfo
+    edited_network_adapter.controllerKey = network_adapter.controllerKey
+    edited_network_adapter.unitNumber = network_adapter.unitNumber
+    edited_network_adapter.addressType = network_adapter.addressType
+    edited_network_adapter.macAddress = network_adapter.macAddress
+    edited_network_adapter.wakeOnLanEnabled = network_adapter.wakeOnLanEnabled
     network_spec = vim.vm.device.VirtualDeviceSpec()
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
-    network_spec.device = network_adapter
+    network_spec.device = edited_network_adapter
 
     return network_spec
 
@@ -346,23 +380,14 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     switch_type.strip().lower()
     network_spec = vim.vm.device.VirtualDeviceSpec()
 
-    if adapter_type == "vmxnet":
-        network_spec.device = vim.vm.device.VirtualVmxnet()
-    elif adapter_type == "vmxnet2":
-        network_spec.device = vim.vm.device.VirtualVmxnet2()
-    elif adapter_type == "vmxnet3":
-        network_spec.device = vim.vm.device.VirtualVmxnet3()
-    elif adapter_type == "e1000":
-        network_spec.device = vim.vm.device.VirtualE1000()
-    elif adapter_type == "e1000e":
-        network_spec.device = vim.vm.device.VirtualE1000e()
+    if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
+        network_spec.device = _get_network_adapter_type(adapter_type)
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
         if not adapter_type:
-            err_msg = "The type of {0} has not been specified. Creating of default type vmxnet3".format(network_adapter_label)
+            log.debug("The type of {0} has not been specified. Creating of default type vmxnet3".format(network_adapter_label))
         else:
-            err_msg = "Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label)
-        log.debug(err_msg)
+            log.error("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
         network_spec.device = vim.vm.device.VirtualVmxnet3()
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -509,8 +534,9 @@ def _manage_devices(devices, vm):
                 existing_network_adapters_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in list(devices['network'].keys()):
                     network_name = devices['network'][device.deviceInfo.label]['name']
+                    adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                     switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name, switch_type)
+                    network_spec = _edit_existing_network_adapter_helper(device, network_name, adapter_type, switch_type)
                     adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
                     device_specs.append(network_spec)
                     nics_map.append(adapter_mapping)
