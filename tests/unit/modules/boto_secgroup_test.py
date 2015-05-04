@@ -207,7 +207,7 @@ class BotoSecgroupTestCase(TestCase):
         expected_get_config_result = OrderedDict([('name', group.name), ('group_id', group.id), ('owner_id', u'111122223333'),
                                                  ('description', group.description),
                                                  ('rules', [{'to_port': to_port, 'from_port': from_port,
-                                                     'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]), 
+                                                  'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]),
                                                  ('rules_egress', [])])
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
