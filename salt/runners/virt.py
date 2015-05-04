@@ -246,6 +246,10 @@ def init(
     if not ret:
         __jid_event__.fire_event({'message': 'VM {0} was not initialized.'.format(name)}, 'progress')
         return 'fail'
+    for minion_id in ret:
+        if ret[minion_id]['ret'] is False:
+            print('VM {0} initialization failed. Returned error: {1}'.format(name, ret[minion_id]['ret']))
+            return 'fail'
 
     __jid_event__.fire_event({'message': 'VM {0} initialized on hypervisor {1}'.format(name, hyper)}, 'progress')
     return 'good'
