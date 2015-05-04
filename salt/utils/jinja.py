@@ -23,6 +23,7 @@ import yaml
 # Import salt libs
 import salt
 import salt.utils
+import salt.utils.url
 import salt.fileclient
 from salt.utils.odict import OrderedDict
 
@@ -89,7 +90,7 @@ class SaltCacheLoader(BaseLoader):
         '''
         Cache a file from the salt master
         '''
-        saltpath = path.join('salt://', template)
+        saltpath = salt.utils.url.create(template)
         self.file_client().get_file(saltpath, '', True, self.saltenv)
 
     def check_cache(self, template):

@@ -13,6 +13,8 @@ import re
 import time
 
 # Import salt libs
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import parse_qs as _parse_qs  # pylint: disable=import-error,no-name-in-module
 import salt.loader
 import salt.utils
 import salt.utils.locales
@@ -448,19 +450,13 @@ class Fileserver(object):
         if '../' in path:
             return fnd
         if path.startswith('|'):
-            # The path arguments are escaped
+            # don't attempt to find URL query arguements in the path
             path = path[1:]
         else:
-            if '?' in path:
-                hcomps = path.split('?')
-                path = hcomps[0]
-                comps = hcomps[1].split('&')
-                for comp in comps:
-                    if '=' not in comp:
-                        # Invalid option, skip it
-                        continue
-                    args = comp.split('=', 1)
-                    kwargs[args[0]] = args[1]
+            split_path = _urlparse(path)
+            path = split_path.path
+            query = _parse_qs(split_path.query)
+            kwargs.update(query)
         if 'env' in kwargs:
             salt.utils.warn_until(
                 'Boron',

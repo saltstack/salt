@@ -23,6 +23,7 @@ import salt.transport
 import salt.fileserver
 import salt.utils
 import salt.utils.templates
+import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
 from salt.utils.openstack.swift import SaltSwift
@@ -65,7 +66,8 @@ class Client(object):
         '''
         if not path.startswith('salt://'):
             raise MinionError(u'Unsupported path: {0}'.format(path))
-        return path[7:]
+        file_path, saltenv = salt.utils.url.parse(path)
+        return file_path
 
     def _file_local_list(self, dest):
         '''
@@ -189,7 +191,7 @@ class Client(object):
 
         ret = []
         for path in self.file_list(saltenv):
-            ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
+            ret.append(self.cache_file(salt.utils.url.create(path), saltenv))
         return ret
 
     def cache_dir(self, path, saltenv='base', include_empty=False,
@@ -227,7 +229,7 @@ class Client(object):
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
-                    fn_ = self.cache_file('salt://' + fn_, saltenv)
+                    fn_ = self.cache_file(salt.utils.url.create(fn_), saltenv)
                     if fn_:
                         ret.append(fn_)
 
@@ -352,15 +354,23 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
+        if path.startswith('salt://'):
+            path, senv = salt.utils.url.parse(path)
+            if senv:
+                saltenv = senv
+
+        escape = '|' if path.startswith('|') else ''
+
+        # also strip escape character '|'
         localsfilesdest = os.path.join(
-            self.opts['cachedir'], 'localfiles', path.lstrip('/'))
+            self.opts['cachedir'], 'localfiles', path.lstrip('|/'))
         filesdest = os.path.join(
-            self.opts['cachedir'], 'files', saltenv, path.lstrip('salt://'))
+            self.opts['cachedir'], 'files', saltenv, path.lstrip('|'))
 
         if os.path.exists(filesdest):
-            return filesdest
+            return u'{0}{1}'.format(escape, filesdest)
         elif os.path.exists(localsfilesdest):
-            return localsfilesdest
+            return u'{0}{1}'.format(escape, localsfilesdest)
 
         return ''
 
@@ -419,12 +429,13 @@ class Client(object):
     def get_state(self, sls, saltenv):
         '''
         Get a state file from the master and store it in the local minion
-        cache return the location of the file
+        cache; return the location of the file
         '''
         if '.' in sls:
             sls = sls.replace('.', '/')
-        for path in ['salt://{0}.sls'.format(sls),
-                     '/'.join(['salt:/', sls, 'init.sls'])]:
+        sls_url = salt.utils.url.create(sls + '.sls')
+        init_url = salt.utils.url.create(sls + '/init.sls')
+        for path in [sls_url, init_url]:
             dest = self.cache_file(path, saltenv)
             if dest:
                 return {'source': path, 'dest': dest}
@@ -470,7 +481,7 @@ class Client(object):
             minion_relpath = fn_[len(prefix):].lstrip('/')
             ret.append(
                self.get_file(
-                  'salt://{0}'.format(fn_),
+                  salt.utils.url.create(fn_),
                   '{0}/{1}'.format(dest, minion_relpath),
                   True, saltenv, gzip
                )
@@ -947,6 +958,10 @@ class RemoteClient(Client):
         cache
         '''
 
+        path, senv = salt.utils.url.split_env(path)
+        if senv:
+            saltenv = senv
+
         # Check if file exists on server, before creating files and
         # directories
         hash_server = self.hash_file(path, saltenv)
@@ -1073,7 +1088,7 @@ class RemoteClient(Client):
             )
         else:
             log.debug(
-                'In env {0!r}, we are ** missing ** the file {1!r}'.format(
+                'In saltenv {0!r}, we are ** missing ** the file {1!r}'.format(
                     saltenv, path
                 )
             )
