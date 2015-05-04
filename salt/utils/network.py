@@ -15,7 +15,10 @@ from string import ascii_letters, digits
 
 # Import 3rd-party libs
 import salt.ext.six as six
-import salt.ext.ipaddress as ipaddress
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
