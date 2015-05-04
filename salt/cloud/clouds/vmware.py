@@ -358,8 +358,12 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
         network_spec.device = vim.vm.device.VirtualE1000e()
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
+        if not adapter_type:
+            err_msg = "The type of {0} has not been specified. Creating of default type vmxnet3".format(network_adapter_label)
+        else:
+            err_msg = "Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label)
+        log.debug(err_msg)
         network_spec.device = vim.vm.device.VirtualVmxnet3()
-        log.warn("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
 
@@ -531,7 +535,7 @@ def _manage_devices(devices, vm):
     if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
-        log.debug("Disks to create: {0}".format(disks_to_create))
+        log.debug("Hard disks to create: {0}".format(disks_to_create))
         for disk_label in disks_to_create:
             # create the disk
             size_gb = devices['disk'][disk_label]['size']
@@ -542,7 +546,7 @@ def _manage_devices(devices, vm):
     if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
         network_adapters_to_create.sort()
-        log.debug("Networks to create: {0}".format(network_adapters_to_create))
+        log.debug("Networks adapters to create: {0}".format(network_adapters_to_create))
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
@@ -556,7 +560,7 @@ def _manage_devices(devices, vm):
     if 'scsi' in list(devices.keys()):
         scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
         scsi_adapters_to_create.sort()
-        log.debug("SCSI adapters to create: {0}".format(scsi_adapters_to_create))
+        log.debug("SCSI devices to create: {0}".format(scsi_adapters_to_create))
         for scsi_adapter_label in scsi_adapters_to_create:
             # create the scsi adapter
             scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
