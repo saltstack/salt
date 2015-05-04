@@ -605,7 +605,7 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
         else:
             log.debug(message)
     else:
-        raise task.info.error
+        raise Exception(task.info.error)
 
 
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
