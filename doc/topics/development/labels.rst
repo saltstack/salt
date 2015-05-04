@@ -40,6 +40,15 @@ applied to either issues or pull requests, though some labels may be applied to 
 Issue Labels
 ------------
 
+All incoming issues should be triaged with at least one label and a milestone. When a new issue comes in, it should be
+determined if the issue is a bug or a feature request, and either of those labels should be applied accordingly. Bugs
+and Feature Requests have differing labeling schemes, detailed below, where other labels are applied to them to further
+help contributors find issues to fix or implement.
+
+There are some labels, such as ``Question`` or some of the "Status" labels that may be applied as "stand alone" labels
+in which more information may be needed or a decision must be reached on how to proceed. (See the "Bug Status Labels"
+section below.)
+
 Feature Requests
 ~~~~~~~~~~~~~~~~
 
@@ -95,7 +104,8 @@ Functional Areas
 ^^^^^^^^^^^^^^^^
 
 All bugs should receive a "Functional Area" label to indicate what region of Salt the bug is mainly seen in. This will
-help internal developers as well as community members identify areas of expertise to getting bugs fixed.
+help internal developers as well as community members identify areas of expertise to find issues that can be fixed more
+easily. Functional Area labels can also be applied to Feature Requests.
 
 Functional Area Labels, in alphabetical order, include:
 
