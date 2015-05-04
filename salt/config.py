@@ -438,6 +438,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
+    'file_client': 'local',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
