@@ -166,40 +166,42 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pyl
     else:
         return None
 
+
 def _parse_rules(sg, rules):
     _rules = []
     for rule in rules:
-            log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
-            attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
-            _rule = odict.OrderedDict()
-            for attr in attrs:
-                val = getattr(rule, attr)
-                if not val:
-                    continue
-                if attr == 'grants':
-                    _grants = []
-                    for grant in val:
-                        log.debug('examining grant {0} for'.format(grant))
-                        g_attrs = {'name': 'source_group_name',
-                                   'owner_id': 'source_group_owner_id',
-                                   'group_id': 'source_group_group_id',
-                                   'cidr_ip': 'cidr_ip'}
-                        _grant = odict.OrderedDict()
-                        for g_attr, g_attr_map in six.iteritems(g_attrs):
-                            g_val = getattr(grant, g_attr)
-                            if not g_val:
-                                continue
-                            _grant[g_attr_map] = g_val
-                        _grants.append(_grant)
-                    _rule['grants'] = _grants
-                elif attr == 'from_port':
-                    _rule[attr] = int(val)
-                elif attr == 'to_port':
-                    _rule[attr] = int(val)
-                else:
-                    _rule[attr] = val
-            _rules.append(_rule)
+        log.debug('examining rule {0} for group {1}'.format(rule, sg.id))
+        attrs = ['ip_protocol', 'from_port', 'to_port', 'grants']
+        _rule = odict.OrderedDict()
+        for attr in attrs:
+            val = getattr(rule, attr)
+            if not val:
+                continue
+            if attr == 'grants':
+                _grants = []
+                for grant in val:
+                    log.debug('examining grant {0} for'.format(grant))
+                    g_attrs = {'name': 'source_group_name',
+                               'owner_id': 'source_group_owner_id',
+                               'group_id': 'source_group_group_id',
+                               'cidr_ip': 'cidr_ip'}
+                    _grant = odict.OrderedDict()
+                    for g_attr, g_attr_map in six.iteritems(g_attrs):
+                        g_val = getattr(grant, g_attr)
+                        if not g_val:
+                            continue
+                        _grant[g_attr_map] = g_val
+                    _grants.append(_grant)
+                _rule['grants'] = _grants
+            elif attr == 'from_port':
+                _rule[attr] = int(val)
+            elif attr == 'to_port':
+                _rule[attr] = int(val)
+            else:
+                _rule[attr] = val
+        _rules.append(_rule)
     return _rules
+
 
 def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=None):
     '''
