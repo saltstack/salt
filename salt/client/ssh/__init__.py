@@ -559,8 +559,8 @@ class SSH(object):
                     sret,
                     outputter,
                     self.opts)
-
-        sys.exit(final_exit)
+        if final_exit:
+            sys.exit(salt.defaults.exitcodes.EX_AGGREGATE)
 
 
 class Single(object):
