@@ -683,6 +683,7 @@ class Single(object):
                 self.opts,
                 self.id,
                 fsclient=self.fsclient,
+                minion_opts=self.minion_opts,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
@@ -739,6 +740,7 @@ class Single(object):
             opts,
             self.id,
             fsclient=self.fsclient,
+            minion_opts=self.minion_opts,
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs

@@ -29,6 +29,7 @@ class FunctionWrapper(object):
             mods=None,
             fsclient=None,
             cmd_prefix=None,
+            minion_opts=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.cmd_prefix = cmd_prefix
@@ -39,6 +40,7 @@ class FunctionWrapper(object):
                        'host': host}
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
+        self.minion_opts = minion_opts
 
     def __getitem__(self, cmd):
         '''
@@ -59,6 +61,7 @@ class FunctionWrapper(object):
                                    mods=self.mods,
                                    fsclient=self.fsclient,
                                    cmd_prefix=cmd,
+                                   minion_opts=self.minion_opts
                                    **kwargs)
 
         if self.cmd_prefix:
@@ -83,6 +86,7 @@ class FunctionWrapper(object):
                     mods=self.mods,
                     wipe=True,
                     fsclient=self.fsclient,
+                    minion_opts = self.minion_opts
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()
