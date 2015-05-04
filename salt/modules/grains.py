@@ -68,7 +68,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
+def get(*args, **kwargs):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -94,11 +94,20 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
+        salt '*' grains.get os osrelease pkg:apache
     '''
-    return salt.utils.traverse_dict_and_list(__grains__,
-                                             key,
-                                             default,
-                                             delimiter)
+    ret = {}
+    default = kwargs.get('default', '')
+    delimiter = kwargs.get('delimiter', 'DEFAULT_TARGET_DELIM')
+    for arg in args:
+        try:
+            ret[arg] = salt.utils.traverse_dict_and_list(__grains__,
+                                                        arg,
+                                                        default,
+                                                        delimiter)
+        except KeyError:
+            pass
+    return ret
 
 
 def has_value(key):
