@@ -19,6 +19,6 @@ DIVERGENCES TO KEEP AT ALL COSTS:
     - for tests reasons only, but in spirit the loader doesnt respect without the patch that much a dict-like interface toward the copy method.
     - https://github.com/saltstack/salt/pull/22940#issuecomment-95259610
     - proposed as fix but unrelated: https://github.com/saltstack/salt/pull/22950
-    - tried to rediscuss on https://github.com/saltstack/salt/issues/23317
+
 
 - iptables needs sync, currently this is a mix from stable/develop, waiting again a bit
