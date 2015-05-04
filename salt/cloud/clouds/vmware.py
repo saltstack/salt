@@ -358,8 +358,12 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
         network_spec.device = vim.vm.device.VirtualE1000e()
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
+        if not adapter_type:
+            err_msg = "The type of {0} has not been specified. Creating of default type vmxnet3".format(network_adapter_label)
+        else:
+            err_msg = "Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label)
+        log.debug(err_msg)
         network_spec.device = vim.vm.device.VirtualVmxnet3()
-        log.warn("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
 
@@ -531,7 +535,7 @@ def _manage_devices(devices, vm):
     if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
-        log.debug("Disks to create: {0}".format(disks_to_create))
+        log.debug("Hard disks to create: {0}".format(disks_to_create))
         for disk_label in disks_to_create:
             # create the disk
             size_gb = devices['disk'][disk_label]['size']
@@ -542,7 +546,7 @@ def _manage_devices(devices, vm):
     if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
         network_adapters_to_create.sort()
-        log.debug("Networks to create: {0}".format(network_adapters_to_create))
+        log.debug("Networks adapters to create: {0}".format(network_adapters_to_create))
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
@@ -556,7 +560,7 @@ def _manage_devices(devices, vm):
     if 'scsi' in list(devices.keys()):
         scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
         scsi_adapters_to_create.sort()
-        log.debug("SCSI adapters to create: {0}".format(scsi_adapters_to_create))
+        log.debug("SCSI devices to create: {0}".format(scsi_adapters_to_create))
         for scsi_adapter_label in scsi_adapters_to_create:
             # create the scsi adapter
             scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
@@ -605,7 +609,7 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
         else:
             log.debug(message)
     else:
-        raise task.info.error
+        raise Exception(task.info.error)
 
 
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
@@ -1798,50 +1802,78 @@ def create(vm_):
     if 'clonefrom' in vm_:
         # Clone VM/template from specified VM/template
         object_ref = _get_mor_by_property(vim.VirtualMachine, vm_['clonefrom'])
-        if object_ref.config.template:
-            clone_type = "template"
+        if object_ref:
+            clone_type = "template" if object_ref.config.template else "vm"
         else:
-            clone_type = "vm"
+            raise SaltCloudSystemExit(
+                'The VM/template that you have specified under clonefrom does not exist'
+            )
 
         # Either a cluster, or a resource pool must be specified when cloning from template.
         if resourcepool:
             resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
+            if not resourcepool_ref:
+                log.error('Specified resource pool: {0} does not exist'.format(resourcepool))
+                if clone_type == "template":
+                    raise SaltCloudSystemExit('You must specify a resource pool that exists')
         elif cluster:
             cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
-            resourcepool_ref = cluster_ref.resourcePool
+            if not cluster_ref:
+                log.error('Specified cluster: {0} does not exist'.format(cluster))
+                if clone_type == "template":
+                    raise SaltCloudSystemExit('You must specify a cluster that exists')
+            else:
+                resourcepool_ref = cluster_ref.resourcePool
         elif clone_type == "template":
             raise SaltCloudSystemExit(
-                'You must either specify a cluster, a host or a resource pool'
+                'You must either specify a cluster or a resource pool when cloning from a template'
             )
+        else:
+            log.debug('Using resource pool used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
             folder_ref = _get_mor_by_property(vim.Folder, folder)
+            if not folder_ref:
+                log.error('Specified folder: {0} does not exist'.format(folder))
+                log.debug('Using folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
+                folder_ref = object_ref.parent
         elif datacenter:
             datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
-            folder_ref = datacenter_ref.vmFolder
+            if not datacenter_ref:
+                log.error('Specified datacenter: {0} does not exist'.format(datacenter))
+                log.debug('Using datacenter folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
+                folder_ref = object_ref.parent
+            else:
+                folder_ref = datacenter_ref.vmFolder
         else:
+            log.debug('Using folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
 
         # Create the relocation specs
         reloc_spec = vim.vm.RelocateSpec()
 
-        if resourcepool or cluster:
+        if (resourcepool and resourcepool_ref) or (cluster and cluster_ref):
             reloc_spec.pool = resourcepool_ref
 
         # Either a datastore/datastore cluster can be optionally specified.
         # If not specified, the current datastore is used.
         if datastore:
             datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+            if datastore_ref:
+                reloc_spec.datastore = datastore_ref
+            else:
+                log.error('Specified datastore: {0} does not exist'.format(datastore))
+                log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
-                log.warning("Specified host: {0} does not exist".format(host))
-                log.warning("Using host used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+                log.error('Specified host: {0} does not exist'.format(host))
+                log.debug('Using host used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
