@@ -31,7 +31,7 @@ load-plugins=saltpylint.pep8,
   saltpylint.pep263,
   saltpylint.strings,
   saltpylint.fileperms,
-  saltpylint.pyminver
+  saltpylint.minpyver
 
 
 # Fileperms Lint Plugin Settings
