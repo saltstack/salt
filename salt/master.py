@@ -17,7 +17,7 @@ import multiprocessing
 
 # Import third party libs
 import zmq
-from M2Crypto import RSA
+from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -819,15 +819,16 @@ class AESFuncs(object):
 
         pub = None
         try:
-            pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError as err:
+            with salt.utils.fopen(tmp_pub) as fp_:
+                pub = RSA.importKey(fp_.read())
+        except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load temporary public key "{0}": {1}'
                       .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
-            if pub.public_decrypt(token, 5) == 'salt':
+            if salt.crypt.public_decrypt(pub, token) == 'salt':
                 return True
-        except RSA.RSAError as err:
+        except ValueError as err:
             log.error('Unable to decrypt token: {0}'.format(err))
 
         log.error('Salt minion claiming to be {0} has attempted to'

@@ -19,7 +19,8 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-from M2Crypto import RSA
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
 
 
 log = logging.getLogger(__name__)
@@ -95,12 +96,14 @@ class AESReqServerMixin(object):
             self.opts,
             key)
         try:
-            pub = RSA.load_pub_key(pubfn)
-        except RSA.RSAError:
+            with salt.utils.fopen(pubfn) as f:
+                pub = RSA.importKey(f.read())
+        except (ValueError, IndexError, TypeError):
             return self.crypticle.dumps({})
 
         pret = {}
-        pret['key'] = pub.public_encrypt(key, 4)
+        cipher = PKCS1_OAEP.new(pub)
+        pret['key'] = cipher.encrypt(key)
         pret[dictkey] = pcrypt.dumps(
             ret if ret is not False else {}
         )
@@ -388,12 +391,14 @@ class AESReqServerMixin(object):
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
-            pub = RSA.load_pub_key(pubfn)
-        except RSA.RSAError as err:
+            with salt.utils.fopen(pubfn) as f:
+                pub = RSA.importKey(f.read())
+        except (ValueError, IndexError, TypeError) as err:
             log.error('Corrupt public key "{0}": {1}'.format(pubfn, err))
             return {'enc': 'clear',
                     'load': {'ret': False}}
 
+        cipher = PKCS1_OAEP.new(pub)
         ret = {'enc': 'pub',
                'pub_key': self.master_key.get_pub_str(),
                'publish_port': self.opts['publish_port']}
@@ -414,10 +419,11 @@ class AESReqServerMixin(object):
                                                    ret['pub_key'])
                 ret.update({'pub_sig': binascii.b2a_base64(pub_sign)})
 
+        mcipher = PKCS1_OAEP.new(master_key.key)
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:
-                    mtoken = self.master_key.key.private_decrypt(load['token'], 4)
+                    mtoken = mcipher.decrypt(load['token'])
                     aes = '{0}_|-{1}'.format(salt.master.SMaster.secrets['aes']['secret'].value, mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
@@ -426,24 +432,22 @@ class AESReqServerMixin(object):
             else:
                 aes = salt.master.SMaster.secrets['aes']['secret'].value
 
-            ret['aes'] = pub.public_encrypt(aes, 4)
+            ret['aes'] = cipher.encrypt(aes)
         else:
             if 'token' in load:
                 try:
-                    mtoken = self.master_key.key.private_decrypt(
-                        load['token'], 4
-                    )
-                    ret['token'] = pub.public_encrypt(mtoken, 4)
+                    mtoken = mcipher.decrypt(load['token'])
+                    ret['token'] = cipher.encrypt(mtoken)
                 except Exception:
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
 
             aes = salt.master.SMaster.secrets['aes']['secret'].value
-            ret['aes'] = pub.public_encrypt(salt.master.SMaster.secrets['aes']['secret'].value, 4)
+            ret['aes'] = cipher.encrypt(salt.master.SMaster.secrets['aes']['secret'].value)
         # Be aggressive about the signature
         digest = hashlib.sha256(aes).hexdigest()
-        ret['sig'] = self.master_key.key.private_encrypt(digest, 5)
+        ret['sig'] = salt.crypt.private_encrypt(self.master_key.key, digest)
         eload = {'result': True,
                  'act': 'accept',
                  'id': load['id'],

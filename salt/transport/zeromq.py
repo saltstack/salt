@@ -132,7 +132,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # Return control to the caller. When send() completes, resume by populating ret with the Future.result
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
+        cipher = PKCS1_OAEP.new(key)
+        aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 

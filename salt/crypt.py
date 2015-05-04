@@ -19,8 +19,9 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 # Import third party libs
 try:
-    from M2Crypto import RSA, EVP
-    from Crypto.Cipher import AES
+    from Crypto.Cipher import AES, PKCS1_OAEP
+    from Crypto.Hash import SHA
+    from Crypto.PublicKey import RSA
 except ImportError:
     # No need for crypt in local mode
     pass
@@ -30,6 +31,7 @@ import salt.defaults.exitcodes
 import salt.utils
 import salt.payload
 import salt.transport.client
+import salt.utils.rsax931
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
@@ -80,15 +82,17 @@ def gen_keys(keydir, keyname, keysize, user=None):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
-    gen = RSA.gen_key(keysize, 65537, callback=lambda x, y, z: None)
+    gen = RSA.generate(bits=keysize, e=65537)
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
         # a key! Use the winner's key
         return priv
     cumask = os.umask(191)
-    gen.save_key(priv, None)
+    with salt.utils.fopen(priv, 'w+') as f:
+        f.write(gen.exportKey('PEM'))
     os.umask(cumask)
-    gen.save_pub_key(pub)
+    with salt.utils.fopen(pub, 'w+') as f:
+        f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 256)
     if user:
         try:
@@ -105,31 +109,27 @@ def gen_keys(keydir, keyname, keysize, user=None):
 
 def sign_message(privkey_path, message):
     '''
-    Use M2Crypto's EVP ("Envelope") functions to sign a message.  Returns the signature.
+    Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     '''
     log.debug('salt.crypt.sign_message: Loading private key')
-    evp_rsa = EVP.load_key(privkey_path)
-    evp_rsa.sign_init()
-    evp_rsa.sign_update(message)
+    with salt.utils.fopen(privkey_path) as f:
+        key = RSA.importKey(f.read())
     log.debug('salt.crypt.sign_message: Signing message.')
-    return evp_rsa.sign_final()
+    signer = PKCS1_v1_5.new(key)
+    return signer.sign(SHA.new(message))
 
 
 def verify_signature(pubkey_path, message, signature):
     '''
-    Use M2Crypto's EVP ("Envelope") functions to verify the signature on a message.
+    Use Crypto.Signature to verify the signature on a message.
     Returns True for valid signature.
     '''
-    # Verify that the signature is valid
     log.debug('salt.crypt.verify_signature: Loading public key')
-    pubkey = RSA.load_pub_key(pubkey_path)
-    verify_evp = EVP.PKey()
-    verify_evp.assign_rsa(pubkey)
-    verify_evp.verify_init()
-    verify_evp.verify_update(message)
+    with salt.utils.fopen(pubkey_path) as f:
+        pubkey = RSA.importKey(f.read())
     log.debug('salt.crypt.verify_signature: Verifying signature')
-    result = verify_evp.verify_final(signature)
-    return result
+    verifier = PKCS1_v1_5.new(pubkey)
+    return verifier.verify(SHA.new(message))
 
 
 def gen_signature(priv_path, pub_path, sign_path):
@@ -159,6 +159,33 @@ def gen_signature(priv_path, pub_path, sign_path):
     return True
 
 
+def private_encrypt(key, message):
+    '''
+    Generate an M2Crypto-compatible signature
+
+    :param Crypto.PublicKey.RSA._RSAobj key: The RSA key object
+    :param str message: The message to sign
+    :rtype: str
+    :return: The signature, or an empty string if the signature operation failed
+    '''
+    signer = salt.utils.rsax931.RSAX931(key.exportKey('PEM'))
+    return signer.sign(message)
+
+
+def public_decrypt(pub, message):
+    '''
+    Verify an M2Crypto-compatible signature
+
+    :param Crypto.PublicKey.RSA._RSAobj key: The RSA public key object
+    :param str message: The signed message to verify
+    :rtype: str
+    :return: The message (or digest) recovered from the signature, or an
+        empty string if the verification failed
+    '''
+    verifier = salt.utils.rsax931.RSAX931(pub.exportKey('PEM'))
+    return verifier.verify(message)
+
+
 class MasterKeys(dict):
     '''
     The Master Keys class is used to manage the RSA public key pair used for
@@ -173,7 +200,6 @@ class MasterKeys(dict):
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'master.pem')
 
         self.key = self.__get_keys()
-        self.token = self.__gen_token()
         self.pub_signature = None
 
         # set names for the signing key-pairs
@@ -223,7 +249,8 @@ class MasterKeys(dict):
         path = os.path.join(self.opts['pki_dir'],
                             name + '.pem')
         if os.path.exists(path):
-            key = RSA.load_key(path)
+            with salt.utils.fopen(path) as f:
+                key = RSA.importKey(f.read())
             log.debug('Loaded {0} key: {1}'.format(name, path))
         else:
             log.info('Generating {0} keys: {1}'.format(name, self.opts['pki_dir']))
@@ -231,14 +258,9 @@ class MasterKeys(dict):
                      name,
                      self.opts['keysize'],
                      self.opts.get('user'))
-            key = RSA.load_key(self.rsa_path)
+            with salt.utils.fopen(self.rsa_path) as f:
+                key = RSA.importKey(f.read())
         return key
-
-    def __gen_token(self):
-        '''
-        Generate the authentication token
-        '''
-        return self.key.private_encrypt('salty bacon', 5)
 
     def get_pub_str(self, name='master'):
         '''
@@ -249,7 +271,8 @@ class MasterKeys(dict):
                             name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            key.save_pub_key(path)
+            with salt.utils.fopen(path, 'w+') as f:
+                f.write(key.publickey().exportKey('PEM'))
         return salt.utils.fopen(path, 'r').read()
 
     def get_mkey_paths(self):
@@ -471,7 +494,7 @@ class AsyncAuth(object):
 
         try:
             payload = yield channel.send(
-                self.minion_sign_in_payload()['load'],  # TODO: change func to return load instead of payload
+                self.minion_sign_in_payload(),
                 tries=tries,
                 timeout=timeout
             )
@@ -540,7 +563,7 @@ class AsyncAuth(object):
         '''
         Return keypair object for the minion.
 
-        :rtype: M2Crypto.RSA.RSA
+        :rtype: Crypto.PublicKey.RSA._RSAobj
         :return: The RSA keypair
         '''
         # Make sure all key parent directories are accessible
@@ -548,7 +571,8 @@ class AsyncAuth(object):
         salt.utils.verify.check_path_traversal(self.opts['pki_dir'], user)
 
         if os.path.exists(self.rsa_path):
-            key = RSA.load_key(self.rsa_path)
+            with salt.utils.fopen(self.rsa_path) as f:
+                key = RSA.importKey(f.read())
             log.debug('Loaded minion key: {0}'.format(self.rsa_path))
         else:
             log.info('Generating keys: {0}'.format(self.opts['pki_dir']))
@@ -556,7 +580,8 @@ class AsyncAuth(object):
                      'minion',
                      self.opts['keysize'],
                      self.opts.get('user'))
-            key = RSA.load_key(self.rsa_path)
+            with salt.utils.fopen(self.rsa_path) as f:
+                key = RSA.importKey(f.read())
         return key
 
     def gen_token(self, clear_tok):
@@ -568,31 +593,30 @@ class AsyncAuth(object):
         :return: Encrypted token
         :rtype: str
         '''
-        return self.get_keys().private_encrypt(clear_tok, 5)
+        return private_encrypt(self.get_keys(), clear_tok)
 
     def minion_sign_in_payload(self):
         '''
         Generates the payload used to authenticate with the master
         server. This payload consists of the passed in id_ and the ssh
-        public key to encrypt the AES key sent back form the master.
+        public key to encrypt the AES key sent back from the master.
 
         :return: Payload dictionary
         :rtype: dict
         '''
         payload = {}
-        payload['enc'] = 'clear'
-        payload['load'] = {}
-        payload['load']['cmd'] = '_auth'
-        payload['load']['id'] = self.opts['id']
+        payload['cmd'] = '_auth'
+        payload['id'] = self.opts['id']
         try:
-            pub = RSA.load_pub_key(
-                os.path.join(self.opts['pki_dir'], self.mpub)
-            )
-            payload['load']['token'] = pub.public_encrypt(self.token, RSA.pkcs1_oaep_padding)
+            pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
+            with salt.utils.fopen(pubkey_path) as f:
+                pub = RSA.importKey(f.read())
+            cipher = PKCS1_OAEP.new(pub)
+            payload['token'] = cipher.encrypt(self.token)
         except Exception:
             pass
-        with salt.utils.fopen(self.pub_path, 'r') as fp_:
-            payload['load']['pub'] = fp_.read()
+        with salt.utils.fopen(self.pub_path, 'r') as f:
+            payload['pub'] = f.read()
         return payload
 
     def decrypt_aes(self, payload, master_pub=True):
@@ -607,6 +631,7 @@ class AsyncAuth(object):
         :param dict payload: The incoming payload. This is a dictionary which may have the following keys:
             'aes': The shared AES key
             'enc': The format of the message. ('clear', 'pub', etc)
+            'sig': The message signature
             'publish_port': The TCP port which published the message
             'token': The encrypted token used to verify the message.
             'pub_key': The public key of the sender.
@@ -626,16 +651,18 @@ class AsyncAuth(object):
         else:
             log.debug('Decrypting the current master AES key')
         key = self.get_keys()
-        key_str = key.private_decrypt(payload['aes'], RSA.pkcs1_oaep_padding)
+        cipher = PKCS1_OAEP.new(key)
+        key_str = cipher.decrypt(payload['aes'])
         if 'sig' in payload:
             m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    mkey = RSA.load_pub_key(m_path)
+                    with salt.utils.fopen(m_path, 'r') as f:
+                        mkey = RSA.importKey(f.read())
                 except Exception:
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
-                m_digest = mkey.public_decrypt(payload['sig'], 5)
+                m_digest = public_decrypt(mkey.publickey(), payload['sig'])
                 if m_digest != digest:
                     return '', ''
         else:
@@ -644,7 +671,7 @@ class AsyncAuth(object):
             return key_str.split('_|-')
         else:
             if 'token' in payload:
-                token = key.private_decrypt(payload['token'], RSA.pkcs1_oaep_padding)
+                token = cipher.decrypt(payload['token'])
                 return key_str, token
             elif not master_pub:
                 return key_str, ''
@@ -975,7 +1002,7 @@ class SAuth(AsyncAuth):
 
         try:
             payload = channel.send(
-                self.minion_sign_in_payload()['load'],  # TODO: change func to retur load instead of payload
+                self.minion_sign_in_payload(),
                 tries=tries,
                 timeout=timeout
             )
