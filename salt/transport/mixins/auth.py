@@ -19,8 +19,9 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-from Crypto.PublicKey import RSA
+import Crypto.Random
 from Crypto.Cipher import PKCS1_OAEP
+from Crypto.PublicKey import RSA
 
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,9 @@ class AESReqServerMixin(object):
             self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
+
+        # Re-initialize the RNG after fork as required by PyCrypto
+        Crypto.Random.atfork()
 
     def _encrypt_private(self, ret, dictkey, target):
         '''
@@ -419,7 +423,7 @@ class AESReqServerMixin(object):
                                                    ret['pub_key'])
                 ret.update({'pub_sig': binascii.b2a_base64(pub_sign)})
 
-        mcipher = PKCS1_OAEP.new(master_key.key)
+        mcipher = PKCS1_OAEP.new(self.master_key.key)
         if self.opts['auth_mode'] >= 2:
             if 'token' in load:
                 try:

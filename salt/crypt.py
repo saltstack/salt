@@ -168,7 +168,7 @@ def private_encrypt(key, message):
     :rtype: str
     :return: The signature, or an empty string if the signature operation failed
     '''
-    signer = salt.utils.rsax931.RSAX931(key.exportKey('PEM'))
+    signer = salt.utils.rsax931.RSAX931Signer(key.exportKey('PEM'))
     return signer.sign(message)
 
 
@@ -182,7 +182,7 @@ def public_decrypt(pub, message):
     :return: The message (or digest) recovered from the signature, or an
         empty string if the verification failed
     '''
-    verifier = salt.utils.rsax931.RSAX931(pub.exportKey('PEM'))
+    verifier = salt.utils.rsax931.RSAX931Verifier(pub.exportKey('PEM'))
     return verifier.verify(message)
 
 
