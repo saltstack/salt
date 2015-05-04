@@ -251,7 +251,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
         # be sure not to seed an alrady seeded host
-        kw['seed'] = seeds.get(name, True)
+        seed = kwargs.get('seed', True)
+        kw['seed'] = seeds.get(name, seed)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
         cmds.append(
