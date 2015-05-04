@@ -54,7 +54,7 @@ def auth(username, password):
 
     url = rest_auth_setup()
 
-    data = { 'username': username, 'password': password}
+    data = {'username': username, 'password': password}
 
     # Post to the API endpoint.  If 200 is returned then the result will be the ACLs
     # for this user
