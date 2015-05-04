@@ -525,10 +525,10 @@ class SSH(object):
             print('')
         sret = {}
         outputter = self.opts.get('output', 'nested')
+        final_exit = 0
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
-            final_exit = 0
-            host_ret = ret[host].get('retcode')
+            host_ret = ret[host].get('retcode', 0)
             if host_ret != 0:
                 final_exit = 1
 
@@ -561,6 +561,7 @@ class SSH(object):
                     self.opts)
 
         sys.exit(final_exit)
+        
 
 class Single(object):
     '''
