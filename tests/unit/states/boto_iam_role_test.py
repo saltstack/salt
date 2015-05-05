@@ -25,7 +25,7 @@ boto_iam_role.__opts__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoElbTestCase(TestCase):
+class BotoIAMRoleTestCase(TestCase):
     '''
     Test cases for salt.states.boto_iam_role
     '''
@@ -42,16 +42,63 @@ class BotoElbTestCase(TestCase):
                'changes': {},
                'comment': ''}
 
-        mock = MagicMock(side_effect=[False, True, False, True, True,
-                                      False, True, True, True, True])
+        _desc_role = {
+            'create_date': '2015-02-11T19:47:14Z',
+            'role_id': 'HIUHBIUBIBNKJNBKJ',
+            'assume_role_policy_document': {
+                'Version': '2008-10-17',
+                'Statement': [{
+                    'Action': 'sts:AssumeRole',
+                    'Principal': {'Service': 'ec2.amazonaws.com'},
+                    'Effect': 'Allow'
+                }]},
+            'role_name': 'myfakerole',
+            'path': '/',
+            'arn': 'arn:aws:iam::12345:role/myfakerole'
+        }
+        _desc_role2 = {
+            'create_date': '2015-02-11T19:47:14Z',
+            'role_id': 'HIUHBIUBIBNKJNBKJ',
+            'assume_role_policy_document': {
+                'Version': '2008-10-17',
+                'Statement': [{
+                    'Action': 'sts:AssumeRole',
+                    'Principal': {
+                        'Service': [
+                            'ec2.amazonaws.com',
+                            'datapipeline.amazonaws.com'
+                        ]
+                    },
+                    'Effect': 'Allow'
+                }]},
+            'role_name': 'myfakerole',
+            'path': '/',
+            'arn': 'arn:aws:iam::12345:role/myfakerole'
+        }
+        mock_desc = MagicMock(side_effect=[
+            False, _desc_role, _desc_role, _desc_role2, _desc_role
+        ])
+        _build_policy = {
+            'Version': '2008-10-17',
+            'Statement': [{
+                'Action': 'sts:AssumeRole',
+                'Effect': 'Allow',
+                'Principal': {'Service': 'ec2.amazonaws.com'}
+            }]
+        }
+        mock_policy = MagicMock(return_value=_build_policy)
+        mock_ipe = MagicMock(side_effect=[False, True, True, True])
+        mock_pa = MagicMock(side_effect=[False, True, True, True])
         mock_bool = MagicMock(return_value=False)
         mock_lst = MagicMock(return_value=[])
         with patch.dict(boto_iam_role.__salt__,
-                        {'boto_iam.role_exists': mock,
+                        {'boto_iam.describe_role': mock_desc,
                          'boto_iam.create_role': mock_bool,
-                         'boto_iam.instance_profile_exists': mock,
+                         'boto_iam.build_policy': mock_policy,
+                         'boto_iam.update_assume_role_policy': mock_bool,
+                         'boto_iam.instance_profile_exists': mock_ipe,
                          'boto_iam.create_instance_profile': mock_bool,
-                         'boto_iam.profile_associated': mock,
+                         'boto_iam.profile_associated': mock_pa,
                          'boto_iam.associate_profile_to_role': mock_bool,
                          'boto_iam.list_role_policies': mock_lst}):
             with patch.dict(boto_iam_role.__opts__, {'test': False}):
@@ -69,6 +116,11 @@ class BotoElbTestCase(TestCase):
                 ret.update({'comment': comt})
                 self.assertDictEqual(boto_iam_role.present(name), ret)
 
+                comt = (' myrole role present. Failed to update assume role'
+                        ' policy.')
+                ret.update({'comment': comt})
+
+                self.assertDictEqual(boto_iam_role.present(name), ret)
                 comt = (' myrole role present.   ')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(boto_iam_role.present(name), ret)
@@ -124,4 +176,4 @@ class BotoElbTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(BotoElbTestCase, needs_daemon=False)
+    run_tests(BotoIAMRoleTestCase, needs_daemon=False)
