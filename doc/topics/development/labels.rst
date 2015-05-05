@@ -74,11 +74,10 @@ Blocker
     Should be used sparingly to indicate must-have fixes for the impending release.
 
 Critical
-    Applied to bugs that have data loss, crashes, hanging, unresponsive system, or have no workaround.
+    Applied to bugs that have data loss, crashes, hanging, unresponsive system, etc.
 
 High Severity
-    Any bug report that contains incorrect functionality, bad functionality, a confusing user experience, or has a
-    possible workaround.
+    Any bug report that contains incorrect functionality, bad functionality, a confusing user experience, etc.
 
 Medium Severity
     Applied to bugs that are about cosmetic items, spelling, spacing, colors, etc.
