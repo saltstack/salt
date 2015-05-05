@@ -163,12 +163,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         kwargs['cli'] = True
                     else:
                         cmd_func = local.cmd_cli
-                    if self.options.static:
-                        if self.options.verbose:
-                            kwargs['verbose'] = True
-                        full_ret = local.cmd_full_return(**kwargs)
-                        ret, out, retcode = self._format_ret(full_ret)
-                        self._output_ret(ret, out)
+
                     if self.options.progress:
                         kwargs['progress'] = True
                         self.config['progress'] = True
