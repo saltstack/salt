@@ -217,7 +217,12 @@ class Terminal(object):
             'Child Forked! PID: {0}  STDOUT_FD: {1}  STDERR_FD: '
             '{2}'.format(self.pid, self.child_fd, self.child_fde)
         )
-        log.debug('Terminal Command: {0}'.format(' '.join(self.args)))
+        terminal_command = ' '.join(self.args)
+        if 'decode("base64")' in terminal_command:
+            log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
+            log.trace('Terminal Command: {0}'.format(terminal_command))
+        else:
+            log.debug('Terminal Command: {0}'.format(terminal_command))
         # <---- Spawn our terminal -------------------------------------------
 
         # ----- Setup Logging ----------------------------------------------->

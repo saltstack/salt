@@ -12,6 +12,14 @@ import pprint
 import os.path
 import json
 import logging
+<<<<<<< HEAD
+=======
+# pylint: disable=no-name-in-module
+import salt.ext.six.moves.http_cookiejar
+import salt.ext.six.moves.urllib.request as urllib_request
+# pylint: enable=no-name-in-module
+from salt.ext.six import string_types
+>>>>>>> upstream/2015.2
 from salt._compat import ElementTree as ET
 
 import ssl
@@ -283,11 +291,19 @@ def query(url,
         result_headers = result.headers
         result_text = result.text
         result_cookies = result.cookies
+<<<<<<< HEAD
     elif backend == 'urllib2':
         request = urllib2.Request(url, data)
         handlers = [
             urllib.request.HTTPHandler,
             urllib.request.HTTPCookieProcessor(sess_cookies)
+=======
+    else:
+        request = urllib_request.Request(url, data)
+        handlers = [
+            urllib_request.HTTPHandler,
+            urllib_request.HTTPCookieProcessor(sess_cookies)
+>>>>>>> upstream/2015.2
         ]
 
         if url.startswith('https') or port == 443:
@@ -334,7 +350,11 @@ def query(url,
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
+<<<<<<< HEAD
                         handlers.append(urllib.request.HTTPSHandler(context=context))  # pylint: disable=E1123
+=======
+                        handlers.append(urllib_request.HTTPSHandler(context=context))  # pylint: disable=E1123
+>>>>>>> upstream/2015.2
                     else:
                         # Python < 2.7.9
                         cert_kwargs = {
@@ -346,7 +366,11 @@ def query(url,
                             cert_kwargs['key_file'] = cert_chain[1]
                         handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(**cert_kwargs)
 
+<<<<<<< HEAD
         opener = urllib.request.build_opener(*handlers)
+=======
+        opener = urllib_request.build_opener(*handlers)
+>>>>>>> upstream/2015.2
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
