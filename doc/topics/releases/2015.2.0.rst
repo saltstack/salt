@@ -22,7 +22,8 @@ modules have been substantially updated and added.
     will not work by default. The modules shipped with salt have been audited
     to fix any issues that might have arisen from this change.  Additionally,
     the ``cmd`` state module has been unaffected, and use of ``cmd.run`` in
-    jinja is also unaffected.
+    jinja is also unaffected. ``cmd.run`` calls on the CLI will also allow
+    shellisms.
 
     However, custom execution modules which use shellisms in ``cmd`` calls
     will break, unless you pass ``python_shell=True`` to these calls.
