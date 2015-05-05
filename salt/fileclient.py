@@ -359,7 +359,7 @@ class Client(object):
             if senv:
                 saltenv = senv
 
-        escape = '|' if path.startswith('|') else ''
+        escaped = True if salt.utils.url.is_escaped(path) else False
 
         # also strip escape character '|'
         localsfilesdest = os.path.join(
@@ -368,9 +368,9 @@ class Client(object):
             self.opts['cachedir'], 'files', saltenv, path.lstrip('|'))
 
         if os.path.exists(filesdest):
-            return u'{0}{1}'.format(escape, filesdest)
+            return salt.utils.url.escape(filesdest) if escaped else filesdest
         elif os.path.exists(localsfilesdest):
-            return u'{0}{1}'.format(escape, localsfilesdest)
+            return salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
 
         return ''
 
@@ -716,9 +716,9 @@ class LocalClient(Client):
 
         if saltenv not in self.opts['file_roots']:
             return fnd
-        if path.startswith('|'):
+        if salt.utils.url.is_escaped(path):
             # The path arguments are escaped
-            path = path[1:]
+            path = salt.utils.url.unescape(path)
         for root in self.opts['file_roots'][saltenv]:
             full = os.path.join(root, path)
             if os.path.isfile(full):
