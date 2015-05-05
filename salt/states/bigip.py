@@ -3,8 +3,22 @@
 A state module designed to enforce load-balancing configurations for F5 Big-IP entities.
 '''
 
-import salt.exceptions
+# Import Python libs
+from __future__ import absolute_import
 import logging as logger
+import json
+
+#Import Salt Libs
+import salt.exceptions
+
+
+#set up virtual function
+def __virtual__():
+    '''
+    Only load if the bigip exec module is available in __salt__
+    '''
+    return 'bigip' if 'bigip.exec_action' in __salt__ else False
+
 
 def _load_result(response, ret):
     '''
@@ -89,6 +103,33 @@ def _check_for_changes(entity_type, ret, existing, modified):
     return ret
 
 
+def _test_output(ret, action, params):
+    '''
+    For testing just output what the state will attempt to do without actually doing it.
+    '''
+
+    if action == 'list':
+        ret['comment'] += 'The list action will just list an entity and will make no changes.\n'
+    elif action == 'create' or action == 'add':
+        ret['comment'] += 'The create action will attempt to create an entity if it does not already exist.\n'
+    elif action == 'delete':
+        ret['comment'] += 'The delete action will attempt to delete an existing entity if it exists.\n'
+    elif action == 'manage':
+        ret['comment'] += 'The manage action will create a new entity if it does not exist.  If it does exist, it will be enforced' \
+                          'to the desired state.\n'
+    elif action == 'modify':
+        ret['comment'] += 'The modify action will attempt to modify an existing entity only if it exists.\n'
+
+    ret['comment'] += 'An iControl REST Request will be made using the parameters:\n'
+    ret['comment'] += json.dumps(params, indent=4)
+
+    ret['changes'] = {}
+    # Return ``None`` when running with ``test=true``.
+    ret['result'] = None
+
+    return ret
+
+
 def list_node(hostname, username, password, name):
     '''
     A function to connect to a bigip device and list a specific node.
@@ -101,6 +142,16 @@ def list_node(hostname, username, password, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'list', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name
+        }
+        )
+
     response = __salt__['bigip.list_node'](hostname, username, password, name)
     return _load_result(response, ret)
 
@@ -118,6 +169,16 @@ def create_node(hostname, username, password, name, address):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'create', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'address': address
+        }
+        )
 
     #is this node currently configured?
     existing = __salt__['bigip.list_node'](hostname, username, password, name)
@@ -178,6 +239,25 @@ def manage_node(hostname, username, password, name, address,
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'address': address,
+            'connection_limit': connection_limit,
+            'description': description,
+            'dynamic_ratio': dynamic_ratio,
+            'logging': logging,
+            'monitor': monitor,
+            'rate_limit': rate_limit,
+            'ratio': ratio,
+            'session': session,
+            'state:': node_state
+        }
+        )
+
     #is this node currently configured?
     existing = __salt__['bigip.list_node'](hostname, username, password, name)
 
@@ -234,20 +314,22 @@ def manage_node(hostname, username, password, name, address,
                                                      state=node_state)
             #was the modification successful?
             if modified['code'] == 200:
+
                 ret['result'] = True
                 ret['comment'] = 'Node was created and enforced to the desired state.  Note: Only parameters specified ' \
                                  'were enforced.  See changes for details.'
                 ret['changes']['old'] = {}
                 ret['changes']['new'] = modified['content']
+
             # roll it back
             else:
+
                 deleted = __salt__['bigip.delete_node'](hostname, username, password, name)
                 # did we get rid of it?
                 if deleted['code'] == 200:
                     ret['comment'] = 'Node was successfully created but an error occurred during modification. ' \
                                      'The creation of the node has been rolled back. Message is as follows:\n' \
                                      '{message}'.format(message=modified['content']['message'])
-
                 # something bad happened
                 else:
                     ret['comment'] = 'Node was successfully created but an error occurred during modification. ' \
@@ -294,10 +376,28 @@ def modify_node(hostname, username, password, name,
         rate_limit:           [integer]
         ratio:                [integer]
         session:              [user-enabled | user-disabled]
-        node_state:           [user-down | user-up ]
+        node_state (state):   [user-down | user-up ]
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'modify', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'connection_limit': connection_limit,
+            'description': description,
+            'dynamic_ratio': dynamic_ratio,
+            'logging': logging,
+            'monitor': monitor,
+            'rate_limit': rate_limit,
+            'ratio': ratio,
+            'session': session,
+            'state:': node_state
+        }
+        )
 
     #is this node currently configured?
     existing = __salt__['bigip.list_node'](hostname, username, password, name)
@@ -334,6 +434,7 @@ def modify_node(hostname, username, password, name,
 
     return ret
 
+
 def delete_node(hostname, username, password, name):
     '''
     Delete an existing node.
@@ -346,6 +447,15 @@ def delete_node(hostname, username, password, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+        }
+        )
 
     #is this node currently configured?
     existing = __salt__['bigip.list_node'](hostname, username, password, name)
@@ -372,7 +482,7 @@ def delete_node(hostname, username, password, name):
             ret['changes']['new'] = {}
 
     else:
-          ret = _load_result(existing, ret)
+            ret = _load_result(existing, ret)
 
     return ret
 
@@ -389,6 +499,16 @@ def list_pool(hostname, username, password, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'list', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+        }
+        )
+
     response = __salt__['bigip.list_pool'](hostname, username, password, name)
     return _load_result(response, ret)
 
@@ -463,6 +583,37 @@ def create_pool(hostname, username, password, name, members=None,
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'create', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'members': members,
+            'allow_nat': allow_nat,
+            'allow_snat': allow_snat,
+            'description': description,
+            'gateway_failsafe_device': gateway_failsafe_device,
+            'ignore_persisted_weight': ignore_persisted_weight,
+            'ip_tos_client:': ip_tos_to_client,
+            'ip_tos_server': ip_tos_to_server,
+            'link_qos_to_client': link_qos_to_client,
+            'link_qos_to_server': link_qos_to_server,
+            'load_balancing_mode': load_balancing_mode,
+            'min_active_members': min_active_members,
+            'min_up_members': min_up_members,
+            'min_up_members_checking': min_up_members_checking,
+            'monitor': monitor,
+            'profiles': profiles,
+            'queue_depth_limit': queue_depth_limit,
+            'queue_on_connection_limit': queue_on_connection_limit,
+            'queue_time_limit': queue_time_limit,
+            'reselect_tries': reselect_tries,
+            'service_down_action': service_down_action,
+            'slow_ramp_time': slow_ramp_time
+            }
+        )
 
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
@@ -589,9 +740,38 @@ def manage_pool(hostname, username, password, name,
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'allow_nat': allow_nat,
+            'allow_snat': allow_snat,
+            'description': description,
+            'gateway_failsafe_device': gateway_failsafe_device,
+            'ignore_persisted_weight': ignore_persisted_weight,
+            'ip_tos_client:': ip_tos_to_client,
+            'ip_tos_server': ip_tos_to_server,
+            'link_qos_to_client': link_qos_to_client,
+            'link_qos_to_server': link_qos_to_server,
+            'load_balancing_mode': load_balancing_mode,
+            'min_active_members': min_active_members,
+            'min_up_members': min_up_members,
+            'min_up_members_checking': min_up_members_checking,
+            'monitor': monitor,
+            'profiles': profiles,
+            'queue_depth_limit': queue_depth_limit,
+            'queue_on_connection_limit': queue_on_connection_limit,
+            'queue_time_limit': queue_time_limit,
+            'reselect_tries': reselect_tries,
+            'service_down_action': service_down_action,
+            'slow_ramp_time': slow_ramp_time
+        }
+        )
+
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
-
 
     # if it exists
     if existing['code'] == 200:
@@ -756,6 +936,36 @@ def modify_pool(hostname, username, password, name,
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'modify', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'allow_nat': allow_nat,
+            'allow_snat': allow_snat,
+            'description': description,
+            'gateway_failsafe_device': gateway_failsafe_device,
+            'ignore_persisted_weight': ignore_persisted_weight,
+            'ip_tos_client:': ip_tos_to_client,
+            'ip_tos_server': ip_tos_to_server,
+            'link_qos_to_client': link_qos_to_client,
+            'link_qos_to_server': link_qos_to_server,
+            'load_balancing_mode': load_balancing_mode,
+            'min_active_members': min_active_members,
+            'min_up_members': min_up_members,
+            'min_up_members_checking': min_up_members_checking,
+            'monitor': monitor,
+            'profiles': profiles,
+            'queue_depth_limit': queue_depth_limit,
+            'queue_on_connection_limit': queue_on_connection_limit,
+            'queue_time_limit': queue_time_limit,
+            'reselect_tries': reselect_tries,
+            'service_down_action': service_down_action,
+            'slow_ramp_time': slow_ramp_time
+        }
+        )
+
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
 
@@ -825,6 +1035,15 @@ def delete_pool(hostname, username, password, name):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+        }
+        )
+
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
     # if it exists by name
@@ -871,6 +1090,16 @@ def manage_pool_members(hostname, username, password, name, members):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'members': members
+        }
+        )
 
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
@@ -934,6 +1163,16 @@ def add_pool_member(hostname, username, password, name, member):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'add', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'members': member
+        }
+        )
 
     #is this pool member currently configured?
     existing_pool = __salt__['bigip.list_pool'](hostname, username, password, name)
@@ -1037,6 +1276,16 @@ def modify_pool_member(hostname, username, password, name, member,
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'modify', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'members': member
+        }
+        )
+
     #is this pool member currently configured?
     existing_pool = __salt__['bigip.list_pool'](hostname, username, password, name)
 
@@ -1125,8 +1374,19 @@ def delete_pool_member(hostname, username, password, name, member):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'members': member
+        }
+        )
+
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
+    
     # if it exists by name
     if existing['code'] == 200:
 
@@ -1175,6 +1435,16 @@ def list_virtual(hostname, username, password, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    
+    if __opts__['test']:
+        return _test_output(ret, 'list', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name
+        }
+        )
+    
     response = __salt__['bigip.list_virtual'](hostname, username, password, name)
     return _load_result(response, ret)
 
@@ -1274,6 +1544,55 @@ def create_virtual(hostname, username, password, name, destination,
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'create', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'destination': destination,
+            'pool': pool,
+            'address_status': address_status,
+            'auto_lasthop': auto_lasthop,
+            'bwc_policy': bwc_policy,
+            'cmp_enabled': cmp_enabled,
+            'connection_limit': connection_limit,
+            'dhcp_relay': dhcp_relay,
+            'description': description,
+            'fallback_persistence': fallback_persistence,
+            'flow_eviction_policy': flow_eviction_policy,
+            'gtm_score': gtm_score,
+            'ip_forward': ip_forward,
+            'ip_protocol': ip_protocol,
+            'internal': internal,
+            'twelve_forward': twelve_forward,
+            'last_hop_pool': last_hop_pool,
+            'mask': mask,
+            'mirror': mirror,
+            'nat64': nat64,
+            'persist': persist,
+            'profiles': profiles,
+            'policies': policies,
+            'rate_class': rate_class,
+            'rate_limit': rate_limit,
+            'rate_limit_mode': rate_limit_mode,
+            'rate_limit_dst': rate_limit_dst,
+            'rate_limit_src': rate_limit_src,
+            'rules': rules,
+            'related_rules': related_rules,
+            'reject': reject,
+            'source': source,
+            'source_address_translation': source_address_translation,
+            'source_port': source_port,
+            'virtual_state': virtual_state,
+            'traffic_classes': traffic_classes,
+            'translate_address': translate_address,
+            'translate_port': translate_port,
+            'vlans': vlans
+        }
+        )
+
     existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
 
     # does this virtual exist?
@@ -1439,6 +1758,55 @@ def manage_virtual(hostname, username, password, name, destination,
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'manage', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'destination': destination,
+            'pool': pool,
+            'address_status': address_status,
+            'auto_lasthop': auto_lasthop,
+            'bwc_policy': bwc_policy,
+            'cmp_enabled': cmp_enabled,
+            'connection_limit': connection_limit,
+            'dhcp_relay': dhcp_relay,
+            'description': description,
+            'fallback_persistence': fallback_persistence,
+            'flow_eviction_policy': flow_eviction_policy,
+            'gtm_score': gtm_score,
+            'ip_forward': ip_forward,
+            'ip_protocol': ip_protocol,
+            'internal': internal,
+            'twelve_forward': twelve_forward,
+            'last_hop_pool': last_hop_pool,
+            'mask': mask,
+            'mirror': mirror,
+            'nat64': nat64,
+            'persist': persist,
+            'profiles': profiles,
+            'policies': policies,
+            'rate_class': rate_class,
+            'rate_limit': rate_limit,
+            'rate_limit_mode': rate_limit_mode,
+            'rate_limit_dst': rate_limit_dst,
+            'rate_limit_src': rate_limit_src,
+            'rules': rules,
+            'related_rules': related_rules,
+            'reject': reject,
+            'source': source,
+            'source_address_translation': source_address_translation,
+            'source_port': source_port,
+            'virtual_state': virtual_state,
+            'traffic_classes': traffic_classes,
+            'translate_address': translate_address,
+            'translate_port': translate_port,
+            'vlans': vlans
+        }
+        )
+
     existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
 
     # does this virtual exist?
@@ -1665,6 +2033,55 @@ def modify_virtual(hostname, username, password, name, destination,
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'modify', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name,
+            'destination': destination,
+            'pool': pool,
+            'address_status': address_status,
+            'auto_lasthop': auto_lasthop,
+            'bwc_policy': bwc_policy,
+            'cmp_enabled': cmp_enabled,
+            'connection_limit': connection_limit,
+            'dhcp_relay': dhcp_relay,
+            'description': description,
+            'fallback_persistence': fallback_persistence,
+            'flow_eviction_policy': flow_eviction_policy,
+            'gtm_score': gtm_score,
+            'ip_forward': ip_forward,
+            'ip_protocol': ip_protocol,
+            'internal': internal,
+            'twelve_forward': twelve_forward,
+            'last_hop_pool': last_hop_pool,
+            'mask': mask,
+            'mirror': mirror,
+            'nat64': nat64,
+            'persist': persist,
+            'profiles': profiles,
+            'policies': policies,
+            'rate_class': rate_class,
+            'rate_limit': rate_limit,
+            'rate_limit_mode': rate_limit_mode,
+            'rate_limit_dst': rate_limit_dst,
+            'rate_limit_src': rate_limit_src,
+            'rules': rules,
+            'related_rules': related_rules,
+            'reject': reject,
+            'source': source,
+            'source_address_translation': source_address_translation,
+            'source_port': source_port,
+            'virtual_state': virtual_state,
+            'traffic_classes': traffic_classes,
+            'translate_address': translate_address,
+            'translate_port': translate_port,
+            'vlans': vlans
+        }
+        )
+
     existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
 
     # does this virtual exist?
@@ -1755,6 +2172,15 @@ def delete_virtual(hostname, username, password, name):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'name': name
+        }
+        )
+
     #is this virtual currently configured?
     existing = __salt__['bigip.list_virtual'](hostname, username, password, name)
     # if it exists by name
@@ -1796,6 +2222,17 @@ def list_monitor(hostname, username, password, monitor_type, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'list', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'monitor_type': monitor_type,
+            'name': name
+        }
+        )
+
     response = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
     return _load_result(response, ret)
 
@@ -1819,6 +2256,21 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+
+        params = {
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'monitor_type': monitor_type,
+            'name': name
+        }
+
+        for key, value in kwargs.iteritems():
+            params[key] = value
+
+        return _test_output(ret, 'create', params)
 
     #is this monitor currently configured?
     existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
@@ -1868,6 +2320,21 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+
+        params = {
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'monitor_type': monitor_type,
+            'name': name
+        }
+
+        for key, value in kwargs.iteritems():
+            params[key] = value
+
+        return _test_output(ret, 'manage', params)
 
     #is this monitor currently configured?
     existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
@@ -1926,6 +2393,21 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+
+        params = {
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'monitor_type': monitor_type,
+            'name': name
+        }
+
+        for key, value in kwargs.iteritems():
+            params[key] = value
+
+        return _test_output(ret, 'modify', params)
+
     #is this monitor currently configured?
     existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
 
@@ -1974,6 +2456,15 @@ def delete_monitor(hostname, username, password, monitor_type, name):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'monitor_type': monitor_type,
+            'name': name
+        })
+
     #is this profile currently configured?
     existing = __salt__['bigip.list_monitor'](hostname, username, password, monitor_type, name)
     # if it exists by name
@@ -2015,6 +2506,16 @@ def list_profile(hostname, username, password, profile_type, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'list', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'profile_type': profile_type,
+            'name': name
+        })
+
     response = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
     return _load_result(response, ret)
 
@@ -2042,6 +2543,15 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+        return _test_output(ret, 'create', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'profile_type': profile_type,
+            'name': name
+        })
 
     #is this profile currently configured?
     existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
@@ -2092,6 +2602,21 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if __opts__['test']:
+
+        params = {
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'profile_type': profile_type,
+            'name': name
+        }
+
+        for key, value in kwargs.iteritems():
+            params[key] = value
+
+        return _test_output(ret, 'manage', params)
 
     #is this profile currently configured?
     existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
@@ -2150,6 +2675,21 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+
+        params = {
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'profile_type': profile_type,
+            'name': name
+        }
+
+        for key, value in kwargs.iteritems():
+            params[key] = value
+
+        return _test_output(ret, 'modify', params)
+
     #is this profile currently configured?
     existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
 
@@ -2198,8 +2738,18 @@ def delete_profile(hostname, username, password, profile_type, name):
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if __opts__['test']:
+        return _test_output(ret, 'delete', params={
+            'hostname': hostname,
+            'username': username,
+            'password': password,
+            'profile_type': profile_type,
+            'name': name
+        })
+
     #is this profile currently configured?
     existing = __salt__['bigip.list_profile'](hostname, username, password, profile_type, name)
+
     # if it exists by name
     if existing['code'] == 200:
 
