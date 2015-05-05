@@ -51,17 +51,22 @@ _salt_caching_policy() {
     (( $#oldp ))
 }
 
-local -a _{target,master,logging,minion}_options _{common,out}_opts
+local -a _{target,master,logging,minion}_options _{common,out}_opts _target_opt_pat
+_target_opt_pat=(
+  '(-[ELGNRCIS]|--(pcre|list|grain(|-pcre)|nodegroup|range|compound|pillar|ipcidr))'
+  '(-E --pcre -L --list -G --grain --grain-pcre -N --nodegroup -R --range -C --compound -I --pillar -S --ipcidr)'
+)
+
 _target_options=(
-    '(-E --pcre)'{-E,--pcre}'[use pcre regular expressions]:pcre:'
-    '(-L --list)'{-L,--list}'[take a comma or space delimited list of servers.]:list:'
-    '(-G --grain)'{-G,--grain}'[use a grain value to identify targets]:Grains:'
-    '--grain-pcre[use a grain value to identify targets.]:pcre:'
-    '(-N --nodegroup)'{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
-    '(-R --range)'{-R,--range}'[use a range expression to identify targets.]:Range:'
-    '(-C --compound)'{-C,--compound}'[Use multiple targeting options.]:Compound:'
-    '(-I --pillar)'{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
-    '(-S --ipcidr)'{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
+    "$_target_opt_pat[2]"{-E,--pcre}'[use pcre regular expressions]:pcre:'
+    "$_target_opt_pat[2]"{-L,--list}'[take a comma or space delimited list of servers.]:list:'
+    "$_target_opt_pat[2]"{-G,--grain}'[use a grain value to identify targets]:Grains:'
+    "$_target_opt_pat[2]--grain-pcre[use a grain value to identify targets.]:pcre:"
+    "$_target_opt_pat[2]"{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
+    "$_target_opt_pat[2]"{-R,--range}'[use a range expression to identify targets.]:Range:'
+    "$_target_opt_pat[2]"{-C,--compound}'[Use multiple targeting options.]:Compound:'
+    "$_target_opt_pat[2]"{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
+    "$_target_opt_pat[2]"{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
 )
 
 _common_opts=(
@@ -120,7 +125,7 @@ _salt_comp(){
     case "$service" in
         salt)
             _arguments -C \
-                "${words[(r)(-[GN]|--grain(|-regex))]+!}:minions:_minions" \
+                "${words[(r)$_target_opt_pat[1]]+!}:minions:_minions" \
                 ':modules:_modules' \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
@@ -138,7 +143,7 @@ _salt_comp(){
             ;;
         salt-cp)
             _arguments -C \
-                "${words[(r)(-[GN]|--grain(|-regex))]+!}:minions:_minions" \
+                "${words[(r)$_target_opt_pat[1]]+!}:minions:_minions" \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
                 "$_logging_options[@]" \
