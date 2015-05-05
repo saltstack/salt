@@ -23,6 +23,8 @@ import salt.utils
 import salt.output
 import salt.exceptions
 
+# Setup the logger
+log = logger.getLogger(__name__)
 
 def __virtual__():
     '''
