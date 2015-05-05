@@ -7,29 +7,34 @@ An execution module which can manipulate an f5 bigip via iControl REST
 
 # Import python libs
 from __future__ import absolute_import
-import requests
-import requests.exceptions
 import json
 import logging as logger
+
+# Import third party libs
+try:
+    import requests
+    import requests.exceptions
+    HAS_LIBS = True
+except ImportError:
+    HAS_LIBS = False
 
 # Import salt libs
 import salt.utils
 import salt.output
 import salt.exceptions
 
-# Setup the logger
-log = logger.getLogger(__name__)
 
-
-# Setup Virtual Function
 def __virtual__():
-    return 'bigip'
+    '''
+    Only return if requests is installed
+    '''
+    return 'bigip' if HAS_LIBS else False
 
 
 BIG_IP_URL_BASE = 'https://{host}/mgmt/tm'
 
 
-def _build_session(username, password):
+def _build_session(username, password, trans_label=None):
     '''
     Create a session to be used when connecting to iControl REST.
     '''
@@ -38,6 +43,15 @@ def _build_session(username, password):
     bigip.auth = (username, password)
     bigip.verify = False
     bigip.headers.update({'Content-Type': 'application/json'})
+
+    if trans_label:
+        #pull the trans id from the grain
+        trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=trans_label))
+
+        if trans_id:
+            bigip.headers.update({'X-F5-REST-Coordination-Id': trans_id})
+        else:
+            bigip.headers.update({'X-F5-REST-Coordination-Id': None})
 
     return bigip
 
@@ -198,16 +212,168 @@ def _set_value(value):
         return value
 
 
-def list_node(hostname, username, password, name=None):
+def start_transaction(hostname, username, password, label):
     '''
-    A function to connect to a bigip device and list all nodes or a specific node.
+    A function to connect to a bigip device and start a new transaction.
 
     Parameters:
         hostname:   The host/address of the bigip device
         username:   The iControl REST username
         password:   The iControl REST password
-        name:   The name of the node to list. If no name is specified than all
-                nodes will be listed.
+        label:      The name / alias for this transaction.  The actual transaction
+                    id will be stored within a grain called bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.start_transaction bigip admin admin my_transaction
+
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    payload = {}
+
+    #post to REST to get trans id
+    try:
+        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/transaction', data=json.dumps(payload))
+    except requests.exceptions.ConnectionError as e:
+        return _load_connection_error(hostname, e)
+
+    #extract the trans_id
+    data = _load_response(response)
+
+    if data['code'] == 200:
+
+        trans_id = data['content']['transId']
+
+        __salt__['grains.setval']('bigip_f5_trans', {label: trans_id})
+
+        return 'Transaction: {trans_id} - has successfully been stored in the grain: bigip_f5_trans:{label}'.format(trans_id=trans_id,
+                                                                                                                       label=label)
+    else:
+        return data
+
+
+def list_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and list an existing transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      the label of this transaction stored within the grain: bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.list_transaction bigip admin admin my_transaction
+
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    #pull the trans id from the grain
+    trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=label))
+
+    if trans_id:
+
+        #post to REST to get trans id
+        try:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}/commands'.format(trans_id=trans_id))
+            return _load_response(response)
+        except requests.exceptions.ConnectionError as e:
+            return _load_connection_error(hostname, e)
+    else:
+        return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
+               ' bigip.start_transaction function'
+
+
+def commit_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and commit an existing transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      the label of this transaction stored within the grain: bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.commit_transaction bigip admin admin my_transaction
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    #pull the trans id from the grain
+    trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=label))
+
+    if trans_id:
+
+        payload = {}
+        payload['state'] = 'VALIDATING'
+
+        #patch to REST to get trans id
+        try:
+            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id),data=json.dumps(payload))
+            return _load_response(response)
+        except requests.exceptions.ConnectionError as e:
+            return _load_connection_error(hostname, e)
+    else:
+        return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
+               ' bigip.start_transaction function'
+
+
+def delete_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and delete an existing transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      The label of this transaction stored within the grain: bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.delete_transaction bigip admin admin my_transaction
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    #pull the trans id from the grain
+    trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=label))
+
+    if trans_id:
+
+        #patch to REST to get trans id
+        try:
+            response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id))
+            return _load_response(response)
+        except requests.exceptions.ConnectionError as e:
+            return _load_connection_error(hostname, e)
+    else:
+        return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
+               ' bigip.start_transaction function'
+
+
+
+
+def list_node(hostname, username, password, name=None, trans_label=None):
+    '''
+    A function to connect to a bigip device and list all nodes or a specific node.
+
+    Parameters:
+        hostname:       The host/address of the bigip device
+        username:       The iControl REST username
+        password:       The iControl REST password
+        name:           The name of the node to list. If no name is specified than all
+                        nodes will be listed.
+        trans_label:    The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example:
 
@@ -215,7 +381,7 @@ def list_node(hostname, username, password, name=None):
     '''
 
     #build sessions
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #get to REST
     try:
@@ -229,16 +395,18 @@ def list_node(hostname, username, password, name=None):
     return _load_response(response)
 
 
-def create_node(hostname, username, password, name, address):
+def create_node(hostname, username, password, name, address, trans_label=None):
     '''
     A function to connect to a bigip device and create a node.
 
     Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the node
-        address:    The address of the node
+        hostname:       The host/address of the bigip device
+        username:       The iControl REST username
+        password:       The iControl REST password
+        name:           The name of the node
+        address:        The address of the node
+
+        trans_label:    The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example::
 
@@ -246,7 +414,7 @@ def create_node(hostname, username, password, name, address):
     '''
 
     #build session
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #construct the payload
     payload = {}
@@ -271,7 +439,8 @@ def modify_node(hostname, username, password, name,
                 rate_limit=None,
                 ratio=None,
                 session=None,
-                state=None):
+                state=None,
+                trans_label=None):
     '''
     A function to connect to a bigip device and modify an existing node.
 
@@ -280,7 +449,6 @@ def modify_node(hostname, username, password, name,
         username:             The iControl REST username
         password:             The iControl REST password
         name:                 The name of the node to modify
-
 
         connection_limit:     [integer]
         description:          [string]
@@ -291,6 +459,7 @@ def modify_node(hostname, username, password, name,
         ratio:                [integer]
         session:              [user-enabled | user-disabled]
         state:                [user-down | user-up ]
+        trans_label:          The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example:
 
@@ -310,7 +479,7 @@ def modify_node(hostname, username, password, name,
     }
 
     #build session
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #build payload
     payload = _loop_payload(params)
@@ -325,15 +494,17 @@ def modify_node(hostname, username, password, name,
     return _load_response(response)
 
 
-def delete_node(hostname, username, password, name):
+def delete_node(hostname, username, password, name, trans_label=None):
     '''
     A function to connect to a bigip device and delete a specific node.
 
     Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name: The name of the node which will be deleted.
+        hostname:       The host/address of the bigip device
+        username:       The iControl REST username
+        password:       The iControl REST password
+        name:           The name of the node which will be deleted.
+
+        trans_label:    The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example:
 
@@ -341,7 +512,7 @@ def delete_node(hostname, username, password, name):
     '''
 
     #build session
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #delete to REST
     try:
