@@ -45,6 +45,9 @@ import tornado.concurrent
 import tornado.tcpclient
 import tornado.netutil
 
+# Import third party libs
+from Crypto.Cipher import PKCS1_OAEP
+
 log = logging.getLogger(__name__)
 
 
@@ -182,7 +185,8 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             yield self.auth.authenticate()
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
+        cipher = PKCS1_OAEP.new(key)
+        aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 
