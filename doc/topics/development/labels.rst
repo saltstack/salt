@@ -209,17 +209,26 @@ Type of Change
 
 A "* Change" label is applied to each incoming pull request. The type of change label that is applied to a pull request
 is based on a scale that encompasses the number of lines affected by the change in conjunction with the area of code
-the change touches. For example, does the pull request change code in an execution or state module? Or is the change
-affecting code in a core area of Salt such as in the transport, state compiler, or crypt files? These labels indicate
-to the Salt engineering staff who should be reviewing and either discussing the changes with the contributor or merging
-the changes into the codebase.
+the change touches (i.e. core code areas vs. execution or state modules).
 
-The change labels are listed in order of smallest/least critical code area change to largest/most critical area:
+The conditions given for these labels are recommendations, as the pull request reviewer will also consult their
+intuition and experience regarding the magnitude of the impact of the proposed changes in the pull request.
+
+Core code areas include: state compiler, crypto engine, master and minion, transport, pillar rendering, loader,
+transport layer, event system, salt.utils, client, cli, logging, netapi, runner engine, templating engine, top file
+compilation, file client, file server, mine, salt-ssh, test runner, etc.
 
 * Minor Change
+    * Less than 64 lines changed, or
+    * Less than 8 core lines changed
 * Medium Change
+    * Less than 256 lines changed, or
+    * Less than 64 core lines changed
 * Master Change
+    * More than 64 lines changed, or
+    * More than 256 core lines changed
 * Expert Change
+    * Needs specialized, in-depth review
 
 Back-port Labels
 ~~~~~~~~~~~~~~~~
