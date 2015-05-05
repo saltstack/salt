@@ -8,19 +8,11 @@ and the like, but also useful for basic HTTP testing.
 
 # Import python libs
 from __future__ import absolute_import
-import pprint
-import os.path
 import json
 import logging
-<<<<<<< HEAD
-=======
-# pylint: disable=no-name-in-module
-import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib.request as urllib_request
-# pylint: enable=no-name-in-module
-from salt.ext.six import string_types
->>>>>>> upstream/2015.2
-from salt._compat import ElementTree as ET
+import os.path
+import pprint
+import socket
 
 import ssl
 try:
@@ -39,9 +31,6 @@ except ImportError:
             HAS_MATCHHOSTNAME = True
         except ImportError:
             HAS_MATCHHOSTNAME = False
-import socket
-import urllib2
-from urllib2 import URLError
 
 # Import salt libs
 import salt.utils
@@ -49,6 +38,7 @@ import salt.utils.xmlutil as xml
 import salt.loader
 import salt.config
 import salt.version
+from salt._compat import ElementTree as ET
 from salt.template import compile_template
 from salt import syspaths
 
@@ -57,7 +47,8 @@ import salt.ext.six as six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib as urllib
+import salt.ext.six.moves.urllib.request as urllib_request
+from salt.ext.six.moves.urllib.error import URLError
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
@@ -291,24 +282,16 @@ def query(url,
         result_headers = result.headers
         result_text = result.text
         result_cookies = result.cookies
-<<<<<<< HEAD
     elif backend == 'urllib2':
-        request = urllib2.Request(url, data)
-        handlers = [
-            urllib.request.HTTPHandler,
-            urllib.request.HTTPCookieProcessor(sess_cookies)
-=======
-    else:
         request = urllib_request.Request(url, data)
         handlers = [
             urllib_request.HTTPHandler,
             urllib_request.HTTPCookieProcessor(sess_cookies)
->>>>>>> upstream/2015.2
         ]
 
         if url.startswith('https') or port == 443:
             hostname = request.get_host()
-            handlers[0] = urllib2.HTTPSHandler(1)
+            handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warn(('match_hostname() not available, SSL hostname checking '
                          'not available. THIS CONNECTION MAY NOT BE SECURE!'))
@@ -350,11 +333,7 @@ def query(url,
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
-<<<<<<< HEAD
-                        handlers.append(urllib.request.HTTPSHandler(context=context))  # pylint: disable=E1123
-=======
                         handlers.append(urllib_request.HTTPSHandler(context=context))  # pylint: disable=E1123
->>>>>>> upstream/2015.2
                     else:
                         # Python < 2.7.9
                         cert_kwargs = {
@@ -366,11 +345,7 @@ def query(url,
                             cert_kwargs['key_file'] = cert_chain[1]
                         handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(**cert_kwargs)
 
-<<<<<<< HEAD
-        opener = urllib.request.build_opener(*handlers)
-=======
         opener = urllib_request.build_opener(*handlers)
->>>>>>> upstream/2015.2
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
