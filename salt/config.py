@@ -1018,6 +1018,25 @@ DEFAULT_MASTER_OPTS = {
     'dummy_pub': False,
 }
 
+# TODO: decide if a raas.syspaths needs to be created
+DEFAULT_RAAS_OPTS = {
+    'bigret': 'cassandra',
+    'cassandra': {
+        'cluster': [
+            'localhost',
+        ],
+        'port': 9042,
+        'username': 'salt',
+        'password': 'salt',
+    },
+    # TODO: understand why the following are required
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'raas'),
+    'default_include': 'raas.d/*.conf',
+    'root_dir': salt.syspaths.ROOT_DIR,
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
+    'whitelist_modules': [],
+}
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 CLOUD_CONFIG_DEFAULTS = {
     'verify_env': True,
@@ -2417,7 +2436,6 @@ def apply_minion_config(overrides=None,
         opts['schedule'] = {}
     return opts
 
-
 def master_config(path, env_var='SALT_MASTER_CONFIG', defaults=None):
     '''
     Reads in the master configuration file and sets up default options
@@ -2560,6 +2578,71 @@ def apply_master_config(overrides=None, defaults=None):
         opts['worker_threads'] = 3
 
     opts.setdefault('pillar_source_merging_strategy', 'smart')
+
+    return opts
+
+
+def raas_config(path, env_var='SALT_RAAS_CONFIG', defaults=None):
+    '''
+    Reads in the master configuration file and sets up default options
+
+    This is useful for running the actual master daemon. For running
+    Master-side client interfaces that need the master opts see
+    :py:func:`salt.client.client_config`.
+    '''
+    if defaults is None:
+        defaults = DEFAULT_RAAS_OPTS
+
+    if not os.environ.get(env_var, None):
+        # No valid setting was given using the configuration variable.
+        # Lets see is SALT_RAAS_CONFIG_DIR is of any use
+        salt_raas_config_dir = os.environ.get('SALT_RAAS_CONFIG_DIR', None)
+        if salt_raas_config_dir:
+            env_config_file_path = os.path.join(salt_raas_config_dir, 'raas')
+            if salt_raas_config_dir and os.path.isfile(env_config_file_path):
+                # We can get a configuration file using SALT_CONFIG_DIR, let's
+                # update the environment with this information
+                os.environ[env_var] = env_config_file_path
+
+    overrides = load_config(path, env_var, DEFAULT_RAAS_OPTS['conf_file'])
+    default_include = overrides.get('default_include',
+                                    defaults['default_include'])
+    include = overrides.get('include', [])
+
+    overrides.update(include_config(default_include, path, verbose=False))
+    overrides.update(include_config(include, path, verbose=True))
+    #opts = apply_master_config(overrides, defaults)
+    opts = apply_raas_config(overrides, defaults)
+    _validate_opts(opts)
+    return opts
+
+
+def apply_raas_config(overrides=None, defaults=None):
+    '''
+    Returns raas configurations dict.
+    '''
+    import salt.crypt
+    if defaults is None:
+        defaults = DEFAULT_RAAS_OPTS
+
+    opts = defaults.copy()
+    opts['__role'] = 'raas'
+    if overrides:
+        opts.update(overrides)
+
+    using_ip_for_id = False
+    append_raas = False
+    if opts.get('id') is None:
+        opts['id'], using_ip_for_id = get_id(
+                opts,
+                cache_minion_id=None)
+        append_raas = True
+
+    # it does not make sense to append a domain to an IP based id
+    if not using_ip_for_id and 'append_domain' in opts:
+        opts['id'] = _append_domain(opts)
+    if append_raas:
+        opts['id'] += '_raas'
 
     return opts
 
