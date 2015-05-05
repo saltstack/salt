@@ -1775,14 +1775,14 @@ class State(object):
 
         return status, reqs
 
-    def event(self, chunk_ret, length, fire_event_flag=False):
+    def event(self, chunk_ret, length, fire_event=False):
         '''
         Fire an event on the master bus
 
-        If `fire_event_flag` is set to True an event will be sent with the
+        If `fire_event` is set to True an event will be sent with the
         chunk name in the tag and the chunk result in the event data.
 
-        If `fire_event_flag` is set to a string such as `mystate/is/finished`,
+        If `fire_event` is set to a string such as `mystate/is/finished`,
         an event will be sent with the string added to the tag and the chunk
         result in the event data.
 
@@ -1790,15 +1790,15 @@ class State(object):
         chunk is evaluated an event will be set up to the master with the
         results.
         '''
-        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event_flag) and self.opts.get('master_uri'):
+        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event) and self.opts.get('master_uri'):
             ret = {'ret': chunk_ret}
-            if fire_event_flag is True:
+            if fire_event is True:
                 tag = salt.utils.event.tagify(
                         [self.jid, self.opts['id'], str(chunk_ret['name'])], 'state_result'
                         )
-            elif isinstance(fire_event_flag, six.string_types):
+            elif isinstance(fire_event, six.string_types):
                 tag = salt.utils.event.tagify(
-                        [self.jid, self.opts['id'], str(fire_event_flag)], 'state_result'
+                        [self.jid, self.opts['id'], str(fire_event)], 'state_result'
                         )
             else:
                 tag = salt.utils.event.tagify(
@@ -1876,7 +1876,7 @@ class State(object):
                                 '__run_num__': self.__run_num,
                                 '__sls__': low['__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks), fire_event_flag=low.get('fire_event'))
+                self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1901,7 +1901,7 @@ class State(object):
                                     '__run_num__': self.__run_num,
                                     '__sls__': low['__sls__']}
                         self.__run_num += 1
-                        self.event(running[tag], len(chunks), fire_event_flag=low.get('fire_event'))
+                        self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -2000,7 +2000,7 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
-            self.event(running[tag], len(chunks), fire_event_flag=low.get('fire_event'))
+            self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
         return running
 
     def call_listen(self, chunks, running):
