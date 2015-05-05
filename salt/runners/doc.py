@@ -4,7 +4,7 @@ A runner module to collect and display the inline documentation from the
 various module types
 '''
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import itertools
 
 # Import salt libs
@@ -72,7 +72,7 @@ def execution():
             for v in six.itervalues(ret):
                 docs.update(v)
     except SaltClientError as exc:
-        print exc  # pylint: disable=W1698
+        print(exc)  # pylint: disable=W1698
         return []
 
     i = itertools.chain.from_iterable([six.iteritems(i) for i in six.itervalues(docs)])
