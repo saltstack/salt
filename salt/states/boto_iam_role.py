@@ -232,6 +232,10 @@ def _role_present(
                 ret['comment'] = '{0} {1}'.format(ret['comment'], msg)
                 ret['changes']['old'] = {'policy_document': policy_document}
                 ret['changes']['new'] = {'policy_document': _policy_document}
+            else:
+                ret['result'] = False
+                msg = 'Failed to update assume role policy.'
+                ret['comment'] = '{0} {1}'.format(ret['comment'], msg)
     return ret
 
 
