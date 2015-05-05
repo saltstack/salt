@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 A state module designed to enforce load-balancing configurations for F5 Big-IP entities.
+    :maturity:      develop
+    :platform:      f5_bigip_11.6
 '''
 
 # Import Python libs
