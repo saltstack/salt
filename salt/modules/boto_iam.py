@@ -901,6 +901,13 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
 
 def update_assume_role_policy(role_name, policy_document, region=None,
                               key=None, keyid=None, profile=None):
+    '''
+    Update an assume role policy for a role.
+
+    CLI example::
+
+        salt myminion boto_iam.update_assume_role_policy myrole '{"Statement":"..."}'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if isinstance(policy_document, string_types):
@@ -920,6 +927,13 @@ def update_assume_role_policy(role_name, policy_document, region=None,
 
 
 def build_policy(region=None, key=None, keyid=None, profile=None):
+    '''
+    Build a default assume role policy.
+
+    CLI example::
+
+        salt myminion boto_iam.build_policy
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if hasattr(conn, 'build_policy'):
         policy = json.loads(conn.build_policy())
