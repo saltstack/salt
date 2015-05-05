@@ -491,12 +491,6 @@ class Master(SMaster):
             log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
 
-        def run_reqserver():
-            reqserv = ReqServer(
-                self.opts,
-                self.key,
-                self.master_key)
-            reqserv.run()
         log.info('Creating master request server process')
         process_manager.add_process(self.run_reqserver)
         try:
