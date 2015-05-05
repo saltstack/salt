@@ -40,6 +40,18 @@ class FunctionWrapper(object):
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
 
+    def __contains__(self, key):
+        '''
+        We need to implement a __contains__ method, othwerwise when someone
+        does a contains comparison python assumes this is a sequence, and does
+        __getitem__ keys 0 and up until IndexError
+        '''
+        try:
+            self[key]  # pylint: disable=W0104
+            return True
+        except KeyError:
+            return False
+
     def __getitem__(self, cmd):
         '''
         Return the function call to simulate the salt local lookup system
