@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 '''
@@ -28,7 +29,8 @@ libcrypto.OPENSSL_add_all_algorithms_noconf()
 # openssl/rsa.h:#define RSA_X931_PADDING 5
 RSA_X931_PADDING = 5
 
-class RSAX931Signer:
+
+class RSAX931Signer(object):
     '''
     Create ANSI X9.31 RSA signatures using OpenSSL libcrypto
     '''
@@ -63,7 +65,7 @@ class RSAX931Signer:
         return buf[0:size]
 
 
-class RSAX931Verifier:
+class RSAX931Verifier(object):
     '''
     Verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
     '''
