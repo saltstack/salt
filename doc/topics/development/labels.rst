@@ -225,8 +225,8 @@ compilation, file client, file server, mine, salt-ssh, test runner, etc.
     * Less than 256 lines changed, or
     * Less than 64 core lines changed
 * Master Change
-    * More than 64 lines changed, or
-    * More than 256 core lines changed
+    * More than 256 lines changed, or
+    * More than 64 core lines changed
 * Expert Change
     * Needs specialized, in-depth review
 
