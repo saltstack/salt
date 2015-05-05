@@ -44,7 +44,7 @@ def _add_var(var, value):
     fullvar = '{0}="{1}"'.format(var, value)
     if __salt__['file.contains'](makeconf, layman):
         # TODO perhaps make this a function in the file module?
-        cmd = ['sed', '-i', '/{0}/ i\{1}'.format(
+        cmd = ['sed', '-i', r'/{0}/ i\{1}'.format(
                     layman.replace('/', '\\/'),
                     fullvar),
                makeconf]
