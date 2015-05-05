@@ -3163,7 +3163,7 @@ def add_datastore_cluster(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f add_datastore_cluster my-vmware-config name="myDatastoreName" datacenter="myDatacenterName"
+        salt-cloud -f add_datastore_cluster my-vmware-config name="myDatastoreClusterName" datacenter="myDatacenterName"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3175,7 +3175,7 @@ def add_datastore_cluster(kwargs=None, call=None):
 
     if not name:
         raise SaltCloudSystemExit(
-            'You must specify a name of the new datacenter cluster'
+            'You must specify a name of the new datastore cluster'
         )
 
     if not datacenter:
