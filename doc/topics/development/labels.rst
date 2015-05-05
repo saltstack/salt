@@ -49,11 +49,11 @@ There are some labels, such as ``Question`` or some of the "Status" labels that 
 in which more information may be needed or a decision must be reached on how to proceed. (See the "Bug Status Labels"
 section below.)
 
-Feature Requests
-~~~~~~~~~~~~~~~~
+Features
+~~~~~~~~
 
-The ``Feature Request`` label should be applied when a user is requesting entirely new functionality. This can include
-new functions, modules, states, modular systems, flags for existing functions, etc. Features *do not* receive severity
+The ``Feature`` label should be applied when a user is requesting entirely new functionality. This can include new
+functions, modules, states, modular systems, flags for existing functions, etc. Features *do not* receive severity
 or priority labels, as those labels are only used for bugs. However, they may receive "Functional Area" labels or "ZD".
 
 Feature request issues will be prioritized on an "as-needed" basis using milestones during SaltStack's feature release
@@ -195,8 +195,8 @@ Regression
     something that never worked in the first place, the issue should be treated with greater urgency.
 
 ZD
-    Stands for “Zen Desk” and is used to help track bugs that customers are seeing as well. Bugs with this label should
-    be treated with greater urgency.
+    Stands for “Zendesk” and is used to help track bugs that customers are seeing as well as community members. Bugs
+    with this label should be treated with greater urgency.
 
 Pull Request Labels
 -------------------
