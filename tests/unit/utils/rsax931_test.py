@@ -16,6 +16,7 @@ ensure_in_syspath('../../')
 # salt libs
 from salt.utils.rsax931 import RSAX931Signer, RSAX931Verifier
 
+
 class RSAX931Test(TestCase):
 
     privkey_data = textwrap.dedent('''\
@@ -89,7 +90,7 @@ class RSAX931Test(TestCase):
 
         signer = RSAX931Signer(RSAX931Test.privkey_data)
         with self.assertRaises(ValueError):
-            signer.sign('x'*255) # message too long
+            signer.sign('x'*255)  # message too long
 
         sig = signer.sign(RSAX931Test.hello_world)
         self.assertEqual(RSAX931Test.hello_world_sig, sig)
