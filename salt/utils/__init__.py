@@ -1602,23 +1602,6 @@ def option(value, default='', opts=None, pillar=None):
     return default
 
 
-def valid_url(url, protos):
-    '''
-    Return true if the passed URL is in the list of accepted protos
-    '''
-    if urlparse(url).scheme in protos:
-        return True
-    return False
-
-
-def strip_proto(uri):
-    '''
-    Return a copy of the string with the protocol designation stripped, if one
-    was present.
-    '''
-    return re.sub('^[^:/]+://', '', uri)
-
-
 def parse_docstring(docstring):
     '''
     Parse a docstring into its parts.

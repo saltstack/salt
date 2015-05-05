@@ -49,6 +49,7 @@ import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.atomicfile
+import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -3009,30 +3010,16 @@ def source_list(source, source_hash, saltenv):
     '''
     # get the master file list
     if isinstance(source, list):
-        mfiles = __salt__['cp.list_master'](saltenv)
-        mdirs = __salt__['cp.list_master_dirs'](saltenv)
+        mfiles = [(f, saltenv) for f in __salt__['cp.list_master'](saltenv)]
+        mdirs = [(d, saltenv) for d in __salt__['cp.list_master_dirs'](saltenv)]
         for single in source:
             if isinstance(single, dict):
                 single = next(iter(single))
 
-            env_splitter = '?saltenv='
-            if '?env=' in single:
-                salt.utils.warn_until(
-                    'Boron',
-                    'Passing a salt environment should be done using '
-                    '\'saltenv\' not \'env\'. This functionality will be '
-                    'removed in Salt Boron.'
-                )
-                env_splitter = '?env='
-            try:
-                _, senv = single.split(env_splitter)
-            except ValueError:
-                continue
-            else:
-                mfiles += ['{0}?saltenv={1}'.format(f, senv)
-                           for f in __salt__['cp.list_master'](senv)]
-                mdirs += ['{0}?saltenv={1}'.format(d, senv)
-                          for d in __salt__['cp.list_master_dirs'](senv)]
+            path, senv = salt.utils.url.parse(single)
+            if senv:
+                mfiles += [(f, senv) for f in __salt__['cp.list_master'](senv)]
+                mdirs += [(d, senv) for d in __salt__['cp.list_master_dirs'](senv)]
 
         ret = None
         for single in source:
@@ -3045,7 +3032,10 @@ def source_list(source, source_hash, saltenv):
                 single_hash = single[single_src] if single[single_src] else source_hash
                 proto = _urlparse(single_src).scheme
                 if proto == 'salt':
-                    if single_src[7:] in mfiles or single_src[7:] in mdirs:
+                    path, senv = salt.utils.url.parse(single_src)
+                    if not senv:
+                        senv = saltenv
+                    if (path, saltenv) in mfiles or (path, saltenv) in mdirs:
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
@@ -3056,7 +3046,10 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
             elif isinstance(single, six.string_types):
-                if single[7:] in mfiles or single[7:] in mdirs:
+                path, senv = salt.utils.url.parse(single)
+                if not senv:
+                    senv = saltenv
+                if (path, senv) in mfiles or (path, senv) in mdirs:
                     ret = (single, source_hash)
                     break
         if ret is None:
@@ -3127,7 +3120,7 @@ def get_managed(
         # exists doesn't play nice with sfn as bool
         # but if cache failed, sfn == False
         if not sfn or not os.path.exists(sfn):
-            return sfn, {}, 'Source file {0} not found'.format(source)
+            return sfn, {}, 'Source file {0!r} not found'.format(source)
         if sfn == name:
             raise SaltInvocationError(
                 'Source file cannot be the same as destination'
@@ -3168,7 +3161,7 @@ def get_managed(
             if _urlparse(source).scheme == 'salt':
                 source_sum = __salt__['cp.hash_file'](source, saltenv)
                 if not source_sum:
-                    return '', {}, 'Source file {0} not found'.format(source)
+                    return '', {}, 'Source file {0!r} not found'.format(source)
             elif source_hash:
                 protos = ['salt', 'http', 'https', 'ftp', 'swift', 's3']
                 if _urlparse(source_hash).scheme in protos:
@@ -3730,7 +3723,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0} not found'.format(source))
+                    ret, 'Source file {0!r} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
@@ -3821,7 +3814,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0} not found'.format(source))
+                    ret, 'Source file {0!r} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
@@ -3890,7 +3883,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0} not found'.format(source))
+                    ret, 'Source file {0!r} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
