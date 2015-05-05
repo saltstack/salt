@@ -34,6 +34,17 @@ modules have been substantially updated and added.
     code. We recommend you only set this setting for as long as it takes to
     resolve these issues in your custom code, then remove the override.
 
+
+.. note::
+
+    Starting in this version of salt, ``pillar_opts`` defaults to False instead
+    of True. This means that master opts will not be present in minion pillar,
+    and as a result, ``config.get`` calls will not include master opts.
+
+    We recommend pillar is used for configuration options which need to make it
+    to the minion.
+
+
 Beacons
 =======
 
