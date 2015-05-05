@@ -7,7 +7,7 @@ vSphere Cloud Module
 
 The vSphere cloud module is used to control access to VMWare vSphere.
 
-:depends:   - PySphere Python module
+:depends:   - PySphere Python module >= 0.1.8
 
 Note: Ensure python pysphere module is installed by running following one-liner
 check. The output should be 0.
@@ -15,6 +15,8 @@ check. The output should be 0.
 .. code-block:: bash
 
    python -c "import pysphere" ; echo $?
+   # if this fails install using
+   pip install https://pysphere.googlecode.com/files/pysphere-0.1.8.zip
 
 Use of this module only requires a URL, username and password. Set up the cloud
 configuration at:
