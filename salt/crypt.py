@@ -22,6 +22,7 @@ try:
     from Crypto.Cipher import AES, PKCS1_OAEP
     from Crypto.Hash import SHA
     from Crypto.PublicKey import RSA
+    import Crypto.Random
 except ImportError:
     # No need for crypt in local mode
     pass
@@ -359,6 +360,7 @@ class AsyncAuth(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
+        Crypto.Random.atfork()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:

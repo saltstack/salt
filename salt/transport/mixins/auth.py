@@ -19,7 +19,6 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-import Crypto.Random
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 
@@ -83,9 +82,6 @@ class AESReqServerMixin(object):
             self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
-
-        # Re-initialize the RNG after fork as required by PyCrypto
-        Crypto.Random.atfork()
 
     def _encrypt_private(self, ret, dictkey, target):
         '''
