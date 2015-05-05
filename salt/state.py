@@ -79,6 +79,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'reload_modules',
     'reload_grains',
     'reload_pillar',
+    'fire_event',
     'saltenv',
     'use',
     'use_in',
