@@ -349,6 +349,13 @@ And ``upstream`` is the name of the remote pointing to the main Salt repo.
 
         git push -u origin bp-1234
 
+Issue and Pull Request Labeling System
+======================================
+
+SaltStack uses several labeling schemes to help facilitate code contributions
+and bug resolution. See the :doc:`<labels-and-milestones>` documentation for
+more information.
+
 .. _`saltstack/salt`: https://github.com/saltstack/salt
 .. _`GitHub Fork a Repo Guide`: https://help.github.com/articles/fork-a-repo
 .. _`GitHub issue tracker`: https://github.com/saltstack/salt/issues
