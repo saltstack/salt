@@ -34,14 +34,16 @@ The information which can be stored in a roster `target` is the following:
 
 .. code-block:: yaml
 
-    <Salt ID>:   # The id to reference the target system with
-        host:    # The IP address or DNS name of the remote host
-        user:    # The user to log in as
-        passwd:  # The password to log in with
+    <Salt ID>:       # The id to reference the target system with
+        host:        # The IP address or DNS name of the remote host
+        user:        # The user to log in as
+        passwd:      # The password to log in with
 
         # Optional parameters
-        port:    # The target system's ssh port number
-        sudo:    # Boolean to run command via sudo
-        priv:    # File path to ssh private key, defaults to salt-ssh.rsa
-        timeout: # Number of seconds to wait for response when establishing a
-                   SSH connection
+        port:        # The target system's ssh port number
+        sudo:        # Boolean to run command via sudo
+        priv:        # File path to ssh private key, defaults to salt-ssh.rsa
+        timeout:     # Number of seconds to wait for response when establishing
+                     # an SSH connection
+        timeout:     # Number of seconds to wait for response
+        minion_opts: # Dictionary of minion opts
