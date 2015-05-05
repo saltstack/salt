@@ -64,8 +64,10 @@ class BotoIAMRoleTestCase(TestCase):
                 'Statement': [{
                     'Action': 'sts:AssumeRole',
                     'Principal': {
-                        'Service': 'ec2.amazonaws.com',
-                        'Service': 'datapipeline.amazonaws.com'
+                        'Service': [
+                            'ec2.amazonaws.com',
+                            'datapipeline.amazonaws.com'
+                        ]
                     },
                     'Effect': 'Allow'
                 }]},
