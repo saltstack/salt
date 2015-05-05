@@ -31,13 +31,13 @@ Connection module for Amazon IAM
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import json
 
-log = logging.getLogger(__name__)
+# Import salt libs
+import salt.utils.odict as odict
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -52,8 +52,7 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=unused-import
 
-# Import salt libs
-import salt.utils.odict as odict
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -904,6 +903,8 @@ def update_assume_role_policy(role_name, policy_document, region=None,
     '''
     Update an assume role policy for a role.
 
+    .. versionadded:: Beryllium
+
     CLI example::
 
         salt myminion boto_iam.update_assume_role_policy myrole '{"Statement":"..."}'
@@ -929,6 +930,8 @@ def update_assume_role_policy(role_name, policy_document, region=None,
 def build_policy(region=None, key=None, keyid=None, profile=None):
     '''
     Build a default assume role policy.
+
+    .. versionadded:: Beryllium
 
     CLI example::
 
