@@ -22,6 +22,7 @@ try:
     from Crypto.Cipher import AES, PKCS1_OAEP
     from Crypto.Hash import SHA
     from Crypto.PublicKey import RSA
+    from Crypto.Signature import PKCS1_v1_5
     import Crypto.Random
 except ImportError:
     # No need for crypt in local mode
@@ -122,7 +123,7 @@ def sign_message(privkey_path, message):
 
 def verify_signature(pubkey_path, message, signature):
     '''
-    Use Crypto.Signature to verify the signature on a message.
+    Use Crypto.Signature.PKCS1_v1_5 to verify the signature on a message.
     Returns True for valid signature.
     '''
     log.debug('salt.crypt.verify_signature: Loading public key')
@@ -130,7 +131,7 @@ def verify_signature(pubkey_path, message, signature):
         pubkey = RSA.importKey(f.read())
     log.debug('salt.crypt.verify_signature: Verifying signature')
     verifier = PKCS1_v1_5.new(pubkey)
-    return verifier.verify(SHA.new(message))
+    return verifier.verify(SHA.new(message), signature)
 
 
 def gen_signature(priv_path, pub_path, sign_path):
