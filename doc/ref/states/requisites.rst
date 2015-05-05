@@ -10,8 +10,7 @@ Fire Event Notifications
 .. versionadded:: Beryllium
 
 The `fire_event` option in a state will cause the minion to send an event to
-the Salt Master upon completion of that individual state. The following
-examples show how to use this feature.
+the Salt Master upon completion of that individual state.
 
 The following example will cause the minion to send an event to the Salt Master
 with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
