@@ -850,7 +850,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                   'expression:\n"os:Arch*"')
         )
         group.add_option(
-            '--grain-pcre',
+            '-P', '--grain-pcre',
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
