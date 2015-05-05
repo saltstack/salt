@@ -201,6 +201,66 @@ ZD
 Pull Request Labels
 -------------------
 
+SaltStack also applies various labels to incoming pull requests. These are mainly used to help SaltStack engineers
+easily identify the nature the changes presented in a pull request and whether or not that pull request is ready to be
+reviewed and merged into the Salt codebase.
+
+Type of Change
+~~~~~~~~~~~~~~
+
+A "* Change" label is applied to each incoming pull request. The type of change label that is applied to a pull request
+is based on a scale that encompasses the number of lines affected by the change in conjunction with the area of code
+the change touches. For example, does the pull request change code in an execution or state module? Or is the change
+affecting code in a core area of Salt such as in the transport, state compiler, or crypt files? These labels indicate
+to the Salt engineering staff who should be reviewing and either discussing the changes with the contributor or merging
+the changes into the codebase.
+
+The change labels are listed in order of smallest/least critical code area change to largest/most critical area:
+
+* Minor Change
+* Medium Change
+* Master Change
+* Expert Change
+
+Back-port Labels
+~~~~~~~~~~~~~~~~
+
+There are two labels that are used to keep track of what pull requests need to be back-ported to an older release branch
+and which pull requests have already been back-ported.
+
+Bugfix - back-port
+    Indicates a pull request that needs to be back-ported. Once the back-port is completed, the back-porting pull request
+    is linked to the original pull request and this label is removed.
+
+Bugfix - [Done] back-ported
+    Indicates a pull request that has been back-ported to another branch. The pull request that is responsible for the
+    backport should be linked to this original pull request.
+
+Testing Labels
+~~~~~~~~~~~~~~
+
+There are a couple of labels that the QA team uses to indicate the mergability of a pull request. If the pull request is
+legitimately passing or failing tests, then one or more of these labels may be applied.
+
+Lint
+    If a pull request fails the test run, but the only failures are related pylint errors, this label will be applied to
+    indicate that pylint needs to be fixed before proceeding.
+
+Pending Changes
+    Indicates that additional commits should be added to the original pull request before the pull request is merged
+    into the codebase. These changes are unrelated to fixing tests and are generally needed to round out any unfinished
+    pull requests.
+
+Tests Passed
+    Sometimes the Jenkins test run encounters problems, either tests that are known to have reliability issues or a
+    test VM failed to build, but the problems are not related to the code changed in the pull request. This label is
+    used to indicate that someone has reviewed the test failures and has deemed the failures to be non-pertinent.
+
+Other Pull Request Labels
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Awesome
+    Applied to pull requests that implemented a cool new feature or fixed a bug in an excellent way.
 
 Labels that Bridge Issues and Pull Requests
 ===========================================
