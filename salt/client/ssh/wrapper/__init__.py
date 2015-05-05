@@ -114,12 +114,14 @@ class FunctionWrapper(object):
             if stderr.count('Permission Denied'):
                 return {'_error': 'Permission Denied',
                         'stdout': stdout,
-                        'stderr': stderr}
+                        'stderr': stderr
+                        'retcode': retcode}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
+                ret.update({'retcode': retcode})
             except ValueError:
                 ret = {'_error': 'Failed to return clean data',
                        'stderr': stderr,

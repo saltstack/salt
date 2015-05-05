@@ -766,11 +766,11 @@ class Single(object):
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
+            retcode = opts_pkg['retcode']
 
             if '_error' in opts_pkg:
                 # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
-                retcode = opts_pkg['retcode']
                 return ret, retcode
 
             pillar = salt.pillar.Pillar(
@@ -848,7 +848,7 @@ class Single(object):
             ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
-        return ret
+        return ret, retcode
 
     def _cmd_str(self):
         '''
