@@ -529,7 +529,7 @@ def __get_ssh_credentials(vm_):
         'ssh_username', vm_, __opts__, default=os.getenv('USER'))
     ssh_key = config.get_cloud_config_value(
         'ssh_keyfile', vm_, __opts__,
-        default=os.getenv('HOME') + '/.ssh/google_compute_engine')
+        default=os.path.expanduser('~/.ssh/google_compute_engine'))
     return ssh_user, ssh_key
 
 
