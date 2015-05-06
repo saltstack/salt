@@ -1567,7 +1567,7 @@ def uptodate(name, refresh=False, **kwargs):
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
-        .. versionadded:: 2015.2
+        .. versionadded:: 2015.5.0
     '''
     ret = {'name': name,
            'changes': {},
