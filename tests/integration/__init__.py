@@ -61,7 +61,6 @@ import salt.utils
 import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
-from salt.utils.immutabletypes import freeze
 
 try:
     import salt.master
@@ -590,11 +589,11 @@ class TestDaemon(object):
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub_minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic_master'))
 
-        RUNTIME_CONFIGS['master'] = freeze(master_opts)
-        RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
-        RUNTIME_CONFIGS['syndic'] = freeze(syndic_opts)
-        RUNTIME_CONFIGS['sub_minion'] = freeze(sub_minion_opts)
-        RUNTIME_CONFIGS['syndic_master'] = freeze(syndic_master_opts)
+        RUNTIME_CONFIGS['master'] = master_opts
+        RUNTIME_CONFIGS['minion'] = minion_opts
+        RUNTIME_CONFIGS['syndic'] = syndic_opts
+        RUNTIME_CONFIGS['sub_minion'] = sub_minion_opts
+        RUNTIME_CONFIGS['syndic_master'] = syndic_master_opts
 
         verify_env([os.path.join(master_opts['pki_dir'], 'minions'),
                     os.path.join(master_opts['pki_dir'], 'minions_pre'),
@@ -995,24 +994,16 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
         if config_for not in RUNTIME_CONFIGS:
             if config_for in ('master', 'syndic_master'):
-                RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.master_config(self.get_config_file_path(config_for))
-                )
+                RUNTIME_CONFIGS[config_for] = salt.config.master_config(self.get_config_file_path(config_for))
             elif config_for in ('minion', 'sub_minion'):
-                RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.minion_config(self.get_config_file_path(config_for))
-                )
+                RUNTIME_CONFIGS[config_for] = salt.config.minion_config(self.get_config_file_path(config_for))
             elif config_for in ('syndic',):
-                RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.syndic_config(
+                RUNTIME_CONFIGS[config_for] = salt.config.syndic_config(
                         self.get_config_file_path(config_for),
                         self.get_config_file_path('minion')
                     )
-                )
             elif config_for == 'client_config':
-                RUNTIME_CONFIGS[config_for] = freeze(
-                    salt.config.client_config(self.get_config_file_path('master'))
-                )
+                RUNTIME_CONFIGS[config_for] = salt.config.client_config(self.get_config_file_path('master'))
         return RUNTIME_CONFIGS[config_for]
 
     def get_config_dir(self):
