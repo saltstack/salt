@@ -1,8 +1,8 @@
 ==============================================
-Salt 2015.2.0 Release Notes - Codename Lithium
+Salt 2015.5.0 Release Notes - Codename Lithium
 ==============================================
 
-The 2015.2.0 feature release of Salt is focused on hardening Salt and mostly
+The 2015.5.0 feature release of Salt is focused on hardening Salt and mostly
 on improving existing systems. A few major additions are present, primarily
 the new Beacon system. Most enhancements have been focused around improving
 existing features and interfaces.

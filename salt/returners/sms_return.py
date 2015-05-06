@@ -3,7 +3,7 @@
 '''
 Return data by SMS.
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 :maintainer:    Damian Myerscough
 :maturity:      new

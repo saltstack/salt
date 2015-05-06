@@ -299,6 +299,17 @@
 # will cause minion to throw an exception and drop the message.
 # sign_pub_messages: False
 
+#####     Salt-SSH Configuration     #####
+##########################################
+
+# Pass in an alternative location for the salt-ssh roster file
+#roster_file: /etc/salt/roster
+
+# Pass in minion option overrides that will be inserted into the SHIM for
+# salt-ssh calls. The local minion config is not used for salt-ssh. Can be
+# overridden on a per-minion basis in the roster (`minion_opts`)
+#ssh_minion_opts:
+#  gpg_keydir: /root/gpg
 
 #####    Master Module Management    #####
 ##########################################

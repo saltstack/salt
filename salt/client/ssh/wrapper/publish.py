@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 Salt-ssh wrapper functions for the publish module.
 

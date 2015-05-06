@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-RUN" "1" "March 09, 2015" "2015.2.0rc1-133-g24fa806" "Salt"
+.TH "SALT-RUN" "1" "May 06, 2015" "2015.5.0" "Salt"
 .SH NAME
 salt-run \- salt-run Documentation
 .
@@ -77,6 +77,12 @@ on most systems is \fB/etc/salt\fP\&.
 The timeout in seconds to wait for replies from the Salt minions. The
 timeout number specifies how long the command line client will wait to
 query the minions and check on running jobs. Default: 1
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully. Default is
+False.
 .UNINDENT
 .INDENT 0.0
 .TP
