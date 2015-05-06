@@ -80,7 +80,7 @@ class FunctionWrapper(object):
                                    fsclient=self.fsclient,
                                    cmd_prefix=cmd,
                                    aliases=self.aliases,
-                                   minion_opts=self.minion_opts
+                                   minion_opts=self.minion_opts,
                                    **kwargs)
 
         if self.cmd_prefix:
