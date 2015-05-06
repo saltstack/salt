@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon DynamoDB
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.5.0
 
 :configuration: This module accepts explicit DynamoDB credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
