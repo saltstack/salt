@@ -71,7 +71,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         cd:
           CD/DVD drive 1:
             device_type: datastore_iso_file
-            iso_path: "[nap004-1] /vmimages/tools-isoimages/linux.iso"
+            iso_path: "[nap004-1] vmimages/tools-isoimages/linux.iso"
           CD/DVD drive 2:
             device_type: client_device
             mode: atapi
@@ -181,7 +181,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         iso_path
             Enter the path to the iso file present on the datastore only if
             ``device_type: datastore_iso_file``. The syntax to specify this is
-            ``iso_path: "[datastoreName] /vmimages/tools-isoimages/linux.iso"``. This
+            ``iso_path: "[datastoreName] vmimages/tools-isoimages/linux.iso"``. This
             field is ignored if ``device_type: client_device``
         mode
             Enter the mode of connection only if ``device_type: client_device``. Currently
