@@ -71,7 +71,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         cd:
           CD/DVD drive 1:
             device_type: datastore_iso_file
-            iso_path: "[] /vmimages/tools-isoimages/linux.iso"
+            iso_path: "[nap004-1] /vmimages/tools-isoimages/linux.iso"
           CD/DVD drive 2:
             device_type: client_device
             mode: atapi
