@@ -10,11 +10,13 @@ from __future__ import absolute_import
 
 import salt.utils
 from salt.ext.six import string_types
+from salt.exceptions import CommandExecutionError
 import logging
 
 log = logging.getLogger(__name__)
 
 try:
+    import win32net
     import win32netcon
     import win32security
     import win32com.client
@@ -102,9 +104,12 @@ def add(name,
                 if compObj is not None:
                     newUser = compObj.Create('user', addUserName)
                     if ldapProvider:
-                        # ldap provider seems to require 'SetInfo' before you can set the password (opposite of WinNT provider)
-                        # also must set the account to 'enabled' as default is disabled
-                        # lots of LDAP properties could be added here/to the function
+                        '''
+                        ldap provider seems to require 'SetInfo' before you can set the password (opposite of WinNT provider)
+                        also must set the account to 'enabled' as default is disabled
+
+                        lots of LDAP properties could be added here/to the function
+                        '''
                         newUser.sAMAccountName = addUserName.replace('cn=', '').replace('CN=', '')
                         newUser.userPrincipalName = addUserName.replace('cn=', '').replace(
                                 'CN=', '') + '@' + name[(name.find('dc=') + 3):len(name)].replace(
@@ -692,8 +697,11 @@ def chgroups(name, groups, append=False):
     current_info['groups'].sort()
 
     if current_info:
+        #existing_groups = [x.lower() for x in current_info['groups']]
+        #existing_groups.sort()
+
         if [x.lower() for x in groups] == [x.lower() for x in current_info['groups']]:
-            # nothing done
+            #nothing done
             ret['result'] = None
             ret['changes'] = None
             ret['comment'].append((
@@ -713,7 +721,7 @@ def chgroups(name, groups, append=False):
             else:
                 for group in current_info['groups']:
                     if group.lower() not in [x.lower() for x in groups]:
-                        # remove it
+                        #remove it
                         thisRet = removegroup(name, group)
                         if thisRet['result']:
                             ret['changes']['Groups Removed'].append(group)
@@ -723,7 +731,7 @@ def chgroups(name, groups, append=False):
                             return ret
                 for group in groups:
                     if group.lower() not in [x.lower() for x in current_info['groups']]:
-                        # add it
+                        #add it
                         thisRet = addgroup(name, group)
                         if thisRet['result']:
                             ret['changes']['Groups Added'].append(group)
@@ -766,6 +774,8 @@ def info(name):
             'gid': ''}
     try:
         if 'dc=' in name.lower():
+            #ldapServer = name.split('dc=', 1)[1].replace('dc=', '.').replace(',', '')
+            #userObj = nt.GetObject('', 'LDAP://' + ldapServer + '/' + name)
             userObj = nt.GetObject('', 'LDAP://' + name)
             ret['active'] = (not bool(userObj.userAccountControl & win32netcon.UF_ACCOUNTDISABLE))
             ret['logonscript'] = userObj.scriptPath
@@ -872,10 +882,12 @@ def list_users(useldap=False):
     nt = win32com.client.Dispatch('AdsNameSpaces')
 
     if useldap:
-        # try to recurse through the ldap server and get all user objects...
-        # could do 'LDAP:' and allow any domain member the ability to get all ldap users
-        # if anonymous binds are allowed, but for now, the code will try to connect to ldap on the local
-        # host
+        '''
+        try to recurse through the ldap server and get all user objects...
+        could do 'LDAP:' and allow any domain member the ability to get all ldap users
+        if anonymous binds are allowed, but for now, the code will try to connect to ldap on the local
+        host
+        '''
         ret = _recursecontainersforusers('LDAP://localhost')
     else:
         results = nt.GetObject('', 'WinNT://.')
