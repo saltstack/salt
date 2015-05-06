@@ -34,21 +34,21 @@ set up in the cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter01.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter01.domain.com"
 
     vmware-vcenter02:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter02.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter02.domain.com"
 
     vmware-vcenter03:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter03.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter03.domain.com"
 
 
 .. _vmware-cloud-profile:
