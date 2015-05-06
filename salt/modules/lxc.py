@@ -347,7 +347,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
 
 def get_container_profile(name=None, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Gather a pre-configured set of container configuration parameters. If no
     arguments are passed, an empty profile is returned.
@@ -428,7 +428,7 @@ def get_container_profile(name=None, **kwargs):
 
 def get_network_profile(name=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Gather a pre-configured set of network configuration parameters. If no
     arguments are passed, the following default profile is returned:
@@ -958,7 +958,7 @@ def init(name,
     memory
         cgroups memory limit, in MB
 
-        .. versionchanged:: 2015.2.0
+        .. versionchanged:: 2015.5.0
             If no value is passed, no limit is set. In earlier Salt versions,
             not passing this value causes a 1024MB memory limit to be set, and
             it was necessary to pass ``memory=0`` to set no limit.
@@ -974,10 +974,10 @@ def init(name,
     network_profile
         Network profile to use for the container
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     nic
-        .. deprecated:: 2015.2.0
+        .. deprecated:: 2015.5.0
             Use ``network_profile`` instead
 
     nic_opts
@@ -1002,7 +1002,7 @@ def init(name,
         Set to ``True`` to denote a password hash instead of a plaintext
         password
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     profile
         A LXC profile (defined in config or pillar).
@@ -1038,7 +1038,7 @@ def init(name,
         Attempt to request key approval from the master. Default: ``True``
 
     clone
-        .. deprecated:: 2015.2.0
+        .. deprecated:: 2015.5.0
             Use ``clone_from`` instead
 
     clone_from
@@ -1049,7 +1049,7 @@ def init(name,
         Delay in seconds between end of container creation and bootstrapping.
         Useful when waiting for container to obtain a DHCP lease.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     bootstrap_url
         See lxc.bootstrap
@@ -1442,7 +1442,7 @@ def cloud_init(name, vm_=None, **kwargs):
 
 def images(dist=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     List the available images for LXC's ``download`` template.
 
@@ -1493,7 +1493,7 @@ def images(dist=None):
 
 def templates():
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     List the available LXC template scripts installed on the minion
 
@@ -1536,7 +1536,7 @@ def create(name,
     network_profile
         Network profile to use for container
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     **Container Creation Arguments**
 
@@ -1816,7 +1816,7 @@ def ls_(active=None, cache=True):
     active
         If ``True``, return only active (i.e. running) containers
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -1856,7 +1856,7 @@ def list_(extra=False, limit=None):
         Return output matching a specific state (**frozen**, **running**, or
         **stopped**).
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Examples:
 
@@ -1984,7 +1984,7 @@ def _ensure_running(name, no_start=False):
 
 def restart(name, force=False):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Restart the named container. If the container was not running, the
     container will merely be started.
@@ -2018,7 +2018,7 @@ def start(name, **kwargs):
     Start the named container
 
     restart : False
-        .. deprecated:: 2015.2.0
+        .. deprecated:: 2015.5.0
             Use :mod:`lxc.restart <salt.modules.lxc.restart>`
 
         Restart the container if it is already running
@@ -2053,7 +2053,7 @@ def stop(name, kill=False):
         Older LXC versions will stop containers like this irrespective of this
         argument.
 
-        .. versionchanged:: 2015.2.0
+        .. versionchanged:: 2015.5.0
             Default value changed to ``False``
 
     CLI Example:
@@ -2085,7 +2085,7 @@ def freeze(name, **kwargs):
         If ``True`` and the container is stopped, the container will be started
         before attempting to freeze.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -2140,7 +2140,7 @@ def destroy(name, stop=False):
         If ``True``, the container will be destroyed even if it is
         running/frozen.
 
-        .. versionchanged:: 2015.2.0
+        .. versionchanged:: 2015.5.0
             Default value changed to ``False``. This more closely matches the
             behavior of ``lxc-destroy(1)``, and also makes it less likely that
             an accidental command will destroy a running container that was
@@ -2393,7 +2393,7 @@ def info(name):
 
 def set_password(name, users, password, encrypted=True):
     '''
-    .. versionchanged:: 2015.2.0
+    .. versionchanged:: 2015.5.0
         Function renamed from ``set_pass`` to ``set_password``. Additionally,
         this function now supports (and defaults to using) a password hash
         instead of a plaintext password.
@@ -2411,7 +2411,7 @@ def set_password(name, users, password, encrypted=True):
         If true, ``password`` must be a password hash. Set to ``False`` to set
         a plaintext password (not recommended).
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -2549,7 +2549,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset):
 
 def set_dns(name, dnsservers=None, searchdomains=None):
     '''
-    .. versionchanged:: 2015.2.0
+    .. versionchanged:: 2015.5.0
         The ``dnsservers`` and ``searchdomains`` parameters can now be passed
         as a comma-separated list.
 
@@ -2686,7 +2686,7 @@ def bootstrap(name,
         Delay in seconds between end of container creation and bootstrapping.
         Useful when waiting for container to obtain a DHCP lease.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     bootstrap_url
         url, content or filepath to the salt bootstrap script
@@ -2929,7 +2929,7 @@ def run_cmd(name,
             ignore_retcode=False,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. deprecated:: 2015.2.0
+    .. deprecated:: 2015.5.0
         Use :mod:`lxc.run <salt.modules.lxc.run>` instead
     '''
     salt.utils.warn_until(
@@ -2970,7 +2970,7 @@ def run(name,
         ignore_retcode=False,
         keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Run :mod:`cmd.run <salt.modules.cmdmod.run>` within a container
 
@@ -3045,7 +3045,7 @@ def run_stdout(name,
                ignore_retcode=False,
                keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Run :mod:`cmd.run_stdout <salt.modules.cmdmod.run_stdout>` within a container
 
@@ -3120,7 +3120,7 @@ def run_stderr(name,
                ignore_retcode=False,
                keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Run :mod:`cmd.run_stderr <salt.modules.cmdmod.run_stderr>` within a container
 
@@ -3193,7 +3193,7 @@ def retcode(name,
                 ignore_retcode=False,
                 keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Run :mod:`cmd.retcode <salt.modules.cmdmod.retcode>` within a container
 
@@ -3268,7 +3268,7 @@ def run_all(name,
             ignore_retcode=False,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Run :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` within a container
 
@@ -3355,7 +3355,7 @@ def cp(name, source, dest, makedirs=False):
     dest
         Destination on the container. Must be an absolute path.
 
-        .. versionchanged:: 2015.2.0
+        .. versionchanged:: 2015.5.0
             If the destination is a directory, the file will be copied into
             that directory.
 
@@ -3364,7 +3364,7 @@ def cp(name, source, dest, makedirs=False):
         Create the parent directory on the container if it does not already
         exist.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -3663,7 +3663,7 @@ def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, 
 
 def apply_network_profile(name, network_profile, nic_opts=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Apply a network profile to a container
 

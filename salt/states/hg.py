@@ -70,7 +70,7 @@ def latest(name,
     identity
         Private SSH key on the minion server for authentication (ssh://)
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     force
         Force hg to clone into pre-existing directories (deletes contents)
