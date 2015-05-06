@@ -218,7 +218,7 @@ Create the Build Environment
    Right-click on the file named **dev_env_salt.ps1** and select **Run with
    Powershell**
 
-   This will clone salt into ``C:\Salt-Dev\salt`` and set it to the 2015.2
+   This will clone salt into ``C:\Salt-Dev\salt`` and set it to the 2015.5
    branch. You could optionally run the command from a powershell window with a
    ``-Version`` switch to pull a different version. For example:
 
