@@ -271,7 +271,7 @@ def gen_locale(locale, **kwargs):
         log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
         return False
 
-    if on_debian or on_gentoo:
+    if os.path.exists('/etc/locale.gen'):
         __salt__['file.replace'](
             '/etc/locale.gen',
             r'^#\s*{0}$'.format(locale),

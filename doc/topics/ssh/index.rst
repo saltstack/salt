@@ -126,6 +126,15 @@ file is in ``/etc/salt/master``. If one wishes to use a customized configuration
 the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a
 configuration file named ``master``.
 
+Minion Config
+---------------
+
+.. versionadded:: 2015.2.1
+
+Minion config options can be defined globally using the master configuration
+option ``ssh_minion_opts``. It can also be defined on a per-minion basis with
+the ``minion_opts`` entry in the roster.
+
 Running Salt SSH as non-root user
 =================================
 
