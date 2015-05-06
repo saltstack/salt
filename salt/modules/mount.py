@@ -756,7 +756,7 @@ def umount(name, device=None, user=None):
 
         salt '*' mount.umount /mnt/foo
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''

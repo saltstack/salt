@@ -65,7 +65,7 @@ be adjusted for the minion via the `mine_interval` option:
 Mine in Salt-SSH
 ================
 
-As of the 2015.2.0 release of salt, salt-ssh supports ``mine.get``.
+As of the 2015.5.0 release of salt, salt-ssh supports ``mine.get``.
 
 Because the minions cannot provide their own ``mine_functions`` configuration,
 we retrieve the args for specified mine functions in one of three places,

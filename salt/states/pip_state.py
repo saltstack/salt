@@ -801,7 +801,7 @@ def uptodate(name,
              cwd=None,
              use_vt=False):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Verify that the system is completely up to date.
 

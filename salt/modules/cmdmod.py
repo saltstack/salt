@@ -705,7 +705,7 @@ def shell(cmd,
     '''
     Execute the passed command and return the output as a string.
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     ************************************************************
     WARNING: This passes the cmd argument directly to the shell
@@ -1573,7 +1573,7 @@ def shells():
     '''
     Lists the valid shells on this system via the /etc/shells file
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     CLI Example::
 

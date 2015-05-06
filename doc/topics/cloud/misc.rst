@@ -291,7 +291,7 @@ only the EC2 driver supports this functionality.
 SSH Agent
 =========
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 If the ssh key is not stored on the server salt-cloud is being run on, set
 ssh_agent, and salt-cloud will use the forwarded ssh-agent to authenticate.

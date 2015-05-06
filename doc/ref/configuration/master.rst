@@ -379,7 +379,7 @@ local job cache on the master.
 ``event_return``
 -----------------
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 Default: ``''``
 
@@ -1855,7 +1855,7 @@ There are additional details at :ref:`salt-pillars`
 ``ext_pillar_first``
 --------------------
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 The ext_pillar_first option allows for external pillar sources to populate
 before file system pillar. This allows for targeting file system pillar from

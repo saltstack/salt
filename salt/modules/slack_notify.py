@@ -2,7 +2,7 @@
 '''
 Module for sending messages to Slack
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt

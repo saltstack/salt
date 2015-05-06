@@ -172,7 +172,7 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
     identity : None
         Private SSH key on the minion server for authentication (ssh://)
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -242,7 +242,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
     identity : None
         Private SSH key on the minion server for authentication (ssh://)
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 

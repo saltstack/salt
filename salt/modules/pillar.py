@@ -92,7 +92,7 @@ def items(*args, **kwargs):
         will also override any variables of the same name in pillar or
         ext_pillar.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -129,7 +129,7 @@ def item(*args, **kwargs):
         will also override any variables of the same name in pillar or
         ext_pillar.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Examples:
 
@@ -186,7 +186,7 @@ def ext(external, pillar=None):
         will also override any variables of the same name in pillar or
         ext_pillar.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: bash
 

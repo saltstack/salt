@@ -18,7 +18,7 @@ to look for Pillar files (such as ``top.sls``).
 .. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
-.. versionchanged:: 2015.2.0
+.. versionchanged:: 2015.5.0
     The special branch name '__env__' will be replace by the
     environment ({{env}})
 

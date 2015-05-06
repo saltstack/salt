@@ -104,7 +104,7 @@ def _get_process_owner(process):
 
 def master(master=None, connected=True):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Fire an event if the minion gets disconnected from its master. This
     function is meant to be run via a scheduled job from the minion. If
