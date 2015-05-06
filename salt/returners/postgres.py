@@ -80,7 +80,7 @@ To use the postgres returner, append '--return postgres' to the salt command.
 
 To use the alternative configuration, append '--return_config alternative' to the salt command.
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 .. code-block:: bash
 

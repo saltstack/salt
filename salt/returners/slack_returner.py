@@ -2,7 +2,7 @@
 '''
 Return salt data via slack
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 The following fields can be set in the minion conf file::
 

@@ -3,7 +3,7 @@
 '''
 Wrapper function for mine operations for salt-ssh
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 '''
 
 # Import python libs

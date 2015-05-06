@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "7" "April 21, 2015" "2015.2.0rc2-143-g32ef5ca" "Salt"
+.TH "SALT" "7" "April 21, 2015" "2015.5.0rc2-143-g32ef5ca" "Salt"
 .SH NAME
 salt \- Salt Documentation
 .
@@ -8628,7 +8628,7 @@ avoid unpredictable behavior. This is probably a good idea whenever
 switching to a new \fBgitfs_provider\fP, but it is less important
 when switching between GitPython and pygit2.
 .sp
-Beginning in version 2015.2.0, the gitfs cache can be easily cleared using
+Beginning in version 2015.5.0, the gitfs cache can be easily cleared using
 the \fBfileserver.clear_cache\fP
 runner.
 .INDENT 0.0
@@ -8713,7 +8713,7 @@ Information on how to authenticate to SSH remotes can be found \fI\%here\fP\&.
 .INDENT 3.0
 .INDENT 3.5
 Dulwich does not recognize \fBssh://\fP URLs, \fBgit+ssh://\fP must be used
-instead. Salt version 2015.2.0 and later will automatically add the
+instead. Salt version 2015.5.0 and later will automatically add the
 \fBgit+\fP to the beginning of these URLs before fetching, but earlier
 Salt versions will fail to fetch unless the URL is specified using
 \fBgit+ssh://\fP\&.
@@ -13269,7 +13269,7 @@ mine_interval: 60
 .UNINDENT
 .SS Mine in Salt\-SSH
 .sp
-As of the 2015.2.0 release of salt, salt\-ssh supports \fBmine.get\fP\&.
+As of the 2015.5.0 release of salt, salt\-ssh supports \fBmine.get\fP\&.
 .sp
 Because the minions cannot provide their own \fBmine_functions\fP configuration,
 we retrieve the args for specified mine functions in one of three places,
@@ -22420,7 +22420,7 @@ being used is capable of providing the necessary information. At this time,
 only the EC2 driver supports this functionality.
 .SS SSH Agent
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 If the ssh key is not stored on the server salt\-cloud is being run on, set
@@ -27163,7 +27163,7 @@ Try and authenticate
 .sp
 Provide authentication using YubiKey.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .TP
@@ -37185,7 +37185,7 @@ ext_job_cache: redis
 .UNINDENT
 .SS \fBevent_return\fP
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Default: \fB\(aq\(aq\fP
@@ -38837,7 +38837,7 @@ ext_pillar:
 There are additional details at \fIsalt\-pillars\fP
 .SS \fBext_pillar_first\fP
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 The ext_pillar_first option allows for external pillar sources to populate
@@ -45275,7 +45275,7 @@ For repository management, the \fBpython\-apt\fP package must be installed.
 .INDENT 0.0
 .TP
 .B salt.modules.aptpkg.autoremove(list_only=False)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Remove packages not required by another package using \fBapt\-get
@@ -45577,13 +45577,13 @@ New in version 0.17.4.
 .B install_recommends
 Whether to install the packages marked as recommended.  Default is True.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B only_upgrade
 Only upgrade the packages, if they are already installed. Default is False.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -46087,7 +46087,7 @@ New in version 2014.1.0.
 .INDENT 0.0
 .TP
 .B salt.modules.archive.cmd_unzip(zip_file, dest, excludes=None, template=None, options=None, runas=None)
-New in version 2015.2.0: In versions 2014.7.x and earlier, this function was known as
+New in version 2015.5.0: In versions 2014.7.x and earlier, this function was known as
 \fBarchive.unzip\fP\&.
 
 .sp
@@ -46130,7 +46130,7 @@ None
 Unpack the zip file as the specified user. Defaults to the user under
 which the minion is running.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B options
@@ -46153,7 +46153,7 @@ salt \(aq*\(aq archive.cmd_unzip /tmp/zipfile.zip /home/strongbad/ excludes=file
 .INDENT 0.0
 .TP
 .B salt.modules.archive.cmd_zip(zip_file, sources, template=None, cwd=None, runas=None)
-New in version 2015.2.0: In versions 2014.7.x and earlier, this function was known as
+New in version 2015.5.0: In versions 2014.7.x and earlier, this function was known as
 \fBarchive.zip\fP\&.
 
 .sp
@@ -46210,7 +46210,7 @@ None
 Create the zip file as the specified user. Defaults to the user under
 which the minion is running.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -46461,7 +46461,7 @@ salt \(aq*\(aq archive.unrar /tmp/rarfile.rar /home/strongbad/ excludes=file_1,f
 .B salt.modules.archive.unzip(zip_file, dest, excludes=None, template=None, runas=None)
 Uses the \fBzipfile\fP Python module to unpack zip files
 .sp
-Changed in version 2015.2.0: This function was rewritten to use Python\(aqs native zip file support.
+Changed in version 2015.5.0: This function was rewritten to use Python\(aqs native zip file support.
 The old functionality has been preserved in the new function
 \fI\%archive.cmd_unzip\fP\&. For versions
 2014.7.x and earlier, see the \fI\%archive.cmd_zip\fP documentation.
@@ -46517,7 +46517,7 @@ salt \(aq*\(aq archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,f
 .B salt.modules.archive.zip_(zip_file, sources, template=None, cwd=None, runas=None)
 Uses the \fBzipfile\fP Python module to create zip files
 .sp
-Changed in version 2015.2.0: This function was rewritten to use Python\(aqs native zip file support.
+Changed in version 2015.5.0: This function was rewritten to use Python\(aqs native zip file support.
 The old functionality has been preserved in the new function
 \fI\%archive.cmd_zip\fP\&. For versions
 2014.7.x and earlier, see the \fI\%archive.cmd_zip\fP documentation.
@@ -53524,7 +53524,7 @@ salt myminion config.get pkg:apache
 .sp
 The \fB:\fP (colon) is used to represent a nested dictionary level.
 .sp
-Changed in version 2015.2.0: The \fBdelimiter\fP argument was added, to allow delimiters other than
+Changed in version 2015.5.0: The \fBdelimiter\fP argument was added, to allow delimiters other than
 \fB:\fP to be used.
 
 .sp
@@ -53542,14 +53542,14 @@ Master config file
 .INDENT 7.0
 .TP
 .B delimiter
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Override the delimiter used to separate nested levels of a data
 structure.
 .TP
 .B merge
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 If passed, this parameter will change the behavior of the function so
@@ -54153,7 +54153,7 @@ It does not work via the CLI.
 .sp
 Manage Perl modules using CPAN
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .TP
@@ -57644,7 +57644,7 @@ salt \(aq*\(aq docker.run_stdout <container id> \(aqls \-l /etc\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.dockerio.save(image, filename)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Save the specified image to filename from docker
@@ -66406,7 +66406,7 @@ salt \(aq*\(aq gnome.set user=<username> schema=org.gnome.desktop.screensaver ke
 Manage a GPG keychains, add keys, create keys, retrieve keys
 from keyservers.  Sign, encrypt and sign & encrypt text and files.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 \fBNOTE:\fP
@@ -67144,7 +67144,7 @@ the \fBmerge\fP dictionary is merged.  This allows common values for
 each case to be collected in the base and overridden by the grain
 selection dictionary and the merge dictionary.  Default is unset.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 
 .UNINDENT
@@ -68122,7 +68122,7 @@ Run hg as a user other than what the minion runs as
 None
 Private SSH key on the minion server for authentication (\fI\%ssh://\fP)
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -68192,7 +68192,7 @@ Run hg as a user other than what the minion runs as
 None
 Private SSH key on the minion server for authentication (\fI\%ssh://\fP)
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -73317,7 +73317,7 @@ lxc >= 1.0 (even beta alpha) is required
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.apply_network_profile(name, network_profile, nic_opts=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Apply a network profile to a container
@@ -73393,7 +73393,7 @@ This can be either a filepath or a string representing the key
 Delay in seconds between end of container creation and bootstrapping.
 Useful when waiting for container to obtain a DHCP lease.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B bootstrap_url
@@ -73659,7 +73659,7 @@ File to be copied to the container
 .B dest
 Destination on the container. Must be an absolute path.
 .sp
-Changed in version 2015.2.0: If the destination is a directory, the file will be copied into
+Changed in version 2015.5.0: If the destination is a directory, the file will be copied into
 that directory.
 
 .UNINDENT
@@ -73670,7 +73670,7 @@ makedirs : False
 Create the parent directory on the container if it does not already
 exist.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .UNINDENT
@@ -73708,7 +73708,7 @@ overridden by the \fBContainer Creation Arguments\fP listed below.
 .B network_profile
 Network profile to use for container
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -73798,7 +73798,7 @@ False
 If \fBTrue\fP, the container will be destroyed even if it is
 running/frozen.
 .sp
-Changed in version 2015.2.0: Default value changed to \fBFalse\fP\&. This more closely matches the
+Changed in version 2015.5.0: Default value changed to \fBFalse\fP\&. This more closely matches the
 behavior of \fBlxc\-destroy(1)\fP, and also makes it less likely that
 an accidental command will destroy a running container that was
 being used for important things.
@@ -73897,7 +73897,7 @@ False
 If \fBTrue\fP and the container is stopped, the container will be started
 before attempting to freeze.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -73916,7 +73916,7 @@ salt \(aq*\(aq lxc.freeze name
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.get_container_profile(name=None, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Gather a pre\-configured set of container configuration parameters. If no
@@ -73969,7 +73969,7 @@ salt\-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.get_network_profile(name=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Gather a pre\-configured set of network configuration parameters. If no
@@ -74059,7 +74059,7 @@ salt \(aq*\(aq lxc.get_parameter container_name memory.limit_in_bytes
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.images(dist=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 List the available images for LXC\(aqs \fBdownload\fP template.
@@ -74133,7 +74133,7 @@ autostart container on reboot
 .B memory
 cgroups memory limit, in MB
 .sp
-Changed in version 2015.2.0: If no value is passed, no limit is set. In earlier Salt versions,
+Changed in version 2015.5.0: If no value is passed, no limit is set. In earlier Salt versions,
 not passing this value causes a 1024MB memory limit to be set, and
 it was necessary to pass \fBmemory=0\fP to set no limit.
 
@@ -74149,11 +74149,11 @@ the default does nothing more than lxcutils does
 .B network_profile
 Network profile to use for the container
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B nic
-Deprecated since version 2015.2.0: Use \fBnetwork_profile\fP instead
+Deprecated since version 2015.5.0: Use \fBnetwork_profile\fP instead
 
 .TP
 .B nic_opts
@@ -74179,7 +74179,7 @@ False
 Set to \fBTrue\fP to denote a password hash instead of a plaintext
 password
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B profile
@@ -74216,7 +74216,7 @@ If explicit preseeding is not used;
 Attempt to request key approval from the master. Default: \fBTrue\fP
 .TP
 .B clone
-Deprecated since version 2015.2.0: Use \fBclone_from\fP instead
+Deprecated since version 2015.5.0: Use \fBclone_from\fP instead
 
 .TP
 .B clone_from
@@ -74227,7 +74227,7 @@ Default: \fBNone\fP
 Delay in seconds between end of container creation and bootstrapping.
 Useful when waiting for container to obtain a DHCP lease.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B bootstrap_url
@@ -74286,7 +74286,7 @@ and each container\(aqs output from \fI\%lxc.info\fP\&.
 Return output matching a specific state (\fBfrozen\fP, \fBrunning\fP, or
 \fBstopped\fP).
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -74313,7 +74313,7 @@ Return a list of the containers available on the minion
 .B active
 If \fBTrue\fP, return only active (i.e. running) containers
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -74363,7 +74363,7 @@ salt \(aqminion\(aq lxc.read_conf /etc/lxc/mycontainer.conf out_format=commented
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.restart(name, force=False)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Restart the named container. If the container was not running, the
@@ -74394,7 +74394,7 @@ salt myminion lxc.restart name
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.retcode(name, cmd, no_start=False, preserve_state=True, stdin=None, python_shell=True, output_loglevel=\(aqdebug\(aq, use_vt=False, ignore_retcode=False, keep_env=\(aqhttp_proxy, https_proxy, no_proxy\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Run \fBcmd.retcode\fP within a container
@@ -74471,7 +74471,7 @@ salt myminion lxc.retcode mycontainer \(aqip addr show\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.run(name, cmd, no_start=False, preserve_state=True, stdin=None, python_shell=True, output_loglevel=\(aqdebug\(aq, use_vt=False, ignore_retcode=False, keep_env=\(aqhttp_proxy, https_proxy, no_proxy\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Run \fBcmd.run\fP within a container
@@ -74548,7 +74548,7 @@ salt myminion lxc.run mycontainer \(aqifconfig \-a\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.run_all(name, cmd, no_start=False, preserve_state=True, stdin=None, python_shell=True, output_loglevel=\(aqdebug\(aq, use_vt=False, ignore_retcode=False, keep_env=\(aqhttp_proxy, https_proxy, no_proxy\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Run \fBcmd.run_all\fP within a container
@@ -74623,13 +74623,13 @@ salt myminion lxc.run_all mycontainer \(aqip addr show\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.run_cmd(name, cmd, no_start=False, preserve_state=True, stdin=None, stdout=True, stderr=False, python_shell=True, output_loglevel=\(aqdebug\(aq, use_vt=False, ignore_retcode=False, keep_env=\(aqhttp_proxy, https_proxy, no_proxy\(aq)
-Deprecated since version 2015.2.0: Use \fI\%lxc.run\fP instead
+Deprecated since version 2015.5.0: Use \fI\%lxc.run\fP instead
 
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.run_stderr(name, cmd, no_start=False, preserve_state=True, stdin=None, python_shell=True, output_loglevel=\(aqdebug\(aq, use_vt=False, ignore_retcode=False, keep_env=\(aqhttp_proxy, https_proxy, no_proxy\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Run \fBcmd.run_stderr\fP within a container
@@ -74704,7 +74704,7 @@ salt myminion lxc.run_stderr mycontainer \(aqip addr show\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.run_stdout(name, cmd, no_start=False, preserve_state=True, stdin=None, python_shell=True, output_loglevel=\(aqdebug\(aq, use_vt=False, ignore_retcode=False, keep_env=\(aqhttp_proxy, https_proxy, no_proxy\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Run \fBcmd.run_stdout\fP within a container
@@ -74781,7 +74781,7 @@ salt myminion lxc.run_stdout mycontainer \(aqifconfig \-a\(aq
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.set_dns(name, dnsservers=None, searchdomains=None)
-Changed in version 2015.2.0: The \fBdnsservers\fP and \fBsearchdomains\fP parameters can now be passed
+Changed in version 2015.5.0: The \fBdnsservers\fP and \fBsearchdomains\fP parameters can now be passed
 as a comma\-separated list.
 
 .sp
@@ -74819,7 +74819,7 @@ salt \(aq*\(aq lxc.set_parameter name parameter value
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.set_password(name, users, password, encrypted=True)
-Changed in version 2015.2.0: Function renamed from \fBset_pass\fP to \fBset_password\fP\&. Additionally,
+Changed in version 2015.5.0: Function renamed from \fBset_pass\fP to \fBset_password\fP\&. Additionally,
 this function now supports (and defaults to using) a password hash
 instead of a plaintext password.
 
@@ -74838,7 +74838,7 @@ True
 If true, \fBpassword\fP must be a password hash. Set to \fBFalse\fP to set
 a plaintext password (not recommended).
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -74863,7 +74863,7 @@ Start the named container
 .TP
 .B restart
 False
-Deprecated since version 2015.2.0: Use \fI\%lxc.restart\fP
+Deprecated since version 2015.5.0: Use \fI\%lxc.restart\fP
 
 .sp
 Restart the container if it is already running
@@ -74910,7 +74910,7 @@ Do not wait for the container to stop, kill all tasks in the container.
 Older LXC versions will stop containers like this irrespective of this
 argument.
 .sp
-Changed in version 2015.2.0: Default value changed to \fBFalse\fP
+Changed in version 2015.5.0: Default value changed to \fBFalse\fP
 
 .UNINDENT
 .sp
@@ -74929,7 +74929,7 @@ salt myminion lxc.stop name
 .INDENT 0.0
 .TP
 .B salt.modules.lxc.templates()
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 List the available LXC template scripts installed on the minion
@@ -78730,7 +78730,7 @@ CLI Example:
 .ft C
 salt \(aq*\(aq mount.umount /mnt/foo
 
-\&.. versionadded:: 2015.2.0
+\&.. versionadded:: 2015.5.0
 
 salt \(aq*\(aq mount.umount /mnt/foo /dev/xvdc1
 .ft P
@@ -81152,7 +81152,7 @@ salt \(aq*\(aq network.ping archlinux.org
 .UNINDENT
 .UNINDENT
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Return a True or False instead of ping output.
@@ -87038,7 +87038,7 @@ available to pillar and ext_pillar rendering. These pillar variables
 will also override any variables of the same name in pillar or
 ext_pillar.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .INDENT 7.0
@@ -87135,7 +87135,7 @@ available to pillar and ext_pillar rendering. these pillar variables
 will also override any variables of the same name in pillar or
 ext_pillar.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -87169,7 +87169,7 @@ available to pillar and ext_pillar rendering. these pillar variables
 will also override any variables of the same name in pillar or
 ext_pillar.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -87545,7 +87545,7 @@ salt \(aq*\(aq pip.uninstall <package name> bin_env=/path/to/pip_bin
 .INDENT 0.0
 .TP
 .B salt.modules.pip.upgrade(bin_env=None, user=None, cwd=None, use_vt=False)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Upgrades outdated pip packages
@@ -87576,7 +87576,7 @@ salt \(aq*\(aq pip.upgrade
 .INDENT 0.0
 .TP
 .B salt.modules.pip.upgrade_available(pkg, bin_env=None, user=None, cwd=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Check whether or not an upgrade is available for a given package
@@ -95321,7 +95321,7 @@ salt \(aq*\(aq lowpkg.list_pkgs
 List the modified files that belong to a package. Not specifying any packages
 will return a list of _all_ modified files on the system\(aqs RPM database.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI examples:
@@ -101614,7 +101614,7 @@ Control the state system on the minion
 .INDENT 0.0
 .TP
 .B salt.modules.state.apply_(mods=None, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Apply states! This function will call highstate or state.sls based on the
@@ -101638,7 +101638,7 @@ salt \(aq*\(aq state.apply test,pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.state.check_request(name=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Return the state request information, if any
@@ -101679,7 +101679,7 @@ salt \(aq*\(aq state.clear_cache
 .INDENT 0.0
 .TP
 .B salt.modules.state.clear_request(name=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Clear out the state execution request without executing it
@@ -101878,7 +101878,7 @@ salt \(aq*\(aq state.pkg /tmp/state_pkg.tgz
 .INDENT 0.0
 .TP
 .B salt.modules.state.request(mods=None, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Request that the local admin execute a state run via
@@ -101902,7 +101902,7 @@ salt \(aq*\(aq state.request test,pkgs
 .INDENT 0.0
 .TP
 .B salt.modules.state.run_request(name=\(aqdefault\(aq, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Execute the pending state request
@@ -104224,7 +104224,7 @@ salt \(aq*\(aq sys.argspec
 .sp
 Module names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104265,7 +104265,7 @@ salt \(aq*\(aq sys.doc network.traceroute user.info
 .sp
 Modules can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104301,7 +104301,7 @@ salt \(aq*\(aq sys.list_functions sys user
 .sp
 Function names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104319,7 +104319,7 @@ salt \(aq*\(aq sys.list_functions \(aqsys.list_*\(aq
 .B salt.modules.sysmod.list_modules(*args)
 List the modules loaded on the minion
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -104351,7 +104351,7 @@ salt \(aq*\(aq sys.list_modules \(aqs*\(aq
 .B salt.modules.sysmod.list_renderers(*args)
 List the renderers loaded on the minion
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -104403,7 +104403,7 @@ salt \(aq*\(aq sys.list_returner_functions mysql etcd
 .sp
 Returner names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104438,7 +104438,7 @@ salt \(aq*\(aq sys.list_returners
 .sp
 Returner names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104476,7 +104476,7 @@ salt \(aq*\(aq sys.list_runner_functions state virt
 .sp
 Runner function names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104511,7 +104511,7 @@ salt \(aq*\(aq sys.list_runners
 .sp
 Runner names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104549,7 +104549,7 @@ salt \(aq*\(aq sys.list_state_functions pkg user
 .sp
 State function names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104585,7 +104585,7 @@ salt \(aq*\(aq sys.list_state_modules
 .sp
 State module names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104626,7 +104626,7 @@ reading.
 .sp
 Multiple renderers can be specified.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -104661,7 +104661,7 @@ salt \(aq*\(aq sys.renderer_doc \(aqc*\(aq \(aqj*\(aq
 Return the argument specification of functions in Salt returner
 modules.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -104721,7 +104721,7 @@ salt \(aq*\(aq sys.returner_doc sqlite3.get_fun etcd.get_fun
 .sp
 Returner names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104740,7 +104740,7 @@ salt \(aq*\(aq sys.returner_doc \(aqsqlite3.get_*\(aq
 Return the argument specification of functions in Salt runner
 modules.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -104800,7 +104800,7 @@ salt \(aq*\(aq sys.runner_doc cache.grains mine.get
 .sp
 Runner names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -104819,7 +104819,7 @@ salt \(aq*\(aq sys.runner_doc \(aqcache.clear_*\(aq
 Return the argument specification of functions in Salt state
 modules.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -104879,7 +104879,7 @@ salt \(aq*\(aq sys.state_doc service.running ipables.append
 .sp
 State names can be specified as globs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .INDENT 3.5
@@ -110015,7 +110015,7 @@ Module for configuring Windows Firewall
 .INDENT 0.0
 .TP
 .B salt.modules.win_firewall.add_rule(name, localport, protocol=\(aqtcp\(aq, action=\(aqallow\(aq, dir=\(aqin\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Add a new firewall rule
@@ -110054,7 +110054,7 @@ salt \(aq*\(aq firewall.disable
 .B salt.modules.win_firewall.enable(profile=\(aqallprofiles\(aq)
 Enable firewall profile :param profile: (default: allprofiles)
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 CLI Example:
@@ -110089,7 +110089,7 @@ salt \(aq*\(aq firewall.get_config
 .INDENT 0.0
 .TP
 .B salt.modules.win_firewall.get_rule(name=\(aqall\(aq)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Get firewall rule(s) info
@@ -111711,7 +111711,7 @@ wmi
 .INDENT 0.0
 .TP
 .B salt.modules.win_status.master(master=None, connected=True)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Fire an event if the minion gets disconnected from its master. This
@@ -113750,7 +113750,7 @@ salt \(aq*\(aq pkg.diff /etc/apache2/httpd.conf /etc/sudoers
 .INDENT 0.0
 .TP
 .B salt.modules.yumpkg.download(*packages)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Download packages to the local disk. Requires \fByumdownloader\fP from
@@ -114413,7 +114413,7 @@ salt \(aq*\(aq pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
 List the modified files that belong to a package. Not specifying any packages
 will return a list of _all_ modified files on the system\(aqs RPM database.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Filtering by flags (True or False):
@@ -115026,7 +115026,7 @@ Nitin Madhok <\fI\%nmadhok@clemson.edu\fP>
 .INDENT 0.0
 .TP
 .B salt.modules.zfs.create(name, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Create a ZFS File System.
@@ -115077,7 +115077,7 @@ salt \(aq*\(aq zfs.create myzpool/mydataset properties="{\(aqmountpoint\(aq: \(a
 .INDENT 0.0
 .TP
 .B salt.modules.zfs.destroy(name, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Destroy a ZFS File System.
@@ -115097,7 +115097,7 @@ salt \(aq*\(aq zfs.destroy myzpool/mydataset [force=True|False]
 .INDENT 0.0
 .TP
 .B salt.modules.zfs.exists(name)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Check if a ZFS filesystem or volume or snapshot exists.
@@ -115117,7 +115117,7 @@ salt \(aq*\(aq zfs.exists myzpool/mydataset
 .INDENT 0.0
 .TP
 .B salt.modules.zfs.list_(name=\(aq\(aq, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Return a list of all datasets or a specified dataset on the system and the
@@ -115177,7 +115177,7 @@ salt \(aq*\(aq zfs.list /myzpool/mydataset properties="[name, sharenfs, mountpoi
 .INDENT 0.0
 .TP
 .B salt.modules.zfs.rename(name, new_name)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Rename or Relocate a ZFS File System.
@@ -115409,7 +115409,7 @@ salt \(aq*\(aq zpool.add myzpool /path/to/vdev1 /path/to/vdev2 [...]
 .INDENT 0.0
 .TP
 .B salt.modules.zpool.create(pool_name, *vdevs, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ\-1, RAIDZ\-2 or RAIDZ\-3
@@ -115524,7 +115524,7 @@ salt \(aq*\(aq zpool.exists myzpool
 .INDENT 0.0
 .TP
 .B salt.modules.zpool.export(*pools, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Export storage pools
@@ -115545,7 +115545,7 @@ salt \(aq*\(aq zpool.export myzpool2 myzpool2 ... [force=True|False]
 .INDENT 0.0
 .TP
 .B salt.modules.zpool.import_(pool_name=\(aq\(aq, new_name=\(aq\(aq, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Import storage pools or list pools available for import
@@ -115583,7 +115583,7 @@ salt \(aq*\(aq zpool.iostat myzpool
 .INDENT 0.0
 .TP
 .B salt.modules.zpool.list_()
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Return a list of all pools in the system with health status and space usage
@@ -115603,7 +115603,7 @@ salt \(aq*\(aq zpool.list
 .INDENT 0.0
 .TP
 .B salt.modules.zpool.offline(pool_name, *vdevs, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Ensure that the specified devices are offline
@@ -115631,7 +115631,7 @@ salt \(aq*\(aq zpool.offline myzpool /path/to/vdev1 [...] [temporary=True|False]
 .INDENT 0.0
 .TP
 .B salt.modules.zpool.online(pool_name, *vdevs, **kwargs)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Ensure that the specified devices are online
@@ -116196,7 +116196,7 @@ salt \(aq*\(aq pkg.mod_repo alias url= mirrorlist=http://host.com/
 List the modified files that belong to a package. Not specifying any packages
 will return a list of _all_ modified files on the system\(aqs RPM database.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Filtering by flags (True or False):
@@ -119452,7 +119452,7 @@ Display ret data
 .SS salt.output.newline_values_only
 .SS Display values only, separated by newlines
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 This outputter is designed for Salt CLI return data. It will do the following
@@ -120568,7 +120568,7 @@ to look for Pillar files (such as \fBtop.sls\fP).
 Changed in version 2014.7.0: The optional \fBroot\fP parameter will be added.
 
 .sp
-Changed in version 2015.2.0: The special branch name \(aq__env__\(aq will be replace by the
+Changed in version 2015.5.0: The special branch name \(aq__env__\(aq will be replace by the
 environment ({{env}})
 
 .sp
@@ -124962,7 +124962,7 @@ salt \(aq*\(aq test.ping \-\-return carbon
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -125146,7 +125146,7 @@ salt \(aq*\(aq test.ping \-\-return couchdb
 .sp
 To use the alternative configuration, append \fB\-\-return_config alternative\fP to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -125641,7 +125641,7 @@ salt \(aq*\(aq test.ping \-\-return memcache
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -125746,7 +125746,7 @@ salt \(aq*\(aq test.ping \-\-return mongo
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -125854,7 +125854,7 @@ salt \(aq*\(aq test.ping \-\-return mongo_return
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -126079,7 +126079,7 @@ salt \(aq*\(aq test.ping \-\-return mysql
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -126304,7 +126304,7 @@ To use this returner, append \(aq\-\-return odbc\(aq to the salt command.
 
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 
-\&.. versionadded:: 2015.2.0
+\&.. versionadded:: 2015.5.0
 
 \&.. code\-block:: bash
 
@@ -126468,7 +126468,7 @@ salt \(aq*\(aq test.ping \-\-return postgres
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -126711,7 +126711,7 @@ salt \(aq*\(aq test.ping \-\-return redis
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -126810,7 +126810,7 @@ messages will be reported at info level.
 .sp
 Return data by SMS.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .TP
@@ -126957,7 +126957,7 @@ salt \(aq*\(aq test.ping \-\-return smtp
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -127079,7 +127079,7 @@ salt \(aq*\(aq test.ping \-\-return sqlite3
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -127243,7 +127243,7 @@ salt \(aq*\(aq test.ping \-\-return xmpp
 .sp
 To use the alternative configuration, append \(aq\-\-return_config alternative\(aq to the salt command.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -127487,7 +127487,7 @@ defaults to /etc/salt/roster
 Use the cloud cache on the master to derive IPv4 addresses based on minion ID.
 .sp
 This roster requires that the minion in question was created using at least the
-2015.2.0 version of Salt Cloud. Starting with the 2015.2.0 release, Salt Cloud
+2015.5.0 version of Salt Cloud. Starting with the 2015.5.0 release, Salt Cloud
 maintains an index of minions that it creates and deletes. This index tracks the
 provider and profile configuration used to provision the minion, including
 authentication information. So long as this configuration remains current, it can
@@ -128348,7 +128348,7 @@ Directly manage the Salt fileserver plugins
 .INDENT 0.0
 .TP
 .B salt.runners.fileserver.clear_cache(backend=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Clear the fileserver cache from VCS fileserver backends (\fBgit\fP, \fBhg\fP, \fBsvn\fP). Executing this runner with no arguments will
@@ -128382,7 +128382,7 @@ salt\-run fileserver.clear_cache \-roots
 .INDENT 0.0
 .TP
 .B salt.runners.fileserver.clear_lock(backend=None, remote=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Clear the fileserver update lock from VCS fileserver backends (\fBgit\fP, \fBhg\fP, \fBsvn\fP). This should only need to be done if a fileserver
@@ -128434,7 +128434,7 @@ of backends with and without a minus sign (ex:
 \fBbackend=\-roots,git\fP) then the ones starting with a minus sign will
 be disregarded.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -128457,7 +128457,7 @@ salt\-run fileserver.dir_list \-git
 .INDENT 0.0
 .TP
 .B salt.runners.fileserver.empty_dir_list(saltenv=\(aqbase\(aq, backend=None, outputter=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Return a list of empty directories in the given environment
@@ -128510,7 +128510,7 @@ then the environments for all configured backends will be returned.
 .B backend
 Narrow fileserver backends to a subset of the enabled ones.
 .sp
-Changed in version 2015.2.0::: If all passed backends start with a minus sign (\fB\-\fP), then these
+Changed in version 2015.5.0::: If all passed backends start with a minus sign (\fB\-\fP), then these
 backends will be excluded from the enabled backends. However, if
 there is a mix of backends with and without a minus sign (ex:
 \fBbackend=\-roots,git\fP) then the ones starting with a minus
@@ -128554,7 +128554,7 @@ of backends with and without a minus sign (ex:
 \fBbackend=\-roots,git\fP) then the ones starting with a minus sign will
 be disregarded.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -128577,7 +128577,7 @@ salt\-run fileserver.file_list \-git
 .INDENT 0.0
 .TP
 .B salt.runners.fileserver.lock(backend=None, remote=None)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Set a fileserver update lock for VCS fileserver backends (\fBgit\fP, \fBhg\fP, \fBsvn\fP).
@@ -128637,7 +128637,7 @@ of backends with and without a minus sign (ex:
 \fBbackend=\-roots,git\fP) then the ones starting with a minus sign will
 be disregarded.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -128667,7 +128667,7 @@ all configured backends will be updated.
 .B backend
 Narrow fileserver backends to a subset of the enabled ones.
 .sp
-Changed in version 2015.2.0: If all passed backends start with a minus sign (\fB\-\fP), then these
+Changed in version 2015.5.0: If all passed backends start with a minus sign (\fB\-\fP), then these
 backends will be excluded from the enabled backends. However, if
 there is a mix of backends with and without a minus sign (ex:
 \fBbackend=\-roots,git\fP) then the ones starting with a minus
@@ -128856,7 +128856,7 @@ Default: \fIFalse\fP\&.
 .B display_progress
 Displays progress events when set to \fITrue\fP\&. Default: \fIFalse\fP\&.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .sp
@@ -129028,7 +129028,7 @@ cgroups cpu shares.
 .B memory
 cgroups memory limit, in MB
 .sp
-Changed in version 2015.2.0: If no value is passed, no limit is set. In earlier Salt versions,
+Changed in version 2015.5.0: If no value is passed, no limit is set. In earlier Salt versions,
 not passing this value causes a 1024MB memory limit to be set, and
 it was necessary to pass \fBmemory=0\fP to set no limit.
 
@@ -129045,11 +129045,11 @@ A LXC profile (defined in config or pillar).
 .B network_profile
 Network profile to use for the container
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B nic
-Deprecated since version 2015.2.0: Use \fBnetwork_profile\fP instead
+Deprecated since version 2015.5.0: Use \fBnetwork_profile\fP instead
 
 .TP
 .B nic_opts
@@ -142175,7 +142175,7 @@ specify "force: True" to overwrite the target file
 If the target subdirectories don\(aqt exist create them
 .TP
 .B preserve
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Set \fBpreserve: True\fP to preserve user/group ownership and mode
@@ -142183,7 +142183,7 @@ after copying. Default is \fBFalse\fP\&. If \fBpreseve\fP is set to \fBTrue\fP,
 then user/group/mode attributes will be ignored.
 .TP
 .B user
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 The user to own the copied file, this defaults to the user salt is
@@ -142191,7 +142191,7 @@ running as on the minion. If \fBpreserve\fP is set to \fBTrue\fP, then
 this will be ignored
 .TP
 .B group
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 The group to own the copied file, this defaults to the group salt is
@@ -142199,7 +142199,7 @@ running as on the minion. If \fBpreserve\fP is set to \fBTrue\fP or on
 Windows this will be ignored
 .TP
 .B mode
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 The permissions to set on the copied file, aka 644, \(aq0775\(aq, \(aq4664\(aq.
@@ -142207,7 +142207,7 @@ If \fBpreserve\fP is set to \fBTrue\fP, then this will be ignored.
 Not supported on Windows
 .TP
 .B subdir
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 If the name is a directory then place the file inside the named
@@ -142292,7 +142292,7 @@ Leave files or directories unchanged:
 .UNINDENT
 .UNINDENT
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B dir_mode / mode
@@ -144406,7 +144406,7 @@ New in version 0.17.0.
 .B identity
 Private SSH key on the minion server for authentication (\fI\%ssh://\fP)
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B force
@@ -144421,7 +144421,7 @@ Include additional arguments and options to the hg command line
 .sp
 This state is useful for sending messages to Hipchat during state runs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -146588,13 +146588,13 @@ web01:
 .INDENT 0.0
 .TP
 .B salt.states.lxc.cloned(name, orig, snapshot=True, size=None, vgname=None, profile=None)
-Deprecated since version 2015.2.0: Use \fI\%lxc.present\fP
+Deprecated since version 2015.5.0: Use \fI\%lxc.present\fP
 
 .UNINDENT
 .INDENT 0.0
 .TP
 .B salt.states.lxc.created(name, **kwargs)
-Deprecated since version 2015.2.0: Use \fI\%lxc.present\fP
+Deprecated since version 2015.5.0: Use \fI\%lxc.present\fP
 
 .UNINDENT
 .INDENT 0.0
@@ -146607,7 +146607,7 @@ Deprecated since version 2015.2.0: Use \fI\%lxc.present\fP
 This state is unsuitable for setting parameters that appear more than
 once in an LXC config file, or parameters which must appear in a
 certain order (such as when configuring more than one network
-interface). It is slated to be replaced, and as of version 2015.2.0 it
+interface). It is slated to be replaced, and as of version 2015.5.0 it
 is deprecated.
 .UNINDENT
 .UNINDENT
@@ -146633,7 +146633,7 @@ setconf:
 .INDENT 0.0
 .TP
 .B salt.states.lxc.frozen(name, start=True)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Ensure that a container is frozen
@@ -146675,7 +146675,7 @@ web02:
 .INDENT 0.0
 .TP
 .B salt.states.lxc.present(name, running=None, clone_from=None, snapshot=False, profile=None, template=None, options=None, image=None, config=None, fstype=None, size=None, backing=None, vgname=None, lvname=None)
-Changed in version 2015.2.0: The \fI\%lxc.created\fP state has been renamed
+Changed in version 2015.5.0: The \fI\%lxc.created\fP state has been renamed
 to \fBlxc.present\fP, and the \fI\%lxc.cloned\fP
 state has been merged into this state.
 
@@ -146697,7 +146697,7 @@ If \fBNone\fP, do nothing with regards to the running state of the
 container
 .UNINDENT
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .TP
 .B clone_from
@@ -146738,7 +146738,7 @@ The available images can be listed using the \fBlxc.images\fP function.
 .UNINDENT
 .TP
 .B options
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Template\-specific options to pass to the lxc\-create command. These
@@ -146791,7 +146791,7 @@ container. Only applicable if \fBbacking\fP is set to \fBlvm\fP\&.
 .INDENT 0.0
 .TP
 .B salt.states.lxc.running(name, restart=False)
-Changed in version 2015.2.0: The \fI\%lxc.started\fP state has been renamed
+Changed in version 2015.5.0: The \fI\%lxc.started\fP state has been renamed
 to \fBlxc.running\fP
 
 .sp
@@ -146833,7 +146833,7 @@ web02:
 .INDENT 0.0
 .TP
 .B salt.states.lxc.set_pass(name, **kwargs)
-Deprecated since version 2015.2.0.
+Deprecated since version 2015.5.0.
 
 .sp
 This state function has been disabled, as it did not conform to design
@@ -146859,7 +146859,7 @@ setpass:
 .INDENT 0.0
 .TP
 .B salt.states.lxc.started(name, restart=False)
-Deprecated since version 2015.2.0: Use \fI\%lxc.running\fP
+Deprecated since version 2015.5.0: Use \fI\%lxc.running\fP
 
 .UNINDENT
 .INDENT 0.0
@@ -146887,7 +146887,7 @@ Do not wait for the container to stop, kill all tasks in the container.
 Older LXC versions will stop containers like this irrespective of this
 argument.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .INDENT 7.0
@@ -147679,7 +147679,7 @@ Verify that a device is not mounted
 The path to the location where the device is to be unmounted from
 .UNINDENT
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 7.0
 .TP
@@ -148251,7 +148251,7 @@ system:
 \&.. note::
     Apply changes to hostname immediately.
 
-\&.. versionadded:: 2015.2.0
+\&.. versionadded:: 2015.5.0
 .ft P
 .fi
 .UNINDENT
@@ -149162,7 +149162,7 @@ Use VT terminal emulation (see ouptut while installing)
 .INDENT 0.0
 .TP
 .B salt.states.pip_state.uptodate(name, bin_env=None, user=None, cwd=None, use_vt=False)
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Verify that the system is completely up to date.
@@ -149619,7 +149619,7 @@ mypkgs:
 Whether to install the packages marked as recommended.  Default is True.
 Currently only works with APT based systems.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .INDENT 7.0
@@ -149640,7 +149640,7 @@ httpd:
 Only upgrade the packages, if they are already installed. Default is False.
 Currently only works with APT based systems.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .INDENT 7.0
@@ -149708,7 +149708,7 @@ mypkgs:
 Whether to install the packages marked as recommended.  Default is True.
 Currently only works with APT based systems.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .INDENT 7.0
@@ -149729,7 +149729,7 @@ httpd:
 Only upgrade the packages, if they are already installed. Default is False.
 Currently only works with APT based systems.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .UNINDENT
 .INDENT 7.0
@@ -150937,7 +150937,7 @@ New in version 0.16.0.
 .SS salt.states.pyrax_queues
 .SS Manage Rackspace Queues
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 Create and destroy Rackspace queues. Be aware that this interacts with
@@ -152481,7 +152481,7 @@ The string to search for when looking for the service process with ps
 .sp
 This state is useful for sending messages to Slack during state runs.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .INDENT 3.5
@@ -155850,7 +155850,7 @@ beacons:
 .sp
 Beacon to monitor disk usage.
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .TP
@@ -155993,7 +155993,7 @@ beacons:
 .sp
 Beacon to monitor statistics from ethernet adapters
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .INDENT 0.0
 .TP
@@ -156265,7 +156265,7 @@ python\-etcd
 all
 .UNINDENT
 .sp
-New in version 2015.2.0.
+New in version 2015.5.0.
 
 .sp
 This module allows access to the etcd database using an \fBsdb://\fP URI. This
@@ -164857,7 +164857,7 @@ paradigm. This allows for many new capabilities to be added to Salt in the
 upcoming releases.
 .sp
 Please keep in mind that this is a beta release of RAET and we hope for bugs to
-be worked out, performance to be better realized and more in the 2015.2.0
+be worked out, performance to be better realized and more in the 2015.5.0
 release.
 .sp
 Simply stated, users running Salt with RAET should expect some hiccups as we
@@ -165358,7 +165358,7 @@ paradigm. This allows for many new capabilities to be added to Salt in the
 upcoming releases.
 .sp
 Please keep in mind that this is a beta release of RAET and we hope for bugs to
-be worked out, performance to be better realized and more in the 2015.2.0
+be worked out, performance to be better realized and more in the 2015.5.0
 release.
 .sp
 Simply stated, users running Salt with RAET should expect some hiccups as we
