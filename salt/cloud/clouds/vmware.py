@@ -484,6 +484,12 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
     if device_type == "datastore_iso_file":
         drive.backing = vim.vm.device.VirtualCdrom.IsoBackingInfo()
         drive.backing.fileName = iso_path
+
+        datastore = iso_path.partition('[')[-1].rpartition(']')[0]
+        datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+        if datastore_ref:
+            drive.backing.datastore = datastore_ref
+
         drive.deviceInfo.summary = 'ISO {0}'.format(iso_path)
 
     elif device_type == "client_device":
@@ -709,14 +715,18 @@ def _wait_for_ip(vm_ref, max_wait_minute):
     while time_counter < max_wait_second:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm_ref.name, time_counter))
+
         if vm_ref.summary.guest.ipAddress:
-            return vm_ref.summary.guest.ipAddress
-        else:
-            for net in vm_ref.guest.net:
-                if net.ipConfig.ipAddress:
-                    for current_ip in net.ipConfig.ipAddress:
-                        if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
-                            return current_ip.ipAddress
+            if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+                log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                return vm_ref.summary.guest.ipAddress
+
+        for net in vm_ref.guest.net:
+            if net.ipConfig.ipAddress:
+                for current_ip in net.ipConfig.ipAddress:
+                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                        log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                        return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
     return False
