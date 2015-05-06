@@ -3,7 +3,7 @@
 Use the cloud cache on the master to derive IPv4 addresses based on minion ID.
 
 This roster requires that the minion in question was created using at least the
-2015.2.0 version of Salt Cloud. Starting with the 2015.2.0 release, Salt Cloud
+2015.5.0 version of Salt Cloud. Starting with the 2015.5.0 release, Salt Cloud
 maintains an index of minions that it creates and deletes. This index tracks the
 provider and profile configuration used to provision the minion, including
 authentication information. So long as this configuration remains current, it can

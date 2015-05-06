@@ -2,7 +2,7 @@
 '''
 Return data to a cassandra server
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 :maintainer:    Corin Kochenower<ckochenower@saltstack.com>
 :maturity:      new as of 2015.2

@@ -100,7 +100,7 @@ def lookup_jid(jid,
     display_progress
         Displays progress events when set to `True`. Default: `False`.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
