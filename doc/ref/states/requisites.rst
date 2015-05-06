@@ -4,6 +4,38 @@
 Requisites and Other Global State Arguments
 ===========================================
 
+Fire Event Notifications
+========================
+
+.. versionadded:: Beryllium
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
+
 Requisites
 ==========
 
