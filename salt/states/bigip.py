@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import json
 
+
 #set up virtual function
 def __virtual__():
     '''
@@ -470,17 +471,17 @@ def delete_node(hostname, username, password, name):
 
         # something bad happened
         else:
-          ret = _load_result(existing, ret)
+            ret = _load_result(existing, ret)
 
     # not found
     elif existing['code'] == 404:
-            ret['result'] = True
-            ret['comment'] = 'This node already does not exist. No changes made.'
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = {}
+        ret['result'] = True
+        ret['comment'] = 'This node already does not exist. No changes made.'
+        ret['changes']['old'] = {}
+        ret['changes']['new'] = {}
 
     else:
-            ret = _load_result(existing, ret)
+        ret = _load_result(existing, ret)
 
     return ret
 
@@ -1057,14 +1058,14 @@ def delete_pool(hostname, username, password, name):
 
         # something bad happened
         else:
-          ret = _load_result(deleted, ret)
+            ret = _load_result(deleted, ret)
 
     # not found
     elif existing['code'] == 404:
-            ret['result'] = True
-            ret['comment'] = 'This pool already does not exist. No changes made.'
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = {}
+        ret['result'] = True
+        ret['comment'] = 'This pool already does not exist. No changes made.'
+        ret['changes']['old'] = {}
+        ret['changes']['new'] = {}
 
     else:
         ret = _load_result(existing, ret)
@@ -1223,7 +1224,6 @@ def add_pool_member(hostname, username, password, name, member):
             # member wasn't added
             else:
                 ret = _load_result(new_member, ret)
-
 
     #pool does not exists
     elif existing_pool['code'] == 404:
@@ -1384,7 +1384,7 @@ def delete_pool_member(hostname, username, password, name, member):
 
     #is this pool currently configured?
     existing = __salt__['bigip.list_pool'](hostname, username, password, name)
-    
+
     # if it exists by name
     if existing['code'] == 200:
 
@@ -1433,7 +1433,7 @@ def list_virtual(hostname, username, password, name):
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
-    
+
     if __opts__['test']:
         return _test_output(ret, 'list', params={
             'hostname': hostname,
@@ -1442,7 +1442,7 @@ def list_virtual(hostname, username, password, name):
             'name': name
         }
         )
-    
+
     response = __salt__['bigip.list_virtual'](hostname, username, password, name)
     return _load_result(response, ret)
 
@@ -2197,10 +2197,10 @@ def delete_virtual(hostname, username, password, name):
 
     # not found
     elif existing['code'] == 404:
-            ret['result'] = True
-            ret['comment'] = 'This virtual already does not exist. No changes made.'
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = {}
+        ret['result'] = True
+        ret['comment'] = 'This virtual already does not exist. No changes made.'
+        ret['changes']['old'] = {}
+        ret['changes']['new'] = {}
     else:
         ret = _load_result(existing, ret)
 
@@ -2481,10 +2481,10 @@ def delete_monitor(hostname, username, password, monitor_type, name):
 
     # not found
     elif existing['code'] == 404:
-            ret['result'] = True
-            ret['comment'] = 'This Monitor already does not exist. No changes made.'
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = {}
+        ret['result'] = True
+        ret['comment'] = 'This Monitor already does not exist. No changes made.'
+        ret['changes']['old'] = {}
+        ret['changes']['new'] = {}
     else:
         ret = _load_result(existing, ret)
 
@@ -2764,10 +2764,10 @@ def delete_profile(hostname, username, password, profile_type, name):
 
     # not found
     elif existing['code'] == 404:
-            ret['result'] = True
-            ret['comment'] = 'This Profile already does not exist. No changes made.'
-            ret['changes']['old'] = {}
-            ret['changes']['new'] = {}
+        ret['result'] = True
+        ret['comment'] = 'This Profile already does not exist. No changes made.'
+        ret['changes']['old'] = {}
+        ret['changes']['new'] = {}
     else:
         ret = _load_result(existing, ret)
 

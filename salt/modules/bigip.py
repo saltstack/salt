@@ -79,7 +79,7 @@ def _load_connection_error(hostname, error):
     Format and Return a connection error
     '''
 
-    ret = {'code': None, 'content': 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=error)}
+    ret = {'code': None, 'content': 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname,error=error)}
 
     return ret
 
@@ -324,7 +324,7 @@ def commit_transaction(hostname, username, password, label):
 
         #patch to REST to get trans id
         try:
-            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id, data=json.dumps(payload)))
+            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id), data=json.dumps(payload))
             return _load_response(response)
         except requests.exceptions.ConnectionError as e:
             return _load_connection_error(hostname, e)
