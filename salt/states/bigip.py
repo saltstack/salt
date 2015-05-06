@@ -7,12 +7,8 @@ A state module designed to enforce load-balancing configurations for F5 Big-IP e
 
 # Import Python libs
 from __future__ import absolute_import
-import logging as logger
+
 import json
-
-#Import Salt Libs
-import salt.exceptions
-
 
 #set up virtual function
 def __virtual__():

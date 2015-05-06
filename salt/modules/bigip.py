@@ -26,6 +26,7 @@ import salt.exceptions
 # Setup the logger
 log = logger.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only return if requests is installed
@@ -57,6 +58,7 @@ def _build_session(username, password, trans_label=None):
 
     return bigip
 
+
 def _load_response(response):
     '''
     Load the response from json data, return the dictionary or raw text
@@ -71,6 +73,7 @@ def _load_response(response):
 
     return ret
 
+
 def _load_connection_error(hostname, error):
     '''
     Format and Return a connection error
@@ -79,6 +82,7 @@ def _load_connection_error(hostname, error):
     ret = {'code': None, 'content': 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=error)}
 
     return ret
+
 
 def _loop_payload(params):
     '''
@@ -320,7 +324,7 @@ def commit_transaction(hostname, username, password, label):
 
         #patch to REST to get trans id
         try:
-            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id),data=json.dumps(payload))
+            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id, data=json.dumps(payload)))
             return _load_response(response)
         except requests.exceptions.ConnectionError as e:
             return _load_connection_error(hostname, e)
@@ -361,8 +365,6 @@ def delete_transaction(hostname, username, password, label):
     else:
         return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
                ' bigip.start_transaction function'
-
-
 
 
 def list_node(hostname, username, password, name=None, trans_label=None):
