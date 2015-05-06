@@ -981,7 +981,7 @@ def _getnetbiosusernamefromsid(adspath):
             user_info = win32security.LookupAccountSid(
                     None, pywintypes.SID(nt.GetObject('', adspath).objectSID))
             return ('{0}\\{1}').format(user_info[1], user_info[0])
-        except Exception:
+        except:
             return adspath.replace('WinNT://', '').replace('/', '\\')
 
 
@@ -999,7 +999,7 @@ def _fixlocaluser(username):
                 user_info = win32security.LookupAccountSid(
                     None, pywintypes.SID(nt.GetObject('', 'WinNT://./' + username).objectSID))
                 username = (('{0}\\{1}').format(user_info[1], user_info[0]))
-            except Exception:
+            except:
                 username = ('{0}\\{1}').format(__salt__['grains.get']('host'), username)
 
     return username
