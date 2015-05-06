@@ -129,7 +129,7 @@ For APT-based distros such as Ubuntu and Debian:
     switching to a new :conf_master:`gitfs_provider`, but it is less important
     when switching between GitPython and pygit2.
 
-    Beginning in version 2015.2.0, the gitfs cache can be easily cleared using
+    Beginning in version 2015.5.0, the gitfs cache can be easily cleared using
     the :mod:`fileserver.clear_cache <salt.runners.fileserver.clear_cache>`
     runner.
 
@@ -183,7 +183,7 @@ master:
    .. note::
 
        Dulwich does not recognize ``ssh://`` URLs, ``git+ssh://`` must be used
-       instead. Salt version 2015.2.0 and later will automatically add the
+       instead. Salt version 2015.5.0 and later will automatically add the
        ``git+`` to the beginning of these URLs before fetching, but earlier
        Salt versions will fail to fetch unless the URL is specified using
        ``git+ssh://``.
