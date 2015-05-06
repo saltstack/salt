@@ -17,7 +17,7 @@ def envs(backend=None, sources=False, outputter=None):
     backend
         Narrow fileserver backends to a subset of the enabled ones.
 
-        .. versionchanged:: 2015.2.0::
+        .. versionchanged:: 2015.5.0
             If all passed backends start with a minus sign (``-``), then these
             backends will be excluded from the enabled backends. However, if
             there is a mix of backends with and without a minus sign (ex:
@@ -66,7 +66,7 @@ def file_list(saltenv='base', backend=None, outputter=None):
         ``backend=-roots,git``) then the ones starting with a minus sign will
         be disregarded.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Examples:
 
@@ -109,7 +109,7 @@ def symlink_list(saltenv='base', backend=None, outputter=None):
         ``backend=-roots,git``) then the ones starting with a minus sign will
         be disregarded.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -152,7 +152,7 @@ def dir_list(saltenv='base', backend=None, outputter=None):
         ``backend=-roots,git``) then the ones starting with a minus sign will
         be disregarded.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -182,7 +182,7 @@ def dir_list(saltenv='base', backend=None, outputter=None):
 
 def empty_dir_list(saltenv='base', backend=None, outputter=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Return a list of empty directories in the given environment
 
@@ -236,7 +236,7 @@ def update(backend=None):
     backend
         Narrow fileserver backends to a subset of the enabled ones.
 
-        .. versionchanged:: 2015.2.0
+        .. versionchanged:: 2015.5.0
             If all passed backends start with a minus sign (``-``), then these
             backends will be excluded from the enabled backends. However, if
             there is a mix of backends with and without a minus sign (ex:
@@ -261,7 +261,7 @@ def update(backend=None):
 
 def clear_cache(backend=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Clear the fileserver cache from VCS fileserver backends (:mod:`git
     <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn
@@ -299,7 +299,7 @@ def clear_cache(backend=None):
 
 def clear_lock(backend=None, remote=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Clear the fileserver update lock from VCS fileserver backends (:mod:`git
     <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn
@@ -340,7 +340,7 @@ def clear_lock(backend=None, remote=None):
 
 def lock(backend=None, remote=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Set a fileserver update lock for VCS fileserver backends (:mod:`git
     <salt.fileserver.gitfs>`, :mod:`hg <salt.fileserver.hgfs>`, :mod:`svn
