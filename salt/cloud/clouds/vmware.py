@@ -702,32 +702,38 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_ip(vm, max_wait_minute):
+def _wait_for_ip(vm_ref, max_wait_minute):
     time_counter = 0
+    starttime = time.time()
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
-        log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm.name, time_counter))
-        for net in vm.guest.net:
-            if net.ipConfig.ipAddress:
-                for current_ip in net.ipConfig.ipAddress:
-                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
-                        ip = current_ip.ipAddress
-                        return ip
-        time.sleep(5)
-        time_counter += 5
+        if time_counter % 5 == 0:
+            log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm_ref.name, time_counter))
+        if vm_ref.summary.guest.ipAddress:
+            return vm_ref.summary.guest.ipAddress
+        else:
+            for net in vm_ref.guest.net:
+                if net.ipConfig.ipAddress:
+                    for current_ip in net.ipConfig.ipAddress:
+                        if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                            return current_ip.ipAddress
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     return False
 
 
 def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
     time_counter = 0
+    starttime = time.time()
     while task.info.state == 'running':
-        message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-        time.sleep(int(sleep_seconds))
-        time_counter += int(sleep_seconds)
+        if time_counter % sleep_seconds == 0:
+            message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(message)
+            else:
+                log.debug(message)
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     if task.info.state == 'success':
         message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
         if log_level == 'info':
@@ -740,22 +746,25 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
 
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
     time_counter = 0
+    starttime = time.time()
     while host_ref.runtime.connectionState != 'notResponding':
-        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-        time.sleep(int(sleep_seconds))
-        time_counter += int(sleep_seconds)
+        if time_counter % sleep_seconds == 0:
+            message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(message)
+            else:
+                log.debug(message)
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     while host_ref.runtime.connectionState != 'connected':
-        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-        time.sleep(int(sleep_seconds))
-        time_counter += int(sleep_seconds)
+        if time_counter % sleep_seconds == 0:
+            message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(message)
+            else:
+                log.debug(message)
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     if host_ref.runtime.connectionState == 'connected':
         message = "[ {0} ] Successfully completed host {1} in {2} seconds".format(host_ref.name, task_type, time_counter)
         if log_level == 'info':
