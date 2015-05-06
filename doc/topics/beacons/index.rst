@@ -35,8 +35,22 @@ to a beacon.
 .. code-block:: yaml
 
     beacons:
+      inotify:
+        /etc/httpd/conf.d: {}
+        /opt: {}
+        interval: 5
       load:
-        - interval: 5
+        - 1m:
+          - 0.0
+          - 2.0
+        - 5m:
+          - 0.0
+          - 1.5
+        - 15m:
+          - 0.1
+          - 1.0
+        - interval: 10
+
 
 Writing Beacon Plugins
 ======================
