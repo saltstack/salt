@@ -1,25 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Windows users with ADSI
+Manage Windows users with the net user command
 
-Can manage local user accounts or domain accounts (if salt-minion is running as a user w/access
-to AD (or localsystem on a DC), AD accounts should be managed as LDAP objects...
+NOTE: This currently only works with local user accounts, not domain accounts
 '''
-
 from __future__ import absolute_import
 
+# Import salt libs
 import salt.utils
 from salt.ext.six import string_types
+from salt.exceptions import CommandExecutionError
 import logging
 
 log = logging.getLogger(__name__)
 
 try:
+    import win32net
     import win32netcon
     import win32security
-    import win32com.client
-    import pythoncom
-    import pywintypes
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
@@ -39,14 +37,6 @@ def __virtual__():
 
 def add(name,
         password=None,
-        fullname=False,
-        description=False,
-        firstname=False,
-        lastname=False,
-        middleinitial=False,
-        disabled=False,
-        requirepwchange=True,
-        pwneverexpires=False,
         # Disable pylint checking on the next options. They exist to match the
         # user modules of other distributions.
         # pylint: disable=W0613
@@ -57,6 +47,7 @@ def add(name,
         shell=None,
         unique=False,
         system=False,
+        fullname=False,
         roomnumber=False,
         workphone=False,
         homephone=False,
@@ -72,133 +63,16 @@ def add(name,
     .. code-block:: bash
 
         salt '*' user.add name password
-
-        if you want to create on a domain controller, you should use the LDAP DN of the object to create
-        short name will work, but UPN will not get set
-
-        you must use name='cn=user,....' since the DN contains '='
-
-        salt 'domainController' user.add name='cn=user,cn=Users,dc=domain,dc=dom' password='pa$$word'
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': [],
-           'comment': []}
-
-    if not info(name):
-        if password is not None:
-            pythoncom.CoInitialize()
-            nt = win32com.client.Dispatch('AdsNameSpaces')
-            try:
-                compObj = None
-                addUserName = name
-                ldapProvider = False
-                if 'dc=' in name.lower():
-                    compObj = nt.GetObject('', 'LDAP://' + name[(name.find(',') + 1):len(name)])
-                    addUserName = name[0:(name.find(','))]
-                    ldapProvider = True
-                else:
-                    compObj = nt.GetObject('', 'WinNT://.,computer')
-                if compObj is not None:
-                    newUser = compObj.Create('user', addUserName)
-                    if ldapProvider:
-                        # ldap provider seems to require 'SetInfo' before you can set the password (opposite of WinNT provider)
-                        # also must set the account to 'enabled' as default is disabled
-                        # lots of LDAP properties could be added here/to the function
-                        newUser.sAMAccountName = addUserName.replace('cn=', '').replace('CN=', '')
-                        newUser.userPrincipalName = addUserName.replace('cn=', '').replace(
-                                'CN=', '') + '@' + name[(name.find('dc=') + 3):len(name)].replace(
-                                'dc=', '.').replace(',', '')
-                        newUser.userAccountControl = 544
-                        if fullname:
-                            newUser.FullName = fullname
-                        newUser.SetInfo()
-                        newUser.SetPassword(password)
-                        newUser.userAccountControl = 512
-                        if description:
-                            newUser.Description = description
-                        if firstname:
-                            newUser.givenName = firstname
-                        if lastname:
-                            newUser.sn = lastname
-                        if middleinitial:
-                            newUser.initials = middleinitial
-                        if home:
-                            newUser.homeDirectory = home
-                        newUser.SetInfo()
-                    else:
-                        if fullname:
-                            newUser.Put('FullName', fullname)
-                        if description:
-                            newUser.Put('Description', description)
-                        if home:
-                            newUser.Put('HomeDirectory', home)
-                        newUser.SetPassword(password)
-                        newUser.SetInfo()
-                    ret['changes'].append((
-                            'Successfully created user {0}'
-                            ).format(name))
-                    if disabled:
-                        this_ret = disable(name)
-                        if this_ret['result']:
-                            ret['changes'].append(this_ret['changes'])
-                        else:
-                            ret['comment'].append(this_ret['comment'])
-                    else:
-                        this_ret = enable(name)
-                        if this_ret['result']:
-                            ret['changes'].append(this_ret['changes'])
-                        else:
-                            ret['comment'].append(this_ret['comment'])
-                    if pwneverexpires:
-                        this_ret = passwordneverexpires(name)
-                        if this_ret['result']:
-                            ret['changes'].append(this_ret['changes'])
-                        else:
-                            ret['comment'].append(this_ret['comment'])
-                    else:
-                        this_ret = passwordneverexpires(name, True)
-                        if this_ret['result']:
-                            ret['changes'].append(this_ret['changes'])
-                        else:
-                            ret['comment'].append(this_ret['comment'])
-
-                        if requirepwchange:
-                            this_ret = requirepasswordchange(name)
-                            if this_ret['result']:
-                                ret['changes'].append(this_ret['changes'])
-                            else:
-                                ret['comment'].append(this_ret['comment'])
-                        else:
-                            this_ret = requirepasswordchange(name, True)
-                            if this_ret['result']:
-                                ret['changes'].append(this_ret['changes'])
-                            else:
-                                ret['comment'].append(this_ret['comment'])
-                else:
-                    ret['result'] = False
-                    ret['comment'].append('Unable to obtain ADSI object')
-            except pywintypes.com_error as com_err:
-                ret['result'] = False
-                friendly_error = ''
-                if len(com_err.excepinfo) >= 2:
-                    if com_err.excepinfo[2] is not None:
-                        friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-                ret['comment'].append((
-                        'Failed to create user {0}.  {1}'
-                        ).format(name, friendly_error))
-        else:
-            ret['result'] = False
-            ret['comment'].append((
-                    'A password was not supplied for new user {0}.'
-                    ).format(name))
+    if password:
+        ret = __salt__['cmd.run_all']('net user {0} {1} /add /y'.format(name, password))
     else:
-        ret['result'] = None
-        ret['comment'].append((
-                'The user {0} already exists.'
-                ).format(name))
-
-    return ret
+        ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
+    if groups:
+        chgroups(name, groups)
+    if fullname:
+        chfullname(name, fullname)
+    return ret['retcode'] == 0
 
 
 def delete(name,
@@ -219,271 +93,24 @@ def delete(name,
 
         salt '*' user.delete name
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': [],
-           'comment': ''}
-
-    if info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
-        try:
-            deleteUserName = name
-            compObj = None
-            if 'dc=' in name.lower():
-                compObj = nt.GetObject('', 'LDAP://' + name[(name.find(',') + 1):len(name)])
-                deleteUserName = name[0:(name.find(','))]
-            else:
-                compObj = nt.GetObject('', 'WinNT://.,computer')
-                if '\\' in deleteUserName:
-                    deleteUserName = deleteUserName.split('\\')[1]
-            if compObj is not None:
-                compObj.Delete('user', deleteUserName)
-                ret['changes'].append(('Successfully removed user {0}').format(name))
-            else:
-                ret['result'] = False
-                ret['comment'] = ('Unable to obtain ADSI object')
-        except pywintypes.com_error as com_err:
-            ret['result'] = False
-            if len(com_err.excepinfo) >= 2:
-                if com_err.excepinfo[2] is not None:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to remove user {0}.  {1}'
-                    ).format(name, friendly_error)
-    else:
-        ret['result'] = None
-        ret['comment'] = (
-                'The user {0} does not exists.'
-                ).format(name)
-
-    return ret
+    ret = __salt__['cmd.run_all']('net user {0} /delete'.format(name))
+    return ret['retcode'] == 0
 
 
-def enable(name):
-    '''
-    enable a user account
-
-    salt '*' user.enable foo
-    '''
-    ret = disable(name, False)
-    return ret
-
-
-def disable(name, disabled=True):
-    '''
-    disable a user account
-
-    salt '*' disableuser foo
-
-    to enable a user:
-
-    salt '*' disableuser foot False
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': '',
-           'comment': ''}
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    if disabled:
-        accountstatus = 'disabled'
-    else:
-        accountstatus = 'enabled'
-    try:
-        if 'dc=' in name.lower():
-            userObj = nt.GetObject('', 'LDAP://' + name)
-
-        else:
-            userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-
-        userObj.AccountDisabled = disabled
-        userObj.SetInfo()
-        ret['result'] = True
-        ret['changes'] = (
-                'User {0} is now {1}.'
-                ).format(name, accountstatus)
-    except pywintypes.com_error as com_err:
-        ret['result'] = False
-        friendly_error = ''
-        if len(com_err.excepinfo) >= 2:
-            if com_err.excepinfo[2] is not None:
-                friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-        ret['comment'] = (
-                'Failed to set password for user {0}.  {1} - {2}'
-                ).format(name, friendly_error, com_err)
-    return ret
-
-
-def passwordneverexpires(name, clear=False):
-    '''
-    set a user's password to never expire
-
-    salt '*' user.passwordneverexpires foo
-
-    to clear the password never expires setting (i.e. set it to expire), use clear=True
-
-    salt '*' user.passwordneverexpires foo True
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': '',
-           'comment': ''}
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    if clear:
-        expirestatus = 'expire'
-    else:
-        expirestatus = 'never expire'
-    try:
-        if 'dc=' in name.lower():
-            userObj = nt.GetObject('', 'LDAP://' + name)
-            if clear:
-                if bool(userObj.userAccountControl & win32netcon.UF_DONT_EXPIRE_PASSWD):
-                    userObj.userAccountControl = userObj.userAccountControl ^ win32netcon.UF_DONT_EXPIRE_PASSWD
-            else:
-                userObj.userAccountControl = userObj.userAccountControl | win32netcon.UF_DONT_EXPIRE_PASSWD
-        else:
-            userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-            if clear:
-                if bool(userObj.UserFlags & win32netcon.UF_DONT_EXPIRE_PASSWD):
-                    userObj.Put('UserFlags', userObj.UserFlags ^ win32netcon.UF_DONT_EXPIRE_PASSWD)
-            else:
-                userObj.Put('UserFlags', userObj.UserFlags | win32netcon.UF_DONT_EXPIRE_PASSWD)
-        userObj.SetInfo()
-        ret['result'] = True
-        ret['changes'] = (
-                'Password for user {0} is now set to {1}.'
-                ).format(name, expirestatus)
-    except pywintypes.com_error as com_err:
-        ret['result'] = False
-        friendly_error = ''
-        if len(com_err.excepinfo) >= 2:
-            if com_err.excepinfo[2] is not None:
-                friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-        ret['comment'] = (
-                'Failed to set password for user {0}.  {1} - {2}'
-                ).format(name, friendly_error, com_err)
-
-    return ret
-
-
-def requirepasswordchange(name, clear=False):
-    '''
-    expire a user's password (i.e. require it to change on next logon)
-    if the password is set to "never expire" this has no effect
-
-    salt '*' user.requirepasswordchange foo
-
-    to clear the require password change flag, use clear=True
-
-    salt '*' user.requirepasswordchange foo True
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': '',
-           'comment': ''}
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    if clear:
-        expiredstatus = 'cleared'
-    else:
-        expiredstatus = 'set'
-    try:
-        if 'dc=' in name.lower():
-            userObj = nt.GetObject('', 'LDAP://' + name)
-            if clear:
-                userObj.pwdLastSet = -1
-            else:
-                userObj.pwdLastSet = 0
-        else:
-            userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-            if clear:
-                userObj.Put('PasswordExpired', 0)
-            else:
-                userObj.Put('PasswordExpired', 1)
-        userObj.SetInfo()
-        ret['result'] = True
-        ret['changes'] = (
-                'Password must be changed at next logon for {0} is now {1}.'
-                ).format(name, expiredstatus)
-    except pywintypes.com_error as com_err:
-        ret['result'] = False
-        friendly_error = ''
-        if len(com_err.excepinfo) >= 2:
-            if com_err.excepinfo[2] is not None:
-                friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-        ret['comment'] = (
-                'Failed to set password for user {0}.  {1} - {2}'
-                ).format(name, friendly_error, com_err)
-
-    return ret
-
-
-def setpassword(name, password, mustchange=None, neverexpires=None):
+def setpassword(name, password):
     '''
     Set a user's password
 
-    use 'mustchange' and 'neverexpires' to set those user account attributes, by default they will be left alone (None)
-        setting to 'False' will clear them, setting to 'True' will set them
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' user.setpassword name password
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': [],
-           'comment': ''}
-
-    if info(name):
-        pythoncom.CoInitialize()
-        nt = win32com.client.Dispatch('AdsNameSpaces')
-        try:
-            userObj = None
-            if 'dc=' in name.lower():
-                userObj = nt.GetObject('', 'LDAP://' + name)
-            else:
-                userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-            if userObj is not None:
-                userObj.SetPassword(password)
-                ret['changes'].append((
-                        'Successfully set password for user {0}'
-                        ).format(name))
-                if mustchange is not None:
-                    if mustchange:
-                        temp_ret = requirepasswordchange(name)
-                        ret['changes'].append(temp_ret['changes'])
-                    else:
-                        temp_ret = requirepasswordchange(name, True)
-                        ret['changes'].append(temp_ret['changes'])
-                if neverexpires is not None:
-                    if neverexpires:
-                        temp_ret = passwordneverexpires(name)
-                        ret['changes'].append(temp_ret['changes'])
-                    else:
-                        temp_ret = passwordneverexpires(name, True)
-                        ret['changes'].append(temp_ret['changes'])
-            else:
-                ret['result'] = False
-                ret['comment'] = ('Unable to obtain ADSI user object')
-        except pywintypes.com_error as com_err:
-            ret['result'] = False
-            friendly_error = ''
-            if len(com_err.excepinfo) >= 2:
-                if com_err.excepinfo[2] is not None:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to set password for user {0}.  {1}'
-                    ).format(name, friendly_error)
-    else:
-        ret['result'] = None
-        ret['comment'] = (
-                'The user {0} does not exists.'
-                ).format(name)
-
-    return ret
+    ret = __salt__['cmd.run_all'](
+        'net user {0} {1}'.format(name, password), output_loglevel='quiet'
+    )
+    return ret['retcode'] == 0
 
 
 def addgroup(name, group):
@@ -496,8 +123,15 @@ def addgroup(name, group):
 
         salt '*' user.addgroup username groupname
     '''
-    ret = __salt__['group.adduser'](group, name)
-    return ret
+    user = info(name)
+    if not user:
+        return False
+    if group in user['groups']:
+        return True
+    ret = __salt__['cmd.run_all'](
+        'net localgroup {0} {1} /add'.format(group, name)
+    )
+    return ret['retcode'] == 0
 
 
 def removegroup(name, group):
@@ -510,8 +144,18 @@ def removegroup(name, group):
 
         salt '*' user.removegroup username groupname
     '''
-    ret = __salt__['group.deluser'](group, name)
-    return ret
+    user = info(name)
+
+    if not user:
+        return False
+
+    if group not in user['groups']:
+        return True
+
+    ret = __salt__['cmd.run_all'](
+        'net localgroup {0} {1} /delete'.format(group, name)
+    )
+    return ret['retcode'] == 0
 
 
 def chhome(name, home):
@@ -524,43 +168,23 @@ def chhome(name, home):
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': [],
-           'comment': ''}
+    pre_info = info(name)
 
-    current_info = info(name)
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
+    if not pre_info:
+        return False
 
-    if current_info:
-        try:
-            if "dc=" in name.lower():
-                userObj = nt.GetObject('', 'LDAP://' + name)
-                userObj.HomeDirectory = home
-                userObj.SetInfo()
-            else:
-                userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-                userObj.Put('HomeDirectory', home)
-                userObj.SetInfo()
-            ret['result'] = True
-            ret['changes'] = (
-                    'Successfully changed user {0}\'s home directory from "{1}" to "{2}"'
-                    ).format(name, current_info['home'], home)
-        except pywintypes.com_error as com_err:
-            ret['result'] = False
-            if len(com_err.excepinfo) >= 2:
-                if com_err.excepinfo[2] is not None:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to set home directory for user {0}.  {1}'
-                    ).format(name, friendly_error)
-    else:
-        ret['result'] = False
-        ret['comment'] = (
-                'The user {0} does not appear to exist.'
-                ).format(name)
-    return ret
+    if home == pre_info['home']:
+        return True
+
+    if __salt__['cmd.retcode']('net user {0} /homedir:{1}'.format(
+            name, home)) != 0:
+        return False
+
+    post_info = info(name)
+    if post_info['home'] != pre_info['home']:
+        return post_info['home'] == home
+
+    return False
 
 
 def chprofile(name, profile):
@@ -572,46 +196,23 @@ def chprofile(name, profile):
     .. code-block:: bash
 
         salt '*' user.chprofile foo \\\\fileserver\\profiles\\foo
-
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': [],
-           'comment': ''}
+    pre_info = info(name)
 
-    current_info = info(name)
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
+    if not pre_info:
+        return False
 
-    if current_info:
-        try:
-            if "dc=" in name.lower():
-                userObj = nt.GetObject('', 'LDAP://' + name)
-                userObj.profilePath = profile
-                userObj.SetInfo()
-            else:
-                userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-                userObj.Put('profile', profile)
-                userObj.SetInfo()
-            ret['result'] = True
-            ret['changes'] = (
-                    'Successfully changed user {0}\'s profile directory from "{1}" to "{2}"'
-                    ).format(name, current_info['profile'], profile)
-        except pywintypes.com_error as com_err:
-            ret['result'] = False
-            friendly_error = ''
-            if len(com_err.excepinfo) >= 2:
-                if com_err.excepinfo[2] is not None:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to set profile path for user {0}.  {1}'
-                    ).format(name, friendly_error)
-    else:
-        ret['result'] = False
-        ret['comment'] = (
-                'The user {0} does not appear to exist.'
-                ).format(name)
-    return ret
+    if profile == pre_info['profile']:
+        return True
+    if __salt__['cmd.retcode']('net user {0} /profilepath:{1}'.format(
+            name, profile)) != 0:
+        return False
+
+    post_info = info(name)
+    if post_info['profile'] != pre_info['profile']:
+        return post_info['profile'] == profile
+
+    return False
 
 
 def chfullname(name, fullname):
@@ -624,43 +225,22 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname user 'First Last'
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': [],
-           'comment': ''}
+    pre_info = info(name)
 
-    current_info = info(name)
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
+    if not pre_info:
+        return False
 
-    if current_info:
-        try:
-            if "dc=" in name.lower():
-                userObj = nt.GetObject('', 'LDAP://' + name)
-                userObj.FullName = fullname
-                userObj.SetInfo()
-            else:
-                userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-                userObj.Put('FullName', fullname)
-                userObj.SetInfo()
-            ret['result'] = True
-            ret['changes'] = (
-                    'Successfully changed user {0}\'s full name from "{1}" to "{2}"'
-                    ).format(name, current_info['fullname'], fullname)
-        except pywintypes.com_error as com_err:
-            ret['result'] = False
-            if len(com_err.excepinfo) >= 2:
-                if com_err.excepinfo[2] is not None:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to change the full name for user {0}.  {1}'
-                    ).format(name, friendly_error)
-    else:
-        ret['result'] = False
-        ret['comment'] = (
-                'The user {0} does not appear to exist.'
-                ).format(name)
-    return ret
+    if fullname == pre_info['fullname']:
+        return True
+    if __salt__['cmd.retcode']('net user {0} /fullname:"{1}"'.format(
+            name, fullname)) != 0:
+        return False
+
+    post_info = info(name)
+    if post_info['fullname'] != pre_info['fullname']:
+        return post_info['fullname'] == fullname
+
+    return False
 
 
 def chgroups(name, groups, append=False):
@@ -673,72 +253,28 @@ def chgroups(name, groups, append=False):
     .. code-block:: bash
 
         salt '*' user.chgroups foo wheel,root True
-
-        if using DNs, group names must be separated with ', '
     '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {'Groups Added': [], 'Groups Removed': []},
-           'comment': []}
-
-    current_info = info(name)
     if isinstance(groups, string_types):
-        if 'dc=' in groups.lower():
-            groups = groups.split(", ")
-        else:
-            groups = groups.split(',')
-    groups = [_fixlocaluser(x.strip(' *')) for x in groups]
-    groups.sort()
-    current_info['groups'].sort()
+        groups = groups.split(',')
 
-    if current_info:
-        if [x.lower() for x in groups] == [x.lower() for x in current_info['groups']]:
-            # nothing done
-            ret['result'] = None
-            ret['changes'] = None
-            ret['comment'].append((
-                    '{0}\'s group membership is correct.'
-                    ).format(name))
-        else:
-            if append:
-                for group in groups:
-                    if group.lower() not in [x.lower() for x in current_info['groups']]:
-                        thisRet = addgroup(name, group)
-                        if thisRet['result']:
-                            ret['changes']['Groups Added'].append(group)
-                        else:
-                            ret['result'] = False
-                            ret['comment'].append(thisRet['comment'])
-                            return ret
-            else:
-                for group in current_info['groups']:
-                    if group.lower() not in [x.lower() for x in groups]:
-                        # remove it
-                        thisRet = removegroup(name, group)
-                        if thisRet['result']:
-                            ret['changes']['Groups Removed'].append(group)
-                        else:
-                            ret['result'] = False
-                            ret['comment'].append(thisRet['comment'])
-                            return ret
-                for group in groups:
-                    if group.lower() not in [x.lower() for x in current_info['groups']]:
-                        # add it
-                        thisRet = addgroup(name, group)
-                        if thisRet['result']:
-                            ret['changes']['Groups Added'].append(group)
-                        else:
-                            ret['result'] = False
-                            ret['comment'].append(thisRet['comment'])
-                            return ret
+    groups = [x.strip(' *') for x in groups]
+    ugrps = set(list_groups(name))
+    if ugrps == set(groups):
+        return True
 
-            ret['result'] = True
-    else:
-        ret['result'] = False
-        ret['comment'].append((
-                'The user {0} does not appear to exist.'
-                ).format(name))
-    return ret
+    if not append:
+        for group in ugrps:
+            if group not in groups:
+                __salt__['cmd.retcode'](
+                        'net localgroup {0} {1} /delete'.format(group, name))
+
+    for group in groups:
+        if group in ugrps:
+            continue
+        __salt__['cmd.retcode'](
+                'net localgroup {0} {1} /add'.format(group, name))
+    agrps = set(list_groups(name))
+    return len(ugrps - agrps) == 0
 
 
 def info(name):
@@ -751,61 +287,35 @@ def info(name):
 
         salt '*' user.info root
     '''
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    ret = {'name': '',
-            'fullname': '',
-            'uid': '',
-            'comment': '',
-            'active': '',
-            'logonscript': '',
-            'profile': '',
-            'home': '',
-            'groups': '',
-            'gid': ''}
+    ret = {}
+    items = {}
     try:
-        if 'dc=' in name.lower():
-            userObj = nt.GetObject('', 'LDAP://' + name)
-            ret['active'] = (not bool(userObj.userAccountControl & win32netcon.UF_ACCOUNTDISABLE))
-            ret['logonscript'] = userObj.scriptPath
-            ret['profile'] = userObj.profilePath
-            ret['fullname'] = userObj.DisplayName
-            ret['name'] = userObj.sAMAccountName
-        else:
-            if '\\' in name:
-                name = name.split('\\')[1]
-            userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-            ret['logonscript'] = userObj.LoginScript
-            ret['active'] = (not userObj.AccountDisabled)
-            ret['fullname'] = userObj.FullName
-            ret['name'] = userObj.Name
-            if not userObj.Profile:
-                regProfile = _get_userprofile_from_registry(
-                        name, win32security.ConvertSidToStringSid(
-                        pywintypes.SID(userObj.objectSID)))
-                if regProfile:
-                    ret['profile'] = regProfile
-            else:
-                ret['profile'] = userObj.Profile
+        items = win32net.NetUserGetInfo(None, name, 4)
+    except win32net.error:
+        pass
 
-        gr_mem = []
+    if items:
+        groups = []
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except win32net.error:
+            pass
 
-        for group in userObj.groups():
-            if 'winnt' in group.ADSPath.lower():
-                gr_mem.append(
-                        _getnetbiosusernamefromsid(group.ADSPath))
-            else:
-                gr_mem.append(
-                        group.distinguishedName)
-        ret['groups'] = gr_mem
-
-        ret['uid'] = win32security.ConvertSidToStringSid(pywintypes.SID(userObj.objectSID))
-        ret['comment'] = userObj.description
-        ret['home'] = userObj.homeDirectory
-        ret['gid'] = userObj.primaryGroupID
-    except pywintypes.com_error:
-        return False
+        ret['fullname'] = items['full_name']
+        ret['name'] = items['name']
+        ret['uid'] = win32security.ConvertSidToStringSid(items['user_sid'])
+        ret['passwd'] = items['password']
+        ret['comment'] = items['comment']
+        ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
+        ret['logonscript'] = items['script_path']
+        ret['profile'] = items['profile']
+        if not ret['profile']:
+            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
+        ret['home'] = items['home_dir']
+        if not ret['home']:
+            ret['home'] = ret['profile']
+        ret['groups'] = groups
+        ret['gid'] = ''
 
     return ret
 
@@ -816,10 +326,10 @@ def _get_userprofile_from_registry(user, sid):
     we can get it from the registry
     '''
     profile_dir = __salt__['reg.read_key'](
-        'HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+        'HKEY_LOCAL_MACHINE', u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
     )
-    log.debug('user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
+    log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
     return profile_dir
 
 
@@ -833,12 +343,15 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-
-    user = info(name)
-    if user:
-        return sorted(user['groups'])
-    else:
+    ugrp = set()
+    try:
+        user = info(name)['groups']
+    except KeyError:
         return False
+    for group in user:
+        ugrp.add(group.strip(' *'))
+
+    return sorted(list(ugrp))
 
 
 def getent(refresh=False):
@@ -856,60 +369,46 @@ def getent(refresh=False):
 
     ret = []
     for user in __salt__['user.list_users']():
+        stuff = {}
         user_info = __salt__['user.info'](user)
-        ret.append(user_info)
+
+        stuff['gid'] = ''
+        stuff['groups'] = user_info['groups']
+        stuff['home'] = user_info['home']
+        stuff['name'] = user_info['name']
+        stuff['passwd'] = user_info['passwd']
+        stuff['shell'] = ''
+        stuff['uid'] = user_info['uid']
+
+        ret.append(stuff)
+
     __context__['user.getent'] = ret
     return ret
 
 
-def list_users(useldap=False):
+def list_users():
     '''
     Return a list of users on Windows
     '''
-    ret = []
-
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    if useldap:
-        # try to recurse through the ldap server and get all user objects...
-        # could do 'LDAP:' and allow any domain member the ability to get all ldap users
-        # if anonymous binds are allowed, but for now, the code will try to connect to ldap on the local
-        # host
-        ret = _recursecontainersforusers('LDAP://localhost')
-    else:
-        results = nt.GetObject('', 'WinNT://.')
-        results.Filter = ['user']
-        for result in results:
-            ret.append(_getnetbiosusernamefromsid(result.AdsPath))
-    __context__['list_users'] = ret
-    return ret
-
-
-def _recursecontainersforusers(path):
-    '''
-    recursively get all user objects in all sub-containers from a top level container
-    for example:
-            _recursecontainersfrorusers('LDAP:')
-            would find all user objects in a domain via ldap
-    '''
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-    ret = []
-    results = None
+    res = 0
+    users = []
+    user_list = []
+    dowhile = True
     try:
-        results = nt.GetObject('', path)
-    except pywintypes.com_error as com_err:
+        while res or dowhile:
+            dowhile = False
+            (users, _, res) = win32net.NetUserEnum(
+                None,
+                0,
+                win32netcon.FILTER_NORMAL_ACCOUNT,
+                res,
+                win32netcon.MAX_PREFERRED_LENGTH
+            )
+            for user in users:
+                user_list.append(user['name'])
+        return user_list
+    except win32net.error:
         pass
-
-    if results:
-        for result in results:
-            if result.Class.lower() == 'user':
-                ret.append(result.distinguishedName)
-            else:
-                ret = ret + (_recursecontainersforusers(result.AdsPath))
-
-    return ret
 
 
 def rename(name, new_name):
@@ -921,85 +420,16 @@ def rename(name, new_name):
     .. code-block:: bash
 
         salt '*' user.rename name new_name
-
-        domain users should use LDAP, to rename the cn, sAMAccountName, and UPN
-        salt 'domainController' user.rename name='cn=user,cn=Users,dc=domain,dc=dom' new_name='newUserName'
     '''
-    ret = {'result': True,
-           'changes': [],
-           'comment': ''}
-
     current_info = info(name)
-    pythoncom.CoInitialize()
-    nt = win32com.client.Dispatch('AdsNameSpaces')
-
-    if current_info:
-        try:
-            if "dc=" in name.lower():
-                userObj = nt.GetObject('', 'LDAP://' + name)
-                userObj.sAMAccountName = new_name
-                userObj.userPrincipalName = new_name + '@' + name[(
-                        name.find('dc=') + 3):len(name)].replace('dc=', '.').replace(',', '')
-                userObj.SetInfo()
-                containerObj = nt.GetObject('', userObj.parent)
-                containerObj.MoveHere(userObj.AdsPath, 'cn=' + new_name)
-            else:
-                containerObj = nt.GetObject('', 'WinNT://.,computer')
-                userObj = nt.GetObject('', 'WinNT://./' + name + ',user')
-                containerObj.MoveHere(userObj.AdsPath, new_name)
-            ret['changes'] = (
-                    'Successfully renamed user {0} to {1}'
-                    ).format(name, new_name)
-        except pywintypes.com_error as com_err:
-            ret['result'] = False
-            if len(com_err.excepinfo) >= 2:
-                if com_err.excepinfo[2] is not None:
-                    friendly_error = com_err.excepinfo[2].rstrip('\r\n')
-            ret['comment'] = (
-                    'Failed to remove user {0}.  {1}'
-                    ).format(name, friendly_error)
-    else:
-        ret['result'] = False
-        ret['comment'] = (
-                'The user {0} does not appear to exist.'
-                ).format(name)
-
-    return ret
-
-
-def _getnetbiosusernamefromsid(adspath):
-    '''
-    gets the "domain\\username" of an adspath using the SID
-    '''
-
-    if 'NT AUTHORITY'.upper() in adspath.upper():
-        return adspath.replace('WinNT://', '').replace('/', '\\')
-    else:
-        try:
-            pythoncom.CoInitialize()
-            nt = win32com.client.Dispatch('AdsNameSpaces')
-            user_info = win32security.LookupAccountSid(
-                    None, pywintypes.SID(nt.GetObject('', adspath).objectSID))
-            return ('{0}\\{1}').format(user_info[1], user_info[0])
-        except Exception:
-            return adspath.replace('WinNT://', '').replace('/', '\\')
-
-
-def _fixlocaluser(username):
-    '''
-    prefixes a username w/o a backslash with the computername
-
-    i.e. _fixlocaluser('Administrator') would return 'computername\administrator'
-    '''
-    if 'dc=' not in username.lower():
-        if '\\' not in username:
-            try:
-                pythoncom.CoInitialize()
-                nt = win32com.client.Dispatch('AdsNameSpaces')
-                user_info = win32security.LookupAccountSid(
-                    None, pywintypes.SID(nt.GetObject('', 'WinNT://./' + username).objectSID))
-                username = (('{0}\\{1}').format(user_info[1], user_info[0]))
-            except Exception:
-                username = ('{0}\\{1}').format(__salt__['grains.get']('host'), username)
-
-    return username
+    if not current_info:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+    new_info = info(new_name)
+    if new_info:
+        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+    cmd = 'wmic useraccount where name="{0}" rename {1}'.format(name, new_name)
+    __salt__['cmd.run'](cmd)
+    post_info = info(new_name)
+    if post_info['name'] != current_info['name']:
+        return post_info['name'] == new_name
+    return False
