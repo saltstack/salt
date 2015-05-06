@@ -449,9 +449,9 @@ class Fileserver(object):
             return fnd
         if '../' in path:
             return fnd
-        if path.startswith('|'):
+        if salt.utils.url.is_escaped(path):
             # don't attempt to find URL query arguements in the path
-            path = path[1:]
+            path = salt.utils.url.unescape(path)
         else:
             split_path = _urlparse(path)
             path = split_path.path
