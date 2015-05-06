@@ -2,7 +2,7 @@
 '''
 Splunk Search State Module
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.5.0
 
 This state is used to ensure presence of splunk searches.
 
