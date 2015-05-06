@@ -152,6 +152,8 @@ def present(
             return ret
     if not rules:
         rules = []
+    if not rules_egress:
+        rules_egress = []
     _ret = _rules_present(name, rules, rules_egress, vpc_id, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
