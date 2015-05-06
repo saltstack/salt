@@ -1297,6 +1297,13 @@ def replace(path,
                         orig_file.append(line)
                         new_file.append(result)
 
+                if prepend_if_not_found or append_if_not_found:
+                    # Search for content, so we don't continue pre/appending
+                    # the content if it's been pre/appended in a previous run.
+                    if re.search('^{0}$'.format(content), line):
+                        # Content was found, so set found.
+                        found = True
+
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
             "Unable to open file '{0}'. "
