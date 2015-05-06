@@ -31,6 +31,7 @@ class FunctionWrapper(object):
             mods=None,
             fsclient=None,
             cmd_prefix=None,
+            minion_opts=None,
             aliases=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
@@ -42,7 +43,7 @@ class FunctionWrapper(object):
                        'host': host}
         self.fsclient = fsclient
         self.kwargs.update(kwargs)
-        self.aliases = aliases
+        self.minion_opts = minion_opts
         if self.aliases is None:
             self.aliases = {}
 
@@ -77,7 +78,7 @@ class FunctionWrapper(object):
                                    mods=self.mods,
                                    fsclient=self.fsclient,
                                    cmd_prefix=cmd,
-                                   aliases=self.aliases,
+                                   minion_opts=self.minion_opts,
                                    **kwargs)
 
         if self.cmd_prefix:
@@ -105,6 +106,7 @@ class FunctionWrapper(object):
                     mods=self.mods,
                     wipe=True,
                     fsclient=self.fsclient,
+                    minion_opts=self.minion_opts,
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()
