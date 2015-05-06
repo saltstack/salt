@@ -230,7 +230,8 @@ def refresh_db():
     '''
     cmd = 'LANG=C pacman -Sy'
     ret = {}
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
+            python_shell=True)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
