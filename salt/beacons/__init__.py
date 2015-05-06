@@ -9,7 +9,6 @@ import copy
 
 # Import Salt libs
 import salt.loader
-import salt.utils
 
 log = logging.getLogger(__name__)
 
