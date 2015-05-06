@@ -258,14 +258,17 @@ def utils(opts, whitelist=None, context=None):
                       pack={'__context__': context})
 
 
-def pillars(opts, functions):
+def pillars(opts, functions, context=None):
     '''
     Returns the pillars modules
     '''
+    if context is None:
+        context = {}
     ret = LazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
                      opts,
                      tag='pillar',
-                     pack={'__salt__': functions})
+                     pack={'__salt__': functions,
+                           '__context__': context})
     return FilterDictWrapper(ret, '.ext_pillar')
 
 
