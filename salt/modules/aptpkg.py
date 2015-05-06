@@ -446,12 +446,12 @@ def install(name=None,
     install_recommends
         Whether to install the packages marked as recommended.  Default is True.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     only_upgrade
         Only upgrade the packages, if they are already installed. Default is False.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     Returns a dict containing the new package names and versions::
 
@@ -598,7 +598,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
 
 def autoremove(list_only=False):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Remove packages not required by another package using ``apt-get
     autoremove``.

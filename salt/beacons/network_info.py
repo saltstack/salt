@@ -2,7 +2,7 @@
 '''
 Beacon to monitor statistics from ethernet adapters
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 '''
 
 # Import Python libs

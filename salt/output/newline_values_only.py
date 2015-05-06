@@ -3,7 +3,7 @@
 Display values only, separated by newlines
 ==========================================
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 This outputter is designed for Salt CLI return data. It will do the following
 to the return dict:

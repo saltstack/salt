@@ -3,7 +3,7 @@
 Manage Rackspace Queues
 =======================
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 Create and destroy Rackspace queues. Be aware that this interacts with
 Rackspace's services, and so may incur charges.

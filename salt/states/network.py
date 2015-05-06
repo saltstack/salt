@@ -170,7 +170,7 @@ all interfaces are ignored unless specified.
     .. note::
         Apply changes to hostname immediately.
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
 .. note::
 

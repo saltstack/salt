@@ -12,7 +12,7 @@ LXC Management with Salt
 .. warning::
 
     Some features are only currently available in the ``develop`` branch, and
-    are new in the upcoming 2015.2.0 release. These new features will be
+    are new in the upcoming 2015.5.0 release. These new features will be
     clearly labeled.
     
 
@@ -110,19 +110,19 @@ another whole profile that differs in just one value.
 .. note::
 
     In the 2014.7.x release cycle and earlier, container profiles are defined
-    under ``lxc.profile``. This parameter will still work in version 2015.2.0,
+    under ``lxc.profile``. This parameter will still work in version 2015.5.0,
     but is deprecated and will be removed in a future release. Please note
     however that the profile merging feature described above will only work
     with profiles defined under ``lxc.container_profile``, and only in versions
-    2015.2.0 and later.
+    2015.5.0 and later.
 
-Additionally, in version 2015.2.0 container profiles have been expanded to
+Additionally, in version 2015.5.0 container profiles have been expanded to
 support passing template-specific CLI options to :mod:`lxc.create
 <salt.modules.lxc.create>`. Below is a table describing the parameters which
 can be configured in container profiles:
 
 ================== ================== ====================
-Parameter          2015.2.0 and Newer 2014.7.x and Earlier
+Parameter          2015.5.0 and Newer 2014.7.x and Earlier
 ================== ================== ====================
 *template*:sup:`1` Yes                Yes
 *options*:sup:`1`  Yes                No
@@ -193,11 +193,11 @@ profile, while those minions without the above Pillar data would use the
 .. note::
 
     In the 2014.7.x release cycle and earlier, network profiles are defined
-    under ``lxc.nic``. This parameter will still work in version 2015.2.0, but
+    under ``lxc.nic``. This parameter will still work in version 2015.5.0, but
     is deprecated and will be removed in a future release. Please note however
     that the profile merging feature described above will only work with
     profiles defined under ``lxc.network_profile``, and only in versions
-    2015.2.0 and later.
+    2015.5.0 and later.
 
 The following are parameters which can be configured in network profiles. These
 will directly correspond to a parameter in an LXC configuration file (see ``man
@@ -263,7 +263,7 @@ container, with three values:
 3. **arch** - CPU architecture (i.e. ``amd64`` or ``i386``)
 
 The :mod:`lxc.images <salt.modules.lxc.images>` function (new in version
-2015.2.0) can be used to list the available images. Alternatively, the releases
+2015.5.0) can be used to list the available images. Alternatively, the releases
 can be viewed on http://images.linuxcontainers.org/images/. The images are
 organized in such a way that the **dist**, **release**, and **arch** can be
 determined using the following URL format:
@@ -407,11 +407,11 @@ Running Commands Within a Container
 For containers which are not running their own Minion, commands can be run
 within the container in a manner similar to using (:mod:`cmd.run
 <salt.modules.cmdmod.run`). The means of doing this have been changed
-significantly in version 2015.2.0 (though the deprecated behavior will still be
+significantly in version 2015.5.0 (though the deprecated behavior will still be
 supported for a few releases). Both the old and new usage are documented
 below.
 
-2015.2.0 and Newer
+2015.5.0 and Newer
 ------------------
 
 New functions have been added to mimic the behavior of the functions in the
@@ -467,7 +467,7 @@ To run a command and return all information:
 Container Management Using States
 =================================
 
-Several states are being renamed or otherwise modified in version 2015.2.0. The
+Several states are being renamed or otherwise modified in version 2015.5.0. The
 information in this tutorial refers to the new states. For
 2014.7.x and earlier, please refer to the :mod:`documentation for the LXC
 states <salt.states.lxc>`.

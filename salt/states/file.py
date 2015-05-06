@@ -1610,7 +1610,7 @@ def directory(name,
                     - mode
                     - ignore_dirs
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -3496,35 +3496,35 @@ def copy(
         If the target subdirectories don't exist create them
 
     preserve
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         Set ``preserve: True`` to preserve user/group ownership and mode
         after copying. Default is ``False``. If ``preseve`` is set to ``True``,
         then user/group/mode attributes will be ignored.
 
     user
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         The user to own the copied file, this defaults to the user salt is
         running as on the minion. If ``preserve`` is set to ``True``, then
         this will be ignored
 
     group
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         The group to own the copied file, this defaults to the group salt is
         running as on the minion. If ``preserve`` is set to ``True`` or on
         Windows this will be ignored
 
     mode
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
         Not supported on Windows
 
     subdir
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         If the name is a directory then place the file inside the named
         directory

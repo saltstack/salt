@@ -2,7 +2,7 @@
 '''
 Cassandra Database Module
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 :depends: DataStax Python Driver for Apache Cassandra
           https://github.com/datastax/python-driver

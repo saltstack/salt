@@ -7,7 +7,7 @@ etcd Database Module
 :depends:       python-etcd
 :platform:      all
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 This module allows access to the etcd database using an ``sdb://`` URI. This
 package is located at ``https://pypi.python.org/pypi/python-etcd``.

@@ -2,7 +2,7 @@
 '''
 Manage Perl modules using CPAN
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 '''
 from __future__ import absolute_import
 

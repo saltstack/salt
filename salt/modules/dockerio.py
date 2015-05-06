@@ -1849,7 +1849,7 @@ def load(imagepath):
 
 def save(image, filename):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Save the specified image to filename from docker
     e.g. `docker save image > filename`

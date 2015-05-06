@@ -415,7 +415,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         each case to be collected in the base and overridden by the grain
         selection dictionary and the merge dictionary.  Default is unset.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
