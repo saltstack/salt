@@ -1,8 +1,8 @@
 ==============================================
-Salt 2015.2.0 Release Notes - Codename Lithium
+Salt 2015.5.0 Release Notes - Codename Lithium
 ==============================================
 
-The 2015.2.0 feature release of Salt is focused on hardening Salt and mostly
+The 2015.5.0 feature release of Salt is focused on hardening Salt and mostly
 on improving existing systems. A few major additions are present, primarily
 the new Beacon system. Most enhancements have been focused around improving
 existing features and interfaces.
@@ -10,6 +10,40 @@ existing features and interfaces.
 As usual the release notes are not exhaustive and primarily include the most
 notable additions and improvements. Hundreds of bugs have been fixed and many
 modules have been substantially updated and added.
+
+.. warning::
+
+    In order to fix potential shell injection vulnerabilities in salt modules,
+    a change has been made to the various ``cmd`` module functions. These
+    functions now default to ``python_shell=False``, which means that the
+    commands will not be sent to an actual shell.
+
+    The largest side effect of this change is that "shellisms", such as pipes,
+    will not work by default. The modules shipped with salt have been audited
+    to fix any issues that might have arisen from this change.  Additionally,
+    the ``cmd`` state module has been unaffected, and use of ``cmd.run`` in
+    jinja is also unaffected. ``cmd.run`` calls on the CLI will also allow
+    shellisms.
+
+    However, custom execution modules which use shellisms in ``cmd`` calls
+    will break, unless you pass ``python_shell=True`` to these calls.
+
+    As a temporary workaround, you can set ``cmd_safe: False`` in your minion
+    and master configs. This will revert the default, but is also less secure,
+    as it will allow shell injection vulnerabilities to be written in custom
+    code. We recommend you only set this setting for as long as it takes to
+    resolve these issues in your custom code, then remove the override.
+
+
+.. note::
+
+    Starting in this version of salt, ``pillar_opts`` defaults to False instead
+    of True. This means that master opts will not be present in minion pillar,
+    and as a result, ``config.get`` calls will not include master opts.
+
+    We recommend pillar is used for configuration options which need to make it
+    to the minion.
+
 
 Beacons
 =======
