@@ -286,7 +286,11 @@ class Shell(object):
         logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ('*' * 6))
-        log.debug(logmsg)
+        if 'decode("base64")' in logmsg:
+            log.debug('Executed SHIM command. Command logged to TRACE')
+            log.trace(logmsg)
+        else:
+            log.debug(logmsg)
 
         ret = self._run_cmd(cmd)
         return ret
@@ -317,7 +321,9 @@ class Shell(object):
                 cmd,
                 shell=True,
                 log_stdout=True,
+                log_stdout_level='trace',
                 log_stderr=True,
+                log_stderr_level='trace',
                 stream_stdout=False,
                 stream_stderr=False)
         sent_passwd = 0
