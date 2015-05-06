@@ -132,7 +132,7 @@ def beacon(config):
             if isinstance(mask, list):
                 r_mask = 0
                 for sub in mask:
-                    r_mask |= _get_mask(mask)
+                    r_mask |= _get_mask(sub)
             elif isinstance(mask, salt.ext.six.binary_type):
                 r_mask = _get_mask(mask)
             else:
