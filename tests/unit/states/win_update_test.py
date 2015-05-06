@@ -21,10 +21,6 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.states import win_update
 
-# Globals
-win_update.__salt__ = {}
-win_update.__opts__ = {}
-
 
 class MockPyWinUpdater(object):
     '''
