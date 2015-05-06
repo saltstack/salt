@@ -241,6 +241,17 @@ def _check_rule(rule, _rule):
     from boto, since they may not completely match rules defined in sls files
     but may be functionally equivalent.
     '''
+
+    # We need to alter what Boto returns if no ports are specified
+    # so that we can compare rules fairly.
+    #
+    # Boto returns None for from_port and to_port where we're required
+    # to pass in "-1" instead.
+    if _rule.get('from_port') is None:
+        _rule['from_port'] = -1
+    if _rule.get('to_port') is None:
+        _rule['to_port'] = -1
+
     if (rule['ip_protocol'] == _rule['ip_protocol'] and
             str(rule['from_port']) == str(_rule['from_port']) and
             str(rule['to_port']) == str(_rule['to_port'])):
