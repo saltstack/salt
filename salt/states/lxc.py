@@ -28,7 +28,7 @@ def present(name,
             vgname=None,
             lvname=None):
     '''
-    .. versionchanged:: 2015.2.0
+    .. versionchanged:: 2015.5.0
         The :mod:`lxc.created <salt.states.lxc.created>` state has been renamed
         to ``lxc.present``, and the :mod:`lxc.cloned <salt.states.lxc.cloned>`
         state has been merged into this state.
@@ -44,7 +44,7 @@ def present(name,
         * If ``None``, do nothing with regards to the running state of the
           container
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     clone_from
         Create named container as a clone of the specified container
@@ -76,7 +76,7 @@ def present(name,
             <salt.modules.lxc.images>` function.
 
     options
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         Template-specific options to pass to the lxc-create command. These
         correspond to the long options (ones beginning with two dashes) that
@@ -329,7 +329,7 @@ def absent(name):
 # Container state (running/frozen/stopped)
 def running(name, restart=False):
     '''
-    .. versionchanged:: 2015.2.0
+    .. versionchanged:: 2015.5.0
         The :mod:`lxc.started <salt.states.lxc.started>` state has been renamed
         to ``lxc.running``
 
@@ -423,7 +423,7 @@ def running(name, restart=False):
 
 def frozen(name, start=True):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Ensure that a container is frozen
 
@@ -522,7 +522,7 @@ def stopped(name, kill=False):
         Older LXC versions will stop containers like this irrespective of this
         argument.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: yaml
 
@@ -577,7 +577,7 @@ def stopped(name, kill=False):
 # Deprecated states
 def created(name, **kwargs):
     '''
-    .. deprecated:: 2015.2.0
+    .. deprecated:: 2015.5.0
         Use :mod:`lxc.present <salt.states.lxc.present>`
     '''
     salt.utils.warn_until(
@@ -590,7 +590,7 @@ def created(name, **kwargs):
 
 def started(name, restart=False):
     '''
-    .. deprecated:: 2015.2.0
+    .. deprecated:: 2015.5.0
         Use :mod:`lxc.running <salt.states.lxc.running>`
     '''
     salt.utils.warn_until(
@@ -608,7 +608,7 @@ def cloned(name,
            vgname=None,
            profile=None):
     '''
-    .. deprecated:: 2015.2.0
+    .. deprecated:: 2015.5.0
         Use :mod:`lxc.present <salt.states.lxc.present>`
     '''
     salt.utils.warn_until(
@@ -627,7 +627,7 @@ def cloned(name,
 
 def set_pass(name, **kwargs):  # pylint: disable=W0613
     '''
-    .. deprecated:: 2015.2.0
+    .. deprecated:: 2015.5.0
 
     This state function has been disabled, as it did not conform to design
     guidelines. Specifically, due to the fact that :mod:`lxc.set_password
@@ -659,7 +659,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
         This state is unsuitable for setting parameters that appear more than
         once in an LXC config file, or parameters which must appear in a
         certain order (such as when configuring more than one network
-        interface). It is slated to be replaced, and as of version 2015.2.0 it
+        interface). It is slated to be replaced, and as of version 2015.5.0 it
         is deprecated.
 
     Edit LXC configuration options
@@ -679,7 +679,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '
         'a certain order (such as when configuring more than one network '
-        'interface). It is slated to be replaced, and as of version 2015.2.0 '
+        'interface). It is slated to be replaced, and as of version 2015.5.0 '
         'it is deprecated.'
     )
     if __opts__['test']:

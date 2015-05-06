@@ -84,7 +84,7 @@ def iostat(name=''):
 
 def list_():
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Return a list of all pools in the system with health status and space usage
 
@@ -190,7 +190,7 @@ def scrub(pool_name=None):
 
 def create(pool_name, *vdevs, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
@@ -409,7 +409,7 @@ def create_file_vdev(size, *vdevs):
 
 def export(*pools, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Export storage pools
 
@@ -452,7 +452,7 @@ def export(*pools, **kwargs):
 
 def import_(pool_name='', new_name='', **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Import storage pools or list pools available for import
 
@@ -504,7 +504,7 @@ def import_(pool_name='', new_name='', **kwargs):
 
 def online(pool_name, *vdevs, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Ensure that the specified devices are online
 
@@ -557,7 +557,7 @@ def online(pool_name, *vdevs, **kwargs):
 
 def offline(pool_name, *vdevs, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Ensure that the specified devices are offline
 

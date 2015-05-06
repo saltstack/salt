@@ -126,7 +126,7 @@ def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs)
     '''
     Execute a single state orchestration routine
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -156,7 +156,7 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     '''
     Execute a single state orchestration routine
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     CLI Example:
 
