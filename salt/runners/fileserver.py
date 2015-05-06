@@ -15,7 +15,7 @@ def envs(backend=None, sources=False, outputter='nested'):
     backend
         Narrow fileserver backends to a subset of the enabled ones.
 
-        .. versionchanged:: 2015.5.0::
+        .. versionchanged:: 2015.5.0
             If all passed backends start with a minus sign (``-``), then these
             backends will be excluded from the enabled backends. However, if
             there is a mix of backends with and without a minus sign (ex:
