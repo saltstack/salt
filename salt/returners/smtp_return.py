@@ -14,6 +14,8 @@ The following fields can be set in the minion conf file::
     smtp.subject (optional, but helpful)
     smtp.gpgowner (optional)
     smtp.fields (optional)
+    smtp.template (optional)
+    smtp.renderer (optional)
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -29,6 +31,8 @@ the default location::
     alternative.smtp.subject
     alternative.smtp.gpgowner
     alternative.smtp.fields
+    alternative.smtp.template
+    alternative.smtp.renderer
 
 There are a few things to keep in mind:
 
@@ -78,6 +82,8 @@ from email.utils import formatdate
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
+import salt.loader
+from salt.template import compile_template
 
 try:
     import gnupg
@@ -107,7 +113,9 @@ def _get_options(ret=None):
              'subject': 'subject',
              'gpgowner': 'gpgowner',
              'fields': 'fields',
-             'tls': 'tls'}
+             'tls': 'tls',
+             'renderer': 'renderer',
+             'template': 'template'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -134,24 +142,29 @@ def returner(ret):
     fields = _options.get('fields').split(',') if 'fields' in _options else []
     smtp_tls = _options.get('tls')
 
+    renderer = _options.get('renderer', __opts__.get('renderer', 'yaml_jinja'))
+    rend = salt.loader.render(__opts__, {})
+
     if not port:
         port = 25
     log.debug('SMTP port has been set to {0}'.format(port))
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
+    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret)
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
-    content = ('id: {0}\r\n'
-               'function: {1}\r\n'
-               'function args: {2}\r\n'
-               'jid: {3}\r\n'
-               'return: {4}\r\n').format(
-                    ret.get('id'),
-                    ret.get('fun'),
-                    ret.get('fun_args'),
-                    ret.get('jid'),
-                    pprint.pformat(ret.get('return')))
+    template = _options.get('template')
+    if template:
+        content = compile_template(template, rend, renderer, **ret)
+    else:
+        template = ('id: {{id}}\r\n'
+                    'function: {{fun}}\r\n'
+                    'function args: {{fun_args}}\r\n'
+                    'jid: {{jid}}\r\n'
+                    'return: {{return}}\r\n')
+        content = compile_template(':string:', rend, renderer, input_data=template, **ret)
+
     if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
                         options=['--trust-model always'])
@@ -177,6 +190,7 @@ def returner(ret):
 
     log.debug('smtp_return: Connecting to the server...')
     server = smtplib.SMTP(host, int(port))
+    server.set_debuglevel = 'debug'
     if smtp_tls is True:
         server.starttls()
         log.debug('smtp_return: TLS enabled')
