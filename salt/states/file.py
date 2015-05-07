@@ -337,6 +337,7 @@ def _gen_keep_files(name, require):
         ret = set()
         if os.path.isdir(name):
             for root, dirs, files in os.walk(name):
+                ret.add(name)
                 for name in files:
                     ret.add(os.path.join(root, name))
                 for name in dirs:
