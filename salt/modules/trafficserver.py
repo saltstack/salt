@@ -9,6 +9,7 @@ cache itesm and bouncing the service.
 The only requirement for this module is the existence of the ``traffic_line``
 binary.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -207,5 +208,3 @@ def stop():
     log.debug('running: cmd=%s', cmd)
     _subprocess(cmd)
     return _subprocess(status_cmd)
-
-
