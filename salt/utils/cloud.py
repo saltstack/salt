@@ -1069,7 +1069,14 @@ def deploy_script(host,
                     )
                     file_map_fail.append({local_file: remote_file})
                     continue
-                remote_dir = os.path.dirname(remote_file)
+
+                if os.path.isdir(local_file):
+                    dir_name = os.path.basename(local_file)
+                    remote_dir = os.path.join(os.path.dirname(remote_file),
+                                              dir_name)
+                else:
+                    remote_dir = os.path.dirname(remote_file)
+
                 if remote_dir not in remote_dirs:
                     root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **ssh_kwargs)
                     remote_dirs.append(remote_dir)
@@ -1547,6 +1554,8 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use sftp to upload a file to a server
     '''
+    put_args = []
+
     if kwargs is None:
         kwargs = {}
 
@@ -1557,6 +1566,8 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
 
     if local_file is not None:
         tmppath = local_file
+        if os.path.isdir(local_file):
+            put_args = ['-r']
 
     log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
 
@@ -1615,8 +1626,8 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    cmd = 'echo "put {0} {1}" | sftp {2} {3[username]}@{3[hostname]}'.format(
-        tmppath, dest_path, ' '.join(ssh_args), kwargs
+    cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{4[hostname]}'.format(
+        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs
     )
     log.debug('SFTP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
