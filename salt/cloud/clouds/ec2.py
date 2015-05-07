@@ -272,8 +272,10 @@ def optimize_providers(providers):
 def sign(key, msg):
     return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
 
+
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
+
 
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
@@ -315,8 +317,8 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         # Create a date for headers and the credential string
         t = datetime.datetime.utcnow()
-        amz_date = t.strftime('%Y%m%dT%H%M%SZ') # Format date as YYYYMMDD'T'HHMMSS'Z'
-        datestamp = t.strftime('%Y%m%d') # Date w/o time, used in credential scope
+        amz_date = t.strftime('%Y%m%dT%H%M%SZ')  # Format date as YYYYMMDD'T'HHMMSS'Z'
+        datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
 
         canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + amz_date + '\n'
         signed_headers = 'host;x-amz-date'
@@ -351,7 +353,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         kService = sign(kRegion, service)
         signing_key = sign(kService, 'aws4_request')
 
-        signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'), \
+        signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'),
                              hashlib.sha256).hexdigest()
         #sig = binascii.b2a_base64(hashed)
 
@@ -359,7 +361,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                                provider['id'] + '/' + credential_scope + \
                                ', ' +  'SignedHeaders=' + signed_headers + \
                                ', ' + 'Signature=' + signature
-        headers = {'x-amz-date':amz_date, 'Authorization':authorization_header}
+        headers = {'x-amz-date':amz_date,  'Authorization':authorization_header}
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         log.trace('EC2 Request Parameters: {0}'.format(params_with_headers))
