@@ -26,8 +26,13 @@ import copy
 import time
 import json
 import pprint
-import requests
 import logging
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -51,6 +56,9 @@ def __virtual__():
     '''
     Check for DigitalOcean configurations
     '''
+    if not HAS_REQUESTS:
+        return False
+
     if get_configured_provider() is False:
         return False
 

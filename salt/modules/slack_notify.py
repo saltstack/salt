@@ -21,11 +21,17 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-import requests
-from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves import range
+
+try:
+    import requests
+    from requests.exceptions import ConnectionError
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 # pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
@@ -38,6 +44,9 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
+    if not HAS_REQUESTS:
+        return False
+
     return __virtualname__
 
 

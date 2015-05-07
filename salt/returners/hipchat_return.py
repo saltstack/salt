@@ -74,7 +74,12 @@ import pprint
 import logging
 
 # Import 3rd-party libs
-import requests
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 from requests.exceptions import ConnectionError
 # pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
@@ -129,6 +134,9 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
+    if not HAS_REQUESTS:
+        return False
+
     return __virtualname__
 
 
