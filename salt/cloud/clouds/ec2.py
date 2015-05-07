@@ -82,10 +82,15 @@ import yaml
 # Import 3rd-party libs
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import requests
 import salt.ext.six as six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 # pylint: enable=import-error,no-name-in-module
 
 # Import libs for talking to the EC2 API
@@ -176,6 +181,9 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for EC2 configurations
     '''
+    if not HAS_REQUESTS:
+        return False
+
     if get_configured_provider() is False:
         return False
 
