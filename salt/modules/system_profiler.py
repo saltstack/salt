@@ -9,6 +9,8 @@ information about package receipts and installed applications.
 
 '''
 
+from __future__ import absolute_import
+
 import plistlib
 import subprocess
 import salt.utils
