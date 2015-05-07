@@ -34,21 +34,21 @@ set up in the cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter01.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter01.domain.com"
 
     vmware-vcenter02:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter02.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter02.domain.com"
 
     vmware-vcenter03:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter03.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter03.domain.com"
 
 
 .. _vmware-cloud-profile:
@@ -68,6 +68,16 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       num_cpus: 4
       memory: 8192
       devices:
+        cd:
+          CD/DVD drive 1:
+            device_type: datastore_iso_file
+            iso_path: "[nap004-1] vmimages/tools-isoimages/linux.iso"
+          CD/DVD drive 2:
+            device_type: client_device
+            mode: atapi
+          CD/DVD drive 3:
+            device_type: client_device
+            mode: passthrough
         disk:
           Hard disk 1:
             size: 30
@@ -157,6 +167,26 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``devices``
     Enter the device specifications here. Currently, the following devices can be
     created or reconfigured:
+
+    cd
+        Enter the CD/DVD drive specification here. If the CD/DVD drive doesn\'t exist,
+        it will be created with the specified configuration. If the CD/DVD drive
+        already exists, it will be reconfigured with the specifications. The following
+        options can be specified per CD/DVD drive:
+
+        device_type
+            Specify how the CD/DVD drive should be used. Currently supported types are
+            ``client_device`` and ``datastore_iso_file``. Default is
+            ``device_type: client_device``
+        iso_path
+            Enter the path to the iso file present on the datastore only if
+            ``device_type: datastore_iso_file``. The syntax to specify this is
+            ``iso_path: "[datastoreName] vmimages/tools-isoimages/linux.iso"``. This
+            field is ignored if ``device_type: client_device``
+        mode
+            Enter the mode of connection only if ``device_type: client_device``. Currently
+            supported modes are ``passthrough`` and ``atapi``. This field is ignored if
+            ``device_type: datastore_iso_file``. Default is ``mode: passthrough``
 
     disk
         Enter the disk specification here. If the hard disk doesn\'t exist, it will
