@@ -164,7 +164,7 @@ class ModjkTestCase(TestCase):
             self.assertTrue(modjk.bulk_recover(["node1", "node2", "node3"],
                                                'loadbalancer1'))
 
-   # 'worker_status' function tests: 1
+    # 'worker_status' function tests: 1
 
     def test_worker_status(self):
         '''
@@ -179,7 +179,7 @@ class ModjkTestCase(TestCase):
         with patch.object(modjk, '_do_http', return_value={}):
             self.assertFalse(modjk.worker_status("node1"))
 
-   # 'worker_recover' function tests: 1
+    # 'worker_recover' function tests: 1
 
     def test_worker_recover(self):
         '''
@@ -190,7 +190,7 @@ class ModjkTestCase(TestCase):
             self.assertDictEqual(modjk.worker_recover("node1", 'loadbalancer1'),
                                  {})
 
-   # 'worker_disable' function tests: 1
+    # 'worker_disable' function tests: 1
 
     def test_worker_disable(self):
         '''
@@ -200,7 +200,7 @@ class ModjkTestCase(TestCase):
                           {'worker.result.type': 'OK'}):
             self.assertTrue(modjk.worker_disable('node1', 'loadbalancer1'))
 
-   # 'worker_activate' function tests: 1
+    # 'worker_activate' function tests: 1
 
     def test_worker_activate(self):
         '''
@@ -210,7 +210,7 @@ class ModjkTestCase(TestCase):
                           {'worker.result.type': 'OK'}):
             self.assertTrue(modjk.worker_activate('node1', 'loadbalancer1'))
 
-   # 'worker_stop' function tests: 1
+    # 'worker_stop' function tests: 1
 
     def test_worker_stop(self):
         '''

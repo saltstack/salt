@@ -893,7 +893,6 @@ class LocalClient(object):
         except Exception as exc:
             log.warning('Returner unavailable: {exc}'.format(exc=exc))
         # Wait for the hosts to check in
-        syndic_wait = 0
         last_time = False
         # iterator for this job's return
         if self.opts['order_masters']:

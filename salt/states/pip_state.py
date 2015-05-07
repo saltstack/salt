@@ -737,7 +737,7 @@ def installed(name,
             comments = []
             if requirements:
                 comments.append('Unable to process requirements file '
-                                '{0}.'.format(requirements))
+                                '"{0}".'.format(requirements))
             if editable:
                 comments.append('Unable to install from VCS checkout'
                                 '{0}.'.format(editable))

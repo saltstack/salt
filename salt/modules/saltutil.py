@@ -48,6 +48,7 @@ import salt.utils
 import salt.utils.process
 import salt.utils.minion
 import salt.utils.event
+import salt.utils.url
 import salt.transport
 import salt.wheel
 from salt.exceptions import (
@@ -91,7 +92,7 @@ def _sync(form, saltenv=None):
         saltenv = saltenv.split(',')
     ret = []
     remote = set()
-    source = os.path.join('salt://_{0}'.format(form))
+    source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir {0!r}'.format(mod_dir))
@@ -587,7 +588,11 @@ def find_cached_job(jid):
         buf = fp_.read()
         fp_.close()
         if buf:
-            data = serial.loads(buf)
+            try:
+                data = serial.loads(buf)
+            except NameError:
+                # msgpack error in salt-ssh
+                return
         else:
             return
     if not isinstance(data, dict):
@@ -846,7 +851,7 @@ def wheel(fun, **kwargs):
         salt '*' saltutil.wheel key.accept match=jerry
     '''
     wclient = salt.wheel.WheelClient(__opts__)
-    return wclient.cmd(fun, **kwargs)
+    return wclient.cmd(fun, kwarg=kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots

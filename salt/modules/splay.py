@@ -83,7 +83,7 @@ def splay(*args, **kwargs):
     # Get rid of the hidden kwargs that salt injects
     func_kwargs = dict((k, v) for k, v in kwargs.iteritems() if not k.startswith('__'))
     result = __salt__[func](*args, **func_kwargs)
-    if type(result) != dict:
+    if not isinstance(result, dict):
         result = {'result': result}
     result['splaytime'] = str(my_delay)
     return result
@@ -100,7 +100,7 @@ def show(splaytime=_DEFAULT_SPLAYTIME):
         salt example-host splay.show 60
     '''
     # Coerce splaytime to int (passed arg from CLI will be a str)
-    if type(splaytime) != int:
+    if not isinstance(splaytime, int):
         splaytime = int(splaytime)
 
     return str(_calc_splay(__grains__['id'], splaytime=splaytime))

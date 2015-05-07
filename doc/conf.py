@@ -69,7 +69,6 @@ MOCK_MODULES = [
     'libcloud.loadbalancer.providers',
     'libcloud.common',
     'libcloud.common.google',
-    'linodepy',
 
     # third-party libs for netapi modules
     'cherrypy',
@@ -81,7 +80,9 @@ MOCK_MODULES = [
     'tornado',
     'tornado.concurrent',
     'tornado.gen',
+    'tornado.httpclient',
     'tornado.httpserver',
+    'tornado.httputil',
     'tornado.ioloop',
     'tornado.web',
     'tornado.websocket',
@@ -95,7 +96,6 @@ MOCK_MODULES = [
     'ClusterShell',
     'ClusterShell.NodeSet',
     'django',
-    'fsutils',
     'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
@@ -159,7 +159,7 @@ copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.7.4'
+release = '2014.7.5'
 
 needs_sphinx = '1.3'
 

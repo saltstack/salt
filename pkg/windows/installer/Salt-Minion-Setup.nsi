@@ -17,7 +17,7 @@ ${StrLoc}
 ${StrStrAdv}
 
 !ifdef SaltVersion
-  !define PRODUCT_VERSION ${SaltVersion}
+  !define PRODUCT_VERSION "${SaltVersion}"
 !else
   !define PRODUCT_VERSION "Undefined Version"
 !endif
@@ -41,6 +41,7 @@ Var MinionName_State
 !define MUI_ABORTWARNING
 !define MUI_ICON "salt.ico"
 !define MUI_UNICON "salt.ico"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "panel.bmp"
 
 ; Welcome page
 !insertmacro MUI_PAGE_WELCOME

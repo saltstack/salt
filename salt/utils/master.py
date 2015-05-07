@@ -21,6 +21,7 @@ import salt.log
 import salt.client
 import salt.pillar
 import salt.utils
+import salt.utils.atomicfile
 import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
@@ -383,13 +384,13 @@ class MasterPillarUtil(object):
                     os.close(tmpfh)
                     with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'grains': minion_grains}))
-                    os.rename(tmpfname, data_file)
+                    salt.utils.atomicfile.atomic_rename(tmpfname, data_file)
                 elif clear_grains and minion_pillar:
                     tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
                     os.close(tmpfh)
                     with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'pillar': minion_pillar}))
-                    os.rename(tmpfname, data_file)
+                    salt.utils.atomicfile.atomic_rename(tmpfname, data_file)
                 if clear_mine:
                     # Delete the whole mine file
                     os.remove(os.path.join(mine_file))
@@ -403,7 +404,9 @@ class MasterPillarUtil(object):
                             os.close(tmpfh)
                             with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
-                            os.rename(tmpfname, mine_file)
+                            salt.utils.atomicfile.atomic_rename(
+                                tmpfname,
+                                mine_file)
         except (OSError, IOError):
             return True
         return True

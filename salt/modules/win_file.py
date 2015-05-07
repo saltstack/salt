@@ -52,7 +52,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
         check_managed, check_managed_changes, check_perms, remove, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
-        contains_glob, find, psed, get_sum, _get_bkroot,
+        contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
@@ -84,8 +84,8 @@ def __virtual__():
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global path_exists_glob
             global write, pardir, join
+            global path_exists_glob, _mkstemp_copy
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -138,6 +138,7 @@ def __virtual__():
             write = _namespaced_function(write, globals())
             pardir = _namespaced_function(pardir, globals())
             join = _namespaced_function(join, globals())
+            _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
 
             return __virtualname__
     return False

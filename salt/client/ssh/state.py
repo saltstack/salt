@@ -16,6 +16,7 @@ import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils
 import salt.utils.thin
+import salt.utils.url
 import salt.roster
 import salt.state
 import salt.loader
@@ -128,13 +129,13 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [
-            ['salt://_modules'],
-            ['salt://_states'],
-            ['salt://_grains'],
-            ['salt://_renderers'],
-            ['salt://_returners'],
-            ['salt://_outputters'],
-            ['salt://_utils'],
+            [salt.utils.url.create('_modules')],
+            [salt.utils.url.create('_states')],
+            [salt.utils.url.create('_grains')],
+            [salt.utils.url.create('_renderers')],
+            [salt.utils.url.create('_returners')],
+            [salt.utils.url.create('_outputters')],
+            [salt.utils.url.create('_utils')],
             ]
     with salt.utils.fopen(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
@@ -148,7 +149,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
             os.makedirs(env_root)
         for ref in file_refs[saltenv]:
             for name in ref:
-                short = name[7:]
+                short = salt.utils.url.parse(name)[0]
                 path = file_client.cache_file(name, saltenv)
                 if path:
                     tgt = os.path.join(env_root, short)

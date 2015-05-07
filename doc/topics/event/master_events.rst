@@ -19,6 +19,15 @@ Authentication events
         ``reject``.
     :var pub: The minion public key.
 
+
+    .. note:: Minions fire auth events on fairly regular basis for a number
+              of reasons.  Writing reactors to respond to events through
+              the auth cycle can lead to infinite reactor event loops
+              (minion tries to auth, reactor responds by doing something
+              that generates another auth event, minion sends auth event,
+              etc.).  Consider reacting to ``salt/key`` or ``salt/minion/<MID>/start``
+              or firing a custom event tag instead.
+
 Start events
 ============
 
@@ -37,7 +46,14 @@ Key events
 
     :var id: The minion ID.
     :var act: The new status of the minion key: ``accept``, ``pend``,
-        ``reject``.
+              ``reject``.
+
+.. warning:: If a master is in :conf_master:`auto_accept mode`, ``salt/key`` events
+             will not be fired when the keys are accepted.  In addition, pre-seeding
+             keys (like happens through :ref:`Salt-Cloud<salt-cloud>`) will not cause
+             firing of these events.
+
+
 
 Job events
 ==========

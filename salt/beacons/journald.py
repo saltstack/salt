@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.utils.cloud
 import salt.ext.six
 
@@ -84,7 +85,7 @@ def beacon(config):
             n_flag = 0
             for key in config[name]:
                 if isinstance(key, salt.ext.six.string_types):
-                    key = salt.utils.sdecode(key)
+                    key = salt.utils.locales.sdecode(key)
                 if key in cur:
                     if config[name][key] == cur[key]:
                         n_flag += 1

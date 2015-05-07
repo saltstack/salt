@@ -175,8 +175,17 @@ def list_directories():
 
     .. versionadded:: Beryllium
     '''
-    tenant = __opts__.get('stormpath', {}).get('tenantid', None)
-    status, result = _query(action='tenants', command='{0}/directories'.format(tenant))
+    tenant = show_tenant()
+    tenant_id = tenant.get('href', '').split('/')[-1]
+    status, result = _query(action='tenants', command='{0}/directories'.format(tenant_id))
+    return result
+
+
+def show_tenant():
+    '''
+    Get the tenant for the login being used
+    '''
+    status, result = _query(action='tenants', command='current')
     return result
 
 

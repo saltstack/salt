@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
-import salt.utils
 from salttesting import TestCase, skipIf
 from salt.exceptions import SaltInvocationError
 from salttesting.helpers import ensure_in_syspath
@@ -23,6 +22,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.utils
 from salt.modules import state
 
 # Globals
@@ -548,9 +548,9 @@ class StateTestCase(TestCase):
         '''
             Test to retrieve the highstate data from the salt master
         '''
-        mock = MagicMock(side_effect=[{"A"}, None, None])
+        mock = MagicMock(side_effect=["A", None, None])
         with patch.object(state, '_check_queue', mock):
-            self.assertEqual(state.show_highstate(), {"A"})
+            self.assertEqual(state.show_highstate(), "A")
 
             self.assertRaises(SaltInvocationError,
                               state.show_highstate,
@@ -562,7 +562,7 @@ class StateTestCase(TestCase):
         '''
             Test to list out the low data that will be applied to this minion
         '''
-        mock = MagicMock(side_effect=[{"A"}, None])
+        mock = MagicMock(side_effect=["A", None])
         with patch.object(state, '_check_queue', mock):
             self.assertRaises(AssertionError, state.show_lowstate)
 
@@ -573,9 +573,9 @@ class StateTestCase(TestCase):
             Test to call a single ID from the
             named module(s) and handle all requisites
         '''
-        mock = MagicMock(side_effect=[{"A"}, None, None, None])
+        mock = MagicMock(side_effect=["A", None, None, None])
         with patch.object(state, '_check_queue', mock):
-            self.assertEqual(state.sls_id("apache", "http"), {"A"})
+            self.assertEqual(state.sls_id("apache", "http"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(return_value={'test': True})
@@ -597,9 +597,9 @@ class StateTestCase(TestCase):
         '''
             Test to display the low data from a specific sls
         '''
-        mock = MagicMock(side_effect=[{"A"}, None, None])
+        mock = MagicMock(side_effect=["A", None, None])
         with patch.object(state, '_check_queue', mock):
-            self.assertEqual(state.show_low_sls("foo"), {"A"})
+            self.assertEqual(state.show_low_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(return_value={'test': True})
@@ -616,9 +616,9 @@ class StateTestCase(TestCase):
         '''
             Test to display the state data from a specific sls
         '''
-        mock = MagicMock(side_effect=[{"A"}, None, None, None])
+        mock = MagicMock(side_effect=["A", None, None, None])
         with patch.object(state, '_check_queue', mock):
-            self.assertEqual(state.show_sls("foo"), {"A"})
+            self.assertEqual(state.show_sls("foo"), "A")
 
             with patch.dict(state.__opts__, {"test": "A"}):
                 mock = MagicMock(return_value={'test': True})
@@ -642,9 +642,9 @@ class StateTestCase(TestCase):
             Test to execute a specific top file
         '''
         ret = ['Pillar failed to render with the following messages:', 'E']
-        mock = MagicMock(side_effect=[{"A"}, None, None, None])
+        mock = MagicMock(side_effect=["A", None, None, None])
         with patch.object(state, '_check_queue', mock):
-            self.assertEqual(state.top("reverse_top.sls"), {"A"})
+            self.assertEqual(state.top("reverse_top.sls"), "A")
 
             mock = MagicMock(side_effect=[False, True, True])
             with patch.object(state, '_check_pillar', mock):
@@ -688,9 +688,9 @@ class StateTestCase(TestCase):
                                   'To re-enable, run state.enable highstate',
                                   'result': 'False'})
 
-            mock = MagicMock(side_effect=[{"A"}, None, None])
+            mock = MagicMock(side_effect=["A", None, None])
             with patch.object(state, '_check_queue', mock):
-                self.assertEqual(state.highstate("whitelist=sls1.sls"), {"A"})
+                self.assertEqual(state.highstate("whitelist=sls1.sls"), "A")
 
                 with patch.dict(state.__opts__, {"test": "A"}):
                     mock = MagicMock(return_value={'test': True})
@@ -703,7 +703,7 @@ class StateTestCase(TestCase):
                         mock = MagicMock(return_value=True)
                         with patch.dict(state.__salt__,
                                         {'config.option': mock}):
-                            mock = MagicMock(return_value={"A"})
+                            mock = MagicMock(return_value="A")
                             with patch.object(state, '_filter_running',
                                               mock):
                                 mock = MagicMock(return_value=True)

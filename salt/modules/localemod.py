@@ -11,6 +11,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
@@ -149,61 +150,6 @@ def set_locale(locale):
     return True
 
 
-def _split_locale(locale):
-    '''
-    Split a locale specifier.  The general format is
-
-    language[_territory][.codeset][@modifier] [charmap]
-
-    For example:
-
-    ca_ES.UTF-8@valencia UTF-8
-    '''
-    def split(st, char):
-        '''
-        Split a string `st` once by `char`; always return a two-element list
-        even if the second element is empty.
-        '''
-        split_st = st.split(char, 1)
-        if len(split_st) == 1:
-            split_st.append('')
-        return split_st
-
-    parts = {}
-    work_st, parts['charmap'] = split(locale, ' ')
-    work_st, parts['modifier'] = split(work_st, '@')
-    work_st, parts['codeset'] = split(work_st, '.')
-    parts['language'], parts['territory'] = split(work_st, '_')
-    return parts
-
-
-def _join_locale(parts):
-    '''
-    Join a locale specifier split in the format returned by _split_locale.
-    '''
-    locale = parts['language']
-    if parts.get('territory'):
-        locale += '_' + parts['territory']
-    if parts.get('codeset'):
-        locale += '.' + parts['codeset']
-    if parts.get('modifier'):
-        locale += '@' + parts['modifier']
-    if parts.get('charmap'):
-        locale += ' ' + parts['charmap']
-    return locale
-
-
-def _normalize_locale(locale):
-    '''
-    Format a locale specifier according to the format returned by `locale -a`.
-    '''
-    parts = _split_locale(locale)
-    parts['territory'] = parts['territory'].upper()
-    parts['codeset'] = parts['codeset'].lower().replace('-', '')
-    parts['charmap'] = ''
-    return _join_locale(parts)
-
-
 def avail(locale):
     '''
     Check if a locale is available.
@@ -217,13 +163,13 @@ def avail(locale):
         salt '*' locale.avail 'en_US.UTF-8'
     '''
     try:
-        normalized_locale = _normalize_locale(locale)
+        normalized_locale = salt.utils.locales.normalize_locale(locale)
     except IndexError:
         log.error('Unable to validate locale "{0}"'.format(locale))
         return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
-       if _normalize_locale(x.strip()) == normalized_locale), False)
+       if salt.utils.locales.normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
 
 
@@ -252,7 +198,7 @@ def gen_locale(locale, **kwargs):
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
     on_suse = __grains__.get('os_family') == 'Suse'
-    locale_info = _split_locale(locale)
+    locale_info = salt.utils.locales.split_locale(locale)
 
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'

@@ -331,7 +331,7 @@ def check_key_file(user,
 
     .. code-block:: bash
 
-        salt '*' root salt://ssh/keyfile
+        salt '*' ssh.check_key_file root salt://ssh/keyfile
     '''
     if env is not None:
         salt.utils.warn_until(

@@ -15,6 +15,10 @@ from string import ascii_letters, digits
 
 # Import 3rd-party libs
 import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
@@ -25,6 +29,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt._compat import subprocess
 
 log = logging.getLogger(__name__)
 
@@ -271,12 +276,11 @@ def generate_minion_id():
     '''
     possible_ids = get_hostnames()
 
-    ip_addresses = [IPv4Address(addr) for addr
-                    in salt.utils.network.ip_addrs(include_loopback=True)
-                    if not addr.startswith('127.')]
-
     # include public and private ipaddresses
-    for addr in ip_addresses:
+    for addr in salt.utils.network.ip_addrs():
+        addr = ipaddress.ip_address(addr)
+        if addr.is_loopback:
+            continue
         possible_ids.append(str(addr))
 
     possible_ids = _filter_localhost_names(possible_ids)
@@ -287,6 +291,20 @@ def generate_minion_id():
 
     hosts = _sort_hostnames(possible_ids)
     return hosts[0]
+
+
+def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
+    '''
+    Return a socket object for the addr
+    IP-version agnostic
+    '''
+
+    version = ipaddress.ip_address(addr).version
+    if version == 4:
+        family = socket.AF_INET
+    elif version == 6:
+        family = socket.AF_INET6
+    return socket.socket(family, type, proto)
 
 
 def get_fqhostname():
@@ -1059,7 +1077,7 @@ def _sunos_remotes_on(port, which_end):
     '''
     remotes = set()
     try:
-        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])
+        data = subprocess.check_output(['netstat', '-f', 'inet', '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed netstat')
         raise
@@ -1105,7 +1123,7 @@ def _freebsd_remotes_on(port, which_end):
 
     try:
         cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
-        data = subprocess.check_output(cmd)
+        data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
@@ -1155,7 +1173,7 @@ def _windows_remotes_on(port, which_end):
     '''
     remotes = set()
     try:
-        data = subprocess.check_output(['netstat', '-n'])
+        data = subprocess.check_output(['netstat', '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed netstat')
         raise
@@ -1201,7 +1219,7 @@ def remotes_on_local_tcp_port(port):
         return _windows_remotes_on(port, 'local_port')
 
     try:
-        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
+        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
@@ -1254,7 +1272,7 @@ def remotes_on_remote_tcp_port(port):
         return _windows_remotes_on(port, 'remote_port')
 
     try:
-        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])
+        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
@@ -1280,60 +1298,3 @@ def remotes_on_remote_tcp_port(port):
         remotes.add(rhost)
 
     return remotes
-
-
-class IPv4Address(object):
-    '''
-    A very minimal subset of the IPv4Address object in the ip_address module.
-    '''
-
-    def __init__(self, address_str):
-        self.address_str = address_str
-        octets = self.address_str.split('.')
-        if len(octets) != 4:
-            raise ValueError(
-                'IPv4 addresses must be in dotted-quad form.'
-            )
-        try:
-            self.dotted_quad = [int(octet) for octet in octets]
-        except ValueError as err:
-            raise ValueError(
-                'IPv4 addresses must be in dotted-quad form. {0}'.format(err)
-            )
-
-    def __str__(self):
-        return self.address_str
-
-    def __repr__(self):
-        return 'IPv4Address("{0}")'.format(str(self))
-
-    def __cmp__(self, other):
-        return cmp(self.dotted_quad, other.dotted_quad)
-
-    @property
-    def is_private(self):
-        '''
-        :return: Returns True if the address is a non-routable IPv4 address.
-                 Otherwise False.
-        '''
-        if 10 == self.dotted_quad[0]:
-            return True
-        if 172 == self.dotted_quad[0]:
-            return 16 <= self.dotted_quad[1] <= 31
-        if 192 == self.dotted_quad[0]:
-            return 168 == self.dotted_quad[1]
-        return False
-
-    @property
-    def is_loopback(self):
-        '''
-        :return: True if the address is a loopback address. Otherwise False.
-        '''
-        return 127 == self.dotted_quad[0]
-
-    @property
-    def reverse_pointer(self):
-        '''
-        :return: Reversed IP address
-        '''
-        return '.'.join(reversed(self.dotted_quad)) + '.in-addr.arpa.'

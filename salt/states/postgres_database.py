@@ -173,7 +173,7 @@ def absent(name,
         The name of the database to remove
 
     db_user
-        database username if different from config or defaul
+        database username if different from config or default
 
     db_password
         user password if any password for a specified user

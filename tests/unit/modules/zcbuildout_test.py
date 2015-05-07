@@ -154,11 +154,11 @@ class BuildoutTestCase(Base):
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests
         #self.assertTrue(
-            # u''
-            # u'OUTPUT:\n'
-            # u'foo\n'
-            # u''
-            #in ret1['outlog']
+        #     u''
+        #     u'OUTPUT:\n'
+        #     u'foo\n'
+        #     u''
+        #    in ret1['outlog']
         #)
 
         # These lines are throwing pylint errors - disabling for now since we are skipping
@@ -167,11 +167,11 @@ class BuildoutTestCase(Base):
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests
         # self.assertTrue(
-            # u'INFO: ibar\n'
-            # u'WARN: wbar\n'
-            # u'DEBUG: dbar\n'
-            # u'ERROR: ebar\n'
-            #in ret1['outlog']
+        #     u'INFO: ibar\n'
+        #     u'WARN: wbar\n'
+        #     u'DEBUG: dbar\n'
+        #     u'ERROR: ebar\n'
+        #    in ret1['outlog']
         #)
         # These lines are throwing pylint errors - disabling for now since we are skipping
         # these tests

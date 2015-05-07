@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-CLOUD" "1" "March 09, 2015" "2015.2.0rc1-133-g24fa806" "Salt"
+.TH "SALT-CLOUD" "1" "April 21, 2015" "2015.2.0rc2-143-g32ef5ca" "Salt"
 .SH NAME
 salt-cloud \- Salt Cloud Command
 .
@@ -58,22 +58,57 @@ clouds via a cleanly controlled profile and mapping system.
 .SH OPTIONS
 .INDENT 0.0
 .TP
+.B \-\-version
+Print the version of Salt that is running.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-h, \-\-help
-Print a usage message briefly summarizing these command\-line options.
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.SS Execution Options
+.INDENT 0.0
+.TP
+.B \-L LOCATION, \-\-location=LOCATION
+Specify which region to connect to.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a ACTION, \-\-action=ACTION
+Perform an action that may be specific to this cloud provider. This
+argument requires one or more instance names to be specified.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f <FUNC\-NAME> <PROVIDER>, \-\-function=<FUNC\-NAME> <PROVIDER>
+Perform an function that may be specific to this cloud provider, that does
+not apply to an instance. This argument requires a provider to be specified
+(i.e.: nova).
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-p PROFILE, \-\-profile=PROFILE
-Select a single profile to build the named cloud VMs from. The profile
-must be defined in the specified profiles file.
+Select a single profile to build the named cloud VMs from. The profile must
+be defined in the specified profiles file.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-m MAP, \-\-map=MAP
 Specify a map file to use. If used without any other options, this option
-will ensure that all of the mapped VMs are created. If VM names are
-also passed as arguments, they will be used to filter the map file.
-If the named VM already exists then it will be skipped.
+will ensure that all of the mapped VMs are created. If the named VM already
+exists then it will be skipped.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -112,6 +147,38 @@ in conjunction with \-m to display only information about the specified map.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-u, \-\-update\-bootstrap
+Update salt\-bootstrap to the latest develop version on GitHub.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-y, \-\-assume\-yes
+Default yes in answer to all confirmation questions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-k, \-\-keep\-tmp
+Do not remove files from /tmp/ after deploy.sh finishes.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-show\-deploy\-args
+Include the options used to deploy the minion in the data returned.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-script\-args=SCRIPT_ARGS
+Script arguments to be fed to the bootstrap script when deploying the VM.
+.UNINDENT
+.SS Query Options
+.INDENT 0.0
+.TP
+.B \-Q, \-\-query
+Execute a query and return some information about the nodes running on
+configured cloud providers
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-F, \-\-full\-query
 Execute a query and print out all available information about all cloud VMs.
 Can be used in conjunction with \-m to display only information about the
@@ -139,58 +206,98 @@ Display a list of configured profiles. Pass in a cloud provider to view
 the provider\(aqs associated profiles, such as \fBdigital_ocean\fP, or pass in
 \fBall\fP to list all the configured profiles.
 .UNINDENT
+.SS Cloud Providers Listings
 .INDENT 0.0
 .TP
-.B \-\-list\-images
-Display a list of images available in configured cloud providers.
-Pass the cloud provider that available images are desired on, aka
-"linode", or pass "all" to list images for all configured cloud providers.
+.B \-\-list\-locations=LIST_LOCATIONS
+Display a list of locations available in configured cloud providers. Pass
+the cloud provider that available locations are desired on, aka "linode",
+or pass "all" to list locations for all configured cloud providers
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-\-list\-sizes
+.B \-\-list\-images=LIST_IMAGES
+Display a list of images available in configured cloud providers. Pass the
+cloud provider that available images are desired on, aka "linode", or pass
+"all" to list images for all configured cloud providers
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-list\-sizes=LIST_SIZES
 Display a list of sizes available in configured cloud providers. Pass the
-cloud provider that available sizes are desired on, aka "aws", or pass
+cloud provider that available sizes are desired on, aka "AWS", or pass
 "all" to list sizes for all configured cloud providers
 .UNINDENT
+.SS Cloud Credentials
 .INDENT 0.0
 .TP
-.B \-C CLOUD_CONFIG, \-\-cloud\-config=CLOUD_CONFIG
-Specify an alternative location for the salt cloud configuration file.
-Default location is /etc/salt/cloud.
+.B \-\-set\-password=<USERNAME> <PROVIDER>
+Configure password for a cloud provider and save it to the keyring.
+PROVIDER can be specified with or without a driver, for example:
+"\-\-set\-password bob rackspace" or more specific "\-\-set\-password bob
+rackspace:openstack" DEPRECATED!
+.UNINDENT
+.SS Output Options
+.INDENT 0.0
+.TP
+.B \-\-out
+Pass in an alternative outputter to display the return of data. This
+outputter can be any of the available outputters:
+.INDENT 7.0
+.INDENT 3.5
+\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+.UNINDENT
+.UNINDENT
+.sp
+Some outputters are formatted only for data returned from specific
+functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
+data.
+.sp
+If an outputter is used that does not support the data passed into it, then
+Salt will fall back on the \fBpprint\fP outputter and display the return data
+using the Python \fBpprint\fP standard library module.
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a JSON string for each minion.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-M MASTER_CONFIG, \-\-master\-config=MASTER_CONFIG
-Specify an alternative location for the salt master configuration file.
-The salt master configuration file is used to determine how to handle the
-minion RSA keys. Default location is /etc/salt/master.
+.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
+Print the output indented by the provided value in spaces. Negative values
+disable indentation. Only applicable in outputters that support
+indentation.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B \-V VM_CONFIG, \-\-profiles=VM_CONFIG, \-\-vm_config=VM_CONFIG
-Specify an alternative location for the salt cloud profiles file.
-Default location is /etc/salt/cloud.profiles.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-raw\-out
-Print the output from the salt command in raw python
-form, this is suitable for re\-reading the output into
-an executing python script with eval.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-out=OUTPUT, \-\-output=OUTPUT
-Print the output from the salt\-cloud command using the specified outputter. The
-builtins are \(aqraw\(aq, \(aqcompact\(aq, \(aqno_return\(aq, \(aqgrains\(aq, \(aqoverstatestage\(aq, \(aqpprint\(aq,
-\(aqjson\(aq, \(aqnested\(aq, \(aqyaml\(aq, \(aqhighstate\(aq, \(aqquiet\(aq, \(aqkey\(aq, \(aqtxt\(aq, \(aqnewline_values_only\(aq,
-\(aqvirt_query\(aq.
+.B \-\-out\-file=OUTPUT_FILE, \-\-output\-file=OUTPUT_FILE
+Write the output to the specified file.
 .UNINDENT
 .INDENT 0.0
 .TP
 .B \-\-no\-color
-Disable all colored output.
+Disable all colored output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-force\-color
+Force colored output
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+When using colored output the color codes are as follows:
+.sp
+\fBgreen\fP denotes success, \fBred\fP denotes failure, \fBblue\fP denotes
+changes and success and \fByellow\fP denotes a expected future change in configuration.
+.UNINDENT
+.UNINDENT
 .UNINDENT
 .SH EXAMPLES
 .sp

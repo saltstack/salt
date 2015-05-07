@@ -411,8 +411,15 @@ def status(name, sig=None):
         return bool(__salt__['status.pid'](sig))
     cmd = ['service', name, 'status']
     if _service_is_upstart(name):
-        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False))
+        # decide result base on cmd output, thus ignore retcode,
+        # which makes cmd output not at error lvl even when cmd fail.
+        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False,
+                                                      ignore_retcode=True)
+    # decide result base on retcode, thus ignore output (set quite)
+    # because there is no way to avoid logging at error lvl when
+    # service is not running - retcode != 0 (which is totally relevant).
+    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
+                                            quite=True))
 
 
 def _get_service_exec():

@@ -49,7 +49,7 @@ Walkthrough <tutorial-gitfs>`.
 # Import python libs
 from __future__ import absolute_import
 import copy
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
 import glob
@@ -97,6 +97,7 @@ _INVALID_REPO = (
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 import salt.fileserver
 from salt.exceptions import FileserverConfigError
 from salt.utils.event import tagify
@@ -508,12 +509,13 @@ def _get_tree_dulwich(repo, tgt_env):
     return None
 
 
-def _clean_stale(repo_obj, local_refs=None):
+def _clean_stale(repo, local_refs=None):
     '''
     Clean stale local refs so they don't appear as fileserver environments
     '''
     provider = _get_provider()
     cleaned = []
+    repo_obj = repo['repo']
     if provider == 'gitpython':
         for ref in repo_obj.remotes[0].stale_refs:
             if ref.name.startswith('refs/tags/'):
@@ -524,6 +526,15 @@ def _clean_stale(repo_obj, local_refs=None):
                 ref.delete(repo_obj, ref)
             cleaned.append(ref)
     elif provider == 'pygit2':
+        if isinstance(repo.get('credentials'),
+                      (pygit2.Keypair, pygit2.UserPass)):
+            log.debug(
+                'pygit2 does not support detecting stale refs for '
+                'authenticated remotes, saltenvs will not reflect '
+                'branches/tags removed from remote repository {0}'
+                .format(repo['url'])
+            )
+            return []
         if local_refs is None:
             local_refs = repo_obj.listall_references()
         remote_refs = []
@@ -577,7 +588,7 @@ def _verify_auth(repo):
         '''
         Helper function to log errors about missing auth parameters
         '''
-        log.error(
+        log.critical(
             'Incomplete authentication information for remote {0}. Missing '
             'parameters: {1}'.format(remote_url, ', '.join(missing))
         )
@@ -600,9 +611,9 @@ def _verify_auth(repo):
         user = address.split('@')[0]
         if user == address:
             # No '@' sign == no user. This is a problem.
-            log.error(
-                'Password / keypair specified for remote {0}, but remote '
-                'URL is missing a username'.format(repo['url'])
+            log.critical(
+                'Keypair specified for remote {0}, but remote URL is missing '
+                'a username'.format(repo['url'])
             )
             _failhard()
 
@@ -625,7 +636,7 @@ def _verify_auth(repo):
             return True
         if password_ok:
             if transport == 'http' and not repo['insecure_auth']:
-                log.error(
+                log.critical(
                     'Invalid configuration for gitfs remote {0}. '
                     'Authentication is disabled by default on http remotes. '
                     'Either set gitfs_insecure_auth to True in the master '
@@ -641,7 +652,7 @@ def _verify_auth(repo):
             missing_auth = [x for x in required_params if not bool(repo[x])]
             _incomplete_auth(repo['url'], missing_auth)
     else:
-        log.error(
+        log.critical(
             'Invalid configuration for remote {0}. Unsupported transport '
             '{1!r}.'.format(repo['url'], transport)
         )
@@ -705,7 +716,7 @@ def init():
                  six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
-                log.error(
+                log.critical(
                     'Invalid per-remote configuration for gitfs remote {0}. '
                     'If no per-remote parameters are being specified, there '
                     'may be a trailing colon after the URL, which should be '
@@ -757,7 +768,7 @@ def init():
             continue
 
         try:
-            repo_conf['mountpoint'] = salt.utils.strip_proto(
+            repo_conf['mountpoint'] = salt.utils.url.strip_proto(
                 repo_conf['mountpoint']
             )
         except TypeError:
@@ -816,7 +827,7 @@ def init():
                    '{0}'.format(exc))
             if provider == 'gitpython':
                 msg += ' Perhaps git is not available.'
-            log.error(msg, exc_info_on_loglevel=logging.DEBUG)
+            log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
             _failhard()
 
     if new_remote:
@@ -1141,7 +1152,7 @@ def update():
                     fetch_results = origin.fetch()
                 except AssertionError:
                     fetch_results = origin.fetch()
-                cleaned = _clean_stale(repo['repo'])
+                cleaned = _clean_stale(repo)
                 if fetch_results or cleaned:
                     data['changed'] = True
             elif provider == 'pygit2':
@@ -1152,7 +1163,21 @@ def update():
                 except KeyError:
                     # No credentials configured for this repo
                     pass
-                fetch = origin.fetch()
+                try:
+                    fetch = origin.fetch()
+                except pygit2.errors.GitError as exc:
+                    # Using exc.__str__() here to avoid deprecation warning
+                    # when referencing exc.message
+                    if 'unsupported url protocol' in exc.__str__().lower() \
+                            and isinstance(repo.get('credentials'),
+                                           pygit2.Keypair):
+                        log.error(
+                            'Unable to fetch SSH-based gitfs remote {0}. '
+                            'libgit2 must be compiled with libssh2 to support '
+                            'SSH authentication.'.format(repo['url'])
+                        )
+                        continue
+                    raise
                 try:
                     # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
                     received_objects = fetch['received_objects']
@@ -1160,13 +1185,19 @@ def update():
                     # pygit2.Remote.fetch() returns a class instance in
                     # pygit2 >= 0.21.0
                     received_objects = fetch.received_objects
-                log.debug(
-                    'gitfs received {0} objects for remote {1}'
-                    .format(received_objects, repo['url'])
-                )
+                if received_objects != 0:
+                    log.debug(
+                        'gitfs received {0} objects for remote {1}'
+                        .format(received_objects, repo['url'])
+                    )
+                else:
+                    log.debug(
+                        'gitfs remote {0} is up-to-date'
+                        .format(repo['url'])
+                    )
                 # Clean up any stale refs
                 refs_post = repo['repo'].listall_references()
-                cleaned = _clean_stale(repo['repo'], refs_post)
+                cleaned = _clean_stale(repo, refs_post)
                 if received_objects or refs_pre != refs_post or cleaned:
                     data['changed'] = True
             elif provider == 'dulwich':
@@ -1180,14 +1211,14 @@ def update():
                 try:
                     refs_post = client.fetch(path, repo['repo'])
                 except dulwich.errors.NotGitRepository:
-                    log.critical(
+                    log.error(
                         'Dulwich does not recognize remote {0} as a valid '
                         'remote URL. Perhaps it is missing \'.git\' at the '
                         'end.'.format(repo['url'])
                     )
                     continue
                 except KeyError:
-                    log.critical(
+                    log.error(
                         'Local repository cachedir {0!r} (corresponding '
                         'remote: {1}) has been corrupted. Salt will now '
                         'attempt to remove the local checkout to allow it to '
@@ -1198,7 +1229,7 @@ def update():
                     try:
                         salt.utils.rm_rf(repo['cachedir'])
                     except OSError as exc:
-                        log.critical(
+                        log.error(
                             'Unable to remove {0!r}: {1}'
                             .format(repo['cachedir'], exc)
                         )
@@ -1626,7 +1657,7 @@ def _file_lists(load, form):
         try:
             os.makedirs(list_cachedir)
         except os.error:
-            log.critical('Unable to make cachedir {0}'.format(list_cachedir))
+            log.error('Unable to make cachedir {0}'.format(list_cachedir))
             return []
     list_cache = os.path.join(
         list_cachedir,
@@ -1720,7 +1751,9 @@ def _file_list_gitpython(repo, tgt_env):
             tree = tree / repo['root']
         except KeyError:
             return files, symlinks
-    relpath = lambda path: os.path.relpath(path, repo['root'])
+        relpath = lambda path: os.path.relpath(path, repo['root'])
+    else:
+        relpath = lambda path: path
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for file_blob in tree.traverse():
         if not isinstance(file_blob, git.Blob):
@@ -1776,10 +1809,12 @@ def _file_list_pygit2(repo, tgt_env):
             return files, symlinks
         if not isinstance(tree, pygit2.Tree):
             return files, symlinks
+        relpath = lambda path: os.path.relpath(path, repo['root'])
+    else:
+        relpath = lambda path: path
     blobs = {}
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    relpath = lambda path: os.path.relpath(path, repo['root'])
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
@@ -1822,7 +1857,10 @@ def _file_list_dulwich(repo, tgt_env):
     blobs = {}
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    relpath = lambda path: os.path.relpath(path, repo['root'])
+    if repo['root']:
+        relpath = lambda path: os.path.relpath(path, repo['root'])
+    else:
+        relpath = lambda path: path
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for repo_path in blobs.get('files', []):
         files.add(add_mountpoint(relpath(repo_path)))
@@ -1893,7 +1931,9 @@ def _dir_list_gitpython(repo, tgt_env):
             tree = tree / repo['root']
         except KeyError:
             return ret
-    relpath = lambda path: os.path.relpath(path, repo['root'])
+        relpath = lambda path: os.path.relpath(path, repo['root'])
+    else:
+        relpath = lambda path: path
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for blob in tree.traverse():
         if isinstance(blob, git.Tree):
@@ -1936,10 +1976,12 @@ def _dir_list_pygit2(repo, tgt_env):
             return ret
         if not isinstance(tree, pygit2.Tree):
             return ret
+        relpath = lambda path: os.path.relpath(path, repo['root'])
+    else:
+        relpath = lambda path: path
     blobs = []
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    relpath = lambda path: os.path.relpath(path, repo['root'])
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for blob in blobs:
         ret.add(add_mountpoint(relpath(blob)))
@@ -1977,7 +2019,10 @@ def _dir_list_dulwich(repo, tgt_env):
     blobs = []
     if len(tree):
         _traverse(tree, repo['repo'], blobs, repo['root'])
-    relpath = lambda path: os.path.relpath(path, repo['root'])
+    if repo['root']:
+        relpath = lambda path: os.path.relpath(path, repo['root'])
+    else:
+        relpath = lambda path: path
     add_mountpoint = lambda path: os.path.join(repo['mountpoint'], path)
     for blob in blobs:
         ret.add(add_mountpoint(relpath(blob)))

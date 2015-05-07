@@ -21,6 +21,7 @@ import jinja2.ext
 # Import salt libs
 import salt.utils
 import salt.utils.yamlencoding
+import salt.utils.locales
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
@@ -299,7 +300,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.sdecode(value)
+        decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)

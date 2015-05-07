@@ -146,7 +146,6 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
     '''
     timenow = datetime.datetime.utcnow()
-    timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Retrieve access credentials from meta-data, or use provided
     access_key_id, secret_access_key, token = creds(prov_dict)
@@ -155,22 +154,16 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
-    querystring = urlencode(list(zip(keys, values)))
+    querystring = urlencode(list(zip(keys, values))).replace('+', '%20')
 
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
-    payload_hash = hashlib.sha256('').hexdigest()
 
     canonical_headers = 'host:{0}\nx-amz-date:{1}\n'.format(
         endpoint,
         amzdate,
     )
     signed_headers = 'host;x-amz-date'
-
-    request = '\n'.join((
-        method, endpoint, querystring, canonical_headers,
-        signed_headers, payload_hash
-    ))
 
     algorithm = 'AWS4-HMAC-SHA256'
 

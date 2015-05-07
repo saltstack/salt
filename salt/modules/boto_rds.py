@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon RDS
 
-.. versionadded:: 2014.7.1
+.. versionadded:: Beryllium
 
 :configuration: This module accepts explicit rds credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.

@@ -203,10 +203,15 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
     if results:
         for result in results:
             values = {}
-            for key, value in result.iteritems():
+            for key, value in six.iteritems(result):
                 # Salt won't return dictionaries with odd types like uuid.UUID
                 if not isinstance(value, six.text_type):
-                    value = str(value)
+                    # Must support Cassandra collection types.
+                    # Namely, Cassandras set, list, and map collections.
+                    if not isinstance(value, set):
+                        if not isinstance(value, list):
+                            if not isinstance(value, dict):
+                                value = str(value)
                 values[key] = value
             ret.append(values)
 

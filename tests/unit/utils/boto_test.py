@@ -11,7 +11,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.exceptions import SaltInvocationError
 import salt.utils.boto
 
 # Import 3rd-party libs
@@ -166,7 +166,7 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     def test_get_conn_error_raises_command_execution_error(self):
         with patch('boto.{0}.connect_to_region'.format(service),
                    side_effect=BotoServerError(400, 'Mocked error', body=error_body)):
-            with self.assertRaises(salt.utils.boto.BotoExecutionError):
+            with self.assertRaises(BotoServerError):
                 salt.utils.boto.get_connection(service)
 
     @mock_ec2
@@ -180,24 +180,31 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto_version))
-class BotoUtilsBotoExecutionErrorTestCase(BotoUtilsTestCaseBase):
-    def test_exception_type_and_message(self):
+class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
+    def test_error_message(self):
         e = BotoServerError('400', 'Mocked error', body=error_body)
-        r = salt.utils.boto.BotoExecutionError(e)
-        self.assertTrue(isinstance(r, CommandExecutionError))
-        self.assertEqual(r.message, '400 Mocked error: Error message')
+        r = salt.utils.boto.get_error(e)
+        expected = {'aws': {'code': 'Error code text',
+                            'message': 'Error message',
+                            'reason': 'Mocked error',
+                            'status': '400'},
+                    'message': 'Mocked error: Error message'}
+        self.assertEqual(r, expected)
 
     def test_exception_message_with_no_body(self):
         e = BotoServerError('400', 'Mocked error')
-        r = salt.utils.boto.BotoExecutionError(e)
-        self.assertTrue(isinstance(r, CommandExecutionError))
-        self.assertEqual(r.message, '400 Mocked error')
+        r = salt.utils.boto.get_error(e)
+        expected = {'aws': {'reason': 'Mocked error',
+                            'status': '400'},
+                    'message': 'Mocked error'}
+        self.assertEqual(r, expected)
 
     def test_exception_message_with_no_error_in_body(self):
         e = BotoServerError('400', 'Mocked error', body=no_error_body)
-        r = salt.utils.boto.BotoExecutionError(e)
-        self.assertTrue(isinstance(r, CommandExecutionError))
-        self.assertEqual(r.message, '400 Mocked error')
+        r = salt.utils.boto.get_error(e)
+        expected = {'aws': {'reason': 'Mocked error', 'status': '400'},
+                            'message': 'Mocked error'}
+        self.assertEqual(r, expected)
 
 if __name__ == '__main__':
     from integration import run_tests

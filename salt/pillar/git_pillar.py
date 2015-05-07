@@ -2,6 +2,8 @@
 '''
 Clone a remote git repository and use the filesystem as a Pillar source
 
+Currently GitPython is the only supported provider for git Pillars
+
 This external Pillar source can be configured in the master config file like
 so:
 
@@ -311,8 +313,6 @@ def ext_pillar(minion_id,
     # function
     if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
         return {}
-
-    gitpil.update()
 
     opts = deepcopy(__opts__)
 

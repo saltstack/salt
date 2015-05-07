@@ -74,7 +74,7 @@ the following:
 
     group: group name
     md5:   MD5 digest of file contents
-    mode:  file permissions (as integer)
+    mode:  file permissions (as as integer)
     mtime: last modification time (as time_t)
     name:  file basename
     path:  file absolute path
@@ -489,7 +489,7 @@ class PrintOption(Option):
                     _FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?')
                 )
             elif arg == 'mode':
-                result.append(fstat[stat.ST_MODE])
+                result.append(int(oct(fstat[stat.ST_MODE])[-3:]))
             elif arg == 'mtime':
                 result.append(fstat[stat.ST_MTIME])
             elif arg == 'user':

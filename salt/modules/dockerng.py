@@ -210,7 +210,7 @@ __docformat__ = 'restructuredtext en'
 # Import Python libs
 import bz2
 import copy
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import fnmatch
 import functools
 import gzip

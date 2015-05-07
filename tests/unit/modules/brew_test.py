@@ -19,6 +19,7 @@ from salt.modules import brew
 # Global Variables
 brew.__context__ = {}
 brew.__salt__ = {}
+brew.__opts__ = {'user': MagicMock(return_value='bar')}
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
@@ -39,10 +40,10 @@ class BrewTestCase(TestCase):
         '''
         mock_taps = MagicMock(return_value={'stdout': TAPS_STRING})
         mock_user = MagicMock(return_value='foo')
-        moca_cmd = MagicMock(return_value='')
+        mock_cmd = MagicMock(return_value='')
         with patch.dict(brew.__salt__, {'file.get_user': mock_user,
                                         'cmd.run_all': mock_taps,
-                                        'cmd.run': moca_cmd}):
+                                        'cmd.run': mock_cmd}):
             self.assertEqual(brew._list_taps(), TAPS_LIST)
 
     # '_tap' function tests: 3
@@ -64,8 +65,7 @@ class BrewTestCase(TestCase):
         mock_cmd = MagicMock(return_value='')
         with patch.dict(brew.__salt__, {'cmd.run_all': mock_failure,
                                         'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd,
-                                        'cmd.retcode': mock_failure}):
+                                        'cmd.run': mock_cmd}):
             self.assertFalse(brew._tap('homebrew/test'))
 
     @patch('salt.modules.brew._list_taps', MagicMock(return_value=TAPS_LIST))
@@ -73,7 +73,12 @@ class BrewTestCase(TestCase):
         '''
         Tests adding unofficial GitHub repos to the list of brew taps
         '''
-        with patch.dict(brew.__salt__, {'cmd.retcode': MagicMock(return_value=0)}):
+        mock_failure = MagicMock(return_value={'retcode': 0})
+        mock_user = MagicMock(return_value='foo')
+        mock_cmd = MagicMock(return_value='')
+        with patch.dict(brew.__salt__, {'cmd.run_all': mock_failure,
+                                        'file.get_user': mock_user,
+                                        'cmd.run': mock_cmd}):
             self.assertTrue(brew._tap('homebrew/test'))
 
     # '_homebrew_bin' function tests: 1

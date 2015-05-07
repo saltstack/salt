@@ -37,6 +37,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.atomicfile
 import salt.utils.thin
+import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
 from salt.utils import is_windows
@@ -942,8 +943,8 @@ ARGS = {9}\n'''.format(self.minion_config,
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
 
-        log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
-        log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
+        log.trace('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
+        log.trace('STDERR {1}\n{0}'.format(stderr, self.target['host']))
         log.debug('RETCODE {1}: {0}'.format(retcode, self.target['host']))
 
         error = self.categorize_shim_errors(stdout, stderr, retcode)
@@ -1154,7 +1155,7 @@ def mod_data(fsclient):
             for fn_ in sorted(files):
                 if fn_.startswith(pref):
                     if fn_.endswith(('.py', '.so', '.pyx')):
-                        full = 'salt://{0}'.format(fn_)
+                        full = salt.utils.url.create(fn_)
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue

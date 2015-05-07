@@ -5,6 +5,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Libs
 from salt.utils.schedule import Schedule
@@ -14,7 +15,10 @@ from salttesting import skipIf, TestCase
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
 
+import integration
+
 ensure_in_syspath('../../')
+SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -33,7 +37,8 @@ class ScheduleTestCase(TestCase):
         '''
         Tests ensuring the job exists and deleting it
         '''
-        self.schedule.opts = {'schedule': {'foo': 'bar'}, 'pillar': ''}
+        self.schedule.opts = {'schedule': {'foo': 'bar'}, 'pillar': '',
+                              'sock_dir': SOCK_DIR}
         self.schedule.delete_job('foo')
         self.assertNotIn('foo', self.schedule.opts)
 
@@ -41,7 +46,8 @@ class ScheduleTestCase(TestCase):
         '''
         Tests deleting job in pillar
         '''
-        self.schedule.opts = {'pillar': {'schedule': {'foo': 'bar'}}, 'schedule': ''}
+        self.schedule.opts = {'pillar': {'schedule': {'foo': 'bar'}}, 'schedule': '',
+                              'sock_dir': SOCK_DIR}
         self.schedule.delete_job('foo')
         self.assertNotIn('foo', self.schedule.opts)
 
@@ -49,7 +55,8 @@ class ScheduleTestCase(TestCase):
         '''
         Tests removing job from intervals
         '''
-        self.schedule.opts = {'pillar': '', 'schedule': ''}
+        self.schedule.opts = {'pillar': '', 'schedule': '',
+                              'sock_dir': SOCK_DIR}
         self.schedule.intervals = {'foo': 'bar'}
         self.schedule.delete_job('foo')
         self.assertNotIn('foo', self.schedule.intervals)
@@ -76,8 +83,10 @@ class ScheduleTestCase(TestCase):
         '''
         data = {'foo': 'bar'}
         ret = {'schedule': {'foo': 'bar', 'hello': 'world'}}
-        self.schedule.opts = {'schedule': {'hello': 'world'}}
+        self.schedule.opts = {'schedule': {'hello': 'world'},
+                              'sock_dir': SOCK_DIR}
         Schedule.add_job(self.schedule, data)
+        del self.schedule.opts['sock_dir']
         self.assertEqual(self.schedule.opts, ret)
 
     # enable_job tests
@@ -86,16 +95,20 @@ class ScheduleTestCase(TestCase):
         '''
         Tests enabling a job
         '''
-        self.schedule.opts = {'schedule': {'name': {'enabled': 'foo'}}}
+        self.schedule.opts = {'schedule': {'name': {'enabled': 'foo'}},
+                              'sock_dir': SOCK_DIR}
         Schedule.enable_job(self.schedule, 'name')
+        del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['schedule']['name']['enabled'])
 
     def test_enable_job_pillar(self):
         '''
         Tests enabling a job in pillar
         '''
-        self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}}}
+        self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}},
+                              'sock_dir': SOCK_DIR}
         Schedule.enable_job(self.schedule, 'name', where='pillar')
+        del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['pillar']['schedule']['name']['enabled'])
 
     # disable_job tests
@@ -104,16 +117,20 @@ class ScheduleTestCase(TestCase):
         '''
         Tests disabling a job
         '''
-        self.schedule.opts = {'schedule': {'name': {'enabled': 'foo'}}}
+        self.schedule.opts = {'schedule': {'name': {'enabled': 'foo'}},
+                              'sock_dir': SOCK_DIR}
         Schedule.disable_job(self.schedule, 'name')
+        del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['schedule']['name']['enabled'])
 
     def test_disable_job_pillar(self):
         '''
         Tests disabling a job in pillar
         '''
-        self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}}}
+        self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}},
+                              'sock_dir': SOCK_DIR}
         Schedule.disable_job(self.schedule, 'name', where='pillar')
+        del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['pillar']['schedule']['name']['enabled'])
 
     # modify_job tests
@@ -134,8 +151,10 @@ class ScheduleTestCase(TestCase):
         '''
         schedule = {'foo': 'bar'}
         ret = {'pillar': {'schedule': {'name': {'foo': 'bar'}}}}
-        self.schedule.opts = {'pillar': {'schedule': {'name': {'foo': 'bar'}}}}
+        self.schedule.opts = {'pillar': {'schedule': {'name': {'foo': 'bar'}}},
+                              'sock_dir': SOCK_DIR}
         Schedule.modify_job(self.schedule, 'name', schedule, where='pillar')
+        del self.schedule.opts['sock_dir']
         self.assertEqual(self.schedule.opts, ret)
 
     # enable_schedule tests
@@ -144,8 +163,10 @@ class ScheduleTestCase(TestCase):
         '''
         Tests enabling the scheduler
         '''
-        self.schedule.opts = {'schedule': {'enabled': 'foo'}}
+        self.schedule.opts = {'schedule': {'enabled': 'foo'},
+                              'sock_dir': SOCK_DIR}
         Schedule.enable_schedule(self.schedule)
+        del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['schedule']['enabled'])
 
     # disable_schedule tests
@@ -154,8 +175,10 @@ class ScheduleTestCase(TestCase):
         '''
         Tests disabling the scheduler
         '''
-        self.schedule.opts = {'schedule': {'enabled': 'foo'}}
+        self.schedule.opts = {'schedule': {'enabled': 'foo'},
+                              'sock_dir': SOCK_DIR}
         Schedule.disable_schedule(self.schedule)
+        del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['schedule']['enabled'])
 
     # reload tests

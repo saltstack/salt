@@ -122,6 +122,21 @@ Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
     master_shuffle: True
 
+.. conf_minion:: retry_dns
+
+``retry_dns``
+---------------
+
+Default: ``30``
+
+Set the number of seconds to wait before attempting to resolve
+the master hostname if name resolution fails. Defaults to 30 seconds.
+Set to zero if the minion should shutdown and not retry.
+
+.. code-block:: yaml
+    
+    retry_dns: 30
+
 .. conf_minion:: master_port
 
 ``master_port``

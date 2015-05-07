@@ -13,6 +13,7 @@ import msgpack
 import socket
 import sys
 import os
+import weakref
 import urlparse  # TODO: remove
 
 
@@ -42,6 +43,10 @@ import tornado.tcpserver
 import tornado.gen
 import tornado.concurrent
 import tornado.tcpclient
+import tornado.netutil
+
+# Import third party libs
+from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 
@@ -99,13 +104,54 @@ def socket_frame_recv(s, recv_size=4096):
     return buf
 
 
-# TODO: make singleton
 # TODO: move serial down into message library
 class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     '''
     Encapsulate sending routines to tcp.
+
+    Note: this class returns a singleton
     '''
+    # This class is only a singleton per minion/master pair
+    # mapping of io_loop -> {key -> channel}
+    instance_map = weakref.WeakKeyDictionary()
+
+    def __new__(cls, opts, **kwargs):
+        '''
+        Only create one instance of channel per __key()
+        '''
+        # do we have any mapping for this io_loop
+        io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        if io_loop not in cls.instance_map:
+            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
+        loop_instance_map = cls.instance_map[io_loop]
+
+        key = cls.__key(opts, **kwargs)
+        if key not in loop_instance_map:
+            log.debug('Initializing new AsyncTCPReqChannel for {0}'.format(key))
+            # we need to make a local variable for this, as we are going to store
+            # it in a WeakValueDictionary-- which will remove the item if no one
+            # references it-- this forces a reference while we return to the caller
+            new_obj = object.__new__(cls)
+            new_obj.__singleton_init__(opts, **kwargs)
+            loop_instance_map[key] = new_obj
+        else:
+            log.debug('Re-using AsyncTCPReqChannel for {0}'.format(key))
+        return loop_instance_map[key]
+
+    @classmethod
+    def __key(cls, opts, **kwargs):
+        return (opts['pki_dir'],     # where the keys are stored
+                opts['id'],          # minion ID
+                opts['master_uri'],  # master ID
+                kwargs.get('crypt', 'aes'),  # TODO: use the same channel for crypt
+                )
+
+    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts, **kwargs):
         self.opts = dict(opts)
 
         self.serial = salt.payload.Serial(self.opts)
@@ -137,10 +183,10 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        self._package_load(self.auth.crypticle.dumps(load))
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
+        cipher = PKCS1_OAEP.new(key)
+        aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 
@@ -385,6 +431,10 @@ class SaltMessageClient(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
+        # Configure the resolver to use a non-blocking one
+        # Not Threaded since we need to work on python2
+        tornado.netutil.Resolver.configure('tornado.netutil.ExecutorResolver')
+
         self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop)
 
         self._mid = 1
@@ -404,7 +454,7 @@ class SaltMessageClient(object):
     # TODO: timeout inflight sessions
     def destroy(self):
         self._closing = True
-        if hasattr(self, '_stream'):
+        if hasattr(self, '_stream') and not self._stream.closed():
             self._stream.close()
 
     def __del__(self):
@@ -437,7 +487,6 @@ class SaltMessageClient(object):
         '''
         while True:
             if self._closing:
-                self.destroy()
                 break
             try:
                 self._stream = yield self._tcp_client.connect(self.host, self.port)
@@ -469,7 +518,7 @@ class SaltMessageClient(object):
                     else:
                         log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
             except tornado.iostream.StreamClosedError as e:
-                log.debug('tcp stream to {0}:{1} closed, unable to send'.format(self.host, self.port))
+                log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
                 for future in self.send_future_map.itervalues():
                     future.set_exception(e)
                 self.send_future_map = {}
