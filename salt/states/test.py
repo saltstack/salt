@@ -337,7 +337,7 @@ def _if_str_then_list(listing):
     return listing
 
 def check_pillar(name, present=[], boolean=[], integer=[],
-        string=[], listing=[], dictionary=[]):
+        string=[], listing=[], dictionary=[], verbose=False):
     '''
     Checks the presence and, optionally, the type of
     given keys in Pillar.
@@ -368,6 +368,7 @@ def check_pillar(name, present=[], boolean=[], integer=[],
         'comment': ''
     }
     checks = {}
+    fine = {}
     failed = {}
     # for those we don't check the type:
     present = _if_str_then_list(present)
@@ -399,6 +400,8 @@ def check_pillar(name, present=[], boolean=[], integer=[],
             elif not result:
                 failed[key] = key_type
                 ret['result'] = False
+            elif verbose:
+                fine[key] = key_type
 
     for key, key_type in failed.items():
         comment = 'Pillar key "{0}" '.format(key)
@@ -406,6 +409,12 @@ def check_pillar(name, present=[], boolean=[], integer=[],
             comment += 'is missing.\n'
         else:
             comment += 'is not {0}.\n'.format(key_type)
+        ret['comment'] += comment
+
+    if verbose and fine:
+        comment = 'Those keys passed the check:\n'
+        for key, key_type in fine.items():
+            comment += '- {0} ({1})\n'.format(key, key_type)
         ret['comment'] += comment
 
     return ret
