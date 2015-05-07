@@ -302,7 +302,6 @@ def append(key, val, convert=False, delimiter=':'):
     while delimiter in key:
         key, rest = key.rsplit(delimiter, 1)
         _grain = get(key, _infinitedict(), delimiter)
-        print('key:', key, '\nrest:', rest, '\n_grain:', _grain, '\ngrains:', grains)
         if isinstance(_grain, dict):
             _grain.update({rest: grains})
         grains = _grain
