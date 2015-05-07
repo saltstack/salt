@@ -17,11 +17,9 @@ import subprocess
 # Import salt libs
 from salt import utils
 
+__virtualname__ = 'trafficserver'
 
 log = logging.getLogger(__name__)
-
-
-__virtualname__ = 'trafficserver'
 
 
 def __virtual__():
@@ -38,10 +36,10 @@ def _subprocess(cmd):
 
     try:
         return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
-    except Exception as e:
-        log.error(e)
+    except OSError as err:
+        log.error(err)
         return False
-        
+
 
 def alarms():
     '''
@@ -53,8 +51,7 @@ def alarms():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '--alarms')
-
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
@@ -68,8 +65,7 @@ def bounce_local():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '-b')
-    
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
@@ -83,8 +79,7 @@ def clear_alarms(alarm):
     '''
 
     cmd = '{0} {1} {2}'.format(_TRAFFICLINE, '--clear_alarms', alarm)
-
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
@@ -98,8 +93,7 @@ def clear_local():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '-c')
-    
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
@@ -113,8 +107,7 @@ def offline():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '--offline')
-
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
@@ -128,12 +121,11 @@ def restart_local():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '-L')
-    
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
-def reload():
+def refresh():
     '''
     Reload the Traffic Server configuration
 
@@ -143,15 +135,14 @@ def reload():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '-x')
-    
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
 def read_var(*args):
     '''
     Read variable definitions from the traffic_line command
-    
+
     This allows reading arbitrary key=value pairs from within trafficserver
 
     .. code-block:: bash
@@ -163,13 +154,15 @@ def read_var(*args):
 
     try:
         for arg in args:
-            log.debug('querying: {0}'.format(arg))
+            log.debug('querying: arg=%s', arg)
             cmd = '{0} {1} {2}'.format(_TRAFFICLINE, '-r', arg)
             ret[arg] = _subprocess(cmd)
     except KeyError:
         pass
 
     return ret
+
+
 def start():
     '''
     Start Apache Traffic Server proxy
@@ -181,8 +174,7 @@ def start():
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '-U')
     status_cmd = '{0} {1}'.format(_TRAFFICLINE, '--status')
-
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     _subprocess(cmd)
     return _subprocess(status_cmd)
 
@@ -197,8 +189,7 @@ def status():
     '''
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '--status')
-
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     return _subprocess(cmd)
 
 
@@ -213,8 +204,7 @@ def stop():
 
     cmd = '{0} {1}'.format(_TRAFFICLINE, '-S')
     status_cmd = '{0} {1}'.format(_TRAFFICLINE, '--status')
-
-    log.debug('running: {0}'.format(cmd))
+    log.debug('running: cmd=%s', cmd)
     _subprocess(cmd)
     return _subprocess(status_cmd)
 
