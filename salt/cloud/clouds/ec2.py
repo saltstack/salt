@@ -276,7 +276,6 @@ def sign(key, msg):
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
 
-
     provider = get_configured_provider()
     service_url = provider.get('service_url', 'amazonaws.com')
 
@@ -361,7 +360,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
                                provider['id'] + '/' + credential_scope + \
                                ', ' +  'SignedHeaders=' + signed_headers + \
                                ', ' + 'Signature=' + signature
-        headers = {'x-amz-date':amz_date,  'Authorization':authorization_header}
+        headers = {'x-amz-date':amz_date, 'Authorization':authorization_header}
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         log.trace('EC2 Request Parameters: {0}'.format(params_with_headers))
