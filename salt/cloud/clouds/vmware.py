@@ -28,21 +28,21 @@ cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: DOMAIN\\user
-      password: verybadpass
-      url: vcenter01.domain.com
+      user: "DOMAIN\\user"
+      password: "verybadpass"
+      url: "vcenter01.domain.com"
 
     vmware-vcenter02:
       provider: vmware
-      user: DOMAIN\\user
-      password: verybadpass
-      url: vcenter02.domain.com
+      user: "DOMAIN\\user"
+      password: "verybadpass"
+      url: "vcenter02.domain.com"
 
     vmware-vcenter03:
       provider: vmware
-      user: DOMAIN\\user
-      password: verybadpass
-      url: vcenter03.domain.com
+      user: "DOMAIN\\user"
+      password: "verybadpass"
+      url: "vcenter03.domain.com"
 '''
 
 # Import python libs
@@ -480,6 +480,72 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
+def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
+    if device_type == "datastore_iso_file":
+        drive.backing = vim.vm.device.VirtualCdrom.IsoBackingInfo()
+        drive.backing.fileName = iso_path
+
+        datastore = iso_path.partition('[')[-1].rpartition(']')[0]
+        datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+        if datastore_ref:
+            drive.backing.datastore = datastore_ref
+
+        drive.deviceInfo.summary = 'ISO {0}'.format(iso_path)
+
+    elif device_type == "client_device":
+        if mode == 'passthrough':
+            drive.backing = vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo()
+            drive.deviceInfo.summary = 'Remote Device'
+        elif mode == 'atapi':
+            drive.backing = vim.vm.device.VirtualCdrom.RemoteAtapiBackingInfo()
+            drive.deviceInfo.summary = 'Remote ATAPI'
+
+    return drive
+
+
+def _edit_existing_cd_or_dvd_drive_helper(drive, device_type, mode, iso_path):
+    device_type.strip().lower()
+    mode.strip().lower()
+
+    drive_spec = vim.vm.device.VirtualDeviceSpec()
+    drive_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
+    drive_spec.device = _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path)
+
+    return drive_spec
+
+
+def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mode, iso_path):
+    random_key = randint(-3025, -3000)
+
+    device_type.strip().lower()
+    mode.strip().lower()
+
+    drive_spec = vim.vm.device.VirtualDeviceSpec()
+    drive_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+    drive_spec.device = vim.vm.device.VirtualCdrom()
+    drive_spec.device.deviceInfo = vim.Description()
+
+    if device_type in ['datastore_iso_file', 'client_device']:
+        drive_spec.device = _set_cd_or_dvd_backing_type(drive_spec.device, device_type, mode, iso_path)
+    else:
+        # If device_type not specified or does not match, create drive of Client type with Passthough mode
+        if not device_type:
+            log.debug("The device_type of {0} has not been specified. Creating of default type client_device".format(drive_label))
+        else:
+            log.error("Cannot create CD/DVD drive of type {0}. Creating {1} of default type client_device".format(device_type, drive_label))
+        drive_spec.device.backing = vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo()
+        drive_spec.device.deviceInfo.summary = 'Remote Device'
+
+    drive_spec.device.key = random_key
+    drive_spec.device.deviceInfo.label = drive_label
+    drive_spec.device.controllerKey = controller_key
+    drive_spec.device.connectable = vim.vm.device.VirtualDevice.ConnectInfo()
+    drive_spec.device.connectable.startConnected = True
+    drive_spec.device.connectable.allowGuestControl = True
+
+    return drive_spec
+
+
 def _set_network_adapter_mapping_helper(adapter_specs):
     adapter_mapping = vim.vm.customization.AdapterMapping()
     adapter_mapping.adapter = vim.vm.customization.IPSettings()
@@ -508,6 +574,8 @@ def _manage_devices(devices, vm):
     existing_disks_label = []
     existing_scsi_adapters_label = []
     existing_network_adapters_label = []
+    existing_cd_drives_label = []
+    ide_controllers = {}
     nics_map = []
 
     # loop through all the devices the vm/template has
@@ -558,6 +626,22 @@ def _manage_devices(devices, vm):
                             scsi_spec = _edit_existing_scsi_adapter_helper(device, bus_sharing)
                             device_specs.append(scsi_spec)
 
+        elif isinstance(device, vim.vm.device.VirtualCdrom):
+            # this is a cd/dvd drive
+            if 'cd' in list(devices.keys()):
+                # there is atleast one cd/dvd drive specified to be created/configured
+                existing_cd_drives_label.append(device.deviceInfo.label)
+                if device.deviceInfo.label in list(devices['cd'].keys()):
+                    device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
+                    mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
+                    iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
+                    cd_drive_spec = _edit_existing_cd_or_dvd_drive_helper(device, device_type, mode, iso_path)
+                    device_specs.append(cd_drive_spec)
+
+        elif isinstance(device, vim.vm.device.VirtualIDEController):
+            # this is a controller to add new cd drives to
+            ide_controllers[device.key] = len(device.device)
+
     if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
@@ -594,6 +678,28 @@ def _manage_devices(devices, vm):
             device_specs.append(scsi_spec)
             bus_number += 1
 
+    if 'cd' in list(devices.keys()):
+        cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
+        cd_drives_to_create.sort()
+        log.debug("CD/DVD drives to create: {0}".format(cd_drives_to_create))
+        for cd_drive_label in cd_drives_to_create:
+            # create the CD/DVD drive
+            device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
+            mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
+            iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
+            for ide_controller_key, num_devices in ide_controllers.iteritems():
+                if num_devices < 2:
+                    controller_key = ide_controller_key
+                    break
+                else:
+                    controller_key = None
+            if not controller_key:
+                log.error('No more available controllers for {0}. All IDE controllers are currently in use'.format(cd_drive_label))
+            else:
+                cd_drive_spec = _add_new_cd_or_dvd_drive_helper(cd_drive_label, controller_key, device_type, mode, iso_path)
+                device_specs.append(cd_drive_spec)
+                ide_controllers[controller_key] += 1
+
     ret = {
         'device_specs': device_specs,
         'nics_map': nics_map
@@ -602,32 +708,42 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_ip(vm, max_wait_minute):
+def _wait_for_ip(vm_ref, max_wait_minute):
     time_counter = 0
+    starttime = time.time()
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
-        log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm.name, time_counter))
-        for net in vm.guest.net:
+        if time_counter % 5 == 0:
+            log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm_ref.name, time_counter))
+
+        if vm_ref.summary.guest.ipAddress:
+            if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+                log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                return vm_ref.summary.guest.ipAddress
+
+        for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
                     if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
-                        ip = current_ip.ipAddress
-                        return ip
-        time.sleep(5)
-        time_counter += 5
+                        log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                        return current_ip.ipAddress
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     return False
 
 
 def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
     time_counter = 0
+    starttime = time.time()
     while task.info.state == 'running':
-        message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-        time.sleep(int(sleep_seconds))
-        time_counter += int(sleep_seconds)
+        if time_counter % sleep_seconds == 0:
+            message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(message)
+            else:
+                log.debug(message)
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     if task.info.state == 'success':
         message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
         if log_level == 'info':
@@ -640,22 +756,25 @@ def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug')
 
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
     time_counter = 0
+    starttime = time.time()
     while host_ref.runtime.connectionState != 'notResponding':
-        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-        time.sleep(int(sleep_seconds))
-        time_counter += int(sleep_seconds)
+        if time_counter % sleep_seconds == 0:
+            message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(message)
+            else:
+                log.debug(message)
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     while host_ref.runtime.connectionState != 'connected':
-        message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-        time.sleep(int(sleep_seconds))
-        time_counter += int(sleep_seconds)
+        if time_counter % sleep_seconds == 0:
+            message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(message)
+            else:
+                log.debug(message)
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
     if host_ref.runtime.connectionState == 'connected':
         message = "[ {0} ] Successfully completed host {1} in {2} seconds".format(host_ref.name, task_type, time_counter)
         if log_level == 'info':
