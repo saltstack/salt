@@ -305,6 +305,7 @@ def mod_watch(name, sfun=None, **kwargs):
     }
     return ret
 
+
 def _check_key_type(key_str, key_type=None):
     '''
     Helper function to get pillar[key_str] and
@@ -324,6 +325,7 @@ def _check_key_type(key_str, key_type=None):
     else:
         return True
 
+
 def _if_str_then_list(listing):
     '''
     Checks if its argument is a list or a str.
@@ -336,8 +338,15 @@ def _if_str_then_list(listing):
         raise TypeError
     return listing
 
-def check_pillar(name, present=[], boolean=[], integer=[],
-        string=[], listing=[], dictionary=[], verbose=False):
+
+def check_pillar(name,
+        present=None,
+        boolean=None,
+        integer=None,
+        string=None,
+        listing=None,
+        dictionary=None,
+        verbose=False):
     '''
     Checks the presence and, optionally, the type of
     given keys in Pillar.
@@ -360,6 +369,13 @@ def check_pillar(name, present=[], boolean=[], integer=[],
     if not (present or boolean or integer or string or
             listing or dictionary):
         raise SaltInvocationError('Missing required argument text.')
+
+    present = present or []
+    boolean = boolean or []
+    integer = integer or []
+    string = string or []
+    listing = listing or []
+    dictionary = dictionary or []
 
     ret = {
         'name': name,
