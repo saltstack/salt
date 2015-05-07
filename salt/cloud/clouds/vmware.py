@@ -3272,3 +3272,48 @@ def reboot_host(kwargs=None, call=None):
         return {host_name: 'failed to reboot host'}
 
     return {host_name: 'rebooted host'}
+
+
+def add_datastore_cluster(kwargs=None, call=None):
+    '''
+    Add a new datastore cluster to a datacenter
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f add_datastore_cluster my-vmware-config name="myDatastoreClusterName" datacenter="myDatacenterName"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The add_datastore_cluster function must be called with -f or --function'
+        )
+
+    name = kwargs.get('name') if kwargs else None
+    datacenter = kwargs.get('datacenter') if kwargs else None
+
+    if not name:
+        raise SaltCloudSystemExit(
+            'You must specify a name of the new datastore cluster'
+        )
+
+    if not datacenter:
+        raise SaltCloudSystemExit(
+            'You must specify the datacenter to attach the new datastore cluster to'
+        )
+
+    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
+
+    if not datacenter_ref:
+        raise SaltCloudSystemExit(
+            'The specified datacenter does not exist'
+        )
+
+    try:
+        datacenter_ref.datastoreFolder.CreateStoragePod(name=name)
+       ret = 'Created Datastore Cluster {0}'.format(name)
+    except Exception as exc:
+        log.error('Error creating datastore cluster {0}: {1}'.format(name, exc))
+        return 'Could not create datastore cluster {0}'.format(name)
+
+    return ret
