@@ -344,7 +344,7 @@ def _gen_keep_files(name, require):
         required_files = [comp for comp in require if 'file' in comp]
         for comp in required_files:
             for low in __lowstate__:
-                if comp['file'] in (low['__id__'], low['name']):
+                if low['name'] == comp['file']:
                     fn = low['name']
                     if os.path.isdir(comp['file']):
                         if _is_child(comp['file'], name):
