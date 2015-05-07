@@ -14,7 +14,11 @@ import hmac
 import logging
 
 # Import 3rd-party libs
-import requests
+try:
+    import requests
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 # Import Salt libs
@@ -58,6 +62,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
     these will not match Amazon's S3 wildcard certificates. Certificate
     verification is enabled by default.
     '''
+    if not HAS_REQUESTS:
+        log.error('There was an error: requests is required for s3 access')
+
     if not headers:
         headers = {}
 

@@ -281,6 +281,12 @@ import re
 from os.path import isfile, join
 from salt.ext.six.moves import input
 
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 # Import Salt libs
 import salt.utils
 
@@ -342,6 +348,9 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
+    if not HAS_REQUESTS:
+        return False
+
     return True
 
 
