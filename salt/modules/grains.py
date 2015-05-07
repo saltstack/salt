@@ -166,11 +166,18 @@ def item(*args, **kwargs):
         salt '*' grains.item host sanitize=True
     '''
     ret = {}
-    for arg in args:
-        try:
-            ret[arg] = __grains__[arg]
-        except KeyError:
-            pass
+    default = kwargs.get('default', '')
+    delimiter = kwargs.get('delimiter', ':')
+
+    try:
+        for arg in args:
+            ret[arg] = salt.utils.traverse_dict_and_list(__grains__,
+                                                        arg,
+                                                        default,
+                                                        delimiter)
+    except KeyError:
+        pass
+
     if salt.utils.is_true(kwargs.get('sanitize')):
         for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
