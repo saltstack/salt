@@ -105,9 +105,8 @@ def version(family='ipv4'):
 def build_rule(table='filter', chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
-    Build a well-formatted iptables rule based on kwargs. Long options must be
-    used (`--jump` instead of `-j`) because they will have the `--` added to
-    them. A `table` and `chain` are not required, unless `full` is True.
+    Build a well-formatted iptables rule based on kwargs. A `table` and `chain`
+    are not required, unless `full` is True.
 
     If `full` is `True`, then `table`, `chain` and `command` are required.
     `command` may be specified as either a short option ('I') or a long option
@@ -118,6 +117,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     `position`. This will only be useful if `full` is True.
 
     If `connstate` is passed in, it will automatically be changed to `state`.
+
+    To pass in jump options that doesn't take arguments, pass in an empty
+    string.
 
     CLI Examples:
 
@@ -266,21 +268,53 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
+    # List of options fetched from http://www.iptables.info/en/iptables-targets-and-jumps.html
     after_jump_arguments = (
+        'j',  # j and jump needs to be first
         'jump',
-        'j',
-        'to-port',
-        'to-ports',
-        'to-destination',
-        'to-source',
+        'clamp-mss-to-pmtu',
+        'ecn-tcp-remove',  # no arg
+        'mask',  # only used with either save-mark or restore-mark
+        'nodst',
+        'queue-num',
         'reject-with',
-        'set-mark',
-        'set-xmark',
-        'log-level',
+        'restore',  # no arg
+        'restore-mark',  # no arg
+        #'save',  # no arg, problematic name: How do we avoid collision with this?
+        'save-mark',  # no arg
+        'selctx',
+        'set-dscp',
+        'set-dscp-class',
+        'set-mss',
+        'set-tos',
+        'ttl-dec',
+        'ttl-inc',
+        'ttl-set',
+        'ulog-cprange',
+        'ulog-nlgroup',
+        'ulog-prefix',
+        'ulog-qthreshold',
+        'clustermac',
+        'hash-init,'
+        'hashmode',
+        'local-node',
         'log-ip-options',
+        'log-level',
         'log-prefix',
         'log-tcp-options',
         'log-tcp-sequence',
+        'new',  # no arg
+        'reject-with',
+        'set-class',
+        'set-mark',
+        'set-xmark',
+        'to',
+        'to-destination',
+        'to-port',
+        'to-ports',
+        'to-source',
+        'total-nodes,'
+        'total-nodes',
     )
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
@@ -290,6 +324,34 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             else:
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
+
+    if 'log' in kwargs:
+        after_jump.append('--log {0} '.format(kwargs['log']))
+        del kwargs['log']
+
+    if 'log-level' in kwargs:
+        after_jump.append('--log-level {0} '.format(kwargs['log-level']))
+        del kwargs['log-level']
+
+    if 'log-prefix' in kwargs:
+        after_jump.append('--log-prefix {0} '.format(kwargs['log-prefix']))
+        del kwargs['log-prefix']
+
+    if 'log-tcp-sequence' in kwargs:
+        after_jump.append('--log-tcp-sequence {0} '.format(kwargs['log-tcp-sequence']))
+        del kwargs['log-tcp-sequence']
+
+    if 'log-tcp-options' in kwargs:
+        after_jump.append('--log-tcp-options {0} '.format(kwargs['log-tcp-options']))
+        del kwargs['log-tcp-options']
+
+    if 'log-ip-options' in kwargs:
+        after_jump.append('--log-ip-options {0} '.format(kwargs['log-ip-options']))
+        del kwargs['log-ip-options']
+
+    if 'log-uid' in kwargs:
+        after_jump.append('--log-uid {0} '.format(kwargs['log-uid']))
+        del kwargs['log-uid']
 
     for item in kwargs:
         rule.append(maybe_add_negation(item))
@@ -486,7 +548,7 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
 
     if _has_option('--check', family):
         cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
-        out = __salt__['cmd.run'](cmd)
+        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
     else:
         _chain_name = hex(uuid.getnode())
 
@@ -826,7 +888,7 @@ def _parser():
         parser = optparse.OptionParser()
         add_arg = parser.add_option
     else:
-        import argparse
+        import argparse  # pylint: disable=minimum-python-version
         parser = argparse.ArgumentParser()
         add_arg = parser.add_argument
 

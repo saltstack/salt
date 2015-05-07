@@ -12910,10 +12910,10 @@ clean_tmp:
 Any other parameters in the \fBLocalClient().cmd()\fP method can be specified as well.
 .SS Calling Runner modules and Wheel modules
 .sp
-Calling Runenr modules and wheel modules from the Reactor uses a more direct
+Calling Runner modules and wheel modules from the Reactor uses a more direct
 syntax since the function is being executed locally instead of sending a
 command to a remote system to be executed there. There are no \(aqarg\(aq or \(aqkwarg\(aq
-parameters (unless the Runenr function or Wheel function accepts a paramter
+parameters (unless the Runner function or Wheel function accepts a paramter
 with either of those names.)
 .sp
 For example:
@@ -16947,7 +16947,7 @@ devhost10\-lxc:
 .INDENT 0.0
 .INDENT 3.5
 In the cloud profile that uses this provider configuration, the syntax for the
-\fBprovider\fP required field would be 
+\fBprovider\fP required field would be
 .nf
 \(ga\(ga
 .fi
@@ -29761,7 +29761,7 @@ used if no arguments are required.
 \fBtgt\fP (\fIstring or list\fP) \-\- Which minions to target for the execution. Default is shell
 glob. Modified by the \fBexpr_form\fP option.
 .IP \(bu 2
-\fBfun\fP (\fIstring or list of strings\fP) \-\- 
+\fBfun\fP (\fIstring or list of strings\fP) \-\-
 .sp
 The module and function to call on the specified minions of
 the form \fBmodule.function\fP\&. For example \fBtest.ping\fP or
@@ -29787,7 +29787,7 @@ executing a compound command.
 \fBtimeout\fP \-\- Seconds to wait after the last minion returns but
 before all minions return.
 .IP \(bu 2
-\fBexpr_form\fP \-\- 
+\fBexpr_form\fP \-\-
 .sp
 The type of \fBtgt\fP\&. Allowed values:
 .INDENT 2.0
@@ -29820,7 +29820,7 @@ on the minions
 .IP \(bu 2
 \fBkwarg\fP \-\- A dictionary with keyword arguments for the function.
 .IP \(bu 2
-\fBkwargs\fP \-\- 
+\fBkwargs\fP \-\-
 .sp
 Optional keyword arguments.
 Authentication credentials may be passed when using
@@ -35327,7 +35327,7 @@ Show the details from vSphere concerning a guest
 #minion_data_cache: True
 
 # Store all returns in the given returner.
-# Setting this option requires that any returner\-specific configuration also 
+# Setting this option requires that any returner\-specific configuration also
 # be set. See various returners in salt/returners for details on required
 # configuration values. (See also, event_return_queue below.)
 #
@@ -35366,12 +35366,12 @@ Show the details from vSphere concerning a guest
 # the key rotation event as minions reconnect. Consider this carefully if this
 # salt master is managing a large number of minions.
 #
-# If disabled, it is recommended to handle this event by listening for the 
+# If disabled, it is recommended to handle this event by listening for the
 # \(aqaes_key_rotate\(aq event with the \(aqkey\(aq tag and acting appropriately.
 # ping_on_rotate: False
 
 # By default, the master deletes its cache of minion data when the key for that
-# minion is removed. To preserve the cache after key deletion, set 
+# minion is removed. To preserve the cache after key deletion, set
 # \(aqpreserve_minion_cache\(aq to True.
 #
 # WARNING: This may have security implications if compromised minions auth with
@@ -35459,7 +35459,7 @@ Show the details from vSphere concerning a guest
 #    \- cmd
 
 # Enforce client_acl & client_acl_blacklist when users have sudo
-# access to the salt command. 
+# access to the salt command.
 #
 #sudo_acl: False
 
@@ -35603,7 +35603,7 @@ Show the details from vSphere concerning a guest
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #
-# Prior to changing this value, the master should be stopped and all Salt 
+# Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
 #hash_type: md5
 
@@ -35926,7 +35926,7 @@ Show the details from vSphere concerning a guest
 .nf
 .ft C
 ##### Primary configuration settings #####
-########################################## 
+##########################################
 # This configuration file is used to manage the behavior of the Salt Minion.
 # With the exception of the location of the Salt Master Server, values that are
 # commented out but have an empty line after the comment are defaults that need
@@ -67126,7 +67126,7 @@ values for non\-standard package names such as when using a different
 Python version from the default Python version provided by the OS
 (e.g., \fBpython26\-mysql\fP instead of \fBpython\-mysql\fP).
 .IP \(bu 2
-\fBdefault\fP \-\- 
+\fBdefault\fP \-\-
 .sp
 default lookup_dict\(aqs key used if the grain does not exists
 or if the grain value has no match on lookup_dict.  If unspecified
@@ -67136,7 +67136,7 @@ New in version 2014.1.0.
 
 
 .IP \(bu 2
-\fBbase\fP \-\- 
+\fBbase\fP \-\-
 .sp
 A lookup_dict key to use for a base dictionary.  The
 grain\-selected \fBlookup_dict\fP is merged over this and then finally
@@ -81470,7 +81470,7 @@ default: group5 (Optional)
 .IP \(bu 2
 \fBprofile\fP \-\- Profile to build on (Optional)
 .IP \(bu 2
-\fBkwargs\fP \-\- 
+\fBkwargs\fP \-\-
 .UNINDENT
 .TP
 .B Returns
@@ -83181,7 +83181,7 @@ default: true (Optional)
 .IP \(bu 2
 \fBprofile\fP \-\- Profile to build on (Optional)
 .IP \(bu 2
-\fBkwargs\fP \-\- 
+\fBkwargs\fP \-\-
 .UNINDENT
 .TP
 .B Returns
@@ -106286,7 +106286,7 @@ The message digest algorithm. Must be a string describing a digest
 algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
 For example, "md5" or "sha1". Default: \(aqsha256\(aq
 .TP
-.B 
+.B
 .nf
 **
 .fi
@@ -118198,7 +118198,7 @@ Return a websocket connection of Salt\(aqs event stream
 .B Query Parameters
 .INDENT 7.0
 .IP \(bu 2
-\fBformat_events\fP \-\- 
+\fBformat_events\fP \-\-
 .sp
 The event stream will undergo server\-side
 formatting if the \fBformat_events\fP URL parameter is included
@@ -118241,7 +118241,7 @@ curl \-NsS <...snip...> localhost:8000/ws?format_events
 .INDENT 3.5
 .INDENT 0.0
 .TP
-.B curl \-NsSk 
+.B curl \-NsSk
 \-H \(aqX\-Auth\-Token: ffedf49d\(aq \-H \(aqHost: localhost:8000\(aq \-H \(aqConnection: Upgrade\(aq \-H \(aqUpgrade: websocket\(aq \-H \(aqOrigin: https://localhost:8000\(aq \-H \(aqSec\-WebSocket\-Version: 13\(aq \-H \(aqSec\-WebSocket\-Key: \(aq"$(echo \-n $RANDOM | base64)" localhost:8000/ws
 .UNINDENT
 .UNINDENT
@@ -163724,11 +163724,11 @@ The \fBfile.serialize\fP state can provide a
 shorthand for creating some files from data structures. There are also many
 examples within Salt Formulas of creating one\-off "serializers" (often as Jinja
 macros) that reformat a data structure to a specific config file format. For
-example, 
+example,
 .nf
 \(gaNginx vhosts\(ga__
 .fi
- or the 
+ or the
 .nf
 \(gaphp.ini\(ga__
 .fi

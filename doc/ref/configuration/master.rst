@@ -224,6 +224,21 @@ each of Salt's module types such as "runners", "output", "wheel", "modules",
 
     extension_modules: srv/modules
 
+.. conf_minion:: module_dirs
+
+``module_dirs``
+---------------
+
+Default: ``[]``
+
+Like ``extension_modules``, but a list of extra directories to search
+for Salt modules.
+
+.. code-block:: yaml
+
+    module_dirs:
+      - /var/cache/salt/minion/extmods
+
 .. conf_master:: cachedir
 
 ``cachedir``

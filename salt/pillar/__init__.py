@@ -16,6 +16,7 @@ import salt.fileclient
 import salt.minion
 import salt.crypt
 import salt.transport
+import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
 from salt.utils.dictupdate import merge
@@ -244,9 +245,9 @@ class Pillar(object):
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
-            opts['state_top'] = os.path.join('salt://', opts['state_top'][1:])
+            opts['state_top'] = salt.utils.url.create(opts['state_top'][1:])
         else:
-            opts['state_top'] = os.path.join('salt://', opts['state_top'])
+            opts['state_top'] = salt.utils.url.create(opts['state_top'])
         if self.__valid_ext(ext):
             if 'ext_pillar' in opts:
                 opts['ext_pillar'].append(ext)

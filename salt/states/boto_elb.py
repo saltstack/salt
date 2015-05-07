@@ -377,6 +377,10 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
                               ''.format(str(instances).strip('[]'))
             ret['result'] = True
         else:
+            if __opts__['test']:
+                ret['comment'] = 'ELB {0} is set to register : {1}.'.format(name, new)
+                ret['result'] = None
+                return ret
             state = __salt__['boto_elb.register_instances'](name,
                                                             instances,
                                                             region,

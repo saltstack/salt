@@ -16,7 +16,6 @@ import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
-from salt._compat import string_types
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -28,6 +27,33 @@ except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
+TARGET_REX = re.compile(
+        r'''(?x)
+        (
+            (?P<engine>G|P|I|J|L|N|S|E|R)  # Possible target engines
+            (?P<delimiter>(?<=G|P|I|J).)?  # Optional delimiter for specific engines
+        @)?                                # Engine+delimiter are separated by a '@'
+                                           # character and are optional for the target
+        (?P<pattern>.+)$'''                # The pattern passed to the target engine
+    )
+
+
+def parse_target(target_expression):
+    '''Parse `target_expressing` splitting it into `engine`, `delimiter`,
+     `pattern` - returns a dict'''
+
+    match = TARGET_REX.match(target_expression)
+    if not match:
+        log.warning('Unable to parse target "{0}"'.format(target_expression))
+        ret = {
+            'engine': None,
+            'delimiter': None,
+            'pattern': target_expression,
+        }
+    else:
+        ret = match.groupdict()
+    return ret
 
 
 def get_minion_data(minion, opts):
@@ -85,25 +111,37 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
         log.error('Failed nodegroup expansion: unknown nodegroup "{0}"'.format(nodegroup))
         return ''
 
-    skip.add(nodegroup)
     nglookup = nodegroups[nodegroup]
+    if isinstance(nglookup, six.string_types):
+        words = nglookup.split()
+    elif isinstance(nglookup, (list, tuple)):
+        words = nglookup
+    else:
+        log.error(
+            'Nodgroup is neither a string, list'
+            ' nor tuple: {0} = {1}'.format(nodegroup, nglookup)
+        )
+        return ''
 
+    skip.add(nodegroup)
     ret = []
     opers = ['and', 'or', 'not', '(', ')']
-    tokens = nglookup.split()
-    for match in tokens:
-        if match in opers:
-            ret.append(match)
-        elif len(match) >= 3 and match.startswith('N@'):
-            ret.append(nodegroup_comp(match[2:], nodegroups, skip=skip))
+    for word in words:
+        if word in opers:
+            ret.append(word)
+        elif len(word) >= 3 and word.startswith('N@'):
+            ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip))
         else:
-            ret.append(match)
+            ret.append(word)
+
+    if ret:
+        ret.insert(0, '(')
+        ret.append(')')
 
     skip.remove(nodegroup)
 
-    expanded = '( {0} )'.format(' '.join(ret)) if ret else ''
-    log.debug('nodegroup_comp("{0}") => {1}'.format(nodegroup, expanded))
-    return expanded
+    log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
+    return ret
 
 
 class CkMinions(object):
@@ -139,12 +177,12 @@ class CkMinions(object):
         '''
         Return the minions found by looking via a list
         '''
-        if isinstance(expr, string_types):
+        if isinstance(expr, six.string_types):
             expr = [m for m in expr.split(',') if m]
         ret = []
-        for m in expr:
-            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, m)):
-                ret.append(m)
+        for minion in expr:
+            if os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, minion)):
+                ret.append(minion)
         return ret
 
     def _check_pcre_minions(self, expr, greedy):  # pylint: disable=unused-argument
@@ -196,6 +234,7 @@ class CkMinions(object):
                 ).get(search_type)
                 if not salt.utils.subdict_match(search_results,
                                                 expr,
+                                                delimiter=delimiter,
                                                 regex_match=regex_match,
                                                 exact_match=exact_match) and id_ in minions:
                     minions.remove(id_)
@@ -342,7 +381,10 @@ class CkMinions(object):
         '''
         Return the minions found by looking via compound matcher
         '''
-        log.debug('_check_compound_minions({0})'.format(expr))
+        log.debug('_check_compound_minions({0}, {1}, {2}, {3})'.format(expr, delimiter, greedy, pillar_exact))
+        if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
+            log.error('Compound target that is neither string, list nor tuple')
+            return []
         minions = set(
             os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
         )
@@ -354,64 +396,53 @@ class CkMinions(object):
                    'I': self._check_pillar_minions,
                    'J': self._check_pillar_pcre_minions,
                    'L': self._check_list_minions,
+                   'N': None,    # nodegroups should already be expanded
                    'S': self._check_ipcidr_minions,
                    'E': self._check_pcre_minions,
                    'R': self._all_minions}
             if pillar_exact:
                 ref['I'] = self._check_pillar_exact_minions
                 ref['J'] = self._check_pillar_exact_minions
+
             results = []
             unmatched = []
             opers = ['and', 'or', 'not', '(', ')']
-            tokens = expr.split()
-            for match in tokens:
-                # Try to match tokens from the compound target, first by using
-                # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
-                if '@' in match and match[1] == '@':
-                    comps = match.split('@', 1)
-                    matcher = ref.get(comps[0])
 
-                    matcher_args = [comps[1]]
-                    if comps[0] in ('G', 'P', 'I', 'J'):
-                        matcher_args.append(delimiter)
-                    matcher_args.append(True)
+            if isinstance(expr, six.string_types):
+                words = expr.split()
+            else:
+                words = expr
 
-                    if not matcher:
-                        # If an unknown matcher is called at any time, fail out
-                        log.error('Unknown matcher: {0}'.format(comps[0]))
-                        return []
-                    results.append(str(set(matcher(*matcher_args))))
-                    if unmatched and unmatched[-1] == '-':
-                        results.append(')')
-                        unmatched.pop()
-                elif match in opers:
-                    # We didn't match a target, so append a boolean operator or
-                    # subexpression
+            for word in words:
+                target_info = parse_target(word)
+
+                # Easy check first
+                if word in opers:
                     if results:
-                        if results[-1] == '(' and match in ('and', 'or'):
-                            log.error('Invalid beginning operator after "(": {0}'.format(match))
+                        if results[-1] == '(' and word in ('and', 'or'):
+                            log.error('Invalid beginning operator after "(": {0}'.format(word))
                             return []
-                        if match == 'not':
+                        if word == 'not':
                             if not results[-1] in ('&', '|', '('):
                                 results.append('&')
                             results.append('(')
                             results.append(str(set(minions)))
                             results.append('-')
                             unmatched.append('-')
-                        elif match == 'and':
+                        elif word == 'and':
                             results.append('&')
-                        elif match == 'or':
+                        elif word == 'or':
                             results.append('|')
-                        elif match == '(':
-                            results.append(match)
-                            unmatched.append(match)
-                        elif match == ')':
+                        elif word == '(':
+                            results.append(word)
+                            unmatched.append(word)
+                        elif word == ')':
                             if not unmatched or unmatched[-1] != '(':
                                 log.error('Invalid compound expr (unexpected '
                                           'right parenthesis): {0}'
                                           .format(expr))
                                 return []
-                            results.append(match)
+                            results.append(word)
                             unmatched.pop()
                             if unmatched and unmatched[-1] == '-':
                                 results.append(')')
@@ -422,29 +453,58 @@ class CkMinions(object):
                             return []
                     else:
                         # seq start with oper, fail
-                        if match == 'not':
+                        if word == 'not':
                             results.append('(')
                             results.append(str(set(minions)))
                             results.append('-')
                             unmatched.append('-')
-                        elif match == '(':
-                            results.append(match)
-                            unmatched.append(match)
+                        elif word == '(':
+                            results.append(word)
+                            unmatched.append(word)
                         else:
-                            log.error('Expression cannot begin with binary operator: {0}'.format(match))
+                            log.error(
+                                'Expression may begin with'
+                                ' binary operator: {0}'.format(word)
+                            )
                             return []
-                else:
-                    # The match is not explicitly defined, evaluate as a glob
+
+                elif target_info and target_info['engine']:
+                    if 'N' == target_info['engine']:
+                        # Nodegroups should already be expanded/resolved to other engines
+                        log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
+                        return []
+                    engine = ref.get(target_info['engine'])
+                    if not engine:
+                        # If an unknown engine is called at any time, fail out
+                        log.error(
+                            'Unrecognized target engine "{0}" for'
+                            ' target expression "{1}"'.format(
+                                target_info['engine'],
+                                word,
+                            )
+                        )
+                        return []
+
+                    engine_args = [target_info['pattern']]
+                    if target_info['engine'] in ('G', 'P', 'I', 'J'):
+                        engine_args.append(target_info['delimiter'] or ':')
+                    engine_args.append(True)
+
+                    results.append(str(set(engine(*engine_args))))
                     if unmatched and unmatched[-1] == '-':
-                        results.append(
-                                str(set(self._check_glob_minions(match, True))))
                         results.append(')')
                         unmatched.pop()
-                    else:
-                        results.append(
-                                str(set(self._check_glob_minions(match, True))))
-            for token in unmatched:
-                results.append(')')
+
+                else:
+                    # The match is not explicitly defined, evaluate as a glob
+                    results.append(str(set(self._check_glob_minions(word, True))))
+                    if unmatched and unmatched[-1] == '-':
+                        results.append(')')
+                        unmatched.pop()
+
+            # Add a closing ')' for each item left in unmatched
+            results.extend([')' for item in unmatched])
+
             results = ' '.join(results)
             log.debug('Evaluating final compound matching expr: {0}'
                       .format(results))
@@ -453,6 +513,7 @@ class CkMinions(object):
             except Exception:
                 log.error('Invalid compound target: {0}'.format(expr))
                 return []
+
         return list(minions)
 
     def connected_ids(self, subset=None, show_ipv4=False):
@@ -535,7 +596,8 @@ class CkMinions(object):
                'L': 'list',
                'S': 'ipcidr',
                'E': 'pcre',
-               'N': 'node'}
+               'N': 'node',
+               None: 'glob'}
         infinite = [
                 'node',
                 'ipcidr',
@@ -545,13 +607,13 @@ class CkMinions(object):
             infinite.append('grain')
             infinite.append('grain_pcre')
 
-        if '@' in valid and valid[1] == '@':
-            comps = valid.split('@', 1)
-            v_matcher = ref.get(comps[0])
-            v_expr = comps[1]
-        else:
-            v_matcher = 'glob'
-            v_expr = valid
+        target_info = parse_target(valid)
+        if not target_info:
+            log.error('Failed to parse valid target "{0}"'.format(valid))
+
+        v_matcher = ref.get(target_info['engine'])
+        v_expr = target_info['pattern']
+
         if v_matcher in infinite:
             # We can't be sure what the subset is, only match the identical
             # target
@@ -631,7 +693,7 @@ class CkMinions(object):
         try:
             for fun in funs:
                 for ind in auth_list:
-                    if isinstance(ind, string_types):
+                    if isinstance(ind, six.string_types):
                         # Allowed for all minions
                         if self.match_check(ind, fun):
                             return True
@@ -646,7 +708,7 @@ class CkMinions(object):
                                 tgt,
                                 tgt_type):
                             # Minions are allowed, verify function in allowed list
-                            if isinstance(ind[valid], string_types):
+                            if isinstance(ind[valid], six.string_types):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
@@ -681,7 +743,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, string_types):
+            if isinstance(ind, six.string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@wheel':
@@ -693,7 +755,7 @@ class CkMinions(object):
                     continue
                 valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], string_types):
+                    if isinstance(ind[valid], six.string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -712,7 +774,7 @@ class CkMinions(object):
         mod = comps[0]
         fun = comps[1]
         for ind in auth_list:
-            if isinstance(ind, string_types):
+            if isinstance(ind, six.string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@runners':
@@ -724,7 +786,7 @@ class CkMinions(object):
                     continue
                 valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], string_types):
+                    if isinstance(ind[valid], six.string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):
@@ -746,7 +808,7 @@ class CkMinions(object):
         else:
             mod = fun
         for ind in auth_list:
-            if isinstance(ind, string_types):
+            if isinstance(ind, six.string_types):
                 if ind.startswith('@') and ind[1:] == mod:
                     return True
                 if ind == '@{0}'.format(form):
@@ -758,7 +820,7 @@ class CkMinions(object):
                     continue
                 valid = next(six.iterkeys(ind))
                 if valid.startswith('@') and valid[1:] == mod:
-                    if isinstance(ind[valid], string_types):
+                    if isinstance(ind[valid], six.string_types):
                         if self.match_check(ind[valid], fun):
                             return True
                     elif isinstance(ind[valid], list):

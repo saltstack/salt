@@ -125,6 +125,16 @@ class IptablesTestCase(TestCase):
                                              **{'log-prefix': 'spam: '}),
                          '--jump LOG --log-prefix "spam: "')
 
+        # Should allow no-arg jump options
+        self.assertEqual(iptables.build_rule(jump='CLUSTERIP',
+                                             **{'new': ''}),
+                         '--jump CLUSTERIP --new ')
+
+        # Should allow the --save jump option to CONNSECMARK
+        #self.assertEqual(iptables.build_rule(jump='CONNSECMARK',
+        #                                     **{'save': ''}),
+        #                 '--jump CONNSECMARK --save ')
+
         ret = '/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT'
         with patch.object(iptables, '_iptables_cmd',
                           MagicMock(return_value='/sbin/iptables')):

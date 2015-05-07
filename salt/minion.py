@@ -74,7 +74,7 @@ import salt.utils.jid
 import salt.pillar
 import salt.utils.args
 import salt.utils.event
-import salt.utils.minion
+import salt.utils.minions
 import salt.utils.schedule
 import salt.utils.error
 import salt.utils.zeromq
@@ -2308,58 +2308,80 @@ class Matcher(object):
         '''
         Runs the compound target check
         '''
-        if not isinstance(tgt, six.string_types):
-            log.debug('Compound target received that is not a string')
+        if not isinstance(tgt, six.string_types) and not isinstance(tgt, (list, tuple)):
+            log.error('Compound target received that is neither string, list nor tuple')
             return False
-        log.debug('compound_match({0})'.format(tgt))
+        log.debug('compound_match: {0} ? {1}'.format(self.opts['id'], tgt))
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
                'J': 'pillar_pcre',
                'L': 'list',
+               'N': None,      # Nodegroups should already be expanded
                'S': 'ipcidr',
                'E': 'pcre'}
         if HAS_RANGE:
             ref['R'] = 'range'
+
         results = []
         opers = ['and', 'or', 'not', '(', ')']
-        tokens = tgt.split()
-        for match in tokens:
-            # Try to match tokens from the compound target, first by using
-            # the 'G, X, I, J, L, S, E' matcher types, then by hostname glob.
-            if '@' in match and match[1] == '@':
-                comps = match.split('@', 1)
-                matcher = ref.get(comps[0])
-                if not matcher:
-                    # If an unknown matcher is called at any time, fail out
-                    log.error('Invalid matcher: {0}'.format(comps[0]))
-                    return False
-                results.append(
-                    str(getattr(self, '{0}_match'.format(matcher))(comps[1]))
-                )
-            elif match in opers:
-                # We didn't match a target, so append a boolean operator or
-                # subexpression
+
+        if isinstance(tgt, six.string_types):
+            words = tgt.split()
+        else:
+            words = tgt
+
+        for word in words:
+            target_info = salt.utils.minions.parse_target(word)
+
+            # Easy check first
+            if word in opers:
                 if results:
-                    if results[-1] == '(' and match in ('and', 'or'):
-                        log.error('Invalid beginning operator after "(": {0}'.format(match))
+                    if results[-1] == '(' and word in ('and', 'or'):
+                        log.error('Invalid beginning operator after "(": {0}'.format(word))
                         return False
-                    if match == 'not':
+                    if word == 'not':
                         if not results[-1] in ('and', 'or', '('):
                             results.append('and')
-                    results.append(match)
+                    results.append(word)
                 else:
                     # seq start with binary oper, fail
-                    if match not in ['(', 'not']:
-                        log.error('Invalid beginning operator: {0}'.format(match))
+                    if word not in ['(', 'not']:
+                        log.error('Invalid beginning operator: {0}'.format(word))
                         return False
-                    results.append(match)
+                    results.append(word)
+
+            elif target_info and target_info['engine']:
+                if 'N' == target_info['engine']:
+                    # Nodegroups should already be expanded/resolved to other engines
+                    log.error('Detected nodegroup expansion failure of "{0}"'.format(word))
+                    return False
+                engine = ref.get(target_info['engine'])
+                if not engine:
+                    # If an unknown engine is called at any time, fail out
+                    log.error('Unrecognized target engine "{0}" for'
+                              ' target expression "{1}"'.format(
+                                  target_info['engine'],
+                                  word,
+                                )
+                        )
+                    return False
+
+                engine_args = [target_info['pattern']]
+                engine_kwargs = {}
+                if target_info['delimiter']:
+                    engine_kwargs['delimiter'] = target_info['delimiter']
+
+                results.append(
+                    str(getattr(self, '{0}_match'.format(engine))(*engine_args, **engine_kwargs))
+                )
 
             else:
                 # The match is not explicitly defined, evaluate it as a glob
-                results.append(str(self.glob_match(match)))
+                results.append(str(self.glob_match(word)))
+
         results = ' '.join(results)
-        log.debug('compound_match "{0}" => "{1}"'.format(tgt, results))
+        log.debug('compound_match {0} ? "{1}" => "{2}"'.format(self.opts['id'], tgt, results))
         try:
             return eval(results)  # pylint: disable=W0123
         except Exception:

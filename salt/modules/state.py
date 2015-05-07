@@ -18,6 +18,7 @@ import tempfile
 import salt.config
 import salt.utils
 import salt.utils.jid
+import salt.utils.url
 import salt.state
 import salt.payload
 from salt.exceptions import SaltInvocationError
@@ -741,7 +742,7 @@ def top(topfn,
 
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
-    st_.opts['state_top'] = os.path.join('salt://', topfn)
+    st_.opts['state_top'] = salt.utils.url.create(topfn)
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),

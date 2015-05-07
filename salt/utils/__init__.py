@@ -30,7 +30,6 @@ import time
 import types
 import warnings
 import string
-import locale
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -1544,6 +1543,19 @@ def is_true(value=None):
         return bool(value)
 
 
+def exactly_n(l, n=1):
+    '''
+    Tests that exactly N items in an iterable are "truthy" (neither None,
+    False, nor 0).
+    '''
+    i = iter(l)
+    return all(any(i) for j in range(n)) and not any(i)
+
+
+def exactly_one(l):
+    return exactly_n(l)
+
+
 def rm_rf(path):
     '''
     Platform-independent recursive delete. Includes code from
@@ -1588,23 +1600,6 @@ def option(value, default='', opts=None, pillar=None):
         if out is not default:
             return out
     return default
-
-
-def valid_url(url, protos):
-    '''
-    Return true if the passed URL is in the list of accepted protos
-    '''
-    if urlparse(url).scheme in protos:
-        return True
-    return False
-
-
-def strip_proto(uri):
-    '''
-    Return a copy of the string with the protocol designation stripped, if one
-    was present.
-    '''
-    return re.sub('^[^:/]+://', '', uri)
 
 
 def parse_docstring(docstring):
@@ -2440,40 +2435,6 @@ def chugid_and_umask(runas, umask):
 def rand_string(size=32):
     key = os.urandom(size)
     return key.encode('base64').replace('\n', '')
-
-
-@real_memoize
-def get_encodings():
-    '''
-    return a list of string encodings to try
-    '''
-    encodings = []
-    loc = locale.getdefaultlocale()[-1]
-    if loc:
-        encodings.append(loc)
-    encodings.append(sys.getdefaultencoding())
-    encodings.extend(['utf-8', 'latin-1'])
-    return encodings
-
-
-def sdecode(string_):
-    '''
-    Since we don't know where a string is coming from and that string will
-    need to be safely decoded, this function will attempt to decode the string
-    until if has a working string that does not stack trace
-    '''
-    if not isinstance(string_, str):
-        return string_
-    encodings = get_encodings()
-    for encoding in encodings:
-        try:
-            decoded = string_.decode(encoding)
-            # Make sure unicode string ops work
-            u' ' + decoded  # pylint: disable=W0104
-            return decoded
-        except UnicodeDecodeError:
-            continue
-    return string_
 
 
 def relpath(path, start='.'):

@@ -17,7 +17,8 @@ import multiprocessing
 
 # Import third party libs
 import zmq
-from M2Crypto import RSA
+from Crypto.PublicKey import RSA
+import Crypto.Random
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -491,12 +492,6 @@ class Master(SMaster):
             log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
 
-        def run_reqserver():
-            reqserv = ReqServer(
-                self.opts,
-                self.key,
-                self.master_key)
-            reqserv.run()
         log.info('Creating master request server process')
         process_manager.add_process(self.run_reqserver)
         try:
@@ -751,6 +746,7 @@ class MWorker(multiprocessing.Process):
             self.key,
             )
         self.aes_funcs = AESFuncs(self.opts)
+        Crypto.Random.atfork()
         self.__bind()
 
 
@@ -788,14 +784,14 @@ class AESFuncs(object):
         '''
         Set the local file objects from the file server interface
         '''
-        fs_ = salt.fileserver.Fileserver(self.opts)
-        self._serve_file = fs_.serve_file
-        self._file_hash = fs_.file_hash
-        self._file_list = fs_.file_list
-        self._file_list_emptydirs = fs_.file_list_emptydirs
-        self._dir_list = fs_.dir_list
-        self._symlink_list = fs_.symlink_list
-        self._file_envs = fs_.envs
+        self.fs_ = salt.fileserver.Fileserver(self.opts)
+        self._serve_file = self.fs_.serve_file
+        self._file_hash = self.fs_.file_hash
+        self._file_list = self.fs_.file_list
+        self._file_list_emptydirs = self.fs_.file_list_emptydirs
+        self._dir_list = self.fs_.dir_list
+        self._symlink_list = self.fs_.symlink_list
+        self._file_envs = self.fs_.envs
 
     def __verify_minion(self, id_, token):
         '''
@@ -819,15 +815,16 @@ class AESFuncs(object):
 
         pub = None
         try:
-            pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError as err:
+            with salt.utils.fopen(tmp_pub) as fp_:
+                pub = RSA.importKey(fp_.read())
+        except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load temporary public key "{0}": {1}'
                       .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
-            if pub.public_decrypt(token, 5) == 'salt':
+            if salt.crypt.public_decrypt(pub, token) == 'salt':
                 return True
-        except RSA.RSAError as err:
+        except ValueError as err:
             log.error('Unable to decrypt token: {0}'.format(err))
 
         log.error('Salt minion claiming to be {0} has attempted to'
@@ -1109,11 +1106,6 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         load['grains']['id'] = load['id']
-        mods = set()
-        for func in six.itervalues(self.mminion.functions):
-            mods.add(func.__module__)
-        for mod in mods:
-            sys.modules[mod].__grains__ = load['grains']
 
         pillar_dirs = {}
         pillar = salt.pillar.Pillar(
@@ -1124,6 +1116,7 @@ class AESFuncs(object):
             ext=load.get('ext'),
             pillar=load.get('pillar_override', {}))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
+        self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
             cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
             if not os.path.isdir(cdir):
@@ -1468,6 +1461,7 @@ class ClearFuncs(object):
 
         Any return other than None is an eauth failure
         '''
+
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1656,6 +1650,7 @@ class ClearFuncs(object):
         Create and return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         '''
+
         if 'eauth' not in clear_load:
             log.warning('Authentication failure of type "eauth" occurred.')
             return ''
@@ -1665,10 +1660,19 @@ class ClearFuncs(object):
             return ''
         try:
             name = self.loadauth.load_name(clear_load)
+            groups = self.loadauth.get_groups(clear_load)
             if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
                     ('*' in self.opts['external_auth'][clear_load['eauth']])):
-                log.warning('Authentication failure of type "eauth" occurred.')
-                return ''
+                found = False
+                for group in groups:
+                    if "{0}%".format(group) in self.opts['external_auth'][clear_load['eauth']]:
+                        found = True
+                        break
+                if not found:
+                    log.warning('Authentication failure of type "eauth" occurred.')
+                    return ''
+                else:
+                    clear_load['groups'] = groups
             if not self.loadauth.time_auth(clear_load):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
@@ -1725,12 +1729,38 @@ class ClearFuncs(object):
                 return ''
             if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
                     ('*' in self.opts['external_auth'][token['eauth']])):
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
+                found = False
+                for group in token['groups']:
+                    if "{0}%".format(group) in self.opts['external_auth'][token['eauth']]:
+                        found = True
+                        break
+                if not found:
+                    log.warning('Authentication failure of type "token" occurred.')
+                    return ''
+
+            group_perm_keys = [item for item in self.opts['external_auth'][token['eauth']] if item.endswith('%')]  # The configured auth groups
+
+            # First we need to know if the user is allowed to proceed via any of their group memberships.
+            group_auth_match = False
+            for group_config in group_perm_keys:
+                group_config = group_config.rstrip('%')
+                for group in token['groups']:
+                    if group == group_config:
+                        group_auth_match = True
+
+            auth_list = []
+
+            if '*' in self.opts['external_auth'][token['eauth']]:
+                auth_list.extend(self.opts['external_auth'][token['eauth']]['*'])
+            if token['name'] in self.opts['external_auth'][token['eauth']]:
+                auth_list.extend(self.opts['external_auth'][token['eauth']][token['name']])
+            if group_auth_match:
+                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][token['eauth']], token['groups'], auth_list)
+
+            log.trace("compiled auth_list: {0}".format(auth_list))
+
             good = self.ckminions.auth_check(
-                self.opts['external_auth'][token['eauth']][token['name']]
-                if token['name'] in self.opts['external_auth'][token['eauth']]
-                else self.opts['external_auth'][token['eauth']]['*'],
+                auth_list,
                 clear_load['fun'],
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))

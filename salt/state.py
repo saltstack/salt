@@ -30,6 +30,7 @@ import salt.minion
 import salt.pillar
 import salt.fileclient
 import salt.utils.event
+import salt.utils.url
 import salt.syspaths as syspaths
 from salt.utils import context, immutabletypes
 from salt.template import compile_template, compile_template_str
@@ -68,7 +69,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'fun',
     'state',
     'check_cmd',
-    'fail_hard',
+    'failhard',
     'onlyif',
     'unless',
     'order',
@@ -78,6 +79,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'reload_modules',
     'reload_grains',
     'reload_pillar',
+    'fire_event',
     'saltenv',
     'use',
     'use_in',
@@ -1774,16 +1776,36 @@ class State(object):
 
         return status, reqs
 
-    def event(self, chunk_ret, length):
+    def event(self, chunk_ret, length, fire_event=False):
         '''
         Fire an event on the master bus
+
+        If `fire_event` is set to True an event will be sent with the
+        chunk name in the tag and the chunk result in the event data.
+
+        If `fire_event` is set to a string such as `mystate/is/finished`,
+        an event will be sent with the string added to the tag and the chunk
+        result in the event data.
+
+        If the `state_events` is set to True in the config, then after the
+        chunk is evaluated an event will be set up to the master with the
+        results.
         '''
-        if not self.opts.get('local') and self.opts.get('state_events', True) and self.opts.get('master_uri'):
-            ret = {'ret': chunk_ret,
-                   'len': length}
-            tag = salt.utils.event.tagify(
-                    [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
-                    )
+        if not self.opts.get('local') and (self.opts.get('state_events', True) or fire_event) and self.opts.get('master_uri'):
+            ret = {'ret': chunk_ret}
+            if fire_event is True:
+                tag = salt.utils.event.tagify(
+                        [self.jid, self.opts['id'], str(chunk_ret['name'])], 'state_result'
+                        )
+            elif isinstance(fire_event, six.string_types):
+                tag = salt.utils.event.tagify(
+                        [self.jid, self.opts['id'], str(fire_event)], 'state_result'
+                        )
+            else:
+                tag = salt.utils.event.tagify(
+                        [self.jid, 'prog', self.opts['id'], str(chunk_ret['__run_num__'])], 'job'
+                        )
+                ret['len'] = length
             preload = {'jid': self.jid}
             self.functions['event.fire_master'](ret, tag, preload=preload)
 
@@ -1855,7 +1877,7 @@ class State(object):
                                 '__run_num__': self.__run_num,
                                 '__sls__': low['__sls__']}
                 self.__run_num += 1
-                self.event(running[tag], len(chunks))
+                self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
                 return running
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
@@ -1880,7 +1902,7 @@ class State(object):
                                     '__run_num__': self.__run_num,
                                     '__sls__': low['__sls__']}
                         self.__run_num += 1
-                        self.event(running[tag], len(chunks))
+                        self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
                         return running
                     running = self.call_chunk(chunk, running, chunks)
                     if self.check_failhard(chunk, running):
@@ -1979,7 +2001,7 @@ class State(object):
             else:
                 running[tag] = self.call(low, chunks, running)
         if tag in running:
-            self.event(running[tag], len(chunks))
+            self.event(running[tag], len(chunks), fire_event=low.get('fire_event'))
         return running
 
     def call_listen(self, chunks, running):
@@ -2261,7 +2283,7 @@ class BaseHighState(object):
             # An error happened on the master
             opts['renderer'] = 'yaml_jinja'
             opts['failhard'] = False
-            opts['state_top'] = 'salt://top.sls'
+            opts['state_top'] = salt.utils.url.create('top.sls')
             opts['nodegroups'] = {}
             opts['file_roots'] = {'base': [syspaths.BASE_FILE_ROOTS_DIR]}
         else:
@@ -2270,9 +2292,9 @@ class BaseHighState(object):
             if mopts['state_top'].startswith('salt://'):
                 opts['state_top'] = mopts['state_top']
             elif mopts['state_top'].startswith('/'):
-                opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
+                opts['state_top'] = salt.utils.url.create(mopts['state_top'][1:])
             else:
-                opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+                opts['state_top'] = salt.utils.url.create(mopts['state_top'])
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
                 'state_auto_order',
@@ -2291,7 +2313,7 @@ class BaseHighState(object):
         envs = set(['base'])
         if 'file_roots' in self.opts:
             envs.update(list(self.opts['file_roots']))
-        return envs
+        return envs.union(set(self.client.envs()))
 
     def get_tops(self):
         '''
@@ -2314,7 +2336,7 @@ class BaseHighState(object):
                     contents,
                     self.state.rend,
                     self.state.opts['renderer'],
-                    env=self.opts['environment']
+                    saltenv=self.opts['environment']
                 )
             ]
         else:

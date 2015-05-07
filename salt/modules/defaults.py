@@ -7,6 +7,7 @@ import yaml
 
 import salt.fileclient
 import salt.utils
+import salt.utils.url
 import salt.ext.six as six
 
 __virtualname__ = 'defaults'
@@ -31,7 +32,7 @@ def _get_files(pillar_name):
     paths = []
 
     for ext in ('yaml', 'json'):
-        source_url = 'salt://{0}/{1}'.format(pillar_name, 'defaults.' + ext)
+        source_url = salt.utils.url.create(pillar_name + '/defaults.' + ext)
         paths.append(source_url)
 
     return __context__['cp.fileclient'].cache_files(paths)

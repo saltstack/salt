@@ -74,14 +74,17 @@ def list_installed():
         salt '*' win_servermanager.list_installed
     '''
     ret = {}
-    for line in list_available().splitlines()[2:]:
+    names = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select DisplayName,Name')
+    for line in names.splitlines()[2:]:
         splt = line.split()
-        if splt[0] == '[X]':
-            name = splt.pop(-1)
-            splt.pop(0)
-            display_name = ' '.join(splt)
-            ret[name] = display_name
-
+        name = splt.pop(-1)
+        display_name = ' '.join(splt)
+        ret[name] = display_name
+    state = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select InstallState,Name')
+    for line in state.splitlines()[2:]:
+        splt = line.split()
+        if splt[0] != 'Installed' and splt[1] in ret:
+            del ret[splt[1]]
     return ret
 
 

@@ -99,6 +99,30 @@ class BotoElasticacheTestCase(TestCase):
                 ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(boto_elasticache.absent(name), ret)
 
+    # 'creategroup' function tests: 1
+
+    def test_creategroup(self):
+        '''
+        Test to ensure the a replication group is create.
+        '''
+        name = 'new_table'
+        primary_cluster_id = 'A'
+        replication_group_description = 'my description'
+
+        ret = {'name': name,
+               'result': True,
+               'changes': {},
+               'comment': ''}
+
+        mock = MagicMock(return_value=True)
+        with patch.dict(boto_elasticache.__salt__,
+                        {'boto_elasticache.group_exists': mock}):
+            comt = ('{0} replication group exists .'.format(name))
+            ret.update({'comment': comt})
+            self.assertDictEqual(boto_elasticache.creategroup
+                                 (name, primary_cluster_id,
+                                  replication_group_description), ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

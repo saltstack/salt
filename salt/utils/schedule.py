@@ -193,6 +193,24 @@ will not run once the specified time has passed.  Time should be specified
 in a format support by the dateutil library.
 This requires the python-dateutil library.
 
+    ... versionadded:: Beryllium
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 15
+        after: '12/31/2015 11:59pm'
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+Using the after argument, the Salt scheduler allows you to specify
+an start time for a scheduled job.  If this argument is specified, jobs
+will not run until the specified time has passed.  Time should be specified
+in a format support by the dateutil library.
+This requires the python-dateutil library.
+
 The scheduler also supports ensuring that there are no more than N copies of
 a particular routine running.  Use this for jobs that may be long-running
 and could step on each other or pile up in case of infrastructure outage.
@@ -323,7 +341,7 @@ class Schedule(object):
                 'minion.d',
                 '_schedule.conf')
         try:
-            with salt.utils.fopen(schedule_conf, 'w+') as fp_:
+            with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule')
@@ -556,7 +574,7 @@ class Schedule(object):
                               'in another thread, skipping.'.format(
                                   basefilename))
                     continue
-                with salt.utils.fopen(fn_, 'r') as fp_:
+                with salt.utils.fopen(fn_, 'rb') as fp_:
                     job = salt.payload.Serial(self.opts).load(fp_)
                     if job:
                         if 'schedule' in job:
@@ -589,7 +607,7 @@ class Schedule(object):
             log.debug('schedule.handle_func: adding this job to the jobcache '
                       'with data {0}'.format(ret))
             # write this to /var/cache/salt/minion/proc
-            with salt.utils.fopen(proc_fn, 'w+') as fp_:
+            with salt.utils.fopen(proc_fn, 'w+b') as fp_:
                 fp_.write(salt.payload.Serial(self.opts).dumps(ret))
 
         args = tuple()
@@ -714,6 +732,19 @@ class Schedule(object):
 
                     if until <= now:
                         log.debug('Until time has passed '
+                                  'skipping job: {0}.'.format(data['name']))
+                        continue
+
+            if 'after' in data:
+                if not _WHEN_SUPPORTED:
+                    log.error('Missing python-dateutil.'
+                              'Ignoring after.')
+                else:
+                    after__ = dateutil_parser.parse(data['after'])
+                    after = int(time.mktime(after__.timetuple()))
+
+                    if after >= now:
+                        log.debug('After time has not passed '
                                   'skipping job: {0}.'.format(data['name']))
                         continue
 
@@ -1079,10 +1110,11 @@ def clean_proc_dir(opts):
         with salt.utils.fopen(fn_, 'rb') as fp_:
             job = None
             try:
-                job_data = fp_.read()
-                if job_data:
-                    job = salt.payload.Serial(opts).load(fp_)
+                job = salt.payload.Serial(opts).load(fp_)
             except Exception:  # It's corrupted
+                # Windows cannot delete an open file
+                if salt.utils.is_windows():
+                    fp_.close()
                 try:
                     os.unlink(fn_)
                     continue

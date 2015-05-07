@@ -1122,6 +1122,16 @@ def _validate_opts(opts):
                         err.format(key, val, type(val), VALID_OPTS[key])
                     )
 
+    # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
+    # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
+    # We don't expect the user to know this, so we will fix up their path for
+    # them if it isn't compliant.
+    if (salt.utils.is_windows() and opts.get('transport') == 'raet' and
+             'sock_dir' in opts and
+             not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
+        opts['sock_dir'] = (
+                '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
+
     for error in errors:
         log.warning(error)
     if errors:

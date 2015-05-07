@@ -1722,6 +1722,11 @@ def grant_revoke(grant,
         # _ and % are authorized on GRANT queries and should get escaped
         # on the db name, but only if not requesting a table level grant
         s_database = quote_identifier(dbc, for_grants=(table is '*'))
+    if dbc is '*':
+        # add revoke for *.*
+        # before the modification query send to mysql will looks like
+        # REVOKE SELECT ON `*`.* FROM %(user)s@%(host)s
+        s_database = dbc
     if table is not '*':
         table = quote_identifier(table)
     # identifiers cannot be used as values, same thing for grants

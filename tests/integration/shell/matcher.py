@@ -72,6 +72,22 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = self.run_salt("-C '* and ( not G@test_grain:cheese )' test.ping")
         self.assertFalse(minion_in_returns('minion', data))
         self.assertTrue(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'G%@planets%merc*' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'P%@planets%^(mercury|saturn)$' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'I%@companions%three%sarah*' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        time.sleep(2)
+        data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
 
     def test_nodegroup(self):
         '''
@@ -99,6 +115,10 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         time.sleep(2)
         data = '\n'.join(self.run_salt('-N nodegroup_loop_a test.ping'))
         self.assertIn('No minions matched', data)
+        time.sleep(2)
+        data = self.run_salt("-N multiline_nodegroup test.ping")
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
 
     def test_glob(self):
         '''

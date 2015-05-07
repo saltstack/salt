@@ -13,6 +13,7 @@ if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 
 import contextlib
+import weakref
 
 
 @contextlib.contextmanager
@@ -42,11 +43,17 @@ class SyncWrapper(object):
     # the sync wrapper will automatically wait on the future
     ret = sync.async_method()
     '''
+    loop_map = weakref.WeakKeyDictionary()  # keep a mapping of parent io_loop -> sync_loop
+
     def __init__(self, method, args=tuple(), kwargs=None):
         if kwargs is None:
             kwargs = {}
 
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        parent_io_loop = tornado.ioloop.IOLoop.current()
+        if parent_io_loop not in SyncWrapper.loop_map:
+            SyncWrapper.loop_map[parent_io_loop] = zmq.eventloop.ioloop.ZMQIOLoop()
+
+        self.io_loop = SyncWrapper.loop_map[parent_io_loop]
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
@@ -75,11 +82,3 @@ class SyncWrapper(object):
         self.io_loop.add_future(future, lambda future: self.io_loop.stop())
         self.io_loop.start()
         return future.result()
-
-    def __del__(self):
-        '''
-        On deletion of the async wrapper, make sure to clean up the async stuff
-        '''
-        if hasattr(self, 'async'):
-            del self.async
-        self.io_loop.close()

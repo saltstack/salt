@@ -88,9 +88,9 @@ def commit():
             conn.cu.commit(confirm=True)
             ret['out'] = True
             ret['message'] = 'Commit Successful.'
-        except Exception as e:
+        except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{0}"'.format(e.message)
+            ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{0}"'.format(exception)
     else:
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'

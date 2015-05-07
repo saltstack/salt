@@ -31,7 +31,8 @@ load-plugins=saltpylint.pep8,
   saltpylint.strings,
   saltpylint.fileperms,
   saltpylint.py3modernize,
-  saltpylint.smartup
+  saltpylint.smartup,
+  saltpylint.minpyver
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -53,6 +54,8 @@ fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests
 # Py3 Modernize PyLint Plugin Settings
 modernize-nofix = libmodernize.fixes.fix_dict_six
 
+# Minimum Python Version To Enforce
+minimum-python-version = 2.6
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show

@@ -22,6 +22,7 @@ Full list of builtin state modules
     aws_sqs
     blockdev
     boto_asg
+    boto_cfn
     boto_cloudwatch_alarm
     boto_dynamodb
     boto_ec2
@@ -104,6 +105,10 @@ Full list of builtin state modules
     ntp
     openstack_config
     pagerduty
+    pagerduty_escalation_policy
+    pagerduty_schedule
+    pagerduty_service
+    pagerduty_user
     pecl
     pip_state
     pkg

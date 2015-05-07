@@ -112,6 +112,27 @@ class BotoElbTestCase(TestCase):
                                                          (name, listeners,
                                                           alarms=alarms), ret)
 
+    # 'register_instances' function tests: 1
+
+    def test_register_instances(self):
+        '''
+        Test to add instance/s to load balancer
+        '''
+        name = 'myelb'
+        instances = ['instance-id1', 'instance-id2']
+
+        ret = {'name': name,
+               'result': None,
+               'changes': {},
+               'comment': ''}
+
+        mock_bool = MagicMock(return_value=False)
+        with patch.dict(boto_elb.__salt__, {'boto_elb.exists': mock_bool}):
+            comt = ('Could not find lb {0}'.format(name))
+            ret.update({'comment': comt})
+            self.assertDictEqual(boto_elb.register_instances(name,
+                                                             instances), ret)
+
     # 'absent' function tests: 1
 
     def test_absent(self):

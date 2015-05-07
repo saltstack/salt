@@ -14,6 +14,7 @@ import shutil
 import stat
 import tempfile
 import filecmp
+import textwrap
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -34,6 +35,9 @@ import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
+
+
+STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -243,6 +247,37 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         changes = next(six.itervalues(ret))['changes']
         self.assertEqual('<show_diff=False>', changes['diff'])
+
+    def test_managed_escaped_file_path(self):
+        '''
+        file.managed test that 'salt://|' protects unusual characters in file path
+        '''
+        funny_file = tempfile.mkstemp(prefix='?f!le? n@=3&', suffix='.file type')[1]
+        funny_file_name = os.path.split(funny_file)[1]
+        funny_url = 'salt://|' + funny_file_name
+        funny_url_path = os.path.join(STATE_DIR, funny_file_name)
+
+        state_name = 'funny_file'
+        state_file_name = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_file_name)
+        state_key = 'file_|-{0}_|-{0}_|-managed'.format(funny_file)
+
+        try:
+            salt.utils.fopen(funny_url_path, 'w').close()
+            salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
+                {0}:
+                  file.managed:
+                    - source: {1}
+                    - makedirs: True
+                '''.format(funny_file, funny_url)))
+
+            ret = self.run_function('state.sls', [state_name])
+            self.assertTrue(ret[state_key]['result'])
+
+        finally:
+            os.remove(state_file)
+            os.remove(funny_file)
+            os.remove(funny_url_path)
 
     def test_directory(self):
         '''

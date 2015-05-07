@@ -46,8 +46,9 @@ Options
 
     .. versionadded:: 0.17
 
-    Choose the format of the state output. The options are `full`,
-    `terse`, `mixed`, `changes`, and `filter`. Default: full
+    Override the configured ``state_output`` value for minion output. One of
+    ``full``, ``terse``, ``mixed``, ``changes`` or ``filter``.  Default:
+    ``full``.
 
 .. option:: --subset=SUBSET
 

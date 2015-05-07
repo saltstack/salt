@@ -34,21 +34,21 @@ set up in the cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter01.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter01.domain.com"
 
     vmware-vcenter02:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter02.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter02.domain.com"
 
     vmware-vcenter03:
       provider: vmware
-      user: DOMAIN\user
-      password: verybadpass
-      url: vcenter03.domain.com
+      user: "DOMAIN\user"
+      password: "verybadpass"
+      url: "vcenter03.domain.com"
 
 
 .. _vmware-cloud-profile:
@@ -68,6 +68,16 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       num_cpus: 4
       memory: 8192
       devices:
+        cd:
+          CD/DVD drive 1:
+            device_type: datastore_iso_file
+            iso_path: "[nap004-1] vmimages/tools-isoimages/linux.iso"
+          CD/DVD drive 2:
+            device_type: client_device
+            mode: atapi
+          CD/DVD drive 3:
+            device_type: client_device
+            mode: passthrough
         disk:
           Hard disk 1:
             size: 30
@@ -78,16 +88,19 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         network:
           Network adapter 1:
             name: 10.20.30-400-Test
+            switch_type: standard
             ip: 10.20.30.123
             gateway: [10.20.30.110]
             subnet_mask: 255.255.255.128
             domain: mycompany.com
           Network adapter 2:
             name: 10.30.40-500-Dev-DHCP
-            type: e1000
+            adapter_type: e1000
+            switch_type: distributed
           Network adapter 3:
             name: 10.40.50-600-Prod
-            type: vmxnet3
+            adapter_type: vmxnet3
+            switch_type: distributed
             ip: 10.40.50.123
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
@@ -120,8 +133,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       power_on: True
       extra_config:
         mem.hotadd: 'yes'
-        guestinfo.saltMaster: 10.20.30.140
+        guestinfo.foo: bar
         guestinfo.domain: foobar.com
+        guestinfo.customVariable: customValue
 
       deploy: True
       private_key: /root/.ssh/mykey.pem
@@ -154,6 +168,26 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Enter the device specifications here. Currently, the following devices can be
     created or reconfigured:
 
+    cd
+        Enter the CD/DVD drive specification here. If the CD/DVD drive doesn\'t exist,
+        it will be created with the specified configuration. If the CD/DVD drive
+        already exists, it will be reconfigured with the specifications. The following
+        options can be specified per CD/DVD drive:
+
+        device_type
+            Specify how the CD/DVD drive should be used. Currently supported types are
+            ``client_device`` and ``datastore_iso_file``. Default is
+            ``device_type: client_device``
+        iso_path
+            Enter the path to the iso file present on the datastore only if
+            ``device_type: datastore_iso_file``. The syntax to specify this is
+            ``iso_path: "[datastoreName] vmimages/tools-isoimages/linux.iso"``. This
+            field is ignored if ``device_type: client_device``
+        mode
+            Enter the mode of connection only if ``device_type: client_device``. Currently
+            supported modes are ``passthrough`` and ``atapi``. This field is ignored if
+            ``device_type: datastore_iso_file``. Default is ``mode: passthrough``
+
     disk
         Enter the disk specification here. If the hard disk doesn\'t exist, it will
         be created with the provided size. If the hard disk already exists, it will
@@ -163,19 +197,22 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         Enter the network adapter specification here. If the network adapter doesn\'t
         exist, a new network adapter will be created with the specified network name,
         type and other configuration. If the network adapter already exists, it will
-        be reconfigured with the specifications. Currently, only network adapters of
-        type vmxnet, vmxnet2, vmxnet3, e1000 and e1000e can be created. If the
-        specified network adapter type is not one of these, a network adapter of type
-        vmxnet3 will be created by default. The following additional options can be
-        specified per network adapter (See example above):
+        be reconfigured with the specifications. The following additional options can
+        be specified per network adapter (See example above):
 
         name
             Enter the network name you want the network adapter to be mapped to.
 
-        type
+        adapter_type
             Enter the network adapter type you want to create. Currently supported
-            types are vmxnet, vmxnet2, vmxnet3, e1000 and e1000e. If no type is
-            specified, by default vmxnet3 will be used.
+            types are ``vmxnet``, ``vmxnet2``, ``vmxnet3``, ``e1000`` and ``e1000e``.
+            If no type is specified, by default ``vmxnet3`` will be used.
+
+        switch_type
+            Enter the type of switch to use. This decides whether to use a standard
+            switch network or a distributed virtual portgroup. Currently supported
+            types are ``standard`` for standard portgroups and ``distributed`` for
+            distributed virtual portgroups.
 
         ip
             Enter the static IP you want the network adapter to be mapped to. If the
@@ -196,14 +233,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     scsi
         Enter the SCSI adapter specification here. If the SCSI adapter doesn\'t exist,
         a new SCSI adapter will be created of the specified type. If the SCSI adapter
-        already exists, it will be reconfigured with the specifications. Currently, only
-        SCSI adapters of type lsilogic, lsilogic_sas and paravirtual can be created. The
-        following additional options can be specified per SCSI adapter:
+        already exists, it will be reconfigured with the specifications. The following
+        additional options can be specified per SCSI adapter:
 
         type
             Enter the SCSI adapter type you want to create. Currently supported
-            types are lsilogic, lsilogic_sas and paravirtual. Type must be specified
-            when creating a new SCSI adapter.
+            types are ``lsilogic``, ``lsilogic_sas`` and ``paravirtual``. Type must
+            be specified when creating a new SCSI adapter.
 
         bus_sharing
             Specify this if sharing of virtual disks between virtual machines is desired.
@@ -219,7 +255,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
                 Virtual disks cannot be shared between virtual machines.
 
 ``domain``
-    Enter the global domain name to be used for DNS.
+    Enter the global domain name to be used for DNS. If not specified and if the VM name
+    is a FQDN, ``domain`` is set to the domain from the VM name. Default is ``local``.
 
 ``dns_servers``
     Enter the list of DNS servers to use in order of priority.

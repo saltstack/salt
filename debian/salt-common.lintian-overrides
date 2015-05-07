@@ -1,3 +1,0 @@
-salt-common: manpage-has-errors-from-man usr/share/man/man7/salt.7.gz
-# The man page renders correctly, no need for lintian to get upset about
-# it.

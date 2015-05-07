@@ -31,6 +31,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -112,8 +113,10 @@ def _changes(name,
     if home:
         if lusr['home'] != home:
             change['home'] = home
-        if createhome and not os.path.isdir(home):
-            change['homeDoesNotExist'] = home
+    if createhome:
+        newhome = home if home else lusr['home']
+        if not os.path.isdir(newhome):
+            change['homeDoesNotExist'] = newhome
 
     if shell:
         if lusr['shell'] != shell:
@@ -223,7 +226,10 @@ def present(name,
         the state, Default is ``True``.
 
     home
-        The location of the home directory to manage
+        The custom login directory of user. Uses default value of underlying
+        system if not set. Notice that this directory does not have to exists.
+        This also the location of the home directory to create if createhome is
+        set to True.
 
     createhome
         If False, the home directory will not be created if it doesn't exist.
@@ -308,10 +314,11 @@ def present(name,
         Date that account expires, represented in days since epoch (January 1,
         1970).
     '''
-    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
-    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
-    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
-    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
+
+    fullname = salt.utils.locales.sdecode(fullname)
+    roomnumber = salt.utils.locales.sdecode(roomnumber)
+    workphone = salt.utils.locales.sdecode(workphone)
+    homephone = salt.utils.locales.sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},
@@ -393,11 +400,14 @@ def present(name,
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
                 continue
-            if key == 'home' or key == 'homeDoesNotExist':
-                if createhome:
-                    __salt__['user.chhome'](name, val, True)
-                else:
-                    __salt__['user.chhome'](name, val, False)
+            # run chhome once to avoid any possible bad side-effect
+            if key == 'home' and 'homeDoesNotExist' not in changes:
+                __salt__['user.chhome'](name, val, False)
+                continue
+            if key == 'homeDoesNotExist':
+                __salt__['user.chhome'](name, val, True)
+                if not os.path.isdir(val):
+                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)
