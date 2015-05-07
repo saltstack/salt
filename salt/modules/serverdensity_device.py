@@ -7,17 +7,29 @@ Wrapper around Server Density API
 '''
 from __future__ import absolute_import
 
-import requests
 import json
 import logging
 import os
 import tempfile
 
-from salt.ext.six.moves import map
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
+from salt.ext.six.moves import map
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Requires requests
+    '''
+    if not HAS_REQUESTS:
+        return False
 
 
 def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
