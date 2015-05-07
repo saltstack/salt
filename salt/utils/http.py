@@ -520,6 +520,8 @@ def get_ca_bundle(opts=None):
         '/etc/ssl/certs/ca-bundle.crt',
         # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
+        # OpenBSD has an unusual path
+        '/etc/ssl/cert.pem',
     ):
         if os.path.exists(path):
             return path
