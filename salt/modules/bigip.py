@@ -79,7 +79,7 @@ def _load_connection_error(hostname, error):
     Format and Return a connection error
     '''
 
-    ret = {'code': None, 'content': 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname,error=error)}
+    ret = {'code': None, 'content': 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=error)}
 
     return ret
 

@@ -2772,4 +2772,3 @@ def delete_profile(hostname, username, password, profile_type, name):
         ret = _load_result(existing, ret)
 
     return ret
-
