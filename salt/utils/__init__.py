@@ -2110,7 +2110,7 @@ def decode_list(data):
     '''
     rv = []
     for item in data:
-        if isinstance(item, six.text_type):
+        if isinstance(item, six.text_type) and six.PY2:
             item = item.encode('utf-8')
         elif isinstance(item, list):
             item = decode_list(item)
@@ -2126,9 +2126,9 @@ def decode_dict(data):
     '''
     rv = {}
     for key, value in six.iteritems(data):
-        if isinstance(key, six.text_type):
+        if isinstance(key, six.text_type) and six.PY2:
             key = key.encode('utf-8')
-        if isinstance(value, six.text_type):
+        if isinstance(value, six.text_type) and six.PY2:
             value = value.encode('utf-8')
         elif isinstance(value, list):
             value = decode_list(value)
