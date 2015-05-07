@@ -436,7 +436,7 @@ class WinUserAddTestCase(TestCase):
         Test if it return a list of users on Windows.
         '''
         MockClient.flag = 1
-        self.assertListEqual(win_useradd.list_users('salt'), [])
+        self.assertListEqual(win_useradd.list_users(), [])
 
     # 'rename' function tests: 1
 
