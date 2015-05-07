@@ -14,9 +14,6 @@ import salt.syspaths
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -131,7 +128,6 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     ret = {minion.opts['id']: running}
     __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
     return ret
-
 
 
 def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
