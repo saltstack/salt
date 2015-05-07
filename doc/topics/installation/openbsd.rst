@@ -3,7 +3,7 @@ OpenBSD
 =======
 
 Salt was added to the OpenBSD ports tree on Aug 10th 2013.
-It has been tested on OpenBSD 5.5 and onwards.
+It has been tested on OpenBSD 5.5 onwards.
 
 Salt is dependent on the following additional ports. These will be installed as
 dependencies of the ``sysutils/salt`` port:
