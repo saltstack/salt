@@ -423,8 +423,7 @@ def create(vm_, call=None):
     kwarg['host'] = prov['target']
     cret = _runner().cmd('lxc.cloud_init', [vm_['name']], kwarg=kwarg)
     ret['runner_return'] = cret
-    if cret['result']:
-        ret['result'] = False
+    ret['result'] = cret['result']
     if not ret['result']:
         ret['Error'] = 'Error while creating {0},'.format(vm_['name'])
     return ret
