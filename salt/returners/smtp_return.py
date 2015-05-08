@@ -74,7 +74,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import pprint
 import logging
 import smtplib
 from email.utils import formatdate
