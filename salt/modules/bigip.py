@@ -7,10 +7,16 @@ An execution module which can manipulate an f5 bigip via iControl REST
 
 # Import python libs
 from __future__ import absolute_import
-import requests
-import requests.exceptions
 import json
 import logging as logger
+
+# Import third party libs
+try:
+    import requests
+    import requests.exceptions
+    HAS_LIBS = True
+except ImportError:
+    HAS_LIBS = False
 
 # Import salt libs
 import salt.utils
@@ -21,15 +27,17 @@ import salt.exceptions
 log = logger.getLogger(__name__)
 
 
-# Setup Virtual Function
 def __virtual__():
-    return 'bigip'
+    '''
+    Only return if requests is installed
+    '''
+    return 'bigip' if HAS_LIBS else False
 
 
 BIG_IP_URL_BASE = 'https://{host}/mgmt/tm'
 
 
-def _build_session(username, password):
+def _build_session(username, password, trans_label=None):
     '''
     Create a session to be used when connecting to iControl REST.
     '''
@@ -38,6 +46,15 @@ def _build_session(username, password):
     bigip.auth = (username, password)
     bigip.verify = False
     bigip.headers.update({'Content-Type': 'application/json'})
+
+    if trans_label:
+        #pull the trans id from the grain
+        trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=trans_label))
+
+        if trans_id:
+            bigip.headers.update({'X-F5-REST-Coordination-Id': trans_id})
+        else:
+            bigip.headers.update({'X-F5-REST-Coordination-Id': None})
 
     return bigip
 
@@ -52,7 +69,19 @@ def _load_response(response):
     except ValueError:
         data = response.text
 
-    return data
+    ret = {'code': response.status_code, 'content': data}
+
+    return ret
+
+
+def _load_connection_error(hostname, error):
+    '''
+    Format and Return a connection error
+    '''
+
+    ret = {'code': None, 'content': 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=error)}
+
+    return ret
 
 
 def _loop_payload(params):
@@ -110,20 +139,18 @@ def _determine_toggles(payload, toggles):
     '''
 
     for toggle, definition in toggles.iteritems():
-
         #did the user specify anything?
         if definition['value'] is not None:
-
             #test for yes_no toggle
-            if definition['value'] is True and definition['type'] == 'yes_no':
+            if (definition['value'] is True or definition['value'] == 'yes') and definition['type'] == 'yes_no':
                 payload[toggle] = 'yes'
-            elif definition['value'] is False and definition['type'] == 'yes_no':
-                payload[toggle] = 'yes'
+            elif (definition['value'] is False or definition['value'] == 'no') and definition['type'] == 'yes_no':
+                payload[toggle] = 'no'
 
             #test for true_false toggle
-            if definition['value'] is True and definition['type'] == 'true_false':
+            if (definition['value'] is True or definition['value'] == 'yes') and definition['type'] == 'true_false':
                 payload[toggle] = True
-            elif definition['value'] is False and definition['type'] == 'yes_no':
+            elif (definition['value'] is False or definition['value'] == 'no') and definition['type'] == 'true_false':
                 payload[toggle] = False
 
     return payload
@@ -135,7 +162,8 @@ def _set_value(value):
     dictionary list or a string
     '''
 
-    #dont continue if bool
+    logger.error(value)
+    #dont continue if already an acceptable data-type
     if isinstance(value, bool) or isinstance(value, dict) or isinstance(value, list):
         return value
 
@@ -190,13 +218,166 @@ def _set_value(value):
         return value
 
 
-def list_node(hostname, username, password, name=None):
+def start_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and start a new transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      The name / alias for this transaction.  The actual transaction
+                    id will be stored within a grain called bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.start_transaction bigip admin admin my_transaction
+
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    payload = {}
+
+    #post to REST to get trans id
+    try:
+        response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/transaction', data=json.dumps(payload))
+    except requests.exceptions.ConnectionError as e:
+        return _load_connection_error(hostname, e)
+
+    #extract the trans_id
+    data = _load_response(response)
+
+    if data['code'] == 200:
+
+        trans_id = data['content']['transId']
+
+        __salt__['grains.setval']('bigip_f5_trans', {label: trans_id})
+
+        return 'Transaction: {trans_id} - has successfully been stored in the grain: bigip_f5_trans:{label}'.format(trans_id=trans_id,
+                                                                                                                       label=label)
+    else:
+        return data
+
+
+def list_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and list an existing transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      the label of this transaction stored within the grain: bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.list_transaction bigip admin admin my_transaction
+
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    #pull the trans id from the grain
+    trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=label))
+
+    if trans_id:
+
+        #post to REST to get trans id
+        try:
+            response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}/commands'.format(trans_id=trans_id))
+            return _load_response(response)
+        except requests.exceptions.ConnectionError as e:
+            return _load_connection_error(hostname, e)
+    else:
+        return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
+               ' bigip.start_transaction function'
+
+
+def commit_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and commit an existing transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      the label of this transaction stored within the grain: bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.commit_transaction bigip admin admin my_transaction
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    #pull the trans id from the grain
+    trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=label))
+
+    if trans_id:
+
+        payload = {}
+        payload['state'] = 'VALIDATING'
+
+        #patch to REST to get trans id
+        try:
+            response = bigip_session.patch(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id), data=json.dumps(payload))
+            return _load_response(response)
+        except requests.exceptions.ConnectionError as e:
+            return _load_connection_error(hostname, e)
+    else:
+        return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
+               ' bigip.start_transaction function'
+
+
+def delete_transaction(hostname, username, password, label):
+    '''
+    A function to connect to a bigip device and delete an existing transaction.
+
+    Parameters:
+        hostname:   The host/address of the bigip device
+        username:   The iControl REST username
+        password:   The iControl REST password
+        label:      The label of this transaction stored within the grain: bigip_f5_trans:<label>
+
+    CLI Example:
+
+        salt '*' bigip.delete_transaction bigip admin admin my_transaction
+    '''
+
+    #build the session
+    bigip_session = _build_session(username, password)
+
+    #pull the trans id from the grain
+    trans_id = __salt__['grains.get']('bigip_f5_trans:{label}'.format(label=label))
+
+    if trans_id:
+
+        #patch to REST to get trans id
+        try:
+            response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/transaction/{trans_id}'.format(trans_id=trans_id))
+            return _load_response(response)
+        except requests.exceptions.ConnectionError as e:
+            return _load_connection_error(hostname, e)
+    else:
+        return 'Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the' \
+               ' bigip.start_transaction function'
+
+
+def list_node(hostname, username, password, name=None, trans_label=None):
     '''
     A function to connect to a bigip device and list all nodes or a specific node.
 
     Parameters:
-        name: The name of the node to list. If no name is specified than all
-        nodes will be listed.
+        hostname:       The host/address of the bigip device
+        username:       The iControl REST username
+        password:       The iControl REST password
+        name:           The name of the node to list. If no name is specified than all
+                        nodes will be listed.
+        trans_label:    The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example:
 
@@ -204,7 +385,7 @@ def list_node(hostname, username, password, name=None):
     '''
 
     #build sessions
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #get to REST
     try:
@@ -213,21 +394,23 @@ def list_node(hostname, username, password, name=None):
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node')
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
 
-def create_node(hostname, username, password, name, address):
+def create_node(hostname, username, password, name, address, trans_label=None):
     '''
     A function to connect to a bigip device and create a node.
 
     Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the node
-        address:    The address of the node
+        hostname:       The host/address of the bigip device
+        username:       The iControl REST username
+        password:       The iControl REST password
+        name:           The name of the node
+        address:        The address of the node
+
+        trans_label:    The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example::
 
@@ -235,7 +418,7 @@ def create_node(hostname, username, password, name, address):
     '''
 
     #build session
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #construct the payload
     payload = {}
@@ -246,7 +429,7 @@ def create_node(hostname, username, password, name, address):
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node', data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {host}\n{error}'.format(host=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -260,7 +443,8 @@ def modify_node(hostname, username, password, name,
                 rate_limit=None,
                 ratio=None,
                 session=None,
-                state=None):
+                state=None,
+                trans_label=None):
     '''
     A function to connect to a bigip device and modify an existing node.
 
@@ -269,7 +453,6 @@ def modify_node(hostname, username, password, name,
         username:             The iControl REST username
         password:             The iControl REST password
         name:                 The name of the node to modify
-
 
         connection_limit:     [integer]
         description:          [string]
@@ -280,6 +463,7 @@ def modify_node(hostname, username, password, name,
         ratio:                [integer]
         session:              [user-enabled | user-disabled]
         state:                [user-down | user-up ]
+        trans_label:          The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example:
 
@@ -299,7 +483,7 @@ def modify_node(hostname, username, password, name,
     }
 
     #build session
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #build payload
     payload = _loop_payload(params)
@@ -309,20 +493,22 @@ def modify_node(hostname, username, password, name,
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
 
-def delete_node(hostname, username, password, name):
+def delete_node(hostname, username, password, name, trans_label=None):
     '''
     A function to connect to a bigip device and delete a specific node.
 
     Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name: The name of the node which will be deleted.
+        hostname:       The host/address of the bigip device
+        username:       The iControl REST username
+        password:       The iControl REST password
+        name:           The name of the node which will be deleted.
+
+        trans_label:    The label of the transaction stored within the grain: bigip_f5_trans:<label>
 
     CLI Example:
 
@@ -330,13 +516,13 @@ def delete_node(hostname, username, password, name):
     '''
 
     #build session
-    bigip_session = _build_session(username, password)
+    bigip_session = _build_session(username, password, trans_label)
 
     #delete to REST
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/node/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     if _load_response(response) == '':
         return True
@@ -370,7 +556,7 @@ def list_pool(hostname, username, password, name=None):
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool')
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -496,7 +682,7 @@ def create_pool(hostname, username, password, name, members=None,
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool', data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -616,7 +802,7 @@ def modify_pool(hostname, username, password, name,
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -643,7 +829,7 @@ def delete_pool(hostname, username, password, name):
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     if _load_response(response) == '':
         return True
@@ -670,10 +856,31 @@ def replace_pool_members(hostname, username, password, name, members):
     payload['name'] = name
     #specify members if provided
     if members is not None:
-        members = members.split(',')
+
+        if isinstance(members, str):
+            members = members.split(',')
+
         pool_members = []
         for member in members:
-            pool_members.append({'name': member, 'address': member.split(':')[0]})
+
+            #check to see if already a dictionary ( for states)
+            if isinstance(member, dict):
+
+                #check for state alternative name 'member_state', replace with state
+                if 'member_state' in member.keys():
+                    member['state'] = member.pop('member_state')
+
+                #replace underscore with dash
+                for key in member.keys():
+                    new_key = key.replace('_', '-')
+                    member[new_key] = member.pop(key)
+
+                pool_members.append(member)
+
+            #parse string passed via execution command (for executions)
+            else:
+                pool_members.append({'name': member, 'address': member.split(':')[0]})
+
         payload['members'] = pool_members
 
     #build session
@@ -683,7 +890,7 @@ def replace_pool_members(hostname, username, password, name, members):
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}'.format(name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -703,7 +910,23 @@ def add_pool_member(hostname, username, password, name, member):
         salt '*' bigip.add_pool_members bigip admin admin my-pool 10.2.2.1:80
     '''
 
-    payload = {'name': member, 'address': member.split(':')[0]}
+    # for states
+    if isinstance(member, dict):
+
+        #check for state alternative name 'member_state', replace with state
+        if 'member_state' in member.keys():
+            member['state'] = member.pop('member_state')
+
+        #replace underscore with dash
+        for key in member.keys():
+            new_key = key.replace('_', '-')
+            member[new_key] = member.pop(key)
+
+        payload = member
+    # for execution
+    else:
+
+        payload = {'name': member, 'address': member.split(':')[0]}
 
     #build session
     bigip_session = _build_session(username, password)
@@ -712,24 +935,24 @@ def add_pool_member(hostname, username, password, name, member):
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members'.format(name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
 
 def modify_pool_member(hostname, username, password, name, member,
-                        connection_limit=None,
-                        description=None,
-                        dynamic_ratio=None,
-                        inherit_profile=None,
-                        logging=None,
-                        monitor=None,
-                        priority_group=None,
-                        profiles=None,
-                        rate_limit=None,
-                        ratio=None,
-                        session=None,
-                        state=None):
+                       connection_limit=None,
+                       description=None,
+                       dynamic_ratio=None,
+                       inherit_profile=None,
+                       logging=None,
+                       monitor=None,
+                       priority_group=None,
+                       profiles=None,
+                       rate_limit=None,
+                       ratio=None,
+                       session=None,
+                       state=None):
     '''
     A function to connect to a bigip device and modify an existing member of a pool.
 
@@ -783,7 +1006,7 @@ def modify_pool_member(hostname, username, password, name, member,
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -811,7 +1034,7 @@ def delete_pool_member(hostname, username, password, name, member):
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/pool/{name}/members/{member}'.format(name=name, member=member))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     if _load_response(response) == '':
         return True
@@ -821,7 +1044,7 @@ def delete_pool_member(hostname, username, password, name, member):
 
 def list_virtual(hostname, username, password, name=None):
     '''
-    A function to connect to a bigip device and list all pools or a specific pool.
+    A function to connect to a bigip device and list all virtuals or a specific virtual.
 
     Parameters:
         hostname:                   The host/address of the bigip device
@@ -845,7 +1068,7 @@ def list_virtual(hostname, username, password, name=None):
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual')
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -853,7 +1076,6 @@ def list_virtual(hostname, username, password, name=None):
 def create_virtual(hostname, username, password, name, destination,
                    pool=None,
                    address_status=None,
-                   app_service=None,
                    auto_lasthop=None,
                    bwc_policy=None,
                    cmp_enabled=None,
@@ -961,7 +1183,6 @@ def create_virtual(hostname, username, password, name, destination,
 
     params = {
         'pool': pool,
-        'app-service': app_service,
         'auto-lasthop': auto_lasthop,
         'bwc-policy': bwc_policy,
         'connection-limit': connection_limit,
@@ -1066,7 +1287,7 @@ def create_virtual(hostname, username, password, name, destination,
             payload['vlans'] = 'none'
         elif vlans == 'default':
             payload['vlans'] = 'default'
-        elif vlans.startswith('enabled') or vlans.startswith('disabled'):
+        elif isinstance(vlans, str) and (vlans.startswith('enabled') or vlans.startswith('disabled')):
             try:
                 vlans_setting = vlans.split(':')[0]
                 payload['vlans'] = vlans.split(':')[1].split(',')
@@ -1076,6 +1297,8 @@ def create_virtual(hostname, username, password, name, destination,
                     payload['vlans-enabled'] = True
             except Exception:
                 return 'Error: Unable to Parse vlans option: \n\tvlans={vlans}'.format(vlans=vlans)
+        else:
+            return 'Error: vlans must be a dictionary or string.'
 
     #determine state
     if state is not None:
@@ -1088,7 +1311,7 @@ def create_virtual(hostname, username, password, name, destination,
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual', data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1097,7 +1320,6 @@ def modify_virtual(hostname, username, password, name,
                    destination=None,
                    pool=None,
                    address_status=None,
-                   app_service=None,
                    auto_lasthop=None,
                    bwc_policy=None,
                    cmp_enabled=None,
@@ -1195,7 +1417,6 @@ def modify_virtual(hostname, username, password, name,
     params = {
         'destination': destination,
         'pool': pool,
-        'app-service': app_service,
         'auto-lasthop': auto_lasthop,
         'bwc-policy': bwc_policy,
         'connection-limit': connection_limit,
@@ -1316,7 +1537,7 @@ def modify_virtual(hostname, username, password, name,
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1343,7 +1564,7 @@ def delete_virtual(hostname, username, password, name):
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/virtual/{name}'.format(name=name))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     if _load_response(response) == '':
         return True
@@ -1379,7 +1600,7 @@ def list_monitor(hostname, username, password, monitor_type, name=None, ):
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}'.format(type=monitor_type))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1404,7 +1625,6 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
         CLI Example:
 
             salt '*' bigip.create_monitor bigip admin admin http my-http-monitor  timeout=10 interval=5
-
     '''
 
     #build session
@@ -1426,7 +1646,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}'.format(type=monitor_type), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1472,7 +1692,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
     try:
         response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1501,7 +1721,7 @@ def delete_monitor(hostname, username, password, monitor_type, name):
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/monitor/{type}/{name}'.format(type=monitor_type, name=name))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     if _load_response(response) == '':
         return True
@@ -1537,7 +1757,7 @@ def list_profile(hostname, username, password, profile_type, name=None, ):
         else:
             response = bigip_session.get(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1611,7 +1831,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     try:
         response = bigip_session.post(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}'.format(type=profile_type), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1685,9 +1905,9 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #put to REST
     try:
-        response = bigip_session.put(BIG_IP_URL_BASE.format(hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name), data=json.dumps(payload))
+        response = bigip_session.put(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name), data=json.dumps(payload))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     return _load_response(response)
 
@@ -1716,7 +1936,7 @@ def delete_profile(hostname, username, password, profile_type, name):
     try:
         response = bigip_session.delete(BIG_IP_URL_BASE.format(host=hostname)+'/ltm/profile/{type}/{name}'.format(type=profile_type, name=name))
     except requests.exceptions.ConnectionError as e:
-        return 'Error: Unable to connect to the bigip device: {hostname}\n{error}'.format(hostname=hostname, error=e)
+        return _load_connection_error(hostname, e)
 
     if _load_response(response) == '':
         return True
