@@ -49,6 +49,15 @@ def _valid(name, comment='', changes=None):
             'comment': comment}
 
 
+def _get_instance(names):
+    # for some reason loader overwrites __opts__['test'] with default
+    # value of False, thus store and then load it again after action
+    test = __opts__['test']
+    instance = __salt__['cloud.action'](fun='show_instance', names=names)
+    __opts__['test'] = test
+    return instance
+
+
 def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
@@ -77,8 +86,7 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
-    instance = __salt__['cloud.action'](
-        fun='show_instance', names=[name])
+    instance = _get_instance([name])
     retcode = __salt__['cmd.retcode']
     prov = str([a for a in instance][0])
     if onlyif is not None:
@@ -153,7 +161,7 @@ def absent(name, onlyif=None, unless=None):
            'result': None,
            'comment': ''}
     retcode = __salt__['cmd.retcode']
-    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    instance = _get_instance([name])
     if not instance or \
             ('Not Actioned/Not Running' in instance
             and name in instance['Not Actioned/Not Running']):
@@ -241,7 +249,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         elif isinstance(unless, string_types):
             if retcode(unless) == 0:
                 return _valid(name, comment='unless execution succeeded')
-    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    instance = _get_instance([name])
     prov = str(instance.iterkeys().next())
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
