@@ -2145,7 +2145,7 @@ def create_datacenter(kwargs=None, call=None):
             'The create_datacenter function must be called with -f or --function.'
         )
 
-    datacenter_name = kwargs.get('name') if kwargs else None
+    datacenter_name = kwargs.get('name') if kwargs and 'name' in kwargs else None
 
     if not datacenter_name:
         raise SaltCloudSystemExit(
@@ -2196,15 +2196,15 @@ def create_cluster(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f create_cluster my-vmware-config name="MyNewCluster" datacenter="DatacenterName"
+        salt-cloud -f create_cluster my-vmware-config name="myNewCluster" datacenter="datacenterName"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
             'The create_cluster function must be called with -f or --function.'
         )
 
-    cluster_name = kwargs.get('name') if kwargs else None
-    datacenter = kwargs.get('datacenter') if kwargs else None
+    cluster_name = kwargs.get('name') if kwargs and 'name' in kwargs else None
+    datacenter = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
 
     if not cluster_name:
         raise SaltCloudSystemExit(
@@ -2268,8 +2268,8 @@ def rescan_hba(kwargs=None, call=None):
             'The rescan_hba function must be called with -f or --function.'
         )
 
-    hba = kwargs.get('hba') if kwargs else None
-    host_name = kwargs.get('host') if kwargs else None
+    hba = kwargs.get('hba') if kwargs and 'hba' in kwargs else None
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
 
     if not host_name:
         raise SaltCloudSystemExit(
@@ -2383,7 +2383,7 @@ def list_hosts_by_cluster(kwargs=None, call=None):
         )
 
     ret = {}
-    cluster_name = kwargs.get('cluster') if kwargs else None
+    cluster_name = kwargs.get('cluster') if kwargs and 'cluster' in kwargs else None
     cluster_properties = ["name"]
 
     cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
@@ -2427,7 +2427,7 @@ def list_clusters_by_datacenter(kwargs=None, call=None):
         )
 
     ret = {}
-    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
     datacenter_properties = ["name"]
 
     datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
@@ -2471,7 +2471,7 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
         )
 
     ret = {}
-    datacenter_name = kwargs.get('datacenter') if kwargs else None
+    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
     datacenter_properties = ["name"]
 
     datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
@@ -2538,8 +2538,8 @@ def list_hbas(kwargs=None, call=None):
         )
 
     ret = {}
-    hba_type = kwargs.get('type').lower() if kwargs else None
-    host_name = kwargs.get('host') if kwargs else None
+    hba_type = kwargs.get('type').lower() if kwargs and 'type' in kwargs else None
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
     host_properties = [
         "name",
         "config.storageDevice.hostBusAdapter"
@@ -2647,7 +2647,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    host_name = kwargs.get('host') if kwargs else None
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
 
@@ -2692,7 +2692,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    host_name = kwargs.get('host') if kwargs else None
+    host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
 
@@ -2758,7 +2758,7 @@ def create_folder(kwargs=None, call=None):
     # Get the service instance object
     si = _get_si()
 
-    folder_path = kwargs.get('path') if kwargs else None
+    folder_path = kwargs.get('path') if kwargs and 'path' in kwargs else None
 
     if not folder_path:
         raise SaltCloudSystemExit(
@@ -3274,46 +3274,62 @@ def reboot_host(kwargs=None, call=None):
     return {host_name: 'rebooted host'}
 
 
-def add_datastore_cluster(kwargs=None, call=None):
+def create_datastore_cluster(kwargs=None, call=None):
     '''
-    Add a new datastore cluster to a datacenter
+    Create a new datastore cluster for the specified datacenter in this VMware environment
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -f add_datastore_cluster my-vmware-config name="myDatastoreClusterName" datacenter="myDatacenterName"
+        salt-cloud -f create_datastore_cluster my-vmware-config name="datastoreClusterName" datacenter="datacenterName"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The add_datastore_cluster function must be called with -f or --function'
+            'The create_datastore_cluster function must be called with '
+            '-f or --function'
         )
 
-    name = kwargs.get('name') if kwargs else None
-    datacenter = kwargs.get('datacenter') if kwargs else None
+    datastore_cluster_name = kwargs.get('name') if kwargs and 'name' in kwargs else None
+    datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
 
-    if not name:
+    if not datastore_cluster_name:
         raise SaltCloudSystemExit(
-            'You must specify a name of the new datastore cluster'
+            'You must pass a name for the new datastore cluster to be created.'
         )
 
-    if not datacenter:
+    if len(datastore_cluster_name) >= 80 or len(datastore_cluster_name) <= 0:
         raise SaltCloudSystemExit(
-            'You must specify the datacenter to attach the new datastore cluster to'
+            'The datastore cluster name must be a non empty string of less than 80 characters.'
         )
 
-    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
+    if not datacenter_name:
+        raise SaltCloudSystemExit(
+            'You must pass a name for the datacenter where the datastore cluster should be created.'
+        )
 
+    # Check if datastore cluster already exists
+    datastore_cluster_ref = _get_mor_by_property(vim.StoragePod, datastore_cluster_name)
+    if datastore_cluster_ref:
+        return {datastore_cluster_name: 'datastore cluster already exists'}
+
+    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
     if not datacenter_ref:
         raise SaltCloudSystemExit(
-            'The specified datacenter does not exist'
+            'The specified datacenter does not exist.'
         )
 
     try:
-        datacenter_ref.datastoreFolder.CreateStoragePod(name=name)
-       ret = 'Created Datastore Cluster {0}'.format(name)
+        datacenter_ref.datastoreFolder.CreateStoragePod(name=datastore_cluster_name)
     except Exception as exc:
-        log.error('Error creating datastore cluster {0}: {1}'.format(name, exc))
-        return 'Could not create datastore cluster {0}'.format(name)
+        log.error(
+            'Error creating datastore cluster {0}: {1}'.format(
+                datastore_cluster_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
+        return False
 
-    return ret
+    return {datastore_cluster_name: 'created'}
