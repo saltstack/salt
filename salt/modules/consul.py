@@ -280,8 +280,7 @@ def put(consul_url, key, value, **kwargs):
 
     if 'acquire' in kwargs:
         if kwargs['acquire'] not in available_sessions:
-            ret['message'] = ('{0} is not a valid ',
-                              'session.'.format(kwargs['acquire']))
+            ret['message'] = '{0} is not a valid session.'.format(kwargs['acquire'])
             ret['res'] = False
             return ret
 
@@ -293,14 +292,12 @@ def put(consul_url, key, value, **kwargs):
                 if _current['data']['Session'] == kwargs['release']:
                     query_params['release'] = kwargs['release']
                 else:
-                    ret['message'] = ('{0} locked by ',
-                                      'another session.'.format(key))
+                    ret['message'] = '{0} locked by another session.'.format(key)
                     ret['res'] = False
                     return ret
 
             else:
-                ret['message'] = ('{0} is not a valid ',
-                                  'session.'.format(kwargs['acquire']))
+                ret['message'] = '{0} is not a valid session.'.format(kwargs['acquire'])
                 ret['res'] = False
         else:
             log.error('Key {0} does not exist. Skipping release.')
@@ -2295,7 +2292,7 @@ def acl_list(consul_url, **kwargs):
         ret['res'] = False
         return ret
 
-    function = 'acl/list/'.format(kwargs['id'])
+    function = 'acl/list'
     ret = _query(consul_url=consul_url,
                  data=data,
                  method='PUT',
@@ -2353,7 +2350,7 @@ def event_fire(consul_url, name, **kwargs):
     if 'tag' in kwargs:
         query_params = kwargs['tag']
 
-    function = 'event/fire/'.format(name)
+    function = 'event/fire/{0}'.format(name)
     res = _query(consul_url=consul_url,
                  query_params=query_params,
                  method='PUT',
