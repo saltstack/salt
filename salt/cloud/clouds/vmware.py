@@ -2170,8 +2170,8 @@ def create(vm_):
                     type='clone',
                     vm=object_ref,
                     podSelectionSpec=pod_spec,
-                    cloneSpec = clone_spec,
-                    cloneName = vm_name,
+                    cloneSpec=clone_spec,
+                    cloneName=vm_name,
                     folder=folder_ref
                 )
 
@@ -3514,5 +3514,5 @@ def create_datastore_cluster(kwargs=None, call=None):
             exc_info_on_loglevel=logging.DEBUG
         )
         return False
-    
+
     return {datastore_cluster_name: 'created'}
