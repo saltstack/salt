@@ -2164,7 +2164,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         if not use_vt:
             res = __salt__['cmd.run_all'](cmd, python_shell=False)
         else:
-            stdout, stderr = '', ''
+            stdout_str, stderr_str = '', ''
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,
@@ -2184,33 +2184,33 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                         except IOError:
                             cstdout, cstderr = '', ''
                         if cstdout:
-                            stdout += cstdout
+                            stdout_str += cstdout
                         else:
                             cstdout = ''
                         if cstderr:
-                            stderr += cstderr
+                            stderr_str += cstderr
                         else:
                             cstderr = ''
                         # done by vt itself
                         # if stdout:
-                        #     log.debug(stdout)
+                        #     log.debug(stdout_str)
                         # if stderr:
-                        #     log.debug(stderr)
+                        #     log.debug(stderr_str)
                         if not cstdout and not cstderr and not proc.isalive():
                             break
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
                        'pid': 2,
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_str,
+                       'stderr': stderr_str}
             except vt.TerminalException:
                 trace = traceback.format_exc()
                 log.error(trace)
                 res = {'retcode': 127,
                        'pid': '2',
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_str,
+                       'stderr': stderr_str}
             finally:
                 proc.terminate()
     else:
