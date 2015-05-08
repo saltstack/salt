@@ -1634,7 +1634,7 @@ def replace(path,
                     if prepend_if_not_found or append_if_not_found:
                         # Search for content, so we don't continue pre/appending
                         # the content if it's been pre/appended in a previous run.
-                        if re.search(content, line):
+                        if re.search('^{0}$'.format(content), line):
                             # Content was found, so set found.
                             found = True
 
@@ -4780,7 +4780,7 @@ def normpath(path):
     '''
     Returns Normalize path, eliminating double slashes, etc.
 
-    .. versionadded:: 2015.2
+    .. versionadded:: 2015.5.0
 
     This can be useful at the CLI but is frequently useful when scripting.
 
@@ -4801,7 +4801,7 @@ def basename(path):
     '''
     Returns the final component of a pathname
 
-    .. versionadded:: 2015.2
+    .. versionadded:: 2015.5.0
 
     This can be useful at the CLI but is frequently useful when scripting.
 
@@ -4822,7 +4822,7 @@ def dirname(path):
     '''
     Returns the directory component of a pathname
 
-    .. versionadded:: 2015.2
+    .. versionadded:: 2015.5.0
 
     This can be useful at the CLI but is frequently useful when scripting.
 

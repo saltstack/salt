@@ -235,7 +235,7 @@ def get(key, default='', delimiter=':', merge=None):
 
     The ``:`` (colon) is used to represent a nested dictionary level.
 
-    .. versionchanged:: 2015.2.0
+    .. versionchanged:: 2015.5.0
         The ``delimiter`` argument was added, to allow delimiters other than
         ``:`` to be used.
 
@@ -254,13 +254,13 @@ def get(key, default='', delimiter=':', merge=None):
     **Arguments**
 
     delimiter
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         Override the delimiter used to separate nested levels of a data
         structure.
 
     merge
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         If passed, this parameter will change the behavior of the function so
         that, instead of traversing each data store above in order and

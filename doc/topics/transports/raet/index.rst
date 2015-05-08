@@ -66,7 +66,7 @@ Limitations
 ===========
 
 The 2014.7 release of RAET is not complete! The Syndic and Multi Master have
-not been completed yet and these are slated for completion in the 2015.2.0
+not been completed yet and these are slated for completion in the 2015.5.0
 release.
 
 Also, Salt-Raet allows for more control over the client but these hooks have

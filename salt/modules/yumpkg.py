@@ -2034,7 +2034,7 @@ def modified(*packages, **flags):
     List the modified files that belong to a package. Not specifying any packages
     will return a list of _all_ modified files on the system's RPM database.
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Filtering by flags (True or False):
 
@@ -2081,7 +2081,7 @@ def modified(*packages, **flags):
 @decorators.which('yumdownloader')
 def download(*packages):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Download packages to the local disk. Requires ``yumdownloader`` from
     ``yum-utils`` package.

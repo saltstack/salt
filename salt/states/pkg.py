@@ -810,7 +810,7 @@ def installed(
         Whether to install the packages marked as recommended. Default is
         ``True``. Currently only works with APT-based systems.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: yaml
 
@@ -822,7 +822,7 @@ def installed(
         Only upgrade the packages, if they are already installed. Default is
         ``False``. Currently only works with APT-based systems.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: yaml
 
@@ -1239,7 +1239,7 @@ def latest(
         Whether to install the packages marked as recommended. Default is
         ``True``. Currently only works with APT-based systems.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: yaml
 
@@ -1251,7 +1251,7 @@ def latest(
         Only upgrade the packages, if they are already installed. Default is
         ``False``. Currently only works with APT-based systems.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: yaml
 
@@ -1619,7 +1619,7 @@ def uptodate(name, refresh=False, **kwargs):
     kwargs
         Any keyword arguments to pass through to ``pkg.upgrade``.
 
-        .. versionadded:: 2015.2
+        .. versionadded:: 2015.5.0
     '''
     ret = {'name': name,
            'changes': {},
