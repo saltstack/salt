@@ -269,6 +269,10 @@ def optimize_providers(providers):
     return optimized_providers
 
 
+def sign(key, msg):
+    return hmac.new(key, msg.encode('utf-8'), hashlib.sha256).digest()
+
+
 def query(params=None, setname=None, requesturl=None, location=None,
           return_url=False, return_root=False):
 
@@ -302,38 +306,66 @@ def query(params=None, setname=None, requesturl=None, location=None,
                 return {'error': endpoint_err}
 
         log.debug('Using EC2 endpoint: {0}'.format(endpoint))
+        # AWS v4 signature
+
         method = 'GET'
+        region = location
+        service = 'ec2'
+        canonical_uri = urlparse.urlparse(requesturl).path
+        host = endpoint.strip()
+
+        # Create a date for headers and the credential string
+        t = datetime.datetime.utcnow()
+        amz_date = t.strftime('%Y%m%dT%H%M%SZ')  # Format date as YYYYMMDD'T'HHMMSS'Z'
+        datestamp = t.strftime('%Y%m%d')  # Date w/o time, used in credential scope
+
+        canonical_headers = 'host:' + host + '\n' + 'x-amz-date:' + amz_date + '\n'
+        signed_headers = 'host;x-amz-date'
+
+        payload_hash = hashlib.sha256('').hexdigest()
 
         ec2_api_version = provider.get(
             'ec2_api_version',
             DEFAULT_EC2_API_VERSION
         )
 
-        params_with_headers['AWSAccessKeyId'] = provider['id']
-        params_with_headers['SignatureVersion'] = '2'
-        params_with_headers['SignatureMethod'] = 'HmacSHA256'
-        params_with_headers['Timestamp'] = '{0}'.format(timestamp)
         params_with_headers['Version'] = ec2_api_version
-        keys = sorted(params_with_headers)
+
+        keys = sorted(params_with_headers.keys())
         values = map(params_with_headers.get, keys)
         querystring = urllib.urlencode(list(zip(keys, values)))
-
-        # AWS signature version 2 requires that spaces be encoded as
-        # %20, however urlencode uses '+'. So replace pluses with %20.
         querystring = querystring.replace('+', '%20')
 
-        uri = '{0}\n{1}\n/\n{2}'.format(method.encode('utf-8'),
-                                        endpoint.encode('utf-8'),
-                                        querystring.encode('utf-8'))
+        canonical_request = method + '\n' + canonical_uri + '\n' + \
+                    querystring + '\n' + canonical_headers + '\n' + \
+                    signed_headers + '\n' + payload_hash
 
-        hashed = hmac.new(provider['key'], uri, hashlib.sha256)
-        sig = binascii.b2a_base64(hashed.digest())
-        params_with_headers['Signature'] = sig.strip()
+        algorithm = 'AWS4-HMAC-SHA256'
+        credential_scope = datestamp + '/' + region + '/' + service + '/' + 'aws4_request'
+
+        string_to_sign = algorithm + '\n' +  amz_date + '\n' + \
+                         credential_scope + '\n' + \
+                         hashlib.sha256(canonical_request).hexdigest()
+
+        kDate = sign(('AWS4' + provider['key']).encode('utf-8'), datestamp)
+        kRegion = sign(kDate, region)
+        kService = sign(kRegion, service)
+        signing_key = sign(kService, 'aws4_request')
+
+        signature = hmac.new(signing_key, (string_to_sign).encode('utf-8'),
+                             hashlib.sha256).hexdigest()
+        #sig = binascii.b2a_base64(hashed)
+
+        authorization_header = algorithm + ' ' + 'Credential=' + \
+                               provider['id'] + '/' + credential_scope + \
+                               ', ' +  'SignedHeaders=' + signed_headers + \
+                               ', ' + 'Signature=' + signature
+        headers = {'x-amz-date': amz_date, 'Authorization': authorization_header}
 
         log.debug('EC2 Request: {0}'.format(requesturl))
         log.trace('EC2 Request Parameters: {0}'.format(params_with_headers))
         try:
-            result = requests.get(requesturl, params=params_with_headers)
+            result = requests.get(requesturl, headers=headers, params=params_with_headers)
             log.debug(
                 'EC2 Response Status Code: {0}'.format(
                     # result.getcode()
