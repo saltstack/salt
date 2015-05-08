@@ -1065,7 +1065,8 @@ def get_vcenter_version(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The get_vcenter_version function must be called with -f or --function.'
+            'The get_vcenter_version function must be called with '
+            '-f or --function.'
         )
 
     # Get the inventory
@@ -1086,7 +1087,8 @@ def list_datacenters(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_datacenters function must be called with -f or --function.'
+            'The list_datacenters function must be called with '
+            '-f or --function.'
         )
 
     datacenters = []
@@ -1112,7 +1114,8 @@ def list_clusters(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_clusters function must be called with -f or --function.'
+            'The list_clusters function must be called with '
+            '-f or --function.'
         )
 
     clusters = []
@@ -1138,7 +1141,8 @@ def list_datastore_clusters(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_datastore_clusters function must be called with -f or --function.'
+            'The list_datastore_clusters function must be called with '
+            '-f or --function.'
         )
 
     datastore_clusters = []
@@ -1164,7 +1168,8 @@ def list_datastores(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_datastores function must be called with -f or --function.'
+            'The list_datastores function must be called with '
+            '-f or --function.'
         )
 
     datastores = []
@@ -1190,7 +1195,8 @@ def list_hosts(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_hosts function must be called with -f or --function.'
+            'The list_hosts function must be called with '
+            '-f or --function.'
         )
 
     hosts = []
@@ -1216,7 +1222,8 @@ def list_resourcepools(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_resourcepools function must be called with -f or --function.'
+            'The list_resourcepools function must be called with '
+            '-f or --function.'
         )
 
     resource_pools = []
@@ -1242,7 +1249,8 @@ def list_networks(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_networks function must be called with -f or --function.'
+            'The list_networks function must be called with '
+            '-f or --function.'
         )
 
     networks = []
@@ -1485,7 +1493,8 @@ def show_instance(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
+            'The show_instance action must be called with '
+            '-a or --action.'
         )
 
     vm_properties = [
@@ -1559,7 +1568,8 @@ def list_folders(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_folders function must be called with -f or --function.'
+            'The list_folders function must be called with '
+            '-f or --function.'
         )
 
     folders = []
@@ -1596,7 +1606,8 @@ def list_snapshots(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_snapshots function must be called with -f or --function.'
+            'The list_snapshots function must be called with '
+            '-f or --function.'
         )
 
     ret = {}
@@ -1630,7 +1641,8 @@ def start(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The start action must be called with -a or --action.'
+            'The start action must be called with '
+            '-a or --action.'
         )
 
     vm_properties = [
@@ -1676,7 +1688,8 @@ def stop(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The stop action must be called with -a or --action.'
+            'The stop action must be called with '
+            '-a or --action.'
         )
 
     vm_properties = [
@@ -1722,7 +1735,8 @@ def suspend(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The suspend action must be called with -a or --action.'
+            'The suspend action must be called with '
+            '-a or --action.'
         )
 
     vm_properties = [
@@ -1772,7 +1786,8 @@ def reset(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The reset action must be called with -a or --action.'
+            'The reset action must be called with '
+            '-a or --action.'
         )
 
     vm_properties = [
@@ -1819,7 +1834,8 @@ def terminate(name, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The terminate action must be called with -a or --action.'
+            'The terminate action must be called with '
+            '-a or --action.'
         )
 
     vm_properties = [
@@ -2202,7 +2218,8 @@ def create_datacenter(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The create_datacenter function must be called with -f or --function.'
+            'The create_datacenter function must be called with '
+            '-f or --function.'
         )
 
     datacenter_name = kwargs.get('name') if kwargs and 'name' in kwargs else None
@@ -2260,7 +2277,8 @@ def create_cluster(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The create_cluster function must be called with -f or --function.'
+            'The create_cluster function must be called with '
+            '-f or --function.'
         )
 
     cluster_name = kwargs.get('name') if kwargs and 'name' in kwargs else None
@@ -2325,7 +2343,8 @@ def rescan_hba(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The rescan_hba function must be called with -f or --function.'
+            'The rescan_hba function must be called with '
+            '-f or --function.'
         )
 
     hba = kwargs.get('hba') if kwargs and 'hba' in kwargs else None
@@ -2414,7 +2433,8 @@ def upgrade_tools(name, reboot=False, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The upgrade_tools action must be called with -a or --action.'
+            'The upgrade_tools action must be called with '
+            '-a or --action.'
         )
 
     vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
@@ -2601,7 +2621,8 @@ def list_hbas(kwargs=None, call=None):
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
-            'The list_hbas function must be called with -f or --function.'
+            'The list_hbas function must be called with '
+            '-f or --function.'
         )
 
     ret = {}
@@ -2896,7 +2917,8 @@ def create_snapshot(name, kwargs=None, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The create_snapshot action must be called with -a or --action.'
+            'The create_snapshot action must be called with '
+            '-a or --action.'
         )
 
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
@@ -2965,7 +2987,8 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The revert_to_snapshot action must be called with -a or --action.'
+            'The revert_to_snapshot action must be called with '
+            '-a or --action.'
         )
 
     suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
@@ -3013,7 +3036,8 @@ def remove_all_snapshots(name, kwargs=None, call=None):
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The remove_all_snapshots action must be called with -a or --action.'
+            'The remove_all_snapshots action must be called with '
+            '-a or --action.'
         )
 
     consolidate = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
