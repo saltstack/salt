@@ -450,7 +450,7 @@ class CloudClient(object):
                 kwargs={'image': 'ami-10314d79'}
             )
         '''
-        mapper = salt.cloud.Map(self._opts_defaults(action=fun))
+        mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
         if names and not provider:
             self.opts['action'] = fun
             return mapper.do_action(names, kwargs)
