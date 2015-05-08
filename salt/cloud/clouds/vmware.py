@@ -175,7 +175,7 @@ def _get_si():
                 ssl._create_default_https_context = default_context
             except:
                 raise SaltCloudSystemExit(
-                    '\nCCould not connect to the vCenter server using the specified username and password'
+                    '\nCould not connect to the vCenter server using the specified username and password'
                 )
         else:
             raise SaltCloudSystemExit(
@@ -2027,7 +2027,7 @@ def create(vm_):
             clone_type = "template" if object_ref.config.template else "vm"
         else:
             raise SaltCloudSystemExit(
-                'The VM/template that you have specified under clonefrom does not exist'
+                'The VM/template that you have specified under clonefrom does not exist.'
             )
 
         # Either a cluster, or a resource pool must be specified when cloning from template.
@@ -2036,18 +2036,18 @@ def create(vm_):
             if not resourcepool_ref:
                 log.error('Specified resource pool: {0} does not exist'.format(resourcepool))
                 if clone_type == "template":
-                    raise SaltCloudSystemExit('You must specify a resource pool that exists')
+                    raise SaltCloudSystemExit('You must specify a resource pool that exists.')
         elif cluster:
             cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
             if not cluster_ref:
                 log.error('Specified cluster: {0} does not exist'.format(cluster))
                 if clone_type == "template":
-                    raise SaltCloudSystemExit('You must specify a cluster that exists')
+                    raise SaltCloudSystemExit('You must specify a cluster that exists.')
             else:
                 resourcepool_ref = cluster_ref.resourcePool
         elif clone_type == "template":
             raise SaltCloudSystemExit(
-                'You must either specify a cluster or a resource pool when cloning from a template'
+                'You must either specify a cluster or a resource pool when cloning from a template.'
             )
         else:
             log.debug('Using resource pool used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
@@ -2226,7 +2226,7 @@ def create_datacenter(kwargs=None, call=None):
 
     if not datacenter_name:
         raise SaltCloudSystemExit(
-            'You must pass a name for the new datacenter to be created.'
+            'You must specify name of the new datacenter to be created.'
         )
 
     if len(datacenter_name) >= 80 or len(datacenter_name) <= 0:
@@ -2286,12 +2286,12 @@ def create_cluster(kwargs=None, call=None):
 
     if not cluster_name:
         raise SaltCloudSystemExit(
-            'You must pass a name for the new cluster to be created.'
+            'You must specify name of the new cluster to be created.'
         )
 
     if not datacenter:
         raise SaltCloudSystemExit(
-            'You must pass a name for the datacenter where the cluster should be created.'
+            'You must specify name of the datacenter where the cluster should be created.'
         )
 
     if not isinstance(datacenter, vim.Datacenter):
@@ -2352,7 +2352,7 @@ def rescan_hba(kwargs=None, call=None):
 
     if not host_name:
         raise SaltCloudSystemExit(
-            'You must pass a name of the host system'
+            'You must specify name of the host system.'
         )
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
@@ -2466,7 +2466,7 @@ def list_hosts_by_cluster(kwargs=None, call=None):
     if call != 'function':
         raise SaltCloudSystemExit(
             'The list_hosts_by_cluster function must be called with '
-            '-f or --function'
+            '-f or --function.'
         )
 
     ret = {}
@@ -2510,7 +2510,7 @@ def list_clusters_by_datacenter(kwargs=None, call=None):
     if call != 'function':
         raise SaltCloudSystemExit(
             'The list_clusters_by_datacenter function must be called with '
-            '-f or --function'
+            '-f or --function.'
         )
 
     ret = {}
@@ -2554,7 +2554,7 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
     if call != 'function':
         raise SaltCloudSystemExit(
             'The list_hosts_by_datacenter function must be called with '
-            '-f or --function'
+            '-f or --function.'
         )
 
     ret = {}
@@ -2635,7 +2635,7 @@ def list_hbas(kwargs=None, call=None):
 
     if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
         raise SaltCloudSystemExit(
-            'Specified hba type {0} currently not supported'.format(hba_type)
+            'Specified hba type {0} currently not supported.'.format(hba_type)
         )
 
     host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
@@ -2741,7 +2741,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
 
     if not host_name or not host_ref:
         raise SaltCloudSystemExit(
-            'You must pass a valid name of the host system'
+            'You must specify a valid name of the host system.'
         )
 
     if host_ref.runtime.inMaintenanceMode:
@@ -2786,7 +2786,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
 
     if not host_name or not host_ref:
         raise SaltCloudSystemExit(
-            'You must pass a valid name of the host system'
+            'You must specify a valid name of the host system.'
         )
 
     if not host_ref.runtime.inMaintenanceMode:
@@ -2850,7 +2850,7 @@ def create_folder(kwargs=None, call=None):
 
     if not folder_path:
         raise SaltCloudSystemExit(
-            'You must specify a non empty folder path'
+            'You must specify a non empty folder path.'
         )
 
     folder_refs = []
@@ -2925,7 +2925,7 @@ def create_snapshot(name, kwargs=None, call=None):
 
     if not snapshot_name:
         raise SaltCloudSystemExit(
-            'You must provide a snapshot name for the snapshot to be created.'
+            'You must specify snapshot name for the snapshot to be created.'
         )
 
     memdump = _str_to_bool(kwargs.get('memdump', True))
@@ -3123,36 +3123,36 @@ def add_host(kwargs=None, call=None):
 
     if not host_user:
         raise SaltCloudSystemExit(
-            'You must provide the ESXi host username in your providers config'
+            'You must specify the ESXi host username in your providers config.'
         )
 
     if not host_password:
         raise SaltCloudSystemExit(
-            'You must provide the ESXi host password in your providers config'
+            'You must specify the ESXi host password in your providers config.'
         )
 
     if not host_name:
         raise SaltCloudSystemExit(
-            'You must pass either an IP or DNS name for the Host system'
+            'You must specify either the IP or DNS name of the host system.'
         )
 
     if (cluster_name and datacenter_name) or not(cluster_name or datacenter_name):
         raise SaltCloudSystemExit(
-            'You must specify either the cluster name or the datacenter name'
+            'You must specify either the cluster name or the datacenter name.'
         )
 
     if cluster_name:
         cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
         if not cluster_ref:
             raise SaltCloudSystemExit(
-                'Specified cluster does not exist'
+                'Specified cluster does not exist.'
             )
 
     if datacenter_name:
         datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
         if not datacenter_ref:
             raise SaltCloudSystemExit(
-                'Specified datacenter does not exist'
+                'Specified datacenter does not exist.'
             )
 
     spec = vim.host.ConnectSpec(
@@ -3229,13 +3229,13 @@ def remove_host(kwargs=None, call=None):
 
     if not host_name:
         raise SaltCloudSystemExit(
-            'You must specify the name of the Host system'
+            'You must specify name of the host system.'
         )
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
-            'Specified host system does not exist'
+            'Specified host system does not exist.'
         )
 
     try:
@@ -3280,13 +3280,13 @@ def connect_host(kwargs=None, call=None):
 
     if not host_name:
         raise SaltCloudSystemExit(
-            'You must specify the name of the Host system'
+            'You must specify name of the host system.'
         )
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
-            'Specified host system does not exist'
+            'Specified host system does not exist.'
         )
 
     if host_ref.runtime.connectionState == 'connected':
@@ -3329,13 +3329,13 @@ def disconnect_host(kwargs=None, call=None):
 
     if not host_name:
         raise SaltCloudSystemExit(
-            'You must specify the name of the Host system'
+            'You must specify name of the host system.'
         )
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
-            'Specified host system does not exist'
+            'Specified host system does not exist.'
         )
 
     if host_ref.runtime.connectionState == 'disconnected':
@@ -3385,30 +3385,30 @@ def reboot_host(kwargs=None, call=None):
 
     if not host_name:
         raise SaltCloudSystemExit(
-            'You must specify the name of the Host system'
+            'You must specify name of the host system.'
         )
 
     host_ref = _get_mor_by_property(vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
-            'Specified host system does not exist'
+            'Specified host system does not exist.'
         )
 
     if host_ref.runtime.connectionState == 'notResponding':
         raise SaltCloudSystemExit(
-            'Specified host system cannot be rebooted in its current state (not responding)'
+            'Specified host system cannot be rebooted in it\'s current state (not responding).'
         )
 
     if not host_ref.capability.rebootSupported:
         raise SaltCloudSystemExit(
-            'Specified host system does not support reboot'
+            'Specified host system does not support reboot.'
         )
 
     if not host_ref.runtime.inMaintenanceMode:
         raise SaltCloudSystemExit(
             'Specified host system is not in maintenance mode. Specify force=True to '
             'force reboot even if there are virtual machines running or other operations '
-            'in progress'
+            'in progress.'
         )
 
     try:
@@ -3441,7 +3441,7 @@ def create_datastore_cluster(kwargs=None, call=None):
     if call != 'function':
         raise SaltCloudSystemExit(
             'The create_datastore_cluster function must be called with '
-            '-f or --function'
+            '-f or --function.'
         )
 
     datastore_cluster_name = kwargs.get('name') if kwargs and 'name' in kwargs else None
@@ -3449,7 +3449,7 @@ def create_datastore_cluster(kwargs=None, call=None):
 
     if not datastore_cluster_name:
         raise SaltCloudSystemExit(
-            'You must pass a name for the new datastore cluster to be created.'
+            'You must specify name of the new datastore cluster to be created.'
         )
 
     if len(datastore_cluster_name) >= 80 or len(datastore_cluster_name) <= 0:
@@ -3459,7 +3459,7 @@ def create_datastore_cluster(kwargs=None, call=None):
 
     if not datacenter_name:
         raise SaltCloudSystemExit(
-            'You must pass a name for the datacenter where the datastore cluster should be created.'
+            'You must specify name of the datacenter where the datastore cluster should be created.'
         )
 
     # Check if datastore cluster already exists
