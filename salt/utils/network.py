@@ -161,11 +161,12 @@ def _sort_hostnames(hostname_list):
 
         # punish ipv4
         e_is_ipv4 = e.count('.') == 3 and not any(c.isalpha() for c in e)
-        if e_is_ipv4 and e.startswith('127.'):
-            fourth = 1
         if e_is_ipv4:
-            fourth = 0
-        if not e_is_ipv4:
+            if e.startswith('127.'):
+                fourth = 1
+            else:
+                fourth = 0
+        else:
             fourth = -1
 
         # favor hosts with more dots
