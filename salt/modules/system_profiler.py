@@ -5,7 +5,7 @@ System Profiler Module
 Interface with Mac OSX's command-line System Profiler utility to get
 information about package receipts and installed applications.
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 '''
 
