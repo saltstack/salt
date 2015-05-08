@@ -155,8 +155,8 @@ def absent(name, onlyif=None, unless=None):
     retcode = __salt__['cmd.retcode']
     instance = __salt__['cloud.action'](fun='show_instance', names=[name])
     if not instance or \
-            ('Not Actioned/Not Running' in ret
-            and name in ret['Not Actioned/Not Running']):
+            ('Not Actioned/Not Running' in instance
+            and name in instance['Not Actioned/Not Running']):
         ret['result'] = True
         ret['comment'] = 'Instance {0} already absent'.format(name)
         return ret
