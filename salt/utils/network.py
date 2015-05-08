@@ -164,7 +164,7 @@ def _sort_hostnames(hostname_list):
         if e_is_ipv4 and e.startswith('127.'):
             fourth = 1
         if e_is_ipv4:
-            fourth = 1
+            fourth = 0
         if not e_is_ipv4:
             fourth = -1
 
