@@ -9,15 +9,24 @@ ensure_in_syspath('../../')
 # Import Salt libs
 from salt.exceptions import SaltException
 from salt.modules import grains as grainsmod
+from salt.modules import config
 
-grainsmod.__grains__ = {
-  'os_family': 'MockedOS'
+grainsmod.__opts__ = {
+  'conf_file': '/tmp/__salt_test_grains',
+  'cachedir':  '/tmp/__salt_test_grains_cache_dir'
 }
 
+grainsmod.__salt__ = {
+  'saltutil.sync_grains': lambda *a, **k: None
+}
 
 class GrainsModuleTestCase(TestCase):
 
     def test_filter_by(self):
+        grainsmod.__grains__ = {
+          'os_family': 'MockedOS'
+        }
+
         dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
         mdict = {'D': {'E': 'I'}, 'J': 'K'}
 
@@ -95,6 +104,46 @@ class GrainsModuleTestCase(TestCase):
         dict1 = {'A': 'B', 'MockedOS': {'D': {'E': 'F', 'G': 'H'}}}
         res = grainsmod.filter_by(dict1, default='Z')
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
+
+
+    def test_append(self):
+        # grains {'a_list': ['a', 'b', 'c'], 'a': {'nested': {'list': ['1', '2', '3']}, 'aa': 'val'}}
+
+        # Append to an existing list
+        grainsmod.__grains__ = {'a_list': ['a', 'b', 'c'], 'b': 'bval'}
+        res = grainsmod.append('a_list', 'd')
+        # check the result
+        self.assertEqual(res, {'a_list': ['a', 'b', 'c', 'd']})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a_list': ['a', 'b', 'c', 'd'], 'b': 'bval'})
+
+        # Append to an non existing list
+        grainsmod.__grains__ = {'b': 'bval'}
+        res = grainsmod.append('a_list', 'd')
+        # check the result
+        self.assertEqual(res, {'a_list': ['d']})
+        # the whole grains should now be
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a_list': ['d'], 'b': 'bval'})
+
+        # Append to an existing string, without convert
+        grainsmod.__grains__ = {'b': 'bval'}
+        res = grainsmod.append('b', 'd')
+        # check the result
+        self.assertEqual(res, 'The key b is not a valid list')
+        # the whole grains should now be
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'b': 'bval'})
+
+        # Append to an existing string, with convert
+        grainsmod.__grains__ = {'b': 'bval'}
+        res = grainsmod.append('b', 'd', convert=True)
+        # check the result
+        self.assertEqual(res, {'b': ['bval', 'd']})
+        # the whole grains should now be
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'b': ['bval', 'd']})
+
 
 
 if __name__ == '__main__':
