@@ -142,48 +142,41 @@ def _sort_hostnames(hostname_list):
         'fe02::',
     ]
 
-    def _cmp_hostname(a, b):
+    def _key_hostname(e):
         # should never have a space in hostname
-        if ' ' in a:
-            return 1
-        if ' ' in b:
-            return -1
+        # favor hostnames w/o spaces
+        if ' ' in e:
+            first = 1
+        else:
+            first = -1
 
         # punish localhost list
-        if a in punish:
-            if b in punish:
-                return punish.index(a) - punish.index(b)
-            return 1
-        if b in punish:
-            return -1
+        if e in punish:
+            second = punish.index(e)
+        else:
+            second = -1
 
         # punish ipv6
-        if ':' in a or ':' in b:
-            return a.count(':') - b.count(':')
+        third = e.count(':')
 
         # punish ipv4
-        a_is_ipv4 = a.count('.') == 3 and not any(c.isalpha() for c in a)
-        b_is_ipv4 = b.count('.') == 3 and not any(c.isalpha() for c in b)
-        if a_is_ipv4 and a.startswith('127.'):
-            return 1
-        if b_is_ipv4 and b.startswith('127.'):
-            return -1
-        if a_is_ipv4 and not b_is_ipv4:
-            return 1
-        if a_is_ipv4 and b_is_ipv4:
-            return 0
-        if not a_is_ipv4 and b_is_ipv4:
-            return -1
+        e_is_ipv4 = e.count('.') == 3 and not any(c.isalpha() for c in e)
+        if e_is_ipv4 and e.startswith('127.'):
+            fourth = 1
+        if e_is_ipv4:
+            fourth = 1
+        if not e_is_ipv4:
+            fourth = -1
 
         # favor hosts with more dots
-        diff = b.count('.') - a.count('.')
-        if diff != 0:
-            return diff
+        fifth = -(e.count('.'))
 
         # favor longest fqdn
-        return len(b) - len(a)
+        sixth = -(len(e))
 
-    return sorted(hostname_list, cmp=_cmp_hostname)
+        return (first, second, third, fourth, fifth, sixth)
+
+    return sorted(hostname_list, key=_key_hostname)
 
 
 def get_hostnames():
@@ -644,7 +637,7 @@ def linux_interfaces():
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
+        ifaces = _interfaces_ip("{0}\n{1}".format(cmd1, cmd2))
     elif ifconfig_path:
         cmd = subprocess.Popen(
             '{0} -a'.format(ifconfig_path),
