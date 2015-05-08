@@ -879,6 +879,7 @@ def init(name,
             __salt__['lxc.clone'](name, clone_from,
                                   profile=profile, **kwargs))
         if not ret.get('cloned', False):
+            ret['result'] = False
             return ret
         cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
                          bridge=bridge, gateway=gateway,
@@ -900,6 +901,7 @@ def init(name,
                 __salt__['lxc.create'](name, config=cfile.name,
                                        profile=profile, **kwargs))
         if not ret.get('created', False):
+            ret['result'] = False
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
