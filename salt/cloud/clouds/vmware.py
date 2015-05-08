@@ -1026,7 +1026,14 @@ def _upg_tools_helper(vm, reboot=False):
                 return status
             _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
         except Exception as exc:
-            log.error('Could not upgrade VMware tools on VM {0}: {1}'.format(vm.name, exc))
+            log.error(
+                'Error while upgrading VMware tools on VM {0}: {1}'.format(
+                    vm.name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
             status = 'VMware tools upgrade failed'
             return status
         status = 'VMware tools upgrade succeeded'
@@ -1644,7 +1651,14 @@ def start(name, call=None):
                 task = vm["object"].PowerOn()
                 _wait_for_task(task, name, "power on")
             except Exception as exc:
-                log.error('Could not power on VM {0}: {1}'.format(name, exc))
+                log.error(
+                    'Error while powering on VM {0}: {1}'.format(
+                        name,
+                        exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
                 return 'failed to power on'
 
     return 'powered on'
@@ -1683,7 +1697,14 @@ def stop(name, call=None):
                 task = vm["object"].PowerOff()
                 _wait_for_task(task, name, "power off")
             except Exception as exc:
-                log.error('Could not power off VM {0}: {1}'.format(name, exc))
+                log.error(
+                    'Error while powering off VM {0}: {1}'.format(
+                        name,
+                        exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
                 return 'failed to power off'
 
     return 'powered off'
@@ -1726,7 +1747,14 @@ def suspend(name, call=None):
                 task = vm["object"].Suspend()
                 _wait_for_task(task, name, "suspend")
             except Exception as exc:
-                log.error('Could not suspend VM {0}: {1}'.format(name, exc))
+                log.error(
+                    'Error while suspending VM {0}: {1}'.format(
+                        name,
+                        exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
                 return 'failed to suspend'
 
     return 'suspended'
@@ -1765,7 +1793,14 @@ def reset(name, call=None):
                 task = vm["object"].Reset()
                 _wait_for_task(task, name, "reset")
             except Exception as exc:
-                log.error('Could not reset VM {0}: {1}'.format(name, exc))
+                log.error(
+                    'Error while resetting VM {0}: {1}'.format(
+                        name,
+                        exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
                 return 'failed to reset'
 
     return 'reset'
@@ -1804,7 +1839,14 @@ def terminate(name, call=None):
                 log.info('Terminating VM {0}'.format(name))
                 vm["object"].Terminate()
             except Exception as exc:
-                log.error('Could not terminate VM {0}: {1}'.format(name, exc))
+                log.error(
+                    'Error while terminating VM {0}: {1}'.format(
+                        name,
+                        exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
                 return 'failed to terminate'
 
     return 'terminated'
@@ -1852,10 +1894,28 @@ def destroy(name, call=None):
                     task = vm["object"].PowerOff()
                     _wait_for_task(task, name, "power off")
                 except Exception as exc:
-                    log.error('Could not destroy VM {0}: {1}'.format(name, exc))
+                    log.error(
+                        'Error while powering off VM {0}: {1}'.format(
+                            name,
+                            exc
+                        ),
+                        # Show the traceback if the debug logging level is enabled
+                        exc_info_on_loglevel=logging.DEBUG
+                    )
                     return 'failed to destroy'
-            task = vm["object"].Destroy_Task()
-            _wait_for_task(task, name, "destroy")
+            try:
+                task = vm["object"].Destroy_Task()
+                _wait_for_task(task, name, "destroy")
+            except Exception as exc:
+                log.error(
+                    'Error while destroying VM {0}: {1}'.format(
+                        name,
+                        exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                return 'failed to destroy'
 
     salt.utils.cloud.fire_event(
         'event',
@@ -2288,7 +2348,14 @@ def rescan_hba(kwargs=None, call=None):
             host_ref.configManager.storageSystem.RescanAllHba()
             ret = 'rescanned all HBAs'
     except Exception as exc:
-        log.error('Could not rescan HBA on host {0}: {1}'.format(host_name, exc))
+        log.error(
+            'Error while rescaning HBA on host {0}: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return {host_name: 'failed to rescan HBA'}
 
     return {host_name: ret}
@@ -2860,7 +2927,14 @@ def create_snapshot(name, kwargs=None, call=None):
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
         _wait_for_task(task, name, "create snapshot", 5, 'info')
     except Exception as exc:
-        log.error('Error while creating snapshot of {0}: {1}'.format(name, exc))
+        log.error(
+            'Error while creating snapshot of {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return 'failed to create snapshot'
 
     return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList, vm_ref.snapshot.currentSnapshot)}
@@ -2907,7 +2981,14 @@ def revert_to_snapshot(name, kwargs=None, call=None):
         _wait_for_task(task, name, "revert to snapshot", 5, 'info')
 
     except Exception as exc:
-        log.error('Error while reverting VM {0} to snapshot: {1}'.format(name, exc))
+        log.error(
+            'Error while reverting VM {0} to snapshot: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return 'revert failed'
 
     return 'reverted to current snapshot'
@@ -2943,7 +3024,14 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         task = vm_ref.RemoveAllSnapshots()
         _wait_for_task(task, name, "remove snapshots", 5, 'info')
     except Exception as exc:
-        log.error('Error while removing snapshots on VM {0}: {1}'.format(name, exc))
+        log.error(
+            'Error while removing snapshots on VM {0}: {1}'.format(
+                name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return 'failed to remove snapshots'
 
     return 'removed all snapshots'
@@ -3062,7 +3150,14 @@ def add_host(kwargs=None, call=None):
             log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
             spec.sslThumbprint = ssl_thumbprint
         except Exception as exc:
-            log.error('Error while trying to get SSL thumbprint of host {0}: {1}'.format(host_name, exc))
+            log.error(
+                'Error while trying to get SSL thumbprint of host {0}: {1}'.format(
+                    host_name,
+                    exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
             return {host_name: 'failed to add host'}
 
     try:
@@ -3077,7 +3172,14 @@ def add_host(kwargs=None, call=None):
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
             log.info('Try again after setting the esxi_host_ssl_thumbprint to {0} in provider configuration'.format(exc.thumbprint))
-        log.error('Error while adding host {0}: {1}'.format(host_name, exc))
+        log.error(
+            'Error while adding host {0}: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return {host_name: 'failed to add host'}
 
     return {host_name: ret}
@@ -3121,7 +3223,14 @@ def remove_host(kwargs=None, call=None):
             task = host_ref.Destroy_Task()
         _wait_for_task(task, host_name, "remove host", 1, 'info')
     except Exception as exc:
-        log.error('Error while removing host {0}: {1}'.format(host_name, exc))
+        log.error(
+            'Error while removing host {0}: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return {host_name: 'failed to remove host'}
 
     return {host_name: 'removed host from vcenter'}
@@ -3163,7 +3272,14 @@ def connect_host(kwargs=None, call=None):
         task = host_ref.ReconnectHost_Task()
         _wait_for_task(task, host_name, "connect host", 5, 'info')
     except Exception as exc:
-        log.error('Error while connecting host {0}: {1}'.format(host_name, exc))
+        log.error(
+            'Error while connecting host {0}: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return {host_name: 'failed to connect host'}
 
     return {host_name: 'connected host'}
@@ -3205,7 +3321,14 @@ def disconnect_host(kwargs=None, call=None):
         task = host_ref.DisconnectHost_Task()
         _wait_for_task(task, host_name, "disconnect host", 1, 'info')
     except Exception as exc:
-        log.error('Error while disconnecting host {0}: {1}'.format(host_name, exc))
+        log.error(
+            'Error while disconnecting host {0}: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return {host_name: 'failed to disconnect host'}
 
     return {host_name: 'disconnected host'}
@@ -3268,7 +3391,14 @@ def reboot_host(kwargs=None, call=None):
         host_ref.RebootHost_Task(force)
         _wait_for_host(host_ref, "reboot", 10, 'info')
     except Exception as exc:
-        log.error('Error while rebooting host {0}: {1}'.format(host_name, exc))
+        log.error(
+            'Error while rebooting host {0}: {1}'.format(
+                host_name,
+                exc
+            ),
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
+        )
         return {host_name: 'failed to reboot host'}
 
     return {host_name: 'rebooted host'}
@@ -3331,5 +3461,5 @@ def create_datastore_cluster(kwargs=None, call=None):
             exc_info_on_loglevel=logging.DEBUG
         )
         return False
-
+    
     return {datastore_cluster_name: 'created'}
