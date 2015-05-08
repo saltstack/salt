@@ -179,12 +179,15 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     size = vm_.get('size', '20G')
     script = vm_.get('script', None)
     script_args = vm_.get('script_args', None)
+    options = vm_.get('options', None)
     if image:
         profile['template'] = image
     if vgname:
         profile['vgname'] = vgname
     if backing:
         profile['backing'] = backing
+    if options:
+        profile.update(options)
     users = vm_.get('users', None)
     if users is None:
         users = []
