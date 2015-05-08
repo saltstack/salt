@@ -441,6 +441,27 @@ def render(opts, functions, states=None):
     return rend
 
 
+def grain_funcs(opts):
+    '''
+    Returns the grain functions
+
+      .. code-block:: python
+
+          import salt.config
+          import salt.loader
+
+          __opts__ = salt.config.minion_config('/etc/salt/minion')
+          grainfuncs = salt.loader.grain_funcs(__opts__)
+    '''
+    return LazyLoader(_module_dirs(opts,
+                                   'grains',
+                                   'grain',
+                                   ext_type_dirs='grains_dirs'),
+                      opts,
+                      tag='grains',
+                      )
+
+
 def grains(opts, force_refresh=False):
     '''
     Return the functions for the dynamic grains and the values for the static
@@ -513,10 +534,7 @@ def grains(opts, force_refresh=False):
         opts['grains'] = {}
 
     grains_data = {}
-    funcs = LazyLoader(_module_dirs(opts, 'grains', 'grain', ext_type_dirs='grains_dirs'),
-                     opts,
-                     tag='grains',
-                     )
+    funcs = grain_funcs(opts)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains

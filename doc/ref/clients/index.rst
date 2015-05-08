@@ -67,6 +67,8 @@ Each module type has a corresponding loader function.
 
 .. autofunction:: salt.loader.grains
 
+.. autofunction:: salt.loader.grain_funcs
+
 Salt's Client Interfaces
 ========================
 
