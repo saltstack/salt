@@ -282,7 +282,7 @@ def append(key, val, convert=False, delimiter=':'):
         specify the delimiter you use.
         You can now append values to a list in nested dictionnary grains. If the
         list doesn't exist at this level, it will be created.
-        .. versionadded:: FIXME
+        .. versionadded:: 2014.7.6
 
     CLI Example:
 
