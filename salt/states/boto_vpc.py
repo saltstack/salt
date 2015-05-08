@@ -701,7 +701,6 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                 ret['comment'] = 'Deleted route {0} from route table {1}.'.format(r['destination_cidr_block'], route_table_name)
         if to_create:
             for r in to_create:
-                log.warning(r)
                 res = __salt__['boto_vpc.create_route'](route_table_id=route_table['id'], region=region, key=key,
                                                         keyid=keyid, profile=profile, **r)
                 if not res['created']:
