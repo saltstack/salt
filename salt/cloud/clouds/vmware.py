@@ -2083,10 +2083,16 @@ def create(vm_):
         if datastore:
             datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
             if datastore_ref:
+                # specific datastore has been specified
                 reloc_spec.datastore = datastore_ref
             else:
-                log.error('Specified datastore: {0} does not exist'.format(datastore))
-                log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
+                datastore_cluster_ref = _get_mor_by_property(vim.StoragePod, datastore)
+                if not datastore_cluster_ref:
+                    log.error('Specified datastore/datastore cluster: {0} does not exist'.format(datastore))
+                    log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
+        else:
+            log.debug('No datastore/datastore cluster specified')
+            log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
@@ -2094,7 +2100,6 @@ def create(vm_):
                 reloc_spec.host = host_ref
             else:
                 log.error('Specified host: {0} does not exist'.format(host))
-                log.debug('Using host used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
@@ -2157,8 +2162,32 @@ def create(vm_):
                 transport=__opts__['transport']
             )
 
-            task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-            _wait_for_task(task, vm_name, "clone", 5, 'info')
+            if datastore and not datastore_ref and datastore_cluster_ref:
+                # datastore cluster has been specified so apply Storage DRS recomendations
+                pod_spec = vim.storageDrs.PodSelectionSpec(storagePod=datastore_cluster_ref)
+
+                storage_spec = vim.storageDrs.StoragePlacementSpec(
+                    type='clone',
+                    vm=object_ref,
+                    podSelectionSpec=pod_spec,
+                    cloneSpec = clone_spec,
+                    cloneName = vm_name,
+                    folder=folder_ref
+                )
+
+                # get si instance to refer to the content
+                si = _get_si()
+
+                # get recommended datastores
+                recommended_datastores = si.content.storageResourceManager.RecommendDatastores(storageSpec=storage_spec)
+
+                # apply storage DRS recommendations
+                task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(recommended_datastores.recommendations[0].key)
+                _wait_for_task(task, vm_name, "apply storage DRS recommendations", 5, 'info')
+            else:
+                # clone the VM/template
+                task = object_ref.Clone(folder_ref, vm_name, clone_spec)
+                _wait_for_task(task, vm_name, "clone", 5, 'info')
         except Exception as exc:
             log.error(
                 'Error creating {0}: {1}'.format(
