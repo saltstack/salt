@@ -2054,8 +2054,8 @@ def bootstrap(name, config=None, approve_key=True,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} /tmp/bootstrap.sh {1}').format(
+                cmd = ("{0} -c 'PATH=$PATH:/bin:/sbin:/usr/sbin"
+                       " {0} /tmp/bootstrap.sh {1}'").format(
                            bootstrap_shell, bootstrap_args)
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
