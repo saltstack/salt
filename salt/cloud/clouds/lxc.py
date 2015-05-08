@@ -426,6 +426,8 @@ def create(vm_, call=None):
     ret['result'] = cret['result']
     if not ret['result']:
         ret['Error'] = 'Error while creating {0},'.format(vm_['name'])
+    else:
+        ret['changes']['created'] = 'created'
     return ret
 
 
