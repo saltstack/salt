@@ -53,7 +53,7 @@ class Batch(object):
 
         fret = set()
         for ret in ping_gen:
-            m = next(ret.iterkeys())
+            m = next(six.iterkeys(ret))
             if m is not None:
                 fret.add(m)
             if time.time() > wait_until:
