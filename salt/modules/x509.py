@@ -24,6 +24,7 @@ import ast
 # Import salt libs
 import salt.utils
 import salt.exceptions
+import salt.ext.six as six
 from salt.utils.odict import OrderedDict
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -142,7 +143,7 @@ def _get_csr_extensions(csr):
     csrtempfile.close()
     csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
-    for short_name, long_name in EXT_NAME_MAPPINGS.iteritems():
+    for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
         if long_name in csrexts:
             ret[short_name] = csrexts[long_name]
 
@@ -202,7 +203,7 @@ def _parse_openssl_crl(crl_filename):
         rev_sn = revoked.split('\n')[0].strip()
         revoked = rev_sn + ':\n' + '\n'.join(revoked.split('\n')[1:])
         rev_yaml = yaml.safe_load(revoked)
-        for rev_item, rev_values in rev_yaml.iteritems():               # pylint: disable=unused-variable
+        for rev_item, rev_values in six.iteritems(rev_yaml):               # pylint: disable=unused-variable
             if 'Revocation Date' in rev_values:
                 rev_date = datetime.datetime.strptime(
                         rev_values['Revocation Date'], "%b %d %H:%M:%S %Y %Z")
@@ -247,7 +248,7 @@ def _parse_subject(subject):
     '''
     ret = {}
     nids = []
-    for nid_name, nid_num in subject.nid.iteritems():
+    for nid_name, nid_num in six.iteritems(subject.nid):
         if nid_num in nids:
             continue
         val = getattr(subject, nid_name)
@@ -1083,7 +1084,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     # Overwrite any arguments in kwargs with signing_policy
     kwargs.update(signing_policy)
 
-    for prop, default in CERT_DEFAULTS.iteritems():
+    for prop, default in six.iteritems(CERT_DEFAULTS):
         if prop not in kwargs:
             kwargs[prop] = default
 
@@ -1121,7 +1122,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     cert.set_pubkey(_get_public_key_obj(kwargs['public_key']))
 
-    for entry, num in subject.nid.iteritems():                  # pylint: disable=unused-variable
+    for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
             setattr(subject, entry, kwargs[entry])
 
@@ -1131,7 +1132,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         signing_cert = cert
     cert.set_issuer(signing_cert.get_subject())
 
-    for extname, extlongname in EXT_NAME_MAPPINGS.iteritems():
+    for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
         if (extname in kwargs or extlongname in kwargs or extname in csrexts or extlongname in csrexts) is False:
             continue
 
@@ -1217,12 +1218,12 @@ def create_csr(path=None, text=False, **kwargs):
         raise salt.exceptions.SaltInvocationError('public_key is required')
     csr.set_pubkey(_get_public_key_obj(kwargs['public_key']))
 
-    for entry, num in subject.nid.iteritems():                  # pylint: disable=unused-variable
+    for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
             setattr(subject, entry, kwargs[entry])
 
     extstack = M2Crypto.X509.X509_Extension_Stack()
-    for extname, extlongname in EXT_NAME_MAPPINGS.iteritems():
+    for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
         if extname not in kwargs or extlongname not in kwargs:
             continue
 
