@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 ensure_in_syspath('../../')
 
@@ -16,10 +22,9 @@ grainsmod.__opts__ = {
   'cachedir':  '/tmp/__salt_test_grains_cache_dir'
 }
 
-grainsmod.__salt__ = {
-  'saltutil.sync_grains': lambda *a, **k: None
-}
+grainsmod.__salt__ = {}
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsModuleTestCase(TestCase):
 
     def test_filter_by(self):
@@ -106,6 +111,7 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
 
 
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append(self):
         # grains {'a_list': ['a', 'b', 'c'], 'a': {'nested': {'list': ['1', '2', '3']}, 'aa': 'val'}}
 
