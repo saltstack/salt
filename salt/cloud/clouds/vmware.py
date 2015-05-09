@@ -43,8 +43,8 @@ cloud configuration at
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter03.domain.com"
-      port: 80
       protocol: "http"
+      port: 80
 
 .. note::
 
