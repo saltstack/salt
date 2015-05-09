@@ -31,6 +31,7 @@ cloud configuration at
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter01.domain.com"
+      port: 443
 
     vmware-vcenter02:
       provider: vmware
@@ -108,7 +109,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'vmware',
-        ('url', 'user', 'password',)
+        ('url', 'user', 'password','port',)
     )
 
 
@@ -154,12 +155,16 @@ def _get_si():
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__, search_global=False
     )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__, search_global=False
+    )
 
     try:
         si = SmartConnect(
             host=url,
             user=username,
-            pwd=password
+            pwd=password,
+            port=port
         )
     except Exception as exc:
         if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
@@ -170,7 +175,8 @@ def _get_si():
                 si = SmartConnect(
                     host=url,
                     user=username,
-                    pwd=password
+                    pwd=password,
+                    port=port
                 )
                 ssl._create_default_https_context = default_context
             except:
