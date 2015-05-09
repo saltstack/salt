@@ -19,9 +19,7 @@ except ImportError:
     HAS_LIBS = False
 
 # Import 3rd-party libs
-# pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
-# pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
 import salt.utils
@@ -872,11 +870,11 @@ def replace_pool_members(hostname, username, password, name, members):
             if isinstance(member, dict):
 
                 #check for state alternative name 'member_state', replace with state
-                if 'member_state' in list(member.keys()):
+                if 'member_state' in member.keys():
                     member['state'] = member.pop('member_state')
 
                 #replace underscore with dash
-                for key in list(member.keys()):
+                for key in member.keys():
                     new_key = key.replace('_', '-')
                     member[new_key] = member.pop(key)
 
@@ -919,11 +917,11 @@ def add_pool_member(hostname, username, password, name, member):
     if isinstance(member, dict):
 
         #check for state alternative name 'member_state', replace with state
-        if 'member_state' in list(member.keys()):
+        if 'member_state' in member.keys():
             member['state'] = member.pop('member_state')
 
         #replace underscore with dash
-        for key in list(member.keys()):
+        for key in member.keys():
             new_key = key.replace('_', '-')
             member[new_key] = member.pop(key)
 
