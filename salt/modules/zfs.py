@@ -158,7 +158,7 @@ def _build_zfs_cmd_list():
 
 def exists(name):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Check if a ZFS filesystem or volume or snapshot exists.
 
@@ -178,7 +178,7 @@ def exists(name):
 
 def create(name, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Create a ZFS File System.
 
@@ -236,7 +236,7 @@ def create(name, **kwargs):
 
 def destroy(name, **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Destroy a ZFS File System.
 
@@ -269,7 +269,7 @@ def destroy(name, **kwargs):
 
 def rename(name, new_name):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Rename or Relocate a ZFS File System.
 
@@ -294,7 +294,7 @@ def rename(name, new_name):
 
 def list_(name='', **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.

@@ -89,7 +89,7 @@ def peered(name):
 
 
 def created(name, bricks, stripe=False, replica=False, device_vg=False,
-            transport='tcp', start=False):
+            transport='tcp', start=False, force=False):
     '''
     Check if volume already exists
 
@@ -153,7 +153,7 @@ def created(name, bricks, stripe=False, replica=False, device_vg=False,
 
     ret['comment'] = __salt__['glusterfs.create'](name, bricks, stripe,
                                                   replica, device_vg,
-                                                  transport, start)
+                                                  transport, start, force)
 
     old_volumes = volumes
     volumes = __salt__['glusterfs.list_volumes']()

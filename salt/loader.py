@@ -258,14 +258,17 @@ def utils(opts, whitelist=None, context=None):
                       pack={'__context__': context})
 
 
-def pillars(opts, functions):
+def pillars(opts, functions, context=None):
     '''
     Returns the pillars modules
     '''
+    if context is None:
+        context = {}
     ret = LazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
                      opts,
                      tag='pillar',
-                     pack={'__salt__': functions})
+                     pack={'__salt__': functions,
+                           '__context__': context})
     return FilterDictWrapper(ret, '.ext_pillar')
 
 
@@ -438,6 +441,27 @@ def render(opts, functions, states=None):
     return rend
 
 
+def grain_funcs(opts):
+    '''
+    Returns the grain functions
+
+      .. code-block:: python
+
+          import salt.config
+          import salt.loader
+
+          __opts__ = salt.config.minion_config('/etc/salt/minion')
+          grainfuncs = salt.loader.grain_funcs(__opts__)
+    '''
+    return LazyLoader(_module_dirs(opts,
+                                   'grains',
+                                   'grain',
+                                   ext_type_dirs='grains_dirs'),
+                      opts,
+                      tag='grains',
+                      )
+
+
 def grains(opts, force_refresh=False):
     '''
     Return the functions for the dynamic grains and the values for the static
@@ -510,10 +534,7 @@ def grains(opts, force_refresh=False):
         opts['grains'] = {}
 
     grains_data = {}
-    funcs = LazyLoader(_module_dirs(opts, 'grains', 'grain', ext_type_dirs='grains_dirs'),
-                     opts,
-                     tag='grains',
-                     )
+    funcs = grain_funcs(opts)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
@@ -978,7 +999,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return mod
+            return False
         except Exception as error:
             log.error(
                 'Failed to import {0} {1}, this is due most likely to a '
@@ -987,7 +1008,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return mod
+            return False
         except SystemExit:
             log.error(
                 'Failed to import {0} {1} as the module called exit()\n'.format(
@@ -995,7 +1016,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 ),
                 exc_info=True
             )
-            return mod
+            return False
         finally:
             sys.path.pop()
 
@@ -1011,6 +1032,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         for p_name, p_value in six.iteritems(self.pack):
             setattr(mod, p_name, p_value)
 
+        module_name = mod.__name__.rsplit('.', 1)[-1]
+
         # Call a module's initialization method if it exists
         module_init = getattr(mod, '__init__', None)
         if inspect.isfunction(module_init):
@@ -1018,7 +1041,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_init(self.opts)
             except TypeError as e:
                 log.error(e)
-        module_name = mod.__name__.rsplit('.', 1)[-1]
+            except Exception:
+                err_string = '__init__ failed'
+                log.debug(
+                    'Error loading {0}.{1}: {2}'.format(
+                        self.tag,
+                        module_name,
+                        err_string),
+                    exc_info=True)
+                self.missing_modules[module_name] = err_string
+                self.missing_modules[name] = err_string
+                return False
 
         # if virtual modules are enabled, we need to look for the
         # __virtual__() function inside that module and run it.

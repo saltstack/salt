@@ -116,6 +116,12 @@ parameters are discussed in more detail below.
       #
       private_key: /etc/salt/my_test_key.pem
       keyname: my_test_key
+
+      # This one should NOT be specified if VPC was not configured in AWS to be
+      # the default. It might cause an error message which sais that network
+      # interfaces and an instance-level security groups may not be specified
+      # on the same request.
+      #
       securitygroup: default
 
       # Optionally configure default region

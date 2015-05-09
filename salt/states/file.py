@@ -337,6 +337,7 @@ def _gen_keep_files(name, require):
         ret = set()
         if os.path.isdir(name):
             for root, dirs, files in os.walk(name):
+                ret.add(name)
                 for name in files:
                     ret.add(os.path.join(root, name))
                 for name in dirs:
@@ -348,7 +349,7 @@ def _gen_keep_files(name, require):
         required_files = [comp for comp in require if 'file' in comp]
         for comp in required_files:
             for low in __lowstate__:
-                if low['__id__'] == comp['file']:
+                if low['name'] == comp['file']:
                     fn = low['name']
                     if os.path.isdir(comp['file']):
                         if _is_child(comp['file'], name):
@@ -1585,7 +1586,7 @@ def directory(name,
                     - mode
                     - ignore_dirs
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -2130,7 +2131,7 @@ def recurse(name,
             ret['changes'][path] = _ret['changes']
 
     def manage_file(path, source):
-        source = u'{0}|{1}'.format(source[:7], source[7:])
+        source = salt.utils.url.escape(source)
         if clean and os.path.exists(path) and os.path.isdir(path):
             _ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
             if __opts__['test']:
@@ -2237,7 +2238,7 @@ def recurse(name,
 
     keep = set()
     vdir = set()
-    srcpath = source[7:]
+    srcpath = salt.utils.url.parse(source)[0]
     if not srcpath.endswith('/'):
         # we're searching for things that start with this *directory*.
         # use '/' since #master only runs on POSIX
@@ -3517,35 +3518,35 @@ def copy(
         If the target subdirectories don't exist create them
 
     preserve
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         Set ``preserve: True`` to preserve user/group ownership and mode
         after copying. Default is ``False``. If ``preseve`` is set to ``True``,
         then user/group/mode attributes will be ignored.
 
     user
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         The user to own the copied file, this defaults to the user salt is
         running as on the minion. If ``preserve`` is set to ``True``, then
         this will be ignored
 
     group
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         The group to own the copied file, this defaults to the group salt is
         running as on the minion. If ``preserve`` is set to ``True`` or on
         Windows this will be ignored
 
     mode
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         The permissions to set on the copied file, aka 644, '0775', '4664'.
         If ``preserve`` is set to ``True``, then this will be ignored.
         Not supported on Windows
 
     subdir
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
         If the name is a directory then place the file inside the named
         directory

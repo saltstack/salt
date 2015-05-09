@@ -8,12 +8,18 @@ import salt.utils.url
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 ensure_in_syspath('../../')
 
 
+@patch('salt.utils.is_windows', MagicMock(return_value=False))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class UrlTestCase(TestCase):
     '''
@@ -80,6 +86,165 @@ class UrlTestCase(TestCase):
         url = 'salt://' + path + '?saltenv=' + saltenv
 
         self.assertEqual(salt.utils.url.create(path, saltenv), url)
+
+    # is_escaped tests
+
+    def test_is_escaped_windows(self):
+        '''
+        Test not testing a 'salt://' URL on windows
+        '''
+        url = 'salt://dir/file.ini'
+
+        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+            self.assertFalse(salt.utils.url.is_escaped(url))
+
+    def test_is_escaped_escaped_path(self):
+        '''
+        Test testing an escaped path
+        '''
+        path = '|dir/file.conf?saltenv=basic'
+
+        self.assertTrue(salt.utils.url.is_escaped(path))
+
+    def test_is_escaped_unescaped_path(self):
+        '''
+        Test testing an unescaped path
+        '''
+        path = 'dir/file.conf'
+
+        self.assertFalse(salt.utils.url.is_escaped(path))
+
+    def test_is_escaped_escaped_url(self):
+        '''
+        Test testing an escaped 'salt://' URL
+        '''
+        url = 'salt://|dir/file.conf?saltenv=basic'
+
+        self.assertTrue(salt.utils.url.is_escaped(url))
+
+    def test_is_escaped_unescaped_url(self):
+        '''
+        Test testing an unescaped 'salt://' URL
+        '''
+        url = 'salt://dir/file.conf'
+
+        self.assertFalse(salt.utils.url.is_escaped(url))
+
+    def test_is_escaped_generic_url(self):
+        '''
+        Test testing an unescaped 'salt://' URL
+        '''
+        url = 'https://gentoo.org/'
+
+        self.assertFalse(salt.utils.url.is_escaped(url))
+
+    # escape tests
+
+    def test_escape_windows(self):
+        '''
+        Test not escaping a 'salt://' URL on windows
+        '''
+        url = 'salt://dir/file.ini'
+
+        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+            self.assertEqual(salt.utils.url.escape(url), url)
+
+    def test_escape_escaped_path(self):
+        '''
+        Test escaping an escaped path
+        '''
+        resource = '|dir/file.conf?saltenv=basic'
+
+        self.assertEqual(salt.utils.url.escape(resource), resource)
+
+    def test_escape_unescaped_path(self):
+        '''
+        Test escaping an unescaped path
+        '''
+        path = 'dir/file.conf'
+        escaped_path = '|' + path
+
+        self.assertEqual(salt.utils.url.escape(path), escaped_path)
+
+    def test_escape_escaped_url(self):
+        '''
+        Test testing an escaped 'salt://' URL
+        '''
+        url = 'salt://|dir/file.conf?saltenv=basic'
+
+        self.assertEqual(salt.utils.url.escape(url), url)
+
+    def test_escape_unescaped_url(self):
+        '''
+        Test testing an unescaped 'salt://' URL
+        '''
+        path = 'dir/file.conf'
+        url = 'salt://' + path
+        escaped_url = 'salt://|' + path
+
+        self.assertEqual(salt.utils.url.escape(url), escaped_url)
+
+    def test_escape_generic_url(self):
+        '''
+        Test testing an unescaped 'salt://' URL
+        '''
+        url = 'https://gentoo.org/'
+
+        self.assertEqual(salt.utils.url.escape(url), url)
+
+    # unescape tests
+
+    def test_unescape_windows(self):
+        '''
+        Test not escaping a 'salt://' URL on windows
+        '''
+        url = 'salt://dir/file.ini'
+
+        with patch('salt.utils.is_windows', MagicMock(return_value=True)):
+            self.assertEqual(salt.utils.url.unescape(url), url)
+
+    def test_unescape_escaped_path(self):
+        '''
+        Test escaping an escaped path
+        '''
+        resource = 'dir/file.conf?saltenv=basic'
+        escaped_path = '|' + resource
+
+        self.assertEqual(salt.utils.url.unescape(escaped_path), resource)
+
+    def test_unescape_unescaped_path(self):
+        '''
+        Test escaping an unescaped path
+        '''
+        path = 'dir/file.conf'
+
+        self.assertEqual(salt.utils.url.unescape(path), path)
+
+    def test_unescape_escaped_url(self):
+        '''
+        Test testing an escaped 'salt://' URL
+        '''
+        resource = 'dir/file.conf?saltenv=basic'
+        url = 'salt://' + resource
+        escaped_url = 'salt://|' + resource
+
+        self.assertEqual(salt.utils.url.unescape(escaped_url), url)
+
+    def test_unescape_unescaped_url(self):
+        '''
+        Test testing an unescaped 'salt://' URL
+        '''
+        url = 'salt://dir/file.conf'
+
+        self.assertEqual(salt.utils.url.unescape(url), url)
+
+    def test_unescape_generic_url(self):
+        '''
+        Test testing an unescaped 'salt://' URL
+        '''
+        url = 'https://gentoo.org/'
+
+        self.assertEqual(salt.utils.url.unescape(url), url)
 
     # add_env tests
 

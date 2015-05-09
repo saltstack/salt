@@ -151,7 +151,7 @@ def create(name, availability_zones, listeners=None, subnets=None,
 
     CLI example to create an ELB::
 
-        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::1111111:server-certificate/mycert"]]' region=us-east-1
+        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='[[443, 80, "HTTPS", "HTTP", "arn:aws:iam::1111111:server-certificate/mycert"]]' region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 

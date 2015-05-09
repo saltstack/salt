@@ -67,7 +67,7 @@ def enable(profile='allprofiles'):
     '''
     Enable firewall profile :param profile: (default: allprofiles)
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -81,7 +81,7 @@ def enable(profile='allprofiles'):
 
 def get_rule(name="all"):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Get firewall rule(s) info
 
@@ -103,7 +103,7 @@ def get_rule(name="all"):
 
 def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Add a new firewall rule
 

@@ -222,7 +222,9 @@ def reap_fileserver_cache_dir(cache_base, find_func):
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
             if len(dirs) == 0 and len(files) == 0:
-                os.rmdir(root)
+                # only remove if empty directory is older than 60s
+                if time.time() - os.path.getctime(root) > 60:
+                    os.rmdir(root)
                 continue
             # if not, lets check the files in the directory
             for file_ in files:
@@ -316,8 +318,8 @@ class Fileserver(object):
     def update_opts(self):
         # This fix func monkey patching by pillar
         for name, func in self.servers.items():
-            if '__opts__' in func.func_globals:
-                func.func_globals['__opts__'].update(self.opts)
+            if '__opts__' in func.__globals__:
+                func.__globals__['__opts__'].update(self.opts)
 
     def clear_cache(self, back=None):
         '''
@@ -449,9 +451,9 @@ class Fileserver(object):
             return fnd
         if '../' in path:
             return fnd
-        if path.startswith('|'):
+        if salt.utils.url.is_escaped(path):
             # don't attempt to find URL query arguements in the path
-            path = path[1:]
+            path = salt.utils.url.unescape(path)
         else:
             split_path = _urlparse(path)
             path = split_path.path

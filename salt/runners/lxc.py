@@ -152,7 +152,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     memory
         cgroups memory limit, in MB
 
-        .. versionchanged:: 2015.2.0
+        .. versionchanged:: 2015.5.0
             If no value is passed, no limit is set. In earlier Salt versions,
             not passing this value causes a 1024MB memory limit to be set, and
             it was necessary to pass ``memory=0`` to set no limit.
@@ -169,10 +169,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     network_profile
         Network profile to use for the container
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     nic
-        .. deprecated:: 2015.2.0
+        .. deprecated:: 2015.5.0
             Use ``network_profile`` instead
 
     nic_opts
@@ -265,7 +265,8 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
         # be sure not to seed an already seeded host
-        kw['seed'] = seeds[name]
+        seed = kwargs.get('seed', True)
+        kw['seed'] = seeds.get(name, seed)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
         cmds.append(

@@ -4,6 +4,7 @@ URL utils
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import re
 
 # Import salt libs
@@ -49,6 +50,63 @@ def create(path, saltenv=None):
     query = u'saltenv={0}'.format(saltenv) if saltenv else ''
     url = urlunparse(('file', '', path, '', query, ''))
     return u'salt://{0}'.format(url[len('file:///'):])
+
+
+def is_escaped(url):
+    '''
+    test whether `url` is escaped with `|`
+    '''
+    if salt.utils.is_windows():
+        return False
+
+    scheme = urlparse(url).scheme
+    if not scheme:
+        return url.startswith('|')
+    elif scheme == 'salt':
+        path, saltenv = parse(url)
+        return path.startswith('|')
+    else:
+        return False
+
+
+def escape(url):
+    '''
+    add escape character `|` to `url`
+    '''
+    if salt.utils.is_windows():
+        return url
+
+    scheme = urlparse(url).scheme
+    if not scheme:
+        if url.startswith('|'):
+            return url
+        else:
+            return u'|{0}'.format(url)
+    elif scheme == 'salt':
+        path, saltenv = parse(url)
+        if path.startswith('|'):
+            return create(path, saltenv)
+        else:
+            return create(u'|{0}'.format(path), saltenv)
+    else:
+        return url
+
+
+def unescape(url):
+    '''
+    remove escape character `|` from `url`
+    '''
+    if salt.utils.is_windows():
+        return url
+
+    scheme = urlparse(url).scheme
+    if not scheme:
+        return url.lstrip('|')
+    elif scheme == 'salt':
+        path, saltenv = parse(url)
+        return create(path.lstrip('|'), saltenv)
+    else:
+        return url
 
 
 def add_env(url, saltenv):

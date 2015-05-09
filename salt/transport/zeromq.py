@@ -30,13 +30,20 @@ import zmq.eventloop.ioloop
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import zmq.eventloop.zmqstream
-import zmq.utils.monitor
-EVENT_MAP = None
+try:
+    import zmq.utils.monitor
+    HAS_ZMQ_MONITOR = True
+    EVENT_MAP = None
+except ImportError:
+    HAS_ZMQ_MONITOR = False
 
 # Import Tornado Libs
 import tornado
 import tornado.gen
 import tornado.concurrent
+
+# Import third party libs
+from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 
@@ -132,7 +139,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # Return control to the caller. When send() completes, resume by populating ret with the Future.result
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
+        cipher = PKCS1_OAEP.new(key)
+        aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 
@@ -288,7 +296,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         More information:
             http://api.zeromq.org/4-0:zmq-socket-monitor
         '''
-        if not self.opts['zmq_monitor']:
+        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
             return
 
         global EVENT_MAP
@@ -310,7 +318,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         self._monitor_stream.on_recv(monitor_callback)
 
     def _stop_monitor(self):
-        if not hasattr(self, '_monitor_socket') or self._monitor_socket is None:
+        if not HAS_ZMQ_MONITOR or not hasattr(self, '_monitor_socket') or self._monitor_socket is None:
             return
         self._socket.disable_monitor()
         self._monitor_stream.close()
