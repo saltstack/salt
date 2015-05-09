@@ -90,7 +90,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
                     if self.options.failhard:
-                        for ret in res.itervalues():
+                        for ret in six.itervalues(res):
                             retcode = salt.utils.job.get_retcode(ret)
                             if retcode != 0:
                                 sys.exit(retcode)

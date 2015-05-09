@@ -46,6 +46,7 @@ from time import sleep
 log = logging.getLogger(__name__)
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import boto
     import boto.rds2
@@ -405,7 +406,7 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
                                                        keyid, profile):
         return False
     param_list = []
-    for key, value in parameters.iteritems():
+    for key, value in six.iteritems(parameters):
         item = (key, value, apply_method)
         param_list.append(item)
         if not len(param_list):

@@ -10,6 +10,9 @@ from __future__ import absolute_import
 
 import json
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 #set up virtual function
 def __virtual__():
@@ -53,7 +56,7 @@ def _strip_key(dictionary, keyword):
     when there were no changes made to the entity.
     '''
 
-    for key, value in dictionary.iteritems():
+    for key, value in six.iteritems(dictionary):
         if key == keyword:
             dictionary[key] = None
         elif isinstance(value, dict):
@@ -2265,7 +2268,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
             'name': name
         }
 
-        for key, value in kwargs.iteritems():
+        for key, value in six.iteritems(kwargs):
             params[key] = value
 
         return _test_output(ret, 'create', params)
@@ -2329,7 +2332,7 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
             'name': name
         }
 
-        for key, value in kwargs.iteritems():
+        for key, value in six.iteritems(kwargs):
             params[key] = value
 
         return _test_output(ret, 'manage', params)
@@ -2401,7 +2404,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
             'name': name
         }
 
-        for key, value in kwargs.iteritems():
+        for key, value in six.iteritems(kwargs):
             params[key] = value
 
         return _test_output(ret, 'modify', params)
@@ -2611,7 +2614,7 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
             'name': name
         }
 
-        for key, value in kwargs.iteritems():
+        for key, value in six.iteritems(kwargs):
             params[key] = value
 
         return _test_output(ret, 'manage', params)
@@ -2683,7 +2686,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
             'name': name
         }
 
-        for key, value in kwargs.iteritems():
+        for key, value in six.iteritems(kwargs):
             params[key] = value
 
         return _test_output(ret, 'modify', params)

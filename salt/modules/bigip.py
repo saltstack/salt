@@ -18,6 +18,9 @@ try:
 except ImportError:
     HAS_LIBS = False
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.utils
 import salt.output
@@ -94,7 +97,7 @@ def _loop_payload(params):
     payload = {}
 
     #set the payload
-    for param, value in params.iteritems():
+    for param, value in six.iteritems(params):
         if value is not None:
             payload[param] = value
 
@@ -138,7 +141,7 @@ def _determine_toggles(payload, toggles):
     Figure out what it likes to hear without confusing the user.
     '''
 
-    for toggle, definition in toggles.iteritems():
+    for toggle, definition in six.iteritems(toggles):
         #did the user specify anything?
         if definition['value'] is not None:
             #test for yes_no toggle
@@ -1636,7 +1639,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             if key not in ['hostname', 'username', 'password', 'type']:
                 key = key.replace('_', '-')
@@ -1682,7 +1685,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
 
     #there's a ton of different monitors and a ton of options for each type of monitor.
     #this logic relies that the end user knows which options are meant for which monitor types
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             if key not in ['hostname', 'username', 'password', 'type', 'name']:
                 key = key.replace('_', '-')
@@ -1817,7 +1820,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             if key not in ['hostname', 'username', 'password', 'profile_type']:
                 key = key.replace('_', '-')
@@ -1893,7 +1896,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
 
     #there's a ton of different profiles and a ton of options for each type of profile.
     #this logic relies that the end user knows which options are meant for which profile types
-    for key, value in kwargs.iteritems():
+    for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
             if key not in ['hostname', 'username', 'password', 'profile_type']:
                 key = key.replace('_', '-')

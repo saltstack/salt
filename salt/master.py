@@ -241,7 +241,7 @@ class Maintenance(multiprocessing.Process):
 
         if to_rotate:
             log.info('Rotating master AES key')
-            for secret_key, secret_map in SMaster.secrets.iteritems():
+            for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
                     secret_map['secret'].value = secret_map['reload']()
@@ -531,7 +531,7 @@ def iter_transport_opts(opts):
     '''
     transports = set()
 
-    for transport, opts_overrides in opts.get('transport_opts', {}).iteritems():
+    for transport, opts_overrides in six.iteritems(opts.get('transport_opts', {})):
         t_opts = dict(opts)
         t_opts.update(opts_overrides)
         t_opts['transport'] = transport

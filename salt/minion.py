@@ -270,7 +270,7 @@ def load_args_and_kwargs(func, args, data=None):
                     # **kwargs not in argspec and parsed argument name not in
                     # list of positional arguments. This keyword argument is
                     # invalid.
-                    for key, val in string_kwarg.iteritems():
+                    for key, val in six.iteritems(string_kwarg):
                         invalid_kwargs.append('{0}={1}'.format(key, val))
                 continue
 
@@ -1627,7 +1627,7 @@ class Minion(MinionBase):
         self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
 
         # start all the other callbacks
-        for periodic_cb in self.periodic_callbacks.itervalues():
+        for periodic_cb in six.itervalues(self.periodic_callbacks):
             periodic_cb.start()
 
         # add handler to subscriber
@@ -1679,7 +1679,7 @@ class Minion(MinionBase):
             self.pub_channel.on_recv(None)
             del self.pub_channel
         if hasattr(self, 'periodic_callbacks'):
-            for cb in self.periodic_callbacks.itervalues():
+            for cb in six.itervalues(self.periodic_callbacks):
                 cb.stop()
 
     def __del__(self):

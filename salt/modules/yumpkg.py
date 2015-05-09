@@ -285,7 +285,7 @@ def _get_yum_config():
         try:
             yb = yum.YumBase()
             yb.preconf.init_plugins = False
-            for name, value in yb.conf.iteritems():
+            for name, value in six.iteritems(yb.conf):
                 conf[name] = value
         except (AttributeError, yum.Errors.ConfigError) as exc:
             raise CommandExecutionError(

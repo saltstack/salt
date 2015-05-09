@@ -160,6 +160,9 @@ import copy
 import salt.exceptions
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 def _revoked_to_list(revs):
     '''
@@ -169,10 +172,10 @@ def _revoked_to_list(revs):
     list_ = []
 
     for rev in revs:
-        for rev_name, props in rev.iteritems():             # pylint: disable=unused-variable
+        for rev_name, props in six.iteritems(rev):             # pylint: disable=unused-variable
             dict_ = {}
             for prop in props:
-                for propname, val in prop.iteritems():
+                for propname, val in six.iteritems(prop):
                     if isinstance(val, datetime.datetime):
                         val = val.strftime('%Y-%m-%d %H:%M:%S')
                     dict_[propname] = val
