@@ -43,6 +43,17 @@ cloud configuration at
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter03.domain.com"
+      protocol: "http"
+      port: 80
+
+.. note::
+
+    Optionally, ``protocol`` and ``port`` can be specified if the vCenter
+    server is not using the defaults. Default is ``protocol: https`` and
+    ``port: 443``.
+
+To test the connection for ``my-vmware-config`` specified in the cloud
+configuration, run :py:func:`test_vcenter_connection`
 '''
 
 # Import python libs
@@ -154,12 +165,20 @@ def _get_si():
     password = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__, search_global=False
     )
+    protocol = config.get_cloud_config_value(
+        'protocol', get_configured_provider(), __opts__, search_global=False, default='https'
+    )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__, search_global=False, default=443
+    )
 
     try:
         si = SmartConnect(
             host=url,
             user=username,
-            pwd=password
+            pwd=password,
+            protocol=protocol,
+            port=port
         )
     except Exception as exc:
         if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
@@ -170,17 +189,17 @@ def _get_si():
                 si = SmartConnect(
                     host=url,
                     user=username,
-                    pwd=password
+                    pwd=password,
+                    protocol=protocol,
+                    port=port
                 )
                 ssl._create_default_https_context = default_context
             except:
-                raise SaltCloudSystemExit(
-                    '\nCould not connect to the vCenter server using the specified username and password'
-                )
+                err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+                raise SaltCloudSystemExit(err_msg)
         else:
-            raise SaltCloudSystemExit(
-                '\nCould not connect to the vCenter server using the specified username and password'
-            )
+            err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            raise SaltCloudSystemExit(err_msg)
 
     atexit.register(Disconnect, si)
 
@@ -687,7 +706,7 @@ def _manage_devices(devices, vm):
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
             mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
             iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
-            for ide_controller_key, num_devices in ide_controllers.iteritems():
+            for ide_controller_key, num_devices in six.iteritems(ide_controllers):
                 if num_devices < 2:
                     controller_key = ide_controller_key
                     break
@@ -918,9 +937,9 @@ def _format_instance_info(vm):
             device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
 
     storage_full_info = {
-        'committed': vm["summary.storage.committed"],
-        'uncommitted': vm["summary.storage.uncommitted"],
-        'unshared': vm["summary.storage.unshared"]
+        'committed': int(vm["summary.storage.committed"]),
+        'uncommitted': int(vm["summary.storage.uncommitted"]),
+        'unshared': int(vm["summary.storage.unshared"])
     }
 
     file_full_info = {}
@@ -945,7 +964,7 @@ def _format_instance_info(vm):
         mac_addresses.append(net.macAddress)
 
     vm_full_info = {
-        'id': vm['name'],
+        'id': str(vm['name']),
         'image': "{0} (Detected)".format(vm["config.guestFullName"]),
         'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
         'state': str(vm["summary.runtime.powerState"]),
@@ -954,11 +973,11 @@ def _format_instance_info(vm):
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
-        'guest_id': vm["config.guestId"],
-        'hostname': vm["object"].guest.hostName,
+        'guest_id': str(vm["config.guestId"]),
+        'hostname': str(vm["object"].guest.hostName),
         'mac_address': mac_addresses,
         'networks': network_full_info,
-        'path': vm["config.files.vmPathName"],
+        'path': str(vm["config.files.vmPathName"]),
         'tools_status': str(vm["guest.toolsStatus"]),
     }
 
@@ -1051,6 +1070,33 @@ def _get_hba_type(hba_type):
         return vim.host.InternetScsiHba
     elif hba_type == "fibre":
         return vim.host.FibreChannelHba
+
+
+def test_vcenter_connection(kwargs=None, call=None):
+    '''
+    Test if the connection can be made to the vCenter server using
+    the specified credentials inside ``/etc/salt/cloud.providers``
+    or ``/etc/salt/cloud.providers.d/vmware.conf``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f test_vcenter_connection my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The test_vcenter_connection function must be called with '
+            '-f or --function.'
+        )
+
+    try:
+        # Get the service instance object
+        si = _get_si()
+    except Exception as exc:
+        return 'failed to connect: {0}'.format(exc)
+
+    return 'connection successful'
 
 
 def get_vcenter_version(kwargs=None, call=None):
@@ -2126,10 +2172,10 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in devices.keys():
+        if devices and 'network' in list(devices.keys()):
             if "Windows" not in object_ref.config.guestFullName:
                 global_ip = vim.vm.customization.GlobalIPSettings()
-                if 'dns_servers' in vm_.keys():
+                if 'dns_servers' in list(vm_.keys()):
                     global_ip.dnsServerList = vm_['dns_servers']
 
                 identity = vim.vm.customization.LinuxPrep()
@@ -3104,12 +3150,12 @@ def add_host(kwargs=None, call=None):
 
             vmware-vcenter01:
               provider: vmware
-              user: DOMAIN\\user
+              user: "DOMAIN\\user"
               password: "verybadpass"
-              url: vcenter01.domain.com
+              url: "vcenter01.domain.com"
 
               # Required when adding a host system
-              esxi_host_user: root
+              esxi_host_user: "root"
               esxi_host_password: "myhostpassword"
               # Optional fields that can be specified when adding a host system
               esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"

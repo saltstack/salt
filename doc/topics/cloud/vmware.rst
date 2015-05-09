@@ -49,7 +49,14 @@ set up in the cloud configuration at
       user: "DOMAIN\user"
       password: "verybadpass"
       url: "vcenter03.domain.com"
+      protocol: "http"
+      port: 80
 
+.. note::
+
+    Optionally, ``protocol`` and ``port`` can be specified if the vCenter
+    server is not using the defaults. Default is ``protocol: https`` and
+    ``port: 443``.
 
 .. _vmware-cloud-profile:
 
