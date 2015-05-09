@@ -706,7 +706,7 @@ def _manage_devices(devices, vm):
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
             mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
             iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
-            for ide_controller_key, num_devices in ide_controllers.iteritems():
+            for ide_controller_key, num_devices in six.iteritems(ide_controllers):
                 if num_devices < 2:
                     controller_key = ide_controller_key
                     break
@@ -2172,10 +2172,10 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in devices.keys():
+        if devices and 'network' in list(devices.keys()):
             if "Windows" not in object_ref.config.guestFullName:
                 global_ip = vim.vm.customization.GlobalIPSettings()
-                if 'dns_servers' in vm_.keys():
+                if 'dns_servers' in list(vm_.keys()):
                     global_ip.dnsServerList = vm_['dns_servers']
 
                 identity = vim.vm.customization.LinuxPrep()
