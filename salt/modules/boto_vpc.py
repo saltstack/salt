@@ -1914,6 +1914,7 @@ def replace_route_table_association(association_id, route_table_id, region=None,
 
 def create_route(route_table_id=None, destination_cidr_block=None,
                  route_table_name=None, gateway_id=None,
+                 internet_gateway_name=None,
                  instance_id=None, interface_id=None,
                  region=None, key=None, keyid=None, profile=None):
     '''
@@ -1931,6 +1932,10 @@ def create_route(route_table_id=None, destination_cidr_block=None,
         raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
                                   'must be provided.')
 
+    if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id)):
+        raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
+                                  'or interface_id may be provided.')
+
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
 
@@ -1942,6 +1947,14 @@ def create_route(route_table_id=None, destination_cidr_block=None,
             if not route_table_id:
                 return {'created': False,
                         'error': {'message': 'route table {0} does not exist.'.format(route_table_name)}}
+
+        if internet_gateway_name:
+            gateway_id = _get_resource_id('internet_gateway', internet_gateway_name,
+                                          region=region, key=key,
+                                          keyid=keyid, profile=profile)
+            if not gateway_id:
+                return {'created': False,
+                        'error': {'message': 'internet gateway {0} does not exist.'.format(internet_gatway_name)}}
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
