@@ -92,9 +92,14 @@ class OptionParserMeta(MixInMeta):
                     # Function already has the attribute set, don't override it
                     continue
 
-                func.__func__._mixin_prio_ = getattr(
-                    base, '_mixin_prio_', 1000
-                )
+                if six.PY2:
+                    func.__func__._mixin_prio_ = getattr(
+                        base, '_mixin_prio_', 1000
+                    )
+                else:
+                    func._mixin_prio_ = getattr(
+                        base, '_mixin_prio_', 1000
+                    )
 
         return instance
 
@@ -410,11 +415,13 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
 class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = -10
     _config_filename_ = None
+    _default_config_dir_ = syspaths.CONFIG_DIR
+    _default_config_dir_env_var_ = 'SALT_CONFIG_DIR'
 
     def _mixin_setup(self):
-        config_dir = os.environ.get('SALT_CONFIG_DIR', None)
+        config_dir = os.environ.get(self._default_config_dir_env_var_, None)
         if not config_dir:
-            config_dir = syspaths.CONFIG_DIR
+            config_dir = self._default_config_dir_
             logging.getLogger(__name__).debug('SYSPATHS setup as: {0}'.format(syspaths.CONFIG_DIR))
         self.add_option(
             '-c', '--config-dir', default=config_dir,
