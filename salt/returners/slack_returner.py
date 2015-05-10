@@ -265,8 +265,8 @@ def returner(ret):
         return
     
     if as_user is None:
-       log.error('slack.as_user not defined in salt config')
-       return
+        log.error('slack.as_user not defined in salt config')
+        return
 
     if not api_key:
         log.error('slack.api_key not defined in salt config')
