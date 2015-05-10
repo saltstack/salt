@@ -185,7 +185,7 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir=''):
+def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -281,8 +281,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         log.critical(msg)
                     else:
                         sys.stderr.write("CRITICAL: {0}\n".format(msg))
-    # Run the extra verification checks
-    zmq_version()
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()
 
 
 def check_user(user):
