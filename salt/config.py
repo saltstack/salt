@@ -1180,7 +1180,7 @@ def _read_conf_file(path):
         if 'id' in conf_opts:
             conf_opts['id'] = str(conf_opts['id'])
         for key, value in six.iteritems(conf_opts.copy()):
-            if isinstance(value, text_type):
+            if isinstance(value, text_type) and six.PY2:
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
