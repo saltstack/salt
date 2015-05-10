@@ -263,7 +263,7 @@ def returner(ret):
     if not username:
         log.error('slack.username not defined in salt config')
         return
- 
+
     if not as_user:
         log.error('slack.as_user not defined in salt config')
         return
