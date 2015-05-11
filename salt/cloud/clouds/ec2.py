@@ -355,7 +355,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         method = 'GET'
         region = location
         service = 'ec2'
-        canonical_uri = urlparse.urlparse(requesturl).path
+        canonical_uri = _urlparse(requesturl).path
         host = endpoint.strip()
 
         # Create a date for headers and the credential string
@@ -377,7 +377,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
         keys = sorted(params_with_headers.keys())
         values = map(params_with_headers.get, keys)
-        querystring = urllib.urlencode(list(zip(keys, values)))
+        querystring = _urlencode(list(zip(keys, values)))
         querystring = querystring.replace('+', '%20')
 
         canonical_request = method + '\n' + canonical_uri + '\n' + \
