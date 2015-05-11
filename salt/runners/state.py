@@ -114,7 +114,6 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             exclude,
             pillar=pillar)
     ret = {minion.opts['id']: running}
-    __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
     return ret
 
 # Aliases for orchestrate runner
