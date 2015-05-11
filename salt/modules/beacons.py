@@ -251,4 +251,3 @@ def disable(**kwargs):
             # Effectively a no-op, since we can't really return without an event system
             ret['comment'] = 'Event module not available. Beacons enable job failed.'
     return ret
-
