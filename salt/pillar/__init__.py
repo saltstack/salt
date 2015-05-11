@@ -283,7 +283,8 @@ class Pillar(object):
                                 ),
                             self.rend,
                             self.opts['renderer'],
-                            self.opts['environment']
+                            self.opts['environment'],
+                            _pillar_rend=True
                             )
                         ]
             else:
@@ -298,7 +299,8 @@ class Pillar(object):
                                     top,
                                     self.rend,
                                     self.opts['renderer'],
-                                    saltenv=saltenv
+                                    saltenv=saltenv,
+                                    _pillar_rend=True
                                     )
                                 )
         except Exception as exc:
@@ -335,7 +337,8 @@ class Pillar(object):
                                         ).get('dest', False),
                                     self.rend,
                                     self.opts['renderer'],
-                                    saltenv=saltenv
+                                    saltenv=saltenv,
+                                    _pillar_rend=True
                                     )
                                 )
                     except Exception as exc:
