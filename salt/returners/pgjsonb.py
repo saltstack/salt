@@ -165,19 +165,13 @@ def _get_options(ret=None):
                 'user': 'salt',
                 'pass': 'salt',
                 'db': 'salt',
-                'port': 5432,
-                'ssl_ca': None,
-                'ssl_cert': None,
-                'ssl_key': None}
+                'port': 5432}
 
     attrs = {'host': 'host',
              'user': 'user',
              'pass': 'password',
              'db': 'database',
-             'port': 'port',
-             'ssl_ca': 'ssl_ca',
-             'ssl_cert': 'ssl_cert',
-             'ssl_key': 'ssl_key'}
+             'port': 'port'}
 
 
     _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
