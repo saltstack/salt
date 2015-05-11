@@ -260,7 +260,7 @@ def event_return(events):
             sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
                      VALUES (%s, %s, %s, %s)'''
             cur.execute(sql, (tag, psycopg2.extras.Json(data),
-                              __opts__['id'], time.localtime()))
+                              __opts__['id'], time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
 
 
 def save_load(jid, load):
