@@ -601,16 +601,18 @@ def delete(name, family='ipv4', **kwargs):
     kwargs['name'] = name
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='D', **kwargs)
+
     if not __salt__['iptables.check'](kwargs['table'],
                                       kwargs['chain'],
                                       rule,
                                       family) is True:
-        ret['result'] = True
-        ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
-            name,
-            family,
-            command.strip())
-        return ret
+        if 'position' not in kwargs:
+            ret['result'] = True
+            ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
+                name,
+                family,
+                command.strip())
+            return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be deleted for {1} ({2})'.format(
             name,
