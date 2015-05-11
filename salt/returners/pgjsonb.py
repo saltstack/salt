@@ -234,14 +234,15 @@ def returner(ret):
     try:
         with _get_serv(ret, commit=True) as cur:
             sql = '''INSERT INTO salt_returns
-                    (fun, jid, return, id, success, full_ret)
-                    VALUES (%s, %s, %s, %s, %s, %s)'''
+                    (fun, jid, return, id, success, full_ret, alter_time)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)'''
 
             cur.execute(sql, (ret['fun'], ret['jid'],
                               psycopg2.extras.Json(ret['return']),
                               ret['id'],
                               ret.get('success', False),
-                              psycopg2.extras.Json(ret)))
+                              psycopg2.extras.Json(ret),
+                              time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
     except salt.exceptions.SaltMasterError:
         log.critical('Could not store return with pgjsonb returner. PostgreSQL server unavailable.')
 
