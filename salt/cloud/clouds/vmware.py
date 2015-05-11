@@ -109,7 +109,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'vmware',
-        ('url', 'user', 'password','port',)
+        ('url', 'user', 'password',)
     )
 
 
@@ -156,7 +156,7 @@ def _get_si():
         'password', get_configured_provider(), __opts__, search_global=False
     )
     port = config.get_cloud_config_value(
-        'port', get_configured_provider(), __opts__, search_global=False
+        'port', get_configured_provider(), __opts__, default=443, search_global=False
     )
 
     try:
