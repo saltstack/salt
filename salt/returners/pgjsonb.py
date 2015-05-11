@@ -169,8 +169,8 @@ def _get_options(ret=None):
 
     attrs = {'host': 'host',
              'user': 'user',
-             'pass': 'password',
-             'db': 'database',
+             'pass': 'pass',
+             'db': 'db',
              'port': 'port'}
 
 
