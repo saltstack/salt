@@ -1,5 +1,4 @@
 -r base.txt
 
-M2Crypto
 pycrypto
 pyzmq >= 2.2.0
