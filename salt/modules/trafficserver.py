@@ -328,4 +328,3 @@ def status():
     cmd = '{0} {1}'.format(_TRAFFICLINE, '--status')
     log.debug('Running: %s', cmd)
     return _subprocess(cmd)
-
