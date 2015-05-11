@@ -8,7 +8,8 @@ The following fields can be set in the minion conf file::
 
     slack.channel (required)
     slack.api_key (required)
-    slack.from_name (required)
+    slack.username (required)
+    slack.as_user (required to see the profile picture of your bot)
     slack.profile (optional)
 
 Alternative configuration values can be used by prefacing the configuration.
@@ -17,14 +18,16 @@ the default location::
 
     slack.channel
     slack.api_key
-    slack.from_name
+    slack.username
+    slack.as_user
 
-Hipchat settings may also be configured as::
+Slack settings may also be configured as::
 
     slack:
         channel: RoomName
         api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        from_name: user@email.com
+        username: user
+        as_user: true
 
     alternative.slack:
         room_id: RoomName
@@ -86,7 +89,8 @@ def _get_options(ret=None):
 
     attrs = {'slack_profile': 'profile',
              'channel': 'channel',
-             'from_name': 'from_name',
+             'username': 'username',
+             'as_user': 'as_user',
              'api_key': 'api_key',
              }
 
@@ -208,23 +212,24 @@ def _query(function, api_key=None, method='GET', data=None):
 
 def _post_message(channel,
                   message,
-                  from_name,
+                  username,
+                  as_user,
                   api_key=None):
     '''
     Send a message to a Slack room.
-    :param room_id:     The room id or room name, either will work.
+    :param channel:     The room name.
     :param message:     The message to send to the Slack room.
-    :param from_name:   Specify who the message is from.
+    :param username:    Specify who the message is from.
+    :param as_user:     Sets the profile picture which have been added through Slack itself.
     :param api_key:     The Slack api key, if not specified in the configuration.
     :param api_version: The Slack api version, if not specified in the configuration.
-    :param color:       The color for the message, default: yellow.
-    :param notify:      Whether to notify the room, default: False.
     :return:            Boolean if message was sent successfully.
     '''
 
     parameters = dict()
     parameters['channel'] = channel
-    parameters['from'] = from_name
+    parameters['username'] = username
+    parameters['as_user'] = as_user
     parameters['text'] = message
 
     result = _query(function='message',
@@ -247,15 +252,20 @@ def returner(ret):
     _options = _get_options(ret)
 
     channel = _options.get('channel')
-    from_name = _options.get('from_name')
+    username = _options.get('username')
+    as_user = _options.get('as_user')
     api_key = _options.get('api_key')
 
     if not channel:
         log.error('slack.channel not defined in salt config')
         return
 
-    if not from_name:
-        log.error('slack.from_name not defined in salt config')
+    if not username:
+        log.error('slack.username not defined in salt config')
+        return
+
+    if not as_user:
+        log.error('slack.as_user not defined in salt config')
         return
 
     if not api_key:
@@ -275,6 +285,7 @@ def returner(ret):
 
     slack = _post_message(channel,
                           message,
-                          channel,
+                          username,
+                          as_user,
                           api_key)
     return slack
