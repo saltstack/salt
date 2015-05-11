@@ -704,7 +704,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=True):
+def upgrade(refresh=True, dist_upgrade=False):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -715,7 +715,7 @@ def upgrade(refresh=True, dist_upgrade=True):
 
     dist_upgrade
         Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
-        is to use dist-upgrade.
+        is to use upgrade.
 
     .. versionadded:: 2014.7.0
 
