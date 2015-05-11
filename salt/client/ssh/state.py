@@ -99,11 +99,13 @@ def lowstate_file_refs(chunks, extras=''):
     return refs
 
 
-def salt_refs(data, ret=[]):
+def salt_refs(data, ret=None):
     '''
     Pull salt file references out of the states
     '''
     proto = 'salt://'
+    if ret is None:
+        ret = []
     if isinstance(data, str):
         if data.startswith(proto) and data not in ret:
             ret.append(data)
