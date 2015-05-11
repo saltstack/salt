@@ -15,7 +15,6 @@ ensure_in_syspath('../../')
 # Import Salt libs
 from salt.exceptions import SaltException
 from salt.modules import grains as grainsmod
-from salt.modules import config
 
 grainsmod.__opts__ = {
   'conf_file': '/tmp/__salt_test_grains',
@@ -23,6 +22,7 @@ grainsmod.__opts__ = {
 }
 
 grainsmod.__salt__ = {}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsModuleTestCase(TestCase):
@@ -110,7 +110,6 @@ class GrainsModuleTestCase(TestCase):
         res = grainsmod.filter_by(dict1, default='Z')
         self.assertEqual(res, {'D': {'E': 'F', 'G': 'H'}})
 
-
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_not_a_list(self):
         # Failing append to an existing string, without convert
@@ -129,7 +128,6 @@ class GrainsModuleTestCase(TestCase):
         # check the whole grains
         self.assertEqual(grainsmod.__grains__, {'b': {'b1': 'bval1'}})
 
-
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_already_in_list(self):
         # Append an existing value
@@ -139,7 +137,6 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, 'The val b was already in the list a_list')
         # check the whole grains
         self.assertEqual(grainsmod.__grains__, {'a_list': ['a', 'b', 'c'], 'b': 'bval'})
-
 
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_ok(self):
@@ -175,7 +172,6 @@ class GrainsModuleTestCase(TestCase):
         # check the whole grains
         self.assertEqual(grainsmod.__grains__, {'b': [{'b1': 'bval1'}, 'd']})
 
-
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_nested_not_a_list(self):
         # Failing append to an existing string, without convert
@@ -194,7 +190,6 @@ class GrainsModuleTestCase(TestCase):
         # check the whole grains
         self.assertEqual(grainsmod.__grains__, {'a': {'b': {'b1': 'bval1'}}})
 
-
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_nested_already_in_list(self):
         # Append an existing value
@@ -204,7 +199,6 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, 'The val b was already in the list a:a_list')
         # check the whole grains
         self.assertEqual(grainsmod.__grains__, {'a': {'a_list': ['a', 'b', 'c'], 'b': 'bval'}})
-
 
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_nested_ok(self):
@@ -239,7 +233,6 @@ class GrainsModuleTestCase(TestCase):
         self.assertEqual(res, {'a': {'b': [{'b1': 'bval1'}, 'd']}})
         # check the whole grains
         self.assertEqual(grainsmod.__grains__, {'a': {'b': [{'b1': 'bval1'}, 'd']}})
-
 
     @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_append_to_an_element_of_a_list(self):
