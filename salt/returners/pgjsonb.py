@@ -127,9 +127,7 @@ from __future__ import absolute_import
 # Import python libs
 from contextlib import contextmanager
 import sys
-import json
 import time
-import datetime
 import logging
 
 # Import salt libs
@@ -260,8 +258,9 @@ def event_return(events):
             tag = event.get('tag', '')
             data = event.get('data', '')
             sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, time.localtime())'''
-            cur.execute(sql, (tag, psycopg2.extras.Json(data), __opts__['id']))
+                     VALUES (%s, %s, %s, %s)'''
+            cur.execute(sql, (tag, psycopg2.extras.Json(data),
+                              __opts__['id'], time.localtime()))
 
 
 def save_load(jid, load):
