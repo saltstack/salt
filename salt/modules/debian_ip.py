@@ -1808,7 +1808,8 @@ def build_network_settings(**settings):
 
     # Write hostname to /etc/hostname
     sline = opts['hostname'].split('.', 1)
-    hostname = '{0}\n' . format(sline[0])
+    opts['hostname'] = sline[0]
+    hostname = '{0}\n' . format(opts['hostname'])
     current_domainname = current_network_settings['domainname']
 
     # Only write the hostname if it has changed
