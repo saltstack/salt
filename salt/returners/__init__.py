@@ -208,9 +208,9 @@ def _fetch_profile_opts(
     log.info('Using profile %s', profile)
 
     if 'config.option' in __salt__:
-        creds = cfg(profile)
-    else:
         creds = cfg.get(profile)
+    else:
+        creds = cfg(profile)
 
     if not creds:
         return {}
