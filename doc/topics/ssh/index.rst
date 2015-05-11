@@ -136,7 +136,7 @@ configuration file named ``master``.
 Minion Config
 ---------------
 
-.. versionadded:: 2015.2.1
+.. versionadded:: 2015.5.1
 
 Minion config options can be defined globally using the master configuration
 option ``ssh_minion_opts``. It can also be defined on a per-minion basis with

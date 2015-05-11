@@ -86,11 +86,10 @@ import base64
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-import requests
 import salt.ext.six as six
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
-# pylint: enable=no-name-in-module
+
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
     import Crypto
@@ -100,7 +99,13 @@ try:
     HAS_PYCRYPTO = True
 except ImportError:
     HAS_PYCRYPTO = False
-# pylint: enable=import-error
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils
@@ -172,6 +177,9 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for EC2 configurations
     '''
+    if not HAS_REQUESTS:
+        return False
+
     if get_configured_provider() is False:
         return False
 

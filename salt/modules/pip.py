@@ -49,7 +49,7 @@ painful in windows.
 
 To do this you just use pip with git to update to the version you want and then
 restart the service. Here is a sample state file that upgrades salt to the head
-of the 2015.2 branch:
+of the 2015.5 branch:
 
 .. code-block:: yaml
 
@@ -57,7 +57,7 @@ of the 2015.2 branch:
      pip.installed:
        - cwd: 'C:\salt\bin\scripts'
        - bin_env: 'C:\salt\bin\scripts\pip.exe'
-       - editable: git+https://github.com/saltstack/salt@2015.2#egg=salt
+       - editable: git+https://github.com/saltstack/salt@2015.5#egg=salt
        - upgrade: True
 
    restart_service:

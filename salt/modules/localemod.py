@@ -222,7 +222,7 @@ def gen_locale(locale, **kwargs):
     if os.path.exists('/etc/locale.gen'):
         __salt__['file.replace'](
             '/etc/locale.gen',
-            r'^#\s*{0}$'.format(locale),
+            r'^\s*#\s*{0}\s*$'.format(locale),
             '{0}'.format(locale),
             append_if_not_found=True
         )

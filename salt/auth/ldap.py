@@ -269,8 +269,9 @@ def groups(username, **kwargs):
                 log.error('Could not get distinguished name for user {0}'.format(username))
                 return group_list
             # LDAP results are always tuples.  First entry in the tuple is the DN
-            dn = user_dn_results[0][0]
+            dn = ldap.filter.escape_filter_chars(user_dn_results[0][0])
             ldap_search_string = '(&(member={0})(objectClass={1}))'.format(dn, _config('groupclass'))
+            log.debug('Running LDAP group membership search: {0}'.format(ldap_search_string))
             try:
                 search_results = bind.search_s(_config('basedn'),
                                                ldap.SCOPE_SUBTREE,
