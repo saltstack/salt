@@ -1,0 +1,50 @@
+/*progress*/
+ol.progtrckr{margin:0;padding:0;list-style-type:none;text-align:center;margin-bottom:40px}.progtrckr a{color:gray}.progtrckr-done a{color:black}@media min-width:840px){ol.progtrckr{font-size:14px}}@media min-width:1000px){ol.progtrckr{font-size:16px}}@media max-width:840px){ol.progtrckr{font-size:12px}}ol.progtrckr li{display:inline-block;text-align:center;line-height:3em}ol.progtrckr li.progtrckr-done{color:black;border-bottom:4px solid #C0392B}ol.progtrckr li.progtrckr-todo{color:black;border-bottom:4px solid #C0392B}ol.progtrckr li:after{content:"\00a0\00a0"}ol.progtrckr li:before{position:relative;bottom:-2.5em;float:left;left:50%;line-height:1em}ol.progtrckr li.progtrckr-done:before{content:"\2713";color:white;background-color:#C0392B;height:1.2em;width:1.2em;line-height:1.2em;border:none;border-radius:1.2em}
+
+/*get started*/
+
+.gs-overview{min-height:20px;padding:19px;margin-bottom:20px;background-color:#f5f5f5;border:1px solid #e3e3e3;border-radius:4px;-webkit-box-shadow:inset 0 1px 1px rgba(0,0,0,0.05);box-shadow:inset 0 1px 1px rgba(0,0,0,0.05)}
+.gs-overview .ph{font-size:18px;font-weight:700}
+.modal90 > .modal-dialog{width:680px!important}
+.bootbox-body video{display:block;margin:auto}
+.footer{height:75px}
+.intro{font-size:24px;font-weight:300}
+.test-env{visibility:hidden}
+.option-list-item{padding:10px}
+p.init{margin-top:20px}
+.section.gs-scenario{min-height:20px;padding:19px;margin-bottom:20px;background-color:#f5f5f5;border:1px solid #e3e3e3;border-radius:4px;-webkit-box-shadow:inset 0 1px 1px rgba(0,0,0,0.05);box-shadow:inset 0 1px 1px rgba(0,0,0,0.05);width:100%;float:right}
+.section.gs-sidebar{min-height:20px;padding:19px;margin-bottom:20px;background-color:#f5f5f5;border:1px solid #e3e3e3;border-radius:4px;-webkit-box-shadow:inset 0 1px 1px rgba(0,0,0,0.05);box-shadow:inset 0 1px 1px rgba(0,0,0,0.05);width:40%;float:right;margin-left:15px}
+img{max-width:100%;width:auto\9;height:auto;vertical-align:middle;border:0;-ms-interpolation-mode:bicubic}
+img.imgcenter{display:block;margin:auto}
+.gs-overview-sub span.ph{font-size:20px}
+#ss-logo-jumbotron{content:url(saltstack_logo_white.svg);float:right;margin-right:5px;margin-left:5px;margin-top:10px;width:60px}
+​.panel-title a{font-weight:300}
+.jumbotron h1{font-weight:300;text-transform:none}
+.jumbotron{margin-bottom:0;margin-top:-18px;background-color:#171717;color:#fff;text-shadow:#000 .1em .1em .1em}
+.jumbotron .glyphicon{color:#0CF;font-weight:100;padding-right:10px;font-size:smaller}
+h1,h2,h3,h4,h5,h6,.h1,.h2,.h3,.h4,.h5,.h6{color:#0CF;text-transform:uppercase}
+h1,.h1{font-size:40px;margin-top:10px;margin-bottom:30px}
+h2,.h2{font-size:25px;margin-top:50px;margin-bottom:20px}
+h3,h4{margin-top:30px;margin-bottom:20px}
+h4.sidebar{margin-top:0;margin-bottom:20px}
+pre.codeblock{margin-top:20px;margin-bottom:20px}
+span.moreinfo{font-size:14pt;font-style:italic;color:lightgray;float:right}
+span.line-through{text-decoration:line-through}
+.btn-primary{color:#fff;background-color:#424242;border-color:#080808}
+body{font-family:"Lato",Helvetica,Arial,sans-serif;background-color:#fff;font-size:14pt}
+.footer{padding-top:100px}
+header img{height:41px;margin-left:0;margin-right:auto;vertical-align:middle;width:auto}
+button#next-button{float:right}
+.btn-primary{color:#fff;background-color:#424242;border-color:#080808}
+.inner-addon{position:relative}
+.inner-addon .glyphicon{position:absolute;padding:10px;pointer-events:none}
+.glyphicon{color:#F79646;color:#C0392B;font-weight:100}
+#next-button .glyphicon{color:#0CF}
+.left-addon .glyphicon{padding:28px 0 0;left:10px}
+.right-addon .glyphicon{padding:30px 0 0;right:5px}
+.left-addon input{padding-left:30px}
+.right-addon input{padding-right:30px}
+#search-form{padding:20px 5px 10px}
+h3 a{color:#0CF;text-decoration:none}
+h3 a:hover,a:focus{color:#0CF;;text-decoration:none}
+.intro{font-weight: 300;font-size:19px}

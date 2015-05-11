@@ -151,7 +151,7 @@ copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.7.2'
+release = '2015.5.0'
 
 needs_sphinx = '1.3'
 
@@ -212,7 +212,7 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = 'saltstack'
+html_theme = 'saltstack2'
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'
@@ -263,6 +263,9 @@ html_context = {
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
+    'previous_release_version': '2014.7.5',
+    'previous_release_dir': '2014.7',
+    'build_type': 'current', #current, previous, develop
 }
 
 html_use_index = True
@@ -274,14 +277,10 @@ html_show_copyright = True
 ### Latex options
 
 latex_documents = [
-  ('contents','Salt-All.tex','Salt All-In-One Documentation','SaltStack, Inc.','manual'),
-  ('contents-1','Salt-1.tex','Salt 1/4 Documentation','SaltStack, Inc.','manual'),
-  ('contents-2','Salt-2.tex','Salt 2/4 Documentation', 'SaltStack, Inc.','manual'),
-  ('contents-3','Salt-3.tex','Salt 3/4 Documentation','SaltStack, Inc.','manual'),
-  ('contents-4','Salt-4.tex','Salt 4/4 Documentation','SaltStack, Inc.','manual'),
+  ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
-latex_logo = '_static/salt-logo.pdf'
+latex_logo = '_static/salt-logo.png'
 
 latex_elements = {
     'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
@@ -289,9 +288,9 @@ latex_elements = {
     'preamble': '''
 
 \usepackage{fontspec}
-\setsansfont{DejaVu Sans}
-\setromanfont{DejaVu Serif}
-\setmonofont{DejaVu Sans Mono}
+\setsansfont{Linux Biolinum O}
+\setromanfont{Linux Libertine O}
+\setmonofont{Source Code Pro}
 ''',
 }
 
