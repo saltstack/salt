@@ -9,10 +9,23 @@ Requests is not a hard dependency for Salt
 from __future__ import absolute_import
 
 # Import python libs
-import requests
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 HAS_REST_EXAMPLE = True
 
 __proxyenabled__ = ['rest_sample']
+
+
+def __virtual__():
+    '''
+    Only return if all the modules are available
+    '''
+    if not HAS_REQUESTS:
+        return False
 
 
 class Proxyconn(object):

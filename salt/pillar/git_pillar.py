@@ -179,9 +179,9 @@ class GitPillar(object):
     def map_branch(self, branch, opts=None):
         opts = __opts__ if opts is None else opts
         if branch == '__env__':
-            branch = opts.get('environment', 'base')
+            branch = opts.get('environment') or 'base'
             if branch == 'base':
-                branch = opts.get('gitfs_base', 'master')
+                branch = opts.get('gitfs_base') or 'master'
         return branch
 
     def update(self):
