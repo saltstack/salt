@@ -25,7 +25,6 @@ except ImportError:
 import os
 import locale
 from distutils.version import LooseVersion  # pylint: disable=E0611
-import re
 
 # Import salt libs
 import salt.utils
