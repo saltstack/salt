@@ -128,6 +128,8 @@ from __future__ import absolute_import
 from contextlib import contextmanager
 import sys
 import json
+import time
+import datetime
 import logging
 
 # Import salt libs
@@ -254,7 +256,7 @@ def returner(ret):
 
 def event_return(events):
     '''
-    Return event to mysql server
+    Return event to Pg server
 
     Requires that configuration be enabled via 'event_return'
     option in master config.
@@ -263,8 +265,8 @@ def event_return(events):
         for event in events:
             tag = event.get('tag', '')
             data = event.get('data', '')
-            sql = '''INSERT INTO salt_events (tag, data, master_id)
-                     VALUES (%s, %s, %s)'''
+            sql = '''INSERT INTO salt_events (tag, data, master_id, alter_time)
+                     VALUES (%s, %s, %s, time.localtime())
             cur.execute(sql, (tag, psycopg2.extras.Json(data), __opts__['id']))
 
 
