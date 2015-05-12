@@ -67,7 +67,7 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     'fun',
     'state',
     'check_cmd',
-    'fail_hard',
+    'failhard',
     'onlyif',
     'unless',
     'order',

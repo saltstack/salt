@@ -3,8 +3,14 @@
 import copy
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 ensure_in_syspath('../../')
 
@@ -13,16 +19,23 @@ from salt.exceptions import SaltException
 from salt.modules import grains as grainsmod
 from salt.utils import dictupdate
 
-grainsmod.__grains__ = {
-  'os_family': 'MockedOS',
-  '1': '1',
-  '2': '2',
+grainsmod.__opts__ = {
+  'conf_file': '/tmp/__salt_test_grains',
+  'cachedir':  '/tmp/__salt_test_grains_cache_dir'
 }
 
+grainsmod.__salt__ = {}
 
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsModuleTestCase(TestCase):
 
     def test_filter_by(self):
+        grainsmod.__grains__ = {
+          'os_family': 'MockedOS',
+          '1': '1',
+          '2': '2',
+
         dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
         dict2 = {
             'default': {
@@ -171,6 +184,141 @@ class GrainsModuleTestCase(TestCase):
                 mdict3
             )
         )
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_not_a_list(self):
+        # Failing append to an existing string, without convert
+        grainsmod.__grains__ = {'b': 'bval'}
+        res = grainsmod.append('b', 'd')
+        # check the result
+        self.assertEqual(res, 'The key b is not a valid list')
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'b': 'bval'})
+
+        # Failing append to an existing dict
+        grainsmod.__grains__ = {'b': {'b1': 'bval1'}}
+        res = grainsmod.append('b', 'd')
+        # check the result
+        self.assertEqual(res, 'The key b is not a valid list')
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'b': {'b1': 'bval1'}})
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_already_in_list(self):
+        # Append an existing value
+        grainsmod.__grains__ = {'a_list': ['a', 'b', 'c'], 'b': 'bval'}
+        res = grainsmod.append('a_list', 'b')
+        # check the result
+        self.assertEqual(res, 'The val b was already in the list a_list')
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a_list': ['a', 'b', 'c'], 'b': 'bval'})
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_ok(self):
+        # Append to an existing list
+        grainsmod.__grains__ = {'a_list': ['a', 'b', 'c'], 'b': 'bval'}
+        res = grainsmod.append('a_list', 'd')
+        # check the result
+        self.assertEqual(res, {'a_list': ['a', 'b', 'c', 'd']})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a_list': ['a', 'b', 'c', 'd'], 'b': 'bval'})
+
+        # Append to an non existing list
+        grainsmod.__grains__ = {'b': 'bval'}
+        res = grainsmod.append('a_list', 'd')
+        # check the result
+        self.assertEqual(res, {'a_list': ['d']})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a_list': ['d'], 'b': 'bval'})
+
+        # Append to an existing string, with convert
+        grainsmod.__grains__ = {'b': 'bval'}
+        res = grainsmod.append('b', 'd', convert=True)
+        # check the result
+        self.assertEqual(res, {'b': ['bval', 'd']})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'b': ['bval', 'd']})
+
+        # Append to an existing dict, with convert
+        grainsmod.__grains__ = {'b': {'b1': 'bval1'}}
+        res = grainsmod.append('b', 'd', convert=True)
+        # check the result
+        self.assertEqual(res, {'b': [{'b1': 'bval1'}, 'd']})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'b': [{'b1': 'bval1'}, 'd']})
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_nested_not_a_list(self):
+        # Failing append to an existing string, without convert
+        grainsmod.__grains__ = {'a': {'b': 'bval'}}
+        res = grainsmod.append('a:b', 'd')
+        # check the result
+        self.assertEqual(res, 'The key a:b is not a valid list')
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'b': 'bval'}})
+
+        # Failing append to an existing dict
+        grainsmod.__grains__ = {'a': {'b': {'b1': 'bval1'}}}
+        res = grainsmod.append('a:b', 'd')
+        # check the result
+        self.assertEqual(res, 'The key a:b is not a valid list')
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'b': {'b1': 'bval1'}}})
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_nested_already_in_list(self):
+        # Append an existing value
+        grainsmod.__grains__ = {'a': {'a_list': ['a', 'b', 'c'], 'b': 'bval'}}
+        res = grainsmod.append('a:a_list', 'b')
+        # check the result
+        self.assertEqual(res, 'The val b was already in the list a:a_list')
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'a_list': ['a', 'b', 'c'], 'b': 'bval'}})
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_nested_ok(self):
+        # Append to an existing list
+        grainsmod.__grains__ = {'a': {'a_list': ['a', 'b', 'c'], 'b': 'bval'}}
+        res = grainsmod.append('a:a_list', 'd')
+        # check the result
+        self.assertEqual(res, {'a': {'a_list': ['a', 'b', 'c', 'd'], 'b': 'bval'}})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'a_list': ['a', 'b', 'c', 'd'], 'b': 'bval'}})
+
+        # Append to an non existing list
+        grainsmod.__grains__ = {'a': {'b': 'bval'}}
+        res = grainsmod.append('a:a_list', 'd')
+        # check the result
+        self.assertEqual(res, {'a': {'a_list': ['d'], 'b': 'bval'}})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'a_list': ['d'], 'b': 'bval'}})
+
+        # Append to an existing string, with convert
+        grainsmod.__grains__ = {'a': {'b': 'bval'}}
+        res = grainsmod.append('a:b', 'd', convert=True)
+        # check the result
+        self.assertEqual(res, {'a': {'b': ['bval', 'd']}})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'b': ['bval', 'd']}})
+
+        # Append to an existing dict, with convert
+        grainsmod.__grains__ = {'a': {'b': {'b1': 'bval1'}}}
+        res = grainsmod.append('a:b', 'd', convert=True)
+        # check the result
+        self.assertEqual(res, {'a': {'b': [{'b1': 'bval1'}, 'd']}})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': {'b': [{'b1': 'bval1'}, 'd']}})
+
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+    def test_append_to_an_element_of_a_list(self):
+        # Append to an element in a list
+        # It currently fails silently
+        grainsmod.__grains__ = {'a': ['b', 'c']}
+        res = grainsmod.append('a:b', 'd')
+        # check the result
+        self.assertEqual(res, {'a': ['b', 'c']})
+        # check the whole grains
+        self.assertEqual(grainsmod.__grains__, {'a': ['b', 'c']})
 
 
 if __name__ == '__main__':

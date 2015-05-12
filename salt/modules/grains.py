@@ -258,7 +258,7 @@ def setval(key, val, destructive=False):
     return setvals({key: val}, destructive)
 
 
-def append(key, val, convert=False):
+def append(key, val, convert=False, delimiter=':'):
     '''
     .. versionadded:: 0.17.0
 
@@ -276,13 +276,19 @@ def append(key, val, convert=False):
         If convert is False and the grain contains non-list contents, an error
         is given. Defaults to False.
 
+    :param delimiter: The key can be a nested dict key. Use this parameter to
+        specify the delimiter you use.
+        You can now append values to a list in nested dictionnary grains. If the
+        list doesn't exist at this level, it will be created.
+        .. versionadded:: 2014.7.6
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.append key val
     '''
-    grains = get(key, [])
+    grains = get(key, [], delimiter)
     if not isinstance(grains, list) and convert is True:
         grains = [grains]
     if not isinstance(grains, list):
@@ -290,6 +296,14 @@ def append(key, val, convert=False):
     if val in grains:
         return 'The val {0} was already in the list {1}'.format(val, key)
     grains.append(val)
+
+    while delimiter in key:
+        key, rest = key.rsplit(delimiter, 1)
+        _grain = get(key, _infinitedict(), delimiter)
+        if isinstance(_grain, dict):
+            _grain.update({rest: grains})
+        grains = _grain
+
     return setval(key, grains)
 
 
