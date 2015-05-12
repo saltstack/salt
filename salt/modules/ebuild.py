@@ -248,7 +248,7 @@ def latest_version(*names, **kwargs):
 available_version = latest_version
 
 
-def _get_upgradable():
+def _get_upgradable(backtrack=3):
     '''
     Utility function to get upgradable packages
 
@@ -256,8 +256,18 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'emerge --pretend --update --newuse --deep --ask n world'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['emerge',
+           '--ask', 'n',
+           '--backtrack', '{0}'.format(backtrack),
+           '--pretend',
+           '--update',
+           '--newuse',
+           '--deep',
+           '@world']
+
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -290,9 +300,19 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, backtrack=3):
     '''
     List all available package upgrades.
+
+    refresh
+        Whether or not to sync the portage tree before checking for upgrades.
+
+    backtrack
+        Specifies an integer number of times to backtrack if dependency
+        calculation fails due to a conflict or an unsatisfied dependency
+        (default: ´3´).
+
+        .. versionadded: Beryllium
 
     CLI Example:
 
@@ -302,7 +322,7 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    return _get_upgradable()
+    return _get_upgradable(backtrack)
 
 
 def upgrade_available(name):
@@ -684,14 +704,21 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade(refresh=True, binhost=None):
+def upgrade(refresh=True, binhost=None, backtrack=3):
     '''
-    Run a full system upgrade (emerge --update world)
+    Run a full system upgrade (emerge -uDN @world)
 
     binhost
         has two options try and force.
         try - tells emerge to try and install the package from a configured binhost.
         force - forces emerge to install the package from a binhost otherwise it fails out.
+
+    backtrack
+        Specifies an integer number of times to backtrack if dependency
+        calculation fails due to a conflict or an unsatisfied dependency
+        (default: ´3´).
+
+        .. versionadded: Beryllium
 
     Return a dict containing the new package names and versions::
 
@@ -713,14 +740,24 @@ def upgrade(refresh=True, binhost=None):
         refresh_db()
 
     if binhost == 'try':
-        bin_opts = '-g'
+        bin_opts = '--getbinpkg'
     elif binhost == 'force':
-        bin_opts = '-G'
+        bin_opts = '--getbinpkgonly'
     else:
         bin_opts = ''
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --deep --ask n --quiet {0} world'.format(bin_opts)
+    cmd = ['emerge',
+           '--ask', 'n',
+           '--quiet',
+           '--backtrack', '{0}'.format(backtrack),
+           '--update',
+           '--newuse',
+           '--deep']
+    if bin_opts:
+        cmd.append(bin_opts)
+    cmd.append('@world')
+
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
