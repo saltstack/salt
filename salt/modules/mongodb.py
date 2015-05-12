@@ -428,7 +428,7 @@ def insert(objects, collection, user=None, password=None,
 
 def find(collection, query=None, user=None, password=None,
          host=None, port=None, database='admin'):
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, database)
     if not conn:
         return 'Failed to connect to mongo database'
 
@@ -460,7 +460,7 @@ def remove(collection, query=None, user=None, password=None,
         salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, database)
     if not conn:
         return 'Failed to connect to mongo database'
 
