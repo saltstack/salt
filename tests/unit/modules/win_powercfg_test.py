@@ -21,6 +21,7 @@ ensure_in_syspath('../../')
 
 powercfg.__salt__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PowerCfgTestCase(TestCase):
     query_ouput = '''Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Hibernate)
@@ -64,7 +65,6 @@ class PowerCfgTestCase(TestCase):
             powercfg.set_standby_timeout(0, "dc")
             mock.assert_called_once_with('powercfg /x standby-timeout-dc 0', python_shell=False)
 
-
     def test_set_hibernate_timeout(self):
         '''
             Test to make sure we can set the hibernate timeout value
@@ -73,7 +73,6 @@ class PowerCfgTestCase(TestCase):
         with patch.dict(powercfg.__salt__, {'cmd.run': mock}):
             powercfg.set_hibernate_timeout(0, "dc")
             mock.assert_called_once_with('powercfg /x hibernate-timeout-dc 0', python_shell=False)
-
 
     def test_get_monitor_timeout(self):
         '''
@@ -91,7 +90,6 @@ class PowerCfgTestCase(TestCase):
             mock.assert_has_calls(calls)
 
             self.assertEqual({'ac': 30, 'dc': 15}, ret)
-
 
     def test_get_disk_timeout(self):
         '''

@@ -31,7 +31,7 @@ def __virtual__():
 
 def _get_current_scheme():
     cmd = "powercfg /getactivescheme"
-    out =  __salt__['cmd.run'](cmd, python_shell=False)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     matches = re.search(r"GUID: (.*) \(", out)
     return matches.groups()[0].strip()
 
@@ -42,7 +42,7 @@ def _get_powercfg_minute_values(scheme, guid, subguid):
     '''
     cmd = "powercfg /q {0} {1} {2}".format(scheme, guid, subguid)
     out = __salt__['cmd.run'](cmd, python_shell=False)
-    raw_settings =  re.findall(r"Power Setting Index: ([0-9a-fx]+)", out)
+    raw_settings = re.findall(r"Power Setting Index: ([0-9a-fx]+)", out)
     return {"ac": int(raw_settings[0], 0) / 60, "dc": int(raw_settings[1], 0) / 60}
 
 
@@ -185,5 +185,3 @@ def get_hibernate_timeout():
         salt '*' powercfg.get_hibernate_timeout
     '''
     return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "HIBERNATEIDLE")
-
-

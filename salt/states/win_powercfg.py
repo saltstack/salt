@@ -86,7 +86,7 @@ def set_timeout(name, value, power="ac"):
 
         values = check_func()
         if values[power] == value:
-            comment.append ("{0} {1} is already set with the value {2}.".format(name, power, value))
+            comment.append("{0} {1} is already set with the value {2}.".format(name, power, value))
         else:
             ret['changes'] = {name: {power: value}}
             set_func(value, power)

@@ -20,6 +20,7 @@ ensure_in_syspath('../../')
 
 powercfg.__salt__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PowerCfgTestCase(TestCase):
     '''
@@ -53,7 +54,6 @@ class PowerCfgTestCase(TestCase):
         '''
         ret = {'changes': {}, 'comment': 'fakesetting is not a valid setting', 'name': 'fakesetting', 'result': False}
         self.assertEqual(powercfg.set_timeout("fakesetting", 0), ret)
-
 
     def test_fail_invalid_power(self):
         '''
