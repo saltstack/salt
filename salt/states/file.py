@@ -243,6 +243,7 @@ import pprint
 import shutil
 import traceback
 import yaml
+from itertools import izip_longest
 
 # Import salt libs
 import salt.payload
@@ -255,7 +256,6 @@ from salt.utils.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -634,7 +634,7 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
         return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
-    return True, '', list(map(None, sources, source_hashes[:len(sources)]))
+    return True, '', list(izip_longest(sources, source_hashes[:len(sources)]))
 
 
 def _get_template_texts(source_list=None,
