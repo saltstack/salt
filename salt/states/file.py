@@ -255,6 +255,7 @@ from salt.utils.serializers import json as json_serializer
 from salt.ext.six.moves import map
 import salt.ext.six as six
 from salt.ext.six import string_types, integer_types
+from salt.ext.six.moves import zip_longest
 
 log = logging.getLogger(__name__)
 
@@ -659,7 +660,7 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
         return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
-    return True, '', list(izip_longest(sources, source_hashes[:len(sources)]))
+    return True, '', list(zip_longest(sources, source_hashes[:len(sources)]))
 
 
 def _get_template_texts(source_list=None,
