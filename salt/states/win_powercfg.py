@@ -2,7 +2,9 @@
 '''
 
 This module allows you to control the power settings of a windows minion via
-powercfg
+powercfg.
+
+.. versionadded:: Beryllium
 
 .. code-block:: yaml
 
@@ -12,10 +14,9 @@ powercfg
             - power: dc
 '''
 
-# Import python libs
+# Import Python Libs
+from __future__ import absolute_import
 import logging
-
-# Import salt libs
 
 log = logging.getLogger(__name__)
 

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 This module allows you to control the power settings of a windows minion via
-powercfg
+powercfg.
+
+.. versionadded:: Beryllium
 
 .. code-block:: bash
 
@@ -9,11 +11,10 @@ powercfg
     salt '*' powercfg.set_disk_timeout 120 power=ac
 '''
 
-# Import python libs
+# Import Python Libs
+from __future__ import absolute_import
 import re
 import logging
-
-# Import salt libs
 
 log = logging.getLogger(__name__)
 
