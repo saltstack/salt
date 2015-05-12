@@ -341,6 +341,9 @@ def bootstrap(vm_, opts):
         'ssh_username', vm_, opts, default='root'
     )
 
+    if 'file_transport' not in opts:
+        opts['file_transport'] = vm_.get('file_transport', 'sftp')
+
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
     #       to run_inline_script function
     deploy_kwargs = {
@@ -1198,24 +1201,24 @@ def deploy_script(host,
                 if remote_dir not in remote_dirs:
                     root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **ssh_kwargs)
                     remote_dirs.append(remote_dir)
-                sftp_file(
-                    remote_file, kwargs=ssh_kwargs, local_file=local_file
+                ssh_file(
+                    opts, remote_file, kwargs=ssh_kwargs, local_file=local_file
                 )
                 file_map_success.append({local_file: remote_file})
 
             # Minion configuration
             if minion_pem:
-                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, ssh_kwargs)
+                ssh_file(opts, '{0}/minion.pem'.format(tmp_dir), minion_pem, ssh_kwargs)
                 ret = root_cmd('chmod 600 \'{0}/minion.pem\''.format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
+                ssh_file(opts, '{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
 
             if master_sign_pub_file:
-                sftp_file('{0}/master_sign.pub'.format(tmp_dir), kwargs=ssh_kwargs, local_file=master_sign_pub_file)
+                ssh_file(opts, '{0}/master_sign.pub'.format(tmp_dir), kwargs=ssh_kwargs, local_file=master_sign_pub_file)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1228,12 +1231,14 @@ def deploy_script(host,
                     )
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
-                    sftp_file(
+                    ssh_file(
+                        opts,
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
                         ssh_kwargs
                     )
-                sftp_file(
+                ssh_file(
+                    opts,
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
                     ssh_kwargs
@@ -1241,7 +1246,7 @@ def deploy_script(host,
 
             # Master configuration
             if master_pem:
-                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, ssh_kwargs)
+                ssh_file(opts, '{0}/master.pem'.format(tmp_dir), master_pem, ssh_kwargs)
                 ret = root_cmd('chmod 600 \'{0}/master.pem\''.format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
@@ -1249,7 +1254,7 @@ def deploy_script(host,
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, ssh_kwargs)
+                ssh_file(opts, '{0}/master.pub'.format(tmp_dir), master_pub, ssh_kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1261,7 +1266,8 @@ def deploy_script(host,
                         'Loading from YAML ...'
                     )
 
-                sftp_file(
+                ssh_file(
+                    opts,
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
                     ssh_kwargs
@@ -1300,7 +1306,7 @@ def deploy_script(host,
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    sftp_file(rpath, minion_key, ssh_kwargs)
+                    ssh_file(opts, rpath, minion_key, ssh_kwargs)
 
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
@@ -1318,7 +1324,7 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, ssh_kwargs)
+                ssh_file(opts, '{0}/deploy.sh'.format(tmp_dir), script, ssh_kwargs)
                 ret = root_cmd(
                     ('sh -c "( chmod +x \'{0}/deploy.sh\' )";'
                      'exit $?').format(tmp_dir),
@@ -1380,7 +1386,8 @@ def deploy_script(host,
                     environ_script_contents.append(deploy_command)
 
                     # Upload our environ setter wrapper
-                    sftp_file(
+                    ssh_file(
+                        opts,
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
                         ssh_kwargs
@@ -1666,13 +1673,14 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
     return 1
 
 
-def scp_file(dest_path, contents, kwargs):
+def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
     Use scp or sftp to copy a file to a server
     '''
-    tmpfh, tmppath = tempfile.mkstemp()
-    with salt.utils.fopen(tmppath, 'w') as tmpfile:
-        tmpfile.write(contents)
+    if contents is not None:
+        tmpfh, tmppath = tempfile.mkstemp()
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
 
     log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
@@ -1684,6 +1692,12 @@ def scp_file(dest_path, contents, kwargs):
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
     ]
+
+    if local_file is not None:
+        tmppath = local_file
+        if os.path.isdir(local_file):
+            ssh_args.append('-r')
+
     if 'key_filename' in kwargs:
         # There should never be both a password and an ssh key passed in, so
         ssh_args.extend([
@@ -1730,25 +1744,30 @@ def scp_file(dest_path, contents, kwargs):
                 ssh_gateway_port
             )
         )
-    if kwargs.get('use_sftp', False) is True:
-        cmd = 'sftp {0} {2[username]}@{2[hostname]} <<< "put {1} {3}"'.format(
+    cmd = (
+        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
             ' '.join(ssh_args), tmppath, kwargs, dest_path
         )
-        log.debug('SFTP command: {0!r}'.format(cmd))
-    else:
-        cmd = (
-            'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
-            'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
-            'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
-                ' '.join(ssh_args), tmppath, kwargs, dest_path
-            )
-        )
-        log.debug('SCP command: {0!r}'.format(cmd))
+    )
+
+    log.debug('SCP command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
                             error_msg='Failed to upload file {0!r}: {1}\n{2}',
                             password_retries=3,
                             **kwargs)
     return retcode
+
+
+def ssh_file(opts, dest_path, contents=None, kwargs=None, local_file=None):
+    '''
+    Copies a file to the remote SSH target using either sftp or scp, as
+    configured.
+    '''
+    if opts.get('file_transport', 'sftp') == 'sftp':
+        return sftp_file(dest_path, contents, kwargs, local_file)
+    return scp_file(dest_path, contents, kwargs, local_file)
 
 
 def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
