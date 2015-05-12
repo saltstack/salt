@@ -40,6 +40,13 @@ class Beacon(object):
         for mod in config:
             if mod == 'enabled':
                 continue
+            if 'enabled' in config[mod] and not config[mod]['enabled']:
+                log.trace('Beacon {0} disabled'.format(mod))
+                continue
+            elif 'enabled' in config[mod] and config[mod]['enabled']:
+                # remove 'enabled' item before processing the beacon
+                del config[mod]['enabled']
+
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
@@ -152,5 +159,33 @@ class Beacon(object):
         evt = salt.utils.event.get_event('minion', opts=self.opts)
         evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacons_disabled_complete')
+
+        return True
+
+    def enable_beacon(self, name):
+        '''
+        Enable a beacon
+        '''
+
+        self.opts['beacons'][name]['enabled'] = True
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_enabled_complete')
+
+        return True
+
+    def disable_beacon(self, name):
+        '''
+        Disable a beacon
+        '''
+
+        self.opts['beacons'][name]['enabled'] = False
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_disabled_complete')
 
         return True
