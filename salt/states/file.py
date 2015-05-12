@@ -243,7 +243,6 @@ import pprint
 import shutil
 import traceback
 import yaml
-from itertools import izip_longest
 
 # Import salt libs
 import salt.payload
