@@ -102,14 +102,14 @@ class VboxGuestTestCase(TestCase):
                          "vbox_guest.grant_access_to_shared_folders_to": mock}
                         ):
             ret.update({'comment': 'System already in the correct state'})
-            self.assertMethod(ret)
+            self.assert_method(ret)
 
             with patch.dict(vbox_guest.__opts__, {"test": True}):
                 ret.update({'changes': {'new': ['AB'], 'old': 'salt'},
                             'comment': 'List of users who have access to'
                             ' auto-mounted shared folders will be changed',
                             'result': None})
-                self.assertMethod(ret)
+                self.assert_method(ret)
 
             with patch.dict(vbox_guest.__opts__, {"test": False}):
                 ret.update({'changes': {'new': 'salt', 'old': 'salt'},
