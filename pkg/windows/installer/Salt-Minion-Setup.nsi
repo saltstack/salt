@@ -51,8 +51,9 @@ Var MinionName_State
 Page custom nsDialogsPage nsDialogsPageLeave
 ; Instfiles page
 !insertmacro MUI_PAGE_INSTFILES
+
 ; Finish page
-!define MUI_FINISHPAGE_RUN "sc"
+!define MUI_FINISHPAGE_RUN "net"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "start salt-minion"
 !insertmacro MUI_PAGE_FINISH
 
@@ -245,14 +246,12 @@ Section -Post
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" "DependOnService" "nsi"
+
+  ExecWait "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
+  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
+
   Call updateMinionConfig
 SectionEnd
-
-Function .onInstSuccess
-  Exec "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
-  ExecWait "net start salt-minion"
-FunctionEnd
 
 Function un.onUninstSuccess
   HideWindow
