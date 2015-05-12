@@ -1995,6 +1995,7 @@ def wait_for_instance(
                 console = get_console_output(
                     instance_id=vm_['instance_id'],
                     call='action',
+                    location=get_location(vm_)
                 )
                 pprint.pprint(console)
                 time.sleep(5)
@@ -2454,6 +2455,9 @@ def set_tags(name=None,
     if kwargs is None:
         kwargs = {}
 
+    if location is None:
+        location = get_location()
+
     if instance_id is None:
         if 'resource_id' in kwargs:
             resource_id = kwargs['resource_id']
@@ -2492,7 +2496,7 @@ def set_tags(name=None,
     while attempts >= 0:
         result = aws.query(params,
                            setname='tagSet',
-                           location=get_location(),
+                           location=location,
                            provider=get_provider(),
                            opts=__opts__,
                            sigver='4')
@@ -3848,6 +3852,7 @@ def describe_snapshots(kwargs=None, call=None):
 
 def get_console_output(
         name=None,
+        location=None,
         instance_id=None,
         call=None,
         kwargs=None,
@@ -3863,6 +3868,9 @@ def get_console_output(
             'The get_console_output action must be called with '
             '-a or --action.'
         )
+
+    if location is None:
+        location = get_location()
 
     if not instance_id:
         instance_id = _get_node(name)[name]['instanceId']
@@ -3880,7 +3888,7 @@ def get_console_output(
 
     ret = {}
     data = aws.query(params,
-                     location=get_location(),
+                     location=location,
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
