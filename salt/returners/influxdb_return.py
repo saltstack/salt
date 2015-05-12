@@ -45,7 +45,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import json
-import datetime
 import logging
 
 # Import Salt libs
@@ -129,6 +128,7 @@ def returner(ret):
     except Exception as e:
         log.critical('Failed to store return with InfluxDB returner: {0}'.format(e))
 
+
 def save_load(jid, load):
     '''
     Save the load to the specified jid
@@ -148,6 +148,7 @@ def save_load(jid, load):
         serv.write_points(req)
     except Exception as e:
         log.critical('Failed to store load with InfluxDB returner: {0}'.format(e))
+
 
 def get_load(jid):
     '''
@@ -176,8 +177,8 @@ def get_jid(jid):
     ret = {}
     if data:
         points = data[0]['points']
-        # {minion:full_ret}
-        ret = {e[3]:json.loads(e[2]) for e in points}
+        for e in points:
+            ret[e[3]] = json.loads(e[2])
 
     return ret
 
@@ -187,21 +188,21 @@ def get_fun(fun):
     '''
     serv = _get_serv(ret=None)
 
-    sql ='''select first(id) as fid, first(full_ret) as fret
+    sql = '''select first(id) as fid, first(full_ret) as fret
             from returns
             where fun = '{0}'
             group by fun, id
-         '''.format(fun)
-
+          '''.format(fun)
 
     data = serv.query(sql)
     ret = {}
     if data:
         points = data[0]['points']
-        # {minion:full_ret}
-        ret = {e[1]:json.loads(e[2]) for e in points}
+        for e in points:
+            ret[e[1]] = json.loads(e[2])
 
     return ret
+
 
 def get_jids():
     '''
@@ -219,6 +220,7 @@ def get_jids():
 
     return ret
 
+
 def get_minions():
     '''
     Return a list of minions
@@ -233,6 +235,7 @@ def get_minions():
             ret.append(jid[1])
 
     return ret
+
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
