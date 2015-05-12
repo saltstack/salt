@@ -46,13 +46,15 @@ class RhipTestCase(TestCase):
 
                 with patch.dict(rh_ip.__salt__, {'kmod.load':
                                                  MagicMock(return_value=None)}):
-                    with patch.object(rh_ip, '_read_temp', return_value='A'):
-                        self.assertEqual(rh_ip.build_bond('iface', test='A'),
-                                         'A')
+                    with patch.object(rh_ip, '_write_file_iface',
+                                      return_value=None):
+                        with patch.object(rh_ip, '_read_temp', return_value='A'):
+                            self.assertEqual(rh_ip.build_bond('iface', test='A'),
+                                             'A')
 
-                    with patch.object(rh_ip, '_read_file', return_value='A'):
-                        self.assertEqual(rh_ip.build_bond('iface', test=None),
-                                         'A')
+                        with patch.object(rh_ip, '_read_file', return_value='A'):
+                            self.assertEqual(rh_ip.build_bond('iface', test=None),
+                                             'A')
 
     def test_build_interface(self):
         '''
