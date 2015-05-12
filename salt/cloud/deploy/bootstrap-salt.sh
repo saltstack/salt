@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2015.05.04"
+__ScriptVersion="2015.05.07"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -208,7 +208,7 @@ _SALT_MINION_ID="null"
 # __SIMPLIFY_VERSION is mostly used in Solaris based distributions
 __SIMPLIFY_VERSION=$BS_TRUE
 _LIBCLOUD_MIN_VERSION="0.14.0"
-_PY_REQUESTS_MIN_VERSION="2.4.3"
+_PY_REQUESTS_MIN_VERSION="2.0"
 _EXTRA_PACKAGES=""
 _HTTP_PROXY=""
 __SALT_GIT_CHECKOUT_DIR=${BS_SALT_GIT_CHECKOUT_DIR:-/tmp/git/salt}
@@ -225,13 +225,17 @@ usage() {
 
   Installation types:
     - stable (default)
+    - stable [version] (ubuntu specific)
     - daily  (ubuntu specific)
+    - testing (redhat specific)
     - git
 
   Examples:
     - ${__ScriptName}
     - ${__ScriptName} stable
+    - ${__ScriptName} stable 2014.7
     - ${__ScriptName} daily
+    - ${__ScriptName} testing
     - ${__ScriptName} git
     - ${__ScriptName} git develop
     - ${__ScriptName} git v0.17.0
@@ -410,6 +414,20 @@ if [ "$ITYPE" = "git" ]; then
         __check_unparsed_options "$*"
         GIT_REV="$1"
         shift
+    fi
+# If doing stable install, check if version specified
+elif [ "$ITYPE" = "stable" ]; then
+    if [ "$#" -eq 0 ];then
+        STABLE_REV="latest"
+    else
+        __check_unparsed_options "$*"
+        if [ "$(echo "$1" | egrep '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5)$')" = "" ]; then
+          echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, latest)"
+          exit 1
+        else
+          STABLE_REV="$1"
+          shift
+        fi
     fi
 fi
 
@@ -1129,6 +1147,9 @@ fi
 if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$ITYPE" = "daily" ]); then
     echoerror "${DISTRO_NAME} does not have daily packages support"
     exit 1
+elif ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$STABLE_REV" != "latest" ]); then
+    echoerror "${DISTRO_NAME} does not have major version pegged packages support"
+    exit 1
 fi
 
 # Only RedHat based distros have testing support
@@ -1726,41 +1747,29 @@ install_ubuntu_deps() {
 
     __enable_universe_repository || return 1
 
-    if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
-        # Above Ubuntu 11.04 add a -y flag
-        add-apt-repository -y ppa:saltstack/salt || return 1
-    else
-        add-apt-repository ppa:saltstack/salt || return 1
-    fi
-
-    apt-get update
-
     # Minimal systems might not have upstart installed, install it
     __apt_get_install_noinput upstart
 
     # Need python-apt for managing packages via Salt
     __apt_get_install_noinput python-apt
 
-    if ([ "$DISTRO_MAJOR_VERSION" -gt 12 ] && [ "$DISTRO_MAJOR_VERSION" -lt 15 ]) || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
-        if [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]; then
+    if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
+        if ([ "$DISTRO_MAJOR_VERSION" -lt 15 ] && [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]); then
             echoinfo "Installing ZMQ>=4/PyZMQ>=14 from Chris Lea's PPA repository"
             add-apt-repository -y ppa:chris-lea/zeromq || return 1
             apt-get update
         fi
         __apt_get_install_noinput python-requests
         __PIP_PACKAGES=""
-    elif [ "$DISTRO_MAJOR_VERSION" -lt 15 ]; then
+    else
         check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package 'requests'"
         __apt_get_install_noinput python-setuptools python-pip
         # shellcheck disable=SC2089
-        __PIP_PACKAGES="'requests>=$_PY_REQUESTS_MIN_VERSION'"
-    elif [ "$DISTRO_MAJOR_VERSION" -ge 15 ]; then
-        __apt_get_install_noinput python-requests
-        __PIP_PACKAGES=""
+        __PIP_PACKAGES="requests>=$_PY_REQUESTS_MIN_VERSION"
     fi
 
     # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
-    __apt_get_install_noinput procps pciutils
+    __apt_get_install_noinput procps pciutils || return 1
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install 'apache-libcloud'"
@@ -1787,6 +1796,28 @@ install_ubuntu_deps() {
     fi
 
     return 0
+}
+
+install_ubuntu_stable_deps() {
+    install_ubuntu_deps || return 1
+
+    # Alternate PPAs: salt16, salt17, salt2014-1, salt2014-7
+    if [ ! "$(echo "$STABLE_REV" | egrep '^(1\.6|1\.7)$')" = "" ]; then
+      STABLE_PPA="saltstack/salt$(echo "$STABLE_REV" | tr -d .)"
+    elif [ ! "$(echo "$STABLE_REV" | egrep '^(2014\.1|2014\.7|2015\.5)$')" = "" ]; then
+      STABLE_PPA="saltstack/salt$(echo "$STABLE_REV" | tr . -)"
+    else
+      STABLE_PPA="saltstack/salt"
+    fi
+
+    if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
+        # Above Ubuntu 11.04 add a -y flag
+        add-apt-repository -y "ppa:$STABLE_PPA" || return 1
+    else
+        add-apt-repository "ppa:$STABLE_PPA" || return 1
+    fi
+
+    apt-get update
 }
 
 install_ubuntu_daily_deps() {
@@ -2019,8 +2050,8 @@ install_debian_deps() {
     __PACKAGES="procps pciutils"
     __PIP_PACKAGES=""
 
-    if [ "$DISTRO_MAJOR_VERSION" -lt 7 ]; then
-        # Both python-requests which is a hard dependency and apache-libcloud which is a soft dependency, under debian < 7
+    if [ "$DISTRO_MAJOR_VERSION" -lt 6 ]; then
+        # Both python-requests which is a hard dependency and apache-libcloud which is a soft dependency, under debian < 6
         # need to be installed using pip
         check_pip_allowed "You need to allow pip based installations (-P) in order to install the python 'requests' package"
         # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
@@ -2030,14 +2061,17 @@ install_debian_deps() {
     fi
 
     # shellcheck disable=SC2086
-    __apt_get_install_noinput ${__PACKAGES}
+    __apt_get_install_noinput ${__PACKAGES} || return 1
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         # shellcheck disable=SC2089
         __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
     fi
-    # shellcheck disable=SC2086,SC2090
-    pip install -U ${__PIP_PACKAGES}
+
+    if [ "${__PIP_PACKAGES}" != "" ]; then
+        # shellcheck disable=SC2086,SC2090
+        pip install -U ${__PIP_PACKAGES} || return 1
+    fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
         __apt_get_upgrade_noinput || return 1
@@ -2128,15 +2162,14 @@ _eof
 
     # Python requests is available through Squeeze backports
     # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
-    __apt_get_install_noinput python-pip procps pciutils
+    __apt_get_install_noinput python-pip procps pciutils python-requests
 
     # Need python-apt for managing packages via Salt
     __apt_get_install_noinput python-apt
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud/requests"
-        __apt_get_install_noinput python-pip
-        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION 'requests>=$_PY_REQUESTS_MIN_VERSION'"
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
 
     fi
 
@@ -2194,20 +2227,18 @@ install_debian_7_deps() {
     __apt_get_install_noinput -t wheezy-backports libzmq3 libzmq3-dev python-zmq python-apt || return 1
     # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
     __PACKAGES="procps pciutils"
+    # Also install python-requests
+    __PACKAGES="${__PACKAGES} python-requests"
     # shellcheck disable=SC2086
     __apt_get_install_noinput ${__PACKAGES} || return 1
-
-
-    check_pip_allowed "You need to allow pip based installations (-P) in order to install requests"
-    __PACKAGES="build-essential python-dev python-pip"
-    # shellcheck disable=SC2086
-    __apt_get_install_noinput ${__PACKAGES} || return 1
-    pip install -U "requests>=$_PY_REQUESTS_MIN_VERSION"
 
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+        __PACKAGES="build-essential python-dev python-pip"
+        # shellcheck disable=SC2086
+        __apt_get_install_noinput ${__PACKAGES} || return 1
         check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
-        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
+        pip install -U "apache-libcloud>=$_LIBCLOUD_MIN_VERSION" || return 1
     fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
@@ -2265,6 +2296,8 @@ install_debian_8_deps() {
 
     # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
     __PACKAGES="procps pciutils"
+    # Also install python-requests
+    __PACKAGES="${__PACKAGES} python-requests"
     # shellcheck disable=SC2086
     __apt_get_install_noinput ${__PACKAGES} || return 1
 
@@ -2315,7 +2348,7 @@ install_debian_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package '${__REQUIRED_TORNADO}'"
-            pip install -U "'${__REQUIRED_TORNADO}'"
+            pip install -U "${__REQUIRED_TORNADO}" || return 1
         fi
     fi
 
@@ -2346,14 +2379,17 @@ install_debian_git_deps() {
 install_debian_6_git_deps() {
     install_debian_6_deps || return 1
     if [ "$_PIP_ALLOWED" -eq $BS_TRUE ]; then
-        easy_install -U Jinja2 || return 1
+        __PACKAGES="build-essential lsb-release python python-dev python-pkg-resources python-crypto"
+        __PACKAGES="${__PACKAGES} python-m2crypto python-yaml msgpack-python python-pip"
 
         if [ "$(which git)" = "" ]; then
-            __apt_get_install_noinput git || return 1
+            __PACKAGES="${__PACKAGES} git"
         fi
 
-        __apt_get_install_noinput lsb-release python python-pkg-resources python-crypto \
-            python-m2crypto python-yaml msgpack-python python-pip || return 1
+        # shellcheck disable=SC2086
+        __apt_get_install_noinput ${__PACKAGES} || return 1
+
+        easy_install -U pyzmq Jinja2 || return 1
 
         __git_clone_and_checkout || return 1
 
@@ -2427,13 +2463,6 @@ install_debian_8_stable() {
 }
 
 install_debian_git() {
-    if [ "$_PIP_ALLOWED" -eq $BS_TRUE ]; then
-        # Building pyzmq from source to build it against libzmq3.
-        # Should override current installation
-        # Using easy_install instead of pip because at least on Debian 6,
-        # there's no default virtualenv active.
-        easy_install -U pyzmq || return 1
-    fi
 
     if [ -f "${__SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
         python setup.py install --install-layout=deb --salt-config-dir="$_SALT_ETC_DIR" || return 1

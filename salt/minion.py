@@ -1357,6 +1357,10 @@ class Minion(MinionBase):
             self.beacons.enable_beacons()
         elif func == 'disable':
             self.beacons.disable_beacons()
+        elif func == 'enable_beacon':
+            self.beacons.enable_beacon(name)
+        elif func == 'disable_beacon':
+            self.beacons.disable_beacon(name)
 
     def environ_setenv(self, package):
         '''

@@ -451,6 +451,18 @@ def wait(name,
               cmd.wait:
                 - env: "PATH=/some/path:$PATH"
 
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -568,6 +580,18 @@ def wait_script(name,
               cmd.wait_script:
                 - env: "PATH=/some/path:$PATH"
 
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
     umask
          The umask (in octal) to use when running the command.
 
@@ -666,6 +690,18 @@ def run(name,
             script-bar:
               cmd.run:
                 - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     stateful
         The command being executed is expected to return data about executing
@@ -880,6 +916,18 @@ def script(name,
             salt://scripts/bar.sh:
               cmd.script:
                 - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     umask
          The umask (in octal) to use when running the command.

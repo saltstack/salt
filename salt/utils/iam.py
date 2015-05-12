@@ -10,10 +10,14 @@ from __future__ import absolute_import
 import json
 import logging
 import time
-import requests
 import pprint
 from salt.ext.six.moves import range
 import salt.ext.six as six
+try:
+    import requests
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 
 log = logging.getLogger(__name__)
 

@@ -30,8 +30,8 @@ class Beacon(object):
         code_block:: yaml
             beacons:
                 inotify:
-                    - /etc/fstab
-                    - /var/cache/foo/*
+                    /etc/fstab: {}
+                    /var/cache/foo: {}
         '''
         ret = []
         b_config = copy.deepcopy(config)
@@ -40,12 +40,28 @@ class Beacon(object):
         for mod in config:
             if mod == 'enabled':
                 continue
+            if 'enabled' in config[mod] and not config[mod]['enabled']:
+                log.trace('Beacon {0} disabled'.format(mod))
+                continue
+            elif 'enabled' in config[mod] and config[mod]['enabled']:
+                # remove 'enabled' item before processing the beacon
+                del config[mod]['enabled']
+
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
-                interval = [arg for arg in config[mod] if 'interval' in arg]
+                if isinstance(config[mod], list):
+                    interval = None
+                    interval_config = [arg for arg in config[mod] if 'interval' in arg]
+                    if interval_config:
+                        interval = interval_config[0]['interval']
+                elif isinstance(config[mod], dict):
+                    interval = config[mod].get('interval', False)
                 if interval:
-                    b_config[mod].remove(interval[0])
+                    if isinstance(b_config[mod], list):
+                        b_config[mod].remove(interval_config[0])
+                    elif isinstance(b_config[mod], dict):
+                        b_config[mod].pop('interval')
                     if not self._process_interval(mod, interval):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
@@ -70,7 +86,7 @@ class Beacon(object):
             log.trace('Processing interval in map')
             counter = self.interval_map[mod]
             log.trace('Interval counter: {0}'.format(counter))
-            if counter * loop_interval >= interval[0]['interval']:
+            if counter * loop_interval >= interval:
                 self.interval_map[mod] = 1
                 return True
             else:
@@ -143,5 +159,33 @@ class Beacon(object):
         evt = salt.utils.event.get_event('minion', opts=self.opts)
         evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
                        tag='/salt/minion/minion_beacons_disabled_complete')
+
+        return True
+
+    def enable_beacon(self, name):
+        '''
+        Enable a beacon
+        '''
+
+        self.opts['beacons'][name]['enabled'] = True
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_enabled_complete')
+
+        return True
+
+    def disable_beacon(self, name):
+        '''
+        Disable a beacon
+        '''
+
+        self.opts['beacons'][name]['enabled'] = False
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_disabled_complete')
 
         return True

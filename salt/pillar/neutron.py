@@ -43,6 +43,8 @@ name after the Keystone profile name:
       - neutron: my_openstack_config neutron_networks
 '''
 
+from __future__ import absolute_import
+
 # Import python libs
 from __future__ import absolute_import
 import logging
