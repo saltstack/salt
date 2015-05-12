@@ -139505,6 +139505,22 @@ bar-script:
     - env: "PATH=/some/path:$PATH"
 .UNINDENT
 .UNINDENT
+.sp
+One can still use the existing $PATH with the help of some Jinja code:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+mycommand:
+  cmd.run:
+    - name: ls -l /
+    - env:
+      - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+.UNINDENT
+.UNINDENT
 .TP
 .B stateful
 The command being executed is expected to return data about executing
@@ -139649,6 +139665,22 @@ literal '$PATH':
     - env: "PATH=/some/path:$PATH"
 .UNINDENT
 .UNINDENT
+.sp
+One can still use the existing $PATH with the help of some Jinja code:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+mycommand:
+  cmd.run:
+    - name: ls -l /
+    - env:
+      - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+.UNINDENT
+.UNINDENT
 .TP
 .B umask
 The umask (in octal) to use when running the command.
@@ -139753,6 +139785,22 @@ literal '$PATH':
 script-bar:
   cmd.wait:
     - env: "PATH=/some/path:$PATH"
+.UNINDENT
+.UNINDENT
+.sp
+One can still use the existing $PATH with the help of some Jinja code:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+mycommand:
+  cmd.run:
+    - name: ls -l /
+    - env:
+      - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 .UNINDENT
 .UNINDENT
 .TP
@@ -139865,6 +139913,22 @@ literal '$PATH':
  salt://scripts/bar.sh:
   cmd.wait_script:
     - env: "PATH=/some/path:$PATH"
+.UNINDENT
+.UNINDENT
+.sp
+One can still use the existing $PATH with the help of some Jinja code:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+mycommand:
+  cmd.run:
+    - name: ls -l /
+    - env:
+      - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 .UNINDENT
 .UNINDENT
 .TP
