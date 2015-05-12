@@ -171,7 +171,6 @@ def _get_options(ret=None):
              'db': 'db',
              'port': 'port'}
 
-
     _options = salt.returners.get_returner_options('returner.{0}'.format(__virtualname__),
                                                    ret,
                                                    attrs,
