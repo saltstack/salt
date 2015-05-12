@@ -2,6 +2,8 @@
 '''
 Module for managing JBoss AS 7 through the CLI interface.
 
+.. versionadded:: 2015.5.0
+
 In order to run each function, jboss_config dictionary with the following properties must be passed:
  * cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
  * controller: the ip addres and port of controller, for example: 10.11.12.13:9999
