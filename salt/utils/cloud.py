@@ -404,6 +404,9 @@ def bootstrap(vm_, opts):
         'file_map': salt.config.get_cloud_config_value(
             'file_map', vm_, opts, default=None
         ),
+        'maxtries': salt.config.get_cloud_config_value(
+            'wait_for_passwd_maxtries', vm_, opts, default=15
+        ),
     }
 
     inline_script_kwargs = deploy_kwargs
@@ -1075,6 +1078,7 @@ def deploy_script(host,
                   script_args=None,
                   script_env=None,
                   ssh_timeout=15,
+                  maxtries=15,
                   make_syndic=False,
                   make_minion=True,
                   display_ssh_output=True,
@@ -1120,7 +1124,8 @@ def deploy_script(host,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
                            display_ssh_output=display_ssh_output,
-                           gateway=gateway, known_hosts_file=known_hosts_file):
+                           gateway=gateway, known_hosts_file=known_hosts_file,
+                           maxtries=maxtries):
 
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(

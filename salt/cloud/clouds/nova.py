@@ -103,6 +103,7 @@ import os
 import logging
 import socket
 import pprint
+import yaml
 
 # Import generic libcloud functions
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -863,6 +864,10 @@ def volume_create(name, size=100, snapshot=None, voltype=None, **kwargs):
     return conn.volume_create(**create_kwargs)
 
 
+# Command parity with EC2 and Azure
+create_volume = volume_create
+
+
 def volume_delete(name, **kwargs):
     '''
     Delete block storage device
@@ -893,6 +898,73 @@ def volume_attach(name, server_name, device='/dev/xvdb', **kwargs):
         device,
         timeout=300
     )
+
+
+# Command parity with EC2 and Azure
+attach_volume = volume_attach
+
+
+def volume_create_attach(name, call=None, **kwargs):
+    '''
+    Create and attach volumes to created node
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The create_attach_volumes action must be called with '
+            '-a or --action.'
+        )
+
+    if type(kwargs['volumes']) is str:
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs['volumes']
+
+    ret = []
+    for volume in volumes:
+        created = False
+
+        volume_dict = {
+            'name': volume['name'],
+        }
+        if 'volume_id' in volume:
+            volume_dict['volume_id'] = volume['volume_id']
+        elif 'snapshot' in volume:
+            volume_dict['snapshot'] = volume['snapshot']
+        else:
+            volume_dict['size'] = volume['size']
+
+            if 'type' in volume:
+                volume_dict['type'] = volume['type']
+            if 'iops' in volume:
+                volume_dict['iops'] = volume['iops']
+
+        if 'id' not in volume_dict:
+            created_volume = create_volume(**volume_dict)
+            created = True
+            volume_dict.update(created_volume)
+
+        attach = attach_volume(
+            name=volume['name'],
+            server_name=name,
+            device=volume.get('device', None),
+            call='action'
+        )
+
+        if attach:
+            msg = (
+                '{0} attached to {1} (aka {2})'.format(
+                    volume_dict['id'],
+                    name,
+                    volume_dict['name'],
+                )
+            )
+            log.info(msg)
+            ret.append(msg)
+    return ret
+
+
+# Command parity with EC2 and Azure
+create_attach_volumes = volume_create_attach
 
 
 def volume_list(**kwargs):
