@@ -73,7 +73,7 @@ class WinNetworkTestCase(TestCase):
                                           False])
             with patch.object(win_network, '_validate', mock):
                 ret.update({'comment': 'The following SLS configuration'
-                            ' errors were detected: T r u e',})
+                            ' errors were detected: T r u e'})
                 self.assertDictEqual(win_network.managed('salt',
                                                          dns_proto='static',
                                                          ip_proto='static'),
