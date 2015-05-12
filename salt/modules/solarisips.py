@@ -3,20 +3,22 @@
 IPS pkg support for Solaris
 
 This module provides support for Solaris 11 new package management - IPS (Image Packaging System).
-In order to manage the IPS packages using salt, you need to override the ``pkg`` provider
+It is the default pkg module for Solaris 11 (and later).
+
+If you want to use also other packaging module (e.g. pkgutil) together with IPS, you need to override the ``pkg`` provider
 by setting the :conf_minion:`providers` parameter in your Minion config file like this:
 
 .. code-block:: yaml
 
     providers:
-      pkg: solarisips
+      pkg: pkgutil
 
 Or you can set the provider in sls for each pkg:
 .. code-block:: yaml
 
     mypackage:
       pkg.installed:
-        - provider: solarisips
+        - provider: pkgutil
 
 '''
 # Import python libs
