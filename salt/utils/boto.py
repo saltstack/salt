@@ -227,14 +227,19 @@ def get_error(e):
         aws['status'] = e.status
     if e.reason:
         aws['reason'] = e.reason
-
-    try:
-        body = e.body or ''
-        error = ET.fromstring(body).find('Errors').find('Error')
-        error = {'code': error.find('Code').text,
-                 'message': error.find('Message').text}
-    except (AttributeError, SyntaxError, ET.ParseError):
-        error = None
+    error = {}
+    if hasattr(e, 'message'):
+        error['message'] = e.message
+    if hasattr(e, 'error_code'):
+        error['code'] = e.error_code
+    if not error:
+        try:
+            body = e.body or ''
+            error = ET.fromstring(body).find('Errors').find('Error')
+            error = {'code': error.find('Code').text,
+                     'message': error.find('Message').text}
+        except (AttributeError, ET.ParseError):
+            error = None
 
     if error:
         aws.update(error)
