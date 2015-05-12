@@ -210,7 +210,7 @@ def interfaces():
 
         salt '*' network.interfaces
     '''
-    return salt.utils.network.interfaces()
+    return salt.utils.network.win_interfaces()
 
 
 def hw_addr(iface):
