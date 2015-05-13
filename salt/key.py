@@ -19,6 +19,7 @@ from salt.ext.six.moves import input
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.exceptions
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils import kinds
@@ -124,7 +125,7 @@ class KeyCLI(object):
                 .format(match, 'or rejected ' if include_rejected else '')
             )
             print(msg)
-            return
+            raise salt.exceptions.SaltSystemExit(code=1)
         if not self.opts.get('yes', False):
             print('The following keys are going to be accepted:')
             salt.output.display_output(
