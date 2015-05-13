@@ -800,14 +800,35 @@ def list_nodes(call=None, **kwargs):
         return {}
     for server in server_list:
         server_tmp = conn.server_show(server_list[server]['id'])[server]
+
+        private = []
+        public = []
+        if 'addresses' not in server_tmp:
+            server_tmp['addresses'] = {}
+        for network in server_tmp['addresses'].keys():
+            for address in server_tmp['addresses'][network]:
+                if salt.utils.cloud.is_public_ip(address.get('addr', '')):
+                    public.append(address['addr'])
+                elif ':' in address['addr']:
+                    public.append(address['addr'])
+                elif '.' in address['addr']:
+                    private.append(address['addr'])
+
+        if server_tmp['accessIPv4']:
+            if salt.utils.cloud.is_public_ip(server_tmp['accessIPv4']):
+                public.append(server_tmp['accessIPv4'])
+            else:
+                private.append(server_tmp['accessIPv4'])
+        if server_tmp['accessIPv6']:
+            public.append(server_tmp['accessIPv6'])
+
         ret[server] = {
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
             'state': server_tmp['state'],
-            'private_ips': [addrs['addr'] for addrs in
-                            server_tmp['addresses'].get('private', [])],
-            'public_ips': [server_tmp['accessIPv4'], server_tmp['accessIPv6']],
+            'private_ips': public,
+            'public_ips': private,
         }
     return ret
 

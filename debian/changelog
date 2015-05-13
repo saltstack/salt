@@ -1,3 +1,9 @@
+salt (2014.7.1-1) unstable; urgency=low
+
+  * Bump to 2014.7.1
+
+ -- Manuel Torrinha <mtorrinha86@gmail.com>  Thu, 11 May 2015 15:54:00 -0000
+
 salt (2014.1.0-1) unstable; urgency=low
 
   * New upstream version
