@@ -30,6 +30,7 @@ def __virtual__():
     '''
     if not HAS_REQUESTS:
         return False
+    return "serverdensity_device"
 
 
 def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
