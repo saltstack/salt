@@ -9,7 +9,11 @@ import socket
 
 # Import salt libs
 from salt._compat import string_types
+import salt.utils
 
+# Import third party libs
+if salt.utils.is_windows():
+    from salt.ext import win_inet_pton
 
 def mac(addr):
     '''
