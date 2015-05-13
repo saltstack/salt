@@ -54,7 +54,6 @@ import salt.returners
 # Import third party libs
 try:
     import influxdb.influxdb08
-    import influxdb.influxdb08.InfluxDBClientError
     HAS_INFLUXDB = True
 except ImportError:
     HAS_INFLUXDB = False
