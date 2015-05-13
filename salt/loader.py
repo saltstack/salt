@@ -138,6 +138,23 @@ def minion_mods(
     Returns a dictionary of execution modules appropriate for the current
     system by evaluating the __virtual__() function in each module.
 
+    :param dict opts: The Salt options dictionary
+
+    :param dict context: A Salt context that should be made present inside
+                            generated modules in __context__
+
+    :param dict utils: Utility functions which should be made available to
+                            Salt modules in __utils__. See `utils_dir` in
+                            salt.config for additional information about
+                            configuration.
+
+    :param list whitelist: A list of modules which should be whitelisted.
+    :param bool include_errors: Deprecated flag! Unused.
+    :param bool initial_load: Deprecated flag! Unused.
+    :param str loaded_base_name: A string marker for the loaded base name.
+    :param bool notify: Flag indicating that an event should be fired upon
+                        completion of module loading.
+
     .. code-block:: python
 
         import salt.config
@@ -149,6 +166,8 @@ def minion_mods(
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
+    # TODO Publish documentation for module whitelisting
+
     if context is None:
         context = {}
     if utils is None:
@@ -299,6 +318,9 @@ def wheels(opts, whitelist=None):
 def outputters(opts):
     '''
     Returns the outputters modules
+
+    :param dict opts: The Salt options dictionary
+    :returns: LazyLoader instance, with only outputters present in the keyspace
     '''
     ret = LazyLoader(_module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
                      opts,
@@ -312,6 +334,9 @@ def outputters(opts):
 def auth(opts, whitelist=None):
     '''
     Returns the auth modules
+
+    :param dict opts: The Salt options dictionary
+    :returns: LazyLoader
     '''
     return LazyLoader(_module_dirs(opts, 'auth', 'auth'),
                       opts,
@@ -344,6 +369,10 @@ def states(opts, functions, whitelist=None):
     '''
     Returns the state modules
 
+    :param dict opts: The Salt options dictionary
+    :param dict functions: A dictionary of minion modules, with module names as
+                            keys and funcs as values.
+
     .. code-block:: python
 
         import salt.config
@@ -362,6 +391,10 @@ def states(opts, functions, whitelist=None):
 def beacons(opts, functions, context=None):
     '''
     Load the beacon modules
+
+    :param dict opts: The Salt options dictionary
+    :param dict functions: A dictionary of minion modules, with module names as
+                            keys and funcs as values.
     '''
     if context is None:
         context = {}
@@ -375,7 +408,13 @@ def beacons(opts, functions, context=None):
 def search(opts, returners, whitelist=None):
     '''
     Returns the search modules
+
+    :param dict opts: The Salt options dictionary
+    :param returners: Undocumented
+    :param whitelist: Undocumented
     '''
+    # TODO Document returners arg
+    # TODO Document whitelist arg
     return LazyLoader(_module_dirs(opts, 'search', 'search'),
                       opts,
                       tag='search',
@@ -386,6 +425,8 @@ def search(opts, returners, whitelist=None):
 def log_handlers(opts):
     '''
     Returns the custom logging handler modules
+
+    :param dict opts: The Salt options dictionary
     '''
     ret = LazyLoader(_module_dirs(opts,
                                   'log_handlers',
