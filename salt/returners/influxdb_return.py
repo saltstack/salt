@@ -54,6 +54,7 @@ import salt.returners
 # Import third party libs
 try:
     import influxdb.influxdb08
+    import influxdb.influxdb08.InfluxDBClientError
     HAS_INFLUXDB = True
 except ImportError:
     HAS_INFLUXDB = False
@@ -95,16 +96,15 @@ def _get_serv(ret=None):
     _options = _get_options(ret)
     host = _options.get('host')
     port = _options.get('port')
-    db = _options.get('db')
+    database = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
 
-    return influxdb.influxdb08.InfluxDBClient(
-                                host=host,
-                                port=port,
-                                username=user,
-                                password=password,
-                                database=db)
+    return influxdb.influxdb08.InfluxDBClient(host=host,
+                                              port=port,
+                                              username=user,
+                                              password=password,
+                                              database=database)
 
 
 def returner(ret):
@@ -125,8 +125,8 @@ def returner(ret):
 
     try:
         serv.write_points(req)
-    except Exception as e:
-        log.critical('Failed to store return with InfluxDB returner: {0}'.format(e))
+    except Exception as ex:
+        log.critical('Failed to store return with InfluxDB returner: {0}'.format(ex))
 
 
 def save_load(jid, load):
@@ -146,8 +146,8 @@ def save_load(jid, load):
 
     try:
         serv.write_points(req)
-    except Exception as e:
-        log.critical('Failed to store load with InfluxDB returner: {0}'.format(e))
+    except Exception as ex:
+        log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
 
 
 def get_load(jid):
@@ -177,10 +177,11 @@ def get_jid(jid):
     ret = {}
     if data:
         points = data[0]['points']
-        for e in points:
-            ret[e[3]] = json.loads(e[2])
+        for point in points:
+            ret[point[3]] = json.loads(point[2])
 
     return ret
+
 
 def get_fun(fun):
     '''
@@ -198,8 +199,8 @@ def get_fun(fun):
     ret = {}
     if data:
         points = data[0]['points']
-        for e in points:
-            ret[e[1]] = json.loads(e[2])
+        for point in points:
+            ret[point[1]] = json.loads(point[2])
 
     return ret
 
