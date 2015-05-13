@@ -453,6 +453,11 @@ def install(name=None,
 
         .. versionadded:: 2015.5.0
 
+   force_conf_new
+        Always install the new version of any configuration files.
+
+        .. versionadded:: Beryllium
+
     Returns a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -504,7 +509,10 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
-        cmd = ['dpkg', '-i', '--force-confold']
+        if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
+            cmd = ['dpkg', '-i', '--force-confnew']
+        else:
+            cmd = ['dpkg', '-i', '--force-confold']
         if skip_verify:
             cmd.append('--force-bad-verify')
         if HAS_APT:
@@ -533,7 +541,10 @@ def install(name=None,
         cmd = ['apt-get', '-q', '-y']
         if downgrade or kwargs.get('force_yes', False):
             cmd.append('--force-yes')
-        cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
+        if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
+            cmd = cmd + ['-o', 'DPkg::Options::=--force-confnew']
+        else:
+            cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
         cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
         if 'install_recommends' in kwargs and not kwargs['install_recommends']:
             cmd.append('--no-install-recommends')
@@ -704,7 +715,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return _uninstall(action='purge', name=name, pkgs=pkgs, **kwargs)
 
 
-def upgrade(refresh=True, dist_upgrade=False):
+def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
@@ -718,6 +729,11 @@ def upgrade(refresh=True, dist_upgrade=False):
         is to use upgrade.
 
     .. versionadded:: 2014.7.0
+
+   force_conf_new
+        Always install the new version of any configuration files.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -734,11 +750,15 @@ def upgrade(refresh=True, dist_upgrade=False):
         refresh_db()
 
     old = list_pkgs()
+    if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
+        force_conf = '--force-confnew'
+    else:
+        force_conf = '--force-confold'
     if dist_upgrade:
-        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
                '-o', 'DPkg::Options::=--force-confdef', 'dist-upgrade']
     else:
-        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::=--force-confold',
+        cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
     call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace',
                                    env=DPKG_ENV_VARS.copy())
