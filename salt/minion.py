@@ -711,9 +711,9 @@ class Minion(MinionBase):
                              ' {0}'.format(opts['master']))
                     if opts['master_shuffle']:
                         shuffle(opts['master'])
-                elif isinstance(opts['master']), str):
+                elif isinstance(opts['master'], str):
                     # We have a string, but a list was what was intended. Convert.
-                    # See #23611 for details
+                    # See issue 23611 for details
                     opts['master'] = list(opts['master'])
                 elif opts['__role'] == 'syndic':
                     log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
