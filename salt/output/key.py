@@ -87,7 +87,7 @@ def output(data):
 
     for status in sorted(data):
         ret += u'{0}\n'.format(trans[status])
-        for key in data[status]:
+        for key in sorted(data[status]):
             skey = key
             if strip_colors:
                 skey = salt.output.strip_esc_sequence(key)
