@@ -497,7 +497,7 @@ def get_or_set_hash(name,
         salt '*' grains.get_or_set_hash 'django:SECRET_KEY' 50
 
     .. warning::
-        
+
         This function could return strings which may contain characters which are reserved
         as directives by the YAML parser, such as strings beginning with `%`. To avoid
         issues when using the output of this function in an SLS file containing YAML+Jinja,
