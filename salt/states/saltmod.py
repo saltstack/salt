@@ -375,7 +375,12 @@ def function(
                 ).format(fun, tgt, str(False))
         ret['result'] = None
         return ret
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    try:
+        cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    except Exception as exc:
+        ret['result'] = False
+        ret['comment'] = str(exc)
+        return ret
 
     changes = {}
     fail = set()
