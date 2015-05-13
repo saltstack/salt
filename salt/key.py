@@ -18,6 +18,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.exceptions
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils import kinds
@@ -127,7 +128,7 @@ class KeyCLI(object):
                 .format(match, 'or rejected ' if include_rejected else '')
             )
             print(msg)
-            return
+            raise salt.exceptions.SaltSystemExit(code=1)
         if not self.opts.get('yes', False):
             print('The following keys are going to be accepted:')
             salt.output.display_output(
@@ -191,7 +192,7 @@ class KeyCLI(object):
                 'The key glob {0!r} does not match any accepted, unaccepted '
                 'or rejected keys.'.format(match)
             )
-            return
+            raise salt.exceptions.SystemExit(code=1)
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
             salt.output.display_output(
