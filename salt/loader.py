@@ -1072,7 +1072,7 @@ class Loader(object):
                     try:
                         virtual = mod.__virtual__()
                     except Exception as exc:
-                        log.error('Exception raised when processing __virtual__ function
+                        log.error('Exception raised when processing __virtual__ function'
                                   ' for {0}. Module will not be loaded {1}'.format(
                                       module_name, exc))
                         virtual = None
