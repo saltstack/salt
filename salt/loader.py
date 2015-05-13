@@ -139,8 +139,16 @@ def minion_mods(
     system by evaluating the __virtual__() function in each module.
 
     :param dict opts: The Salt options dictionary
+
     :param dict context: A Salt context that should be made present inside
                             generated modules in __context__
+
+    :param dict utils: Utility functions which should be made available to 
+                            Salt modules in __utils__. See `utils_dir` in
+                            salt.config for additional information about
+                            configuration.
+
+    :param list whitelist: A list of modules which should be whitelisted.
 
     .. code-block:: python
 
@@ -153,6 +161,8 @@ def minion_mods(
         __salt__ = salt.loader.minion_mods(__opts__)
         __salt__['test.ping']()
     '''
+    # TODO Publish documentation for module whitelisting
+
     if context is None:
         context = {}
     if utils is None:
