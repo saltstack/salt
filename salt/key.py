@@ -189,7 +189,7 @@ class KeyCLI(object):
                 'The key glob {0!r} does not match any accepted, unaccepted '
                 'or rejected keys.'.format(match)
             )
-            return
+            raise salt.exceptions.SystemExit(code=1)
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
             salt.output.display_output(
