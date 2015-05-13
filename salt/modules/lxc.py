@@ -1374,7 +1374,7 @@ def init(name,
                     ret['result'] = False
                 else:
                     changes.append(
-                        {'bootstrap': 'Continer successfully bootstrapped'}
+                        {'bootstrap': 'Container successfully bootstrapped'}
                     )
         elif seed_cmd:
             try:
@@ -1393,7 +1393,7 @@ def init(name,
                     ret['result'] = False
                 else:
                     changes.append(
-                        {'bootstrap': 'Continer successfully bootstrapped '
+                        {'bootstrap': 'Container successfully bootstrapped '
                                       'using seed_cmd \'{0}\''
                                       .format(seed_cmd)}
                     )
