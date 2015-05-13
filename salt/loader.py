@@ -150,6 +150,10 @@ def minion_mods(
 
     :param list whitelist: A list of modules which should be whitelisted.
     :param bool include_errors: Deprecated flag! Unused.
+    :param bool initial_load: Deprecated flag! Unused.
+    :param str loaded_base_name: A string marker for the loaded base name.
+    :param bool notify: Flag indicating that an event should be fired upon
+                        completion of module loading.
 
     .. code-block:: python
 
