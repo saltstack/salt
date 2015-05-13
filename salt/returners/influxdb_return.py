@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Return data to an influxdb server
+Return data to an influxdb server.
+
+.. versionadded:: Beryllium
 
 To enable this returner the minion will need the python client for influxdb
 installed and the following values configured in the minion or master
@@ -34,8 +36,6 @@ To use the influxdb returner, append '--return influxdb' to the salt command.
     salt '*' test.ping --return influxdb
 
 To use the alternative configuration, append '--return_config alternative' to the salt command.
-
-.. versionadded:: 2015.5.0
 
 .. code-block:: bash
 
