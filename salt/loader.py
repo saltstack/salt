@@ -1069,7 +1069,13 @@ class Loader(object):
                             end, module_name)
                     log.warning(msg)
                 else:
-                    virtual = mod.__virtual__()
+                    try:
+                        virtual = mod.__virtual__()
+                    except Exception as exc:
+                        log.error('Exception raised when processing __virtual__ function'
+                                  ' for {0}. Module will not be loaded {1}'.format(
+                                      module_name, exc))
+                        virtual = None
                 # Get the module's virtual name
                 virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
