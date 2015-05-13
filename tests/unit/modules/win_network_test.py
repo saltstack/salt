@@ -177,7 +177,9 @@ class WinNetworkTestCase(TestCase):
         '''
         Test if it return information about all the interfaces on the minion
         '''
-        self.assertTrue(win_network.interfaces())
+        with patch.object(salt.utils.network, 'win_interfaces',
+                          MagicMock(return_value=True)):
+            self.assertTrue(win_network.interfaces())
 
     # 'hw_addr' function tests: 1
 
