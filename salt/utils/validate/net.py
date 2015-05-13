@@ -15,6 +15,7 @@ import salt.utils
 if salt.utils.is_windows():
     from salt.ext import win_inet_pton
 
+
 def mac(addr):
     '''
     Validates a mac address
