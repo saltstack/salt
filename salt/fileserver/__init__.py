@@ -215,7 +215,9 @@ def reap_fileserver_cache_dir(cache_base, find_func):
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
             if len(dirs) == 0 and len(files) == 0:
-                os.rmdir(root)
+                # only remove if empty directory is older than 60s
+                if time.time() - os.path.getctime(root) > 60:
+                    os.rmdir(root)
                 continue
             # if not, lets check the files in the directory
             for file_ in files:
