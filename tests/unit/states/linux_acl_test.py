@@ -47,8 +47,7 @@ class LinuxAclTestCase(TestCase):
 
         mock = MagicMock(side_effect=[{name: {acl_type: [{acl_name:
                                                           {'octal': 'A'}}]}},
-                                      {name: {acl_type: {acl_name:
-                                                         {'octal': 'A'}}}},
+                                      {name: {acl_type: [{}]}},
                                       {name: {acl_type: ''}}])
         with patch.dict(linux_acl.__salt__, {'acl.getfacl': mock}):
             with patch.dict(linux_acl.__opts__, {'test': True}):
