@@ -35,6 +35,7 @@ class GrainsModuleTestCase(TestCase):
           'os_family': 'MockedOS',
           '1': '1',
           '2': '2',
+        }
 
         dict1 = {'A': 'B', 'C': {'D': {'E': 'F', 'G': 'H'}}}
         dict2 = {
