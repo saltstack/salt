@@ -1,0 +1,13 @@
+===========================
+Salt 2015.5.1 Release Notes
+===========================
+
+:release: TBA
+
+Version 2015.5.1 is a bugfix release for :doc:`2015.5.0
+</topics/releases/2015.5.0>`.
+
+Changes:
+
+- salt.runners.cloud.action() has changed the `fun` keyword argument to `func`.
+  Please update any calls to this function in the cloud runner.
