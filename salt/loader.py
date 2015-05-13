@@ -1173,10 +1173,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             end, module_name)
                     log.warning(msg)
                 else:
-                    virtual = mod.__virtual__()
-                    if isinstance(virtual, tuple):
-                        error_reason = virtual[1]
-                        virtual = virtual[0]
+                    try:
+                        virtual = mod.__virtual__()
+                        if isinstance(virtual, tuple):
+                            error_reason = virtual[1]
+                            virtual = virtual[0]
+                    except Exception as exc:
+                        log.error('Exception raised when processing __virtual__ function'
+                                  ' for {0}. Module will not be loaded {1}'.format(
+                                      module_name, exc))
+                        virtual = None
                 # Get the module's virtual name
                 virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
