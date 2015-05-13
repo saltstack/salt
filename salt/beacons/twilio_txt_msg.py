@@ -5,7 +5,6 @@ Beacon to emit Twilio text messages
 
 # Import Python libs
 from __future__ import absolute_import
-from datetime import datetime
 import logging
 
 # Import 3rd Party libs
