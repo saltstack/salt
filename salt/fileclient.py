@@ -615,7 +615,7 @@ class Client(object):
                             destfp.write(chunk)
                     else:
                         while True:
-                            chunk = response.read(chunk_size)
+                            chunk = response.buffer.read(chunk_size)
                             destfp.write(chunk)
                             if len(chunk) < chunk_size:
                                 break
