@@ -29,6 +29,7 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
       ssh_auth.present:
         - user: root
         - source: salt://ssh_keys/thatch.id_rsa.pub
+        - config: %h/.ssh/authorized_keys
 
     sshkeys:
       ssh_auth.present:
@@ -239,7 +240,8 @@ def present(
 
     config
         The location of the authorized keys file relative to the user's home
-        directory, defaults to ".ssh/authorized_keys"
+        directory, defaults to ".ssh/authorized_keys". Token expansion %u and
+        %h for username and home path supported.
     '''
     ret = {'name': name,
            'changes': {},
@@ -382,7 +384,9 @@ def absent(name,
 
     config
         The location of the authorized keys file relative to the user's home
-        directory, defaults to ".ssh/authorized_keys"
+        directory, defaults to ".ssh/authorized_keys". Token expansion %u and
+        %h for username and home path supported.
+
     '''
     ret = {'name': name,
            'changes': {},
