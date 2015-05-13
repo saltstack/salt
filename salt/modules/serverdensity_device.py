@@ -32,6 +32,7 @@ def __virtual__():
         return False
     return "serverdensity_device"
 
+
 def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     '''
     Returns requested Server Density authentication value from pillar.
