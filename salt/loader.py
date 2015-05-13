@@ -149,6 +149,7 @@ def minion_mods(
                             configuration.
 
     :param list whitelist: A list of modules which should be whitelisted.
+    :param bool include_errors: Deprecated flag! Unused.
 
     .. code-block:: python
 
