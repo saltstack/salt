@@ -545,6 +545,14 @@ def present(name,
                                          ' {1}'.format(name, expire)
                         ret['result'] = False
                     ret['changes']['expire'] = expire
+            elif salt.utils.is_windows():
+                if password and not empty_password:
+                    if not __salt__['user.setpassword'](name, password):
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' password to' \
+                                         ' {1}'.format(name, password)
+                        ret['result'] = False
+                    ret['changes']['passwd'] = password
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False
