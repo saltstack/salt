@@ -391,7 +391,9 @@ def create(name,
            password=None,
            **kwargs):
     '''
-    Create the named service
+    Create the named service.
+
+    .. versionadded:: Beryllium
 
     Required parameters:
     name: Specifies the service name returned by the getkeyname operation
