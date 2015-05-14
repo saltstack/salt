@@ -36,7 +36,10 @@ from salt.ext.six import string_types
 from salt.template import compile_template
 
 # Import third party libs
-import Crypto.Random
+try:
+    import Crypto.Random
+except ImportError:
+    pass  # pycrypto < 2.1
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
@@ -2232,7 +2235,8 @@ def run_parallel_map_providers_query(data, queue=None):
     This function will be called from another process when building the
     providers map.
     '''
-    Crypto.Random.atfork()
+    if 'Crypto.Random' in sys.modules:
+        Crypto.Random.atfork()
 
     cloud = Cloud(data['opts'])
     try:
