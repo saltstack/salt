@@ -60,6 +60,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 import salt.fileserver
 from salt.utils.event import tagify
 
@@ -249,7 +250,7 @@ def init():
             _failhard()
 
         try:
-            repo_conf['mountpoint'] = salt.utils.strip_proto(
+            repo_conf['mountpoint'] = salt.utils.url.strip_proto(
                 repo_conf['mountpoint']
             )
         except TypeError:

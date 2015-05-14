@@ -31,13 +31,13 @@ Connection module for Amazon IAM
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import logging
 import json
 
-log = logging.getLogger(__name__)
+# Import salt libs
+import salt.utils.odict as odict
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -52,8 +52,7 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=unused-import
 
-# Import salt libs
-import salt.utils.odict as odict
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -165,7 +164,19 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
         info = conn.get_role(name)
         if not info:
             return False
-        return info
+        role = info.get_role_response.get_role_result.role
+        role['assume_role_policy_document'] = json.loads(_unquote(
+            role.assume_role_policy_document
+        ))
+        # If Sid wasn't defined by the user, boto will still return a Sid in
+        # each policy. To properly check idempotently, let's remove the Sid
+        # from the return if it's not actually set.
+        for policy_key, policy in role['assume_role_policy_document'].items():
+            if policy_key == 'Statement':
+                for val in policy:
+                    if 'Sid' in val and not val['Sid']:
+                        del val['Sid']
+        return role
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to get {0} information.'
@@ -885,6 +896,69 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
         msg = 'Failed to delete {0} policy for role {1}.'
         log.error(msg.format(policy_name, role_name))
         return False
+
+
+def update_assume_role_policy(role_name, policy_document, region=None,
+                              key=None, keyid=None, profile=None):
+    '''
+    Update an assume role policy for a role.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.update_assume_role_policy myrole '{"Statement":"..."}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if isinstance(policy_document, string_types):
+        policy_document = json.loads(policy_document,
+                                     object_pairs_hook=odict.OrderedDict)
+    try:
+        _policy_document = json.dumps(policy_document)
+        conn.update_assume_role_policy(role_name, _policy_document)
+        msg = 'Successfully updated assume role policy for role {0}.'
+        log.info(msg.format(role_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to update assume role policy for role {0}.'
+        log.error(msg.format(role_name))
+        return False
+
+
+def build_policy(region=None, key=None, keyid=None, profile=None):
+    '''
+    Build a default assume role policy.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_iam.build_policy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if hasattr(conn, 'build_policy'):
+        policy = json.loads(conn.build_policy())
+    elif hasattr(conn, '_build_policy'):
+        policy = json.loads(conn._build_policy())
+    else:
+        return {}
+    # The format we get from build_policy isn't going to be what we get back
+    # from AWS for the exact same policy. AWS converts single item list values
+    # into strings, so let's do the same here.
+    for key, policy_val in policy.items():
+        for statement in policy_val:
+            if (isinstance(statement['Action'], list)
+                    and len(statement['Action']) == 1):
+                statement['Action'] = statement['Action'][0]
+            if (isinstance(statement['Principal']['Service'], list)
+                    and len(statement['Principal']['Service']) == 1):
+                statement['Principal']['Service'] = statement['Principal']['Service'][0]
+    # build_policy doesn't add a version field, which AWS is going to set to a
+    # default value, when we get it back, so let's set it.
+    policy['Version'] = '2008-10-17'
+    return policy
 
 
 def get_account_id(region=None, key=None, keyid=None, profile=None):

@@ -2,7 +2,7 @@
 '''
 Return salt data via hipchat.
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 The following fields can be set in the minion conf file::
 
@@ -60,7 +60,7 @@ To use the HipChat returner, append '--return hipchat' to the salt command.
 
 To use the alternative configuration, append '--return_config alternative' to the salt command.
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 .. code-block:: bash
 
@@ -74,7 +74,12 @@ import pprint
 import logging
 
 # Import 3rd-party libs
-import requests
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
@@ -130,6 +135,9 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
+    if not HAS_REQUESTS:
+        return False
+
     return __virtualname__
 
 

@@ -31,8 +31,8 @@ load-plugins=saltpylint.pep8,
   saltpylint.strings,
   saltpylint.fileperms,
   saltpylint.py3modernize,
-  salttesting.pylintplugins.smartup,
-  saltpylint.pyminver
+  saltpylint.smartup,
+  saltpylint.minpyver
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile

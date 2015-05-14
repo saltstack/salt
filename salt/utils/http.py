@@ -8,8 +8,6 @@ and the like, but also useful for basic HTTP testing.
 
 # Import python libs
 from __future__ import absolute_import
-import pprint
-import os.path
 import json
 import logging
 # pylint: disable=no-name-in-module
@@ -18,6 +16,9 @@ import salt.ext.six.moves.urllib as urllib
 # pylint: enable=no-name-in-module
 from salt.ext.six import string_types
 from salt._compat import ElementTree as ET
+import os.path
+import pprint
+import socket
 
 import ssl
 try:
@@ -36,9 +37,6 @@ except ImportError:
             HAS_MATCHHOSTNAME = True
         except ImportError:
             HAS_MATCHHOSTNAME = False
-import socket
-import urllib2
-from urllib2 import URLError
 
 # Import salt libs
 import salt.utils
@@ -46,6 +44,7 @@ import salt.utils.xmlutil as xml
 import salt.loader
 import salt.config
 import salt.version
+from salt._compat import ElementTree as ET
 from salt.template import compile_template
 from salt import syspaths
 
@@ -54,11 +53,11 @@ import salt.ext.six as six
 # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
-import salt.ext.six.moves.urllib as urllib
+import salt.ext.six.moves.urllib.request as urllib_request
+from salt.ext.six.moves.urllib.error import URLError
 # pylint: enable=import-error,no-name-in-module
 
 # Don't need a try/except block, since Salt depends on tornado
-import cookielib
 import tornado.httputil
 from tornado.httpclient import HTTPClient
 
@@ -290,15 +289,15 @@ def query(url,
         result_text = result.text
         result_cookies = result.cookies
     elif backend == 'urllib2':
-        request = urllib2.Request(url, data)
+        request = urllib_request.Request(url, data)
         handlers = [
-            urllib.request.HTTPHandler,
-            urllib.request.HTTPCookieProcessor(sess_cookies)
+            urllib_request.HTTPHandler,
+            urllib_request.HTTPCookieProcessor(sess_cookies)
         ]
 
         if url.startswith('https') or port == 443:
             hostname = request.get_host()
-            handlers[0] = urllib2.HTTPSHandler(1)
+            handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
                 log.warn(('match_hostname() not available, SSL hostname checking '
                          'not available. THIS CONNECTION MAY NOT BE SECURE!'))
@@ -340,7 +339,7 @@ def query(url,
                     if hasattr(ssl, 'SSLContext'):
                         # Python >= 2.7.9
                         context = ssl.SSLContext.load_cert_chain(*cert_chain)
-                        handlers.append(urllib.request.HTTPSHandler(context=context))  # pylint: disable=E1123
+                        handlers.append(urllib_request.HTTPSHandler(context=context))  # pylint: disable=E1123
                     else:
                         # Python < 2.7.9
                         cert_kwargs = {
@@ -352,7 +351,7 @@ def query(url,
                             cert_kwargs['key_file'] = cert_chain[1]
                         handlers[0] = salt.ext.six.moves.http_client.HTTPSConnection(**cert_kwargs)
 
-        opener = urllib.request.build_opener(*handlers)
+        opener = urllib_request.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
         request.get_method = lambda: method
@@ -527,6 +526,8 @@ def get_ca_bundle(opts=None):
         '/etc/ssl/certs/ca-bundle.crt',
         # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
+        # OpenBSD has an unusual path
+        '/etc/ssl/cert.pem',
     ):
         if os.path.exists(path):
             return path
@@ -717,7 +718,7 @@ def parse_cookie_header(header):
 
         # cookielib.Cookie() requires an epoch
         if 'expires' in cookie:
-            cookie['expires'] = cookielib.http2time(cookie['expires'])
+            cookie['expires'] = salt.ext.six.moves.http_cookiejar.http2time(cookie['expires'])
 
         # Fill in missing required fields
         for req in reqd:
@@ -728,6 +729,6 @@ def parse_cookie_header(header):
         if cookie['rest'] is None:
             cookie['rest'] = {}
 
-        ret.append(cookielib.Cookie(name=name, value=value, **cookie))
+        ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret

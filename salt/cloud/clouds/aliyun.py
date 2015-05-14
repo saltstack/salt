@@ -38,8 +38,13 @@ import base64
 from hashlib import sha1
 
 # Import 3rd-party libs
-import requests
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -71,6 +76,9 @@ def __virtual__():
     '''
     Check for aliyun configurations
     '''
+    if not HAS_REQUESTS:
+        return False
+
     if get_configured_provider() is False:
         return False
 
@@ -721,7 +729,7 @@ def query(params=None):
     signature = _compute_signature(parameters, access_key_secret)
     parameters['Signature'] = signature
 
-    request = requests.get(path, params=parameters, verify=False)
+    request = requests.get(path, params=parameters, verify=True)
     if request.status_code != 200:
         raise SaltCloudSystemExit(
             'An error occurred while querying aliyun ECS. HTTP Code: {0}  '

@@ -330,6 +330,9 @@ def append(name, table='filter', family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -454,6 +457,9 @@ def insert(name, table='filter', family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -574,6 +580,9 @@ def delete(name, table='filter', family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -615,16 +624,18 @@ def delete(name, table='filter', family='ipv4', **kwargs):
     kwargs['name'] = name
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='D', **kwargs)
+
     if not __salt__['iptables.check'](table,
                                       kwargs['chain'],
                                       rule,
                                       family) is True:
-        ret['result'] = True
-        ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
-            name,
-            family,
-            command.strip())
-        return ret
+        if 'position' not in kwargs:
+            ret['result'] = True
+            ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
+                name,
+                family,
+                command.strip())
+            return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be deleted for {1} ({2})'.format(
             name,

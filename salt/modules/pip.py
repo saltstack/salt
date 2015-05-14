@@ -49,7 +49,7 @@ painful in windows.
 
 To do this you just use pip with git to update to the version you want and then
 restart the service. Here is a sample state file that upgrades salt to the head
-of the 2015.2 branch:
+of the 2015.5 branch:
 
 .. code-block:: yaml
 
@@ -57,7 +57,7 @@ of the 2015.2 branch:
      pip.installed:
        - cwd: 'C:\salt\bin\scripts'
        - bin_env: 'C:\salt\bin\scripts\pip.exe'
-       - editable: git+https://github.com/saltstack/salt@2015.2#egg=salt
+       - editable: git+https://github.com/saltstack/salt@2015.5#egg=salt
        - upgrade: True
 
    restart_service:
@@ -83,6 +83,8 @@ import shutil
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
+import salt.utils.url
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -126,36 +128,16 @@ def _get_pip_bin(bin_env):
     return bin_env
 
 
-def _process_salt_url(path, saltenv):
-    '''
-    Process 'salt://' and '?saltenv=' out of `path` and return the stripped
-    path and the saltenv.
-    '''
-    path = path.split('salt://', 1)[-1]
-
-    env_splitter = '?saltenv='
-    if '?env=' in path:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        env_splitter = '?env='
-    try:
-        path, saltenv = path.split(env_splitter)
-    except ValueError:
-        pass
-
-    return path, saltenv
-
-
 def _get_cached_requirements(requirements, saltenv):
     '''
     Get the location of a cached requirements file; caching if necessary.
     '''
 
-    requirements_file, saltenv = _process_salt_url(requirements, saltenv)
-    if requirements_file not in __salt__['cp.list_master'](saltenv):
+    req_file, senv = salt.utils.url.parse(requirements)
+    if senv:
+        saltenv = senv
+
+    if req_file not in __salt__['cp.list_master'](saltenv):
         # Requirements file does not exist in the given saltenv.
         return False
 
@@ -229,7 +211,7 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+            cmd.append('--requirement="{0}"'.format(treq or requirement))
     return cleanup_requirements, None
 
 
@@ -502,7 +484,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
-            if not (salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link)):
+            if not (salt.utils.url.validate(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
                     '{0!r} must be a valid URL or path'.format(link)
                 )
@@ -515,14 +497,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         )
 
     if index_url:
-        if not salt.utils.valid_url(index_url, VALID_PROTOS):
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(index_url)
             )
         cmd.append('--index-url={0!r}'.format(index_url))
 
     if extra_index_url:
-        if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '{0!r} must be a valid URL'.format(extra_index_url)
             )
@@ -973,7 +955,7 @@ def upgrade_available(pkg,
                       user=None,
                       cwd=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Check whether or not an upgrade is available for a given package
 
@@ -991,7 +973,7 @@ def upgrade(bin_env=None,
             cwd=None,
             use_vt=False):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Upgrades outdated pip packages
 

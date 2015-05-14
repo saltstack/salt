@@ -56,13 +56,6 @@ Salt Virt
 
     cloud_controller
 
-Halite
-======
-.. toctree::
-    :maxdepth: 2
-
-    halite
-
 Using Salt at scale
 ===================
 .. toctree::

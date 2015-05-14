@@ -30,13 +30,20 @@ import zmq.eventloop.ioloop
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import zmq.eventloop.zmqstream
-import zmq.utils.monitor
-EVENT_MAP = None
+try:
+    import zmq.utils.monitor
+    HAS_ZMQ_MONITOR = True
+    EVENT_MAP = None
+except ImportError:
+    HAS_ZMQ_MONITOR = False
 
 # Import Tornado Libs
 import tornado
 import tornado.gen
 import tornado.concurrent
+
+# Import third party libs
+from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 
@@ -127,23 +134,34 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
     @tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
+            # Return controle back to the caller, continue when authentication succeeds
             yield self.auth.authenticate()
+        # Return control to the caller. When send() completes, resume by populating ret with the Future.result
         ret = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout)
         key = self.auth.get_keys()
-        aes = key.private_decrypt(ret['key'], 4)
+        cipher = PKCS1_OAEP.new(key)
+        aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
 
     @tornado.gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60):
         '''
+        Send a load across the wire, with encryption
+
         In case of authentication errors, try to renegotiate authentication
         and retry the method.
+
         Indeed, we can fail too early in case of a master restart during a
         minion state execution call
+
+        :param dict load: A load to send across the wire
+        :param int tries: The number of times to make before failure
+        :param int timeout: The number of seconds on a response before failing
         '''
         @tornado.gen.coroutine
         def _do_transfer():
+            # Yield control to the caller. When send() completes, resume by populating data with the Future.result
             data = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)),
                                       timeout=timeout,
                                       )
@@ -155,16 +173,26 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 data = self.auth.crypticle.loads(data)
             raise tornado.gen.Return(data)
         if not self.auth.authenticated:
+            # Return control back to the caller, resume when authentication succeeds
             yield self.auth.authenticate()
         try:
+            # We did not get data back the first time. Retry.
             ret = yield _do_transfer()
         except salt.crypt.AuthenticationError:
+            # If auth error, return control back to the caller, continue when authentication succeeds
             yield self.auth.authenticate()
             ret = yield _do_transfer()
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
+        '''
+        Send a load across the wire in cleartext
+
+        :param dict load: A load to send across the wire
+        :param int tries: The number of times to make before failure
+        :param int timeout: The number of seconds on a response before failing
+        '''
         ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
         raise tornado.gen.Return(ret)
 
@@ -181,6 +209,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
 
 class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
+    '''
+    A transport channel backed by ZeroMQ for a Salt Publisher to use to
+    publish commands to connected minions
+    '''
     def __init__(self,
                  opts,
                  **kwargs):
@@ -258,7 +290,13 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         self._init_monitor()
 
     def _init_monitor(self):
-        if not self.opts['zmq_monitor']:
+        '''
+        Create ZMQ monitor sockets
+
+        More information:
+            http://api.zeromq.org/4-0:zmq-socket-monitor
+        '''
+        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
             return
 
         global EVENT_MAP
@@ -280,7 +318,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         self._monitor_stream.on_recv(monitor_callback)
 
     def _stop_monitor(self):
-        if not hasattr(self, '_monitor_socket') or self._monitor_socket is None:
+        if not HAS_ZMQ_MONITOR or not hasattr(self, '_monitor_socket') or self._monitor_socket is None:
             return
         self._socket.disable_monitor()
         self._monitor_stream.close()
@@ -319,6 +357,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
     def _decode_messages(self, messages):
         '''
         Take the zmq messages, decrypt/decode them into a payload
+
+        :param list messages: A list of messages to be decoded
         '''
         messages_len = len(messages)
         # if it was one message, then its old style
@@ -330,11 +370,16 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         else:
             raise Exception(('Invalid number of messages ({0}) in zeromq pub'
                              'message from master').format(len(messages_len)))
+        # Yield control back to the caller. When the payload has been decoded, assign
+        # the decoded payload to 'ret' and resume operation
         ret = yield self._decode_payload(payload)
         raise tornado.gen.Return(ret)
 
     @property
     def stream(self):
+        '''
+        Return the current zmqstream, creating one if necessary
+        '''
         if not hasattr(self, '_stream'):
             self._stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=self.io_loop)
         return self._stream
@@ -342,6 +387,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
     def on_recv(self, callback):
         '''
         Register a callback for recieved messages (that we didn't initiate)
+
+        :param func callback: A function which should be called when data is received
         '''
         if callback is None:
             return self.stream.on_recv(None)
@@ -392,6 +439,9 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
                 raise exc
 
     def close(self):
+        '''
+        Cleanly shutdown the router socket
+        '''
         if hasattr(self, 'clients'):
             self.clients.close()
         self.stream.close()
@@ -399,6 +449,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
     def pre_fork(self, process_manager):
         '''
         Pre-fork we need to create the zmq router device
+
+        :param func process_manager: An instance of salt.utils.process.ProcessManager
         '''
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
         process_manager.add_process(self.zmq_device)
@@ -407,6 +459,10 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         After forking we need to create all of the local sockets to listen to the
         router
+
+        :param func payload_handler: A function to called to handle incoming payloads as
+                                     they are picked up off the wire
+        :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         '''
         self.payload_handler = payload_handler
         self.io_loop = io_loop
@@ -432,7 +488,12 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
     @tornado.gen.coroutine
     def handle_message(self, stream, payload):
         '''
-        Handle incoming messages from underylying tcp streams
+        Handle incoming messages from underylying TCP streams
+
+        :stream ZMQStream stream: A ZeroMQ stream.
+        See http://zeromq.github.io/pyzmq/api/generated/zmq.eventloop.zmqstream.html
+
+        :param dict payload: A payload to process
         '''
         try:
             payload = self.serial.loads(payload[0])
@@ -456,6 +517,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         # TODO: test
         try:
+            # Take the payload_handler function that was registered when we created the channel
+            # and call it, returning control to the caller until it completes
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:
             # always attempt to return an error to the minion
@@ -481,6 +544,9 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
+    '''
+    Encapsulate synchronous operations for a publisher channel
+    '''
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
@@ -502,6 +568,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             pub_sock.setsockopt(zmq.HWM, self.opts.get('pub_hwm', 1000))
         # in zmq >= 3.0, there are separate send and receive HWM settings
         except AttributeError:
+            # Set the High Water Marks. For more information on HWM, see:
+            # http://api.zeromq.org/4-1:zmq-setsockopt
             pub_sock.setsockopt(zmq.SNDHWM, self.opts.get('pub_hwm', 1000))
             pub_sock.setsockopt(zmq.RCVHWM, self.opts.get('pub_hwm', 1000))
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
@@ -563,6 +631,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                     raise exc
 
         except KeyboardInterrupt:
+            # Cleanly close the sockets if we're shutting down
             if pub_sock.closed is False:
                 pub_sock.setsockopt(zmq.LINGER, 1)
                 pub_sock.close()
@@ -577,12 +646,16 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
+
+        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         '''
         process_manager.add_process(self._publish_daemon)
 
     def publish(self, load):
         '''
         Publish "load" to minions
+
+        :param dict load: A load to be sent across the wire to minions
         '''
         payload = {'enc': 'aes'}
 
@@ -623,6 +696,15 @@ class AsyncReqMessageClient(object):
     we can manage a pool of REQ/REP sockets-- but for now we'll just do them in serial
     '''
     def __init__(self, opts, addr, linger=0, io_loop=None):
+        '''
+        Create an asynchronous message client
+
+        :param dict opts: The salt opts dictionary
+        :param str addr: The interface IP address to bind to
+        :param int linger: The number of seconds to linger on a ZMQ socket. See
+                           http://api.zeromq.org/2-1:zmq-setsockopt [ZMQ_LINGER]
+        :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
+        '''
         self.opts = opts
         self.addr = addr
         self.linger = linger
@@ -644,7 +726,7 @@ class AsyncReqMessageClient(object):
     # TODO: timeout all in-flight sessions, or error
     def destroy(self):
         if hasattr(self, 'stream'):
-            # TODO: Optionally call stream.close() on newer pyzmq? Its broken on some
+            # TODO: Optionally call stream.close() on newer pyzmq? It is broken on some.
             self.stream.io_loop.remove_handler(self.stream.socket)
             self.stream.socket.close()
             self.socket.close()
@@ -680,6 +762,12 @@ class AsyncReqMessageClient(object):
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self.socket, io_loop=self.io_loop)
 
     def _set_tcp_keepalive(self):
+        '''
+        Ensure that TCP keepalives are set for the ReqServer.
+
+        Warning: Failure to set TCP keepalives can result in frequent or unexpected
+        disconnects!
+        '''
         if hasattr(zmq, 'TCP_KEEPALIVE') and self.opts:
             if 'tcp_keepalive' in self.opts:
                 self.socket.setsockopt(
@@ -725,6 +813,12 @@ class AsyncReqMessageClient(object):
         self.io_loop.remove_timeout(timeout)
 
     def timeout_message(self, message):
+        '''
+        Handle a message timeout by removing it from the sending queue
+        and informing the caller
+
+        :raises: SaltReqTimeoutError
+        '''
         del self.send_timeout_map[message]
         self.send_future_map.pop(message).set_exception(SaltReqTimeoutError('Message timed out'))
 

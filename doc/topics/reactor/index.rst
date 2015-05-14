@@ -273,10 +273,10 @@ Any other parameters in the :py:meth:`LocalClient().cmd()
 Calling Runner modules and Wheel modules
 ----------------------------------------
 
-Calling Runenr modules and wheel modules from the Reactor uses a more direct
+Calling Runner modules and wheel modules from the Reactor uses a more direct
 syntax since the function is being executed locally instead of sending a
 command to a remote system to be executed there. There are no 'arg' or 'kwarg'
-parameters (unless the Runenr function or Wheel function accepts a paramter
+parameters (unless the Runner function or Wheel function accepts a paramter
 with either of those names.)
 
 For example:

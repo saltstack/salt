@@ -48,7 +48,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             self.exit(2, '{0}\n'.format(exc))
             return
 
-        if self.options.batch:
+        if self.options.batch or self.options.static:
             import salt.cli.batch
             eauth = {}
             if 'token' in self.config:
@@ -73,6 +73,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             if self.options.static:
 
+                if not self.options.batch:
+                    self.config['batch'] = '100%'
+
                 batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
 
                 ret = {}
@@ -87,7 +90,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
                     if self.options.failhard:
-                        for ret in res.itervalues():
+                        for ret in six.itervalues(res):
                             retcode = salt.utils.job.get_retcode(ret)
                             if retcode != 0:
                                 sys.exit(retcode)
@@ -159,12 +162,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         kwargs['cli'] = True
                     else:
                         cmd_func = local.cmd_cli
-                    if self.options.static:
-                        if self.options.verbose:
-                            kwargs['verbose'] = True
-                        full_ret = local.cmd_full_return(**kwargs)
-                        ret, out, retcode = self._format_ret(full_ret)
-                        self._output_ret(ret, out)
+
                     if self.options.progress:
                         kwargs['progress'] = True
                         self.config['progress'] = True

@@ -37,6 +37,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.atomicfile
 import salt.utils.thin
+import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
 from salt.utils import is_windows
@@ -580,6 +581,7 @@ class Single(object):
             fsclient=None,
             thin=None,
             mine=False,
+            minion_opts=None,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -626,12 +628,15 @@ class Single(object):
                 'sudo': sudo,
                 'tty': tty,
                 'mods': self.mods}
-        self.minion_config = yaml.dump(
-                {
+        self.minion_opts = opts.get('ssh_minion_opts', {})
+        if minion_opts is not None:
+            self.minion_opts.update(minion_opts)
+        self.minion_opts.update({
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
-                }, width=1000).strip()
+                })
+        self.minion_config = yaml.dump(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
@@ -744,6 +749,7 @@ class Single(object):
                 self.opts,
                 self.id,
                 fsclient=self.fsclient,
+                minion_opts=self.minion_opts,
                 **self.target)
             opts_pkg = pre_wrapper['test.opts_pkg']()
             opts_pkg['file_roots'] = self.opts['file_roots']
@@ -801,6 +807,7 @@ class Single(object):
             opts,
             self.id,
             fsclient=self.fsclient,
+            minion_opts=self.minion_opts,
             **self.target)
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
@@ -858,7 +865,10 @@ class Single(object):
             debug = '1'
         arg_str = '''
 OPTIONS = OBJ()
-OPTIONS.config = '{0}'
+OPTIONS.config = \
+"""
+{0}
+"""
 OPTIONS.delimiter = '{1}'
 OPTIONS.saltdir = '{2}'
 OPTIONS.checksum = '{3}'
@@ -942,8 +952,8 @@ ARGS = {9}\n'''.format(self.minion_config,
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
 
-        log.debug('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
-        log.debug('STDERR {1}\n{0}'.format(stderr, self.target['host']))
+        log.trace('STDOUT {1}\n{0}'.format(stdout, self.target['host']))
+        log.trace('STDERR {1}\n{0}'.format(stderr, self.target['host']))
         log.debug('RETCODE {1}: {0}'.format(retcode, self.target['host']))
 
         error = self.categorize_shim_errors(stdout, stderr, retcode)
@@ -1154,7 +1164,7 @@ def mod_data(fsclient):
             for fn_ in sorted(files):
                 if fn_.startswith(pref):
                     if fn_.endswith(('.py', '.so', '.pyx')):
-                        full = 'salt://{0}'.format(fn_)
+                        full = salt.utils.url.create(fn_)
                         mod_path = fsclient.cache_file(full, env)
                         if not os.path.isfile(mod_path):
                             continue

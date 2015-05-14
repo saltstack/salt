@@ -48,6 +48,7 @@ import salt.utils
 import salt.utils.process
 import salt.utils.minion
 import salt.utils.event
+import salt.utils.url
 import salt.transport
 import salt.wheel
 from salt.exceptions import (
@@ -91,7 +92,7 @@ def _sync(form, saltenv=None):
         saltenv = saltenv.split(',')
     ret = []
     remote = set()
-    source = os.path.join('salt://_{0}'.format(form))
+    source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir {0!r}'.format(mod_dir))

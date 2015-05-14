@@ -55,6 +55,9 @@ import salt.utils.cloud
 from salt.cloud.exceptions import SaltCloudConfigError
 from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 from salt.utils import namespaced_function
+
+# Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 # Get logging started
@@ -93,7 +96,7 @@ def remove_complex_types(dictionary):
     are not serializable by msgpack.  Kill those.
     '''
 
-    for k, v in dictionary.iteritems():
+    for k, v in six.iteritems(dictionary):
         if isinstance(v, dict):
             dictionary[k] = remove_complex_types(v)
         elif hasattr(v, 'to_eng_string'):
@@ -476,7 +479,7 @@ if HAS_LINODEPY:
 
         linode_list = linodes(full=full, conn=c)
 
-        for l, d in linode_list.iteritems():
+        for l, d in six.iteritems(linode_list):
             if LinodeID:
                 if d['id'] == LinodeID:
                     d = dict(d.items() + get_ips(conn=c, LinodeID=d['id']).items())

@@ -2,7 +2,7 @@
 '''
 Connection library for AWS
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 This is a base library used by a number of AWS services.
 
@@ -24,7 +24,11 @@ import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
 
 # Import 3rd-party libs
-import requests
+try:
+    import requests
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 from salt.ext.six.moves import map, range, zip
 from salt.ext.six.moves.urllib.parse import urlencode, urlparse

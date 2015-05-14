@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-KEY" "1" "March 09, 2015" "2015.2.0rc1-133-g24fa806" "Salt"
+.TH "SALT-KEY" "1" "May 06, 2015" "2015.5.0" "Salt"
 .SH NAME
 salt-key \- salt-key Documentation
 .
@@ -70,6 +70,17 @@ on most systems is \fB/etc/salt\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-u USER, \-\-user=USER
+Specify user to run salt\-key
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully. Default is
+False.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-q, \-\-quiet
 Suppress output
 .UNINDENT
@@ -77,6 +88,13 @@ Suppress output
 .TP
 .B \-y, \-\-yes
 Answer \(aqYes\(aq to all questions presented, defaults to False
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-rotate\-aes\-key=ROTATE_AES_KEY
+Setting this to False prevents the master from refreshing the key session
+when keys are deleted or rejected, this lowers the security of the key
+deletion/rejection operation. Default is True.
 .UNINDENT
 .SS Logging Options
 .sp
@@ -245,6 +263,35 @@ Set the keysize for the generated key, only works with
 the \(aq\-\-gen\-keys\(aq option, the key size must be 2048 or
 higher, otherwise it will be rounded up to 2048. The
 default is 2048.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-gen\-signature
+Create a signature file of the masters public\-key named
+master_pubkey_signature. The signature can be send to a minion in the
+masters auth\-reply and enables the minion to verify the masters public\-key
+cryptographically. This requires a new signing\-key\- pair which can be
+auto\-created with the \-\-auto\-create parameter.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-priv=PRIV
+The private\-key file to create a signature with
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-signature\-path=SIGNATURE_PATH
+The path where the signature file should be written
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pub=PUB
+The public\-key file to create a signature for
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-auto\-create
+Auto\-create a signing key\-pair if it does not yet exist
 .UNINDENT
 .SH SEE ALSO
 .sp

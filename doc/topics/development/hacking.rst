@@ -286,3 +286,10 @@ Run the test suite with following command:
     ./setup.py test
 
 See :doc:`here <tests/index>` for more information regarding the test suite.
+
+Issue and Pull Request Labeling System
+--------------------------------------
+
+SaltStack uses several labeling schemes to help facilitate code contributions
+and bug resolution. See the :doc:`<labels-and-milestones>` documentation for
+more information.

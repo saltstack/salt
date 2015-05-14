@@ -90,8 +90,8 @@ def get_returner_options(virtualname=None,
     _options.update(
         _fetch_profile_opts(
             cfg,
-            __salt__,
             virtualname,
+            __salt__,
             _options,
             profile_attr,
             profile_attrs
@@ -210,9 +210,9 @@ def _fetch_profile_opts(
         log.info('Using profile %s', profile)
 
         if 'config.option' in __salt__:
-            creds = cfg(profile)
-        else:
             creds = cfg.get(profile)
+        else:
+            creds = cfg(profile)
 
     if not creds:
         return {}

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Encapsulate the different transports available to Salt.  Currently this is only ZeroMQ.
+Encapsulate the different transports available to Salt.
 '''
 from __future__ import absolute_import
 

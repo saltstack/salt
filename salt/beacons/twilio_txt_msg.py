@@ -5,7 +5,6 @@ Beacon to emit Twilio text messages
 
 # Import Python libs
 from __future__ import absolute_import
-from datetime import datetime
 import logging
 
 # Import 3rd Party libs
@@ -50,34 +49,20 @@ def beacon(config):
             account_sid: "<account sid>"
             auth_token: "<auth token>"
             twilio_number: "+15555555555"
-            poll_interval: 10
+            interval: 10
 
-    poll_interval defaults to 10 seconds
     '''
     log.trace('twilio_txt_msg beacon starting')
     ret = []
     if not all([config['account_sid'], config['auth_token'], config['twilio_number']]):
         return ret
     output = {}
-    poll_interval = config.get('poll_interval')
-    if not poll_interval:
-        # Let's default to polling every 10 secons
-        poll_interval = 10
-    now = datetime.now()
-    if 'twilio_txt_msg' in __context__:
-        timedelta = now - __context__['twilio_txt_msg']
-        if timedelta.seconds < poll_interval:
-            log.trace('Twilio beacon poll interval not met.')
-            log.trace('Twilio polling in {0}'.format(poll_interval - timedelta.seconds))
-            return ret
-
     output['texts'] = []
     client = TwilioRestClient(config['account_sid'], config['auth_token'])
     messages = client.messages.list(to=config['twilio_number'])
     log.trace('Num messages: {0}'.format(len(messages)))
     if len(messages) < 1:
         log.trace('Twilio beacon has no texts')
-        __context__['twilio_txt_msg'] = now
         return ret
 
     for message in messages:
@@ -95,6 +80,5 @@ def beacon(config):
                     item['images'].append(str(pic.uri))
         output['texts'].append(item)
         message.delete()
-    __context__['twilio_txt_msg'] = now
     ret.append(output)
     return ret

@@ -7,6 +7,9 @@ Splay function calls across targeted minions
 from __future__ import absolute_import
 import time
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
@@ -81,7 +84,7 @@ def splay(*args, **kwargs):
     my_delay = _calc_splay(__grains__['id'], splaytime=splaytime)
     time.sleep(my_delay)
     # Get rid of the hidden kwargs that salt injects
-    func_kwargs = dict((k, v) for k, v in kwargs.iteritems() if not k.startswith('__'))
+    func_kwargs = dict((k, v) for k, v in six.iteritems(kwargs) if not k.startswith('__'))
     result = __salt__[func](*args, **func_kwargs)
     if not isinstance(result, dict):
         result = {'result': result}

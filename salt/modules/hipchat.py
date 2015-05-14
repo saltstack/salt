@@ -2,7 +2,7 @@
 '''
 Module for sending messages to hipchat.
 
-.. versionadded:: 2015.2.0
+.. versionadded:: 2015.5.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt
@@ -26,7 +26,6 @@ import logging
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves import range
 import salt.ext.six.moves.http_client
-# pylint: enable=import-error,no-name-in-module
 
 try:
     import requests
@@ -34,6 +33,7 @@ try:
     ENABLED = True
 except ImportError:
     ENABLED = False
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 

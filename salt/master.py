@@ -17,7 +17,8 @@ import multiprocessing
 
 # Import third party libs
 import zmq
-from M2Crypto import RSA
+from Crypto.PublicKey import RSA
+import Crypto.Random
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -240,7 +241,7 @@ class Maintenance(multiprocessing.Process):
 
         if to_rotate:
             log.info('Rotating master AES key')
-            for secret_key, secret_map in SMaster.secrets.iteritems():
+            for secret_key, secret_map in six.iteritems(SMaster.secrets):
                 # should be unecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
                     secret_map['secret'].value = secret_map['reload']()
@@ -491,12 +492,6 @@ class Master(SMaster):
             log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
 
-        def run_reqserver():
-            reqserv = ReqServer(
-                self.opts,
-                self.key,
-                self.master_key)
-            reqserv.run()
         log.info('Creating master request server process')
         process_manager.add_process(self.run_reqserver)
         try:
@@ -536,7 +531,7 @@ def iter_transport_opts(opts):
     '''
     transports = set()
 
-    for transport, opts_overrides in opts.get('transport_opts', {}).iteritems():
+    for transport, opts_overrides in six.iteritems(opts.get('transport_opts', {})):
         t_opts = dict(opts)
         t_opts.update(opts_overrides)
         t_opts['transport'] = transport
@@ -751,6 +746,7 @@ class MWorker(multiprocessing.Process):
             self.key,
             )
         self.aes_funcs = AESFuncs(self.opts)
+        Crypto.Random.atfork()
         self.__bind()
 
 
@@ -819,15 +815,16 @@ class AESFuncs(object):
 
         pub = None
         try:
-            pub = RSA.load_pub_key(tmp_pub)
-        except RSA.RSAError as err:
+            with salt.utils.fopen(tmp_pub) as fp_:
+                pub = RSA.importKey(fp_.read())
+        except (ValueError, IndexError, TypeError) as err:
             log.error('Unable to load temporary public key "{0}": {1}'
                       .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
-            if pub.public_decrypt(token, 5) == 'salt':
+            if salt.crypt.public_decrypt(pub, token) == 'salt':
                 return True
-        except RSA.RSAError as err:
+        except ValueError as err:
             log.error('Unable to decrypt token: {0}'.format(err))
 
         log.error('Salt minion claiming to be {0} has attempted to'
@@ -1109,11 +1106,6 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return False
         load['grains']['id'] = load['id']
-        mods = set()
-        for func in six.itervalues(self.mminion.functions):
-            mods.add(func.__module__)
-        for mod in mods:
-            sys.modules[mod].__grains__ = load['grains']
 
         pillar_dirs = {}
         pillar = salt.pillar.Pillar(

@@ -2,6 +2,8 @@
 '''
 Manage JBoss 7 Application Server via CLI interface
 
+.. versionadded:: 2015.5.0
+
 This state uses jboss-cli.sh script from JBoss installation and parses its output to determine execution result.
 
 In order to run each state, jboss_config dictionary with the following properties must be passed:

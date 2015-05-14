@@ -64,10 +64,6 @@ Glossary
         hostname, network addresses. *See also*: :ref:`targeting with grains
         <targeting-grains>`.
 
-    Halite
-        The Salt GUI. *See also*: `Halite
-        <https://github.com/saltstack/halite>`_.
-
     Highdata
         The data structure in a SLS file the represents a set of state
         declarations. *See also*: :ref:`state layers

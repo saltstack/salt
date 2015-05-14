@@ -584,6 +584,7 @@ def hypermedia_in():
     if (cherrypy.request.method.upper() == 'POST'
             and cherrypy.request.headers.get('Content-Length', '0') == '0'):
         cherrypy.request.process_request_body = False
+        cherrypy.request.unserialized_data = None
 
     cherrypy.request.body.processors.clear()
     cherrypy.request.body.default_proc = cherrypy.HTTPError(

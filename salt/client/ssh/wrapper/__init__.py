@@ -35,6 +35,7 @@ class FunctionWrapper(object):
             fsclient=None,
             cmd_prefix=None,
             aliases=None,
+            minion_opts=None,
             **kwargs):
         super(FunctionWrapper, self).__init__()
         self.cmd_prefix = cmd_prefix
@@ -48,6 +49,7 @@ class FunctionWrapper(object):
         self.aliases = aliases
         if self.aliases is None:
             self.aliases = {}
+        self.minion_opts = minion_opts
 
     def __contains__(self, key):
         '''
@@ -81,6 +83,7 @@ class FunctionWrapper(object):
                                    fsclient=self.fsclient,
                                    cmd_prefix=cmd,
                                    aliases=self.aliases,
+                                   minion_opts=self.minion_opts,
                                    **kwargs)
 
         if self.cmd_prefix:
@@ -108,6 +111,7 @@ class FunctionWrapper(object):
                     mods=self.mods,
                     wipe=True,
                     fsclient=self.fsclient,
+                    minion_opts=self.minion_opts,
                     **self.kwargs
             )
             stdout, stderr, _ = single.cmd_block()

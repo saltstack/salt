@@ -15,6 +15,10 @@ from string import ascii_letters, digits
 
 # Import 3rd-party libs
 import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
@@ -138,48 +142,43 @@ def _sort_hostnames(hostname_list):
         'fe02::',
     ]
 
-    def _cmp_hostname(a, b):
+    def _key_hostname(e):
         # should never have a space in hostname
-        if ' ' in a:
-            return 1
-        if ' ' in b:
-            return -1
+        # favor hostnames w/o spaces
+        if ' ' in e:
+            first = 1
+        else:
+            first = -1
 
         # punish localhost list
-        if a in punish:
-            if b in punish:
-                return punish.index(a) - punish.index(b)
-            return 1
-        if b in punish:
-            return -1
+        if e in punish:
+            second = punish.index(e)
+        else:
+            second = -1
 
         # punish ipv6
-        if ':' in a or ':' in b:
-            return a.count(':') - b.count(':')
+        third = e.count(':')
 
         # punish ipv4
-        a_is_ipv4 = a.count('.') == 3 and not any(c.isalpha() for c in a)
-        b_is_ipv4 = b.count('.') == 3 and not any(c.isalpha() for c in b)
-        if a_is_ipv4 and a.startswith('127.'):
-            return 1
-        if b_is_ipv4 and b.startswith('127.'):
-            return -1
-        if a_is_ipv4 and not b_is_ipv4:
-            return 1
-        if a_is_ipv4 and b_is_ipv4:
-            return 0
-        if not a_is_ipv4 and b_is_ipv4:
-            return -1
+        # punish ipv4 addresses that start with '127.' more
+        e_is_ipv4 = e.count('.') == 3 and not any(c.isalpha() for c in e)
+        if e_is_ipv4:
+            if e.startswith('127.'):
+                fourth = 1
+            else:
+                fourth = 0
+        else:
+            fourth = -1
 
         # favor hosts with more dots
-        diff = b.count('.') - a.count('.')
-        if diff != 0:
-            return diff
+        fifth = -(e.count('.'))
 
         # favor longest fqdn
-        return len(b) - len(a)
+        sixth = -(len(e))
 
-    return sorted(hostname_list, cmp=_cmp_hostname)
+        return (first, second, third, fourth, fifth, sixth)
+
+    return sorted(hostname_list, key=_key_hostname)
 
 
 def get_hostnames():
@@ -272,12 +271,11 @@ def generate_minion_id():
     '''
     possible_ids = get_hostnames()
 
-    ip_addresses = [IPv4Address(addr) for addr
-                    in salt.utils.network.ip_addrs(include_loopback=True)
-                    if not addr.startswith('127.')]
-
     # include public and private ipaddresses
-    for addr in ip_addresses:
+    for addr in salt.utils.network.ip_addrs():
+        addr = ipaddress.ip_address(addr)
+        if addr.is_loopback:
+            continue
         possible_ids.append(str(addr))
 
     possible_ids = _filter_localhost_names(possible_ids)
@@ -288,6 +286,20 @@ def generate_minion_id():
 
     hosts = _sort_hostnames(possible_ids)
     return hosts[0]
+
+
+def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
+    '''
+    Return a socket object for the addr
+    IP-version agnostic
+    '''
+
+    version = ipaddress.ip_address(addr).version
+    if version == 4:
+        family = socket.AF_INET
+    elif version == 6:
+        family = socket.AF_INET6
+    return socket.socket(family, type, proto)
 
 
 def get_fqhostname():
@@ -627,7 +639,7 @@ def linux_interfaces():
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ip(cmd1 + '\n' + cmd2)
+        ifaces = _interfaces_ip("{0}\n{1}".format(cmd1, cmd2))
     elif ifconfig_path:
         cmd = subprocess.Popen(
             '{0} -a'.format(ifconfig_path),
@@ -1281,60 +1293,3 @@ def remotes_on_remote_tcp_port(port):
         remotes.add(rhost)
 
     return remotes
-
-
-class IPv4Address(object):
-    '''
-    A very minimal subset of the IPv4Address object in the ip_address module.
-    '''
-
-    def __init__(self, address_str):
-        self.address_str = address_str
-        octets = self.address_str.split('.')
-        if len(octets) != 4:
-            raise ValueError(
-                'IPv4 addresses must be in dotted-quad form.'
-            )
-        try:
-            self.dotted_quad = [int(octet) for octet in octets]
-        except ValueError as err:
-            raise ValueError(
-                'IPv4 addresses must be in dotted-quad form. {0}'.format(err)
-            )
-
-    def __str__(self):
-        return self.address_str
-
-    def __repr__(self):
-        return 'IPv4Address("{0}")'.format(str(self))
-
-    def __cmp__(self, other):
-        return cmp(self.dotted_quad, other.dotted_quad)
-
-    @property
-    def is_private(self):
-        '''
-        :return: Returns True if the address is a non-routable IPv4 address.
-                 Otherwise False.
-        '''
-        if 10 == self.dotted_quad[0]:
-            return True
-        if 172 == self.dotted_quad[0]:
-            return 16 <= self.dotted_quad[1] <= 31
-        if 192 == self.dotted_quad[0]:
-            return 168 == self.dotted_quad[1]
-        return False
-
-    @property
-    def is_loopback(self):
-        '''
-        :return: True if the address is a loopback address. Otherwise False.
-        '''
-        return 127 == self.dotted_quad[0]
-
-    @property
-    def reverse_pointer(self):
-        '''
-        :return: Reversed IP address
-        '''
-        return '.'.join(reversed(self.dotted_quad)) + '.in-addr.arpa.'

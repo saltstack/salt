@@ -18,6 +18,7 @@ import tempfile
 import salt.config
 import salt.utils
 import salt.utils.jid
+import salt.utils.url
 import salt.state
 import salt.payload
 from salt.exceptions import SaltInvocationError
@@ -271,7 +272,7 @@ def template_str(tem, queue=False, **kwargs):
 def apply_(mods=None,
           **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, state.apply is intended to be the main gateway for
@@ -293,7 +294,7 @@ def apply_(mods=None,
 def request(mods=None,
             **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Request that the local admin execute a state run via
     `salt-call state.run_request`
@@ -334,7 +335,7 @@ def request(mods=None,
 
 def check_request(name=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Return the state request information, if any
 
@@ -357,7 +358,7 @@ def check_request(name=None):
 
 def clear_request(name=None):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Clear out the state execution request without executing it
 
@@ -398,7 +399,7 @@ def clear_request(name=None):
 
 def run_request(name='default', **kwargs):
     '''
-    .. versionadded:: 2015.2.0
+    .. versionadded:: 2015.5.0
 
     Execute the pending state request
 
@@ -741,7 +742,7 @@ def top(topfn,
 
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
-    st_.opts['state_top'] = os.path.join('salt://', topfn)
+    st_.opts['state_top'] = salt.utils.url.create(topfn)
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),

@@ -16,6 +16,7 @@ import tempfile
 import jinja2
 import yaml
 import salt.ext.six as six
+import tornado
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -98,6 +99,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
+            os.path.dirname(tornado.__file__),
             ]
 
     tops.append(six.__file__.replace('.pyc', '.py'))
