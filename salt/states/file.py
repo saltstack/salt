@@ -251,9 +251,9 @@ import salt.utils.templates
 from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
-from salt.ext.six.moves import map
 import salt.ext.six as six
 from salt.ext.six import string_types, integer_types
+from salt.ext.six.moves import zip_longest
 
 log = logging.getLogger(__name__)
 
@@ -335,6 +335,7 @@ def _gen_keep_files(name, require):
         ret = set()
         if os.path.isdir(name):
             for root, dirs, files in os.walk(name):
+                ret.add(name)
                 for name in files:
                     ret.add(os.path.join(root, name))
                 for name in dirs:
@@ -346,7 +347,7 @@ def _gen_keep_files(name, require):
         required_files = [comp for comp in require if 'file' in comp]
         for comp in required_files:
             for low in __lowstate__:
-                if low['__id__'] == comp['file']:
+                if low['name'] == comp['file']:
                     fn = low['name']
                     if os.path.isdir(comp['file']):
                         if _is_child(comp['file'], name):
@@ -658,7 +659,7 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
         return (True, '', [(source, source_hash)])
 
     # Make a nice neat list of tuples exactly len(sources) long..
-    return True, '', list(map(None, sources, source_hashes[:len(sources)]))
+    return True, '', list(zip_longest(sources, source_hashes[:len(sources)]))
 
 
 def _get_template_texts(source_list=None,
