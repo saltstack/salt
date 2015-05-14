@@ -86,9 +86,6 @@ import salt.utils
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-# It would be cool if we could use __virtual__() in this module, though, since
-# pip can be installed on a virtualenv anywhere on the filesystem, there's no
-# definite way to tell if pip is installed on not.
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -98,6 +95,15 @@ __func_alias__ = {
 }
 
 VALID_PROTOS = ['http', 'https', 'ftp', 'file']
+
+
+def __virtual__():
+    '''
+    There is no way to verify that pip is installed without inspecting the
+    entire filesystem.  If it's not installed in a conventional location, the
+    user is required to provide the location of pip each time it is used.
+    '''
+    return 'pip'
 
 
 def _get_pip_bin(bin_env):
@@ -442,7 +448,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # Backwards compatibility
         saltenv = __env__
 
-    cmd = [_get_pip_bin(bin_env), 'install']
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'install']
 
     cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
                                                         saltenv=saltenv, user=user,
@@ -587,7 +595,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if pre_releases:
         # Check the locally installed pip version
-        pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
+        pip_version_cmd = '{0} --version'.format(pip_bin)
         output = __salt__['cmd.run_all'](pip_version_cmd,
                                          use_vt=use_vt,
                                          python_shell=False).get('stdout', '')
@@ -743,7 +751,9 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
 
     '''
-    cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'uninstall', '-y']
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
@@ -836,7 +846,9 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-    cmd = [_get_pip_bin(bin_env), 'freeze']
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'freeze']
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
@@ -865,6 +877,7 @@ def list_(prefix=None,
     packages = {}
 
     pip_bin = _get_pip_bin(bin_env)
+
     pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
 
@@ -924,7 +937,9 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
+    pip_bin = _get_pip_bin(bin_env)
+
+    output = __salt__['cmd.run']('{0} --version'.format(pip_bin), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
@@ -943,8 +958,8 @@ def list_upgrades(bin_env=None,
 
         salt '*' pip.list_upgrades
     '''
-
     pip_bin = _get_pip_bin(bin_env)
+
     cmd = [pip_bin, "list", "--outdated"]
 
     cmd_kwargs = dict(cwd=cwd, runas=user)
