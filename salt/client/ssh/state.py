@@ -102,20 +102,22 @@ def lowstate_file_refs(chunks, extras=''):
     return refs
 
 
-def salt_refs(data):
+def salt_refs(data, ret=None):
     '''
     Pull salt file references out of the states
     '''
     proto = 'salt://'
-    ret = []
+    if ret is None:
+        ret = []
     if isinstance(data, str):
-        if data.startswith(proto):
-            return [data]
+        if data.startswith(proto) and data not in ret:
+            ret.append(data)
     if isinstance(data, list):
         for comp in data:
-            if isinstance(comp, str):
-                if comp.startswith(proto):
-                    ret.append(comp)
+            salt_refs(comp, ret)
+    if isinstance(data, dict):
+        for comp in data:
+            salt_refs(data[comp], ret)
     return ret
 
 
@@ -157,7 +159,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                     if not os.path.isdir(tgt_dir):
                         os.makedirs(tgt_dir)
                     shutil.copy(path, tgt)
-                    break
+                    continue
                 files = file_client.cache_dir(name, saltenv)
                 if files:
                     for filename in files:
@@ -173,7 +175,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)
                         shutil.copy(filename, tgt)
-                    break
+                    continue
     cwd = os.getcwd()
     os.chdir(gendir)
     with closing(tarfile.open(trans_tar, 'w:gz')) as tfp:

@@ -428,7 +428,7 @@ def refresh_db():
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
     else:
-        if __salt__['cmd.retcode']('emerge --sync --ask n --quiet',
+        if __salt__['cmd.retcode']('emerge --ask n --quiet --sync',
                                    python_shell=False) == 0:
             return True
         # We fall back to "webrsync" if "rsync" fails for some reason
@@ -633,7 +633,7 @@ def install(name=None,
                 targets.append(target)
     else:
         targets = pkg_params
-    cmd = 'emerge --quiet {0} --ask n {1} {2}'.format(bin_opts, emerge_opts, ' '.join(targets))
+    cmd = 'emerge --ask n --quiet {0} {1} {2}'.format(bin_opts, emerge_opts, ' '.join(targets))
 
     old = list_pkgs()
     call = __salt__['cmd.run_all'](cmd,
@@ -693,7 +693,7 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
         bin_opts = ''
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --oneshot --ask n --quiet {0} {1}'.format(bin_opts, full_atom)
+    cmd = 'emerge --ask n --quiet --update --newuse --oneshot {0} {1}'.format(bin_opts, full_atom)
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
@@ -824,7 +824,7 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     if not targets:
         return {}
-    cmd = 'emerge --unmerge --quiet --quiet-unmerge-warn --ask n' \
+    cmd = 'emerge --ask n --quiet --unmerge --quiet-unmerge-warn ' \
           '{0}'.format(' '.join(targets))
     __salt__['cmd.run_all'](cmd,
                             output_loglevel='trace',
@@ -916,7 +916,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     else:
         targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --depclean --ask n --quiet {0}'.format(' '.join(targets))
+    cmd = 'emerge --ask n --quiet --depclean {0}'.format(' '.join(targets))
     __salt__['cmd.run_all'](cmd,
                             output_loglevel='trace',
                             python_shell=False)
