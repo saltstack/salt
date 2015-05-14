@@ -1524,7 +1524,7 @@ class Cloud(object):
                         'The cloud driver, {0!r}, configured under the '
                         '{1!r} cloud provider alias was not loaded since '
                         '\'{2}()\' could not be found. Removing it from '
-                        'the available providers list'.format(
+                        'the available providers list.'.format(
                             driver, alias, fun
                         )
                     )
@@ -1546,7 +1546,7 @@ class Cloud(object):
                             'The cloud driver, {0!r}, configured under the '
                             '{1!r} cloud provider alias is not properly '
                             'configured. Removing it from the available '
-                            'providers list'.format(driver, alias)
+                            'providers list.'.format(driver, alias)
                         )
                         self.opts['providers'][alias].pop(driver)
 
