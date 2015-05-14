@@ -255,6 +255,7 @@ from salt.utils.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six import string_types, integer_types
 from salt.ext.six.moves import zip_longest
 
 log = logging.getLogger(__name__)

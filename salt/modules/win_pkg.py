@@ -30,6 +30,9 @@ try:
 except ImportError:
     import msgpack_pure as msgpack
 # pylint: enable=import-error
+import os
+import locale
+from distutils.version import LooseVersion  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
@@ -237,10 +240,6 @@ def list_pkgs(versions_as_list=False, **kwargs):
             if key in name_map:
                 key = name_map[key]
             __salt__['pkg_resource.add_pkg'](ret, key, val)
-        for key, val in six.iteritems(_get_msi_software()):
-            if key in name_map:
-                key = name_map[key]
-            __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     if not versions_as_list:
@@ -360,8 +359,6 @@ def _get_reg_software():
                     reg_hive,
                     prd_uninst_key,
                     'WindowsInstaller')
-                if windows_installer != 'Not Found' and windows_installer:
-                    continue
 
                 prd_name = _get_reg_value(
                     reg_hive,
