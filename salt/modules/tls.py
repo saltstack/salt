@@ -25,6 +25,7 @@ HAS_SSL = False
 try:
     import OpenSSL
     HAS_SSL = True
+    OpenSSL_version = OpenSSL.__dict__.get('__version__', None)
 except ImportError:
     pass
 
@@ -34,14 +35,14 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-
 def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    if HAS_SSL:
+    if HAS_SSL and float(OpenSSL_version) < 0.14:
         return True
-    return False, ['PyOpenSSL must be installed before this module can be used.']
+    return False, ['PyOpenSSL version 0.14 or later  must be installed before '
+                  ' this module can be used.']
 
 
 def cert_base_path(cacert_path=None):
@@ -517,6 +518,82 @@ def create_ca(ca_name,
 
     return ret
 
+def get_extensions(cert_type):
+    '''
+    Fetch X509 and CSR extension definitions from tls:extensions:
+    (common|server|client) or set them to standard defaults.
+
+    cert_type:
+        required
+        ``server`` or ``client``
+
+    '''
+
+    ext = {}
+    if cert_type == '':
+        log.error('cert_type set to empty in tls_ca.get_extensions(); defaulting to ``server``')
+        cert_type = 'server'
+
+    try:
+        ext['common'] = __salt__['pillar.get']('tls.extensions:common')
+    except NameError as err:
+        log.debug(err)
+
+    if 'common' not in ext or ext['common'] == '':
+        ext['common'] = {
+            'csr': {
+                'basicConstraints': 'CA:FALSE',
+            },
+            'cert': {
+                'authorityKeyIdentifier': 'keyid,issuer:always',
+                'subjectKeyIdentifier': 'hash',
+            },
+        }
+
+    try:
+        ext['server'] = __salt__['pillar.get']('tls.extensions:server')
+    except NameError as err:
+        log.debug(err)
+
+    if 'server' not in ext or ext['server'] == '':
+        ext['server'] = {
+            'csr': {
+                'extendedKeyUsage': 'serverAuth',
+                'keyUsage': 'digitalSignature, keyEncipherment',
+            },
+            'cert': {},
+        }
+
+    try:
+        ext['client'] = __salt__['pillar.get']('tls.extensions:client')
+    except NameError as err:
+        log.debug(err)
+
+    if 'client' not in ext or ext['client'] == '':
+        ext['client'] = {
+            'csr': {
+                'extendedKeyUsage': 'clientAuth',
+                'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment',
+            },
+            'cert': {},
+        }
+
+    # possible user-defined profile or a typo
+    if cert_type not in ext:
+        try:
+            ext[cert_type] = __salt__['pillar.get'](
+                'tls.extensions:{0}'.format(cert_type))
+        except NameError as e:
+            log.debug(
+                'pillar, tls:extensions:{0} not available or not operating in a salt context\n{1}'.
+                format(cert_type, e))
+
+    retval = ext['common']
+
+    for Use in retval:
+        retval[Use].update(ext[cert_type][Use])
+
+    return retval
 
 def create_csr(ca_name,
                bits=2048,
@@ -556,7 +633,23 @@ def create_csr(ca_name,
         email address for the request, default is 'xyz@pdq.net'
     subjectAltName
         valid subjectAltNames in full form, e.g. to add DNS entry you would call
-        this function with this value:  **['DNS:myapp.foo.comm']**
+        this function with this value:
+
+        examples: ['DNS:somednsname.com',
+                'DNS:1.2.3.4',
+                'IP:1.2.3.4',
+                'IP:2001:4801:7821:77:be76:4eff:fe11:e51',
+                'email:me@i.like.pie.com']
+
+    .. note::
+        some libraries do not properly query IP: prefixes, instead looking
+        for the given req. source with a DNS: prefix. To be thorough, you
+        may want to include both DNS: and IP: entries if you are using
+        subjectAltNames for destinations for your TLS connections.
+            e.g.:
+                requests to https://1.2.3.4 will fail from python's
+                requests library w/out the second entry in the above list
+
     cacert_path
         absolute path to ca certificates root directory
     csr_filename
@@ -621,10 +714,21 @@ def create_csr(ca_name,
     req.get_subject().CN = CN
     req.get_subject().emailAddress = emailAddress
 
+    extensions = get_extensions('server')['csr']
+    extension_adds = []
+
+    for ext, value in extensions.items():
+        extension_adds.append(OpenSSL.crypto.X509Extension(ext, False, value))
+
     if subjectAltName:
-        req.add_extensions([
+        if isinstance(subjectAltName, str):
+            subjectAltName = [subjectAltName]
+
+        extension_adds.append(
             OpenSSL.crypto.X509Extension(
-                'subjectAltName', False, ", ".join(subjectAltName))])
+                'subjectAltName', False, ", ".join(subjectAltName)))
+
+    req.add_extensions(extension_adds)
     req.set_pubkey(key)
     req.sign(key, digest)
 
@@ -862,8 +966,13 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
         cert_filename = CN
 
     if os.path.exists(
-            '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                     ca_name, cert_filename)
+            os.path.join(
+                os.path.sep.join('{0}/{1}/certs/{2}.crt'.format(
+                    cert_base_path(),
+                    ca_name,
+                    cert_filename).split('/')
+                )
+            )
     ):
         return 'Certificate "{0}" already exists'.format(cert_filename)
 
@@ -898,28 +1007,46 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
 
     exts = []
     try:
-        # see: http://bazaar.launchpad.net/~exarkun/pyopenssl/master/revision/189
-        # support is there from quite a long time, but without API
-        # so we mimic the newly get_extensions method present in ultra
-        # recent pyopenssl distros
-        native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
-        for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
-            ext = OpenSSL.crypto.X509Extension.__new__(OpenSSL.crypto.X509Extension)
-            ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(native_exts_obj, i)
-            exts.append(ext)
-    except Exception:
-        log.error('Support for extensions is not available, upgrade PyOpenSSL')
+        exts.extend(req.get_extensions())
+        log.debug('req.get_extensions() supported in pyOpenSSL {0}'.format(
+                        OpenSSL.__dict__.get('__version__', '')))
+    except AttributeError:
+        try:
+            # see: http://bazaar.launchpad.net/~exarkun/pyopenssl/master/revision/189
+            # support is there from quite a long time, but without API
+            # so we mimic the newly get_extensions method present in ultra
+            # recent pyopenssl distros
+            log.info('req.get_extensions() not supported in pyOpenSSL versions '
+                    'prior to 0.15. Switching to Dark Magic(tm) '
+                    ' Your version: {0}'.format(
+                            OpenSSL.__dict__.get('__version__', 'pre-2014')))
+
+            native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
+            for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
+                ext = OpenSSL.crypto.X509Extension.__new__(
+                    OpenSSL.crypto.X509Extension)
+                ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(
+                    native_exts_obj,
+                    i)
+                exts.append(ext)
+        except Exception:
+            log.error('X509 extensions are unsupported in pyOpenSSL '
+                      'versions prior to 0.14. Upgrade required. Current '
+                      'version: {0}'.format(
+                          OpenSSL.__dict__.get('__version__', 'pre-2014'))
+                      )
 
     cert = OpenSSL.crypto.X509()
     cert.set_version(2)
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
-    if exts:
-        cert.add_extensions(exts)
     cert.set_serial_number(_new_serial(ca_name, CN))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
+
+    cert.add_extensions(exts)
+
     cert.sign(ca_key, digest)
 
     with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
