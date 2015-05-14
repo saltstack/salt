@@ -1085,6 +1085,72 @@ def cert_info(cert_path, digest='sha256'):
     return ret
 
 
+def create_empty_crl(
+        ca_name,
+        cacert_path=None,
+        ca_filename=None,
+        crl_file=None):
+    '''
+    Create an empty Certificate Revocation List
+
+    ca_name
+        name of the CA
+    cacert_path
+        absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
+    crl_file
+        full path to the CRL file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.create_empty_crl ca_name='koji' ca_filename='ca' crl_file='/etc/openvpn/team1/crl.pem'
+    '''
+
+    set_ca_path(cacert_path)
+
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if not crl_file:
+        crl_file = '{0}/{1}/crl.pem'.format(
+                _cert_base_path(),
+                ca_name
+                )
+
+    if os.path.exists('{0}'.format(crl_file)):
+        return 'CRL "{0}" already exists'.format(crl_file)
+
+    try:
+        ca_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.crt'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename
+                    )).read()
+                )
+        ca_key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.key'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename)).read()
+                )
+    except IOError:
+        return 'There is no CA named "{0}"'.format(ca_name)
+
+    crl = OpenSSL.crypto.CRL()
+    crl_text = crl.export(ca_cert, ca_key)
+
+    with salt.utils.fopen(crl_file, 'w') as f:
+        f.write(crl_text)
+
+    return 'Created an empty CRL: "{0}"'.format(crl_file)
+
+
 if __name__ == '__main__':
     #create_ca('koji', days=365, **cert_sample_meta)
     create_csr(
