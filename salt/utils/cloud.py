@@ -1089,6 +1089,13 @@ def deploy_script(host,
 
                 if remote_dir not in remote_dirs:
                     root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **ssh_kwargs)
+                    if ssh_kwargs['username'] != 'root':
+                        root_cmd(
+                            'chown {0} \'{1}\''.format(
+                                ssh_kwargs['username'], remote_dir
+                            ),
+                            tty, sudo, **ssh_kwargs
+                        )
                     remote_dirs.append(remote_dir)
                 ssh_file(
                     opts, remote_file, kwargs=ssh_kwargs, local_file=local_file
