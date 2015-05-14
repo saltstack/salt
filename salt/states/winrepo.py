@@ -18,12 +18,10 @@ def __virtual__():
     '''
     Load this state if this is the salt-master
     '''
-    try:
-        return ('winrepo'
-                if 'salt-master' in __grains__.get('roles', [])
-                else False)
-    except TypeError:
-        return False
+
+    return ('winrepo'
+            if 'salt-master' in __grains__.get('roles', [])
+            else False)
 
 
 def genrepo(name, force=False, allow_empty=False):
