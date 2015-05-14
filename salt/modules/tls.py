@@ -31,6 +31,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 
 log = logging.getLogger(__name__)
@@ -398,6 +399,32 @@ def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, 
     return keyp
 
 
+def _check_onlyif_unless(onlyif, unless):
+    ret = None
+    retcode = __salt__['cmd.retcode']
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
+            if not onlyif:
+                ret = {'comment': 'onlyif execution failed',
+                        'result': True}
+        elif isinstance(onlyif, string_types):
+            if retcode(onlyif) != 0:
+                ret = {'comment': 'onlyif execution failed',
+                        'result': True}
+                log.debug('onlyif execution failed')
+    if unless is not None:
+        if not isinstance(unless, string_types):
+            if unless:
+                ret = {'comment': 'unless execution succeeded',
+                        'result': True}
+        elif isinstance(unless, string_types):
+            if retcode(unless) == 0:
+                ret = {'comment': 'unless execution succeeded',
+                        'result': True}
+                log.debug('unless execution succeeded')
+    return ret
+
+
 def create_ca(ca_name,
               bits=2048,
               days=365,
@@ -411,7 +438,9 @@ def create_ca(ca_name,
               fixmode=False,
               cacert_path=None,
               ca_filename=None,
-              digest='sha256'):
+              digest='sha256',
+              onlyif=None,
+              unless=None):
     '''
     Create a Certificate Authority (CA)
 
@@ -464,6 +493,10 @@ def create_ca(ca_name,
 
         salt '*' tls.create_ca test_ca
     '''
+    status = _check_onlyif_unless(onlyif, unless)
+    if status is not None:
+        return None
+
     set_ca_path(cacert_path)
 
     if not ca_filename:
