@@ -372,6 +372,7 @@ def create_ca(ca_name,
               emailAddress='xyz@pdq.net',
               fixmode=False,
               cacert_path=None,
+              ca_filename=None,
               digest='sha256'):
     '''
     Create a Certificate Authority (CA)
@@ -398,6 +399,8 @@ def create_ca(ca_name,
         email address for the CA owner, default is 'xyz@pdq.net'
     cacert_path
         absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
     digest
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
@@ -424,10 +427,14 @@ def create_ca(ca_name,
         salt '*' tls.create_ca test_ca
     '''
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-        cert_base_path(), ca_name, ca_name)
-    ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
-        cert_base_path(), ca_name, ca_name)
+
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    certp = '{0}/{1}/{2}.crt'.format(
+        cert_base_path(), ca_name, ca_filename)
+    ca_keyp = '{0}/{1}/{2}.key'.format(
+        cert_base_path(), ca_name, ca_filename)
     if not fixmode and ca_exists(ca_name):
         return 'Certificate for CA named "{0}" already exists'.format(ca_name)
 
@@ -510,10 +517,10 @@ def create_ca(ca_name,
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{0}/{1}/{2}_ca_cert.key." ').format(
-        ca_name, cert_base_path(), ca_name)
-    ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
-        ca_name, cert_base_path(), ca_name, ca_name)
+    ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
+        cert_base_path(), ca_name, ca_filename)
+    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
+        ca_name, cert_base_path(), ca_name, ca_filename)
 
     return ret
 
