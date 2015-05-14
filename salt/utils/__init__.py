@@ -1028,6 +1028,19 @@ def fopen(*args, **kwargs):
         )
         return flopen(*args, **kwargs)
 
+    # ensure 'binary' mode is always used on windows
+    if is_windows():
+        if len(args) > 1:
+            args = list(args)
+            if 'b' not in args[1]:
+                args[1] += 'b'
+        elif kwargs.get('mode', None):
+            if 'b' not in kwargs['mode']:
+                kwargs['mode'] += 'b'
+        else:
+            # the default is to read
+            kwargs['mode'] = 'rb'
+
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
