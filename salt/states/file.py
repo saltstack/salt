@@ -2508,6 +2508,13 @@ def blockreplace(
         name,
         marker_start='#-- start managed zone --',
         marker_end='#-- end managed zone --',
+        source=None,
+        source_hash=None,
+        template='jinja',
+        sources=None,
+        source_hashes=None,
+        defaults=None,
+        context=None,
         content='',
         append_if_not_found=False,
         prepend_if_not_found=False,
@@ -2545,6 +2552,106 @@ def blockreplace(
     content
         The content to be used between the two lines identified by marker_start
         and marker_stop
+
+    source
+        The source file to download to the minion, this source file can be
+        hosted on either the salt master server, or on an HTTP or FTP server.
+        Both HTTPS and HTTP are supported as well as downloading directly
+        from Amazon S3 compatible URLs with both pre-configured and automatic
+        IAM credentials. (see s3.get state documentation)
+        File retrieval from Openstack Swift object storage is supported via
+        swift://container/object_path URLs, see swift.get documentation.
+        For files hosted on the salt file server, if the file is located on
+        the master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs. If source is left blank or None
+        (use ~ in YAML), the file will be created as an empty file and
+        the content will not be managed
+
+        If the file is hosted on a HTTP or FTP server then the source_hash
+        argument is also required
+
+        A list of sources can also be passed in to provide a default source and
+        a set of fallbacks. The first source in the list that is found to exist
+        will be used and subsequent entries in the list will be ignored.
+
+        .. code-block:: yaml
+
+            file_override_example:
+              file.managed:
+                - source:
+                  - salt://file_that_does_not_exist
+                  - salt://file_that_exists
+
+    source_hash
+        This can be one of the following:
+            1. a source hash string
+            2. the URI of a file that contains source hash strings
+
+        The function accepts the first encountered long unbroken alphanumeric
+        string of correct length as a valid hash, in order from most secure to
+        least secure:
+
+        .. code-block:: text
+
+            Type    Length
+            ======  ======
+            sha512     128
+            sha384      96
+            sha256      64
+            sha224      56
+            sha1        40
+            md5         32
+
+        **Using a Source Hash File**
+            The file can contain several checksums for several files. Each line
+            must contain both the file name and the hash.  If no file name is
+            matched, the first hash encountered will be used, otherwise the most
+            secure hash with the correct source file name will be used.
+
+            When using a source hash file the source_hash argument needs to be a
+            url, the standard download urls are supported, ftp, http, salt etc:
+
+            Example:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.hash
+
+            The following is an example of the supported source_hash format:
+
+            .. code-block:: text
+
+                /etc/rc.conf ef6e82e4006dee563d98ada2a2a80a27
+                sha254c8525aee419eb649f0233be91c151178b30f0dff8ebbdcc8de71b1d5c8bcc06a  /etc/resolv.conf
+                ead48423703509d37c4a90e6a0d53e143b6fc268
+
+            Debian file type ``*.dsc`` files are also supported.
+
+        **Inserting the Source Hash in the sls Data**
+            Examples:
+
+            .. code-block:: yaml
+
+                tomdroid-src-0.7.3.tar.gz:
+                  file.managed:
+                    - name: /tmp/tomdroid-src-0.7.3.tar.gz
+                    - source: https://launchpad.net/tomdroid/beta/0.7.3/+download/tomdroid-src-0.7.3.tar.gz
+                    - source_hash: md5=79eef25f9b0b2c642c62b7f737d4f53f
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file, currently jinja, mako, and wempy
+        are supported
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
 
     append_if_not_found
         If markers are not found and set to True then the markers and content
@@ -2615,6 +2722,18 @@ def blockreplace(
     if not name:
         return _error(ret, 'Must provide name to file.blockreplace')
 
+    if sources is None:
+        sources = []
+    if source_hashes is None:
+        source_hashes = []
+
+    (ok_, err, sl_) = _unify_sources_and_hashes(source=source,
+                                                source_hash=source_hash,
+                                                sources=sources,
+                                                source_hashes=source_hashes)
+    if not ok_:
+        return _error(ret, err)
+
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
@@ -2636,6 +2755,18 @@ def blockreplace(
                     content = line
                 else:
                     content += "\n" + line
+
+    if sl_:
+        tmpret = _get_template_texts(source_list=sl_,
+                                     template=template,
+                                     defaults=defaults,
+                                     context=context)
+        if not tmpret['result']:
+            return tmpret
+        text = tmpret['data']
+
+        for index, item in enumerate(text):
+            content += str(item)
 
     changes = __salt__['file.blockreplace'](
         name,
