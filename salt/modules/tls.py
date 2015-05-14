@@ -34,6 +34,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+two_digit_year_fmt = "%y%m%d%H%M%SZ"
+four_digit_year_fmt = "%Y%m%d%H%M%SZ"
+
 
 def __virtual__():
     '''
@@ -124,24 +127,25 @@ def _new_serial(ca_name, CN):
     return hashnum
 
 
-def _write_cert_to_database(ca_name, cert, cacert_path=None):
-    '''
-    write out the index.txt database file in the appropriate directory to
-    track certificates
+def _four_digit_year_to_two_digit(datetimeObj):
+    return datetimeObj.strftime(two_digit_year_fmt)
 
-    ca_name
-        name of the CA
-    cert
-        certificate to be recorded
-    cacert_path
-        absolute path to ca certificates root directory
-    '''
-    set_ca_path(cacert_path)
-    index_file = "{0}/{1}/index.txt".format(cert_base_path(),
-                                            ca_name)
 
-    expire_date = cert.get_notAfter()
-    serial_number = cert.get_serial_number()
+def _get_basic_info(ca_name, cert, ca_dir=None):
+    '''
+    Get basic info to write out to the index.txt
+    '''
+    if ca_dir is None:
+        ca_dir = '{0}/{1}'.format(_cert_base_path(), ca_name)
+
+    index_file = "{0}/index.txt".format(ca_dir)
+
+    expire_date = _four_digit_year_to_two_digit(
+            datetime.strptime(
+                cert.get_notAfter(),
+                four_digit_year_fmt)
+            )
+    serial_number = format(cert.get_serial_number(), 'X')
 
     #gotta prepend a /
     subject = '/'
@@ -154,7 +158,28 @@ def _write_cert_to_database(ca_name, cert, cacert_path=None):
             )
     subject += '\n'
 
-    index_data = 'V\t{0}\t\t{1}\tunknown\t{2}'.format(
+    return (index_file, expire_date, serial_number, subject)
+
+
+def _write_cert_to_database(ca_name, cert, cacert_path=None, status='V'):
+    '''
+    write out the index.txt database file in the appropriate directory to
+    track certificates
+
+    ca_name
+        name of the CA
+    cert
+        certificate to be recorded
+    '''
+    set_ca_path(cacert_path)
+    ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)
+    index_file, expire_date, serial_number, subject = _get_basic_info(
+            ca_name,
+            cert,
+            ca_dir)
+
+    index_data = '{0}\t{1}\t\t{2}\tunknown\t{3}'.format(
+            status,
             expire_date,
             serial_number,
             subject
@@ -913,7 +938,7 @@ def create_ca_signed_cert(ca_name,
         return 'Certificate "{0}" already exists'.format(cert_filename)
 
     try:
-        maybe_fix_ssl_version(ca_name)
+        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
         with salt.utils.fopen('{0}/{1}/{2}.crt'.format(cert_base_path(),
                                                        ca_name,
                                                        ca_filename)) as fhr:
