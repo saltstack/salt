@@ -28,6 +28,11 @@ from salt.ext.six.moves import range
 # Import third party libs
 try:
     import zmq
+    # TODO: cleanup
+    import zmq.eventloop.ioloop
+    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
     HAS_ZMQ = True
 except ImportError:
     # Running in local, zmq not needed
@@ -92,11 +97,6 @@ from salt.exceptions import (
 )
 
 
-# TODO: cleanup
-import zmq.eventloop.ioloop
-# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import tornado.gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
