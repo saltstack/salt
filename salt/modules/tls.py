@@ -1196,7 +1196,9 @@ def create_empty_crl(
         ca_filename=None,
         crl_file=None):
     '''
-    Create an empty Certificate Revocation List
+    Create an empty Certificate Revocation List.
+
+    .. versionadded:: Beryllium
 
     ca_name
         name of the CA
@@ -1266,6 +1268,8 @@ def revoke_cert(
         crl_file=None):
     '''
     Revoke a certificate.
+
+    .. versionadded:: Beryllium
 
     ca_name
         Name of the CA.
