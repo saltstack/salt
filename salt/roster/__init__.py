@@ -67,7 +67,7 @@ class Roster(object):
             try:
                 targets.update(self.rosters[f_str](tgt, tgt_type))
             except salt.exceptions.SaltRenderError as exc:
-                log.debug('Unable to render roster file: {0}'.format(exc.error))
+                log.error('Unable to render roster file: {0}'.format(exc))
             except IOError as exc:
                 pass
 
