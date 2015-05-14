@@ -1264,6 +1264,37 @@ def revoke_cert(
         cert_path=None,
         cert_filename=None,
         crl_file=None):
+    '''
+    Revoke a certificate.
+
+    ca_name
+        Name of the CA.
+
+    CN
+        Common name matching the certificate signing request.
+
+    cacert_path
+        Absolute path to ca certificates root directory.
+
+    ca_filename
+        Alternative filename for the CA.
+
+    cert_path
+        Path to the cert file.
+
+    cert_filename
+        Alternative filename for the certificate, useful when using special characters in the CN.
+
+    crl_file
+        Full path to the CRL file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.revoke_cert ca_name='koji' ca_filename='ca' crl_file='/etc/openvpn/team1/crl.pem'
+
+    '''
 
     set_ca_path(cacert_path)
     ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)
