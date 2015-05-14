@@ -11,7 +11,8 @@ Salt now uses a portable python. As a result the entire pip module is now
 functional on the salt installation itself. You can pip install dependencies
 for your custom modules. You can even upgrade salt itself using pip. For this
 to work properly, you must specify the Current Working Directory (``cwd``) and
-the Pip Binary (``bin_env``) salt should use.
+the Pip Binary (``bin_env``) salt should use.  The variable ``pip_bin`` can
+be either a virtualenv path or the path to the pip binary itself.
 
 For example, the following command will list all software installed using pip
 to your current salt environment:
@@ -108,8 +109,8 @@ def __virtual__():
 
 def _get_pip_bin(bin_env):
     '''
-    Return the pip command to call, either from a virtualenv, an argument
-    passed in, or from the global modules options
+    Locate the pip binary, either from `bin_env` as a virtualenv, as the
+    executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
         which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
@@ -119,7 +120,7 @@ def _get_pip_bin(bin_env):
             return which_result.encode('string-escape')
         return which_result
 
-    # try to get pip bin from env
+    # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
             pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe').encode('string-escape')
@@ -127,9 +128,14 @@ def _get_pip_bin(bin_env):
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
             return pip_bin
+        msg = 'Could not find a `pip` binary in virtualenv {0}'.format(bin_env)
+        raise CommandNotFoundError(msg)
+    # bin_env is the pip binary
+    elif os.access(bin_env, os.X_OK):
+        if os.path.isfile(bin_env) or os.path.islink(bin_env):
+            return bin_env
+    else:
         raise CommandNotFoundError('Could not find a `pip` binary')
-
-    return bin_env
 
 
 def _process_salt_url(path, saltenv):
