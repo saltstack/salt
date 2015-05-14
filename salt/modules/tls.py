@@ -20,6 +20,7 @@ import logging
 import hashlib
 from salt.ext.six.moves import range
 from datetime import datetime
+import re
 
 HAS_SSL = False
 try:
@@ -30,9 +31,13 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt._compat import string_types
 
 
 log = logging.getLogger(__name__)
+
+two_digit_year_fmt = "%y%m%d%H%M%SZ"
+four_digit_year_fmt = "%Y%m%d%H%M%SZ"
 
 
 def __virtual__():
@@ -124,24 +129,25 @@ def _new_serial(ca_name, CN):
     return hashnum
 
 
-def _write_cert_to_database(ca_name, cert, cacert_path=None):
-    '''
-    write out the index.txt database file in the appropriate directory to
-    track certificates
+def _four_digit_year_to_two_digit(datetimeObj):
+    return datetimeObj.strftime(two_digit_year_fmt)
 
-    ca_name
-        name of the CA
-    cert
-        certificate to be recorded
-    cacert_path
-        absolute path to ca certificates root directory
-    '''
-    set_ca_path(cacert_path)
-    index_file = "{0}/{1}/index.txt".format(cert_base_path(),
-                                            ca_name)
 
-    expire_date = cert.get_notAfter()
-    serial_number = cert.get_serial_number()
+def _get_basic_info(ca_name, cert, ca_dir=None):
+    '''
+    Get basic info to write out to the index.txt
+    '''
+    if ca_dir is None:
+        ca_dir = '{0}/{1}'.format(_cert_base_path(), ca_name)
+
+    index_file = "{0}/index.txt".format(ca_dir)
+
+    expire_date = _four_digit_year_to_two_digit(
+            datetime.strptime(
+                cert.get_notAfter(),
+                four_digit_year_fmt)
+            )
+    serial_number = format(cert.get_serial_number(), 'X')
 
     #gotta prepend a /
     subject = '/'
@@ -154,7 +160,28 @@ def _write_cert_to_database(ca_name, cert, cacert_path=None):
             )
     subject += '\n'
 
-    index_data = 'V\t{0}\t\t{1}\tunknown\t{2}'.format(
+    return (index_file, expire_date, serial_number, subject)
+
+
+def _write_cert_to_database(ca_name, cert, cacert_path=None, status='V'):
+    '''
+    write out the index.txt database file in the appropriate directory to
+    track certificates
+
+    ca_name
+        name of the CA
+    cert
+        certificate to be recorded
+    '''
+    set_ca_path(cacert_path)
+    ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)
+    index_file, expire_date, serial_number, subject = _get_basic_info(
+            ca_name,
+            cert,
+            ca_dir)
+
+    index_data = '{0}\t{1}\t\t{2}\tunknown\t{3}'.format(
+            status,
             expire_date,
             serial_number,
             subject
@@ -164,7 +191,7 @@ def _write_cert_to_database(ca_name, cert, cacert_path=None):
         ofile.write(index_data)
 
 
-def maybe_fix_ssl_version(ca_name, cacert_path=None):
+def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
     '''
     Check that the X509 version is correct
     (was incorrectly set in previous salt versions).
@@ -174,6 +201,8 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
         ca authority name
     cacert_path
         absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
 
     CLI Example:
 
@@ -182,12 +211,16 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
         salt '*' tls.maybe_fix_ssl_version test_ca /etc/certs
     '''
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-        cert_base_path(),
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+    certp = '{0}/{1}/{2}.crt'.format(
+            cert_base_path(),
             ca_name,
-            ca_name)
-    ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
-        cert_base_path(), ca_name, ca_name)
+            ca_filename)
+    ca_keyp = '{0}/{1}/{2}.key'.format(
+            cert_base_path(),
+            ca_name,
+            ca_filename)
     with salt.utils.fopen(certp) as fic:
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM,
                                                fic.read())
@@ -224,12 +257,16 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None):
                     fixmode=True)
 
 
-def ca_exists(ca_name, cacert_path=None):
+def ca_exists(ca_name, cacert_path=None, ca_filename=None):
     '''
     Verify whether a Certificate Authority (CA) already exists
 
     ca_name
         name of the CA
+    cacert_path
+        absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
 
     CLI Example:
 
@@ -238,12 +275,14 @@ def ca_exists(ca_name, cacert_path=None):
         salt '*' tls.ca_exists test_ca /etc/certs
     '''
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+    certp = '{0}/{1}/{2}.crt'.format(
             cert_base_path(),
             ca_name,
-            ca_name)
+            ca_filename)
     if os.path.exists(certp):
-        maybe_fix_ssl_version(ca_name)
+        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
         return True
     return False
 
@@ -360,6 +399,32 @@ def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, 
     return keyp
 
 
+def _check_onlyif_unless(onlyif, unless):
+    ret = None
+    retcode = __salt__['cmd.retcode']
+    if onlyif is not None:
+        if not isinstance(onlyif, string_types):
+            if not onlyif:
+                ret = {'comment': 'onlyif execution failed',
+                        'result': True}
+        elif isinstance(onlyif, string_types):
+            if retcode(onlyif) != 0:
+                ret = {'comment': 'onlyif execution failed',
+                        'result': True}
+                log.debug('onlyif execution failed')
+    if unless is not None:
+        if not isinstance(unless, string_types):
+            if unless:
+                ret = {'comment': 'unless execution succeeded',
+                        'result': True}
+        elif isinstance(unless, string_types):
+            if retcode(unless) == 0:
+                ret = {'comment': 'unless execution succeeded',
+                        'result': True}
+                log.debug('unless execution succeeded')
+    return ret
+
+
 def create_ca(ca_name,
               bits=2048,
               days=365,
@@ -372,7 +437,10 @@ def create_ca(ca_name,
               emailAddress='xyz@pdq.net',
               fixmode=False,
               cacert_path=None,
-              digest='sha256'):
+              ca_filename=None,
+              digest='sha256',
+              onlyif=None,
+              unless=None):
     '''
     Create a Certificate Authority (CA)
 
@@ -398,6 +466,8 @@ def create_ca(ca_name,
         email address for the CA owner, default is 'xyz@pdq.net'
     cacert_path
         absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
     digest
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
@@ -423,12 +493,20 @@ def create_ca(ca_name,
 
         salt '*' tls.create_ca test_ca
     '''
+    status = _check_onlyif_unless(onlyif, unless)
+    if status is not None:
+        return None
+
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-        cert_base_path(), ca_name, ca_name)
-    ca_keyp = '{0}/{1}/{2}_ca_cert.key'.format(
-        cert_base_path(), ca_name, ca_name)
-    if not fixmode and ca_exists(ca_name):
+
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    certp = '{0}/{1}/{2}.crt'.format(
+        cert_base_path(), ca_name, ca_filename)
+    ca_keyp = '{0}/{1}/{2}.key'.format(
+        cert_base_path(), ca_name, ca_filename)
+    if not fixmode and ca_exists(ca_name, ca_filename=ca_filename):
         return 'Certificate for CA named "{0}" already exists'.format(ca_name)
 
     if fixmode and not os.path.exists(certp):
@@ -510,10 +588,10 @@ def create_ca(ca_name,
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{0}/{1}/{2}_ca_cert.key." ').format(
-        ca_name, cert_base_path(), ca_name)
-    ret += ('Created CA "{0}": "{1}/{2}/{3}_ca_cert.crt."').format(
-        ca_name, cert_base_path(), ca_name, ca_name)
+    ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
+        cert_base_path(), ca_name, ca_filename)
+    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
+        ca_name, cert_base_path(), ca_name, ca_filename)
 
     return ret
 
@@ -529,6 +607,8 @@ def create_csr(ca_name,
                emailAddress='xyz@pdq.net',
                subjectAltName=None,
                cacert_path=None,
+               ca_filename=None,
+               csr_path=None,
                csr_filename=None,
                digest='sha256'):
     '''
@@ -559,6 +639,10 @@ def create_csr(ca_name,
         this function with this value:  **['DNS:myapp.foo.comm']**
     cacert_path
         absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
+    csr_path
+        full path to the CSR directory
     csr_filename
         alternative filename for the csr, useful when using special characters in the CN
     digest
@@ -589,21 +673,24 @@ def create_csr(ca_name,
     '''
     set_ca_path(cacert_path)
 
-    if not ca_exists(ca_name):
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if not ca_exists(ca_name, ca_filename=ca_filename):
         return ('Certificate for CA named "{0}" does not exist, please create '
                 'it first.').format(ca_name)
 
-    if not os.path.exists('{0}/{1}/certs/'.format(
-        cert_base_path(),
-        ca_name)
-    ):
-        os.makedirs("{0}/{1}/certs/".format(cert_base_path(),
-                                            ca_name))
+    if not csr_path:
+        csr_path = '{0}/{1}/certs/'.format(cert_base_path(), ca_name)
+
+    if not os.path.exists(csr_path):
+        os.makedirs(csr_path)
+
     if not csr_filename:
         csr_filename = CN
 
-    csr_f = '{0}/{1}/certs/{2}.csr'.format(cert_base_path(),
-                                           ca_name, csr_filename)
+    csr_f = '{0}/{1}.csr'.format(csr_path, csr_filename)
+
     if os.path.exists(csr_f):
         return 'Certificate Request "{0}" already exists'.format(csr_f)
 
@@ -629,9 +716,8 @@ def create_csr(ca_name,
     req.sign(key, digest)
 
     # Write private key and request
-    with salt.utils.fopen('{0}/{1}/certs/{2}.key'.format(
-                                    cert_base_path(),
-                                    ca_name, csr_filename), 'w+') as priv_key:
+    with salt.utils.fopen('{0}/{1}.key'.format(csr_path,
+                                               csr_filename), 'w+') as priv_key:
         priv_key.write(
                 OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
                 )
@@ -644,15 +730,13 @@ def create_csr(ca_name,
                     )
                 )
 
-    ret = 'Created Private Key: "{0}/{1}/certs/{2}.key." '.format(
-                    cert_base_path(),
-                    ca_name,
+    ret = 'Created Private Key: "{0}/{1}.key." '.format(
+                    csr_path,
                     csr_filename
                     )
-    ret += 'Created CSR for "{0}": "{1}/{2}/certs/{3}.csr."'.format(
+    ret += 'Created CSR for "{0}": "{1}/{2}.csr."'.format(
                     CN,
-                    cert_base_path(),
-                    ca_name,
+                    csr_path,
                     csr_filename
                     )
 
@@ -804,7 +888,14 @@ def create_self_signed_cert(tls_dir='tls',
     return ret
 
 
-def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename=None, digest='sha256'):
+def create_ca_signed_cert(ca_name,
+                          CN,
+                          days=365,
+                          cacert_path=None,
+                          ca_filename=None,
+                          cert_path=None,
+                          cert_filename=None,
+                          digest='sha256'):
     '''
     Create a Certificate (CERT) signed by a named Certificate Authority (CA)
 
@@ -826,6 +917,12 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
 
     cacert_path
         absolute path to ca certificates root directory
+
+    ca_filename
+        alternative filename for the CA
+
+    cert_path
+        full path to the certificates directory
 
     cert_filename
         alternative filename for the certificate, useful when using special characters in the CN
@@ -856,45 +953,55 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
 
         salt '*' tls.create_ca_signed_cert test localhost
     '''
+    ret = {}
+
     set_ca_path(cacert_path)
+
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if not cert_path:
+        cert_path = '{0}/{1}/certs'.format(cert_base_path(), ca_name)
 
     if not cert_filename:
         cert_filename = CN
 
     if os.path.exists(
-            '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                     ca_name, cert_filename)
+            '{0}/{1}.crt'.format(cert_path, cert_filename)
     ):
         return 'Certificate "{0}" already exists'.format(cert_filename)
 
     try:
-        maybe_fix_ssl_version(ca_name)
-        with salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
+        with salt.utils.fopen('{0}/{1}/{2}.crt'.format(cert_base_path(),
+                                                       ca_name,
+                                                       ca_filename)) as fhr:
             ca_cert = OpenSSL.crypto.load_certificate(
                     OpenSSL.crypto.FILETYPE_PEM, fhr.read()
                 )
-        with salt.utils.fopen('{0}/{1}/{2}_ca_cert.key'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        with salt.utils.fopen('{0}/{1}/{2}.key'.format(cert_base_path(),
+                                                       ca_name,
+                                                       ca_filename)) as fhr:
             ca_key = OpenSSL.crypto.load_privatekey(
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                 )
     except IOError:
-        return 'There is no CA named "{0}"'.format(ca_name)
+        ret['retcode'] = 1
+        ret['comment'] = 'There is no CA named "{0}"'.format(ca_name)
+        return ret
 
     try:
-        with salt.utils.fopen('{0}/{1}/certs/{2}.csr'.format(cert_base_path(),
-                                                             ca_name,
-                                                             cert_filename)) as fhr:
+        with salt.utils.fopen('{0}/{1}.csr'.format(cert_path,
+                                                   cert_filename)) as fhr:
             req = OpenSSL.crypto.load_certificate_request(
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
                     )
     except IOError:
-        return 'There is no CSR that matches the CN "{0}"'.format(cert_filename)
+        ret['retcode'] = 1
+        ret['comment'] = 'There is no CSR that matches the CN "{0}"'.format(cert_filename)
+        return ret
 
     exts = []
     try:
@@ -922,9 +1029,8 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
     cert.set_pubkey(req.get_pubkey())
     cert.sign(ca_key, digest)
 
-    with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                                         ca_name,
-                                                         cert_filename), 'w+') as crt:
+    with salt.utils.fopen('{0}/{1}.crt'.format(cert_path,
+                                               cert_filename), 'w+') as crt:
         crt.write(
             OpenSSL.crypto.dump_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
@@ -935,10 +1041,9 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
     _write_cert_to_database(ca_name, cert)
 
     return ('Created Certificate for "{0}": '
-            '"{1}/{2}/certs/{3}.crt"').format(
+            '"{1}/{2}.crt"').format(
                     CN,
-                    cert_base_path(),
-                    ca_name,
+                    cert_path,
                     cert_filename
                     )
 
@@ -1083,6 +1188,207 @@ def cert_info(cert_path, digest='sha256'):
         ret['signature_algorithm'] = cert.get_signature_algorithm()
 
     return ret
+
+
+def create_empty_crl(
+        ca_name,
+        cacert_path=None,
+        ca_filename=None,
+        crl_file=None):
+    '''
+    Create an empty Certificate Revocation List
+
+    ca_name
+        name of the CA
+    cacert_path
+        absolute path to ca certificates root directory
+    ca_filename
+        alternative filename for the CA
+    crl_file
+        full path to the CRL file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.create_empty_crl ca_name='koji' ca_filename='ca' crl_file='/etc/openvpn/team1/crl.pem'
+    '''
+
+    set_ca_path(cacert_path)
+
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if not crl_file:
+        crl_file = '{0}/{1}/crl.pem'.format(
+                _cert_base_path(),
+                ca_name
+                )
+
+    if os.path.exists('{0}'.format(crl_file)):
+        return 'CRL "{0}" already exists'.format(crl_file)
+
+    try:
+        ca_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.crt'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename
+                    )).read()
+                )
+        ca_key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.key'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename)).read()
+                )
+    except IOError:
+        return 'There is no CA named "{0}"'.format(ca_name)
+
+    crl = OpenSSL.crypto.CRL()
+    crl_text = crl.export(ca_cert, ca_key)
+
+    with salt.utils.fopen(crl_file, 'w') as f:
+        f.write(crl_text)
+
+    return 'Created an empty CRL: "{0}"'.format(crl_file)
+
+
+def revoke_cert(
+        ca_name,
+        CN,
+        cacert_path=None,
+        ca_filename=None,
+        cert_path=None,
+        cert_filename=None,
+        crl_file=None):
+
+    set_ca_path(cacert_path)
+    ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)
+
+    if ca_filename is None:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if cert_path is None:
+        cert_path = '{0}/{1}/certs'.format(_cert_base_path(), ca_name)
+
+    if cert_filename is None:
+        cert_filename = '{0}'.format(CN)
+
+    try:
+        ca_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.crt'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename
+                    )).read()
+                )
+        ca_key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.key'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename)).read()
+                )
+    except IOError:
+        return 'There is no CA named "{0}"'.format(ca_name)
+
+    try:
+        client_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}.crt'.format(
+                    cert_path,
+                    cert_filename)).read()
+                )
+    except IOError:
+        return 'There is no client certificate named "{0}"'.format(CN)
+
+    index_file, expire_date, serial_number, subject = _get_basic_info(
+            ca_name,
+            client_cert,
+            ca_dir)
+
+    index_serial_subject = '{0}\tunknown\t{1}'.format(
+            serial_number,
+            subject)
+    index_v_data = 'V\t{0}\t\t{1}'.format(
+            expire_date,
+            index_serial_subject)
+    index_r_data_pattern = re.compile(
+            r"R\t" +
+            expire_date +
+            r"\t\d{12}Z\t" +
+            re.escape(index_serial_subject))
+    index_r_data = 'R\t{0}\t{1}\t{2}'.format(
+            expire_date,
+            _four_digit_year_to_two_digit(datetime.now()),
+            index_serial_subject)
+
+    ret = {}
+    with salt.utils.fopen(index_file) as f:
+        for line in f:
+            if index_r_data_pattern.match(line):
+                revoke_date = line.split('\t')[2]
+                try:
+                    datetime.strptime(revoke_date, two_digit_year_fmt)
+                    return ('"{0}/{1}.crt" was already revoked, '
+                            'serial number: {2}').format(
+                                    cert_path,
+                                    cert_filename,
+                                    serial_number
+                                    )
+                except ValueError:
+                    ret['retcode'] = 1
+                    ret['comment'] = ("Revocation date '{0}' does not match"
+                                     "format '{1}'").format(
+                                             revoke_date,
+                                             two_digit_year_fmt)
+                    return ret
+            elif index_serial_subject in line:
+                __salt__['file.replace'](
+                        index_file,
+                        index_v_data,
+                        index_r_data,
+                        backup=False)
+                break
+
+    crl = OpenSSL.crypto.CRL()
+
+    with salt.utils.fopen(index_file) as f:
+        for line in f:
+            if line.startswith('R'):
+                fields = line.split('\t')
+                revoked = OpenSSL.crypto.Revoked()
+                revoked.set_serial(fields[3])
+                revoke_date_2_digit = datetime.strptime(fields[2], two_digit_year_fmt)
+                revoked.set_rev_date(revoke_date_2_digit.strftime(four_digit_year_fmt))
+                crl.add_revoked(revoked)
+
+    crl_text = crl.export(ca_cert, ca_key)
+
+    if crl_file is None:
+        crl_file = '{0}/{1}/crl.pem'.format(
+                _cert_base_path(),
+                ca_name
+                )
+
+    if os.path.isdir(crl_file):
+        ret['retcode'] = 1
+        ret['comment'] = 'crl_file "{0}" is an existing directory'.format(crl_file)
+        return ret
+
+    with salt.utils.fopen(crl_file, 'w') as f:
+        f.write(crl_text)
+
+    return ('Revoked Certificate: "{0}/{1}.crt", '
+            'serial number: {2}').format(
+                    cert_path,
+                    cert_filename,
+                    serial_number
+                    )
 
 
 if __name__ == '__main__':
