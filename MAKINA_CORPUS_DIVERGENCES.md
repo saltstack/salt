@@ -1,7 +1,7 @@
 DIVERGENCES TO KEEP AT ALL COSTS:
 ----------------------------------
 
-- [protect VT logs from unicode strings / e2fb10f4a03cb161ed1f5d0878ecc446a839c0b5](https://github.com/makinacorpus/salt/commit/e2fb10f4a03cb161ed1f5d0878ecc446a839c0b5)
+- [protect VT logs from unicode strings / 9484b3a6bb37539fe03ee65a3ff0c25cca617eec](https://github.com/makinacorpus/salt/commit/9484b3a6bb37539fe03ee65a3ff0c25cca617eec)
 
     - Upstream did not accepted this trivial changeset, even as a later changeable changeset, issue is pending for more than a while here:
 
