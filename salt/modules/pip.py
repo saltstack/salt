@@ -601,11 +601,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if pre_releases:
         # Check the locally installed pip version
-        pip_version_cmd = '{0} --version'.format(pip_bin)
-        output = __salt__['cmd.run_all'](pip_version_cmd,
-                                         use_vt=use_vt,
-                                         python_shell=False).get('stdout', '')
-        pip_version = output.split()[1]
+        pip_version = version(pip_bin)
 
         # From pip v1.4 the --pre flag is available
         if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
@@ -884,7 +880,6 @@ def list_(prefix=None,
 
     pip_bin = _get_pip_bin(bin_env)
 
-    pip_version_cmd = [pip_bin, '--version']
     cmd = [pip_bin, 'freeze']
 
     cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
@@ -892,11 +887,7 @@ def list_(prefix=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     if not prefix or prefix in ('p', 'pi', 'pip'):
-        pip_version_result = __salt__['cmd.run_all'](' '.join(pip_version_cmd),
-                                                     **cmd_kwargs)
-        if pip_version_result['retcode'] > 0:
-            raise CommandExecutionError(pip_version_result['stderr'])
-        packages['pip'] = pip_version_result['stdout'].split()[1]
+        packages['pip'] = version(bin_env)
 
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     if result['retcode'] > 0:
