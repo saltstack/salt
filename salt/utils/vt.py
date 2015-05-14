@@ -219,7 +219,7 @@ class Terminal(object):
         )
 
         try:
-            terminal_command = ' '.join(self.args)
+            terminal_command = ' '.join(self.args))
             if 'decode("base64")' in terminal_command:
                 log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
                 log.trace('Terminal Command: {0}'.format(terminal_command))
@@ -231,7 +231,7 @@ class Terminal(object):
                 if isinstance(arg, unicode):
                     arg = arg.encode('utf-8')
                 sargs.append(arg)
-            terminal_command = ' '.join(sargs)
+            terminal_command = ' '.join(sargs))
             if 'decode("base64")' in terminal_command:
                 log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
                 log.trace('Terminal Command: {0}'.format(terminal_command))
