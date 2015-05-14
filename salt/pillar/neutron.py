@@ -3,22 +3,22 @@
 Use Openstack Neutron data as a Pillar source. Will list all networks listed
 inside of Neutron, to all minions.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.5.1
 
 :depends:  - python-neutronclient
 
 A keystone profile must be used for the pillar to work (no generic keystone
-configuration here).
+configuration here). For example:
 
-    For example::
+.. code-block:: yaml
 
-        my openstack_config:
-          keystone.user: 'admin'
-          keystone.password: 'password'
-          keystone.tenant: 'admin'
-          keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
-          keystone.region_name: 'RegionOne'
-          keystone.service_type: 'network'
+    my openstack_config:
+      keystone.user: 'admin'
+      keystone.password: 'password'
+      keystone.tenant: 'admin'
+      keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+      keystone.region_name: 'RegionOne'
+      keystone.service_type: 'network'
 
 After the profile is created, configure the external pillar system to use it.
 
@@ -43,10 +43,11 @@ name after the Keystone profile name:
       - neutron: my_openstack_config neutron_networks
 '''
 
-# Import python libs
+# Import Python Libs
+from __future__ import absolute_import
 import logging
 
-# Import third party libs
+# Import Salt Libs
 try:
     import salt.utils.openstack.neutron as suoneu
     HAS_NEUTRON = True
