@@ -538,6 +538,7 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
+        pillarenv=None,
         **kwargs):
     '''
     Execute a set list of state files from an environment.
@@ -594,10 +595,18 @@ def sls(mods,
         # Backwards compatibility
         saltenv = env
     if not saltenv:
-        if __opts__.get('saltenv', None):
-            saltenv = __opts__['saltenv']
+        if __opts__.get('environment', None):
+            saltenv = __opts__['environment']
         else:
             saltenv = 'base'
+    else:
+        __opts__['environment'] = saltenv
+
+    if not pillarenv:
+        if __opts__.get('pillarenv', None):
+            pillarenv = __opts__['pillarenv']
+    else:
+        __opts__['pillarenv'] = pillarenv
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
