@@ -47,7 +47,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         try:
             data = load(yaml_data, Loader=get_yaml_loader(argline))
         except ScannerError as exc:
-            err_type = _ERROR_MAP.get(exc.problem, 'Unknown yaml render error')
+            err_type = _ERROR_MAP.get(exc.problem, exc.problem)
             line_num = exc.problem_mark.line + 1
             raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
         except ConstructorError as exc:
