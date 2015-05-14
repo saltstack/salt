@@ -379,7 +379,8 @@ def status(name, sig=None):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name))
+    return not __salt__['cmd.retcode'](_systemctl_cmd('is-active', name),
+                                       ignore_retcode=True)
 
 
 def enable(name, **kwargs):
