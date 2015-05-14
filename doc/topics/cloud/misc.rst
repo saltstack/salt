@@ -28,14 +28,16 @@ This has also been tested to work with pipes, if needed:
     script_args: | head
 
 
-Use SFTP to transfer files
-==========================
-Some distributions do not have scp distributed with the ssh package.  The
-solution is to use sftp with the `use_sftp` flag
+Selecting the File Transport
+============================
+By default, Salt Cloud uses SFTP to transfer files to Linux hosts. However, if
+SFTP is not available, or specific SCP functionality is needed, Salt Cloud can
+be configured to use SCP instead.
 
 .. code-block:: yaml
 
-    use_sftp: True
+    file_transport: sftp
+    file_transport: scp
 
 
 Sync After Install
