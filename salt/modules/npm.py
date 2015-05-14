@@ -28,7 +28,7 @@ def __virtual__():
     '''
     try:
         if salt.utils.which('npm') is not None:
-            _check_valid_version()
+            _check_valid_version(__salt__)
             return True
         else:
             return (False, 'npm execution module could not be loaded '
@@ -37,14 +37,14 @@ def __virtual__():
         return (False, str(exc))
 
 
-def _check_valid_version():
+def _check_valid_version(salt):
     '''
     Check the version of npm to ensure this module will work. Currently
     npm must be at least version 1.2.
     '''
     # pylint: disable=no-member
     npm_version = distutils.version.LooseVersion(
-        __salt__['cmd.run']('npm --version'))
+        salt['cmd.run']('npm --version'))
     valid_version = distutils.version.LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
