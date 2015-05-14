@@ -307,9 +307,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
 
     if init_delay:
         time.sleep(init_delay)
-        ret['changes'] = (
+        ret['comment'] = (
             '{0}\nDelayed return for {1} seconds'
-            .format(ret['commant'], init_delay)
+            .format(ret['comment'], init_delay)
         )
     return ret
 
