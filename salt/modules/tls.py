@@ -20,6 +20,7 @@ import logging
 import hashlib
 from salt.ext.six.moves import range
 from datetime import datetime
+import re
 
 HAS_SSL = False
 try:
@@ -1220,6 +1221,141 @@ def create_empty_crl(
         f.write(crl_text)
 
     return 'Created an empty CRL: "{0}"'.format(crl_file)
+
+
+def revoke_cert(
+        ca_name,
+        CN,
+        cacert_path=None,
+        ca_filename=None,
+        cert_path=None,
+        cert_filename=None,
+        crl_file=None):
+
+    set_ca_path(cacert_path)
+    ca_dir = '{0}/{1}'.format(cert_base_path(), ca_name)
+
+    if ca_filename is None:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if cert_path is None:
+        cert_path = '{0}/{1}/certs'.format(_cert_base_path(), ca_name)
+
+    if cert_filename is None:
+        cert_filename = '{0}'.format(CN)
+
+    try:
+        ca_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.crt'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename
+                    )).read()
+                )
+        ca_key = OpenSSL.crypto.load_privatekey(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}/{2}.key'.format(
+                    cert_base_path(),
+                    ca_name,
+                    ca_filename)).read()
+                )
+    except IOError:
+        return 'There is no CA named "{0}"'.format(ca_name)
+
+    try:
+        client_cert = OpenSSL.crypto.load_certificate(
+                OpenSSL.crypto.FILETYPE_PEM,
+                salt.utils.fopen('{0}/{1}.crt'.format(
+                    cert_path,
+                    cert_filename)).read()
+                )
+    except IOError:
+        return 'There is no client certificate named "{0}"'.format(CN)
+
+    index_file, expire_date, serial_number, subject = _get_basic_info(
+            ca_name,
+            client_cert,
+            ca_dir)
+
+    index_serial_subject = '{0}\tunknown\t{1}'.format(
+            serial_number,
+            subject)
+    index_v_data = 'V\t{0}\t\t{1}'.format(
+            expire_date,
+            index_serial_subject)
+    index_r_data_pattern = re.compile(
+            r"R\t" +
+            expire_date +
+            r"\t\d{12}Z\t" +
+            re.escape(index_serial_subject))
+    index_r_data = 'R\t{0}\t{1}\t{2}'.format(
+            expire_date,
+            _four_digit_year_to_two_digit(datetime.now()),
+            index_serial_subject)
+
+    ret = {}
+    with salt.utils.fopen(index_file) as f:
+        for line in f:
+            if index_r_data_pattern.match(line):
+                revoke_date = line.split('\t')[2]
+                try:
+                    datetime.strptime(revoke_date, two_digit_year_fmt)
+                    return ('"{0}/{1}.crt" was already revoked, '
+                            'serial number: {2}').format(
+                                    cert_path,
+                                    cert_filename,
+                                    serial_number
+                                    )
+                except ValueError:
+                    ret['retcode'] = 1
+                    ret['comment'] = ("Revocation date '{0}' does not match"
+                                     "format '{1}'").format(
+                                             revoke_date,
+                                             two_digit_year_fmt)
+                    return ret
+            elif index_serial_subject in line:
+                __salt__['file.replace'](
+                        index_file,
+                        index_v_data,
+                        index_r_data,
+                        backup=False)
+                break
+
+    crl = OpenSSL.crypto.CRL()
+
+    with salt.utils.fopen(index_file) as f:
+        for line in f:
+            if line.startswith('R'):
+                fields = line.split('\t')
+                revoked = OpenSSL.crypto.Revoked()
+                revoked.set_serial(fields[3])
+                revoke_date_2_digit = datetime.strptime(fields[2], two_digit_year_fmt)
+                revoked.set_rev_date(revoke_date_2_digit.strftime(four_digit_year_fmt))
+                crl.add_revoked(revoked)
+
+    crl_text = crl.export(ca_cert, ca_key)
+
+    if crl_file is None:
+        crl_file = '{0}/{1}/crl.pem'.format(
+                _cert_base_path(),
+                ca_name
+                )
+
+    if os.path.isdir(crl_file):
+        ret['retcode'] = 1
+        ret['comment'] = 'crl_file "{0}" is an existing directory'.format(crl_file)
+        return ret
+
+    with salt.utils.fopen(crl_file, 'w') as f:
+        f.write(crl_text)
+
+    return ('Revoked Certificate: "{0}/{1}.crt", '
+            'serial number: {2}').format(
+                    cert_path,
+                    cert_filename,
+                    serial_number
+                    )
 
 
 if __name__ == '__main__':
