@@ -14,6 +14,7 @@ import signal
 import logging
 import traceback
 import multiprocessing
+import sys
 from itertools import groupby
 
 # Import salt.cloud libs
