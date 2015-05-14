@@ -95,7 +95,7 @@ def __list_functions(user=None):
                 'sys.list_functions',
                 timeout=__opts__['timeout'])
     except SaltClientError as client_error:
-        print client_error
+        print(client_error)
         return funcs
 
     for ret in gener:
