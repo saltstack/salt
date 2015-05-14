@@ -11,7 +11,6 @@ A module to manage software on Windows
 # Import python libs
 from __future__ import absolute_import
 import os
-import re
 import locale
 import logging
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
