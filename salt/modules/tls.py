@@ -829,7 +829,14 @@ def create_self_signed_cert(tls_dir='tls',
     return ret
 
 
-def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename=None, digest='sha256'):
+def create_ca_signed_cert(ca_name,
+                          CN,
+                          days=365,
+                          cacert_path=None,
+                          ca_filename=None,
+                          cert_path=None,
+                          cert_filename=None,
+                          digest='sha256'):
     '''
     Create a Certificate (CERT) signed by a named Certificate Authority (CA)
 
@@ -851,6 +858,12 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
 
     cacert_path
         absolute path to ca certificates root directory
+
+    ca_filename
+        alternative filename for the CA
+
+    cert_path
+        full path to the certificates directory
 
     cert_filename
         alternative filename for the certificate, useful when using special characters in the CN
@@ -885,26 +898,31 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
 
     set_ca_path(cacert_path)
 
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    if not cert_path:
+        cert_path = '{0}/{1}/certs'.format(cert_base_path(), ca_name)
+
     if not cert_filename:
         cert_filename = CN
 
     if os.path.exists(
-            '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                     ca_name, cert_filename)
+            '{0}/{1}.crt'.format(cert_path, cert_filename)
     ):
         return 'Certificate "{0}" already exists'.format(cert_filename)
 
     try:
         maybe_fix_ssl_version(ca_name)
-        with salt.utils.fopen('{0}/{1}/{2}_ca_cert.crt'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        with salt.utils.fopen('{0}/{1}/{2}.crt'.format(cert_base_path(),
+                                                       ca_name,
+                                                       ca_filename)) as fhr:
             ca_cert = OpenSSL.crypto.load_certificate(
                     OpenSSL.crypto.FILETYPE_PEM, fhr.read()
                 )
-        with salt.utils.fopen('{0}/{1}/{2}_ca_cert.key'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        with salt.utils.fopen('{0}/{1}/{2}.key'.format(cert_base_path(),
+                                                       ca_name,
+                                                       ca_filename)) as fhr:
             ca_key = OpenSSL.crypto.load_privatekey(
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
@@ -915,9 +933,8 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
         return ret
 
     try:
-        with salt.utils.fopen('{0}/{1}/certs/{2}.csr'.format(cert_base_path(),
-                                                             ca_name,
-                                                             cert_filename)) as fhr:
+        with salt.utils.fopen('{0}/{1}.csr'.format(cert_path,
+                                                   cert_filename)) as fhr:
             req = OpenSSL.crypto.load_certificate_request(
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
@@ -953,9 +970,8 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
     cert.set_pubkey(req.get_pubkey())
     cert.sign(ca_key, digest)
 
-    with salt.utils.fopen('{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
-                                                         ca_name,
-                                                         cert_filename), 'w+') as crt:
+    with salt.utils.fopen('{0}/{1}.crt'.format(cert_path,
+                                               cert_filename), 'w+') as crt:
         crt.write(
             OpenSSL.crypto.dump_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
@@ -966,10 +982,9 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, cert_filename
     _write_cert_to_database(ca_name, cert)
 
     return ('Created Certificate for "{0}": '
-            '"{1}/{2}/certs/{3}.crt"').format(
+            '"{1}/{2}.crt"').format(
                     CN,
-                    cert_base_path(),
-                    ca_name,
+                    cert_path,
                     cert_filename
                     )
 
