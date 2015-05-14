@@ -265,7 +265,7 @@ html_context = {
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
     'previous_release_version': '2014.7.5',
     'previous_release_dir': '2014.7',
-    'build_type': 'current', #current, previous, develop
+    'build_type': 'latest', #latest, previous, develop
 }
 
 html_use_index = True

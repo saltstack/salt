@@ -33,6 +33,3 @@ Salt Table of Contents
     security/index
     faq
     glossary
-
-    .. only:: latex
-        :numbered:

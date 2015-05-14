@@ -378,9 +378,9 @@ div.header div.rel a {
 blockquote {
     margin: 1em;
 }
-.footer, .footer a {
+/*.footer, .footer a {
     color: #888a85;
-}
+}*/
 div.admonition {
     font-size: 0.9em;
     margin: 1em 0 1em 0;

@@ -164,12 +164,11 @@
         <div id="wrapper">
             <div id="sidebar-wrapper">
 
-                <a class="ss-logo" href="http://saltstack.com"><img src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
+                <a class="ss-logo" href="http://saltstack.com"><img class="nolightbox" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 <div id="versions">
 
-                    <!--todo: dynamically populate version numbers-->
-                    <a id="latest" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ release }} </a> {% if build_type == "current" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
+                    <a id="latest" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ release }} </a> {% if build_type == "latest" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
                     <a id="previous" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }} </a> {% if build_type == "previous" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
                     <a id="develop" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">Develop </a> {% if build_type == "develop" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %}
                 </div>
@@ -180,7 +179,7 @@
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Watch SaltStack Videos on YouTube" href="https://www.youtube.com/user/SaltStack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" /></a></li>
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="View the latest SaltStack Tweets" href="http://twitter.com/SaltStackInc" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/twitter.png', 1) }}" /></a></li>
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Subscribe to the Salt Users mailing list" href="https://groups.google.com/forum/#!forum/salt-users" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/email.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Download SaltStack code from GitHub" href="https://github.com/saltstack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Download SaltStack code from GitHub" href="https://github.com/saltstack/salt" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Chat in #salt on Freenode IRC" href="http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" alt="SaltStack on IRC"></a></li>
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="/r/saltstack" href="http://www.reddit.com/r/saltstack/" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/reddit.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Ask a SaltStack question on StackOverflow" href="http://stackoverflow.com/questions/tagged/salt-stack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li><li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Join or start a SaltStack Meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>
@@ -228,12 +227,12 @@
                                             {%- block relbar_small %}{{ relbar() }}{% endblock %}
                                             <li><a href="/en/getstarted/" target="_blank">Get Started</a></li>
 
-                                            {% if build_type == "current" %}
-                                            <li><a class="icon-dl" href="/en/pdf/{{ release }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/{{ release }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            {% if build_type == "latest" %}
+                                            <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                             {% elif build_type == "previous" %}
-                                            <li><a class="icon-dl" href="/en/pdf/{{ previous_release_version }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/{{ previous_release_version }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/pdf/Salt-{{ previous_release_version }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ previous_release_version }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                             {% endif %}
                                         </ul>
                                     </div>
@@ -243,12 +242,12 @@
                                             {%- block relbar_large %}{{ relbar() }}{% endblock %}
                                             <li><a href="/en/getstarted/" target="_blank">Get Started</a></li>
 
-                                            {% if build_type == "current" %}
-                                            <li><a class="icon-dl" href="/en/pdf/{{ release }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/{{ release }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            {% if build_type == "latest" %}
+                                            <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                             {% elif build_type == "previous" %}
-                                            <li><a class="icon-dl" href="/en/pdf/{{ previous_release_version }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/{{ previous_release_version }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/pdf/Salt-{{ previous_release_version }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ previous_release_version }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                             {% endif %}
 
                                         </ul>
@@ -284,10 +283,16 @@
 
 
 
+                                {% if build_type == "latest" %}
+                                <p>You are viewing docs for the latest stable release, {{ release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
 
-                                <p>Latest Salt release: <a href="releases/2015.5.0.html">2015.5.0</a></p>
-                                <p class="muted">Docs for previous releases are available on
-                                    <a href="https://readthedocs.org/projects/salt/">readthedocs.org</a>.</p>
+                                {% elif build_type == "previous" %}
+                                <p>You are viewing docs for the previous stable release, {{ previous_release_version }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+
+                                {% elif build_type == "develop" %}
+                                <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ release }}</a>, or to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }}</a>.</p>
+                                {% endif %}
+
                                 <br>
                                 <p><a href="saltstack.com">saltstack.com</a></p>
 
@@ -327,7 +332,7 @@
 
                 </div>
             </footer>
-        {%- endblock %}-->
+        {%- endblock %}
 
 
         {% if on_saltstack %}
