@@ -1015,7 +1015,7 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # Remove lock, uid, gid and mode from kwargs if present
+    # Remove lock from kwargs if present
     lock = kwargs.pop('lock', False)
 
     if lock is True:
