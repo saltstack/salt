@@ -367,7 +367,7 @@ def dead(name, enable=None, sig=None, **kwargs):
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name)
     before_toggle_enable_status = __salt__['service.enabled'](name)
-    if or not __salt__['service.status'](name, sig):
+    if not __salt__['service.status'](name, sig):
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
