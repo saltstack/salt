@@ -361,7 +361,8 @@ class AsyncAuth(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        Crypto.Random.atfork()
+        if 'Crypto.Random' in sys.modules:
+            Crypto.Random.atfork()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:

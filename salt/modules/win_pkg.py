@@ -11,7 +11,6 @@ A module to manage software on Windows
 # Import python libs
 from __future__ import absolute_import
 import os
-import re
 import locale
 import logging
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
@@ -254,9 +253,7 @@ def _search_software(target):
     values added to the list passed in
     '''
     search_results = {}
-    software = dict(
-        list(_get_reg_software().items()) +
-        list(_get_msi_software().items()))
+    software = dict(_get_reg_software().items())
     for key, value in six.iteritems(software):
         if key is not None:
             if target.lower() in key.lower():
@@ -337,10 +334,9 @@ def _get_reg_software():
                    ]
     encoding = locale.getpreferredencoding()
 
-    # attempt to corral the wild west of the multiple ways to install
-    # software in windows
-    reg_entries = dict(list(_get_user_keys().items()) +
-                       list(_get_machine_keys().items()))
+    #attempt to corral the wild west of the multiple ways to install
+    #software in windows
+    reg_entries = dict(_get_machine_keys().items())
     for reg_hive, reg_keys in six.iteritems(reg_entries):
         for reg_key in reg_keys:
             try:

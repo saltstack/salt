@@ -14,6 +14,7 @@ import signal
 import logging
 import traceback
 import multiprocessing
+import sys
 from itertools import groupby
 
 # Import salt.cloud libs
@@ -36,6 +37,10 @@ from salt.ext.six import string_types
 from salt.template import compile_template
 
 # Import third party libs
+try:
+    import Crypto.Random
+except ImportError:
+    pass  # pycrypto < 2.1
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
@@ -2231,12 +2236,8 @@ def run_parallel_map_providers_query(data, queue=None):
     This function will be called from another process when building the
     providers map.
     '''
-    try:
-        import Crypto.Random  # pylint: disable=E0611
+    if 'Crypto.Random' in sys.modules:
         Crypto.Random.atfork()
-    except ImportError:
-        # PyCrypto version < 2.1
-        pass
 
     cloud = Cloud(data['opts'])
     try:
