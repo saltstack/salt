@@ -289,7 +289,7 @@ class Pillar(object):
                                 ),
                             self.rend,
                             self.opts['renderer'],
-                            self.opts['pillarenv']
+                            self.opts['pillarenv'],
                             _pillar_rend=True
                             )
                         ]
