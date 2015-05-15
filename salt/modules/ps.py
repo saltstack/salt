@@ -126,7 +126,7 @@ def top(num_processes=5, interval=3):
     '''
     result = []
     start_usage = {}
-    for pid in psutil.pid_list():
+    for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
             user, system = process.cpu_times()
@@ -178,7 +178,7 @@ def get_pid_list():
 
         salt '*' ps.get_pid_list
     '''
-    return psutil.pid_list()
+    return psutil.pids()
 
 
 def proc_info(pid, attrs=None):

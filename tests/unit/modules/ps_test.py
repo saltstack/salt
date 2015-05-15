@@ -79,7 +79,7 @@ class PsTestCase(TestCase):
             MOCK_PROC.name = 'test_mock_proc'
             MOCK_PROC.pid = 9999999999
 
-    @patch('salt.utils.psutil_compat.pid_list', new=MagicMock(return_value=STUB_PID_LIST))
+    @patch('salt.utils.psutil_compat.pids', new=MagicMock(return_value=STUB_PID_LIST))
     def test_get_pid_list(self):
         self.assertListEqual(STUB_PID_LIST, ps.get_pid_list())
 
