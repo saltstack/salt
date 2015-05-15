@@ -55,10 +55,10 @@ class PipModuleTest(integration.ModuleCase):
         # Let's run a pip depending functions
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=self.venv_dir)
-            self.assertEqual(
-                ret,
-                'Command required for \'{0}\' not found: Could not find '
-                'a `pip` binary'.format(func)
+            self.assertIn(
+                'Command required for \'{0}\' not found: '
+                'Could not find a `pip` binary in virtualenv'.format(func),
+                ret
             )
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
