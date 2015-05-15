@@ -602,6 +602,7 @@ def create_ca(ca_name,
 
     return ret
 
+
 def get_extensions(cert_type):
     '''
     Fetch X509 and CSR extension definitions from tls:extensions:
@@ -680,6 +681,7 @@ def get_extensions(cert_type):
         retval[Use].update(ext[cert_type][Use])
 
     return retval
+
 
 def create_csr(ca_name,
                bits=2048,
