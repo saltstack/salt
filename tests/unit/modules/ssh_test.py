@@ -29,6 +29,6 @@ class SSHAuthKeyPathTestCase(TestCase):
                 '/home/user')
         self.assertEqual(output, '/home//home/user')
 
-        output = ssh._expand_authorized_keys_path('/srv/%h/aaa/%u%%', 'user', 
+        output = ssh._expand_authorized_keys_path('/srv/%h/aaa/%u%%', 'user',
                 '/home/user')
         self.assertEqual(output, '/srv//home/user/aaa/user%')
