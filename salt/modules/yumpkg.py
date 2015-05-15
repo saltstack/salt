@@ -120,7 +120,7 @@ def _repoquery_pkginfo(repoquery_args):
     Wrapper to call repoquery and parse out all the tuples
     '''
     ret = []
-    for line in _repoquery(repoquery_args):
+    for line in _repoquery(repoquery_args, ignore_stderr=True):
         pkginfo = _parse_pkginfo(line)
         if pkginfo is not None:
             ret.append(pkginfo)
@@ -143,7 +143,7 @@ def _check_repoquery():
             raise CommandExecutionError('Unable to install yum-utils')
 
 
-def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
+def _repoquery(repoquery_args, query_format=__QUERYFORMAT, ignore_stderr=False):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
@@ -154,7 +154,11 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT):
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
         comment = ''
-        if 'stderr' in call:
+        # when checking for packages some yum modules return data via
+        # stderr that don't cause non-zero return codes.  A perfect
+        # example of this is when spacewalk is installed but not yet
+        # registered. We should ignore those when getting pkginfo.
+        if 'stderr' in call and not salt.utils.is_true(ignore_stderr):
             comment += call['stderr']
         if 'stdout' in call:
             comment += call['stdout']
@@ -189,11 +193,21 @@ def _get_repo_options(**kwargs):
     else:
         repo_arg = ''
         if disablerepo:
-            log.info('Disabling repo {0!r}'.format(disablerepo))
-            repo_arg += '--disablerepo={0!r}'.format(disablerepo)
+            if isinstance(disablerepo, list):
+                for repo_item in disablerepo:
+                    log.info('Disabling repo {0!r}'.format(repo_item))
+                    repo_arg += '--disablerepo={0!r} '.format(repo_item)
+            else:
+                log.info('Disabling repo {0!r}'.format(disablerepo))
+                repo_arg += '--disablerepo={0!r}'.format(disablerepo)
         if enablerepo:
-            log.info('Enabling repo {0!r}'.format(enablerepo))
-            repo_arg += '--enablerepo={0!r}'.format(enablerepo)
+            if isinstance(enablerepo, list):
+                for repo_item in enablerepo:
+                    log.info('Enabling repo {0!r}'.format(repo_item))
+                    repo_arg += '--enablerepo={0!r} '.format(repo_item)
+            else:
+                log.info('Enabling repo {0!r}'.format(enablerepo))
+                repo_arg += '--enablerepo={0!r}'.format(enablerepo)
     return repo_arg
 
 
