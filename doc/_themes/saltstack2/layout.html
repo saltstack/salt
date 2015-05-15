@@ -73,24 +73,16 @@
 {%- endmacro %}
 
 {%- macro css() %}
-<!--    {% if style %}
-    <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}">
-    {% endif %}-->
 
     <link rel="stylesheet" href="{{ pathto('_static/css/core.min.css', 1) }}">
     <link rel="stylesheet" href="{{ pathto('_static/css/webhelp.min.css', 1) }}">
     <link rel="stylesheet" href="{{ pathto('_static/css/pygments.css', 1) }}">
     <link rel="stylesheet" href="{{ pathto('_static/css/basic.css', 1) }}">
     <link rel="stylesheet" href="{{ pathto('_static/css/main.css', 1) }}">
-<!--    <style>
-        body { padding-top: 20px; }
-    </style>-->
+
 {%- endmacro %}
 
-<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<html>
     <head>
         <meta charset="{{ encoding }}">
         {{ metatags }}
@@ -105,6 +97,10 @@
         <meta name="google-site-verification" content="1Y-ojT3ndjxA9coB77iUDyXPWxeuQ3T4_r0j-QG6QHg" />
 
         {{ css() }}
+
+        <!--[if lt IE 9]>
+        <script src="{{ pathto('_static/js/respond.min.js', 1) }}">
+        <![endif]-->
 
         {%- if not embedded %}
         {{ script() }}
@@ -151,8 +147,8 @@
     </head>
 
     <body class="index">
-        <!--[if lt IE 7]>
-            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <!--[if lt IE 8]>
+            <p>You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser.</a></p>
         <![endif]-->
 
         <!-- This code is taken from http://twitter.github.com/bootstrap/examples/hero.html -->
@@ -164,7 +160,7 @@
         <div id="wrapper">
             <div id="sidebar-wrapper">
 
-                <a class="ss-logo" href="http://saltstack.com"><img class="nolightbox" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
+                <a class="ss-logo" href="http://saltstack.com"><img width="350px" class="nolightbox" src="{{ pathto('_static/images/saltstack_logo.png', 1) }}"></a>
 
                 <div id="versions">
 
@@ -191,10 +187,7 @@
 
                 <div id="search-form" class="inner-addon left-addon"><i class="glyphicon glyphicon-search"></i><input type="text" class="form-control"></div>
 
-
-                <div class="sidebar-nav">
-
-
+            <div class="sidebar-nav">
                 {% block menu %}
                 {% set toctree = toctree(maxdepth=8, collapse=True, includehidden=True) %}
                 {% if toctree %}
@@ -206,7 +199,7 @@
                 {% endblock %}
             </div>
 
-            </div>
+            </div> <!--end sidebar wrapper-->
             <div id="page-content-wrapper">
                 <div class="container-fluid">
 
@@ -216,7 +209,7 @@
                                 <div class="container-fluid">
                                     <div class="navbar-header">
 
-                                        <button type="button" href="#menu-toggle" class="pull-left navbar-toggle collapsed" id="menu-toggle"><span class="sr-only">Toggle navigation</span>
+                                        <button type="button" class="pull-left navbar-toggle collapsed" id="menu-toggle"><span class="sr-only">Toggle navigation</span>
                                             <span class="icon-bar"></span>
                                             <span class="icon-bar"></span>
                                             <span class="icon-bar"></span></button>
@@ -229,10 +222,10 @@
 
                                             {% if build_type == "latest" %}
                                             <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25px" width="18px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.png', 1) }}"></a></li>
                                             {% elif build_type == "previous" %}
                                             <li><a class="icon-dl" href="/en/pdf/Salt-{{ previous_release_version }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ previous_release_version }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ previous_release_version }}.epub"><img height="25px" width="18px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.png', 1) }}"></a></li>
                                             {% endif %}
                                         </ul>
                                     </div>
@@ -244,10 +237,10 @@
 
                                             {% if build_type == "latest" %}
                                             <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25px" width="18px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.png', 1) }}"></a></li>
                                             {% elif build_type == "previous" %}
                                             <li><a class="icon-dl" href="/en/pdf/Salt-{{ previous_release_version }}.pdf"><img height="25px" width="25px" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.png', 1) }}"></a></li>
-                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ previous_release_version }}.epub"><img height="20px" width="20px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                            <li><a class="icon-dl" href="/en/epub/Salt-{{ previous_release_version }}.epub"><img height="25px" width="18px" class="nolightbox" src="{{ pathto('_static/images/epub_icon.png', 1) }}"></a></li>
                                             {% endif %}
 
                                         </ul>
@@ -273,7 +266,8 @@
 
 
                         </div>
-                        </div>
+                        </div> <!--end row-->
+
                     {%- block footer %}
                     <div class="footer">
                         <hr />
@@ -319,23 +313,13 @@
                         </div>
 
 
-                    </div>
-
+                    </div> <!--end footer-->
+                    {%- endblock %}
 
                     </div>
                 </div>
-            </div>
-
-
+            </div> <!--end wrapper-->
         {%- endblock %}
-
-
-                </div>
-            </footer>
-        {%- endblock %}
-
-
-        {% if on_saltstack %}
         <script type="text/javascript" language="javascript">llactid=23943</script>
         <script type="text/javascript" language="javascript" src="http://t6.trackalyzer.com/trackalyze.js"></script>
 
@@ -353,6 +337,6 @@
             var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
         })();
         </script>
-        {% endif %}
+
     </body>
 </html>
