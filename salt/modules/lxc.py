@@ -2635,7 +2635,9 @@ def set_dns(name, dnsservers=None, searchdomains=None):
 
 def _need_install(name):
     ret = 0
-    has_minion = retcode(name, 'which salt-minion')
+    has_minion = retcode(name,
+                         'which salt-minion',
+                         ignore_retcode=True)
     # we assume that installing is when no minion is running
     # but testing the executable presence is not enougth for custom
     # installs where the bootstrap can do much more than installing
@@ -2748,7 +2750,9 @@ def bootstrap(name,
         needs_install = _need_install(name)
     else:
         needs_install = True
-    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
+    seeded = retcode(name,
+                     'test -e \'{0}\''.format(SEED_MARKER),
+                     ignore_retcode=True) == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         ret = True
@@ -3405,8 +3409,8 @@ def cp(name, source, dest, makedirs=False):
     if not os.path.isabs(dest):
         raise SaltInvocationError('Destination path must be absolute')
     if retcode(name,
-                   'test -d \'{0}\''.format(dest),
-                   ignore_retcode=True) == 0:
+               'test -d \'{0}\''.format(dest),
+               ignore_retcode=True) == 0:
         # Destination is a directory, full path to dest file will include the
         # basename of the source file.
         dest = os.path.join(dest, source_name)
@@ -3416,8 +3420,8 @@ def cp(name, source, dest, makedirs=False):
         # parent directory.
         dest_dir, dest_name = os.path.split(dest)
         if retcode(name,
-                       'test -d \'{0}\''.format(dest_dir),
-                       ignore_retcode=True) != 0:
+                   'test -d \'{0}\''.format(dest_dir),
+                   ignore_retcode=True) != 0:
             if makedirs:
                 result = run_all(name, 'mkdir -p \'{0}\''.format(dest_dir))
                 if result['retcode'] != 0:
