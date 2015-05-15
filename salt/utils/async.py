@@ -13,7 +13,7 @@ try:
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 except ImportError:
-    pass # salt-ssh doesn't dep zmq
+    pass  # salt-ssh doesn't dep zmq
 
 import contextlib
 import weakref
