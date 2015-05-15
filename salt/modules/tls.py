@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 two_digit_year_fmt = "%y%m%d%H%M%SZ"
 four_digit_year_fmt = "%Y%m%d%H%M%SZ"
 
+
 def __virtual__():
     '''
     Only load this module if the ca config options are set
