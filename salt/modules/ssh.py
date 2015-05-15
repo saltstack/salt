@@ -78,6 +78,35 @@ def _format_auth_line(key, enc, comment, options):
     return line
 
 
+def _expand_authorized_keys_path(path, user, home):
+    '''
+    Expand the AuthorizedKeysFile expression. Defined in man sshd_config(5)
+    '''
+    converted_path = ''
+    had_escape = False
+    for char in path:
+        if had_escape:
+            had_escape = False
+            if char == '%':
+                converted_path += '%'
+            elif char == 'u':
+                converted_path += user
+            elif char == 'h':
+                converted_path += home
+            else:
+                error = 'AuthorizedKeysFile path: unknown token character "%{0}"'.format(char)
+                raise CommandExecutionError(error)
+            continue
+        elif char == '%':
+            had_escape = True
+        else:
+            converted_path += char
+    if had_escape:
+        error = "AuthorizedKeysFile path: Last character can't be escape character"
+        raise CommandExecutionError(error)
+    return converted_path
+
+
 def _get_config_file(user, config):
     '''
     Get absolute path to a user's ssh_config.
@@ -85,8 +114,10 @@ def _get_config_file(user, config):
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         raise CommandExecutionError('User {0!r} does not exist'.format(user))
+    home = uinfo['home']
     if not os.path.isabs(config):
-        config = os.path.join(uinfo['home'], config)
+        config = os.path.join(home, config)
+    config = _expand_authorized_keys_path(config, user, home)
     return config
 
 
