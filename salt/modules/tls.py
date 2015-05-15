@@ -47,7 +47,7 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    if HAS_SSL and LooseVersion(OpenSSL_version) < LooseVersion(0.14):
+    if HAS_SSL and LooseVersion(OpenSSL_version) < LooseVersion('0.14'):
         if __opts__.get('ca.cert_base_path', None):
             return True
         else:
