@@ -321,7 +321,8 @@ class UtilsTestCase(TestCase):
     def test_clean_kwargs(self):
         self.assertDictEqual(utils.clean_kwargs(foo='bar'), {'foo': 'bar'})
         self.assertDictEqual(utils.clean_kwargs(__pub_foo='bar'), {})
-        self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
+        self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {})
+        self.assertDictEqual(utils.clean_kwargs(foo_bar='gwar'), {'foo_bar': 'gwar'})
 
     def test_check_state_result(self):
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
