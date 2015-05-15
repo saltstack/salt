@@ -326,8 +326,8 @@ def _gen_keep_files(name, require):
         '''
         Check whether ``path`` is child of ``directory``
         '''
-        path = os.path.realpath(path)
-        directory = os.path.realpath(directory)
+        path = os.path.abspath(path)
+        directory = os.path.abspath(directory)
 
         relative = os.path.relpath(path, directory)
 
