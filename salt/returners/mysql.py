@@ -250,7 +250,8 @@ def returner(ret):
                               ret['id'],
                               ret.get('success', False),
                               json.dumps(ret)))
-    except salt.exceptions.SaltMasterError:
+    except salt.exceptions.SaltMasterError as exc:
+        log.critical(exc)
         log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
 
 
