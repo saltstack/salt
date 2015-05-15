@@ -42,8 +42,8 @@ try:
     #pylint: disable=unused-import
     import boto
     import boto.cloudformation
-    from boto.exception import BotoServerError
     #pylint: enable=unused-import
+    from boto.exception import BotoServerError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
