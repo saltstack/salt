@@ -4,22 +4,27 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 
 # Import Salt Libs
 ensure_in_syspath('../../')
 from salt.modules import ssh
+from salt.exceptions import CommandExecutionError
 
 
-class SSHAuthKeyPathTestCase(TestCase):
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class SSHAuthKeyTestCase(TestCase):
     '''
-    TestCase for salt.modules.ssh module's ssh AuthorizedKeysFile path
-    expansion
+    TestCase for salt.modules.ssh
     '''
     def test_expand_user_token(self):
         '''
-        Test if the %u token is correctly expanded
+        Test if the %u, %h, and %% tokens are correctly expanded
         '''
         output = ssh._expand_authorized_keys_path('/home/%u', 'user',
                 '/home/user')
@@ -32,3 +37,16 @@ class SSHAuthKeyPathTestCase(TestCase):
         output = ssh._expand_authorized_keys_path('/srv/%h/aaa/%u%%', 'user',
                 '/home/user')
         self.assertEqual(output, '/srv//home/user/aaa/user%')
+
+        user = 'dude'
+        home = '/home/dude'
+        path = '/home/dude%'
+        self.assertRaises(CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home)
+
+        path = '/home/%dude'
+        self.assertRaises(CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home)
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(SSHAuthKeyTestCase, needs_daemon=False)
