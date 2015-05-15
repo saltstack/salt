@@ -611,6 +611,8 @@ def get_extensions(cert_type):
         required
         ``server`` or ``client``
 
+    .. versionadded:: Beryllium
+
     '''
 
     ext = {}
