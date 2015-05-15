@@ -39,6 +39,10 @@ else:
     pids = psutil.get_pid_list
     users = psutil.get_users
 
+    #Deprecated in 1.0.1, but not mentioned in blog post
+    if psutil.version_info < (1, 0, 1):
+        net_io_counters = psutil.network_io_counters()
+
     class Process(psutil.Process): #pylint: disable: no-init
         # Reimplement overloaded getters/setters
         def cpu_affinity(self, *args, **kwargs):

@@ -562,9 +562,9 @@ def network_io_counters(interface=None):
         salt '*' ps.network_io_counters interface=eth0
     '''
     if not interface:
-        return dict(psutil.network_io_counters()._asdict())
+        return dict(psutil.net_io_counters()._asdict())
     else:
-        stats = psutil.network_io_counters(pernic=True)
+        stats = psutil.net_io_counters(pernic=True)
         if interface in stats:
             return dict(stats[interface]._asdict())
         else:
