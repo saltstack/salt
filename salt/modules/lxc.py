@@ -179,12 +179,15 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     size = vm_.get('size', '20G')
     script = vm_.get('script', None)
     script_args = vm_.get('script_args', None)
+    options = vm_.get('options', None)
     if image:
         profile['template'] = image
     if vgname:
         profile['vgname'] = vgname
     if backing:
         profile['backing'] = backing
+    if options:
+        profile.update(options)
     users = vm_.get('users', None)
     if users is None:
         users = []
@@ -876,6 +879,7 @@ def init(name,
             __salt__['lxc.clone'](name, clone_from,
                                   profile=profile, **kwargs))
         if not ret.get('cloned', False):
+            ret['result'] = False
             return ret
         cfg = _LXCConfig(name=name, nic=nic, nic_opts=nic_opts,
                          bridge=bridge, gateway=gateway,
@@ -897,6 +901,7 @@ def init(name,
                 __salt__['lxc.create'](name, config=cfile.name,
                                        profile=profile, **kwargs))
         if not ret.get('created', False):
+            ret['result'] = False
             return ret
         path = '/var/lib/lxc/{0}/config'.format(name)
         old_chunks = []
@@ -2049,8 +2054,8 @@ def bootstrap(name, config=None, approve_key=True,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('PATH=$PATH:/bin:/sbin:/usr/sbin'
-                       ' {0} /tmp/bootstrap.sh {1}').format(
+                cmd = ("{0} -c 'PATH=$PATH:/bin:/sbin:/usr/sbin"
+                       " {0} /tmp/bootstrap.sh {1}'").format(
                            bootstrap_shell, bootstrap_args)
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
@@ -2161,7 +2166,7 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
         if not use_vt:
             res = __salt__['cmd.run_all'](cmd, python_shell=False)
         else:
-            stdout, stderr = '', ''
+            stdout_str, stderr_str = '', ''
             try:
                 proc = vt.Terminal(cmd,
                                    shell=True,
@@ -2181,33 +2186,33 @@ def run_cmd(name, cmd, no_start=False, preserve_state=True,
                         except IOError:
                             cstdout, cstderr = '', ''
                         if cstdout:
-                            stdout += cstdout
+                            stdout_str += cstdout
                         else:
                             cstdout = ''
                         if cstderr:
-                            stderr += cstderr
+                            stderr_str += cstderr
                         else:
                             cstderr = ''
                         # done by vt itself
                         # if stdout:
-                        #     log.debug(stdout)
+                        #     log.debug(stdout_str)
                         # if stderr:
-                        #     log.debug(stderr)
+                        #     log.debug(stderr_str)
                         if not cstdout and not cstderr and not proc.isalive():
                             break
                     except KeyboardInterrupt:
                         break
                 res = {'retcode': proc.exitstatus,
                        'pid': 2,
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_str,
+                       'stderr': stderr_str}
             except vt.TerminalException:
                 trace = traceback.format_exc()
                 log.error(trace)
                 res = {'retcode': 127,
                        'pid': '2',
-                       'stdout': stdout,
-                       'stderr': stderr}
+                       'stdout': stdout_str,
+                       'stderr': stderr_str}
             finally:
                 proc.terminate()
     else:
