@@ -53,7 +53,7 @@ def _valid(name, comment='', changes=None):
 def _get_instance(names):
     # for some reason loader overwrites __opts__['test'] with default
     # value of False, thus store and then load it again after action
-    test = __opts__['test']
+    test = __opts__.get('test', False)
     instance = __salt__['cloud.action'](fun='show_instance', names=names)
     __opts__['test'] = test
     return instance
