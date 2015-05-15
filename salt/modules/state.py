@@ -855,6 +855,8 @@ def sls_id(
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
@@ -917,6 +919,8 @@ def show_low_sls(mods,
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -977,6 +981,9 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary'
         )
+
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
 
     st_ = salt.state.HighState(opts, pillar)
     if isinstance(mods, six.string_types):
