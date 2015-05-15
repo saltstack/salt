@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import psutil
 
 if psutil.version_info >= (2, 0):
-    from psutil import * #pylint: disable: wildcard-import
+    from psutil import *  # pylint: disable=wildcard-import
 else:
     # Import hack to work around bugs in old psutil's
     # Psuedo "from psutil import *"
@@ -29,8 +29,8 @@ else:
             pass
 
     # Import functions not in __all__
-    from psutil import disk_partitions
-    from psutil import disk_usage
+    from psutil import disk_partitions  # pylint: disable=unused-import
+    from psutil import disk_usage  # pylint: disable=unused-import
 
     # Alias new module functions
     def boot_time():
@@ -47,7 +47,7 @@ else:
     if psutil.version_info < (1, 0, 1):
         net_io_counters = psutil.network_io_counters()
 
-    class Process(psutil.Process): #pylint: disable: no-init
+    class Process(psutil.Process):  # pylint: disable=no-init
         # Reimplement overloaded getters/setters
         def cpu_affinity(self, *args, **kwargs):
             if args or kwargs:
