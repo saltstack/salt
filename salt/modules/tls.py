@@ -20,13 +20,15 @@ import logging
 import hashlib
 from salt.ext.six.moves import range
 from datetime import datetime
+from distutils.version import LooseVersion
+
 import re
 
 HAS_SSL = False
 try:
     import OpenSSL
     HAS_SSL = True
-    OpenSSL_version = OpenSSL.__dict__.get('__version__', '0.0')
+    OpenSSL_version = LooseVersion(OpenSSL.__dict__.get('__version__', '0.0'))
 except ImportError:
     pass
 
@@ -45,7 +47,7 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    if HAS_SSL and float(OpenSSL_version) < 0.14:
+    if HAS_SSL and LooseVersion(OpenSSL_version) < LooseVersion(0.14):
         if __opts__.get('ca.cert_base_path', None):
             return True
         else:
