@@ -380,7 +380,7 @@ def destroy(vm_, call=None):
             transport=__opts__['transport']
         )
         cret = _salt('lxc.destroy', vm_, stop=True)
-        ret['result'] = cret['change']
+        ret['result'] = cret['result']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
             salt.utils.cloud.fire_event(
