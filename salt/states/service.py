@@ -276,7 +276,6 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if not _available(name, ret):
         return ret
 
-
     # lot of custom init script wont or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name)
@@ -521,4 +520,3 @@ def mod_watch(name,
     ret['comment'] = 'Service {0}'.format(past_participle) if result else \
                      'Failed to {0} the service'.format(verb)
     return ret
-
