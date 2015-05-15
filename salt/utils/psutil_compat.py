@@ -28,6 +28,10 @@ else:
         except AttributeError:
             pass
 
+    # Import functions not in __all__
+    from psutil import disk_partitions
+    from psutil import disk_usage
+
     # Alias new module functions
     def boot_time():
         return psutil.BOOT_TIME
@@ -39,7 +43,7 @@ else:
     pids = psutil.get_pid_list
     users = psutil.get_users
 
-    #Deprecated in 1.0.1, but not mentioned in blog post
+    # Deprecated in 1.0.1, but not mentioned in blog post
     if psutil.version_info < (1, 0, 1):
         net_io_counters = psutil.network_io_counters()
 
