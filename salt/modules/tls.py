@@ -26,7 +26,7 @@ HAS_SSL = False
 try:
     import OpenSSL
     HAS_SSL = True
-    OpenSSL_version = OpenSSL.__dict__.get('__version__', None)
+    OpenSSL_version = OpenSSL.__dict__.get('__version__', '0.0')
 except ImportError:
     pass
 
