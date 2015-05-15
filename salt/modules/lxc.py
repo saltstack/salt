@@ -2838,8 +2838,12 @@ def attachable(name):
         _ensure_exists(name)
         # Can't use run() here because it uses attachable() and would
         # endlessly recurse, resulting in a traceback
+        log.debug('Checking if LXC container {0} is attachable'.format(name))
         cmd = 'lxc-attach --clear-env -n {0} -- /usr/bin/env'.format(name)
-        result = __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        result = __salt__['cmd.retcode'](cmd,
+                                         python_shell=False,
+                                         output_loglevel='quiet',
+                                         ignore_retcode=True) == 0
         __context__['lxc.attachable'] = result
     return __context__['lxc.attachable']
 
