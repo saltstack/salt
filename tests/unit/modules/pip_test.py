@@ -945,38 +945,38 @@ class PipTestCase(TestCase):
             'bbfreeze-loader==1.1.0',
             'pycrypto==2.6'
         ]
-        mock = MagicMock(
-            side_effect=[
-                {'retcode': 0, 'stdout': 'pip MOCKED_VERSION'},
-                {'retcode': 0, 'stdout': '\n'.join(eggs)}
-            ]
-        )
+        mock_version = '6.1.1'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': '\n'.join(eggs)})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            ret = pip.list_()
-            mock.assert_called_with(
-                'pip freeze',
-                runas=None,
-                cwd=None,
-                python_shell=False,
-            )
-            self.assertEqual(
-                ret, {
-                    'SaltTesting-dev': 'git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8',
-                    'M2Crypto': '0.21.1',
-                    'bbfreeze-loader': '1.1.0',
-                    'bbfreeze': '1.1.0',
-                    'pip': 'MOCKED_VERSION',
-                    'pycrypto': '2.6'
-                }
-            )
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value=mock_version)):
+                ret = pip.list_()
+                mock.assert_called_with(
+                    'pip freeze',
+                    runas=None,
+                    cwd=None,
+                    python_shell=False,
+                )
+                self.assertEqual(
+                    ret, {
+                        'SaltTesting-dev': 'git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8',
+                        'M2Crypto': '0.21.1',
+                        'bbfreeze-loader': '1.1.0',
+                        'bbfreeze': '1.1.0',
+                        'pip': mock_version,
+                        'pycrypto': '2.6'
+                    }
+                )
 
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.list_,
-            )
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='6.1.1')):
+                self.assertRaises(
+                    CommandExecutionError,
+                    pip.list_,
+                )
 
     def test_list_command_with_prefix(self):
         eggs = [
@@ -1015,34 +1015,35 @@ class PipTestCase(TestCase):
             {'retcode': 0, 'stdout': ''}
         ])
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(
-                'pep8', pre_releases=True
-            )
-            mock.assert_called_with(
-                'pip install \'pep8\'',
-                saltenv='base',
-                runas=None,
-                cwd=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            with patch('salt.modules.pip.version',
+                       MagicMock(return_value='1.3')):
+                pip.install(
+                    'pep8', pre_releases=True
+                )
+                mock.assert_called_with(
+                    'pip install \'pep8\'',
+                    saltenv='base',
+                    runas=None,
+                    cwd=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
-        mock = MagicMock(side_effect=[
-            {'retcode': 0, 'stdout': 'pip 1.4.0 /path/to/site-packages/pip'},
-            {'retcode': 0, 'stdout': ''}
-        ])
-        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.install(
-                'pep8', pre_releases=True
-            )
-            mock.assert_called_with(
-                'pip install --pre \'pep8\'',
-                saltenv='base',
-                runas=None,
-                cwd=None,
-                use_vt=False,
-                python_shell=False,
-            )
+        mock_run = MagicMock(return_value='pip 1.4.1 /path/to/site-packages/pip')
+        mock_run_all = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run': mock_run,
+                                       'cmd.run_all': mock_run_all}):
+            with patch('salt.modules.pip._get_pip_bin',
+                       MagicMock(return_value='pip')):
+                pip.install('pep8', pre_releases=True)
+                mock_run_all.assert_called_with(
+                    'pip install --pre \'pep8\'',
+                    saltenv='base',
+                    runas=None,
+                    cwd=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
 
 if __name__ == '__main__':

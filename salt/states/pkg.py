@@ -1217,6 +1217,10 @@ def latest(
     skip_verify
         Skip the GPG verification check for the package to be installed
 
+    refresh
+        Update the repo database of available packages prior to installing the
+        requested package.
+
 
     Multiple Package Installation Options:
 

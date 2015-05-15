@@ -103,10 +103,14 @@ def list_present(name, value):
             ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'.format(name)
             return ret
-
-        if value in grain:
-            ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
-            return ret
+        if isinstance(value, list):
+            if set(value).issubset(set(__grains__.get(name))):
+                ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
+                return ret
+        else:
+            if value in grain:
+                ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
+                return ret
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Value {1} is set to be appended to grain {0}'.format(name, value)
@@ -118,12 +122,17 @@ def list_present(name, value):
         ret['comment'] = 'Grain {0} is set to be added'.format(name)
         ret['changes'] = {'new': grain}
         return ret
-
     new_grains = __salt__['grains.append'](name, value)
-    if value not in __grains__.get(name):
-        ret['result'] = False
-        ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
-        return ret
+    if isinstance(value, list):
+        if not set(value).issubset(set(__grains__.get(name))):
+            ret['result'] = False
+            ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
+            return ret
+    else:
+        if value not in __grains__.get(name):
+            ret['result'] = False
+            ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
+            return ret
     ret['comment'] = 'Append value {1} to grain {0}'.format(name, value)
     ret['changes'] = {'new': new_grains}
     return ret
