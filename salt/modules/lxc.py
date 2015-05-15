@@ -2635,17 +2635,17 @@ def set_dns(name, dnsservers=None, searchdomains=None):
 
 def _need_install(name):
     ret = 0
-    has_minion = retcode(name, "command -v salt-minion")
+    has_minion = retcode(name, 'which salt-minion')
     # we assume that installing is when no minion is running
     # but testing the executable presence is not enougth for custom
     # installs where the bootstrap can do much more than installing
     # the bare salt binaries.
     if has_minion:
-        processes = run_stdout(name, "ps aux")
+        processes = run_stdout(name, 'ps aux')
         if 'salt-minion' not in processes:
             ret = 1
         else:
-            retcode(name, "salt-call --local service.stop salt-minion")
+            retcode(name, 'salt-call --local service.stop salt-minion')
     else:
         ret = 1
     return ret
