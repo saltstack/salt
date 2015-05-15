@@ -146,7 +146,8 @@ class LocalemodTestCase(TestCase):
         '''
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__salt__,
-                        {'cmd.run_all': MagicMock(return_value=ret)}):
+                        {'cmd.run_all': MagicMock(return_value=ret),
+                         'file.replace': MagicMock()}):
             self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
@@ -157,7 +158,8 @@ class LocalemodTestCase(TestCase):
         '''
         ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
         with patch.dict(localemod.__salt__,
-                        {'cmd.run_all': MagicMock(return_value=ret)}):
+                        {'cmd.run_all': MagicMock(return_value=ret),
+                         'file.replace': MagicMock()}):
             self.assertEqual(localemod.gen_locale('en_US.UTF-8', verbose=True), ret)
 
 
