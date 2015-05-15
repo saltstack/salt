@@ -2498,7 +2498,7 @@ def set_tags(name=None,
 
         if resource_id is None:
             if instance_id is None:
-                instance_id = _get_node(name, location)[name]['instanceId']
+                instance_id = _get_node(name=name, instance_id=None, location=location)[name]['instanceId']
         else:
             instance_id = resource_id
 
