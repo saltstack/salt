@@ -2641,7 +2641,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
 
 def _needs_install(name):
     ret = 0
-    has_minion = retcode(name, "command -v salt-minion")
+    has_minion = retcode(name, 'which salt-minion')
     # we assume that installing is when no minion is running
     # but testing the executable presence is not enougth for custom
     # installs where the bootstrap can do much more than installing
