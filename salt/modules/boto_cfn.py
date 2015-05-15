@@ -118,7 +118,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
         log.debug('Stack {0} exists.'.format(name))
         return True
     except BotoServerError as e:
-        log.warning('Exists returned an exception.\n{0}'.format(str(e)))
+        log.warning('Could not describe stack {0}.\n{0}'.format(name, str(e)))
         return False
 
 
