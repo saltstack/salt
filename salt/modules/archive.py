@@ -6,6 +6,7 @@ A module to wrap (non-Windows) archive calls
 '''
 from __future__ import absolute_import
 import os
+import contextlib  # For < 2.7 compat
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -510,7 +511,7 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
         # variable from being defined and cause a NameError in the return
         # statement at the end of the function.
         cleaned_files = []
-        with zipfile.ZipFile(zip_file) as zfile:
+        with contextlib.closing(zipfile.ZipFile(zip_file, "r")) as zfile:
             files = zfile.namelist()
 
             if isinstance(excludes, string_types):
