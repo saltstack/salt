@@ -420,7 +420,7 @@ def reaped(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. verionadded:: Beryllium
+    .. versionadded:: Beryllium
 
     CLI Example:
 

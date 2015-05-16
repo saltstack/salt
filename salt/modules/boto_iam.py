@@ -1208,8 +1208,7 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     :param cert_name: The name for the server certificate. Do not include the path in this value.
     :param cert_body: The contents of the public key certificate in PEM-encoded format.
     :param private_key: The contents of the private key in PEM-encoded format.
-    :param cert_chain:  The contents of the certificate chain. This is typically a
-    concatenation of the PEM-encoded public key certificates of the chain.
+    :param cert_chain:  The contents of the certificate chain. This is typically a concatenation of the PEM-encoded public key certificates of the chain.
     :param path: The path for the server certificate.
     :param region: The name of the region to connect to.
     :param key: The key to be used in order to connect
