@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 AliYun ECS Cloud Module
-==========================
+=======================
 
 .. versionadded:: 2014.7.0
 
@@ -451,7 +451,9 @@ def start(name, call=None):
     '''
     Start a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a start myinstance
     '''
@@ -475,7 +477,9 @@ def stop(name, force=False, call=None):
     '''
     Stop a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a stop myinstance
         salt-cloud -a stop myinstance force=True
@@ -503,7 +507,9 @@ def reboot(name, call=None):
     '''
     Reboot a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot myinstance
     '''
@@ -772,7 +778,9 @@ def show_disk(name, call=None):
     '''
     Show the disk details of the instance
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a show_disk aliyun myinstance
     '''
@@ -801,7 +809,9 @@ def list_monitor_data(kwargs=None, call=None):
     Get monitor data of the instance. If instance name is
     missing, will show all the instance monitor data on the region.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f list_monitor_data aliyun
         salt-cloud -f list_monitor_data aliyun name=AY14051311071990225bd
