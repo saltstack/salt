@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage DynamoDB Tables
-=================
+======================
 
 .. versionadded:: 2015.5.0
 

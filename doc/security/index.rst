@@ -103,7 +103,7 @@ quickly and safely as is possible.
     the full release documentation and download locations.
 
 Receiving security announcements
-===============================
+================================
 
 The fastest place to receive security announcements is via the `salt-announce`_
 mailing list. This list is low-traffic.
