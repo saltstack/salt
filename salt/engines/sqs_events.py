@@ -4,7 +4,7 @@ An engine that continuously reads messages from SQS and fires them as events.
 
 Note that long polling is utilized to avoid excessive CPU usage.
 
-.. versionsadded:: Beryllium
+.. versionadded:: Beryllium
 
 :configuration:
     This engine can be run on the master or on a minion.

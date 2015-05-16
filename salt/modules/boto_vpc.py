@@ -14,10 +14,14 @@ Connection module for Amazon VPC
     If IAM roles are not used you need to specify them either in a pillar or
     in the minion's config file::
 
+    .. code-block:: yaml
+
         vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
         vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     A region may also be specified in the configuration::
+
+    .. code-block:: yaml
 
         vpc.region: us-east-1
 
@@ -25,6 +29,8 @@ Connection module for Amazon VPC
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
+
+    .. code-block:: yaml
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -34,21 +40,30 @@ Connection module for Amazon VPC
 .. versionchanged:: Beryllium
     All methods now return a dictionary. Create and delete methods return:
 
-    .. code-blocK:: yaml
-        created: true
-    or
     .. code-block:: yaml
+
+        created: true
+
+    or
+
+    .. code-block:: yaml
+
         created: false
         error:
           message: error message
 
     Request methods (e.g., `describe_vpc`) return:
+
     .. code-block:: yaml
+
         vpcs:
           - {...}
           - {...}
+
     or
-    .. code-block:: yal
+
+    .. code-block:: yaml
+
         error:
           message: error message
 
@@ -1381,6 +1396,7 @@ def delete_network_acl(network_acl_id=None, network_acl_name=None, disassociate=
                 disassociate=false
 
     .. code-block:: bash
+
         salt myminion boto_vpc.delete_network_acl network_acl_name='myacl' \\
                 disassociate=true
 

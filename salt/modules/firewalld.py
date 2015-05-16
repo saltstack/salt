@@ -397,7 +397,7 @@ def get_masquerade(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.get_masquerade zone
     '''
@@ -417,7 +417,7 @@ def add_masquerade(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.add_masquerade
     '''
@@ -432,7 +432,7 @@ def remove_masquerade(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.remove_masquerade
     '''
@@ -447,7 +447,7 @@ def add_port(zone, port):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.add_port internal 443/tcp
     '''
@@ -465,7 +465,7 @@ def remove_port(zone, port):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.remove_port internal 443/tcp
     '''
@@ -480,7 +480,7 @@ def list_ports(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.list_ports
     '''
@@ -495,7 +495,7 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr=''):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.add_port_fwd public 80 443 tcp
     '''
@@ -521,7 +521,7 @@ def remove_port_fwd(zone, src, dest, proto='tcp'):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.remove_port_fwd public 80 443 tcp
     '''
@@ -543,7 +543,7 @@ def list_port_fwd(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.list_port_fwd public
     '''
@@ -570,7 +570,7 @@ def block_icmp(zone, icmp):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.block_icmp zone echo-reply
     '''
@@ -593,7 +593,7 @@ def allow_icmp(zone, icmp):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.allow_icmp zone echo-reply
     '''
@@ -616,7 +616,7 @@ def list_icmp_block(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewlld.list_icmp_block zone
     '''
