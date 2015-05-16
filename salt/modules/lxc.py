@@ -340,7 +340,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     if not config['master']:
         config = {}
     eth0 = {}
-    nic_opts = {'eth0': eth0}
+    nic_opts = {DEFAULT_NIC: eth0}
     bridge = vm_.get('bridge', search_lxc_bridge())
     if ip is None:
         nic_opts = None
@@ -559,6 +559,9 @@ def get_network_profile(name=None):
                     'lxc.nic has been deprecated, please configure LXC '
                     'network profiles under lxc.network_profile instead'
                 )
+
+    if name == DEFAULT_NIC and not net_profile:
+        net_profile = {DEFAULT_NIC: {}}
     return net_profile if net_profile is not None else {}
 
 
@@ -3693,7 +3696,7 @@ def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, 
             net_config.append(net_params)
     nic_opts = salt.utils.odict.OrderedDict()
     for params in net_config:
-        dev = params.get('lxc.network.name', 'eth0')
+        dev = params.get('lxc.network.name', DEFAULT_NIC)
         dev_opts = nic_opts.setdefault(dev, salt.utils.odict.OrderedDict())
         for param in params:
             opt = param.replace('lxc.network.', '')
