@@ -2835,20 +2835,20 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
         Optional. Specifies one or more datasets to include in the
         response. To specify more than one of these options on the URI,
         you must separate each option with a comma. Valid values are:
-            snapshots:
-                Specifies that snapshots should be included in the
-                enumeration. Snapshots are listed from oldest to newest in
-                the response.
-            metadata:
-                Specifies that blob metadata be returned in the response.
-            uncommittedblobs:
-                Specifies that blobs for which blocks have been uploaded,
-                but which have not been committed using Put Block List
-                (REST API), be included in the response.
-            copy:
-                Version 2012-02-12 and newer. Specifies that metadata
-                related to any current or previous Copy Blob operation
-                should be included in the response.
+        snapshots:
+            Specifies that snapshots should be included in the
+            enumeration. Snapshots are listed from oldest to newest in
+            the response.
+        metadata:
+            Specifies that blob metadata be returned in the response.
+        uncommittedblobs:
+            Specifies that blobs for which blocks have been uploaded,
+            but which have not been committed using Put Block List
+            (REST API), be included in the response.
+        copy:
+            Version 2012-02-12 and newer. Specifies that metadata
+            related to any current or previous Copy Blob operation
+            should be included in the response.
     delimiter:
         Optional. When the request includes this parameter, the operation
         returns a BlobPrefix element in the response body that acts as a
