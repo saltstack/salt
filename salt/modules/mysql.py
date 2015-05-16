@@ -1057,7 +1057,7 @@ def user_exists(user,
             qry += ' AND Password = \'\''
     elif password:
         qry += ' AND Password = PASSWORD(%(password)s)'
-        args['password'] = password
+        args['password'] = str(password)
     elif password_hash:
         qry += ' AND Password = %(password)s'
         args['password'] = password_hash
@@ -1169,7 +1169,7 @@ def user_create(user,
     args['host'] = host
     if password is not None:
         qry += ' IDENTIFIED BY %(password)s'
-        args['password'] = password
+        args['password'] = str(password)
     elif password_hash is not None:
         qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash

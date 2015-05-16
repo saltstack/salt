@@ -44,10 +44,9 @@ name after the Keystone profile name:
       - neutron: my_openstack_config neutron_networks
 '''
 
-# Import python libs
+# Import Python Libs
 from __future__ import absolute_import
 import logging
-
 
 # Import Salt Libs
 try:

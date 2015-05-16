@@ -1032,7 +1032,7 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # Remove lock, uid, gid and mode from kwargs if present
+    # Remove lock from kwargs if present
     lock = kwargs.pop('lock', False)
 
     if lock is True:
@@ -1044,6 +1044,19 @@ def fopen(*args, **kwargs):
             '\'salt.utils.fopen()\'.'
         )
         return flopen(*args, **kwargs)
+
+    # ensure 'binary' mode is always used on windows
+    if is_windows():
+        if len(args) > 1:
+            args = list(args)
+            if 'b' not in args[1]:
+                args[1] += 'b'
+        elif kwargs.get('mode', None):
+            if 'b' not in kwargs['mode']:
+                kwargs['mode'] += 'b'
+        else:
+            # the default is to read
+            kwargs['mode'] = 'rb'
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
@@ -1318,14 +1331,15 @@ def mkstemp(*args, **kwargs):
 
 def clean_kwargs(**kwargs):
     '''
-    Clean out the __pub* keys from the kwargs dict passed into the execution
-    module functions. The __pub* keys are useful for tracking what was used to
-    invoke the function call, but they may not be desierable to have if
-    passing the kwargs forward wholesale.
+    Return a dict without any of the __pub* keys (or any other keys starting
+    with a dunder) from the kwargs dict passed into the execution module
+    functions. These keys are useful for tracking what was used to invoke
+    the function call, but they may not be desierable to have if passing the
+    kwargs forward wholesale.
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):
-        if not key.startswith('__pub'):
+        if not key.startswith('__'):
             ret[key] = val
     return ret
 

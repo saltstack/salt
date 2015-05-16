@@ -28,6 +28,11 @@ from salt.ext.six.moves import range
 # Import third party libs
 try:
     import zmq
+    # TODO: cleanup
+    import zmq.eventloop.ioloop
+    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
     HAS_ZMQ = True
 except ImportError:
     # Running in local, zmq not needed
@@ -92,11 +97,6 @@ from salt.exceptions import (
 )
 
 
-# TODO: cleanup
-import zmq.eventloop.ioloop
-# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import tornado.gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
@@ -355,7 +355,8 @@ class SMinion(object):
             self.opts,
             self.opts['grains'],
             self.opts['id'],
-            self.opts['environment']
+            self.opts['environment'],
+            pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -601,7 +602,8 @@ class Minion(MinionBase):
             self.opts,
             self.opts['grains'],
             self.opts['id'],
-            self.opts['environment']
+            self.opts['environment'],
+            self.opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
@@ -1308,6 +1310,7 @@ class Minion(MinionBase):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv')
             ).compile_pillar()
         except SaltClientError:
             # Do not exit if a pillar refresh fails.
@@ -2455,7 +2458,8 @@ class ProxyMinion(Minion):
             opts,
             opts['grains'],
             opts['id'],
-            opts['environment']
+            opts['environment'],
+            pillarenv=opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
