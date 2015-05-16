@@ -3775,7 +3775,7 @@ def reconfigure(name,
             return profile_match
         return kw_overrides_match
     if nic_opts is not None and not network_profile:
-        network_profile = 'eth0'
+        network_profile = DEFAULT_NIC
 
     if autostart is not None:
         autostart = select('autostart', autostart)
