@@ -404,12 +404,11 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         if 'gateway' in ndata:
             gw = ndata['gateway']
             gateway = None
-    # only use a default bridge / gateway
-    # if we did not specified an ip
-    # using the salt cloud configuration style.
-    # On other cases, we should rely on settings provided by a
+    # only use a default bridge / gateway if we configured them
+    # via the legacy salt cloud configuration style.
+    # On other cases, we should rely on settings provided by the new
     # salt lxc network profile style configuration which can
-    # be overidden via the nic_opts dict.
+    # be also be overriden or a per interface basis via the nic_opts dict.
     if bridge:
         eth0['link'] = bridge
     if gateway:
