@@ -1016,7 +1016,9 @@ def init(name,
         list of dns servers to set in the container, default [] (no setting)
 
     seed
-        Seed the container with the minion config. Default: ``True``
+        Seed the container with the minion config.
+        Default: ``False`` directly from this function
+        Default: ``True`` from the runner
 
     install
         If salt-minion is not already installed, install it. Default: ``True``
@@ -1140,7 +1142,9 @@ def init(name,
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
     start_ = select('start', True)
     autostart = select('autostart', autostart)
-    seed = select('seed', True)
+    # on minions: set seed to False, but on the runner, the default
+    # is True
+    seed = select('seed', False)
     install = select('install', True)
     seed_cmd = select('seed_cmd')
     salt_config = select('config')
