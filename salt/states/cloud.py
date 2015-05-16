@@ -55,6 +55,15 @@ def _valid(name, comment='', changes=None):
             'comment': comment}
 
 
+def _get_instance(names):
+    # for some reason loader overwrites __opts__['test'] with default
+    # value of False, thus store and then load it again after action
+    test = __opts__.get('test', False)
+    instance = __salt__['cloud.action'](fun='show_instance', names=names)
+    __opts__['test'] = test
+    return instance
+
+
 def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
@@ -250,7 +259,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
         elif isinstance(unless, six.string_types):
             if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
-    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    instance = _get_instance([name])
     prov = str(next(six.iterkeys(instance)))
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
