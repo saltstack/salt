@@ -225,6 +225,10 @@ def _salt(fun, *args, **kw):
             if target in cret:
                 ret = cret[target]
                 break
+            # recent changes
+            elif 'data' in cret and 'outputter' in cret:
+                ret = cret['data']
+                break
             # special case, some answers may be crafted
             # to handle the unresponsivness of a specific command
             # which is also meaningful, e.g. a minion not yet provisioned
