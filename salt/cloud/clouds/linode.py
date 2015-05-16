@@ -8,7 +8,9 @@ The Linode cloud module is used to control access to the Linode VPS system
 Use of this module only requires the ``apikey`` parameter.
 
 :depends: linode-python >= 1.1.1
+
 OR
+
 :depends: apache-libcloud >= 0.13.2
 
 .. note::
