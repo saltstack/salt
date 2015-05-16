@@ -10,7 +10,7 @@ and possibly remote minion.
 In other words, Salt will connect to a minion, then from that minion:
 
 - Provision and configure a container for networking access
-- Use :ref:`saltify <config_saltify>` to deploy salt and re-attach to master
+- Use **lxc** and **config** module to deploy salt and re-attach to master
 
 Limitations
 ------------
@@ -61,7 +61,18 @@ Here are the options to configure your containers:
     ``target``
         Host minion id to install the lxc Container into
     ``profile``
-        Name of the profile containing the LXC configuration
+        Name of the profile containing the LXC configuration defaults
+    ``network_profile``
+        Name of the profile containing the LXC network configuration defaults
+    ``nic_opts``
+        Per interface new-style configuration options mappings::
+
+              eth0: {'mac': '00:16:3e:01:29:40',
+                            'gateway': None, (default)
+                            'link': 'br0', (default)
+                            'gateway': None, (default)
+                            'netmask': '', (default)
+                            'ip': '22.1.4.25'}}
 
     Container creation/clone options:
         Create a container by cloning:
