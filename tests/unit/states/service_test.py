@@ -116,7 +116,7 @@ class ServiceTestCase(TestCase):
                     ),
                     patch.dict(service.__opts__, {'test': True})
                 ):
-                    self.assertDictEqual(service.running("salt"), ret[3]),
+                    self.assertDictEqual(service.running("salt"), ret[3])
 
                 with contextlib.nested(
                     patch.dict(service.__opts__, {'test': False}),
