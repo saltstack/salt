@@ -277,12 +277,15 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
 
     # lot of custom init script wont or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__['service.status'](name)
+    before_toggle_status = __salt__['service.status'](name, sig)
     before_toggle_enable_status = __salt__['service.enabled'](name)
 
     # See if the service is already running
-    if __salt__['service.status'](name, sig):
+    if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
+        if __opts__['test']:
+            ret['result'] = None
+            return ret
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
             return ret
@@ -363,14 +366,18 @@ def dead(name, enable=None, sig=None, **kwargs):
 
     # lot of custom init script wont or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
-    before_toggle_status = __salt__['service.status'](name)
+    before_toggle_status = __salt__['service.status'](name, sig)
     before_toggle_enable_status = __salt__['service.enabled'](name)
-    if not __salt__['service.status'](name, sig):
+    if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
-        if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
-        elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
+        if not __opts__['test']:
+            if enable is True and not before_toggle_enable_status:
+                ret.update(_enable(name, None, **kwargs))
+            elif enable is False and before_toggle_enable_status:
+                ret.update(_disable(name, None, **kwargs))
+            return ret
+        else:
+            ret['result'] = None
         return ret
 
     if __opts__['test']:
