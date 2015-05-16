@@ -49,6 +49,7 @@ __func_alias__ = {
 }
 
 DEFAULT_NIC = 'eth0'
+DEFAULT_BR = 'br0'
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -99,6 +100,72 @@ def _ip_sort(ip):
     elif '::' in ip:
         idx = '100'
     return '{0}___{1}'.format(idx, ip)
+
+
+def search_lxc_bridges():
+    '''
+    Search which bridges are potentially available as LXC bridges
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.search_lxc_bridges
+
+    '''
+    bridges = __context__.get('lxc.bridges', None)
+    # either match not yet called or no bridges were found
+    # to handle the case where lxc was not installed on the first
+    # call
+    if not bridges:
+        bridges = set()
+        running_bridges = set()
+        bridges.add(DEFAULT_BR)
+        try:
+            output = __salt__['cmd.run_all']('brctl show')
+            for line in output['stdout'].splitlines()[1:]:
+                if not line.startswith(' '):
+                    running_bridges.add(line.split()[0].strip())
+        except (SaltInvocationError, CommandExecutionError):
+            pass
+        for ifc, ip in six.iteritems(
+            __grains__.get('ip_interfaces', {})
+        ):
+            if ifc in running_bridges:
+                bridges.add(ifc)
+            elif os.path.exists(
+                'a/sys/devices/virtual/net/{0}/bridge'.format(ifc)
+            ):
+                bridges.add(ifc)
+        bridges = list(bridges)
+        # if we found interfaces that have lxc in their names
+        # we filter them as being the potential lxc bridges
+        # we also try to default on br0 on other cases
+
+        def sort_bridges(a):
+            pref = 'z'
+            if 'lxc' in a:
+                pref = 'a'
+            elif 'br0' == a:
+                pref = 'c'
+            return '{0}_{1}'.format(pref, a)
+        bridges.sort(key=sort_bridges)
+        __context__['lxc.bridges'] = bridges
+    return bridges
+
+
+def search_lxc_bridge():
+    '''
+    Search the first bridge which is potentially available as LXC bridge
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.search_lxc_bridge
+
+    '''
+    return search_lxc_bridges()[0]
 
 
 def cloud_init_interface(name, vm_=None, **kwargs):
@@ -251,7 +318,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     ip = vm_.get('ip', None)
     mac = vm_.get('mac', None)
     netmask = vm_.get('netmask', '24')
-    bridge = vm_.get('bridge', 'lxcbr0')
+    bridge = vm_.get('bridge', search_lxc_bridge())
     gateway = vm_.get('gateway', 'auto')
     unconditional_install = vm_.get('unconditional_install', False)
     force_install = vm_.get('force_install', True)
@@ -274,7 +341,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         config = {}
     eth0 = {}
     nic_opts = {'eth0': eth0}
-    bridge = vm_.get('bridge', 'lxcbr0')
+    bridge = vm_.get('bridge', search_lxc_bridge())
     if ip is None:
         nic_opts = None
     else:
@@ -293,7 +360,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         if gw:
             ethx['gateway'] = gw
             vm_['gateway'] = gateway = None
-        ethx['link'] = iopts.get('link', 'br0')
+        ethx['link'] = iopts.get('link', search_lxc_bridge())
         ethx['ipv4'] = iopts['ip']
         nm = iopts.get('netmask', '')
         if nm:
@@ -585,7 +652,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                     'test': not link,
                     'value': link,
                     'old': old_if.get('lxc.network.link'),
-                    'default': 'br0'}),
+                    'default': search_lxc_bridge()}),
                 ('lxc.network.hwaddr', {
                     'test': not mac,
                     'value': mac,
