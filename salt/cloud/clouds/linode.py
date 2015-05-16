@@ -22,10 +22,10 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 .. code-block:: yaml
 
-my-linode-config:
-  # Linode account api key
-  apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-  provider: linode
+    my-linode-config:
+      # Linode account api key
+      apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+      provider: linode
 
 When used with linode-python, this provider supports cloning existing Linodes.
 To clone, add a profile with a ``clonefrom`` key, and a ``script_args: -C``.
