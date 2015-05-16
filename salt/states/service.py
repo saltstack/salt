@@ -100,6 +100,8 @@ def _enable(name, started, result=True, **kwargs):
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is running').format(name)
         elif started is None:
+            # always be sure in this case to reset the changes dict
+            ret['changes'] = {}
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is in the desired state').format(name)
         else:
@@ -176,6 +178,8 @@ def _disable(name, started, result=True, **kwargs):
             ret['comment'] = ('Service {0} is already disabled,'
                               ' and is running').format(name)
         elif started is None:
+            # always be sure in this case to reset the changes dict
+            ret['changes'] = {}
             ret['comment'] = ('Service {0} is already disabled,'
                               ' and is in the desired state').format(name)
         else:
@@ -271,13 +275,21 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if not _available(name, ret):
         return ret
 
+    # lot of custom init script wont or mis implement the status
+    # command, so it is just an indicator but can not be fully trusted
+    before_toggle_status = __salt__['service.status'](name, sig)
+    before_toggle_enable_status = __salt__['service.enabled'](name)
+
     # See if the service is already running
-    if __salt__['service.status'](name, sig):
+    if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
-        if enable is True:
+        if __opts__['test']:
+            ret['result'] = None
+            return ret
+        if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
             return ret
-        elif enable is False:
+        elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
             return ret
         else:
@@ -289,9 +301,9 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    ret['changes'] = {name: __salt__['service.start'](name)}
+    func_ret = __salt__['service.start'](name)
 
-    if not ret['changes'][name]:
+    if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
@@ -304,6 +316,15 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
             ret.update(_enable(name, True, **kwargs))
         elif enable is False:
             ret.update(_disable(name, True, **kwargs))
+
+    # only force a change state if we have explicitly detected them
+    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_enable_status = __salt__['service.enabled'](name)
+    if (
+        (before_toggle_enable_status != after_toggle_enable_status) or
+        (before_toggle_status != after_toggle_status)
+    ) and not ret.get('changes', {}):
+        ret['changes'][name] = func_ret
 
     if init_delay:
         time.sleep(init_delay)
@@ -343,12 +364,20 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = True
         return ret
 
-    if not __salt__['service.status'](name, sig):
+    # lot of custom init script wont or mis implement the status
+    # command, so it is just an indicator but can not be fully trusted
+    before_toggle_status = __salt__['service.status'](name, sig)
+    before_toggle_enable_status = __salt__['service.enabled'](name)
+    if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
-        if enable is True:
-            ret.update(_enable(name, None, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, None, **kwargs))
+        if not __opts__['test']:
+            if enable is True and not before_toggle_enable_status:
+                ret.update(_enable(name, None, **kwargs))
+            elif enable is False and before_toggle_enable_status:
+                ret.update(_disable(name, None, **kwargs))
+            return ret
+        else:
+            ret['result'] = None
         return ret
 
     if __opts__['test']:
@@ -356,9 +385,9 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
 
-    ret['changes'] = {name: __salt__['service.stop'](name)}
-
-    if not ret['changes'][name]:
+    # be sure to stop, in case we mis detected in the check
+    func_ret = __salt__['service.stop'](name)
+    if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
@@ -371,6 +400,14 @@ def dead(name, enable=None, sig=None, **kwargs):
             ret.update(_enable(name, False, **kwargs))
         elif enable is False:
             ret.update(_disable(name, False, **kwargs))
+    # only force a change state if we have explicitly detected them
+    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_enable_status = __salt__['service.enabled'](name)
+    if (
+        (before_toggle_enable_status != after_toggle_enable_status) or
+        (before_toggle_status != after_toggle_status)
+    ) and not ret.get('changes', {}):
+        ret['changes'][name] = func_ret
     return ret
 
 
