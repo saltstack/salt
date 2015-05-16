@@ -168,6 +168,26 @@ def search_lxc_bridge():
     return search_lxc_bridges()[0]
 
 
+def _get_salt_config(config, **kwargs):
+    if not config:
+        config = kwargs.get('minion', {})
+    if not config:
+        config = {}
+    config.setdefault('master',
+                      kwargs.get('master',
+                              __opts__.get('master',
+                                           __opts__['id'])))
+    config.setdefault(
+        'master_port',
+        kwargs.get('master_port',
+                __opts__.get('master_port',
+                             __opts__.get('ret_port',
+                                          __opts__.get('4506')))))
+    if not config['master']:
+        config = {}
+    return config
+
+
 def cloud_init_interface(name, vm_=None, **kwargs):
     '''
     Interface between salt.cloud.lxc driver and lxc.init
@@ -342,23 +362,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     gateway = vm_.get('gateway', None)
     unconditional_install = vm_.get('unconditional_install', False)
     force_install = vm_.get('force_install', True)
-    config = vm_.get('config', {})
-    if not config:
-        config = vm_.get('minion', {})
-    if not config:
-        config = {}
-    config.setdefault('master',
-                      vm_.get('master',
-                              __opts__.get('master',
-                                           __opts__['id'])))
-    config.setdefault(
-        'master_port',
-        vm_.get('master_port',
-                __opts__.get('master_port',
-                             __opts__.get('ret_port',
-                                          __opts__.get('4506')))))
-    if not config['master']:
-        config = {}
+    config = _get_salt_config(vm_.get('config', {}), **vm_)
     default_nic = vm_.get('default_nic', DEFAULT_NIC)
     # do the interface with lxc.init mainly via nic_opts
     # to avoid extra and confusing extra use cases.
@@ -1155,6 +1159,12 @@ def init(name,
         Optional config parameters. By default, the id is set to
         the name of the container.
 
+    master
+        salt master (default to minion's master)
+
+    master_port
+        salt master port (default to minion's master port)
+
     pub_key
         Explicit public key to preseed the minion with (optional).
         This can be either a filepath or a string representing the key
@@ -1273,7 +1283,8 @@ def init(name,
     seed = select('seed', True)
     install = select('install', True)
     seed_cmd = select('seed_cmd')
-    salt_config = select('config')
+    salt_config = _get_salt_config(
+        copy.deepcopy(select('config', {})), **kwargs)
     approve_key = select('approve_key', True)
     clone_from = select('clone_from')
     if password and password_encrypted is None:
