@@ -31,6 +31,16 @@ __func_alias__ = {
 }
 
 
+def _sanitized_kw(kwargs):
+    kw = {}
+    if kwargs:
+        for i, val in six.iteritems(kwargs):
+            if isinstance(i, six.string_types) and i.startswith('__pub'):
+                continue
+            kw[i] = val
+    return kw
+
+
 def _do(name, fun):
     '''
     Invoke a function in the lxc module with no args
@@ -257,7 +267,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     cmds = []
     for name in names:
         args = [name]
-        kw = kwargs
+        kw = _sanitized_kw(kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
