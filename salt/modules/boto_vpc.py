@@ -359,7 +359,7 @@ def get_resource_id(resource, name=None, resource_id=None, region=None,
 
     .. versionadded:: Beryllium
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -383,7 +383,7 @@ def resource_exists(resource, name=None, resource_id=None, tags=None,
 
     .. versionadded:: Beryllium
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -477,7 +477,7 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
     '''
     Given VPC properties, return the VPC id if a match is found.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -500,7 +500,7 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
     Returns True if the given VPC ID exists and returns False if the given
     VPC ID does not exist.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -530,7 +530,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
     Returns {created: true} if the VPC was created and returns
     {created: False} if the VPC was not created.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -567,7 +567,7 @@ def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
     Returns {deleted: true} if the VPC was deleted and returns
     {deleted: false} if the VPC was not deleted.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -619,7 +619,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
     .. versionchanged:: Beryllium
         Added vpc_name argument
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -664,7 +664,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
 
     .. versionadded:: Beryllium
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -757,7 +757,7 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     .. versionchanged:: Beryllium
         Added vpc_name argument
 
-    CLI examples:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -790,7 +790,7 @@ def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
     .. versionchanged:: Beryllium
         Added subnet_name argument
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -919,7 +919,7 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
 
     .. versionadded:: Beryllium
 
-    CLI examples:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1015,7 +1015,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
     returns False if the internet gateways was not created.
 
     .. versionadded:: Beryllium
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1055,7 +1055,7 @@ def delete_internet_gateway(internet_gateway_id=None,
 
     .. versionadded:: Beryllium
 
-    CLI examples:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1109,7 +1109,7 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn,
     Returns the customer gateway id if the customer gateway was created and
     returns False if the customer gateway was not created.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1134,7 +1134,7 @@ def delete_customer_gateway(customer_gateway_id=None, customer_gateway_name=None
     .. versionchanged:: Beryllium
         Added customer_gateway_name argument
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1183,7 +1183,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
     .. versionchanged:: Beryllium
         Added vpc_name and vpc_id arguments
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1224,7 +1224,7 @@ def delete_dhcp_options(dhcp_options_id=None, dhcp_options_name=None,
 
     .. versionadded:: Beryllium
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1246,7 +1246,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
 
     Returns True if the DHCP options record were associated and returns False if the DHCP options record was not associated.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1283,7 +1283,7 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
 
     Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
