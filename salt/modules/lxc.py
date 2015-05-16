@@ -215,6 +215,41 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     priv_key
         private key to preseed the minion with.
         Can be the keycontent or a filepath
+    network_profile
+        salt lxc network profile selection
+    nic_opts
+        per interface settings compatibles with
+        network profile (ipv4/ipv6/link/gateway/mac/netmask)
+
+        eg::
+
+              - {'eth0': {'mac': '00:16:3e:01:29:40',
+                          'gateway': None, (default)
+                          'link': 'br0', (default)
+                          'gateway': None, (default)
+                          'netmask': '', (default)
+                          'ip': '22.1.4.25'}}
+    unconditional_install
+        given to lxc.bootstrap (see relative doc)
+    force_install
+        given to lxc.bootstrap (see relative doc)
+    config
+        any extra argument for the salt minion config
+    dnsservers
+        dns servers to set inside the container
+    autostart
+        autostart the container at boot time
+    password
+        administrative password for the container
+    users
+        administrative users for the container
+        default: [root] and [root, ubuntu] on ubuntu
+    default_nic
+        name of the first interface, you should
+        really not override this
+
+    Legacy but still supported options:
+
     ip
         ip for the primary nic
     mac
@@ -241,21 +276,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                  'link': 'br0', (default)
                  'netmask': '', (default)
                  'ip': '22.1.4.25'}
-    unconditional_install
-        given to lxc.bootstrap (see relative doc)
-    force_install
-        given to lxc.bootstrap (see relative doc)
-    config
-        any extra argument for the salt minion config
-    dnsservers
-        dns servers to set inside the container
-    autostart
-        autostart the container at boot time
-    password
-        administrative password for the container
-    users
-        administrative users for the container
-        default: [root] and [root, ubuntu] on ubuntu
 
     CLI Example:
 
@@ -287,8 +307,14 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         default_template = 'ubuntu'
     image = vm_.get('image', profile.get('template',
                                          default_template))
-    vgname = vm_.get('vgname', None)
     backing = vm_.get('backing', 'dir')
+    if image:
+        profile['template'] = image
+    vgname = vm_.get('vgname', None)
+    if vgname:
+        profile['vgname'] = vgname
+    if backing:
+        profile['backing'] = backing
     snapshot = vm_.get('snapshot', False)
     autostart = bool(vm_.get('autostart', True))
     dnsservers = vm_.get('dnsservers', [])
@@ -303,23 +329,17 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     size = vm_.get('size', '20G')
     script = vm_.get('script', None)
     script_args = vm_.get('script_args', None)
-    if image:
-        profile['template'] = image
-    if vgname:
-        profile['vgname'] = vgname
-    if backing:
-        profile['backing'] = backing
     users = vm_.get('users', None)
     if users is None:
         users = []
     ssh_username = vm_.get('ssh_username', None)
     if ssh_username and (ssh_username not in users):
         users.append(ssh_username)
-    ip = vm_.get('ip', None)
-    mac = vm_.get('mac', None)
+    net_profile = vm_.get('network_profile', _marker)
+    nic_opts = kwargs.pop('nic_opts', None)
     netmask = vm_.get('netmask', '24')
-    bridge = vm_.get('bridge', search_lxc_bridge())
-    gateway = vm_.get('gateway', 'auto')
+    bridge = vm_.get('bridge', None)
+    gateway = vm_.get('gateway', None)
     unconditional_install = vm_.get('unconditional_install', False)
     force_install = vm_.get('force_install', True)
     config = vm_.get('config', {})
@@ -339,29 +359,51 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                                           __opts__.get('4506')))))
     if not config['master']:
         config = {}
-    eth0 = {}
-    nic_opts = {DEFAULT_NIC: eth0}
-    bridge = vm_.get('bridge', search_lxc_bridge())
-    if ip is None:
-        nic_opts = None
-    else:
+    default_nic = vm_.get('default_nic', DEFAULT_NIC)
+    # do the interface with lxc.init mainly via nic_opts
+    # to avoid extra and confusing extra use cases.
+    if not isinstance(nic_opts, dict):
+        nic_opts = salt.utils.odict.OrderedDict()
+    # have a reference to the default nic
+    eth0 = nic_opts.setdefault(default_nic,
+                               salt.utils.odict.OrderedDict())
+    # lxc config is based of ifc order, be sure to use odicts.
+    if not isinstance(nic_opts, salt.utils.odict.OrderedDict):
+        bnic_opts = salt.utils.odict.OrderedDict()
+        bnic_opts.update(nic_opts)
+        nic_opts = bnic_opts
+    gw = None
+    # legacy salt.cloud scheme for network interfaces settings support
+    bridge = vm_.get('bridge', None)
+    ip = vm_.get('ip', None)
+    mac = vm_.get('mac', None)
+    if ip:
         fullip = ip
         if netmask:
             fullip += '/{0}'.format(netmask)
         eth0['ipv4'] = fullip
         if mac is not None:
             eth0['mac'] = mac
-        if bridge:
-            eth0['link'] = bridge
     for ix, iopts in enumerate(vm_.get("additional_ips", [])):
         ifh = "eth{0}".format(ix+1)
         ethx = nic_opts.setdefault(ifh, {})
-        gw = iopts.get('gateway', None)
-        if gw:
-            ethx['gateway'] = gw
-            vm_['gateway'] = gateway = None
-        ethx['link'] = iopts.get('link', search_lxc_bridge())
-        ethx['ipv4'] = iopts['ip']
+        if gw is None:
+            gw = iopts.get('gateway', ethx.get('gateway', None))
+            if gw:
+                # only one and only one default gateway is allowed !
+                eth0.pop('gateway', None)
+                gateway = None
+                # even if the gateway if on default "eth0" nic
+                # and we popped it will work
+                # as we reinject or set it here.
+                ethx['gateway'] = gw
+        elink = iopts.get('link', ethx.get('link', None))
+        if elink:
+            ethx['link'] = elink
+        # allow dhcp
+        aip = iopts.get('ipv4', iopts.get('ip', None))
+        if aip:
+            ethx['ipv4'] = aip
         nm = iopts.get('netmask', '')
         if nm:
             ethx['ipv4'] += '/{0}'.format(nm)
@@ -370,8 +412,25 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                 ethx['mac'] = iopts[i]
                 break
         if 'mac' not in ethx:
-            raise ValueError('No mac for {0}'.format(ifh))
-    gateway = vm_.get('gateway', 'auto')
+            ethx['mac'] = salt.utils.gen_mac()
+    # last round checking for unique gateway and such
+    gw = None
+    for ethx in [a for a in nic_opts]:
+        ndata = nic_opts[ethx]
+        if gw:
+            ndata.pop('gateway', None)
+        if 'gateway' in ndata:
+            gw = ndata['gateway']
+            gateway = None
+    # only use a default bridge / gateway if we configured them
+    # via the legacy salt cloud configuration style.
+    # On other cases, we should rely on settings provided by the new
+    # salt lxc network profile style configuration which can
+    # be also be overriden or a per interface basis via the nic_opts dict.
+    if bridge:
+        eth0['link'] = bridge
+    if gateway:
+        eth0['gateway'] = gateway
     #
     lxc_init_interface = {}
     lxc_init_interface['name'] = name
@@ -379,8 +438,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['memory'] = vm_.get('memory', 0)  # nolimit
     lxc_init_interface['pub_key'] = pub_key
     lxc_init_interface['priv_key'] = priv_key
-    lxc_init_interface['bridge'] = bridge
-    lxc_init_interface['gateway'] = gateway
     lxc_init_interface['nic_opts'] = nic_opts
     for clone_from in ['clone_from', 'clone', 'from_container']:
         # clone_from should default to None if not available
@@ -405,8 +462,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
     lxc_init_interface['password_encrypted'] = password_encrypted
-    lxc_init_interface.setdefault('network_profile',
-                                  vm_.get('network_profile', _marker))
+    # be sure not to let objects goes inside the return
+    # as this return will be msgpacked for use in the runner !
+    if net_profile is not _marker:
+        lxc_init_interface['network_profile'] = net_profile
     for i in ['cpu', 'cpuset', 'cpushare']:
         if vm_.get(i, None):
             lxc_init_interface[i] = vm_[i]
