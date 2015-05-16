@@ -2641,7 +2641,9 @@ def set_dns(name, dnsservers=None, searchdomains=None):
 
 def _needs_install(name):
     ret = 0
-    has_minion = retcode(name, "command -v salt-minion")
+    has_minion = retcode(name,
+                         'which salt-minion',
+                         ignore_retcode=True)
     # we assume that installing is when no minion is running
     # but testing the executable presence is not enougth for custom
     # installs where the bootstrap can do much more than installing
@@ -2755,7 +2757,9 @@ def bootstrap(name,
         needs_install = _needs_install(name)
     else:
         needs_install = True
-    seeded = retcode(name, 'test -e \'{0}\''.format(SEED_MARKER)) == 0
+    seeded = retcode(name,
+                     'test -e \'{0}\''.format(SEED_MARKER),
+                     ignore_retcode=True) == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
         ret = True
@@ -2849,8 +2853,12 @@ def attachable(name):
         _ensure_exists(name)
         # Can't use run() here because it uses attachable() and would
         # endlessly recurse, resulting in a traceback
+        log.debug('Checking if LXC container {0} is attachable'.format(name))
         cmd = 'lxc-attach --clear-env -n {0} -- /usr/bin/env'.format(name)
-        result = __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+        result = __salt__['cmd.retcode'](cmd,
+                                         python_shell=False,
+                                         output_loglevel='quiet',
+                                         ignore_retcode=True) == 0
         __context__['lxc.attachable'] = result
     return __context__['lxc.attachable']
 
