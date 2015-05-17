@@ -749,8 +749,7 @@ class MWorker(multiprocessing.Process):
             self.key,
             )
         self.aes_funcs = AESFuncs(self.opts)
-        if 'Crypto.Random' in sys.modules:
-            Crypto.Random.atfork()
+        salt.utils.reinit_crypto()
         self.__bind()
 
 

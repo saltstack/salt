@@ -32,6 +32,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 import salt.syspaths
+from salt.utils import reinit_crypto
 from salt.utils import context
 from salt.ext.six import string_types
 from salt.template import compile_template
@@ -2236,8 +2237,7 @@ def run_parallel_map_providers_query(data, queue=None):
     This function will be called from another process when building the
     providers map.
     '''
-    if 'Crypto.Random' in sys.modules:
-        Crypto.Random.atfork()
+    reinit_crypto()
 
     cloud = Cloud(data['opts'])
     try:
