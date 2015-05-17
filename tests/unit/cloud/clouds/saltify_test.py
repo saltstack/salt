@@ -28,7 +28,8 @@ class SaltifyTestCase(TestCase):
         Test if deployment fails. This is the most basic test as saltify doesn't contain much logic
         '''
         vm = {'deploy':  False,
-              'provider': 'saltify'
+              'provider': 'saltify',
+              'name': 'dummy'
              }
         self.assertTrue(saltify.create(vm)['Error']['No Deploy'])
 
