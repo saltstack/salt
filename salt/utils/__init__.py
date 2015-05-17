@@ -347,10 +347,8 @@ def reinit_crypto():
         child processes after using os.fork()
 
     '''
-    ret = None
     if HAS_CRYPTO:
-        ret = Crypto.Random.atfork()
-    return ret
+        Crypto.Random.atfork()
 
 
 def daemonize(redirect_out=True):
