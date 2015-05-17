@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import socket
+import platform
 
 # Import salt libs
 from salt.ext.six import string_types
@@ -44,7 +45,10 @@ def __ip_addr(addr, address_family=socket.AF_INET):
 
     # Verify that IP address is valid
     try:
-        socket.inet_pton(address_family, ip)
+        if platform.system().lower() == "windows":
+            socket.inet_aton(ip)
+        else:
+            socket.inet_pton(address_family, ip)
     except socket.error:
         return False
 
