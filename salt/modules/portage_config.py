@@ -277,7 +277,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
             new_flags = list(flags)
         else:
             atom = string.strip().split()[0]
-            new_flags = portage.dep.strip_empty(string.strip().split(' '))[1:]
+            new_flags = filter(None,string.strip().split(' '))[1:]
             if '/' not in atom:
                 atom = _p_to_cp(atom)
                 string = '{0} {1}'.format(atom, ' '.join(new_flags))
