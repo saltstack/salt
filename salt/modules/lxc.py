@@ -2739,6 +2739,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     script = '/sbin/{0}_dns.sh'.format(rstr)
     DNS_SCRIPT = "\n".join([
         # 'set -x',
+        '#!/usr/bin/env bash',
         'if [ -h /etc/resolv.conf ];then',
         ' if [ "x$(readlink /etc/resolv.conf)"'
         ' = "x../run/resolvconf/resolv.conf" ];then',
