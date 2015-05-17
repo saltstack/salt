@@ -67,6 +67,7 @@ def create(vm_):
 
     return ret
 
+
 def get_configured_provider():
     '''
     Return the first configured instance.
