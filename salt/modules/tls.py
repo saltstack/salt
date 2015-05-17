@@ -47,7 +47,9 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    if HAS_SSL and LooseVersion(OpenSSL_version) < LooseVersion('0.14'):
+    if HAS_SSL and OpenSSL_version >= LooseVersion('0.14'):
+        if OpenSSL_version <= LooseVersion('0.15'):
+            log.warn('You should upgrade pyOpenSSL to at least 0.15.1')
         # never EVER reactivate this code, this has been done too many times.
         # not having configured a cert path in the configuration does not
         # mean that users cant use this module as we provide methods
@@ -59,7 +61,8 @@ def __virtual__():
         #     return False
         return True
     else:
-        return False, ['PyOpenSSL version 0.14 or later  must be installed before '
+        return False, ['PyOpenSSL version 0.14 or later'
+                       ' must be installed before '
                        ' this module can be used.']
 
 
