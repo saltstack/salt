@@ -1787,6 +1787,9 @@ def is_public_ip(ip):
     '''
     if ':' in ip:
         # ipv6
+        if ip.startswith('fe80:'):
+            # ipv6 link local
+            return False
         return True
     addr = ip_to_int(ip)
     if addr > 167772160 and addr < 184549375:
