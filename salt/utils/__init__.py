@@ -43,6 +43,13 @@ from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
 # Try to load pwd, fallback to getpass if unsuccessful
+# Import 3rd-party libs
+try:
+    import Crypto.Random
+    HAS_CRYPTO = True
+except ImportError:
+    HAS_CRYPTO = False
+
 try:
     import pwd
 except ImportError:
@@ -330,6 +337,22 @@ def get_specific_user():
     return user
 
 
+def reinit_crypto():
+    '''
+    When a fork arrises, pycrypto needs to reinit
+    From its doc::
+
+        Caveat: For the random number generator to work correctly,
+        you must call Random.atfork() in both the parent and
+        child processes after using os.fork()
+
+    '''
+    ret = None
+    if HAS_CRYPTO:
+        ret = Crypto.Random.atfork()
+    return ret
+
+
 def daemonize(redirect_out=True):
     '''
     Daemonize a process
@@ -338,6 +361,7 @@ def daemonize(redirect_out=True):
         pid = os.fork()
         if pid > 0:
             # exit first parent
+            reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
@@ -355,6 +379,7 @@ def daemonize(redirect_out=True):
     try:
         pid = os.fork()
         if pid > 0:
+            reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
@@ -363,6 +388,8 @@ def daemonize(redirect_out=True):
             )
         )
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    reinit_crypto()
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
