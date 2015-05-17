@@ -1283,8 +1283,7 @@ def init(name,
     seed = select('seed', True)
     install = select('install', True)
     seed_cmd = select('seed_cmd')
-    salt_config = _get_salt_config(
-        copy.deepcopy(select('config', {})), **kwargs)
+    salt_config = _get_salt_config(config, **kwargs)
     approve_key = select('approve_key', True)
     clone_from = select('clone_from')
     if password and password_encrypted is None:
