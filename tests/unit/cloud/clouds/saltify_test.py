@@ -16,6 +16,7 @@ from salt.cloud.clouds import saltify
 saltify.__opts__ = {}
 saltify.__opts__['providers'] = {}
 
+
 class SaltifyTestCase(TestCase):
     '''
     Test cases for salt.cloud.clouds.saltify
@@ -30,6 +31,7 @@ class SaltifyTestCase(TestCase):
               'provider': 'saltify'
              }
         self.assertTrue(saltify.create(vm)['Error']['No Deploy'])
+
 
 if __name__ == '__main__':
     from integration import run_tests
