@@ -1834,6 +1834,12 @@ def is_public_ip(ip):
     '''
     Determines whether an IP address falls within one of the private IP ranges
     '''
+    if ':' in ip:
+        # ipv6
+        if ip.startswith('fe80:'):
+            # ipv6 link local
+            return False
+        return True
     addr = ip_to_int(ip)
     if addr > 167772160 and addr < 184549375:
         # 10.0.0.0/24
