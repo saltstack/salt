@@ -190,10 +190,17 @@ def _get_serv(ret=None, commit=False):
     '''
     _options = _get_options(ret)
 
+    connect = True
     if __context__ and 'mysql_returner_conn' in __context__:
-        log.debug('Reusing MySQL connection pool')
-        conn = __context__['mysql_returner_conn']
-    else:
+        try:
+            log.debug('Trying to reuse MySQL connection pool')
+            conn = __context__['mysql_returner_conn']
+            conn.ping()
+            connect = False
+        except MySQLdb.connections.OperationalError as exc:
+            log.debug('OperationalError on ping: {}'.format(exc))
+
+    if connect:
         log.debug('Generating new MySQL connection pool')
         try:
             # An empty ssl_options dictionary passed to MySQLdb.connect will
