@@ -5,9 +5,9 @@ Connection module for Amazon Cloud Formation
 .. versionadded:: Beryllium
 
 :configuration: This module accepts explicit AWS credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
-credentials are then automatically obtained from AWS API and no further
-configuration is necessary. More Information available at:
+    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    credentials are then automatically obtained from AWS API and no further
+    configuration is necessary. More Information available at:
 
     .. code-block:: text
 
