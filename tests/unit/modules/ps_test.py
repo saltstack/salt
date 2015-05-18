@@ -16,7 +16,7 @@ HAS_PSUTIL = ps.__virtual__()
 HAS_PSUTIL_VERSION = False
 
 if HAS_PSUTIL:
-    import psutil
+    import salt.utils.psutil_compat as psutil
     from collections import namedtuple
 
     PSUTIL2 = psutil.version_info >= (2, 0)
@@ -51,7 +51,7 @@ else:
      STUB_USER) = [None for val in range(9)]
 
 STUB_PID_LIST = [0, 1, 2, 3]
-MOCK_PROC = mocked_proc = MagicMock('psutil.Process')
+MOCK_PROC = mocked_proc = MagicMock('salt.utils.psutil_compat.Process')
 
 try:
     import utmp  # pylint: disable=W0611
@@ -79,59 +79,59 @@ class PsTestCase(TestCase):
             MOCK_PROC.name = 'test_mock_proc'
             MOCK_PROC.pid = 9999999999
 
-    @patch('psutil.get_pid_list', new=MagicMock(return_value=STUB_PID_LIST))
+    @patch('salt.utils.psutil_compat.pids', new=MagicMock(return_value=STUB_PID_LIST))
     def test_get_pid_list(self):
         self.assertListEqual(STUB_PID_LIST, ps.get_pid_list())
 
-    @patch('psutil.Process')
+    @patch('salt.utils.psutil_compat.Process')
     def test_kill_pid(self, send_signal_mock):
         ps.kill_pid(0, signal=999)
         self.assertEqual(send_signal_mock.call_args, call(0))
 
-    @patch('psutil.Process.send_signal')
-    @patch('psutil.process_iter', new=MagicMock(return_value=[MOCK_PROC]))
+    @patch('salt.utils.psutil_compat.Process.send_signal')
+    @patch('salt.utils.psutil_compat.process_iter', new=MagicMock(return_value=[MOCK_PROC]))
     def test_pkill(self, send_signal_mock):
         mocked_proc.send_signal = MagicMock()
         test_signal = 1234
         ps.pkill(_get_proc_name(mocked_proc), signal=test_signal)
         self.assertEqual(mocked_proc.send_signal.call_args, call(test_signal))
 
-    @patch('psutil.process_iter', new=MagicMock(return_value=[MOCK_PROC]))
+    @patch('salt.utils.psutil_compat.process_iter', new=MagicMock(return_value=[MOCK_PROC]))
     def test_pgrep(self):
         self.assertIn(_get_proc_pid(MOCK_PROC), ps.pgrep(_get_proc_name(MOCK_PROC)))
 
-    @patch('psutil.cpu_percent', new=MagicMock(return_value=1))
+    @patch('salt.utils.psutil_compat.cpu_percent', new=MagicMock(return_value=1))
     def test_cpu_percent(self):
         self.assertEqual(ps.cpu_percent(), 1)
 
-    @patch('psutil.cpu_times', new=MagicMock(return_value=STUB_CPU_TIMES))
+    @patch('salt.utils.psutil_compat.cpu_times', new=MagicMock(return_value=STUB_CPU_TIMES))
     def test_cpu_times(self):
         self.assertDictEqual({'idle': 4, 'nice': 2, 'system': 3, 'user': 1}, ps.cpu_times())
 
     @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
-    @patch('psutil.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
+    @patch('salt.utils.psutil_compat.virtual_memory', new=MagicMock(return_value=STUB_VIRT_MEM))
     def test_virtual_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'available': 500, 'percent': 50, 'free': 500},
                              ps.virtual_memory())
 
     @skipIf(HAS_PSUTIL_VERSION is False, 'psutil 0.6.0 or greater is required for this test')
-    @patch('psutil.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
+    @patch('salt.utils.psutil_compat.swap_memory', new=MagicMock(return_value=STUB_SWAP_MEM))
     def test_swap_memory(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500, 'sin': 0, 'sout': 0},
                              ps.swap_memory())
 
-    @patch('psutil.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
+    @patch('salt.utils.psutil_compat.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
     def test_disk_partitions(self):
         self.assertDictEqual(
             {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
              'fstype': 'hfs'},
             ps.disk_partitions()[0])
 
-    @patch('psutil.disk_usage', new=MagicMock(return_value=STUB_DISK_USAGE))
+    @patch('salt.utils.psutil_compat.disk_usage', new=MagicMock(return_value=STUB_DISK_USAGE))
     def test_disk_usage(self):
         self.assertDictEqual({'used': 500, 'total': 1000, 'percent': 50, 'free': 500}, ps.disk_usage('DUMMY_PATH'))
 
-    @patch('psutil.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
+    @patch('salt.utils.psutil_compat.disk_partitions', new=MagicMock(return_value=[STUB_DISK_PARTITION]))
     def test_disk_partition_usage(self):
         self.assertDictEqual(
             {'device': '/dev/disk0s2', 'mountpoint': '/', 'opts': 'rw,local,rootfs,dovolfs,journaled,multilabel',
@@ -149,26 +149,26 @@ class PsTestCase(TestCase):
     ## Should only be tested in integration
     # def test_boot_time(self):
     #     pass
-    @patch('psutil.network_io_counters', new=MagicMock(return_value=STUB_NETWORK_IO))
+    @patch('salt.utils.psutil_compat.net_io_counters', new=MagicMock(return_value=STUB_NETWORK_IO))
     def test_network_io_counters(self):
         self.assertDictEqual(
             {'packets_sent': 500, 'packets_recv': 600, 'bytes_recv': 2000, 'dropout': 4, 'bytes_sent': 1000,
              'errout': 2, 'errin': 1, 'dropin': 3}, ps.network_io_counters())
 
-    @patch('psutil.disk_io_counters', new=MagicMock(return_value=STUB_DISK_IO))
+    @patch('salt.utils.psutil_compat.disk_io_counters', new=MagicMock(return_value=STUB_DISK_IO))
     def test_disk_io_counters(self):
         self.assertDictEqual(
             {'read_time': 2000, 'write_bytes': 600, 'read_bytes': 500, 'write_time': 3000, 'read_count': 1000,
              'write_count': 2000}, ps.disk_io_counters())
 
-    @patch('psutil.get_users', new=MagicMock(return_value=[STUB_USER]))
+    @patch('salt.utils.psutil_compat.users', new=MagicMock(return_value=[STUB_USER]))
     def test_get_users(self):
         self.assertDictEqual({'terminal': 'ttys000', 'started': 0.0, 'host': 'localhost', 'name': 'bdobbs'},
                              ps.get_users()[0])
 
         ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
         # @skipIf(not HAS_UTMP, "The utmp module must be installed to run test_get_users_utmp()")
-        # @patch('psutil.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
+        # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
         # def test_get_users_utmp(self):
         #     pass
 

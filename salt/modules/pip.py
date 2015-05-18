@@ -11,7 +11,8 @@ Salt now uses a portable python. As a result the entire pip module is now
 functional on the salt installation itself. You can pip install dependencies
 for your custom modules. You can even upgrade salt itself using pip. For this
 to work properly, you must specify the Current Working Directory (``cwd``) and
-the Pip Binary (``bin_env``) salt should use.
+the Pip Binary (``bin_env``) salt should use.  The variable ``pip_bin`` can
+be either a virtualenv path or the path to the pip binary itself.
 
 For example, the following command will list all software installed using pip
 to your current salt environment:
@@ -86,9 +87,6 @@ import salt.utils
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
-# It would be cool if we could use __virtual__() in this module, though, since
-# pip can be installed on a virtualenv anywhere on the filesystem, there's no
-# definite way to tell if pip is installed on not.
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -100,10 +98,19 @@ __func_alias__ = {
 VALID_PROTOS = ['http', 'https', 'ftp', 'file']
 
 
+def __virtual__():
+    '''
+    There is no way to verify that pip is installed without inspecting the
+    entire filesystem.  If it's not installed in a conventional location, the
+    user is required to provide the location of pip each time it is used.
+    '''
+    return 'pip'
+
+
 def _get_pip_bin(bin_env):
     '''
-    Return the pip command to call, either from a virtualenv, an argument
-    passed in, or from the global modules options
+    Locate the pip binary, either from `bin_env` as a virtualenv, as the
+    executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
         which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
@@ -113,7 +120,7 @@ def _get_pip_bin(bin_env):
             return which_result.encode('string-escape')
         return which_result
 
-    # try to get pip bin from env
+    # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
             pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe').encode('string-escape')
@@ -121,9 +128,14 @@ def _get_pip_bin(bin_env):
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
             return pip_bin
+        msg = 'Could not find a `pip` binary in virtualenv {0}'.format(bin_env)
+        raise CommandNotFoundError(msg)
+    # bin_env is the pip binary
+    elif os.access(bin_env, os.X_OK):
+        if os.path.isfile(bin_env) or os.path.islink(bin_env):
+            return bin_env
+    else:
         raise CommandNotFoundError('Could not find a `pip` binary')
-
-    return bin_env
 
 
 def _process_salt_url(path, saltenv):
@@ -442,7 +454,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # Backwards compatibility
         saltenv = __env__
 
-    cmd = [_get_pip_bin(bin_env), 'install']
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'install']
 
     cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
                                                         saltenv=saltenv, user=user,
@@ -587,11 +601,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if pre_releases:
         # Check the locally installed pip version
-        pip_version_cmd = '{0} --version'.format(_get_pip_bin(bin_env))
-        output = __salt__['cmd.run_all'](pip_version_cmd,
-                                         use_vt=use_vt,
-                                         python_shell=False).get('stdout', '')
-        pip_version = output.split()[1]
+        pip_version = version(pip_bin)
 
         # From pip v1.4 the --pre flag is available
         if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='1.4'):
@@ -743,7 +753,9 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
 
     '''
-    cmd = [_get_pip_bin(bin_env), 'uninstall', '-y']
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'uninstall', '-y']
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
@@ -836,7 +848,9 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze /home/code/path/to/virtualenv/
     '''
-    cmd = [_get_pip_bin(bin_env), 'freeze']
+    pip_bin = _get_pip_bin(bin_env)
+
+    cmd = [pip_bin, 'freeze']
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
@@ -865,7 +879,7 @@ def list_(prefix=None,
     packages = {}
 
     pip_bin = _get_pip_bin(bin_env)
-    pip_version_cmd = [pip_bin, '--version']
+
     cmd = [pip_bin, 'freeze']
 
     cmd_kwargs = dict(runas=user, cwd=cwd, python_shell=False)
@@ -873,11 +887,7 @@ def list_(prefix=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     if not prefix or prefix in ('p', 'pi', 'pip'):
-        pip_version_result = __salt__['cmd.run_all'](' '.join(pip_version_cmd),
-                                                     **cmd_kwargs)
-        if pip_version_result['retcode'] > 0:
-            raise CommandExecutionError(pip_version_result['stderr'])
-        packages['pip'] = pip_version_result['stdout'].split()[1]
+        packages['pip'] = version(bin_env)
 
     result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
     if result['retcode'] > 0:
@@ -924,7 +934,9 @@ def version(bin_env=None):
 
         salt '*' pip.version
     '''
-    output = __salt__['cmd.run']('{0} --version'.format(_get_pip_bin(bin_env)), python_shell=False)
+    pip_bin = _get_pip_bin(bin_env)
+
+    output = __salt__['cmd.run']('{0} --version'.format(pip_bin), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:
@@ -943,8 +955,8 @@ def list_upgrades(bin_env=None,
 
         salt '*' pip.list_upgrades
     '''
-
     pip_bin = _get_pip_bin(bin_env)
+
     cmd = [pip_bin, "list", "--outdated"]
 
     cmd_kwargs = dict(cwd=cwd, runas=user)

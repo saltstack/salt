@@ -443,14 +443,17 @@ def get_ca_bundle(opts=None):
         return opts_bundle
 
     file_roots = opts.get('file_roots', {'base': [syspaths.SRV_ROOT_DIR]})
-    salt_root = file_roots['base'][0]
-    log.debug('file_roots is {0}'.format(salt_root))
 
     # Please do not change the order without good reason
-    for path in (
-        # Check Salt first
-        os.path.join(salt_root, 'cacert.pem'),
-        os.path.join(salt_root, 'ca-bundle.crt'),
+
+    # Check Salt first
+    for salt_root in file_roots.get('base', []):
+        log.debug('file_roots is {0}'.format(salt_root))
+        for path in ('cacert.pem', 'ca-bundle.crt'):
+            if os.path.exists(path):
+                return path
+
+    locations = (
         # Debian has paths that often exist on other distros
         '/etc/ssl/certs/ca-certificates.crt',
         # RedHat is also very common
@@ -460,7 +463,8 @@ def get_ca_bundle(opts=None):
         '/etc/ssl/certs/ca-bundle.crt',
         # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
-    ):
+    )
+    for path in locations:
         if os.path.exists(path):
             return path
 
