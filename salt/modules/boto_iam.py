@@ -7,12 +7,16 @@ Connection module for Amazon IAM
 :configuration: This module accepts explicit iam credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+    configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         iam.keyid: GKTADJGHEIQSXMKKRBJ08H
         iam.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -20,6 +24,8 @@ Connection module for Amazon IAM
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
+
+    .. code-block:: yaml
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -70,7 +76,9 @@ def instance_profile_exists(name, region=None, key=None, keyid=None,
     '''
     Check to see if an instance profile exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.instance_profile_exists myiprofile
     '''
@@ -90,7 +98,9 @@ def create_instance_profile(name, region=None, key=None, keyid=None,
     '''
     Create an instance profile.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_instance_profile myiprofile
     '''
@@ -116,7 +126,9 @@ def delete_instance_profile(name, region=None, key=None, keyid=None,
     '''
     Delete an instance profile.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_instance_profile myiprofile
     '''
@@ -139,7 +151,9 @@ def role_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if an IAM role exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.role_exists myirole
     '''
@@ -155,7 +169,9 @@ def describe_role(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get information for a role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.describe_role myirole
     '''
@@ -191,7 +207,9 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_user myuser
     '''
@@ -218,7 +236,9 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_all_access_keys myuser
     '''
@@ -237,7 +257,9 @@ def create_access_key(user_name, region=None, key=None, keyid=None, profile=None
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_access_key myuser
     '''
@@ -257,7 +279,9 @@ def delete_access_key(access_key_id, user_name=None, region=None, key=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_access_key myuser
     '''
@@ -277,7 +301,9 @@ def delete_user(user_name, region=None, key=None, keyid=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_user myuser
     '''
@@ -300,7 +326,9 @@ def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_user myuser
     '''
@@ -324,7 +352,9 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_group group
     '''
@@ -351,7 +381,9 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_group mygroup
     '''
@@ -375,7 +407,9 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.add_user_to_group myuser mygroup
     '''
@@ -407,7 +441,9 @@ def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=Non
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.user_exists_in_group myuser mygroup
     '''
@@ -429,7 +465,9 @@ def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=N
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.remove_user_from_group mygroup myuser
     '''
@@ -461,7 +499,9 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
@@ -492,7 +532,9 @@ def delete_group_policy(group_name, policy_name, region=None, key=None,
     '''
     Delete a group policy.
 
-    CLI example::
+    CLI Example::
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_group_policy mygroup mypolicy
     '''
@@ -523,7 +565,9 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_group_policy mygroup policyname
     '''
@@ -549,7 +593,9 @@ def get_all_group_policies(group_name, region=None, key=None, keyid=None,
     '''
     Get a list of policy names from a group.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_all_group_policies mygroup
     '''
@@ -573,7 +619,9 @@ def create_login_profile(user_name, password, region=None, key=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_login_profile user_name password
     '''
@@ -611,7 +659,9 @@ def update_account_password_policy(allow_users_to_change_password=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.update_account_password_policy True
     '''
@@ -639,9 +689,11 @@ def get_account_policy(region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
 
-    salt myminion boto_iam.get_account_policy
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_account_policy
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -659,7 +711,9 @@ def create_role(name, policy_document=None, path=None, region=None, key=None,
     '''
     Create an instance role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_role myrole
     '''
@@ -683,7 +737,9 @@ def delete_role(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an IAM role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_role myirole
     '''
@@ -706,7 +762,9 @@ def profile_associated(role_name, profile_name, region, key, keyid, profile):
     '''
     Check to see if an instance profile is associated with an IAM role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.profile_associated myirole myiprofile
     '''
@@ -733,7 +791,9 @@ def associate_profile_to_role(profile_name, role_name, region=None, key=None,
     '''
     Associate an instance profile with an IAM role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.associate_profile_to_role myirole myiprofile
     '''
@@ -766,7 +826,9 @@ def disassociate_profile_from_role(profile_name, role_name, region=None,
     '''
     Disassociate an instance profile from an IAM role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.disassociate_profile_from_role myirole myiprofile
     '''
@@ -799,7 +861,9 @@ def list_role_policies(role_name, region=None, key=None, keyid=None,
     '''
     Get a list of policy names from a role.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.list_role_policies myirole
     '''
@@ -819,7 +883,9 @@ def get_role_policy(role_name, policy_name, region=None, key=None,
     '''
     Get a role policy.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_role_policy myirole mypolicy
     '''
@@ -842,7 +908,9 @@ def create_role_policy(role_name, policy_name, policy, region=None, key=None,
     '''
     Create or modify a role policy.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.create_role_policy myirole mypolicy '{"MyPolicy": "Statement": [{"Action": ["sqs:*"], "Effect": "Allow", "Resource": ["arn:aws:sqs:*:*:*"], "Sid": "MyPolicySqs1"}]}'
     '''
@@ -877,7 +945,9 @@ def delete_role_policy(role_name, policy_name, region=None, key=None,
     '''
     Delete a role policy.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_role_policy myirole mypolicy
     '''
@@ -905,7 +975,9 @@ def update_assume_role_policy(role_name, policy_document, region=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.update_assume_role_policy myrole '{"Statement":"..."}'
     '''
@@ -933,7 +1005,9 @@ def build_policy(region=None, key=None, keyid=None, profile=None):
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.build_policy
     '''
@@ -965,7 +1039,9 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     '''
     Get a the AWS account id associated with the used credentials.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_account_id
     '''
@@ -1003,7 +1079,9 @@ def get_all_user_policies(user_name, marker=None, max_items=None, region=None, k
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_group mygroup
     '''
@@ -1027,7 +1105,9 @@ def get_user_policy(user_name, policy_name, region=None, key=None, keyid=None, p
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_user_policy myuser mypolicyname
     '''
@@ -1054,7 +1134,9 @@ def put_user_policy(user_name, policy_name, policy_json, region=None, key=None, 
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.put_user_policy myuser policyname policyrules
     '''
@@ -1084,7 +1166,9 @@ def delete_user_policy(user_name, policy_name, region=None, key=None, keyid=None
     '''
     Delete a user policy.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_user_policy myuser mypolicy
     '''
@@ -1115,15 +1199,16 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.upload_server_cert mycert_name crt priv_key
 
     :param cert_name: The name for the server certificate. Do not include the path in this value.
     :param cert_body: The contents of the public key certificate in PEM-encoded format.
     :param private_key: The contents of the private key in PEM-encoded format.
-    :param cert_chain:  The contents of the certificate chain. This is typically a
-    concatenation of the PEM-encoded public key certificates of the chain.
+    :param cert_chain:  The contents of the certificate chain. This is typically a concatenation of the PEM-encoded public key certificates of the chain.
     :param path: The path for the server certificate.
     :param region: The name of the region to connect to.
     :param key: The key to be used in order to connect
@@ -1153,7 +1238,9 @@ def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.get_server_certificate mycert_name
     '''
@@ -1176,7 +1263,9 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_iam.delete_server_cert mycert_name
     '''

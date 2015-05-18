@@ -15,6 +15,7 @@ in the future. That being said, the wire framing is quite efficient and looks
 like:
 
 .. code-block:: text
+
     len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})
 
 The wire protocol is basically two parts, the length of the payload and a payload
@@ -36,6 +37,7 @@ For the pub channel we send messages without "message ids" which the remote end
 interprets as a one-way send.
 
 .. note::
+
     As of today we send all publishes to all minions and rely on minion-side filtering.
 
 

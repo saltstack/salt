@@ -7,17 +7,23 @@ Connection module for Amazon EC2
 :configuration: This module accepts explicit EC2 credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at::
+    further configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         ec2.keyid: GKTADJGHEIQSXMKKRBJ08H
         ec2.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         ec2.region: us-east-1
 
@@ -25,6 +31,8 @@ Connection module for Amazon EC2
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
+
+    .. code-block:: yaml
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -83,7 +91,8 @@ def get_zones(region=None, key=None, keyid=None, profile=None):
     '''
     Get a list of AZs for the configured region.
 
-    CLI example::
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_ec2.get_zones
@@ -99,7 +108,8 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
     '''
     Given instance properties, find and return matching instance ids
 
-    CLI examples::
+    CLI Examples:
+
     .. code-block:: bash
 
         salt myminion boto_ec2.find_instances # Lists all instances
@@ -143,7 +153,7 @@ def terminate(instance_id=None, name=None, region=None,
     '''
     Terminate the instance described by instance_id or name.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -170,7 +180,7 @@ def get_id(name=None, tags=None, region=None, key=None,
     '''
     Given instace properties, return the instance id if it exist.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -199,7 +209,7 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
     Returns True if the given an instance with the given id, name, or tags
     exists; otherwise, False is returned.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -222,7 +232,7 @@ def run(image_id, name=None, tags=None, instance_type='m1.small',
 
     Returns True if the instance was created; otherwise False.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -263,7 +273,9 @@ def get_key(key_name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a key exists. Returns fingerprint and name if
     it does and False if it doesn't
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_ec2.get_key mykey
     '''
@@ -285,7 +297,10 @@ def create_key(key_name, save_path, region=None, key=None, keyid=None,
     '''
     Creates a key and saves it to a given path.
     Returns the private key.
-    CLI example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_ec2.create mykey /root/
     '''
@@ -311,7 +326,10 @@ def import_key(key_name, public_key_material, region=None, key=None,
     - SSH public key file format as specified in RFC4716
     - DSA keys are not supported. Make sure your key generator is set up to create RSA keys.
     Supported lengths: 1024, 2048, and 4096.
-    CLI example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_ec2.import mykey publickey
     '''
@@ -329,7 +347,10 @@ def import_key(key_name, public_key_material, region=None, key=None,
 def delete_key(key_name, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a key. Always returns True
-    CLI example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_ec2.delete_key mykey
     '''
@@ -355,7 +376,10 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
     consisting of filter names as the key and filter values as the
     value. The set of allowable filter names/values is dependent on
     the request being performed. Check the EC2 API guide for details.
-    CLI example::
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_ec2.get_keys
     '''
@@ -378,7 +402,8 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
     '''
     Get an EC2 instance attribute.
 
-    CLI example::
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_ec2.get_attribute name=my_instance attribute=sourceDestCheck
@@ -430,7 +455,8 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
     Set an EC2 instance attribute.
     Returns whether the operation succeeded or not.
 
-    CLI example::
+    CLI Example:
+
     .. code-block:: bash
 
         salt myminion boto_ec2.set_attribute instance_name=my_instance \
