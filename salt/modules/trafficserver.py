@@ -32,7 +32,16 @@ def _subprocess(cmd):
     '''
 
     try:
-        return subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        ret = proc.communicate()[0].strip()
+        retcode = proc.wait()
+
+        if ret:
+            return ret
+        elif retcode != 1:
+            return True
+        else:
+            return False
     except OSError as err:
         log.error(err)
         return False
