@@ -1739,6 +1739,14 @@ def directory(name,
         if not os.path.isdir(os.path.dirname(name)):
             # The parent directory does not exist, create them
             if makedirs:
+                # Make sure the drive is mapped before trying to create the
+                # path in windows
+                if salt.utils.is_windows():
+                    drive, path = os.path.splitdrive(name)
+                    if not os.path.isdir(drive):
+                        return _error(
+                            ret, 'Drive {0} is not mapped'.format(drive))
+                # Everything's good, create the path
                 __salt__['file.makedirs'](
                     name, user=user, group=group, mode=dir_mode
                 )

@@ -48,7 +48,7 @@ except ImportError:
 
 HAS_PSUTIL = False
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
     HAS_PSUTIL = True
 except ImportError:
     pass
@@ -845,7 +845,7 @@ class Minion(MinionBase):
             log.debug('modules_max_memory set, enforcing a maximum of {0}'.format(self.opts['modules_max_memory']))
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).get_memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()
             mem_limit = rss + vms + self.opts['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.get('modules_max_memory', -1) > 0:
