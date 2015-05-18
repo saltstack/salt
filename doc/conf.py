@@ -24,6 +24,8 @@ class Mock(object):
     def __init__(self, *args, **kwargs):
         pass
 
+    __all__ = []
+
     def __call__(self, *args, **kwargs):
         ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
@@ -94,6 +96,7 @@ MOCK_MODULES = [
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
+    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
@@ -263,7 +266,7 @@ html_context = {
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
-    'previous_release_version': '2014.7.5',
+    'previous_release_version': '2014.7.6',
     'previous_release_dir': '2014.7',
     'build_type': 'latest', #latest, previous, develop
 }
