@@ -13,6 +13,7 @@ from __future__ import absolute_import, print_function
 import datetime
 import pipes
 import copy
+import textwrap
 import difflib
 import logging
 import tempfile
@@ -2780,6 +2781,182 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     return True
 
 
+def running_systemd(name, cache=True):
+    '''
+    Determine if systemD is running
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.running_systemd ubuntu
+
+    '''
+    k = 'lxc.systemd.test.{0}'.format(name)
+    ret = __context__.get(k, None)
+    if ret is None or not cache:
+        rstr = __salt__['test.rand_str']()
+        # no tmp here, apparmor wont let us execute !
+        script = '/sbin/{0}_testsystemd.sh'.format(rstr)
+        # ubuntu already had since trusty some bits of systemd but was
+        # still using upstart ...
+        # we need to be a bit more careful that just testing that systemd
+        # is present
+        _script = textwrap.dedent(
+            '''\
+            #!/usr/bin/env bash
+            set -x
+            if ! which systemctl 1>/dev/nulll 2>/dev/null;then exit 2;fi
+            for i in \\
+                /run/systemd/journal/dev-log\\
+                /run/systemd/journal/flushed\\
+                /run/systemd/journal/kernel-seqnum\\
+                /run/systemd/journal/socket\\
+                /run/systemd/journal/stdout\\
+                /var/run/systemd/journal/dev-log\\
+                /var/run/systemd/journal/flushed\\
+                /var/run/systemd/journal/kernel-seqnum\\
+                /var/run/systemd/journal/socket\\
+                /var/run/systemd/journal/stdout\\
+            ;do\\
+                if test -e ${i};then exit 0;fi
+            done
+            if test -d /var/systemd/system;then exit 0;fi
+            exit 2
+            ''')
+        result = run_all(
+            name, 'tee {0}'.format(script), stdin=_script, python_shell=True)
+        if result['retcode'] == 0:
+            result = run_all(name,
+                             'sh -c "chmod +x {0};{0}"'''.format(script),
+                             python_shell=True)
+        else:
+            raise CommandExecutionError(
+                'lxc {0} failed to copy initd tester'.format(name))
+        run_all(name,
+                'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''
+                ''.format(script),
+                ignore_retcode=True,
+                python_shell=True)
+        if result['retcode'] != 0:
+            error = ('Unable to determine if the container \'{0}\''
+                     ' was running systemd, assmuming it is not.'
+                     ''.format(name))
+            if result['stderr']:
+                error += ': {0}'.format(result['stderr'])
+        # only cache result if we got a known exit code
+        if result['retcode'] in (0, 2):
+            __context__[k] = ret = not result['retcode']
+    return ret
+
+
+def systemd_running_state(name):
+    '''
+    Get the operational state of a systemd based container
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.systemd_running_state ubuntu
+
+    '''
+    try:
+        ret = run_all(name,
+                      'systemctl is-system-running',
+                     ignore_retcode=True)['stdout']
+    except CommandExecutionError:
+        ret = ''
+    return ret
+
+
+def test_sd_started_state(name):
+
+    '''
+    Test if a systemd container is fully started
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.test_sd_started_state ubuntu
+
+    '''
+    qstate = systemd_running_state(name)
+    if qstate in ('initializing', 'starting'):
+        return False
+    elif qstate == '':
+        return None
+    else:
+        return True
+
+
+def test_bare_started_state(name):
+    '''
+    Test if a non systemd container is fully started
+    For now, it consists only to test if the container is attachable
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.test_bare_started_state ubuntu
+
+    '''
+    try:
+        ret = run_all(name, 'ls', ignore_retcode=True)['retcode'] == 0
+    except (CommandExecutionError,):
+        ret = None
+    return ret
+
+
+def wait_started(name, timeout=300):
+    '''
+    Check that the system has fully inited
+
+    This is actually very important for systemD based containers
+
+    see https://github.com/saltstack/salt/issues/23847
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.wait_started ubuntu
+
+    '''
+    if not exists(name):
+        raise CommandExecutionError(
+            'Container {0} does does exists'.format(name))
+    if not state(name) == 'running':
+        raise CommandExecutionError(
+            'Container {0} is not running'.format(name))
+    ret = False
+    if running_systemd(name):
+        test_started = test_sd_started_state
+        logger = log.error
+    else:
+        test_started = test_bare_started_state
+        logger = log.debug
+    now = time.time()
+    expire = now + timeout
+    now = time.time()
+    started = test_started(name)
+    while time.time() < expire and not started:
+        time.sleep(0.3)
+        started = test_started(name)
+    if started is None:
+        logger(
+            'Assuming {0} is started, although we failed to detect that'
+            ' is fully started correctly'.format(name))
+        ret = True
+    else:
+        ret = started
+    return ret
+
+
 def _needs_install(name):
     ret = 0
     has_minion = retcode(name,
@@ -2865,6 +3042,7 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
+    wait_started(name)
     if bootstrap_delay is not None:
         try:
             time.sleep(bootstrap_delay)
