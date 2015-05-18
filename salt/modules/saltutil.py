@@ -245,12 +245,35 @@ def update(version=None):
     return ret
 
 
+def sync_beacons(saltenv=None, refresh=True):
+    '''
+    Sync the beacons from the _beacons directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _beacons directory, base is the default
+    environment.
+
+    .. versionadded:: 2015.5.1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_beacons
+    '''
+    ret = _sync('beacons', saltenv)
+    if refresh:
+        refresh_beacons()
+    return ret
+
+
 def sync_modules(saltenv=None, refresh=True):
     '''
     Sync the modules from the _modules directory on the salt master file
     server. This function is environment aware, pass the desired environment
     to grab the contents of the _modules directory, base is the default
     environment.
+
+    .. versionadded:: 2015.5.1
 
     CLI Example:
 
@@ -395,6 +418,7 @@ def sync_all(saltenv=None, refresh=True):
     '''
     log.debug('Syncing all')
     ret = {}
+    ret['beacons'] = sync_beacons(saltenv, False)
     ret['modules'] = sync_modules(saltenv, False)
     ret['states'] = sync_states(saltenv, False)
     ret['grains'] = sync_grains(saltenv, False)
@@ -404,6 +428,24 @@ def sync_all(saltenv=None, refresh=True):
     ret['utils'] = sync_utils(saltenv, False)
     if refresh:
         refresh_modules()
+    return ret
+
+
+def refresh_beacons():
+    '''
+    Signal the minion to refresh the beacons.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_beacons
+    '''
+    try:
+        ret = __salt__['event.fire']({}, 'beacons_refresh')
+    except KeyError:
+        log.error('Event module not available. Module refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
 
