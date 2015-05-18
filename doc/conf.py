@@ -24,6 +24,8 @@ class Mock(object):
     def __init__(self, *args, **kwargs):
         pass
 
+    __all__ = []
+
     def __call__(self, *args, **kwargs):
         ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
@@ -94,6 +96,7 @@ MOCK_MODULES = [
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
+    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
