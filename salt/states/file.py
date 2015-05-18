@@ -3972,6 +3972,8 @@ def accumulated(name, filename, text, **kwargs):
         return ret
     if isinstance(text, six.string_types):
         text = (text,)
+    elif isinstance(text, dict):
+        text = (text,)
     accum_data, accum_deps = _load_accumulators()
     if filename not in accum_data:
         accum_data[filename] = {}
