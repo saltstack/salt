@@ -2595,7 +2595,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         client_config_dir = xdg_dir
         saltrc_config_file = 'saltrc'
     else:
-        client_config_dir = '~'
+        client_config_dir = os.path.expanduser('~')
         saltrc_config_file = '.saltrc'
 
     # Get the token file path from the provided defaults. If not found, specify

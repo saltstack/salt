@@ -11,7 +11,7 @@ Configure Apt
 
 
 Squeeze (Old Old Stable)
---------------------
+------------------------
 
 For squeeze, you will need to enable the Debian backports repository
 as well as the debian.saltstack.com repository. To do so, add the
@@ -26,7 +26,7 @@ following to ``/etc/apt/sources.list`` or a file in
 
 
 Wheezy (Old Stable)
----------------
+-------------------
 
 For wheezy, the following line is needed in either
 ``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
@@ -36,7 +36,7 @@ For wheezy, the following line is needed in either
     deb http://debian.saltstack.com/debian wheezy-saltstack main
 
 Jessie (Stable)
-----------------
+---------------
 
 For jessie, the following line is needed in either
 ``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:

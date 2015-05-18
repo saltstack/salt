@@ -187,7 +187,9 @@ def avail_locations(call=None):
     Return a dict of all available locations on the provider with
     relevant data.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud --list-locations my-qingcloud
     '''
@@ -251,7 +253,9 @@ def avail_images(kwargs=None, call=None):
     '''
     Return a list of the images that are on the provider.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud --list-images my-qingcloud
         salt-cloud -f avail_images my-qingcloud zone=gd1
@@ -305,7 +309,9 @@ def show_image(kwargs, call=None):
     '''
     Show the details from QingCloud concerning an image.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f show_image my-qingcloud image=trustysrvx64c
         salt-cloud -f show_image my-qingcloud image=trustysrvx64c,coreos4
@@ -375,7 +381,9 @@ def avail_sizes(kwargs=None, call=None):
     '''
     Return a list of the instance sizes that are on the provider.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud --list-sizes my-qingcloud
         salt-cloud -f avail_sizes my-qingcloud zone=pek2
@@ -450,7 +458,9 @@ def list_nodes_full(call=None):
     '''
     Return a list of the instances that are on the provider.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -F my-qingcloud
     '''
@@ -498,7 +508,9 @@ def list_nodes(call=None):
     '''
     Return a list of the instances that are on the provider.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -Q my-qingcloud
     '''
@@ -528,7 +540,9 @@ def list_nodes_min(call=None):
     Return a list of the instances that are on the provider. Only a list of
     instances names, and their state, is returned.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f list_nodes_min my-qingcloud
     '''
@@ -554,7 +568,9 @@ def list_nodes_select(call=None):
     Return a list of the instances that are on the provider, with selected
     fields.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -S my-qingcloud
     '''
@@ -569,7 +585,9 @@ def show_instance(instance_id, call=None, kwargs=None):
     '''
     Show the details from QingCloud concerning an instance.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a show_instance i-2f733r5n
     '''
@@ -613,7 +631,9 @@ def create(vm_):
     '''
     Create a single instance from a data dict.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -p qingcloud-ubuntu-c1m1 hostname1
         salt-cloud -m /path/to/mymap.sls -P
@@ -727,7 +747,9 @@ def start(instance_id, call=None):
     '''
     Start an instance.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a start i-2f733r5n
     '''
@@ -752,7 +774,9 @@ def stop(instance_id, force=False, call=None):
     '''
     Stop an instance.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a stop i-2f733r5n
         salt-cloud -a stop i-2f733r5n force=True
@@ -779,7 +803,9 @@ def reboot(instance_id, call=None):
     '''
     Reboot an instance.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot i-2f733r5n
     '''

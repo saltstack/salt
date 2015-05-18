@@ -167,7 +167,7 @@ def saltmem(human_readable=False):
 
     CLI Example:
 
-    .. code-black:: bash
+    .. code-block:: bash
 
         salt '*' status.salt_mem
         salt '*' status.salt_mem human_readable=True

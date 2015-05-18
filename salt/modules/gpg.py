@@ -306,9 +306,11 @@ def create_key(key_type='RSA',
     .. note::
 
         GPG key generation requires *a lot* of entropy and randomness.
-        Difficult to do over a remote connection, consider having another
-        process available which is generating randomness for the machine.
-        Also especially difficult on virtual machines, consider the rpg-tools
+        Difficult to do over a remote connection, consider having
+        another process available which is generating randomness for
+        the machine.  Also especially difficult on virtual machines,
+        consider the `rng-tools
+        <http://www.gnu.org/software/hurd/user/tlecarrour/rng-tools.html>`_
         package.
 
         The create_key process takes awhile so increasing the timeout
@@ -620,9 +622,7 @@ def import_key(user=None,
     .. code-block:: bash
 
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
-
         salt '*' gpg.import_key filename='/path/to/public-key-file'
-
     '''
     ret = {
            'res': True,

@@ -33,6 +33,7 @@ Multiple packages can also be installed with the use of the pkgs
 state module
 
 .. code-block:: yaml
+
     dotdeb.repo:
       pkgrepo.managed:
         - humanname: Dotdeb

@@ -972,7 +972,9 @@ def destroy(name, conn=None, call=None, kwargs=None):
     '''
     Destroy a VM
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -d myminion
         salt-cloud -a destroy myminion service_name=myservice
@@ -1117,7 +1119,9 @@ def get_operation_status(kwargs=None, conn=None, call=None):
 
     Get Operation Status, based on a request ID
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_operation_status my-azure id=0123456789abcdef0123456789abcdef
     '''
@@ -1153,7 +1157,9 @@ def list_storage(kwargs=None, conn=None, call=None):
 
     List storage accounts associated with the account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_storage my-azure
     '''
@@ -1179,7 +1185,9 @@ def show_storage(kwargs=None, conn=None, call=None):
 
     List storage service properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_storage my-azure name=my_storage
     '''
@@ -1210,7 +1218,9 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
 
     Show storage account keys
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_storage_keys my-azure name=my_storage
     '''
@@ -1248,7 +1258,9 @@ def create_storage(kwargs=None, conn=None, call=None):
 
     Create a new storage account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_storage my-azure name=my_storage label=my_storage location='West US'
     '''
@@ -1295,7 +1307,9 @@ def update_storage(kwargs=None, conn=None, call=None):
 
     Update a storage account's properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f update_storage my-azure name=my_storage label=my_storage
     '''
@@ -1328,7 +1342,9 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     Regenerate storage account keys. Requires a key_type ("primary" or
     "secondary") to be specified.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f regenerate_storage_keys my-azure name=my_storage key_type=primary
     '''
@@ -1362,7 +1378,9 @@ def delete_storage(kwargs=None, conn=None, call=None):
 
     Delete a specific storage account
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_storage my-azure name=my_storage
     '''
@@ -1390,7 +1408,9 @@ def list_services(kwargs=None, conn=None, call=None):
 
     List hosted services associated with the account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_services my-azure
     '''
@@ -1416,7 +1436,9 @@ def show_service(kwargs=None, conn=None, call=None):
 
     List hosted service properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_service my-azure name=my_service
     '''
@@ -1445,7 +1467,9 @@ def create_service(kwargs=None, conn=None, call=None):
 
     Create a new hosted service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_service my-azure name=my_service label=my_service location='West US'
     '''
@@ -1487,7 +1511,9 @@ def delete_service(kwargs=None, conn=None, call=None):
 
     Delete a specific service associated with the account
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_service my-azure name=my_service
     '''
@@ -1515,7 +1541,9 @@ def list_disks(kwargs=None, conn=None, call=None):
 
     List disks associated with the account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_disks my-azure
     '''
@@ -1540,7 +1568,9 @@ def show_disk(kwargs=None, conn=None, call=None):
 
     Return information about a disk
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_disk my-azure name=my_disk
     '''
@@ -1571,7 +1601,9 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     *** CAUTION *** This is a destructive function with no undo button, and no
     "Are you sure?" confirmation!
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f cleanup_unattached_disks my-azure name=my_disk
         salt-cloud -f cleanup_unattached_disks my-azure name=my_disk delete_vhd=True
@@ -1599,7 +1631,9 @@ def delete_disk(kwargs=None, conn=None, call=None):
 
     Delete a specific disk associated with the account
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_disk my-azure name=my_disk
         salt-cloud -f delete_disk my-azure name=my_disk delete_vhd=True
@@ -1628,7 +1662,9 @@ def update_disk(kwargs=None, conn=None, call=None):
 
     Update a disk's properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f update_disk my-azure name=my_disk label=my_disk
         salt-cloud -f update_disk my-azure name=my_disk new_name=another_disk
@@ -1662,7 +1698,9 @@ def list_service_certificates(kwargs=None, conn=None, call=None):
 
     List certificates associated with the service
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_service_certificates my-azure name=my_service
     '''
@@ -1690,7 +1728,9 @@ def show_service_certificate(kwargs=None, conn=None, call=None):
 
     Return information about a service certificate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_service_certificate my-azure name=my_service_certificate \
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
@@ -1730,7 +1770,9 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
 
     Add a new service certificate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f add_service_certificate my-azure name=my_service_certificate \
             data='...CERT_DATA...' certificate_format=sha1 password=verybadpass
@@ -1773,7 +1815,9 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
 
     Delete a specific certificate associated with the service
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_service_certificate my-azure name=my_service_certificate \
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
@@ -1812,7 +1856,9 @@ def list_management_certificates(kwargs=None, conn=None, call=None):
 
     List management certificates associated with the subscription
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_management_certificates my-azure name=my_management
     '''
@@ -1837,7 +1883,9 @@ def show_management_certificate(kwargs=None, conn=None, call=None):
 
     Return information about a management_certificate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_management_certificate my-azure name=my_management_certificate \
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
@@ -1867,7 +1915,9 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
 
     Add a new management certificate
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f add_management_certificate my-azure public_key='...PUBKEY...' \
             thumbprint=0123456789ABCDEF data='...CERT_DATA...'
@@ -1906,7 +1956,9 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
 
     Delete a specific certificate associated with the management
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_management_certificate my-azure name=my_management_certificate \
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
@@ -1935,7 +1987,9 @@ def list_virtual_networks(kwargs=None, conn=None, call=None):
 
     List input endpoints associated with the deployment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_virtual_networks my-azure service=myservice deployment=mydeployment
     '''
@@ -1955,7 +2009,9 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
 
     List input endpoints associated with the deployment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_input_endpoints my-azure service=myservice deployment=mydeployment
     '''
@@ -1994,7 +2050,9 @@ def show_input_endpoint(kwargs=None, conn=None, call=None):
 
     Show an input endpoint associated with the deployment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_input_endpoint my-azure service=myservice \
             deployment=mydeployment name=SSH
@@ -2022,7 +2080,9 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
     Update an input endpoint associated with the deployment. Please note that
     there may be a delay before the changes show up.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f update_input_endpoint my-azure service=myservice \
             deployment=mydeployment role=myrole name=HTTP local_port=80 \
@@ -2131,7 +2191,9 @@ def add_input_endpoint(kwargs=None, conn=None, call=None):
     Add an input endpoint to the deployment. Please note that
     there may be a delay before the changes show up.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f add_input_endpoint my-azure service=myservice \
             deployment=mydeployment role=myrole name=HTTP local_port=80 \
@@ -2153,7 +2215,9 @@ def delete_input_endpoint(kwargs=None, conn=None, call=None):
     Delete an input endpoint from the deployment. Please note that
     there may be a delay before the changes show up.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_input_endpoint my-azure service=myservice \
             deployment=mydeployment role=myrole name=HTTP
@@ -2172,7 +2236,9 @@ def show_deployment(kwargs=None, conn=None, call=None):
 
     Return information about a deployment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_deployment my-azure name=my_deployment
     '''
@@ -2207,7 +2273,9 @@ def list_affinity_groups(kwargs=None, conn=None, call=None):
 
     List input endpoints associated with the deployment
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_affinity_groups my-azure
     '''
@@ -2232,7 +2300,9 @@ def show_affinity_group(kwargs=None, conn=None, call=None):
 
     Show an affinity group associated with the account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_affinity_group my-azure service=myservice \
             deployment=mydeployment name=SSH
@@ -2262,7 +2332,9 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
 
     Create a new affinity group
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_affinity_group my-azure name=my_affinity_group
     '''
@@ -2301,7 +2373,9 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
 
     Update an affinity group's properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f update_affinity_group my-azure name=my_group label=my_group
     '''
@@ -2333,7 +2407,9 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
 
     Delete a specific affinity group associated with the account
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_affinity_group my-azure name=my_affinity_group
     '''
@@ -2385,7 +2461,9 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
 
     Creates the URL to access a blob
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f make_blob_url my-azure container=mycontainer blob=myblob
 
@@ -2436,7 +2514,9 @@ def list_storage_containers(kwargs=None, storage_conn=None, call=None):
 
     List containers associated with the storage account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_storage_containers my-azure
     '''
@@ -2461,7 +2541,9 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
 
     Create a storage container
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f create_storage_container my-azure name=mycontainer
 
@@ -2501,7 +2583,9 @@ def show_storage_container(kwargs=None, storage_conn=None, call=None):
 
     Show a container associated with the storage account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_storage_container my-azure name=myservice
 
@@ -2536,7 +2620,9 @@ def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 
     Show a storage container's metadata
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_storage_container_metadata my-azure name=myservice
 
@@ -2574,7 +2660,9 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 
     Set a storage container's metadata
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f set_storage_container my-azure name=mycontainer \
             x_ms_meta_name_values='{"my_name": "my_value"}'
@@ -2620,7 +2708,9 @@ def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
 
     Show a storage container's acl
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_storage_container_acl my-azure name=myservice
 
@@ -2658,7 +2748,9 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
 
     Set a storage container's acl
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f set_storage_container my-azure name=mycontainer
 
@@ -2698,7 +2790,9 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
 
     Delete a container associated with the storage account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f delete_storage_container my-azure name=mycontainer
 
@@ -2735,7 +2829,9 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
 
     Lease a container associated with the storage account
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f lease_storage_container my-azure name=mycontainer
 
@@ -2809,7 +2905,9 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
 
     List blobs associated with the container
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f list_blobs my-azure container=mycontainer
 
@@ -2835,20 +2933,21 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
         Optional. Specifies one or more datasets to include in the
         response. To specify more than one of these options on the URI,
         you must separate each option with a comma. Valid values are:
-            snapshots:
-                Specifies that snapshots should be included in the
-                enumeration. Snapshots are listed from oldest to newest in
-                the response.
-            metadata:
-                Specifies that blob metadata be returned in the response.
-            uncommittedblobs:
-                Specifies that blobs for which blocks have been uploaded,
-                but which have not been committed using Put Block List
-                (REST API), be included in the response.
-            copy:
-                Version 2012-02-12 and newer. Specifies that metadata
-                related to any current or previous Copy Blob operation
-                should be included in the response.
+
+        snapshots:
+            Specifies that snapshots should be included in the
+            enumeration. Snapshots are listed from oldest to newest in
+            the response.
+        metadata:
+            Specifies that blob metadata be returned in the response.
+        uncommittedblobs:
+            Specifies that blobs for which blocks have been uploaded,
+            but which have not been committed using Put Block List
+            (REST API), be included in the response.
+        copy:
+            Version 2012-02-12 and newer. Specifies that metadata
+            related to any current or previous Copy Blob operation
+            should be included in the response.
     delimiter:
         Optional. When the request includes this parameter, the operation
         returns a BlobPrefix element in the response body that acts as a
@@ -2876,7 +2975,9 @@ def show_blob_service_properties(kwargs=None, storage_conn=None, call=None):
 
     Show a blob's service properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_blob_service_properties my-azure
     '''
@@ -2907,7 +3008,9 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     set the default request version for all incoming requests that do not
     have a version specified.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f set_blob_service_properties my-azure
 
@@ -2941,7 +3044,9 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
     Returns all user-defined metadata, standard HTTP properties, and
     system properties for the blob.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f show_blob_properties my-azure container=mycontainer blob=myblob
 
@@ -2988,7 +3093,9 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
 
     Set a blob's properties
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f set_blob_properties my-azure
 
@@ -3052,7 +3159,9 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
 
     Upload a blob
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f put_blob my-azure container=base name=top.sls blob_path=/srv/salt/top.sls
         salt-cloud -f put_blob my-azure container=base name=content.txt blob_content='Some content'
@@ -3122,7 +3231,9 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
 
     Download a blob
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt-cloud -f get_blob my-azure container=base name=top.sls local_path=/srv/salt/top.sls
         salt-cloud -f get_blob my-azure container=base name=content.txt return_content=True
