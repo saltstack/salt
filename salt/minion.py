@@ -23,6 +23,7 @@ from stat import S_IMODE
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
+from salt.utils import reinit_crypto
 # pylint: enable=no-name-in-module,redefined-builtin
 
 # Import third party libs
@@ -653,8 +654,10 @@ class Minion(MinionBase):
                 log.debug('Starting {0} proxy.'.format(p))
                 pid = os.fork()
                 if pid > 0:
+                    reinit_crypto()
                     continue
                 else:
+                    reinit_crypto()
                     proxyminion = ProxyMinion(self.opts)
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)

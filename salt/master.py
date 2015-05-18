@@ -18,10 +18,6 @@ import multiprocessing
 # Import third party libs
 import zmq
 from Crypto.PublicKey import RSA
-try:
-    import Crypto.Random
-except ImportError:
-    pass
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -749,8 +745,7 @@ class MWorker(multiprocessing.Process):
             self.key,
             )
         self.aes_funcs = AESFuncs(self.opts)
-        if 'Crypto.Random' in sys.modules:
-            Crypto.Random.atfork()
+        salt.utils.reinit_crypto()
         self.__bind()
 
 
