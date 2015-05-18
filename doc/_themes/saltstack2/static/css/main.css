@@ -479,11 +479,11 @@ SaltStack custom styles
 
 /* Code blocks */
 
-pre {
+/*pre {
     position: relative;
     border-top-width: 4px;
-    padding-top: 18px; /* :before height */
-}
+    padding-top: 18px; *//* :before height *//*
+}*/
 
 .highlight-bash,
 .highlight-jinja,

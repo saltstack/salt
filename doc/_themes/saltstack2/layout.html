@@ -166,23 +166,23 @@
 
                     <a id="latest" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ release }} </a> {% if build_type == "latest" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
                     <a id="previous" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }} </a> {% if build_type == "previous" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
-                    <a id="develop" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">Develop </a> {% if build_type == "develop" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %}
+                    <a id="develop" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Recent doc build from the develop branch" href="/en/develop/">Develop </a> {% if build_type == "develop" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %}
                 </div>
+
 
                 <div class="text-nowrap">
                     <!--social icons from http://vervex.deviantart.com/art/Somacro-45-300DPI-Social-Media-Icons-267955425-->
                     <ul id="social-links" class="list-inline">
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Watch SaltStack Videos on YouTube" href="https://www.youtube.com/user/SaltStack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" /></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="View the latest SaltStack Tweets" href="http://twitter.com/SaltStackInc" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/twitter.png', 1) }}" /></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Subscribe to the Salt Users mailing list" href="https://groups.google.com/forum/#!forum/salt-users" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/email.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Download SaltStack code from GitHub" href="https://github.com/saltstack/salt" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="Watch SaltStack Videos on YouTube" href="https://www.youtube.com/user/SaltStack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" /></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="View the latest SaltStack Tweets" href="http://twitter.com/SaltStackInc" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/twitter.png', 1) }}" /></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="Subscribe to the Salt Users mailing list" href="https://groups.google.com/forum/#!forum/salt-users" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/email.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="Download SaltStack code from GitHub" href="https://github.com/saltstack/salt" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Chat in #salt on Freenode IRC" href="http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" alt="SaltStack on IRC"></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="/r/saltstack" href="http://www.reddit.com/r/saltstack/" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/reddit.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Ask a SaltStack question on StackOverflow" href="http://stackoverflow.com/questions/tagged/salt-stack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li><li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Join or start a SaltStack Meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>
-                        <li><a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Follow SaltStack on LinkedIn" href="http://www.linkedin.com/company/salt-stack-inc" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/linkedin.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="/r/saltstack" href="http://www.reddit.com/r/saltstack/" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/reddit.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="Ask a SaltStack question on StackOverflow" href="http://stackoverflow.com/questions/tagged/salt-stack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li><li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="Join or start a SaltStack Meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="bottom" title="Follow SaltStack on LinkedIn" href="http://www.linkedin.com/company/salt-stack-inc" target="_blank"><img class="nolightbox" width="24px" src="{{ pathto('_static/images/linkedin.png', 1) }}" ></a></li>
                     </ul>
                 </div>
-
 
 
                 <div id="search-form" class="inner-addon left-addon"><i class="glyphicon glyphicon-search"></i><input type="text" class="form-control"></div>
@@ -198,6 +198,8 @@
                 {% endif %}
                 {% endblock %}
             </div>
+
+
 
             </div> <!--end sidebar wrapper-->
             <div id="page-content-wrapper">

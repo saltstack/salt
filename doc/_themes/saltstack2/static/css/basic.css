@@ -413,9 +413,9 @@ dd {
     margin-left: 30px;
 }
 
-dt:target, .highlighted {
+/*dt:target, .highlighted {
     background-color: #fbe54e;
-}
+}*/
 
 dl.glossary dt {
     font-weight: bold;
@@ -533,10 +533,11 @@ div.literal-block-wrapper div.highlight {
     margin: 0;
 }
 
-code.descname {
+/*code.descname {
     background-color: transparent;
     font-weight: bold;
-    font-size: 1.2em;
+    *//*font-size: 1.2em;*//*
+    font-size: 1.5em;
 }
 
 code.descclassname {
@@ -546,7 +547,7 @@ code.descclassname {
 code.xref, a code {
     background-color: transparent;
     font-weight: bold;
-}
+}*/
 
 h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
     background-color: transparent;
