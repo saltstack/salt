@@ -40,12 +40,13 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import third party libs
+# pylint: disable=import-error
 try:
+    #pylint: disable=unused-import
     import boto
     import boto.cloudformation
-    import boto.cloudformation.connection
-    import boto.cloudformation.stack
-    import boto.cloudformation.template
+    #pylint: enable=unused-import
+    from boto.exception import BotoServerError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -58,8 +59,12 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation')
     return True
+
+
+def __init__(opts):
+    if HAS_BOTO:
+        __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation')
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):
@@ -79,8 +84,44 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
         exists = conn.describe_stacks(name)
         log.debug('Stack {0} exists.'.format(name))
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug('Exists returned an excpetion.\n{0}'.format(str(e)))
+    except BotoServerError as e:
+        log.debug('Exists returned an exception.\n{0}'.format(str(e)))
+        return False
+
+
+def describe(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe a stack.
+
+    .. versionadded:: Beryllium
+
+    CLI example::
+
+        salt myminion boto_cfn.describe mystack region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        # Returns an object if stack exists else an exception
+        r = conn.describe_stacks(name)
+        if r:
+            stack = r[0]
+            log.debug('Found VPC: {0}'.format(stack.stack_id))
+            keys = ('stack_id', 'description', 'stack_status', 'stack_status_reason')
+
+            ret = dict([(k, getattr(stack, k)) for k in keys])
+            o = getattr(stack, 'outputs')
+            outputs = {}
+            for i in o:
+                outputs[i.key] = i.value
+            ret['outputs'] = outputs
+
+            return {'stack': ret}
+
+        log.debug('Stack {0} exists.'.format(name))
+        return True
+    except BotoServerError as e:
+        log.warning('Could not describe stack {0}.\n{1}'.format(name, str(e)))
         return False
 
 
@@ -102,8 +143,8 @@ def create(name, template_body=None, template_url=None, parameters=None, notific
     try:
         return conn.create_stack(name, template_body, template_url, parameters, notification_arns, disable_rollback,
                                  timeout_in_minutes, capabilities, tags, on_failure, stack_policy_body, stack_policy_url)
-    except boto.exception.BotoServerError as e:
-        msg = 'Failed to create stack {0}.'.format(name)
+    except BotoServerError as e:
+        msg = 'Failed to create stack {0}.\n{1}'.format(name, str(e))
         log.error(msg)
         log.debug(e)
         return False
@@ -132,7 +173,7 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
                                    stack_policy_body, stack_policy_url)
         log.debug('Updated result is : {0}.'.format(update))
         return update
-    except boto.exception.BotoServerError as e:
+    except BotoServerError as e:
         msg = 'Failed to update stack {0}.'.format(name)
         log.debug(e)
         log.error(msg)
@@ -153,7 +194,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
     try:
         return conn.delete_stack(name)
-    except boto.exception.BotoServerError as e:
+    except BotoServerError as e:
         msg = 'Failed to create stack {0}.'.format(name)
         log.error(msg)
         log.debug(e)
@@ -176,7 +217,7 @@ def get_template(name, region=None, key=None, keyid=None, profile=None):
         template = conn.get_template(name)
         log.info('Retrieved template for stack {0}'.format(name))
         return template
-    except boto.exception.BotoServerError as e:
+    except BotoServerError as e:
         log.debug(e)
         msg = 'Template {0} does not exist'.format(name)
         log.error(msg)
@@ -198,7 +239,7 @@ def validate_template(template_body=None, template_url=None, region=None, key=No
     try:
         # Returns an object if json is validated and an exception if its not
         return conn.validate_template(template_body, template_url)
-    except boto.exception.BotoServerError as e:
+    except BotoServerError as e:
         log.debug(e)
         msg = 'Error while trying to validate template {0}.'.format(template_body)
         log.error(msg)
