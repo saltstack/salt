@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Watch files and translate the changes into salt events
+
+:depends:   - pyinotify Python module >= 0.9.5
+
+:Caution:   Using generic mask options like open, access, ignored, and
+:           closed_nowrite with reactors can easily cause the reactor
+:           to loop on itself.
+
 '''
 # Import Python libs
 from __future__ import absolute_import
@@ -145,24 +152,24 @@ def beacon(config):
               recurse: True
               auto_add: True
 
-    The mask can be a single option from:
-      access
-      attrib
-      close_nowrite
-      close_write
-      create
-      delete
-      delete_self
-      excl_unlink
-      ignored
-      modify
-      moved_from
-      moved_to
-      move_self
-      oneshot
-      onlydir
-      open
-      unmount
+    The mask list can contain options:
+        * access            File was accessed
+        * attrib            Metadata changed
+        * close_nowrite     Unwrittable file closed
+        * close_write       Writtable file was closed
+        * create            File created
+        * delete            File deleted
+        * delete_self       Named file or directory deleted
+        * excl_unlink
+        * ignored
+        * modify            File was modified
+        * moved_from        File being watched was moved
+        * moved_to          File moved into watched area
+        * move_self         Named file was moved
+        * oneshot
+        * onlydir           Operate only if name is directory
+        * open              File was opened
+        * unmount           Backing fs was unmounted
     recurse:
       Tell the beacon to recursively watch files in the directory
     auto_add:

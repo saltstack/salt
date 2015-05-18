@@ -8,7 +8,10 @@ information about the version numbering scheme.
 Latest Stable Release
 =====================
 
-|current_release_doc|
+.. releasestree::
+    :maxdepth: 1
+
+    2015.5.0
 
 Previous Releases
 =================
@@ -17,6 +20,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    2015.5.*
     2014.7.*
     2014.1.*
     0.*
