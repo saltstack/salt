@@ -329,7 +329,7 @@ def add(name, **kwargs):
 
     if name in current_schedule:
         ret['comment'] = 'Job {0} already exists in schedule.'.format(name)
-        ret['result'] = True
+        ret['result'] = False
         return ret
 
     if not name:
