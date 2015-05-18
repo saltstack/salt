@@ -16,7 +16,7 @@
 #
 
 Name:           salt
-Version:        2014.7.0
+Version:        2015.5.0
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -35,10 +35,11 @@ BuildRequires:  python-M2Crypto
 BuildRequires:  python-PyYAML
 BuildRequires:  python-apache-libcloud >= 0.14.0
 BuildRequires:  python-devel
-BuildRequires:  python-msgpack-python
+BuildRequires:  python-msgpack-python > 0.3
 BuildRequires:  python-psutil
 BuildRequires:  python-pycrypto
-BuildRequires:  python-pyzmq
+BuildRequires:  python-pyzmq >= 2.2.0
+BuildRequires:  python-tornado
 BuildRequires:  python-requests >= 1.0.0
 BuildRequires:  python-yaml
 
@@ -67,14 +68,17 @@ BuildRequires:  python-sphinx
 
 Requires:       logrotate
 Requires:       python-Jinja2
+Requires:		python-M2Crypto
 Requires:       python-PyYAML
 Requires:       python-apache-libcloud
+Requires:		python-msgpack-python
 Requires:       python-psutil
-Requires:       python-requests
+Requires:       python-tornado
 Requires:       python-xml
 Requires:       python-yaml
-Requires:       python-yaml
 Requires:       python-zypp
+Requires:		python-pyzmq
+Requires:		python-pycrypto
 Requires(pre): %fillup_prereq
 %if 0%{?suse_version} < 1210
 Requires(pre): %insserv_prereq
@@ -115,7 +119,7 @@ Summary:        The api for Salt a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
 Requires:       %{name}-master = %{version}
-Recommends:     python-CherryPy
+Requires:	    python-CherryPy
 
 %description api
 salt-api is a modular interface on top of Salt that can provide a variety of entry points into a running Salt system.
@@ -124,8 +128,9 @@ salt-api is a modular interface on top of Salt that can provide a variety of ent
 Summary:        Salt Cloud is a generic cloud provisioning tool
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires:       python-PyYAML
+Requires:       %{name}-master = %{version}
 Requires:       python-apache-libcloud
+Requires:       python-requests
 Recommends:     python-botocore
 Recommends:     python-netaddr
 
@@ -138,10 +143,6 @@ controlled profile and mapping system.
 Summary:        Documentation for salt, a parallel remote execution system
 Group:          Documentation/HTML
 Requires:       %{name} = %{version}
-Requires:       python-M2Crypto
-Requires:       python-msgpack-python
-Requires:       python-pycrypto
-Requires:       python-pyzmq
 
 %description doc
 Documentation of salt, offline version of http://docs.saltstack.com.
@@ -157,16 +158,11 @@ Recommends:     python-pygit2
 Requires:       git
 Requires:       python-pygit2
 %endif
-Requires:       python-M2Crypto
-Requires:       python-msgpack-python
-Requires:       python-pycrypto
-Requires:       python-pyzmq
 %ifarch %{ix86} x86_64
 %if 0%{?suse_version} && 0%{?sles_version} == 0
 Requires:       dmidecode
 %endif
 %endif
-Recommends:     python-halite
 %if 0%{?suse_version} < 1210
 Requires(pre):  %insserv_prereq
 %endif
@@ -181,10 +177,6 @@ than serially.
 Summary:        Client component for salt, a parallel remote execution system
 Group:          System/Monitoring
 Requires:       %{name} = %{version}
-Requires:       python-M2Crypto
-Requires:       python-msgpack-python
-Requires:       python-pycrypto
-Requires:       python-pyzmq
 %if 0%{?suse_version} < 1210
 Requires(pre):  %insserv_prereq
 %endif
@@ -239,7 +231,6 @@ Bash command line completion support for %{name}.
 %package zsh-completion
 Summary:        Zsh Completion for %{name}
 Group:          System/Management
-Conflicts:		salt-zsh-completion
 Requires:       %{name} = %{version}
 Requires:       zsh
 BuildArch:      noarch
@@ -322,7 +313,7 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 ## install completion scripts
 %if %with_bashcomp
 install -Dpm 0644 pkg/salt.bash %{buildroot}/etc/bash_completion.d/%{name}
-install -Dpm 0644 scripts/completion/zsh_completion.zsh %{buildroot}/etc/zsh_completion.d/%{name}
+install -Dpm 0644 pkg/zsh_completion.zsh %{buildroot}/etc/zsh_completion.d/%{name}
 %endif #with_bashcomp
 
 #%%check
