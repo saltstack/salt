@@ -62,7 +62,7 @@ def validate(config):
 
 def beacon(config):
     '''
-    The journald beacon allows for the systemd jornal to be parsed and linked
+    The journald beacon allows for the systemd journal to be parsed and linked
     objects to be turned into events.
 
     This beacons config will return all sshd jornal entries
