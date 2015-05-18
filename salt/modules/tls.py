@@ -4,11 +4,96 @@ A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
 
-:depends:   - PyOpenSSL Python module
+:depends:   - PyOpenSSL Python module (0.14 or later)
 :configuration: Add the following values in /etc/salt/minion for the CA module
     to function properly::
 
         ca.cert_base_path: '/etc/pki'
+
+
+CLI Example #1
+Creating a CA, a server request and its signed certificate:
+
+    .. code-block:: bash
+
+    # salt-call tls.create_ca my_little \
+      days=5 \
+      CN='My Little CA' \
+      C=US \
+      ST=Utah \
+      L=Salt Lake City \
+      O=Saltstack \
+      emailAddress=pleasedontemail@thisisnot.coms
+
+    Created Private Key: "/etc/pki/my_little/my_little_ca_cert.key"
+    Created CA "my_little_ca": "/etc/pki/my_little_ca/my_little_ca_cert.crt"
+
+    # salt-call tls.create_csr my_little CN=www.thisisnot.coms
+    Created Private Key: "/etc/pki/my_little/certs/www.thisisnot.coms.key
+    Created CSR for "www.thisisnot.coms": "/etc/pki/my_little/certs/www.thisisnot.coms.csr"
+
+    # salt-call tls.create_ca_signed_cert my_little CN=www.thisisnot.coms
+    Created Certificate for "www.thisisnot.coms": /etc/pki/my_little/certs/www.thisisnot.coms.crt"
+
+CLI Example #2:
+Creating a client request and its signed certificate
+
+    .. code-block:: bash
+
+    # salt-call tls.create_csr my_little CN=DBReplica_No.1 cert_type=client
+    Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key."
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.csr."
+
+    # salt-call tls.create_ca_signed_cert my_little CN=DBReplica_No.1
+    Created Certificate for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.crt"
+
+CLI Example #3:
+Creating both a server and client req + cert for the same CN
+
+    .. code-block:: bash
+    # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2  \
+        cert_type=client
+    Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key."
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/MasterDBReplica_No.2.csr."
+
+    # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2
+    Created Certificate for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1.crt"
+
+    # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2 \
+        cert_type=server
+    Certificate "MasterDBReplica_No.2" already exists
+
+    (doh!)
+
+    # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2 \
+        cert_type=server type_ext=True
+    Created Private Key: "/etc/pki/my_little/certs/DBReplica_No.1_client.key."
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/DBReplica_No.1_client.csr."
+
+    # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2
+    Certificate "MasterDBReplica_No.2" already exists
+
+    (DOH!)
+
+    # salt-call tls.create_ca_signed_cert my_little CN=MasterDBReplica_No.2 \
+        cert_type=server type_ext=True
+    Created Certificate for "MasterDBReplica_No.2": "/etc/pki/my_little/certs/MasterDBReplica_No.2_server.crt"
+
+
+CLI Example #4:
+Create a server req + cert with non-CN filename for the cert
+
+    .. code-block:: bash
+
+    # salt-call tls.create_csr my_little CN=www.anothersometh.ing \
+        cert_type=server type_ext=True
+    Created Private Key: "/etc/pki/my_little/certs/www.anothersometh.ing_server.key."
+    Created CSR for "DBReplica_No.1": "/etc/pki/my_little/certs/www.anothersometh.ing_server.csr."
+
+    # salt-call tls_create_ca_signed_cert my_little CN=www.anothersometh.ing \
+        cert_type=server cert_filename="something_completely_different"
+    Created Certificate for "www.anothersometh.ing": /etc/pki/my_little/certs/something_completely_different.crt
+
 '''
 from __future__ import absolute_import
 # pylint: disable=C0103
@@ -597,9 +682,9 @@ def create_ca(ca_name,
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
+    ret = ('Created Private Key: "{0}/{1}{2}.key." ').format(
         cert_base_path(), ca_name, ca_filename)
-    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
+    ret += ('Created CA "{0}": "{1}/{2}{3}.crt."').format(
         ca_name, cert_base_path(), ca_name, ca_filename)
 
     return ret
@@ -1029,7 +1114,9 @@ def create_ca_signed_cert(ca_name,
                           ca_filename=None,
                           cert_path=None,
                           cert_filename=None,
-                          digest='sha256'):
+                          digest='sha256',
+                          cert_type=None,
+                          type_ext=False):
     '''
     Create a Certificate (CERT) signed by a named Certificate Authority (CA)
 
@@ -1059,12 +1146,38 @@ def create_ca_signed_cert(ca_name,
         full path to the certificates directory
 
     cert_filename
-        alternative filename for the certificate, useful when using special characters in the CN
+        alternative filename for the certificate, useful when using special
+        characters in the CN. If this option is set it will override
+        the certificate filename output effects of ``cert_type``.
+        ``type_ext`` will be completely overridden.
 
     digest
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
         For example, "md5" or "sha1". Default: 'sha256'
+
+    cert_type
+        string. Either 'server' or 'client' (see create_csr() for details).
+
+        If create_csr(type_ext=True) this function **must** be called with the
+        same cert_type so it can find the CSR file.
+
+    .. note::
+        create_csr() defaults to cert_type='server'; therefore, if it was also
+        called with type_ext, cert_type becomes a required argument for
+        create_ca_signed_cert()
+
+    type_ext
+        bool. If set True, use ``cert_type`` as an extension to the CN when
+        formatting the filename.
+
+        e.g.: some_subject_CN_server.crt or some_subject_CN_client.crt
+
+        This facilitates the context where both types are required for the same
+        subject
+
+        If ``cert_filename`` is `not None`, setting ``type_ext`` has no
+        effect
 
     If the following values were set:
 
@@ -1091,14 +1204,26 @@ def create_ca_signed_cert(ca_name,
 
     set_ca_path(cacert_path)
 
-    if not ca_filename:
-        ca_filename = '{0}_ca_cert'.format(ca_name)
+
+    ca_filename = '{0}_ca_cert'.format(ca_name)
 
     if not cert_path:
         cert_path = '{0}/{1}/certs'.format(cert_base_path(), ca_name)
 
+    if type_ext:
+        if not cert_type:
+            log.error('type_ext = True but cert_type is unset. '
+                      'Certificate not written.')
+            return ret
+        elif cert_type:
+            CN_ext = '_{0}'.format(cert_type)
+    else:
+        CN_ext = ''
+
+    csr_filename = '{0}{1}'.format(CN, CN_ext)
+
     if not cert_filename:
-        cert_filename = CN
+        cert_filename = '{0}{1}'.format(CN, CN_ext)
 
     if os.path.exists(
             os.path.join(
@@ -1132,8 +1257,8 @@ def create_ca_signed_cert(ca_name,
         return ret
 
     try:
-        with salt.utils.fopen('{0}/{1}.csr'.format(cert_path,
-                                                   cert_filename)) as fhr:
+        with salt.utils.fopen(
+            '{0}/{1}.csr'.format(cert_path, csr_filename)) as fhr:
             req = OpenSSL.crypto.load_certificate_request(
                     OpenSSL.crypto.FILETYPE_PEM,
                     fhr.read()
@@ -1187,8 +1312,8 @@ def create_ca_signed_cert(ca_name,
 
     cert.sign(ca_key, digest)
 
-    with salt.utils.fopen('{0}/{1}.crt'.format(cert_path,
-                                               cert_filename), 'w+') as crt:
+    with salt.utils.fopen(
+        '{0}/{1}.crt'.format(cert_path, cert_filename), 'w+') as crt:
         crt.write(
             OpenSSL.crypto.dump_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
