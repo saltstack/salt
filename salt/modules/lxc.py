@@ -2926,7 +2926,7 @@ def wait_started(name, timeout=300):
     while time.time() < expire and not started:
         time.sleep(0.3)
         started = test_started(name)
-    if state is None:
+    if started is None:
         log.error(
             'Assuming {0} is started, although we failed to detect that'
             ' is fully started correctly'.format(name))
