@@ -106,6 +106,13 @@ def _ip_sort(ip):
 def search_lxc_bridges():
     '''
     Search which bridges are potentially available as LXC bridges
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.search_lxc_bridges
+
     '''
     bridges = __context__.get('lxc.bridges', None)
     # either match not yet called or no bridges were found
