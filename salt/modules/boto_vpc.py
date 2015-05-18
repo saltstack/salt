@@ -1276,7 +1276,7 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
     '''
     ..deprecated:: Beryllium
         This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>',
+        :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>`,
         which now takes vpc_id or vpc_name as kwargs.
 
         This function will be removed in a future release.
@@ -1501,7 +1501,7 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
     '''
     ..deprecated:: Beryllium
         This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>',
+        :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>`,
         which now takes subnet_id or subnet_name as kwargs.
 
         This function will be removed in a future release.
