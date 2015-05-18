@@ -136,6 +136,12 @@ def set_locale(locale):
                 '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
             )
     elif 'Debian' in __grains__['os_family']:
+        update_locale = salt.utils.which('update-locale')
+        if update_locale is None:
+            raise CommandExecutionError(
+                'Cannot set locale: "update-locale" was not found.')
+        __salt__['cmd.run'](update_locale)  # (re)generate /etc/default/locale
+
         __salt__['file.replace'](
             '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
         )
