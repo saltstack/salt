@@ -148,6 +148,16 @@ def search_lxc_bridges():
 
 
 def search_lxc_bridge():
+    '''
+    Search the first bridge which is potentially available as LXC bridge
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.search_lxc_bridge
+
+    '''
     return search_lxc_bridges()[0]
 
 
@@ -2773,6 +2783,14 @@ def set_dns(name, dnsservers=None, searchdomains=None):
 def running_systemd(name, cache=True):
     '''
     Determine if systemD is running
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.running_systemd ubuntu
+
     '''
     k = 'lxc.systemd.test.{0}'.format(name)
     ret = __context__.get(k, None)
