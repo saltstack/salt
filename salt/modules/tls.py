@@ -847,12 +847,13 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
     cert.set_pubkey(req.get_pubkey())
     extensions_list = []
     for name in extensions:
-        log.debug("name: {0}, critical: {1}, options: {2}".format(
-            name, extensions[name]['critical'], extensions[name]['options']))
-        extensions_list.append(OpenSSL.crypto.X509Extension(
-            name,
-            extensions[name]['critical'],
-            extensions[name]['options']))
+        if type(extensions[name]) == dict and extensions[name].keys() == ['critical', 'options']:
+            log.debug("name: {0}, critical: {1}, options: {2}".format(
+                name, extensions[name]['critical'], extensions[name]['options']))
+            extensions_list.append(OpenSSL.crypto.X509Extension(
+                name,
+                extensions[name]['critical'],
+                extensions[name]['options']))
     cert.add_extensions(extensions_list)
     cert.sign(ca_key, digest)
 
