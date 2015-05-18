@@ -45,7 +45,7 @@ def beacon(config):
     and only emit a beacon if any of them are
     exceeded.
 
-    code_block:: yaml
+    .. code_block:: yaml
 
         beacons:
             diskusage:
