@@ -8,7 +8,7 @@ def __virtual__():
     '''
     Only load if the Traffic Server module is available in __salt__
     '''
-    return 'trafficserver' if 'trafficserver' in __salt__ else False
+    return 'trafficserver' if 'trafficserver.set_var' in __salt__ else False
 
 
 def bounce_cluster():
