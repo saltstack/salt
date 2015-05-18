@@ -711,12 +711,10 @@ def shell(cmd,
 
     .. versionadded:: 2015.5.0
 
-    ************************************************************
-    WARNING: This passes the cmd argument directly to the shell
-    without any further processing! Be absolutely sure that you
-    have properly santized the command passed to this function
-    and do not use untrusted inputs.
-    ************************************************************
+    .. warning:: This passes the cmd argument directly to the shell
+        without any further processing! Be absolutely sure that you
+        have properly santized the command passed to this function
+        and do not use untrusted inputs.
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.

@@ -622,9 +622,7 @@ def import_key(user=None,
     .. code-block:: bash
 
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
-
         salt '*' gpg.import_key filename='/path/to/public-key-file'
-
     '''
     ret = {
            'res': True,
