@@ -1386,7 +1386,7 @@ def running(name,
                         runtime_kwargs,
                         validate_ip_addrs=validate_ip_addrs)
 
-        # Add any needed contiainer creation arguments based on the validated
+        # Add any needed container creation arguments based on the validated
         # runtime arguments.
         if runtime_kwargs.get('binds') is not None:
             # Using bind mounts requries mountpoints to be specified at the
