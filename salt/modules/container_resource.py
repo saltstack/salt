@@ -93,7 +93,7 @@ def cache_file(source):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt myminion container_resource.cache_file salt://foo/bar/baz.txt
     '''
@@ -130,7 +130,7 @@ def run(name,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt myminion container_resource.run mycontainer 'ps aux' container_type=docker exec_driver=nsenter output=stdout
     '''
@@ -270,7 +270,7 @@ def copy_to(name,
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt myminion container_resource.copy_to mycontainer /local/file/path /container/file/path container_type=docker exec_driver=nsenter
     '''
