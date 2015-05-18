@@ -36,7 +36,6 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'digital_ocean'
 
 
-
 class DigitalOceanTest(integration.ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
