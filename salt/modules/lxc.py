@@ -466,7 +466,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
     lxc_init_interface['password_encrypted'] = password_encrypted
-    lxc_init_interface['network_profile'] = net_profile
+    # be sure not to let objects goes inside the return
+    # as this return will be msgpacked for use in the runner !
+    if net_profile is not _marker:
+        lxc_init_interface['network_profile'] = net_profile
     for i in ['cpu', 'cpuset', 'cpushare']:
         if vm_.get(i, None):
             lxc_init_interface[i] = vm_[i]
