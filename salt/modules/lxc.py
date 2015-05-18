@@ -2942,8 +2942,10 @@ def wait_started(name, timeout=300):
     ret = False
     if running_systemd(name):
         test_started = test_sd_started_state
+        logger = log.error
     else:
         test_started = test_bare_started_state
+        logger = log.debug
     now = time.time()
     expire = now + timeout
     now = time.time()
@@ -2952,7 +2954,7 @@ def wait_started(name, timeout=300):
         time.sleep(0.3)
         started = test_started(name)
     if started is None:
-        log.error(
+        logger(
             'Assuming {0} is started, although we failed to detect that'
             ' is fully started correctly'.format(name))
         ret = True
