@@ -1351,10 +1351,6 @@ def init(name,
         chunks = read_conf(path, out_format='commented')
         if old_chunks != chunks:
             to_reboot = True
-    if remove_seed_marker:
-        run(name,
-            'rm -f \'{0}\''.format(SEED_MARKER),
-            python_shell=False)
 
     # last time to be sure any of our property is correctly applied
     cfg = _LXCConfig(name=name, network_profile=network_profile,
@@ -1469,6 +1465,10 @@ def init(name,
                     ret['result'] = False
 
     # retro compatibility, test also old markers
+    if remove_seed_marker:
+        run(name,
+            'rm -f \'{0}\''.format(SEED_MARKER),
+            python_shell=False)
     gid = '/.lxc.initial_seed'
     gids = [gid, '/lxc.initial_seed']
     if (
