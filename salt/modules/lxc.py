@@ -2774,7 +2774,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     return True
 
 
-def _need_install(name):
+def _needs_install(name):
     ret = 0
     has_minion = retcode(name,
                          'which salt-minion',
@@ -2888,7 +2888,7 @@ def bootstrap(name,
     if not orig_state:
         return orig_state
     if not force_install:
-        needs_install = _need_install(name)
+        needs_install = _needs_install(name)
     else:
         needs_install = True
     seeded = retcode(name,
