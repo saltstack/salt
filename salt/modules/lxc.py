@@ -13,6 +13,7 @@ from __future__ import absolute_import, print_function
 import datetime
 import pipes
 import copy
+import textwrap
 import difflib
 import logging
 import tempfile
@@ -49,6 +50,7 @@ __func_alias__ = {
 }
 
 DEFAULT_NIC = 'eth0'
+DEFAULT_BR = 'br0'
 SEED_MARKER = '/lxc.initial_seed'
 PATH = 'PATH=/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:' \
        '/usr/local/bin:/usr/local/sbin'
@@ -101,6 +103,92 @@ def _ip_sort(ip):
     return '{0}___{1}'.format(idx, ip)
 
 
+def search_lxc_bridges():
+    '''
+    Search which bridges are potentially available as LXC bridges
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.search_lxc_bridges
+
+    '''
+    bridges = __context__.get('lxc.bridges', None)
+    # either match not yet called or no bridges were found
+    # to handle the case where lxc was not installed on the first
+    # call
+    if not bridges:
+        bridges = set()
+        running_bridges = set()
+        bridges.add(DEFAULT_BR)
+        try:
+            output = __salt__['cmd.run_all']('brctl show')
+            for line in output['stdout'].splitlines()[1:]:
+                if not line.startswith(' '):
+                    running_bridges.add(line.split()[0].strip())
+        except (SaltInvocationError, CommandExecutionError):
+            pass
+        for ifc, ip in six.iteritems(
+            __grains__.get('ip_interfaces', {})
+        ):
+            if ifc in running_bridges:
+                bridges.add(ifc)
+            elif os.path.exists(
+                'a/sys/devices/virtual/net/{0}/bridge'.format(ifc)
+            ):
+                bridges.add(ifc)
+        bridges = list(bridges)
+        # if we found interfaces that have lxc in their names
+        # we filter them as being the potential lxc bridges
+        # we also try to default on br0 on other cases
+
+        def sort_bridges(a):
+            pref = 'z'
+            if 'lxc' in a:
+                pref = 'a'
+            elif 'br0' == a:
+                pref = 'c'
+            return '{0}_{1}'.format(pref, a)
+        bridges.sort(key=sort_bridges)
+        __context__['lxc.bridges'] = bridges
+    return bridges
+
+
+def search_lxc_bridge():
+    '''
+    Search the first bridge which is potentially available as LXC bridge
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.search_lxc_bridge
+
+    '''
+    return search_lxc_bridges()[0]
+
+
+def _get_salt_config(config, **kwargs):
+    if not config:
+        config = kwargs.get('minion', {})
+    if not config:
+        config = {}
+    config.setdefault('master',
+                      kwargs.get('master',
+                              __opts__.get('master',
+                                           __opts__['id'])))
+    config.setdefault(
+        'master_port',
+        kwargs.get('master_port',
+                __opts__.get('master_port',
+                             __opts__.get('ret_port',
+                                          __opts__.get('4506')))))
+    if not config['master']:
+        config = {}
+    return config
+
+
 def cloud_init_interface(name, vm_=None, **kwargs):
     '''
     Interface between salt.cloud.lxc driver and lxc.init
@@ -148,6 +236,41 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     priv_key
         private key to preseed the minion with.
         Can be the keycontent or a filepath
+    network_profile
+        salt lxc network profile selection
+    nic_opts
+        per interface settings compatibles with
+        network profile (ipv4/ipv6/link/gateway/mac/netmask)
+
+        eg::
+
+              - {'eth0': {'mac': '00:16:3e:01:29:40',
+                          'gateway': None, (default)
+                          'link': 'br0', (default)
+                          'gateway': None, (default)
+                          'netmask': '', (default)
+                          'ip': '22.1.4.25'}}
+    unconditional_install
+        given to lxc.bootstrap (see relative doc)
+    force_install
+        given to lxc.bootstrap (see relative doc)
+    config
+        any extra argument for the salt minion config
+    dnsservers
+        dns servers to set inside the container
+    autostart
+        autostart the container at boot time
+    password
+        administrative password for the container
+    users
+        administrative users for the container
+        default: [root] and [root, ubuntu] on ubuntu
+    default_nic
+        name of the first interface, you should
+        really not override this
+
+    Legacy but still supported options:
+
     ip
         ip for the primary nic
     mac
@@ -174,21 +297,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                  'link': 'br0', (default)
                  'netmask': '', (default)
                  'ip': '22.1.4.25'}
-    unconditional_install
-        given to lxc.bootstrap (see relative doc)
-    force_install
-        given to lxc.bootstrap (see relative doc)
-    config
-        any extra argument for the salt minion config
-    dnsservers
-        dns servers to set inside the container
-    autostart
-        autostart the container at boot time
-    password
-        administrative password for the container
-    users
-        administrative users for the container
-        default: [root] and [root, ubuntu] on ubuntu
 
     CLI Example:
 
@@ -220,8 +328,14 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         default_template = 'ubuntu'
     image = vm_.get('image', profile.get('template',
                                          default_template))
-    vgname = vm_.get('vgname', None)
     backing = vm_.get('backing', 'dir')
+    if image:
+        profile['template'] = image
+    vgname = vm_.get('vgname', None)
+    if vgname:
+        profile['vgname'] = vgname
+    if backing:
+        profile['backing'] = backing
     snapshot = vm_.get('snapshot', False)
     autostart = bool(vm_.get('autostart', True))
     dnsservers = vm_.get('dnsservers', [])
@@ -236,65 +350,65 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     size = vm_.get('size', '20G')
     script = vm_.get('script', None)
     script_args = vm_.get('script_args', None)
-    if image:
-        profile['template'] = image
-    if vgname:
-        profile['vgname'] = vgname
-    if backing:
-        profile['backing'] = backing
     users = vm_.get('users', None)
     if users is None:
         users = []
     ssh_username = vm_.get('ssh_username', None)
     if ssh_username and (ssh_username not in users):
         users.append(ssh_username)
-    ip = vm_.get('ip', None)
-    mac = vm_.get('mac', None)
+    net_profile = vm_.get('network_profile', _marker)
+    nic_opts = kwargs.pop('nic_opts', None)
     netmask = vm_.get('netmask', '24')
-    bridge = vm_.get('bridge', 'lxcbr0')
-    gateway = vm_.get('gateway', 'auto')
+    bridge = vm_.get('bridge', None)
+    gateway = vm_.get('gateway', None)
     unconditional_install = vm_.get('unconditional_install', False)
     force_install = vm_.get('force_install', True)
-    config = vm_.get('config', {})
-    if not config:
-        config = vm_.get('minion', {})
-    if not config:
-        config = {}
-    config.setdefault('master',
-                      vm_.get('master',
-                              __opts__.get('master',
-                                           __opts__['id'])))
-    config.setdefault(
-        'master_port',
-        vm_.get('master_port',
-                __opts__.get('master_port',
-                             __opts__.get('ret_port',
-                                          __opts__.get('4506')))))
-    if not config['master']:
-        config = {}
-    eth0 = {}
-    nic_opts = {'eth0': eth0}
-    bridge = vm_.get('bridge', 'lxcbr0')
-    if ip is None:
-        nic_opts = None
-    else:
+    config = _get_salt_config(vm_.get('config', {}), **vm_)
+    default_nic = vm_.get('default_nic', DEFAULT_NIC)
+    # do the interface with lxc.init mainly via nic_opts
+    # to avoid extra and confusing extra use cases.
+    if not isinstance(nic_opts, dict):
+        nic_opts = salt.utils.odict.OrderedDict()
+    # have a reference to the default nic
+    eth0 = nic_opts.setdefault(default_nic,
+                               salt.utils.odict.OrderedDict())
+    # lxc config is based of ifc order, be sure to use odicts.
+    if not isinstance(nic_opts, salt.utils.odict.OrderedDict):
+        bnic_opts = salt.utils.odict.OrderedDict()
+        bnic_opts.update(nic_opts)
+        nic_opts = bnic_opts
+    gw = None
+    # legacy salt.cloud scheme for network interfaces settings support
+    bridge = vm_.get('bridge', None)
+    ip = vm_.get('ip', None)
+    mac = vm_.get('mac', None)
+    if ip:
         fullip = ip
         if netmask:
             fullip += '/{0}'.format(netmask)
         eth0['ipv4'] = fullip
         if mac is not None:
             eth0['mac'] = mac
-        if bridge:
-            eth0['link'] = bridge
     for ix, iopts in enumerate(vm_.get("additional_ips", [])):
         ifh = "eth{0}".format(ix+1)
         ethx = nic_opts.setdefault(ifh, {})
-        gw = iopts.get('gateway', None)
-        if gw:
-            ethx['gateway'] = gw
-            vm_['gateway'] = gateway = None
-        ethx['link'] = iopts.get('link', 'br0')
-        ethx['ipv4'] = iopts['ip']
+        if gw is None:
+            gw = iopts.get('gateway', ethx.get('gateway', None))
+            if gw:
+                # only one and only one default gateway is allowed !
+                eth0.pop('gateway', None)
+                gateway = None
+                # even if the gateway if on default "eth0" nic
+                # and we popped it will work
+                # as we reinject or set it here.
+                ethx['gateway'] = gw
+        elink = iopts.get('link', ethx.get('link', None))
+        if elink:
+            ethx['link'] = elink
+        # allow dhcp
+        aip = iopts.get('ipv4', iopts.get('ip', None))
+        if aip:
+            ethx['ipv4'] = aip
         nm = iopts.get('netmask', '')
         if nm:
             ethx['ipv4'] += '/{0}'.format(nm)
@@ -303,8 +417,25 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                 ethx['mac'] = iopts[i]
                 break
         if 'mac' not in ethx:
-            raise ValueError('No mac for {0}'.format(ifh))
-    gateway = vm_.get('gateway', 'auto')
+            ethx['mac'] = salt.utils.gen_mac()
+    # last round checking for unique gateway and such
+    gw = None
+    for ethx in [a for a in nic_opts]:
+        ndata = nic_opts[ethx]
+        if gw:
+            ndata.pop('gateway', None)
+        if 'gateway' in ndata:
+            gw = ndata['gateway']
+            gateway = None
+    # only use a default bridge / gateway if we configured them
+    # via the legacy salt cloud configuration style.
+    # On other cases, we should rely on settings provided by the new
+    # salt lxc network profile style configuration which can
+    # be also be overriden or a per interface basis via the nic_opts dict.
+    if bridge:
+        eth0['link'] = bridge
+    if gateway:
+        eth0['gateway'] = gateway
     #
     lxc_init_interface = {}
     lxc_init_interface['name'] = name
@@ -312,8 +443,6 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['memory'] = vm_.get('memory', 0)  # nolimit
     lxc_init_interface['pub_key'] = pub_key
     lxc_init_interface['priv_key'] = priv_key
-    lxc_init_interface['bridge'] = bridge
-    lxc_init_interface['gateway'] = gateway
     lxc_init_interface['nic_opts'] = nic_opts
     for clone_from in ['clone_from', 'clone', 'from_container']:
         # clone_from should default to None if not available
@@ -338,7 +467,10 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
     lxc_init_interface['password_encrypted'] = password_encrypted
-    lxc_init_interface['network_profile'] = DEFAULT_NIC
+    # be sure not to let objects goes inside the return
+    # as this return will be msgpacked for use in the runner !
+    if net_profile is not _marker:
+        lxc_init_interface['network_profile'] = net_profile
     for i in ['cpu', 'cpuset', 'cpushare']:
         if vm_.get(i, None):
             lxc_init_interface[i] = vm_[i]
@@ -492,6 +624,9 @@ def get_network_profile(name=None):
                     'lxc.nic has been deprecated, please configure LXC '
                     'network profiles under lxc.network_profile instead'
                 )
+
+    if name == DEFAULT_NIC and not net_profile:
+        net_profile = {DEFAULT_NIC: {}}
     return net_profile if net_profile is not None else {}
 
 
@@ -585,7 +720,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                     'test': not link,
                     'value': link,
                     'old': old_if.get('lxc.network.link'),
-                    'default': 'br0'}),
+                    'default': search_lxc_bridge()}),
                 ('lxc.network.hwaddr', {
                     'test': not mac,
                     'value': mac,
@@ -1025,6 +1160,12 @@ def init(name,
         Optional config parameters. By default, the id is set to
         the name of the container.
 
+    master
+        salt master (default to minion's master)
+
+    master_port
+        salt master port (default to minion's master port)
+
     pub_key
         Explicit public key to preseed the minion with (optional).
         This can be either a filepath or a string representing the key
@@ -1143,7 +1284,7 @@ def init(name,
     seed = select('seed', True)
     install = select('install', True)
     seed_cmd = select('seed_cmd')
-    salt_config = select('config')
+    salt_config = _get_salt_config(config, **kwargs)
     approve_key = select('approve_key', True)
     clone_from = select('clone_from')
     if password and password_encrypted is None:
@@ -1272,6 +1413,7 @@ def init(name,
                 '/.lxc.{0}.initial_pass'.format(name)]
         if not any(retcode(name,
                            'test -e "{0}"'.format(x),
+                           chroot_fallback=True,
                            ignore_retcode=True) == 0
                    for x in gids):
             # think to touch the default user generated by default templates
@@ -1279,11 +1421,12 @@ def init(name,
             # root is defined as a member earlier in the code
             for default_user in ['ubuntu']:
                 if (
-                    default_user not in users
-                    and retcode(name,
-                                'id {0}'.format(default_user),
-                                python_shell=False,
-                                ignore_retcode=True) == 0
+                    default_user not in users and
+                    retcode(name,
+                            'id {0}'.format(default_user),
+                            python_shell=False,
+                            chroot_fallback=True,
+                            ignore_retcode=True) == 0
                 ):
                     users.append(default_user)
             for user in users:
@@ -1307,6 +1450,7 @@ def init(name,
                 if retcode(name,
                            ('sh -c \'touch "{0}"; test -e "{0}"\''
                             .format(gid)),
+                           chroot_fallback=True,
                            ignore_retcode=True) != 0:
                     ret['comment'] = 'Failed to set password marker'
                     changes[-1]['password'] += '. ' + ret['comment'] + '.'
@@ -1321,6 +1465,7 @@ def init(name,
                 '/lxc.{0}.initial_dns'.format(name)]
         if not any(retcode(name,
                            'test -e "{0}"'.format(x),
+                           chroot_fallback=True,
                            ignore_retcode=True) == 0
                    for x in gids):
             try:
@@ -1335,6 +1480,7 @@ def init(name,
                 if retcode(name,
                            ('sh -c \'touch "{0}"; test -e "{0}"\''
                             .format(gid)),
+                           chroot_fallback=True,
                            ignore_retcode=True) != 0:
                     ret['comment'] = 'Failed to set DNS marker'
                     changes[-1]['dns'] += '. ' + ret['comment'] + '.'
@@ -1346,9 +1492,9 @@ def init(name,
     if (
         any(retcode(name,
                     'test -e {0}'.format(x),
+                    chroot_fallback=True,
                     ignore_retcode=True) == 0
-            for x in gids)
-        or not ret.get('result', True)
+            for x in gids) or not ret.get('result', True)
     ):
         pass
     elif seed or seed_cmd:
@@ -2438,6 +2584,7 @@ def set_password(name, users, password, encrypted=True):
                          'chpasswd{0}'.format(' -e' if encrypted else ''),
                          stdin=':'.join((user, password)),
                          python_shell=False,
+                         chroot_fallback=True,
                          output_loglevel='quiet')
         if result != 0:
             failed_users.append(user)
@@ -2599,6 +2746,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     script = '/sbin/{0}_dns.sh'.format(rstr)
     DNS_SCRIPT = "\n".join([
         # 'set -x',
+        '#!/usr/bin/env bash',
         'if [ -h /etc/resolv.conf ];then',
         ' if [ "x$(readlink /etc/resolv.conf)"'
         ' = "x../run/resolvconf/resolv.conf" ];then',
@@ -2633,7 +2781,183 @@ def set_dns(name, dnsservers=None, searchdomains=None):
     return True
 
 
-def _need_install(name):
+def running_systemd(name, cache=True):
+    '''
+    Determine if systemD is running
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.running_systemd ubuntu
+
+    '''
+    k = 'lxc.systemd.test.{0}'.format(name)
+    ret = __context__.get(k, None)
+    if ret is None or not cache:
+        rstr = __salt__['test.rand_str']()
+        # no tmp here, apparmor wont let us execute !
+        script = '/sbin/{0}_testsystemd.sh'.format(rstr)
+        # ubuntu already had since trusty some bits of systemd but was
+        # still using upstart ...
+        # we need to be a bit more careful that just testing that systemd
+        # is present
+        _script = textwrap.dedent(
+            '''\
+            #!/usr/bin/env bash
+            set -x
+            if ! which systemctl 1>/dev/nulll 2>/dev/null;then exit 2;fi
+            for i in \\
+                /run/systemd/journal/dev-log\\
+                /run/systemd/journal/flushed\\
+                /run/systemd/journal/kernel-seqnum\\
+                /run/systemd/journal/socket\\
+                /run/systemd/journal/stdout\\
+                /var/run/systemd/journal/dev-log\\
+                /var/run/systemd/journal/flushed\\
+                /var/run/systemd/journal/kernel-seqnum\\
+                /var/run/systemd/journal/socket\\
+                /var/run/systemd/journal/stdout\\
+            ;do\\
+                if test -e ${i};then exit 0;fi
+            done
+            if test -d /var/systemd/system;then exit 0;fi
+            exit 2
+            ''')
+        result = run_all(
+            name, 'tee {0}'.format(script), stdin=_script, python_shell=True)
+        if result['retcode'] == 0:
+            result = run_all(name,
+                             'sh -c "chmod +x {0};{0}"'''.format(script),
+                             python_shell=True)
+        else:
+            raise CommandExecutionError(
+                'lxc {0} failed to copy initd tester'.format(name))
+        run_all(name,
+                'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''
+                ''.format(script),
+                ignore_retcode=True,
+                python_shell=True)
+        if result['retcode'] != 0:
+            error = ('Unable to determine if the container \'{0}\''
+                     ' was running systemd, assmuming it is not.'
+                     ''.format(name))
+            if result['stderr']:
+                error += ': {0}'.format(result['stderr'])
+        # only cache result if we got a known exit code
+        if result['retcode'] in (0, 2):
+            __context__[k] = ret = not result['retcode']
+    return ret
+
+
+def systemd_running_state(name):
+    '''
+    Get the operational state of a systemd based container
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.systemd_running_state ubuntu
+
+    '''
+    try:
+        ret = run_all(name,
+                      'systemctl is-system-running',
+                     ignore_retcode=True)['stdout']
+    except CommandExecutionError:
+        ret = ''
+    return ret
+
+
+def test_sd_started_state(name):
+
+    '''
+    Test if a systemd container is fully started
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.test_sd_started_state ubuntu
+
+    '''
+    qstate = systemd_running_state(name)
+    if qstate in ('initializing', 'starting'):
+        return False
+    elif qstate == '':
+        return None
+    else:
+        return True
+
+
+def test_bare_started_state(name):
+    '''
+    Test if a non systemd container is fully started
+    For now, it consists only to test if the container is attachable
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.test_bare_started_state ubuntu
+
+    '''
+    try:
+        ret = run_all(name, 'ls', ignore_retcode=True)['retcode'] == 0
+    except (CommandExecutionError,):
+        ret = None
+    return ret
+
+
+def wait_started(name, timeout=300):
+    '''
+    Check that the system has fully inited
+
+    This is actually very important for systemD based containers
+
+    see https://github.com/saltstack/salt/issues/23847
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion lxc.wait_started ubuntu
+
+    '''
+    if not exists(name):
+        raise CommandExecutionError(
+            'Container {0} does does exists'.format(name))
+    if not state(name) == 'running':
+        raise CommandExecutionError(
+            'Container {0} is not running'.format(name))
+    ret = False
+    if running_systemd(name):
+        test_started = test_sd_started_state
+        logger = log.error
+    else:
+        test_started = test_bare_started_state
+        logger = log.debug
+    now = time.time()
+    expire = now + timeout
+    now = time.time()
+    started = test_started(name)
+    while time.time() < expire and not started:
+        time.sleep(0.3)
+        started = test_started(name)
+    if started is None:
+        logger(
+            'Assuming {0} is started, although we failed to detect that'
+            ' is fully started correctly'.format(name))
+        ret = True
+    else:
+        ret = started
+    return ret
+
+
+def _needs_install(name):
     ret = 0
     has_minion = retcode(name,
                          'which salt-minion',
@@ -2718,6 +3042,7 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
+    wait_started(name)
     if bootstrap_delay is not None:
         try:
             time.sleep(bootstrap_delay)
@@ -2747,11 +3072,12 @@ def bootstrap(name,
     if not orig_state:
         return orig_state
     if not force_install:
-        needs_install = _need_install(name)
+        needs_install = _needs_install(name)
     else:
         needs_install = True
     seeded = retcode(name,
                      'test -e \'{0}\''.format(SEED_MARKER),
+                     chroot_fallback=True,
                      ignore_retcode=True) == 0
     tmp = tempfile.mkdtemp()
     if seeded and not unconditional_install:
@@ -2862,6 +3188,7 @@ def _run(name,
          output_loglevel='debug',
          use_vt=False,
          ignore_retcode=False,
+         chroot_fallback=None,
          keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     Common logic for lxc.run functions
@@ -2897,6 +3224,9 @@ def _run(name,
                 ignore_retcode=ignore_retcode,
                 use_vt=use_vt)
         else:
+            if not chroot_fallback:
+                raise CommandExecutionError(
+                    '{0} is not attachable.'.format(name))
             rootfs = info(name).get('rootfs')
             # Set context var to make cmd.run_chroot run cmd.run instead of
             # cmd.run_all.
@@ -2935,6 +3265,7 @@ def run_cmd(name,
             output_loglevel='debug',
             use_vt=False,
             ignore_retcode=False,
+            chroot_fallback=False,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. deprecated:: 2015.5.0
@@ -2976,6 +3307,7 @@ def run(name,
         output_loglevel='debug',
         use_vt=False,
         ignore_retcode=False,
+        chroot_fallback=False,
         keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.5.0
@@ -3019,6 +3351,10 @@ def run(name,
         Use SaltStack's utils.vt to stream output to console. Assumes
         ``output=all``.
 
+    chroot_fallback
+        if the container is not running, try to run the command using chroot
+        default: false
+
     keep_env : http_proxy,https_proxy,no_proxy
         A list of env vars to preserve. May be passed as commma-delimited list.
 
@@ -3039,6 +3375,7 @@ def run(name,
                 output_loglevel=output_loglevel,
                 use_vt=use_vt,
                 ignore_retcode=ignore_retcode,
+                chroot_fallback=chroot_fallback,
                 keep_env=keep_env)
 
 
@@ -3051,6 +3388,7 @@ def run_stdout(name,
                output_loglevel='debug',
                use_vt=False,
                ignore_retcode=False,
+               chroot_fallback=False,
                keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.5.0
@@ -3097,6 +3435,10 @@ def run_stdout(name,
     keep_env : http_proxy,https_proxy,no_proxy
         A list of env vars to preserve. May be passed as commma-delimited list.
 
+    chroot_fallback
+        if the container is not running, try to run the command using chroot
+        default: false
+
 
     CLI Example:
 
@@ -3114,6 +3456,7 @@ def run_stdout(name,
                 output_loglevel=output_loglevel,
                 use_vt=use_vt,
                 ignore_retcode=ignore_retcode,
+                chroot_fallback=chroot_fallback,
                 keep_env=keep_env)
 
 
@@ -3126,6 +3469,7 @@ def run_stderr(name,
                output_loglevel='debug',
                use_vt=False,
                ignore_retcode=False,
+               chroot_fallback=False,
                keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.5.0
@@ -3170,6 +3514,10 @@ def run_stderr(name,
     keep_env : http_proxy,https_proxy,no_proxy
         A list of env vars to preserve. May be passed as commma-delimited list.
 
+    chroot_fallback
+        if the container is not running, try to run the command using chroot
+        default: false
+
 
     CLI Example:
 
@@ -3187,6 +3535,7 @@ def run_stderr(name,
                 output_loglevel=output_loglevel,
                 use_vt=use_vt,
                 ignore_retcode=ignore_retcode,
+                chroot_fallback=chroot_fallback,
                 keep_env=keep_env)
 
 
@@ -3199,6 +3548,7 @@ def retcode(name,
                 output_loglevel='debug',
                 use_vt=False,
                 ignore_retcode=False,
+                chroot_fallback=False,
                 keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.5.0
@@ -3245,6 +3595,10 @@ def retcode(name,
     keep_env : http_proxy,https_proxy,no_proxy
         A list of env vars to preserve. May be passed as commma-delimited list.
 
+    chroot_fallback
+        if the container is not running, try to run the command using chroot
+        default: false
+
 
     CLI Example:
 
@@ -3262,6 +3616,7 @@ def retcode(name,
                 output_loglevel=output_loglevel,
                 use_vt=use_vt,
                 ignore_retcode=ignore_retcode,
+                chroot_fallback=chroot_fallback,
                 keep_env=keep_env)
 
 
@@ -3274,6 +3629,7 @@ def run_all(name,
             output_loglevel='debug',
             use_vt=False,
             ignore_retcode=False,
+            chroot_fallback=False,
             keep_env='http_proxy,https_proxy,no_proxy'):
     '''
     .. versionadded:: 2015.5.0
@@ -3318,6 +3674,10 @@ def run_all(name,
     keep_env : http_proxy,https_proxy,no_proxy
         A list of env vars to preserve. May be passed as commma-delimited list.
 
+    chroot_fallback
+        if the container is not running, try to run the command using chroot
+        default: false
+
 
     CLI Example:
 
@@ -3335,6 +3695,7 @@ def run_all(name,
                 output_loglevel=output_loglevel,
                 use_vt=use_vt,
                 ignore_retcode=ignore_retcode,
+                chroot_fallback=chroot_fallback,
                 keep_env=keep_env)
 
 
@@ -3342,7 +3703,9 @@ def _get_md5(name, path):
     '''
     Get the MD5 checksum of a file from a container
     '''
-    output = run_stdout(name, 'md5sum "{0}"'.format(path), ignore_retcode=True)
+    output = run_stdout(name, 'md5sum "{0}"'.format(path),
+                        chroot_fallback=True,
+                        ignore_retcode=True)
     try:
         return output.split()[0]
     except IndexError:
@@ -3626,7 +3989,7 @@ def edit_conf(conf_file, out_format='simple', read_only=False, lxc_config=None, 
             net_config.append(net_params)
     nic_opts = salt.utils.odict.OrderedDict()
     for params in net_config:
-        dev = params.get('lxc.network.name', 'eth0')
+        dev = params.get('lxc.network.name', DEFAULT_NIC)
         dev_opts = nic_opts.setdefault(dev, salt.utils.odict.OrderedDict())
         for param in params:
             opt = param.replace('lxc.network.', '')
