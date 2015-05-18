@@ -353,12 +353,14 @@ class Schedule(object):
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
+                log.debug('==== Deleting {0} ===='.format(name))
                 del self.opts['schedule'][name]
             schedule = self.opts['schedule']
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
                 if name in self.opts['pillar']['schedule']:
+                    log.debug('==== Deleting {0} ====='.format(name))
                     del self.opts['pillar']['schedule'][name]
             schedule = self.opts['pillar']['schedule']
 
@@ -451,14 +453,14 @@ class Schedule(object):
                 self.delete_job(name, where=where)
             self.opts['schedule'][name] = schedule
 
-    def run_job(self, name, where=None):
+    def run_job(self, name):
         '''
         Run a schedule job now
         '''
-        if where == 'pillar':
-            data = self.opts['pillar']['schedule'][name]
-        else:
-            data = self.opts['schedule'][name]
+        schedule = self.opts['schedule']
+        if 'schedule' in self.opts['pillar']:
+            schedule.update(self.opts['pillar']['schedule'])
+        data = schedule[name]
 
         if 'function' in data:
             func = data['function']
@@ -526,6 +528,26 @@ class Schedule(object):
                 self.opts['schedule'].update(schedule)
         else:
             self.opts['schedule'] = schedule
+
+    def list(self, where):
+        '''
+        List the current schedule items
+        '''
+        schedule = {}
+        if where == 'pillar':
+            if 'schedule' in self.opts['pillar']:
+                schedule.update(self.opts['pillar']['schedule'])
+        elif where == 'opts':
+            schedule.update(self.opts['schedule'])
+        else:
+            schedule.update(self.opts['schedule'])
+            if 'schedule' in self.opts['pillar']:
+                schedule.update(self.opts['pillar']['schedule'])
+
+        # Fire the complete event back along with the list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'schedule': schedule},
+                       tag='/salt/minion/minion_schedule_list_complete')
 
     def handle_func(self, func, data):
         '''
