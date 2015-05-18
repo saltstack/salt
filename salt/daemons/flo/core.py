@@ -40,7 +40,7 @@ console = getConsole()
 # pylint: disable=import-error
 HAS_PSUTIL = False
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
     HAS_PSUTIL = True
 except ImportError:
     pass
@@ -648,7 +648,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                     )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).get_memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()
             mem_limit = rss + vms + self.opts.value['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.value.get('modules_max_memory', -1) > 0:
