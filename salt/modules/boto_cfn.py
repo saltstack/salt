@@ -33,9 +33,6 @@ import logging
 
 log = logging.getLogger(__name__)
 
-# Import salt libs
-import salt.utils.boto
-
 # Import third party libs
 # pylint: disable=import-error
 try:
@@ -118,7 +115,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
         log.debug('Stack {0} exists.'.format(name))
         return True
     except BotoServerError as e:
-        log.warning('Could not describe stack {0}.\n{0}'.format(name, str(e)))
+        log.warning('Could not describe stack {0}.\n{1}'.format(name, str(e)))
         return False
 
 
