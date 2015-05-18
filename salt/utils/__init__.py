@@ -1230,6 +1230,7 @@ def subdict_match(data,
                       regex_match=regex_match,
                       exact_match=exact_match):
                 return True
+        return False
 
     for idx in range(1, expr.count(delimiter) + 1):
         splits = expr.split(delimiter)
