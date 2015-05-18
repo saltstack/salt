@@ -1392,7 +1392,8 @@ def running(name,
             # Using bind mounts requries mountpoints to be specified at the
             # time the container is created, so we need to add them to the
             # create_kwargs.
-            create_kwargs['volumes'] = list(runtime_kwargs['binds'])
+            create_kwargs['volumes'] = [bind_conf['bind'] for bind_conf in
+                                        runtime_kwargs['binds'].values()]
         if runtime_kwargs.get('port_bindings') is not None \
                 and create_kwargs.get('ports') is None:
             create_kwargs['ports'] = ','.join(
