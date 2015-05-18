@@ -2886,7 +2886,7 @@ def test_bare_started_state(name):
 
     '''
     try:
-        ret = run(name, 'ls', ingore_retcode=True)['retcode'] == 0
+        ret = run_all(name, 'ls', ignore_retcode=True)['retcode'] == 0
     except (CommandExecutionError,):
         ret = None
     return ret
