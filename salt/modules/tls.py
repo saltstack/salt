@@ -699,7 +699,9 @@ def create_csr(ca_name,
                ca_filename=None,
                csr_path=None,
                csr_filename=None,
-               digest='sha256'):
+               digest='sha256',
+               type_ext=False,
+               cert_type='server'):
     '''
     Create a Certificate Signing Request (CSR) for a
     particular Certificate Authority (CA)
@@ -742,18 +744,32 @@ def create_csr(ca_name,
                 requests to https://1.2.3.4 will fail from python's
                 requests library w/out the second entry in the above list
 
-    cacert_path
-        absolute path to ca certificates root directory
-    ca_filename
-        alternative filename for the CA
-    csr_path
-        full path to the CSR directory
-    csr_filename
-        alternative filename for the csr, useful when using special characters in the CN
-    digest
-        The message digest algorithm. Must be a string describing a digest
-        algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
-        For example, "md5" or "sha1". Default: 'sha256'
+    .. versionadded:: Beryllium
+
+    cert_type
+        Specify the general certificate type. Can be either `server` or
+        `client`. Indicates the set of common extensions added to the CSR.
+
+        server: {
+           'basicConstraints': 'CA:FALSE',
+           'extendedKeyUsage': 'serverAuth',
+           'keyUsage': 'digitalSignature, keyEncipherment'
+        }
+
+        client: {
+           'basicConstraints': 'CA:FALSE',
+           'extendedKeyUsage': 'clientAuth',
+           'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
+        }
+
+    type_ext
+        boolean.  Whether or not to extend the filename with CN_[cert_type]
+        This can be useful if a server and client certificate are needed for
+        the same CN. Defaults to False to avoid introducing an unexpected file
+        naming pattern
+
+        The files normally named some_subject_CN.csr and some_subject_CN.key
+        will then be saved
 
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
@@ -791,8 +807,10 @@ def create_csr(ca_name,
     if not os.path.exists(csr_path):
         os.makedirs(csr_path)
 
+    CN_ext = '_{0}'.format(cert_type) if type_ext else ''
+
     if not csr_filename:
-        csr_filename = CN
+        csr_filename = '{0}{1}'.format(CN, CN_ext)
 
     csr_f = '{0}/{1}.csr'.format(csr_path, csr_filename)
 
