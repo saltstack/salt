@@ -353,14 +353,12 @@ class Schedule(object):
         if where is None or where != 'pillar':
             # ensure job exists, then delete it
             if name in self.opts['schedule']:
-                log.debug('==== Deleting {0} ===='.format(name))
                 del self.opts['schedule'][name]
             schedule = self.opts['schedule']
         else:
             # If job is in pillar, delete it there too
             if 'schedule' in self.opts['pillar']:
                 if name in self.opts['pillar']['schedule']:
-                    log.debug('==== Deleting {0} ====='.format(name))
                     del self.opts['pillar']['schedule'][name]
             schedule = self.opts['pillar']['schedule']
 
