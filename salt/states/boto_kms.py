@@ -57,6 +57,7 @@ config:
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 from __future__ import absolute_import
+import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
 
 
@@ -140,7 +141,7 @@ def key_present(
         name, policy, description, key_usage, key_rotation, enabled, region,
         key, keyid, profile
     )
-    ret['changes'] = _ret['changes']
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
@@ -161,7 +162,6 @@ def _key_present(
         key,
         keyid,
         profile):
-    # TODO: break this function up into smaller pieces.
     ret = {'result': True, 'comment': '', 'changes': {}}
     alias = 'alias/{0}'.format(name)
     r = __salt__['boto_kms.key_exists'](alias, region, key, keyid, profile)
@@ -179,152 +179,191 @@ def _key_present(
         rc = __salt__['boto_kms.create_key'](
             policy, description, key_usage, region, key, keyid, profile
         )
-        kms_key_id = rc['key_metadata']['KeyId']
+        key_metadata = rc['key_metadata']
+        kms_key_id = key_metadata['KeyId']
         if 'error' in rc:
             ret['result'] = False
             ret['comment'] = 'Failed to create key: {0}'.format(
                 rc['error']['message']
             )
-        else:
-            rn = __salt__['boto_kms.create_alias'](
-                name, kms_key_id, region, key, keyid, profile
-            )
-            if 'error' in rn:
-                # We can't recover from this. KMS only exposes enable/disable
-                # and disable is not necessarily a great action here. AWS sucks
-                # for not including alias in the create_key call.
-                msg = ('Failed to create key alias for key_id {0}.'
-                       ' This resource will be left dangling. Please clean'
-                       ' manually. Error: {1}')
-                ret['result'] = False
-                ret['comment'] = msg.format(
-                    kms_key_id,
-                    rn['error']['message']
-                )
-            else:
-                ret['changes']['old'] = {'key': None}
-                ret['changes']['new'] = {'key': name}
-                ret['comment'] = 'Key {0} created.'.format(name)
-            if key_rotation:
-                rk = __salt__['boto_kms.enable_key_rotation'](
-                    kms_key_id, region, key, keyid, profile
-                )
-                if 'error' in rk:
-                    msg = '{0} Failed to enable key rotation: {1}'
-                    ret['result'] = False
-                    ret['comment'] = msg.format(
-                        ret['comment'],
-                        rk['error']['message']
-                    )
-                else:
-                    msg = '{0} Enabled key rotation.'
-                    ret['comment'] = msg.format(ret['comment'])
+            return ret
+        rn = __salt__['boto_kms.create_alias'](
+            alias, kms_key_id, region, key, keyid, profile
+        )
+        if 'error' in rn:
+            # We can't recover from this. KMS only exposes enable/disable
+            # and disable is not necessarily a great action here. AWS sucks
+            # for not including alias in the create_key call.
+            msg = ('Failed to create key alias for key_id {0}.'
+                   ' This resource will be left dangling. Please clean'
+                   ' manually. Error: {1}')
+            ret['result'] = False
+            ret['comment'] = msg.format(kms_key_id, rn['error']['message'])
+            return ret
+        ret['changes']['old'] = {'key': None}
+        ret['changes']['new'] = {'key': name}
+        ret['comment'] = 'Key {0} created.'.format(name)
     else:
         rd = __salt__['boto_kms.describe_key'](
             alias, region, key, keyid, profile
         )
-        kms_key_id = rd['key_metadata']['KeyId']
+        key_metadata = rd['key_metadata']
         if 'error' in rd:
             ret['result'] = False
             ret['comment'] = 'Failed to update key: {0}.'.format(
                 rd['error']['message']
             )
             return ret
-        rke = __salt__['boto_kms.get_key_rotation_status'](
+        _ret = _key_description(
+            key_metadata, description, region, key, keyid, profile
+        )
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+        _ret = _key_policy(
+            key_metadata, policy, region, key, keyid, profile
+        )
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+    # Actions that need to occur whether creating or updating
+    _ret = _key_enabled(
+        key_metadata, enabled, region, key, keyid, profile
+    )
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _key_rotation(
+        key_metadata, key_rotation, region, key, keyid, profile
+    )
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+    return ret
+
+
+def _key_enabled(key_metadata, enabled, region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    kms_key_id = key_metadata['KeyId']
+    if key_metadata['Enabled'] == enabled:
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Key set to have enabled status updated.'
+        ret['result'] = None
+        return ret
+    if enabled:
+        re = __salt__['boto_kms.enable_key'](
             kms_key_id, region, key, keyid, profile
         )
-        if rke['result'] != key_rotation:
-            if __opts__['test']:
-                ret['comment'] = 'Key set to have key rotation policy updated.'
-                ret['result'] = None
-            else:
-                if key_rotation:
-                    rk = __salt__['boto_kms.enable_key_rotation'](
-                        kms_key_id, region, key, keyid,
-                        profile
-                    )
-                else:
-                    rk = __salt__['boto_kms.enable_key_rotation'](
-                        kms_key_id, region, key, keyid,
-                        profile
-                    )
-                if 'error' in rk:
-                    msg = 'Failed to set key rotation: {0}.'
-                    ret['result'] = False
-                    ret['comment'] = msg.format(rk['error']['message'])
-                else:
-                    ret['comment'] = 'Set key rotation policy to {0}.'.format(
-                        key_rotation
-                    )
-        rkp = __salt__['boto_kms.get_key_policy'](
-            kms_key_id, 'default', region, key, keyid, profile
+        event = 'Enabled'
+    else:
+        re = __salt__['boto_kms.disable_key'](
+            kms_key_id, region, key, keyid, profile
         )
-        if rkp['key_policy'] != policy:
-            if __opts__['test']:
-                msg = '{0} Key set to have key policy updated.'
-                ret['comment'] = msg.format(ret['comment'])
-                ret['result'] = None
-            else:
-                rpkp = __salt__['boto_kms.put_key_policy'](
-                    kms_key_id, 'default', policy, region, key, keyid, profile
-                )
-                if 'error' in rpkp:
-                    msg = '{0} Failed to update key policy: {1}'
-                    ret['result'] = False
-                    ret['comment'] = msg.format(
-                        ret['comment'],
-                        rpkp['error']['message']
-                    )
-                else:
-                    ret['comment'] = 'Updated key policy.'
-        if rd['key_metadata']['Description'] != description:
-            if __opts__['test']:
-                msg = '{0} Key set to have description updated.'
-                ret['comment'] = msg.format(ret['comment'])
-                ret['result'] = None
-            else:
-                rdu = __salt__['boto_kms.update_key_description'](
-                    kms_key_id, description, region, key, keyid, profile
-                )
-                if 'error' in rdu:
-                    msg = '{0} Failed to update key description: {1}.'
-                    ret['result'] = False
-                    ret['comment'] = msg.format(
-                        ret['comment'],
-                        rdu['error']['message']
-                    )
-                else:
-                    ret['comment'] = '{0} Updated key description.'.format(
-                        ret['comment']
-                    )
-        if rd['key_metadata']['Enabled'] != enabled:
-            if __opts__['test']:
-                msg = '{0} Key set to have enabled status updated.'
-                ret['comment'] = msg.format(ret['comment'])
-                ret['result'] = None
-            else:
-                if enabled:
-                    re = __salt__['boto_kms.enable_key'](
-                        kms_key_id, region, key, keyid,
-                        profile
-                    )
-                    event = 'enabled'
-                else:
-                    re = __salt__['boto_kms.disable_key'](
-                        kms_key_id, region, key, keyid,
-                        profile
-                    )
-                    event = 'disabled'
-                if 'error' in re:
-                    msg = '{0} Failed to update key enabled status: {1}.'
-                    ret['result'] = False
-                    ret['comment'] = msg.format(
-                        ret['comment'],
-                        re['error']['message']
-                    )
-                else:
-                    ret['comment'] = '{0} {1} key.'.format(
-                        ret['comment'],
-                        event
-                    )
+        event = 'Disabled'
+    if 'error' in re:
+        msg = 'Failed to update key enabled status: {0}.'
+        ret['result'] = False
+        ret['comment'] = msg.format(re['error']['message'])
+    else:
+        ret['comment'] = '{0} key.'.format(event)
+    return ret
+
+
+def _key_description(key_metadata, description, region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if key_metadata['Description'] == description:
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Key set to have description updated.'
+        ret['result'] = None
+        return ret
+    rdu = __salt__['boto_kms.update_key_description'](
+        key_metadata['KeyId'], description, region, key, keyid, profile
+    )
+    if 'error' in rdu:
+        msg = 'Failed to update key description: {0}.'
+        ret['result'] = False
+        ret['comment'] = msg.format(rdu['error']['message'])
+    else:
+        ret['comment'] = 'Updated key description.'
+    return ret
+
+
+def _key_rotation(key_metadata, key_rotation, region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    kms_key_id = key_metadata['KeyId']
+    rke = __salt__['boto_kms.get_key_rotation_status'](
+        kms_key_id, region, key, keyid, profile
+    )
+    if rke['result'] == key_rotation:
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'Key set to have key rotation policy updated.'
+        ret['result'] = None
+        return ret
+    if not key_metadata['Enabled']:
+        ret['comment'] = 'Key is disabled, not changing key rotation policy.'
+        ret['result'] = None
+        return ret
+    if key_rotation:
+        rk = __salt__['boto_kms.enable_key_rotation'](
+            kms_key_id, region, key, keyid, profile
+        )
+    else:
+        rk = __salt__['boto_kms.enable_key_rotation'](
+            kms_key_id, region, key, keyid, profile
+        )
+    if 'error' in rk:
+        # Just checking for the key being disabled isn't enough, since key
+        # disabling is very eventually consistent, so we have a long race
+        # condition to handle. We check the error message to see if the failure
+        # was due to a key being disabled.
+        if 'is disabled' in rk['error']['message']:
+            msg = 'Key is disabled, not changing key rotation policy.'
+            ret['result'] = None
+            ret['comment'] = msg
+            return ret
+        msg = 'Failed to set key rotation: {0}.'
+        ret['result'] = False
+        ret['comment'] = msg.format(rk['error']['message'])
+    else:
+        ret['changes'] = {'old': {'key_rotation': not key_rotation},
+                          'new': {'key_rotation': key_rotation}}
+        ret['comment'] = 'Set key rotation policy to {0}.'.format(key_rotation)
+    return ret
+
+
+def _key_policy(key_metadata, policy, region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    kms_key_id = key_metadata['KeyId']
+    rkp = __salt__['boto_kms.get_key_policy'](
+        kms_key_id, 'default', region, key, keyid, profile
+    )
+    if rkp['key_policy'] == policy:
+        return ret
+    if __opts__['test']:
+        msg = '{0} Key set to have key policy updated.'
+        ret['comment'] = msg.format(ret['comment'])
+        ret['result'] = None
+        return ret
+    rpkp = __salt__['boto_kms.put_key_policy'](
+        kms_key_id, 'default', policy, region, key, keyid, profile
+    )
+    if 'error' in rpkp:
+        msg = '{0} Failed to update key policy: {1}'
+        ret['result'] = False
+        ret['comment'] = msg.format(ret['comment'], rpkp['error']['message'])
+    else:
+        ret['comment'] = 'Updated key policy.'
     return ret
