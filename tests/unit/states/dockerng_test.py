@@ -233,6 +233,45 @@ class DockerngTestCase(TestCase):
                                            'removed': ['container-id']}
                                })
 
+    def test_image_present_already_local(self):
+        '''
+        According following sls,
+
+        .. code-block:: yaml
+
+            image:latest:
+              dockerng.image_present:
+                - force: true
+
+        if ``image:latest`` is already downloaded locally the state
+        should not report changes.
+        '''
+        dockerng_inspect_image = Mock(
+            return_value={'Id': 'abcdefghijk'})
+        dockerng_pull = Mock(
+            return_value={'Layers':
+                          {'Already_Pulled': ['abcdefghijk'],
+                           'Pulled': []},
+                          'Status': 'Image is up to date for image:latest',
+                          'Time_Elapsed': 1.1})
+        dockerng_list_tags = Mock(
+            return_value=['image:latest']
+        )
+        __salt__ = {'dockerng.list_tags': dockerng_list_tags,
+                    'dockerng.pull': dockerng_pull,
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.image_present('image:latest', force=True)
+            self.assertEqual(ret,
+                             {'changes': {},
+                              'result': True,
+                              'comment': "Image 'image:latest' was pulled, "
+                              "but there were no changes",
+                              'name': 'image:latest',
+                              })
+
 
 if __name__ == '__main__':
     from integration import run_tests
