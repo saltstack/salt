@@ -779,7 +779,7 @@ def calculate_subnet(ipaddr, netmask):
     Takes IP and netmask and returns the network in CIDR-notation.
     (The IP can be any IP inside this subnet.)
     '''
-    return ipaddress.ip_interface('{0}/{1}'.format(ipaddr, netmask), strict=False)
+    return str(ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False))
 
 
 def _ipv4_to_bits(ipaddr):
