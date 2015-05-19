@@ -460,8 +460,6 @@ def run_job(name, force=False):
 
     schedule = list_(show_all=True, return_yaml=False)
     if name in schedule:
-        log.debug('schedule {0}'.format(type(schedule)))
-        log.debug('schedule {0}'.format(schedule))
         data = schedule[name]
         if 'enabled' in data and not data['enabled'] and not force:
             ret['comment'] = 'Job {0} is disabled.'.format(name)
