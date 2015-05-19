@@ -215,14 +215,22 @@ def raw_cron(user):
 
         salt '*' cron.raw_cron root
     '''
+    
+    appUser = __opts__['user']
     if __grains__.get('os_family') in ('Solaris', 'AIX'):
-        cmd = 'crontab -l {0}'.format(user)
+        if appUser == user:
+          cmd = 'crontab -l'
+        else:
+          cmd = 'crontab -l {0}'.format(user)
         lines = __salt__['cmd.run_stdout'](cmd,
                                            runas=user,
                                            rstrip=False,
                                            python_shell=False).splitlines()
     else:
-        cmd = 'crontab -l -u {0}'.format(user)
+        if appUser == user:
+          cmd = 'crontab -l'
+        else:
+          cmd = 'crontab -l -u {0}'.format(user)
         lines = __salt__['cmd.run_stdout'](cmd,
                                            rstrip=False,
                                            python_shell=False).splitlines()
