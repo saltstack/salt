@@ -779,8 +779,7 @@ def calculate_subnet(ipaddr, netmask):
     Takes IP and netmask and returns the network in CIDR-notation.
     (The IP can be any IP inside this subnet.)
     '''
-    return '{0}/{1}'.format(get_net_start(ipaddr, netmask),
-                            get_net_size(netmask))
+    return str(ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False))
 
 
 def _ipv4_to_bits(ipaddr):
@@ -864,32 +863,17 @@ def in_subnet(cidr, addrs=None):
     Returns True if host is within specified subnet, otherwise False
     '''
     try:
-        netstart, netsize = cidr.split('/')
-        netsize = int(netsize)
+        cidr = ipaddress.ip_network(cidr)
     except ValueError:
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
-
-    netstart_bin = _ipv4_to_bits(netstart)
-
-    if netsize < 32 and len(netstart_bin.rstrip('0')) > netsize:
-        log.error('Invalid network starting IP \'{0}\' in CIDR '
-                  '\'{1}\''.format(netstart, cidr))
-        return False
-
-    netstart_leftbits = netstart_bin[0:netsize]
 
     if addrs is None:
         addrs = ip_addrs()
 
     for ip_addr in addrs:
-        if netsize == 32:
-            if netstart == ip_addr:
-                return True
-        else:
-            ip_leftbits = _ipv4_to_bits(ip_addr)[0:netsize]
-            if netstart_leftbits == ip_leftbits:
-                return True
+        if ipaddress.ip_address(ip_addr) in cidr:
+            return True
     return False
 
 
@@ -897,11 +881,7 @@ def ip_in_subnet(ip_addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
     '''
-    ipaddr = int(''.join(['%02x' % int(x) for x in ip_addr.split('.')]), 16)  # pylint: disable=E1321
-    netstr, bits = cidr.split('/')
-    netaddr = int(''.join(['%02x' % int(x) for x in netstr.split('.')]), 16)  # pylint: disable=E1321
-    mask = (0xffffffff << (32 - int(bits))) & 0xffffffff
-    return (ipaddr & mask) == (netaddr & mask)
+    return in_subnet(cidr, [ip_addr])
 
 
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):
