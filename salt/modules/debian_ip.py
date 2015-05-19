@@ -597,7 +597,7 @@ def _parse_interfaces(interface_files=None):
                         iface_dict['bonding'][opt] = valuestr
 
                     elif attr.startswith('bridge'):
-                        opt = attr.split('_', 1)[1]
+                        opt = attr.split('-', 1)[1]
                         if 'bridging' not in iface_dict:
                             iface_dict['bridging'] = salt.utils.odict.OrderedDict()
                         iface_dict['bridging'][opt] = valuestr
