@@ -4196,7 +4196,7 @@ def serialize(name,
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
-                                    .format(formatter.capitalized())),
+                                    .format(formatter.capitalize())),
                         'name': name,
                         'result': False}
 
@@ -4231,7 +4231,7 @@ def serialize(name,
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
-                    formatter.capitalized()),
+                    formatter.capitalize()),
                 'name': name,
                 'result': False
                 }
