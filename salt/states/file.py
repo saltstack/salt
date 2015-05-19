@@ -2845,8 +2845,8 @@ def comment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.contains_regex_multiline'](name, regex):
-        if __salt__['file.contains_regex_multiline'](name, unanchor_regex):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, unanchor_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -2866,8 +2866,7 @@ def comment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](name,
-                                                              unanchor_regex)
+    ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -2931,13 +2930,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex_multiline'](
-            name, '^[ \t]*{0}'.format(regex.lstrip('^'))):
+    if __salt__['file.search'](
+            name,
+            '^[ \t]*{0}'.format(regex.lstrip('^')),
+            multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex_multiline'](
-            name, '{0}[ \t]*{1}'.format(char, regex.lstrip('^'))):
+    elif __salt__['file.search'](
+            name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
         # Line exists and is commented
         pass
     else:
@@ -2958,8 +2961,10 @@ def uncomment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](
-        name, '^[ \t]*{0}'.format(regex.lstrip('^'))
+    ret['result'] = __salt__['file.search'](
+        name,
+        '^[ \t]*{0}'.format(regex.lstrip('^')),
+        multiline=True
     )
 
     if slines != nlines:
@@ -3192,8 +3197,10 @@ def append(name,
     try:
         for chunk in text:
 
-            if __salt__['file.contains_regex_multiline'](
-                    name, salt.utils.build_whitespace_split_regex(chunk)):
+            if __salt__['file.search'](
+                    name,
+                    salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
                 continue
 
             lines = chunk.splitlines()
@@ -3359,8 +3366,10 @@ def prepend(name,
     preface = []
     for chunk in text:
 
-        if __salt__['file.contains_regex_multiline'](
-                name, salt.utils.build_whitespace_split_regex(chunk)):
+        if __salt__['file.search'](
+                name,
+                salt.utils.build_whitespace_split_regex(chunk),
+                multiline=True):
             continue
 
         lines = chunk.splitlines()
