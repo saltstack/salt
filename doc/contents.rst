@@ -5,7 +5,6 @@ Salt Table of Contents
 .. toctree::
     :maxdepth: 2
     :glob:
-    :numbered:
 
     topics/index
     topics/installation/index

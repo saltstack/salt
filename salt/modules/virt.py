@@ -809,8 +809,8 @@ def get_nics(vm_):
                 if v_node.tagName == 'virtualport':
                     temp = {}
                     temp['type'] = v_node.getAttribute('type')
-                    for key in v_node.attributes:
-                        temp[key] = v_node.getAttribute(key)
+                    for key, value in v_node.attributes.items():
+                        temp[key] = value
                     nic['virtualport'] = temp
             if 'mac' not in nic:
                 continue

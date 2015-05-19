@@ -254,6 +254,8 @@ def sync_beacons(saltenv=None, refresh=True):
     to grab the contents of the _beacons directory, base is the default
     environment.
 
+    .. versionadded:: 2015.5.1
+
     CLI Example:
 
     .. code-block:: bash
@@ -289,6 +291,8 @@ def sync_modules(saltenv=None, refresh=True):
 
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
+
+    .. versionadded:: 2015.5.1
 
     CLI Example:
 

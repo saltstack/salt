@@ -140,6 +140,26 @@ def present(name,
         The range parameter must be a dictionary with the date strings
         using the dateutil format. Requires python-dateutil.
 
+    once
+        This will schedule a job to run once on the specified date.
+
+    once_fmt
+        The default date format is ISO 8601 but can be overridden by
+        also specifying the ``once_fmt`` option.
+
+    enabled
+        Whether the job should be enabled or disabled.  Value should be a boolean.
+
+    return_job
+        Whether to return information to the Salt master upon job completion.
+
+    metadata
+        Using the metadata parameter special values can be associated with
+        a scheduled job.  These values are not used in the execution of the job,
+        but can be used to search for specific jobs later if combined with the
+        return_job parameter.  The metadata parameter must be specified as a
+        dictionary, othewise it will be ignored.
+
     returner
         The returner to use to return the results of the scheduled job.
 
