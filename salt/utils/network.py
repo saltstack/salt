@@ -883,6 +883,7 @@ def ip_in_subnet(ip_addr, cidr):
     '''
     return in_subnet(cidr, [ip_addr])
 
+
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
