@@ -59,7 +59,7 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
         port = __salt__['config.option']('mongodb.port')
 
     try:
-        conn = pymongo.connection.Connection(host=host, port=port)
+        conn = pymongo.MongoClient(host=host, port=port)
         mdb = pymongo.database.Database(conn, database)
         if user and password:
             mdb.authenticate(user, password)
