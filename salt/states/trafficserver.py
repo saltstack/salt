@@ -2,6 +2,7 @@
 '''
 Control Apache Traffic Server
 =============================
+.. versionadded:: Beryllium
 '''
 
 def __virtual__():
