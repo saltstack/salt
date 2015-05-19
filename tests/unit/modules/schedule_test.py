@@ -117,7 +117,7 @@ class ScheduleTestCase(TestCase):
         comm4 = 'Job: job2 would be added to schedule.'
         with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}}):
             self.assertDictEqual(schedule.add('job1'),
-                                 {'comment': comm1, 'result': True})
+                                 {'comment': comm1, 'result': False})
 
             self.assertDictEqual(schedule.add('job2', function='test.ping',
                                               seconds=3600, when='2400'),
