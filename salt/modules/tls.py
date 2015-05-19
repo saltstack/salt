@@ -103,6 +103,8 @@ import os
 import time
 import logging
 import hashlib
+import salt.utils
+from salt._compat import string_types
 from salt.ext.six.moves import range
 from datetime import datetime
 from distutils.version import LooseVersion
@@ -118,8 +120,6 @@ except ImportError:
     pass
 
 # Import salt libs
-import salt.utils
-from salt._compat import string_types
 
 
 log = logging.getLogger(__name__)
@@ -243,7 +243,7 @@ def _get_basic_info(ca_name, cert, ca_dir=None):
             )
     serial_number = format(cert.get_serial_number(), 'X')
 
-    #gotta prepend a /
+    # gotta prepend a /
     subject = '/'
 
     # then we can add the rest of the subject
@@ -331,9 +331,9 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                 except Exception:
                     bits = 2048
                 try:
-                    days = (datetime.strptime(cert.get_notAfter(),
-                                                       '%Y%m%d%H%M%SZ') -
-                            datetime.now()).days
+                    days = (datetime.strptime(
+                        cert.get_notAfter(),
+                        '%Y%m%d%H%M%SZ') - datetime.now()).days
                 except (ValueError, TypeError):
                     days = 365
                 subj = cert.get_subject()
@@ -499,22 +499,18 @@ def _check_onlyif_unless(onlyif, unless):
     if onlyif is not None:
         if not isinstance(onlyif, string_types):
             if not onlyif:
-                ret = {'comment': 'onlyif execution failed',
-                        'result': True}
+                ret = {'comment': 'onlyif execution failed', 'result': True}
         elif isinstance(onlyif, string_types):
             if retcode(onlyif) != 0:
-                ret = {'comment': 'onlyif execution failed',
-                        'result': True}
+                ret = {'comment': 'onlyif execution failed', 'result': True}
                 log.debug('onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, string_types):
             if unless:
-                ret = {'comment': 'unless execution succeeded',
-                        'result': True}
+                ret = {'comment': 'unless execution succeeded', 'result': True}
         elif isinstance(unless, string_types):
             if retcode(unless) == 0:
-                ret = {'comment': 'unless execution succeeded',
-                        'result': True}
+                ret = {'comment': 'unless execution succeeded', 'result': True}
                 log.debug('unless execution succeeded')
     return ret
 
@@ -1204,7 +1200,6 @@ def create_ca_signed_cert(ca_name,
 
     set_ca_path(cacert_path)
 
-
     ca_filename = '{0}_ca_cert'.format(ca_name)
 
     if not cert_path:
@@ -1257,12 +1252,11 @@ def create_ca_signed_cert(ca_name,
         return ret
 
     try:
-        with salt.utils.fopen(
-            '{0}/{1}.csr'.format(cert_path, csr_filename)) as fhr:
+        csr_path = '{0}/{1}.csr'.format(cert_path, csr_filename)
+        with salt.utils.fopen(csr_path) as fhr:
             req = OpenSSL.crypto.load_certificate_request(
                     OpenSSL.crypto.FILETYPE_PEM,
-                    fhr.read()
-                    )
+                    fhr.read())
     except IOError:
         ret['retcode'] = 1
         ret['comment'] = 'There is no CSR that matches the CN "{0}"'.format(cert_filename)
@@ -1280,9 +1274,9 @@ def create_ca_signed_cert(ca_name,
             # so we mimic the newly get_extensions method present in ultra
             # recent pyopenssl distros
             log.info('req.get_extensions() not supported in pyOpenSSL versions '
-                    'prior to 0.15. Switching to Dark Magic(tm) '
-                    ' Your version: {0}'.format(
-                            OpenSSL.__dict__.get('__version__', 'pre-2014')))
+                     'prior to 0.15. Switching to Dark Magic(tm) '
+                     ' Your version: {0}'.format(
+                         OpenSSL.__dict__.get('__version__', 'pre-2014')))
 
             native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
             for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
@@ -1312,14 +1306,11 @@ def create_ca_signed_cert(ca_name,
 
     cert.sign(ca_key, digest)
 
-    with salt.utils.fopen(
-        '{0}/{1}.crt'.format(cert_path, cert_filename), 'w+') as crt:
+    cert_full_path = '{0}/{1}.crt'.format(cert_path, cert_filename)
+
+    with salt.utils.fopen(cert_full_path, 'w+') as crt:
         crt.write(
-            OpenSSL.crypto.dump_certificate(
-                OpenSSL.crypto.FILETYPE_PEM,
-                cert
-                )
-            )
+            OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert))
 
     _write_cert_to_database(ca_name, cert)
 
@@ -1661,9 +1652,9 @@ def revoke_cert(
                 except ValueError:
                     ret['retcode'] = 1
                     ret['comment'] = ("Revocation date '{0}' does not match"
-                                     "format '{1}'").format(
-                                             revoke_date,
-                                             two_digit_year_fmt)
+                                      "format '{1}'".format(
+                                          revoke_date,
+                                          two_digit_year_fmt))
                     return ret
             elif index_serial_subject in line:
                 __salt__['file.replace'](
@@ -1710,7 +1701,7 @@ def revoke_cert(
 
 
 if __name__ == '__main__':
-    #create_ca('koji', days=365, **cert_sample_meta)
+    # create_ca('koji', days=365, **cert_sample_meta)
     create_csr(
             'koji',
             CN='test_system',
