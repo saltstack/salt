@@ -121,8 +121,8 @@ Here are the options to configure your containers:
 
 .. code-block:: yaml
 
-    # Note: This example would go in /etc/salt/cloud.profile or any file in the
-    # /etc/salt/cloud.profile.d/ directory.
+    # Note: This example would go in /etc/salt/cloud.profiles or any file in the
+    # /etc/salt/cloud.profiles.d/ directory.
     devhost10-lxc:
       provider: devhost10-lxc
       from_container: ubuntu
