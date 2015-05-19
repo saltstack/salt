@@ -67,8 +67,6 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-from salt.ext.six import string_types
-
 
 def __virtual__():
     '''
@@ -92,7 +90,7 @@ def create_alias(alias_name, target_key_id, region=None, key=None, keyid=None,
 
     CLI example::
 
-        salt myminion boto_kms.create_alias 'mykey' key_id
+        salt myminion boto_kms.create_alias 'alias/mykey' key_id
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -119,15 +117,19 @@ def create_grant(key_id, grantee_principal, retiring_principal=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if key_id.startswith('alias/'):
+        key_id = _get_key_id(key_id)
     r = {}
     try:
-        conn.create_grant(
-            key_id, grantee_principal, retiring_principal, operations,
-            constraints, grant_tokens
+        r['grant'] = conn.create_grant(
+            key_id,
+            grantee_principal,
+            retiring_principal=retiring_principal,
+            operations=operations,
+            constraints=constraints,
+            grant_tokens=grant_tokens
         )
-        r['result'] = True
     except boto.exception.BotoServerError as e:
-        r['result'] = False
         r['error'] = __utils__['boto.get_error'](e)
     return r
 
@@ -144,12 +146,15 @@ def create_key(policy=None, description=None, key_usage=None, region=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
+    _policy = json.serialize(policy)
     try:
-        r['result'] = conn.create_key(
-            policy, description, key_usage
+        key_metadata = conn.create_key(
+            _policy,
+            description=description,
+            key_usage=key_usage
         )
+        r['key_metadata'] = key_metadata['KeyMetadata']
     except boto.exception.BotoServerError as e:
-        r['result'] = False
         r['error'] = __utils__['boto.get_error'](e)
     return r
 
@@ -168,9 +173,11 @@ def decrypt(ciphertext_blob, encryption_context=None, grant_tokens=None,
     r = {}
     try:
         plaintext = conn.decrypt(
-            ciphertext_blob, encryption_context, grant_tokens
+            ciphertext_blob,
+            encryption_context=encryption_context,
+            grant_tokens=grant_tokens
         )
-        r['plaintext'] = plaintext
+        r['plaintext'] = plaintext['Plaintext']
     except boto.exception.BotoServerError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r
@@ -197,6 +204,16 @@ def key_exists(key_id, region=None, key=None, keyid=None, profile=None):
             return r
         r['error'] = __utils__['boto.get_error'](e)
     return r
+
+
+def _get_key_id(alias, region=None, key=None, keyid=None, profile=None):
+    '''
+    From an alias, get a key_id.
+    '''
+    key_metadata = describe_key(
+        alias, region, key, keyid, profile
+    )['key_metadata']
+    return key_metadata['KeyId']
 
 
 def describe_key(key_id, region=None, key=None, keyid=None, profile=None):
@@ -315,9 +332,12 @@ def encrypt(key_id, plaintext, encryption_context=None, grant_tokens=None,
     r = {}
     try:
         ciphertext = conn.encrypt(
-            key_id, plaintext, encryption_context, grant_tokens
+            key_id,
+            plaintext,
+            encryption_context=encryption_context,
+            grant_tokens=grant_tokens
         )
-        r['ciphertext'] = ciphertext
+        r['ciphertext'] = ciphertext['CiphertextBlob']
     except boto.exception.BotoServerError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r
@@ -326,13 +346,23 @@ def encrypt(key_id, plaintext, encryption_context=None, grant_tokens=None,
 def generate_data_key(key_id, encryption_context=None, number_of_bytes=None,
                       key_spec=None, grant_tokens=None, region=None, key=None,
                       keyid=None, profile=None):
+    '''
+    Generate a secure data key.
+
+    CLI example::
+
+        salt myminion boto_kms.generate_data_key 'alias/mykey' number_of_bytes=1024 key_spec=AES_128
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
     try:
         data_key = conn.generate_data_key(
-            key_id, encryption_context, number_of_bytes, key_spec,
-            grant_tokens
+            key_id,
+            encryption_context=encryption_context,
+            number_of_bytes=number_of_bytes,
+            key_spec=key_spec,
+            grant_tokens=grant_tokens
         )
         r['data_key'] = data_key
     except boto.exception.BotoServerError as e:
@@ -344,13 +374,23 @@ def generate_data_key_without_plaintext(
         key_id, encryption_context=None, number_of_bytes=None, key_spec=None,
         grant_tokens=None, region=None, key=None, keyid=None, profile=None
         ):
+    '''
+    Generate a secure data key without a plaintext copy of the key.
+
+    CLI example::
+
+        salt myminion boto_kms.generate_data_key_without_plaintext 'alias/mykey' number_of_bytes=1024 key_spec=AES_128
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
     try:
         data_key = conn.generate_data_key_without_plaintext(
-            key_id, encryption_context, number_of_bytes, key_spec,
-            grant_tokens
+            key_id,
+            encryption_context=encryption_context,
+            number_of_bytes=number_of_bytes,
+            key_spec=key_spec,
+            grant_tokens=grant_tokens
         )
         r['data_key'] = data_key
     except boto.exception.BotoServerError as e:
@@ -360,12 +400,19 @@ def generate_data_key_without_plaintext(
 
 def generate_random(number_of_bytes=None, region=None, key=None, keyid=None,
                     profile=None):
+    '''
+    Generate a random string.
+
+    CLI example::
+
+        salt myminion boto_kms.generate_random number_of_bytes=1024
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
     try:
         random = conn.generate_random(number_of_bytes)
-        r['random'] = random
+        r['random'] = random['Plaintext']
     except boto.exception.BotoServerError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r
@@ -373,6 +420,13 @@ def generate_random(number_of_bytes=None, region=None, key=None, keyid=None,
 
 def get_key_policy(key_id, policy_name, region=None, key=None, keyid=None,
                    profile=None):
+    '''
+    Get the policy for the specified key.
+
+    CLI example::
+
+        salt myminion boto_kms.get_key_policy 'alias/mykey' mypolicy
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
@@ -389,6 +443,13 @@ def get_key_policy(key_id, policy_name, region=None, key=None, keyid=None,
 
 def get_key_rotation_status(key_id, region=None, key=None, keyid=None,
                             profile=None):
+    '''
+    Get status of whether or not key rotation is enabled for a key.
+
+    CLI example::
+
+        salt myminion boto_kms.get_key_rotation_status 'alias/mykey'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
@@ -402,12 +463,26 @@ def get_key_rotation_status(key_id, region=None, key=None, keyid=None,
 
 def list_grants(key_id, limit=None, marker=None, region=None, key=None,
                 keyid=None, profile=None):
+    '''
+    List grants for the specified key.
+
+    CLI example::
+
+        salt myminion boto_kms.list_grants 'alias/mykey'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if key_id.startswith('alias/'):
+        key_id = _get_key_id(key_id)
     r = {}
     try:
-        grants = conn.list_grants(key_id, limit, marker)
-        r['grants'] = grants
+        grants = conn.list_grants(
+            key_id,
+            limit=limit,
+            marker=marker
+        )
+        # TODO: handle limit/marker automatically
+        r['grants'] = grants['Grants']
     except boto.exception.BotoServerError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r
@@ -415,12 +490,26 @@ def list_grants(key_id, limit=None, marker=None, region=None, key=None,
 
 def list_key_policies(key_id, limit=None, marker=None, region=None, key=None,
                       keyid=None, profile=None):
+    '''
+    List key_policies for the specified key.
+
+    CLI example::
+
+        salt myminion boto_kms.list_key_policies 'alias/mykey'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if key_id.startswith('alias/'):
+        key_id = _get_key_id(key_id)
     r = {}
     try:
-        key_policies = conn.list_key_policies(key_id, limit, marker)
-        r['key_policies'] = key_policies
+        key_policies = conn.list_key_policies(
+            key_id,
+            limit=limit,
+            marker=marker
+        )
+        # TODO: handle limit, marker and truncation automatically.
+        r['key_policies'] = key_policies['PolicyNames']
     except boto.exception.BotoServerError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r
@@ -428,6 +517,13 @@ def list_key_policies(key_id, limit=None, marker=None, region=None, key=None,
 
 def put_key_policy(key_id, policy_name, policy, region=None, key=None,
                    keyid=None, profile=None):
+    '''
+    Attach a key policy to the specified key.
+
+    CLI example::
+
+        salt myminion boto_kms.put_key_policy 'alias/mykey' default '{"Statement":...}'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
@@ -444,7 +540,19 @@ def re_encrypt(ciphertext_blob, destination_key_id,
                source_encryption_context=None,
                destination_encryption_context=None, grant_tokens=None,
                region=None, key=None, keyid=None, profile=None):
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    '''
+    Reencrypt encrypted data with a new master key.
+
+    CLI example::
+
+        salt myminion boto_kms.re_encrypt 'encrypted_data' 'alias/mynewkey' default '{"Statement":...}'
+    '''
+    conn = _get_conn(
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile
+    )
 
     r = {}
     try:
@@ -460,8 +568,17 @@ def re_encrypt(ciphertext_blob, destination_key_id,
 
 def revoke_grant(key_id, grant_id, region=None, key=None, keyid=None,
                  profile=None):
+    '''
+    Revoke a grant from a key.
+
+    CLI example::
+
+        salt myminion boto_kms.revoke_grant 'alias/mykey' 8u89hf-j09j...
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if key_id.startswith('alias/'):
+        key_id = _get_key_id(key_id)
     r = {}
     try:
         conn.revoke_grant(key_id, grant_id)
@@ -474,6 +591,13 @@ def revoke_grant(key_id, grant_id, region=None, key=None, keyid=None,
 
 def update_key_description(key_id, description, region=None, key=None,
                            keyid=None, profile=None):
+    '''
+    Update a key's description.
+
+    CLI example::
+
+        salt myminion boto_kms.update_key_description 'alias/mykey' 'My key'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     r = {}
