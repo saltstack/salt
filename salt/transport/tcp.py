@@ -164,11 +164,13 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if self.crypt != 'clear':
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
+        resolver = kwargs.get('resolver')
+
         parse = urlparse.urlparse(self.opts['master_uri'])
         host, port = parse.netloc.rsplit(':', 1)
         self.master_addr = (host, int(port))
 
-        self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop)
+        self.message_client = SaltMessageClient(host, int(port), io_loop=self.io_loop, resolver=resolver)
 
     def __del__(self):
         self.message_client.destroy()
@@ -425,17 +427,13 @@ class SaltMessageClient(object):
     '''
     Low-level message sending client
     '''
-    def __init__(self, host, port, io_loop=None):
+    def __init__(self, host, port, io_loop=None, resolver=None):
         self.host = host
         self.port = port
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        # Configure the resolver to use a non-blocking one
-        # Not Threaded since we need to work on python2
-        tornado.netutil.Resolver.configure('tornado.netutil.ExecutorResolver')
-
-        self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop)
+        self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop, resolver=resolver)
 
         self._mid = 1
         self._max_messages = sys.maxint - 1  # number of IDs before we wrap
