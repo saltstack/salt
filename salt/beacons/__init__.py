@@ -96,6 +96,17 @@ class Beacon(object):
             self.interval_map[mod] = 1
         return False
 
+    def list_beacons(self):
+        '''
+        List the beacon items
+        '''
+        # Fire the complete event back along with the list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacons_list_complete')
+
+        return True
+
     def add_beacon(self, name, beacon_data):
         '''
         Add a beacon item
