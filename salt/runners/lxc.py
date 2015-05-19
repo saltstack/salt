@@ -230,11 +230,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     explicit_auth = pub_key and priv_key
     approve_key = kw.get('approve_key', True)
     seeds = {}
+    seed_arg = kwargs.get('seed', True)
     if approve_key and not explicit_auth:
         skey = salt.key.Key(__opts__)
         all_minions = skey.all_keys().get('minions', [])
         for name in names:
-            seed = kwargs.get('seed', True)
+            seed = seed_arg
             if name in all_minions:
                 try:
                     if client.cmd(name, 'test.ping', timeout=20).get(name, None):
@@ -265,8 +266,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
         # be sure not to seed an already seeded host
-        seed = kwargs.get('seed', True)
-        kw['seed'] = seeds.get(name, seed)
+        kw['seed'] = seeds.get(name, seed_arg)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
         cmds.append(
