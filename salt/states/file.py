@@ -243,6 +243,7 @@ import pprint
 import shutil
 import traceback
 import yaml
+from collections import Iterable, Mapping
 
 # Import salt libs
 import salt.payload
@@ -717,6 +718,18 @@ def _get_template_texts(source_list=None,
 
     ret['data'] = txtl
     return ret
+
+
+def _validate_str_list(arg):
+    '''
+    ensure ``arg`` is a list of strings
+    '''
+    if isinstance(arg, string_types):
+        return [arg]
+    elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
+        return [str(item) for item in arg]
+    else:
+        return False
 
 
 def symlink(
@@ -3033,12 +3046,9 @@ def append(name,
             return tmpret
         text = tmpret['data']
 
-    for index, item in enumerate(text):
-        if isinstance(item, integer_types):
-            text[index] = str(item)
-
-    if isinstance(text, string_types):
-        text = (text,)
+    text = _validate_str_list(text)
+    if not text:
+        return _error(ret, 'Given text is not a string or a list of strings')
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
@@ -3053,15 +3063,7 @@ def append(name,
                     name, salt.utils.build_whitespace_split_regex(chunk)):
                 continue
 
-            try:
-                lines = chunk.splitlines()
-            except AttributeError:
-                log.debug(
-                    'Error appending text to {0}; given object is: {1}'.format(
-                        name, type(chunk)
-                    )
-                )
-                return _error(ret, 'Given text is not a string')
+            lines = chunk.splitlines()
 
             for line in lines:
                 if __opts__['test']:
@@ -3072,9 +3074,7 @@ def append(name,
                     __salt__['file.append'](name, line)
                 count += 1
     except TypeError:
-        ret['comment'] = 'No text found to append. Nothing appended'
-        ret['result'] = False
-        return ret
+        return _error(ret, 'No text found to append. Nothing appended')
 
     if __opts__['test']:
         nlines = slines + test_lines
@@ -3213,8 +3213,9 @@ def prepend(name,
             return tmpret
         text = tmpret['data']
 
-    if isinstance(text, string_types):
-        text = (text,)
+    text = _validate_str_list(text)
+    if not text:
+        return _error(ret, 'Given text is not a string or a list of strings')
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
@@ -3229,15 +3230,7 @@ def prepend(name,
                 name, salt.utils.build_whitespace_split_regex(chunk)):
             continue
 
-        try:
-            lines = chunk.splitlines()
-        except AttributeError:
-            log.debug(
-                'Error appending text to {0}; given object is: {1}'.format(
-                    name, type(chunk)
-                )
-            )
-            return _error(ret, 'Given text is not a string')
+        lines = chunk.splitlines()
 
         for line in lines:
             if __opts__['test']:
