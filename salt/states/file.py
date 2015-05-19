@@ -253,7 +253,7 @@ from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
 import salt.ext.six as six
-from salt.ext.six import string_types, integer_types
+from salt.ext.six import string_types
 from salt.ext.six.moves import zip_longest
 
 log = logging.getLogger(__name__)
@@ -2093,41 +2093,22 @@ def recurse(name,
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    # Handle corner case where someone uses a numeric source
-    if isinstance(source, (integer_types, float)):
-        ret['result'] = False
-        ret['comment'] = ('Invalid source {0} (cannot be numeric)'
-                          .format(source))
-        return ret
+    # expand source into source_list
+    source_list = _validate_str_list(source)
+    if not source_list:
+        return _error(ret, '\'source\' parameter is not a string or list of strings')
 
-    # Make sure that only salt fileserver paths are being used (no http(s)/ftp)
-    if isinstance(source, string_types):
-        source_precheck = [source]
-    else:
-        source_precheck = source
-    for precheck in source_precheck:
+    for idx, val in enumerate(source_list):
+        source_list[idx] = val.rstrip('/')
+
+    for precheck in source_list:
         if not precheck.startswith('salt://'):
-            ret['result'] = False
-            ret['comment'] = ('Invalid source {0!r} (must be a salt:// URI)'
-                              .format(precheck))
-            return ret
+            return _error(ret, ('Invalid source {0!r} '
+                                '(must be a salt:// URI)'.format(precheck)))
 
-    if isinstance(source, list):
-        sources = source
-    else:
-        sources = [source]
-
+    # Select the first source in source_list that exists
     try:
-        for idx, val in enumerate(sources):
-            sources[idx] = val.rstrip('/')
-    except AttributeError:
-        ret['result'] = False
-        ret['comment'] = '\'source\' parameter(s) must be a string'
-        return ret
-
-    # If source is a list, find which in the list actually exists
-    try:
-        source, source_hash = __salt__['file.source_list'](sources, '', __env__)
+        source, source_hash = __salt__['file.source_list'](source_list, '', __env__)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = 'Recurse failed: {0}'.format(exc)
