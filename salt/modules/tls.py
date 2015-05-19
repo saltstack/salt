@@ -132,7 +132,13 @@ def _new_serial(ca_name, CN):
     cachedir = __opts__['cachedir']
     log.debug('cachedir: {0}'.format(cachedir))
     serial_file = '{0}/{1}.serial'.format(cachedir, ca_name)
-    with salt.utils.fopen(serial_file, 'a+') as ofile:
+    if not os.path.exists(cachedir):
+        os.makedirs(cachedir)
+    if not os.path.exists(serial_file):
+        fd = salt.utils.fopen(serial_file, 'w')
+    else:
+        fd = salt.utils.fopen(serial_file, 'a+')
+    with fd as ofile:
         ofile.write(str(hashnum))
 
     return hashnum
