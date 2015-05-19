@@ -154,7 +154,7 @@ copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2015.5.0'
+release = '2015.5.0' # also update release versions in 'html_context'
 
 needs_sphinx = '1.3'
 
@@ -215,7 +215,7 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = 'saltstack2'
+html_theme = 'saltstack2' #change to 'saltstack' to use previous theme
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'
@@ -266,6 +266,7 @@ html_context = {
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
+    'latest_release_version': '2015.5.0',
     'previous_release_version': '2014.7.6',
     'previous_release_dir': '2014.7',
     'build_type': 'latest', #latest, previous, develop
@@ -289,13 +290,15 @@ latex_elements = {
     'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
     'utf8extra': '',
     'preamble': '''
-
-\usepackage{fontspec}
-\setsansfont{Linux Biolinum O}
-\setromanfont{Linux Libertine O}
-\setmonofont{Source Code Pro}
+    \usepackage{fontspec}
+    \setsansfont{Linux Biolinum O}
+    \setromanfont{Linux Libertine O}
+    \setmonofont{Source Code Pro}
 ''',
 }
+### Linux Biolinum, Linux Libertine: http://www.linuxlibertine.org/
+### Source Code Pro: https://github.com/adobe-fonts/source-code-pro/releases
+
 
 ### Linkcheck options
 linkcheck_ignore = [r'http://127.0.0.1',
