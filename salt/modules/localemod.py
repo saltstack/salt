@@ -128,20 +128,26 @@ def set_locale(locale):
     elif 'RedHat' in __grains__['os_family']:
         if not __salt__['file.file_exists']('/etc/sysconfig/i18n'):
             __salt__['file.touch']('/etc/sysconfig/i18n')
-        if __salt__['cmd.retcode']('grep "^LANG=" /etc/sysconfig/i18n') != 0:
-            __salt__['file.append']('/etc/sysconfig/i18n',
-                                    'LANG="{0}"'.format(locale))
-        else:
-            __salt__['file.replace'](
-                '/etc/sysconfig/i18n', '^LANG=.*', 'LANG="{0}"'.format(locale)
-            )
-    elif 'Debian' in __grains__['os_family']:
         __salt__['file.replace'](
-            '/etc/default/locale', '^LANG=.*', 'LANG="{0}"'.format(locale)
+            '/etc/sysconfig/i18n',
+            '^LANG=.*',
+            'LANG="{0}"'.format(locale),
+            append_if_not_found=True
         )
-        if __salt__['cmd.retcode']('grep "^LANG=" /etc/default/locale') != 0:
-            __salt__['file.append']('/etc/default/locale',
-                                    'LANG="{0}"'.format(locale))
+    elif 'Debian' in __grains__['os_family']:
+        update_locale = salt.utils.which('update-locale')
+        if update_locale is None:
+            raise CommandExecutionError(
+                'Cannot set locale: "update-locale" was not found.')
+        __salt__['cmd.run'](update_locale)  # (re)generate /etc/default/locale
+
+        # FIXME: why are we writing to a file that is dynamically generated?
+        __salt__['file.replace'](
+            '/etc/default/locale',
+            '^LANG=.*',
+            'LANG="{0}"'.format(locale),
+            append_if_not_found=True
+        )
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
