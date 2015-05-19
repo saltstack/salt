@@ -66,6 +66,99 @@ class DockerngTestCase(TestCase):
             validate_ip_addrs=False,
             validate_input=False)
 
+    def test_compare_volumes_no_diff(self):
+        '''
+        test dockerng._compare function with binds volumes.
+
+        Make sure that volumes that are not managed by user doens't interfere
+        with comparison.
+
+        Here the volume ``/container-0`` is not bind by the user.
+        So it shouldn't appear in the diff.
+        '''
+        actual = {'Config':
+                  {'Volumes':
+                   {'/container-0': '/var/lib/docker/vfs/dir/abcdef',
+                    '/container-1': '/host-1'}},
+                  'HostConfig': {'Binds': ['/host-1:/container-1:rw']},
+                  }
+        create_kwargs = {'volumes': ['/container-1']}
+        runtime_kwargs = {'binds':
+                          {'/host-1':
+                           {'bind': '/container-1',
+                            'ro': False}
+                           }
+                          }
+        ret = dockerng_state._compare(actual, create_kwargs, runtime_kwargs)
+        self.assertEqual(ret, {})
+
+    def test_compare_volumes_diff(self):
+        '''
+        test dockerng._compare function with binds volumes.
+
+        Make sure that volumes that are not managed by user doens't interfere
+        with comparison.
+
+        Here the volume ``/container-1`` is bind by the user but not
+        by the container. So it should appear in the diff.
+        '''
+        actual = {'Config':
+                  {'Volumes':
+                   {'/container-0': '/var/lib/docker/vfs/dir/abcdef',
+                    '/container-1': '/var/lib/docker/vfs/dir/12345'}},
+                  'HostConfig': {'Binds': []},
+                  }
+        create_kwargs = {'volumes': ['/container-1']}
+        runtime_kwargs = {'binds':
+                          {'/host-1':
+                           {'bind': '/container-1',
+                            'ro': False}
+                           }
+                          }
+        ret = dockerng_state._compare(actual, create_kwargs, runtime_kwargs)
+        self.assertEqual(ret, {'binds':
+                               {'old': [],
+                                'new': ['/host-1:/container-1:rw']},
+                               })
+
+    def test_compare_ports_no_diff(self):
+        '''
+        test dockerng._compare function with port binding.
+
+        Make sure that ports that are not managed by user doens't interfere
+        with comparison.
+
+        Here the port ``9090`` is not bind by the user.
+        So it shouldn't appear in the diff.
+        '''
+        actual = {'Config': {'ExposedPorts': {'9090/tcp': {},
+                                              '9797/tcp': {}}},
+                  'HostConfig': {'PortBindings':
+                                 {'9797/tcp': [{'HostIp': '',
+                                                'HostPort': '9797'}]}},
+                  }
+        create_kwargs = {'ports': [9797]}
+        runtime_kwargs = {'port_bindings': {9797: [9797]}}
+        ret = dockerng_state._compare(actual, create_kwargs, runtime_kwargs)
+        self.assertEqual(ret, {})
+
+    def test_compare_ports_diff(self):
+        '''
+        test dockerng._compare function with port binding.
+
+        Here the port ``9797`` is bind by the user but not by the container,
+        So it should appear in the diff.
+        '''
+        actual = {'Config': {'ExposedPorts': {'9090/tcp': {},
+                                              '9797/tcp': {}}},
+                  'HostConfig': {'PortBindings': {}},
+                  }
+        create_kwargs = {'ports': [9797]}
+        runtime_kwargs = {'port_bindings': {9797: [9797]}}
+        ret = dockerng_state._compare(actual, create_kwargs, runtime_kwargs)
+        self.assertEqual(ret, {'port_bindings':
+                               {'old': [], 'new': ['9797:9797']}})
+
 
 if __name__ == '__main__':
     from integration import run_tests

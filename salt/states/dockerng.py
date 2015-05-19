@@ -195,7 +195,8 @@ def _compare(actual, create_kwargs, runtime_kwargs):
                           .format(item, actual_ports))
                 log.trace('dockerng.running ({0}): munged desired value: {1}'
                           .format(item, desired_ports))
-                if actual_ports != desired_ports:
+                difference = set(desired_ports).difference(set(actual_ports))
+                if difference:
                     ret.update({item: {'old': actual_ports,
                                        'new': desired_ports}})
                 continue
@@ -329,6 +330,14 @@ def _compare(actual, create_kwargs, runtime_kwargs):
                     ret.update({item: {'old': actual_hosts,
                                        'new': desired_hosts}})
                     continue
+
+            elif item == 'volumes':
+                difference = set(data).difference(set(actual_data))
+                desired_data = sorted(data)
+                if difference:
+                    ret.update({item: {'old': sorted(actual_data),
+                                       'new': desired_data}})
+                continue
 
             elif isinstance(data, list):
                 # Compare two sorted lists of items. Won't work for "command"
