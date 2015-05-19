@@ -24,6 +24,8 @@ class Mock(object):
     def __init__(self, *args, **kwargs):
         pass
 
+    __all__ = []
+
     def __call__(self, *args, **kwargs):
         ret = Mock()
         # If mocked function is used as a decorator, expose decorated function.
@@ -94,6 +96,7 @@ MOCK_MODULES = [
     'MySQLdb',
     'MySQLdb.cursors',
     'psutil',
+    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
@@ -147,11 +150,11 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2014 SaltStack, Inc.'
+copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
 #release = '.'.join(map(str, salt.version.__version_info__))
-release = '2014.7.2'
+release = '2014.7.6' # also update release versions in 'html_context'
 
 needs_sphinx = '1.3'
 
@@ -212,13 +215,13 @@ gettext_compact = False
 
 
 ### HTML options
-html_theme = 'saltstack'
+html_theme = 'saltstack2' #change to 'saltstack' to use previous theme
 html_theme_path = ['_themes']
 html_title = u''
 html_short_title = 'Salt'
 
 html_static_path = ['_static']
-html_logo = None # specfied in the theme layout.html
+html_logo = None # specified in the theme layout.html
 html_favicon = 'favicon.ico'
 html_use_smartypants = False
 
@@ -263,6 +266,10 @@ html_context = {
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
+    'latest_release_version': '2015.5.0',
+    'previous_release_version': '2014.7.6',
+    'previous_release_dir': '2014.7',
+    'build_type': 'previous', #latest, previous, develop
 }
 
 html_use_index = True
@@ -272,23 +279,26 @@ html_show_sphinx = True
 html_show_copyright = True
 
 ### Latex options
+
 latex_documents = [
   ('contents', 'Salt.tex', 'Salt Documentation', 'SaltStack, Inc.', 'manual'),
 ]
 
-latex_logo = '_static/salt-logo.pdf'
+latex_logo = '_static/salt-logo.png'
 
 latex_elements = {
     'inputenc': '',     # use XeTeX instead of the inputenc LaTeX package.
     'utf8extra': '',
     'preamble': '''
-
-\usepackage{fontspec}
-\setsansfont{DejaVu Sans}
-\setromanfont{DejaVu Serif}
-\setmonofont{DejaVu Sans Mono}
+    \usepackage{fontspec}
+    \setsansfont{Linux Biolinum O}
+    \setromanfont{Linux Libertine O}
+    \setmonofont{Source Code Pro}
 ''',
 }
+### Linux Biolinum, Linux Libertine: http://www.linuxlibertine.org/
+### Source Code Pro: https://github.com/adobe-fonts/source-code-pro/releases
+
 
 ### Linkcheck options
 linkcheck_ignore = [r'http://127.0.0.1',
