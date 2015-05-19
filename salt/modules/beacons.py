@@ -34,10 +34,20 @@ def list_(return_yaml=True):
 
     '''
 
-    if 'beacons' in __opts__:
-        beacons = __opts__['beacons'].copy()
-    else:
-        return {'beacons': {}}
+    try:
+        eventer = salt.utils.event.get_event('minion', opts=__opts__)
+        res = __salt__['event.fire']({'func': 'list'}, 'manage_beacons')
+        if res:
+            event_ret = eventer.get_event(tag='/salt/minion/minion_beacons_list_complete', wait=30)
+            log.debug('event_ret {0}'.format(event_ret))
+            if event_ret and event_ret['complete']:
+                beacons = event_ret['beacons']
+    except KeyError:
+        # Effectively a no-op, since we can't really return without an event system
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = 'Event module not available. Beacon add failed.'
+        return ret
 
     if beacons:
         if return_yaml:
