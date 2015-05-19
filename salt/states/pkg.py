@@ -51,6 +51,13 @@ state module
           - php5-fpm
           - php5-cli
           - php5-curl
+
+.. warning::
+
+    Package names are currently case-sensitive. If the minion is using a
+    package manager which is not case-sensitive (such as :mod:`pkgng
+    <salt.modules.pkgng>`), then this state will fail if the proper case is not
+    used. This will be addressed in a future release of Salt.
 '''
 
 # Import python libs
