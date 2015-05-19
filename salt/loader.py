@@ -1162,7 +1162,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             Depends.enforce_dependencies(self._dict, self.tag)
         except RuntimeError as e:
             log.info('Depends.enforce_dependencies() failed '
-                     'for reasons: '.format(e))
+                     'for reasons: {0}'.format(e))
 
         self.loaded_modules[module_name] = mod_dict
         return True
