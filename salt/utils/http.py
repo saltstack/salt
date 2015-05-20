@@ -724,12 +724,10 @@ def parse_cookie_header(header):
         # Fill in missing required fields
         for req in reqd:
             if req not in cookie.keys():
-                cookie[req] = None
-        if cookie['domain'] is None:
-            cookie['domain'] = ''
-        if cookie['version'] is None:
+                cookie[req] = ''
+        if cookie['version'] == '':
             cookie['version'] = 0
-        if cookie['rest'] is None:
+        if cookie['rest'] == '':
             cookie['rest'] = {}
 
         ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
