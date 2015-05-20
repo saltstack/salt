@@ -3637,7 +3637,7 @@ def copy(
         ret['changes'] = {name: source}
         # Preserve really means just keep the behavior of the cp command. If
         # the filesystem we're copying to is squashed or doesn't support chown
-        # then we shouldn't be checking permissions
+        # then we shouldn't be checking anything.
         if not preserve:
             __salt__['file.check_perms'](name, ret, user, group, mode)
     except (IOError, OSError):
