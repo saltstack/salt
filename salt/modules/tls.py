@@ -720,11 +720,16 @@ def get_extensions(cert_type):
     Fetch X509 and CSR extension definitions from tls:extensions:
     (common|server|client) or set them to standard defaults.
 
-    cert_type:
-        required
-        ``server`` or ``client``
-
     .. versionadded:: Beryllium
+
+    cert_type:
+        The type of certificate such as ``server`` or ``client``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' tls.get_extensions client
 
     '''
 
