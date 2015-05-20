@@ -1933,12 +1933,12 @@ def clone(name,
     network_profile
         Network profile to use for container
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     nic_opts
         give extra opts overriding network profile values
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
 
     CLI Examples:
