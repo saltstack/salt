@@ -120,7 +120,10 @@ def avail_images(call=None):
                 ret[image['id']][item] = str(image[item])
 
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
 
     return ret
 
@@ -169,7 +172,11 @@ def list_nodes(call=None):
                 'state': str(node['status']),
             }
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
     return ret
 
 
@@ -196,7 +203,10 @@ def list_nodes_full(call=None, forOutput=True):
                     value = str(value)
                 ret[node['name']][item] = value
         page += 1
-        fetch = 'next' in items['links']['pages']
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
     return ret
 
 
@@ -583,7 +593,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
             'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.status_code,
-                #request.read()
+                # request.read()
                 request.text
             )
         )
