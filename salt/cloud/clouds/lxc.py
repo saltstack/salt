@@ -278,7 +278,11 @@ def list_nodes(conn=None, call=None):
         hide = True
     if not get_configured_provider():
         return
-    lxclist = _salt('lxc.list', extra=True)
+
+    path = None
+    if profile and profile in profiles:
+        path = profiles[profile].get('path', None)
+    lxclist = _salt('lxc.list', extra=True, path=path)
     nodes = {}
     for state, lxcs in six.iteritems(lxclist):
         for lxcc, linfos in six.iteritems(lxcs):
@@ -295,10 +299,9 @@ def list_nodes(conn=None, call=None):
             # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
             if (
-                (call in ['full'] or not hide)
-                and (
-                    (lxcc in names and call in ['action'])
-                    or (call in ['full'])
+                (call in ['full'] or not hide) and (
+                    (lxcc in names and call in ['action']) or (
+                        call in ['full'])
                 )
             ):
                 nodes[lxcc] = info
@@ -383,7 +386,7 @@ def destroy(vm_, call=None):
         return
     ret = {'comment': '{0} was not found'.format(vm_),
            'result': False}
-    if _salt('lxc.info', vm_):
+    if _salt('lxc.info', vm_, path=path):
         salt.utils.cloud.fire_event(
             'event',
             'destroying instance',
@@ -391,7 +394,7 @@ def destroy(vm_, call=None):
             {'name': vm_, 'instance_id': vm_},
             transport=__opts__['transport']
         )
-        cret = _salt('lxc.destroy', vm_, stop=True)
+        cret = _salt('lxc.destroy', vm_, stop=True, path=path)
         ret['result'] = cret['result']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
@@ -507,18 +510,21 @@ def get_configured_provider(vm_=None):
         profs = __opts__['profiles']
         tgt = 'profile: {0}'.format(curprof)
         if (
-            curprof in profs
-            and profs[curprof]['provider'] == __active_provider_name__
+            curprof in profs and
+            profs[curprof]['provider'] == __active_provider_name__
         ):
             prov, cdriver = profs[curprof]['provider'].split(':')
             tgt += ' provider: {0}'.format(prov)
             data = get_provider(prov)
             matched = True
     # fallback if we have only __active_provider_name__
-    if ((__opts__.get('destroy', False) and not data)
-        or (not matched and __active_provider_name__)):
+    if (
+        (__opts__.get('destroy', False) and not data) or (
+            not matched and __active_provider_name__
+        )
+    ):
         data = __opts__.get('providers',
-                           {}).get(dalias, {}).get(driver, {})
+                            {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:
         try:
