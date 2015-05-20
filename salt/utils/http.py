@@ -192,7 +192,7 @@ def query(url,
     if cookie_jar is None:
         cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.txt')
     if session_cookie_jar is None:
-        cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
+        session_cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
 
     if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
