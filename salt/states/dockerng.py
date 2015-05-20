@@ -1389,11 +1389,18 @@ def running(name,
         # Add any needed container creation arguments based on the validated
         # runtime arguments.
         if runtime_kwargs.get('binds') is not None:
-            # Using bind mounts requries mountpoints to be specified at the
-            # time the container is created, so we need to add them to the
-            # create_kwargs.
-            create_kwargs['volumes'] = [bind_conf['bind'] for bind_conf in
-                                        runtime_kwargs['binds'].values()]
+            if 'volumes' not in create_kwargs:
+                # Check if there are preconfigured volumes in the image
+                for step in __salt__['dockerng.history'](image, quiet=True):
+                    if step.lstrip().startswith('VOLUME'):
+                        break
+                else:
+                    # No preconfigured volumes, we need to make our own. Use
+                    # the ones from the "binds" configuration.
+                    create_kwargs['volumes'] = [
+                        x['bind']
+                        for x in six.itervalues(runtime_kwargs['binds'])
+                    ]
         if runtime_kwargs.get('port_bindings') is not None \
                 and create_kwargs.get('ports') is None:
             create_kwargs['ports'] = ','.join(
