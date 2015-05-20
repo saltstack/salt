@@ -579,7 +579,7 @@ class Minion(MinionBase):
         self.io_loop.start()
         future_exception = self._connect_master_future.exc_info()
         if future_exception:
-            raise future_exception[0], future_exception[1], future_exception[2]
+            raise six.reraise(*future_exception)
 
     @tornado.gen.coroutine
     def connect_master(self):
