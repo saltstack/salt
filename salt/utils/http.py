@@ -74,8 +74,6 @@ except ImportError:
     HAS_CERTIFI = False
 
 log = logging.getLogger(__name__)
-JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
-SESSIONJARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.session.p')
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
@@ -96,10 +94,10 @@ def query(url,
           headers=False,
           text=False,
           cookies=None,
-          cookie_jar=JARFILE,
+          cookie_jar=None,
           cookie_format='lwp',
           persist_session=False,
-          session_cookie_jar=SESSIONJARFILE,
+          session_cookie_jar=None,
           data_render=False,
           data_renderer=None,
           header_render=False,
@@ -190,6 +188,11 @@ def query(url,
 
     if header_list is None:
         header_list = []
+
+    if cookie_jar is None:
+        cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.txt')
+    if session_cookie_jar is None:
+        session_cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
 
     if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
@@ -393,7 +396,7 @@ def query(url,
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        if 'Set-Cookie' in result_headers.keys():
+        if 'Set-Cookie' in result_headers.keys() and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
                 sess_cookies.set_cookie(item)
@@ -721,12 +724,10 @@ def parse_cookie_header(header):
         # Fill in missing required fields
         for req in reqd:
             if req not in cookie.keys():
-                cookie[req] = None
-        if cookie['domain'] is None:
-            cookie['domain'] = ''
-        if cookie['version'] is None:
+                cookie[req] = ''
+        if cookie['version'] == '':
             cookie['version'] = 0
-        if cookie['rest'] is None:
+        if cookie['rest'] == '':
             cookie['rest'] = {}
 
         ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
