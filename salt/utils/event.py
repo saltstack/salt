@@ -109,7 +109,7 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     '''
     if transport == 'zeromq':
         if node == 'master':
-            return MasterEvent(sock_dir or opts.get('sock_dir', None))
+            return MasterEvent(sock_dir or opts.get('sock_dir', None), opts)
         return SaltEvent(node, sock_dir, opts)
     elif transport == 'raet':
         import salt.utils.raetevent
@@ -124,7 +124,7 @@ def get_master_event(opts, sock_dir, listen=True):
     Return an event object suitable for the named transport
     '''
     if opts['transport'] == 'zeromq':
-        return MasterEvent(sock_dir)
+        return MasterEvent(sock_dir, opts)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(opts=opts, sock_dir=sock_dir, listen=listen)
@@ -506,8 +506,8 @@ class MasterEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, sock_dir):
-        super(MasterEvent, self).__init__('master', sock_dir)
+    def __init__(self, sock_dir, opts=None):
+        super(MasterEvent, self).__init__('master', sock_dir, opts)
 
 
 class LocalClientEvent(MasterEvent):
