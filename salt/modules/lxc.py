@@ -1428,6 +1428,7 @@ def init(name,
     if remove_seed_marker:
         run(name,
             'rm -f \'{0}\''.format(SEED_MARKER),
+            path=path,
             chroot_fallback=False,
             python_shell=False)
 
