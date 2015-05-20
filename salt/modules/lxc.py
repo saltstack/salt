@@ -1369,10 +1369,6 @@ def init(name,
         chunks = read_conf(path, out_format='commented')
         if old_chunks != chunks:
             to_reboot = True
-    if remove_seed_marker:
-        run(name,
-            'rm -f \'{0}\''.format(SEED_MARKER),
-            python_shell=False)
 
     # last time to be sure any of our property is correctly applied
     cfg = _LXCConfig(name=name, network_profile=network_profile,
@@ -1404,6 +1400,12 @@ def init(name,
             if changes:
                 ret['changes'] = changes_dict
             return ret
+
+    if remove_seed_marker:
+        run(name,
+            'rm -f \'{0}\''.format(SEED_MARKER),
+            chroot_fallback=False,
+            python_shell=False)
 
     # set the default user/password, only the first time
     if ret.get('result', True) and password:
