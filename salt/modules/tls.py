@@ -721,11 +721,11 @@ def get_extensions(cert_type):
         cert_type = 'server'
 
     try:
-        ext['common'] = __salt__['pillar.get']('tls.extensions:common')
+        ext['common'] = __salt__['pillar.get']('tls.extensions:common', False)
     except NameError as err:
         log.debug(err)
 
-    if 'common' not in ext or ext['common'] == '':
+    if not ext['common'] or ext['common'] == '':
         ext['common'] = {
             'csr': {
                 'basicConstraints': 'CA:FALSE',
@@ -737,11 +737,11 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext['server'] = __salt__['pillar.get']('tls.extensions:server')
+        ext['server'] = __salt__['pillar.get']('tls.extensions:server', False)
     except NameError as err:
         log.debug(err)
 
-    if 'server' not in ext or ext['server'] == '':
+    if not ext['server'] or ext['server'] == '':
         ext['server'] = {
             'csr': {
                 'extendedKeyUsage': 'serverAuth',
@@ -751,11 +751,11 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext['client'] = __salt__['pillar.get']('tls.extensions:client')
+        ext['client'] = __salt__['pillar.get']('tls.extensions:client', False)
     except NameError as err:
         log.debug(err)
 
-    if 'client' not in ext or ext['client'] == '':
+    if not ext['client'] or ext['client'] == '':
         ext['client'] = {
             'csr': {
                 'extendedKeyUsage': 'clientAuth',
