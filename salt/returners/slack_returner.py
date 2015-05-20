@@ -238,7 +238,7 @@ def _post_message(channel,
     parameters['channel'] = channel
     parameters['username'] = username
     parameters['as_user'] = as_user
-    parameters['text'] = message
+    parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
 
     result = _query(function='message',
                     api_key=api_key,
