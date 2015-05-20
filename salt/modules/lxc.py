@@ -1297,6 +1297,9 @@ def init(name,
         return kw_overrides_match
 
     path = select('path')
+    bpath = path
+    if not bpath:
+        bpath = DEFAULT_PATH
     state_pre = state(name, path=path)
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -1375,7 +1378,7 @@ def init(name,
                     if changes:
                         ret['changes'] = changes_dict
                     return ret
-        cpath = os.path.join(path, name, 'config')
+        cpath = os.path.join(bpath, name, 'config')
         old_chunks = []
         if os.path.exists(cpath):
             old_chunks = read_conf(cpath, out_format='commented')
