@@ -262,7 +262,9 @@ def avail_images():
 def list_nodes(conn=None, call=None):
     hide = False
     names = __opts__.get('names', [])
-    profile = __opts__.get('profile', [])
+    profiles = __opts__.get('profiles', {})
+    profile = __opts__.get('profile',
+                           __opts__.get('lxc_profile', []))
     destroy_opt = __opts__.get('destroy', False)
     action = __opts__.get('action', '')
     for opt in ['full_query', 'select_query', 'query']:
@@ -276,7 +278,11 @@ def list_nodes(conn=None, call=None):
         hide = True
     if not get_configured_provider():
         return
-    lxclist = _salt('lxc.list', extra=True)
+
+    path = None
+    if profile and profile in profiles:
+        path = profiles[profile].get('path', None)
+    lxclist = _salt('lxc.list', extra=True, path=path)
     nodes = {}
     for state, lxcs in six.iteritems(lxclist):
         for lxcc, linfos in six.iteritems(lxcs):
@@ -293,10 +299,9 @@ def list_nodes(conn=None, call=None):
             # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
             if (
-                (call in ['full'] or not hide)
-                and (
-                    (lxcc in names and call in ['action'])
-                    or (call in ['full'])
+                (call in ['full'] or not hide) and (
+                    (lxcc in names and call in ['action']) or (
+                        call in ['full'])
                 )
             ):
                 nodes[lxcc] = info
@@ -365,6 +370,12 @@ last message: {comment}'''.format(**ret)
 def destroy(vm_, call=None):
     '''Destroy a lxc container'''
     destroy_opt = __opts__.get('destroy', False)
+    profiles = __opts__.get('profiles', {})
+    profile = __opts__.get('profile',
+                           __opts__.get('lxc_profile', []))
+    path = None
+    if profile and profile in profiles:
+        path = profiles[profile].get('path', None)
     action = __opts__.get('action', '')
     if action != 'destroy' and not destroy_opt:
         raise SaltCloudSystemExit(
@@ -375,7 +386,7 @@ def destroy(vm_, call=None):
         return
     ret = {'comment': '{0} was not found'.format(vm_),
            'result': False}
-    if _salt('lxc.info', vm_):
+    if _salt('lxc.info', vm_, path=path):
         salt.utils.cloud.fire_event(
             'event',
             'destroying instance',
@@ -383,7 +394,7 @@ def destroy(vm_, call=None):
             {'name': vm_, 'instance_id': vm_},
             transport=__opts__['transport']
         )
-        cret = _salt('lxc.destroy', vm_, stop=True)
+        cret = _salt('lxc.destroy', vm_, stop=True, path=path)
         ret['result'] = cret['result']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
@@ -414,6 +425,7 @@ def create(vm_, call=None):
     profile = vm_.get('profile', None)
     if not profile:
         profile = {}
+
     salt.utils.cloud.fire_event(
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
@@ -445,6 +457,7 @@ def create(vm_, call=None):
     # exists hence the need to remove profile from global opts once
     # current container is created.
     if 'profile' in __opts__:
+        __opts__['lxc_profile'] = __opts__['profile']
         del __opts__['profile']
 
     return ret
@@ -495,18 +508,21 @@ def get_configured_provider(vm_=None):
         profs = __opts__['profiles']
         tgt = 'profile: {0}'.format(curprof)
         if (
-            curprof in profs
-            and profs[curprof]['provider'] == __active_provider_name__
+            curprof in profs and
+            profs[curprof]['provider'] == __active_provider_name__
         ):
             prov, cdriver = profs[curprof]['provider'].split(':')
             tgt += ' provider: {0}'.format(prov)
             data = get_provider(prov)
             matched = True
     # fallback if we have only __active_provider_name__
-    if ((__opts__.get('destroy', False) and not data)
-        or (not matched and __active_provider_name__)):
+    if (
+        (__opts__.get('destroy', False) and not data) or (
+            not matched and __active_provider_name__
+        )
+    ):
         data = __opts__.get('providers',
-                           {}).get(dalias, {}).get(driver, {})
+                            {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:
         try:
