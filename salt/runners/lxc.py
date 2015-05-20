@@ -235,8 +235,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['result'] = False
         return ret
 
-
-    kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
+    kw = salt.utils.clean_kwargs(**kwargs)
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
@@ -269,7 +268,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     cmds = []
     for name in names:
         args = [name]
-        kw = salt.utils.clean_kwargs(kwargs)
+        kw = salt.utils.clean_kwargs(**kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
