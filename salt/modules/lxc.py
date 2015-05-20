@@ -1951,11 +1951,6 @@ def clone(name,
         salt '*' lxc.clone myclone orig=orig_container
         salt '*' lxc.clone myclone orig=orig_container snapshot=True
     '''
-    if exists(name, path=path):
-        raise CommandExecutionError(
-            'Container \'{0}\' already exists'.format(name)
-        )
-
     profile = get_container_profile(copy.deepcopy(profile))
     kw_overrides = copy.deepcopy(kwargs)
 
@@ -1968,6 +1963,10 @@ def clone(name,
         return kw_overrides_match
 
     path = select('path')
+    if exists(name, path=path):
+        raise CommandExecutionError(
+            'Container \'{0}\' already exists'.format(name)
+        )
 
     _ensure_exists(orig, path=path)
     if state(orig, path=path) != 'stopped':
