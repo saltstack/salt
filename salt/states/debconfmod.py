@@ -76,7 +76,7 @@ def set_file(name, source, template=None, context=None, defaults=None, **kwargs)
         <state_id>:
           debconf.set_file:
             - source: salt://pathto/pkg.selections.jinja2
-            - template: jinja2
+            - template: jinja
             - context:
                 some_value: "false"
 
