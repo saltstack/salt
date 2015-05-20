@@ -926,7 +926,7 @@ def create_csr(ca_name,
     req.get_subject().CN = CN
     req.get_subject().emailAddress = emailAddress
 
-    extensions = get_extensions('server')['csr']
+    extensions = get_extensions(cert_type)['csr']
     extension_adds = []
 
     for ext, value in extensions.items():
