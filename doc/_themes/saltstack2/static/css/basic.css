@@ -498,6 +498,11 @@ td.linenos pre {
 
 table.highlighttable {
     margin-left: 0.5em;
+    width:100%;
+}
+
+td.code {
+    width: 100%;
 }
 
 table.highlighttable td {
