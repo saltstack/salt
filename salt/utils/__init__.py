@@ -1218,11 +1218,19 @@ def subdict_match(data,
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
     def _dict_match(target, pattern, regex_match=False, exact_match=False):
+        if pattern.startswith('*:'):
+            pattern = pattern[2:]
+
         if pattern == '*':
             # We are just checking that the key exists
             return True
         elif pattern in target:
             # We might want to search for a key
+            return True
+        elif subdict_match(target,
+                         pattern,
+                         regex_match=regex_match,
+                         exact_match=exact_match):
             return True
         for key in target.keys():
             if _match(key,
@@ -1230,6 +1238,19 @@ def subdict_match(data,
                       regex_match=regex_match,
                       exact_match=exact_match):
                 return True
+            if isinstance(target[key], dict):
+                if _dict_match(target[key],
+                               pattern,
+                               regex_match=regex_match,
+                               exact_match=exact_match):
+                    return True
+            elif isinstance(target[key], list):
+                for item in target[key]:
+                    if _match(item,
+                              pattern,
+                              regex_match=regex_match,
+                              exact_match=exact_match):
+                        return True
         return False
 
     for idx in range(1, expr.count(delimiter) + 1):
@@ -1252,17 +1273,10 @@ def subdict_match(data,
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
-                    if matchstr.startswith('*:'):
-                        matchstr = matchstr[2:]
                     if _dict_match(member,
                                    matchstr,
                                    regex_match=regex_match,
                                    exact_match=exact_match):
-                        return True
-                    if subdict_match(member,
-                                     matchstr,
-                                     regex_match=regex_match,
-                                     exact_match=exact_match):
                         return True
                 if _match(member,
                           matchstr,
