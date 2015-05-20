@@ -1425,6 +1425,12 @@ def init(name,
                 ret['changes'] = changes_dict
             return ret
 
+    if remove_seed_marker:
+        run(name,
+            'rm -f \'{0}\''.format(SEED_MARKER),
+            chroot_fallback=False,
+            python_shell=False)
+
     # set the default user/password, only the first time
     if ret.get('result', True) and password:
         gid = '/.lxc.initial_pass'

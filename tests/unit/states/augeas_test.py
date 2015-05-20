@@ -41,6 +41,7 @@ class AugeasTestCase(TestCase):
         context = '/files/etc/services'
         changes = ['ins service-name after service-name[last()]',
                    'set service-name[last()] zabbix-agent']
+        changes_ret = {'updates': changes}
 
         ret = {'name': name,
                'result': False,
@@ -64,12 +65,10 @@ class AugeasTestCase(TestCase):
                 ret.update({'comment': 'Error: error', 'result': False})
                 self.assertDictEqual(augeas.change(name, changes=changes), ret)
 
-            chang = ['ins service-name after service-name[last()]',
-                     'set service-name[last()] zabbix-agent']
             mock = MagicMock(return_value={'retval': True})
             with patch.dict(augeas.__salt__, {'augeas.execute': mock}):
                 ret.update({'comment': 'Changes have been saved',
-                            'result': True, 'changes': chang})
+                            'result': True, 'changes': changes_ret})
                 self.assertDictEqual(augeas.change(name, changes=changes), ret)
 
 
