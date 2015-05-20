@@ -1494,6 +1494,7 @@ def init(name,
         if not any(retcode(name,
                            'test -e "{0}"'.format(x),
                            chroot_fallback=True,
+                           path=path,
                            ignore_retcode=True) == 0
                    for x in gids):
             try:
@@ -1510,6 +1511,7 @@ def init(name,
                            ('sh -c \'touch "{0}"; test -e "{0}"\''
                             .format(gid)),
                            chroot_fallback=True,
+                           path=path,
                            ignore_retcode=True) != 0:
                     ret['comment'] = 'Failed to set DNS marker'
                     changes[-1]['dns'] += '. ' + ret['comment'] + '.'
