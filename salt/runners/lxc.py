@@ -31,6 +31,16 @@ __func_alias__ = {
 }
 
 
+def _sanitized_kw(kwargs):
+    kw = {}
+    if kwargs:
+        for i, val in six.iteritems(kwargs):
+            if isinstance(i, six.string_types) and i.startswith('__pub'):
+                continue
+            kw[i] = val
+    return kw
+
+
 def _do(name, fun):
     '''
     Invoke a function in the lxc module with no args
@@ -208,6 +218,19 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['comment'] = 'Container names are not formed as a list'
         ret['result'] = False
         return ret
+    # check that the host is alive
+    client = salt.client.get_local_client(__opts__['conf_file'])
+    alive = False
+    try:
+        if client.cmd(host, 'test.ping', timeout=20).get(host, None):
+            alive = True
+    except (TypeError, KeyError):
+        pass
+    if not alive:
+        ret['comment'] = 'Host {0} is not reachable'.format(host)
+        ret['result'] = False
+        return ret
+
     log.info('Searching for LXC Hosts')
     data = __salt__['lxc.list'](host, quiet=True)
     for host, containers in data.items():
@@ -222,7 +245,6 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['result'] = False
         return ret
 
-    client = salt.client.get_local_client(__opts__['conf_file'])
 
     kw = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
     pub_key = kw.get('pub_key', None)
@@ -257,7 +279,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     cmds = []
     for name in names:
         args = [name]
-        kw = kwargs
+        kw = _sanitized_kw(kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
