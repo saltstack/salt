@@ -722,6 +722,8 @@ def parse_cookie_header(header):
         for req in reqd:
             if req not in cookie.keys():
                 cookie[req] = None
+        if cookie['domain'] is None:
+            cookie['domain'] = ''
         if cookie['version'] is None:
             cookie['version'] = 0
         if cookie['rest'] is None:
