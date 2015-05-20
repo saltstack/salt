@@ -390,7 +390,9 @@ def ca_exists(ca_name, cacert_path=None, ca_filename=None):
             ca_name,
             ca_filename)
     if os.path.exists(certp):
-        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
+        maybe_fix_ssl_version(ca_name,
+                              cacert_path=cacert_path,
+                              ca_filename=ca_filename)
         return True
     return False
 
@@ -431,7 +433,11 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
     return certp
 
 
-def get_ca_signed_cert(ca_name, CN='localhost', as_text=False, cacert_path=None, cert_filename=None):
+def get_ca_signed_cert(ca_name,
+                       CN='localhost',
+                       as_text=False,
+                       cacert_path=None,
+                       cert_filename=None):
     '''
     Get the certificate path or content
 
@@ -469,7 +475,11 @@ def get_ca_signed_cert(ca_name, CN='localhost', as_text=False, cacert_path=None,
     return certp
 
 
-def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, key_filename=None):
+def get_ca_signed_key(ca_name,
+                      CN='localhost',
+                      as_text=False,
+                      cacert_path=None,
+                      key_filename=None):
     '''
     Get the certificate path or content
 
@@ -482,13 +492,17 @@ def get_ca_signed_key(ca_name, CN='localhost', as_text=False, cacert_path=None, 
     cacert_path
         absolute path to certificates root directory
     key_filename
-        alternative filename for the key, useful when using special characters in the CN
+        alternative filename for the key, useful when using special characters
+        in the CN
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' tls.get_ca_signed_key test_ca CN=localhost as_text=False cacert_path=/etc/certs
+        salt '*' tls.get_ca_signed_key \
+                test_ca CN=localhost \
+                as_text=False \
+                cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
     if not key_filename:
@@ -586,7 +600,8 @@ def create_ca(ca_name,
         ca.cert_base_path='/etc/pki'
         ca_name='koji'
 
-    the resulting CA, and corresponding key, would be written in the following location::
+    the resulting CA, and corresponding key, would be written in the following
+    location::
 
         /etc/pki/koji/koji_ca_cert.crt
         /etc/pki/koji/koji_ca_cert.key
@@ -715,15 +730,16 @@ def get_extensions(cert_type):
 
     ext = {}
     if cert_type == '':
-        log.error('cert_type set to empty in tls_ca.get_extensions(); defaulting to ``server``')
+        log.error('cert_type set to empty in tls_ca.get_extensions(); '
+                  'defaulting to ``server``')
         cert_type = 'server'
 
     try:
-        ext['common'] = __salt__['pillar.get']('tls.extensions:common')
+        ext['common'] = __salt__['pillar.get']('tls.extensions:common', False)
     except NameError as err:
         log.debug(err)
 
-    if 'common' not in ext or ext['common'] == '':
+    if not ext['common'] or ext['common'] == '':
         ext['common'] = {
             'csr': {
                 'basicConstraints': 'CA:FALSE',
@@ -735,11 +751,11 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext['server'] = __salt__['pillar.get']('tls.extensions:server')
+        ext['server'] = __salt__['pillar.get']('tls.extensions:server', False)
     except NameError as err:
         log.debug(err)
 
-    if 'server' not in ext or ext['server'] == '':
+    if not ext['server'] or ext['server'] == '':
         ext['server'] = {
             'csr': {
                 'extendedKeyUsage': 'serverAuth',
@@ -749,11 +765,11 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext['client'] = __salt__['pillar.get']('tls.extensions:client')
+        ext['client'] = __salt__['pillar.get']('tls.extensions:client', False)
     except NameError as err:
         log.debug(err)
 
-    if 'client' not in ext or ext['client'] == '':
+    if not ext['client'] or ext['client'] == '':
         ext['client'] = {
             'csr': {
                 'extendedKeyUsage': 'clientAuth',
@@ -769,8 +785,8 @@ def get_extensions(cert_type):
                 'tls.extensions:{0}'.format(cert_type))
         except NameError as e:
             log.debug(
-                'pillar, tls:extensions:{0} not available or not operating in a salt context\n{1}'.
-                format(cert_type, e))
+                'pillar, tls:extensions:{0} not available or '
+                'not operating in a salt context\n{1}'.format(cert_type, e))
 
     retval = ext['common']
 
@@ -1214,7 +1230,8 @@ def create_ca_signed_cert(ca_name,
 
     set_ca_path(cacert_path)
 
-    ca_filename = '{0}_ca_cert'.format(ca_name)
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
 
     if not cert_path:
         cert_path = '{0}/{1}/certs'.format(cert_base_path(), ca_name)
@@ -1246,7 +1263,9 @@ def create_ca_signed_cert(ca_name,
         return 'Certificate "{0}" already exists'.format(cert_filename)
 
     try:
-        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
+        maybe_fix_ssl_version(ca_name,
+                              cacert_path=cacert_path,
+                              ca_filename=ca_filename)
         with salt.utils.fopen('{0}/{1}/{2}.crt'.format(cert_base_path(),
                                                        ca_name,
                                                        ca_filename)) as fhr:
@@ -1273,7 +1292,8 @@ def create_ca_signed_cert(ca_name,
                     fhr.read())
     except IOError:
         ret['retcode'] = 1
-        ret['comment'] = 'There is no CSR that matches the CN "{0}"'.format(cert_filename)
+        ret['comment'] = 'There is no CSR that matches the CN "{0}"'.format(
+                cert_filename)
         return ret
 
     exts = []
@@ -1292,8 +1312,10 @@ def create_ca_signed_cert(ca_name,
                      ' Your version: {0}'.format(
                          OpenSSL.__dict__.get('__version__', 'pre-2014')))
 
-            native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
-            for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
+            native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(
+                    req._req)
+            for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(
+                    native_exts_obj)):
                 ext = OpenSSL.crypto.X509Extension.__new__(
                     OpenSSL.crypto.X509Extension)
                 ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(
@@ -1452,8 +1474,12 @@ def cert_info(cert_path, digest='sha256'):
         'subject': dict(cert.get_subject().get_components()),
         'issuer': dict(cert.get_issuer().get_components()),
         'serial_number': cert.get_serial_number(),
-        'not_before': time.mktime(datetime.strptime(cert.get_notBefore(), date_fmt).timetuple()),
-        'not_after': time.mktime(datetime.strptime(cert.get_notAfter(), date_fmt).timetuple()),
+        'not_before': time.mktime(datetime.strptime(
+            cert.get_notBefore(),
+            date_fmt).timetuple()),
+        'not_after': time.mktime(datetime.strptime(
+            cert.get_notAfter(),
+            date_fmt).timetuple()),
     }
 
     # add additional info if your version of pyOpenSSL supports it
@@ -1465,9 +1491,11 @@ def cert_info(cert_path, digest='sha256'):
 
     if 'subjectAltName' in ret.get('extensions', {}):
         valid_names = set()
-        for name in ret['extensions']['subjectAltName']._subjectAltNameString().split(", "):
+        for name in ret['extensions']['subjectAltName'] \
+                ._subjectAltNameString().split(", "):
             if not name.startswith('DNS:'):
-                log.error('Cert {0} has an entry ({1}) which does not start with DNS:'.format(cert_path, name))
+                log.error('Cert {0} has an entry ({1}) which does not start '
+                          'with DNS:'.format(cert_path, name))
             else:
                 valid_names.add(name[4:])
         ret['subject_alt_names'] = valid_names
@@ -1501,7 +1529,9 @@ def create_empty_crl(
 
     .. code-block:: bash
 
-        salt '*' tls.create_empty_crl ca_name='koji' ca_filename='ca' crl_file='/etc/openvpn/team1/crl.pem'
+        salt '*' tls.create_empty_crl ca_name='koji' \
+                ca_filename='ca' \
+                crl_file='/etc/openvpn/team1/crl.pem'
     '''
 
     set_ca_path(cacert_path)
@@ -1575,7 +1605,8 @@ def revoke_cert(
         Path to the cert file.
 
     cert_filename
-        Alternative filename for the certificate, useful when using special characters in the CN.
+        Alternative filename for the certificate, useful when using special
+        characters in the CN.
 
     crl_file
         Full path to the CRL file.
@@ -1584,7 +1615,9 @@ def revoke_cert(
 
     .. code-block:: bash
 
-        salt '*' tls.revoke_cert ca_name='koji' ca_filename='ca' crl_file='/etc/openvpn/team1/crl.pem'
+        salt '*' tls.revoke_cert ca_name='koji' \
+                ca_filename='ca' \
+                crl_file='/etc/openvpn/team1/crl.pem'
 
     '''
 
@@ -1686,8 +1719,10 @@ def revoke_cert(
                 fields = line.split('\t')
                 revoked = OpenSSL.crypto.Revoked()
                 revoked.set_serial(fields[3])
-                revoke_date_2_digit = datetime.strptime(fields[2], two_digit_year_fmt)
-                revoked.set_rev_date(revoke_date_2_digit.strftime(four_digit_year_fmt))
+                revoke_date_2_digit = datetime.strptime(fields[2],
+                                                        two_digit_year_fmt)
+                revoked.set_rev_date(revoke_date_2_digit.strftime(
+                    four_digit_year_fmt))
                 crl.add_revoked(revoked)
 
     crl_text = crl.export(ca_cert, ca_key)
@@ -1700,7 +1735,8 @@ def revoke_cert(
 
     if os.path.isdir(crl_file):
         ret['retcode'] = 1
-        ret['comment'] = 'crl_file "{0}" is an existing directory'.format(crl_file)
+        ret['comment'] = 'crl_file "{0}" is an existing directory'.format(
+                crl_file)
         return ret
 
     with salt.utils.fopen(crl_file, 'w') as f:
