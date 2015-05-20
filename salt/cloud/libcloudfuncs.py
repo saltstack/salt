@@ -362,7 +362,9 @@ def destroy(name, conn=None, call=None):
             flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
-        client = salt.client.get_local_client(__opts__['conf_file'])
+        mopts = config.DEFAULT_MASTER_OPTS
+        mopts.update(config.master_config('/etc/salt/master'))
+        client = salt.client.get_local_client(mopts)
         minions = client.cmd(name, 'mine.flush')
 
     log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
