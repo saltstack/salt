@@ -114,8 +114,12 @@ def latest(name,
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
 
+        .. versionadded:: 2015.5.0
+
     https_pass
         HTTP Basic Auth password for HTTPS (only) clones
+
+        .. versionadded:: 2015.5.0
 
     onlyif
         A command to run as a check, run the named command only if the command
