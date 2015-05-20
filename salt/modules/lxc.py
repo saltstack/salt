@@ -240,7 +240,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     path
         path to the container parent directory (default: /var/lib/lxc)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
+
     network_profile
         salt lxc network profile selection
     nic_opts
@@ -1195,7 +1196,7 @@ def init(name,
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     clone
         .. deprecated:: 2015.5.0
@@ -1813,7 +1814,7 @@ def create(name,
     path
         parent path for the container creation (default: /var/lib/lxc)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
     '''
     # Required params for 'download' template
     download_template_deps = ('dist', 'release', 'arch')
@@ -1945,7 +1946,7 @@ def clone(name,
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     **Container Cloning Arguments**
 
@@ -2041,7 +2042,7 @@ def ls_(active=None, cache=True, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     active
         If ``True``, return only active (i.e. running) containers
@@ -2088,7 +2089,7 @@ def list_(extra=False, limit=None, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     limit
         Return output matching a specific state (**frozen**, **running**, or
@@ -2222,7 +2223,7 @@ def _ensure_running(name, no_start=False, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
     '''
     _ensure_exists(name, path=path)
     pre = state(name, path=path)
@@ -2258,13 +2259,13 @@ def restart(name, path=None, lxc_config=None, force=False):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     lxc_config
 
         path to a lxc config file
         config file will be guessed from container name otherwise
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     force : False
         If ``True``, the container will be force-stopped instead of gracefully
@@ -2301,13 +2302,14 @@ def start(name, **kwargs):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     lxc_config
 
         path to a lxc config file
         config file will be guessed from container name otherwise
-        .. versionadded:: 2015.5.0
+
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2349,7 +2351,7 @@ def stop(name, kill=False, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     kill: False
         Do not wait for the container to stop, kill all tasks in the container.
@@ -2388,7 +2390,7 @@ def freeze(name, **kwargs):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     start : False
         If ``True`` and the container is stopped, the container will be started
@@ -2431,7 +2433,7 @@ def unfreeze(name, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
 
     CLI Example:
@@ -2461,7 +2463,8 @@ def destroy(name, stop=False, path=None):
 
     path
         path to the container parent directory (default: /var/lib/lxc)
-        .. versionadded:: 2015.5.0
+
+        .. versionadded:: 2015.5.2
 
     stop : False
         If ``True``, the container will be destroyed even if it is
@@ -2497,7 +2500,8 @@ def exists(name, path=None):
 
     path
         path to the container parent directory (default: /var/lib/lxc)
-        .. versionadded:: 2015.5.0
+
+        .. versionadded:: 2015.5.2
 
 
     CLI Example:
@@ -2521,7 +2525,8 @@ def state(name, path=None):
 
     path
         path to the container parent directory (default: /var/lib/lxc)
-        .. versionadded:: 2015.5.0
+
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2567,7 +2572,7 @@ def get_parameter(name, parameter, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2596,7 +2601,7 @@ def set_parameter(name, parameter, value, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2626,7 +2631,7 @@ def info(name, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2791,7 +2796,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2842,7 +2847,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -2951,7 +2956,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
 
     CLI Example:
@@ -3042,7 +3047,7 @@ def running_systemd(name, cache=True, path=None):
     path
         path to the container parent
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -3120,7 +3125,7 @@ def systemd_running_state(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -3148,7 +3153,7 @@ def test_sd_started_state(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
 
     CLI Example:
@@ -3176,7 +3181,7 @@ def test_bare_started_state(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
 
     CLI Example:
@@ -3207,7 +3212,7 @@ def wait_started(name, path=None, timeout=300):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
 
     CLI Example:
@@ -3297,7 +3302,7 @@ def bootstrap(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     pub_key
         Explicit public key to pressed the minion with (optional).
@@ -3476,7 +3481,7 @@ def attachable(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -3525,7 +3530,7 @@ def _run(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     '''
     orig_state = state(name, path=path)
@@ -3596,7 +3601,7 @@ def run_cmd(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     .. deprecated:: 2015.5.0
         Use :mod:`lxc.run <salt.modules.lxc.run>` instead
@@ -3642,7 +3647,7 @@ def run(name,
         chroot_fallback=False,
         keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: 2015.5.0
+    .. versionadded:: 2015.5.2
 
     Run :mod:`cmd.run <salt.modules.cmdmod.run>` within a container
 
@@ -3670,7 +3675,7 @@ def run(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     no_start : False
         If the container is not running, don't start it
@@ -3759,7 +3764,7 @@ def run_stdout(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     no_start : False
         If the container is not running, don't start it
@@ -3846,7 +3851,7 @@ def run_stderr(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     no_start : False
         If the container is not running, don't start it
@@ -3941,7 +3946,7 @@ def retcode(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     stdin : None
         Standard input to be used for the command
@@ -4025,7 +4030,7 @@ def run_all(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     cmd
         Command to run
@@ -4109,7 +4114,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     dest
         Destination on the container. Must be an absolute path.
@@ -4382,7 +4387,7 @@ def reboot(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Examples:
 
@@ -4466,7 +4471,7 @@ def reconfigure(name,
     path
         path to the container parent
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -4546,7 +4551,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
     path
         path to the container parent
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     CLI Examples:
 
