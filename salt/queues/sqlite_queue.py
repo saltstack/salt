@@ -211,9 +211,12 @@ def pop(queue, quantity=1):
         if len(result) > 0:
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
-            del_cmd = 'DELETE FROM {0} WHERE name IN ("{1}")'.format(
-                                                               queue, itemlist)
+            _quote_escape(itemlist)
+            del_cmd = '''DELETE FROM {0} WHERE name IN ('{1}')'''.format(
+                queue, itemlist)
+
             log.debug('SQL Query: {0}'.format(del_cmd))
+
             cur.execute(del_cmd)
         con.commit()
     log.info(items)
