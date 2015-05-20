@@ -316,7 +316,7 @@ def present(name,
     return ret
 
 
-def absent(name, stop=False, path=None)
+def absent(name, stop=False, path=None):
     '''
     Ensure a container is not present, destroying it if present
 
