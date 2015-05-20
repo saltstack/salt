@@ -396,7 +396,7 @@ def query(url,
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
-        if 'Set-Cookie' in result_headers.keys():
+        if 'Set-Cookie' in result_headers.keys() and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
                 sess_cookies.set_cookie(item)
