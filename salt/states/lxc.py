@@ -313,7 +313,7 @@ def present(name,
     return ret
 
 
-def absent(name, path=None, stop=False):
+def absent(name, stop=False, path=None)
     '''
     Ensure a container is not present, destroying it if present
 
@@ -352,7 +352,7 @@ def absent(name, path=None, stop=False):
         return ret
 
     try:
-        result = __salt__['lxc.destroy'](name, path=path, stop=stop)
+        result = __salt__['lxc.destroy'](name, stop=stop, path=path)
     except (SaltInvocationError, CommandExecutionError) as exc:
         ret['result'] = False
         ret['comment'] = 'Failed to destroy container: {0}'.format(exc)
