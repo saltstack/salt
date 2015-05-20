@@ -390,7 +390,9 @@ def ca_exists(ca_name, cacert_path=None, ca_filename=None):
             ca_name,
             ca_filename)
     if os.path.exists(certp):
-        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
+        maybe_fix_ssl_version(ca_name,
+                              cacert_path=cacert_path,
+                              ca_filename=ca_filename)
         return True
     return False
 
@@ -1246,7 +1248,9 @@ def create_ca_signed_cert(ca_name,
         return 'Certificate "{0}" already exists'.format(cert_filename)
 
     try:
-        maybe_fix_ssl_version(ca_name, ca_filename=ca_filename)
+        maybe_fix_ssl_version(ca_name,
+                              cacert_path=cacert_path,
+                              ca_filename=ca_filename)
         with salt.utils.fopen('{0}/{1}/{2}.crt'.format(cert_base_path(),
                                                        ca_name,
                                                        ca_filename)) as fhr:
