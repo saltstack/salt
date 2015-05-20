@@ -26,7 +26,8 @@ def present(name,
             size=None,
             backing=None,
             vgname=None,
-            lvname=None):
+            lvname=None,
+            path=None):
     '''
     .. versionchanged:: 2015.5.0
         The :mod:`lxc.created <salt.states.lxc.created>` state has been renamed
@@ -37,6 +38,13 @@ def present(name,
 
     name
         The name of the container to be created
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
+
 
     running : False
         * If ``True``, ensure that the container is running
@@ -144,7 +152,7 @@ def present(name,
                 pass
 
     # Sanity check(s)
-    if clone_from and not __salt__['lxc.exists'](clone_from):
+    if clone_from and not __salt__['lxc.exists'](clone_from, path=path):
         ret['result'] = False
         ret['comment'] = ('Clone source \'{0}\' does not exist'
                           .format(clone_from))
@@ -153,7 +161,7 @@ def present(name,
 
     action = 'cloned from {0}'.format(clone_from) if clone_from else 'created'
 
-    state = {'old': __salt__['lxc.state'](name)}
+    state = {'old': __salt__['lxc.state'](name, path=path)}
     if __opts__['test']:
         if state['old'] is None:
             ret['comment'] = (
@@ -203,6 +211,7 @@ def present(name,
                                                profile=profile,
                                                snapshot=snapshot,
                                                size=size,
+                                               path=path,
                                                backing=backing)
             else:
                 result = __salt__['lxc.create'](name,
@@ -215,6 +224,7 @@ def present(name,
                                                 size=size,
                                                 backing=backing,
                                                 vgname=vgname,
+                                                path=path,
                                                 lvname=lvname)
         except (CommandExecutionError, SaltInvocationError) as exc:
             ret['result'] = False
@@ -233,7 +243,7 @@ def present(name,
             # Don't do anything
             pass
         elif running:
-            c_state = __salt__['lxc.state'](name)
+            c_state = __salt__['lxc.state'](name, path=path)
             if c_state == 'running':
                 ret['comment'] += ' and is running'
             else:
@@ -241,7 +251,9 @@ def present(name,
                 try:
                     start_func = 'lxc.unfreeze' if c_state == 'frozen' \
                         else 'lxc.start'
-                    state['new'] = __salt__[start_func](name)['state']['new']
+                    state['new'] = __salt__[start_func](
+                        name, path=path
+                    )['state']['new']
                     if state['new'] != 'running':
                         ret['result'] = False
                         ret['comment'] += error
@@ -261,14 +273,16 @@ def present(name,
                         )
 
         else:
-            c_state = __salt__['lxc.state'](name)
+            c_state = __salt__['lxc.state'](name, path=path)
             if c_state == 'stopped':
                 if state['old'] is not None:
                     ret['comment'] += ' and is stopped'
             else:
                 error = ', but it could not be stopped'
                 try:
-                    state['new'] = __salt__['lxc.stop'](name)['state']['new']
+                    state['new'] = __salt__['lxc.stop'](
+                        name, path=path
+                    )['state']['new']
                     if state['new'] != 'stopped':
                         ret['result'] = False
                         ret['comment'] += error
@@ -284,7 +298,7 @@ def present(name,
 
     if 'new' not in state:
         # Make sure we know the final state of the container before we return
-        state['new'] = __salt__['lxc.state'](name)
+        state['new'] = __salt__['lxc.state'](name, path=path)
     if state['old'] != state['new']:
         ret['changes']['state'] = state
     return ret
@@ -297,6 +311,13 @@ def absent(name):
     name
         Name of the container to destroy
 
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
+
+
     .. code-block:: yaml
 
         web01:
@@ -307,7 +328,7 @@ def absent(name):
            'result': True,
            'comment': 'Container \'{0}\' does not exist'.format(name)}
 
-    if not __salt__['lxc.exists'](name):
+    if not __salt__['lxc.exists'](name, path=path):
         return ret
 
     if __opts__['test']:
@@ -316,7 +337,7 @@ def absent(name):
         return ret
 
     try:
-        result = __salt__['lxc.destroy'](name)
+        result = __salt__['lxc.destroy'](name, path=path)
     except (SaltInvocationError, CommandExecutionError) as exc:
         ret['result'] = False
         ret['comment'] = 'Failed to destroy container: {0}'.format(exc)
@@ -327,7 +348,7 @@ def absent(name):
 
 
 # Container state (running/frozen/stopped)
-def running(name, restart=False):
+def running(name, restart=False, path=None):
     '''
     .. versionchanged:: 2015.5.0
         The :mod:`lxc.started <salt.states.lxc.started>` state has been renamed
@@ -344,6 +365,12 @@ def running(name, restart=False):
 
     name
         The name of the container
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
 
     restart : False
         Restart container if it is already running
@@ -362,7 +389,7 @@ def running(name, restart=False):
            'comment': 'Container \'{0}\' is already running'.format(name),
            'changes': {}}
 
-    state = {'old': __salt__['lxc.state'](name)}
+    state = {'old': __salt__['lxc.state'](name, path=path)}
     if state['old'] is None:
         ret['result'] = False
         ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
@@ -392,16 +419,16 @@ def running(name, restart=False):
 
     try:
         if state['old'] == 'frozen' and not restart:
-            result = __salt__['lxc.unfreeze'](name)
+            result = __salt__['lxc.unfreeze'](name, path=path)
         else:
             if restart:
-                result = __salt__['lxc.restart'](name)
+                result = __salt__['lxc.restart'](name, path=path)
             else:
-                result = __salt__['lxc.start'](name)
+                result = __salt__['lxc.start'](name, path=path)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
-        state['new'] = __salt__['lxc.state'](name)
+        state['new'] = __salt__['lxc.state'](name, path=path)
     else:
         state['new'] = result['state']['new']
         if state['new'] != 'running':
@@ -436,6 +463,13 @@ def frozen(name, start=True):
     name
         The name of the container
 
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
+
+
     start : True
         Start container first, if necessary. If ``False``, then this state will
         fail if the container is not running.
@@ -454,7 +488,7 @@ def frozen(name, start=True):
            'comment': 'Container \'{0}\' is already frozen'.format(name),
            'changes': {}}
 
-    state = {'old': __salt__['lxc.state'](name)}
+    state = {'old': __salt__['lxc.state'](name, path=path)}
     if state['old'] is None:
         ret['result'] = False
         ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
@@ -477,11 +511,11 @@ def frozen(name, start=True):
         return ret
 
     try:
-        result = __salt__['lxc.freeze'](name, start=start)
+        result = __salt__['lxc.freeze'](name, start=start, path=path)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
-        state['new'] = __salt__['lxc.state'](name)
+        state['new'] = __salt__['lxc.state'](name, path=path)
     else:
         state['new'] = result['state']['new']
         if state['new'] != 'frozen':
@@ -501,7 +535,7 @@ def frozen(name, start=True):
     return ret
 
 
-def stopped(name, kill=False):
+def stopped(name, kill=False, path=None):
     '''
     Ensure that a container is stopped
 
@@ -517,12 +551,25 @@ def stopped(name, kill=False):
     name
         The name of the container
 
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
+
     kill : False
         Do not wait for the container to stop, kill all tasks in the container.
         Older LXC versions will stop containers like this irrespective of this
         argument.
 
         .. versionadded:: 2015.5.0
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
+
 
     .. code-block:: yaml
 
@@ -534,7 +581,7 @@ def stopped(name, kill=False):
            'comment': 'Container \'{0}\' is already stopped'.format(name),
            'changes': {}}
 
-    state = {'old': __salt__['lxc.state'](name)}
+    state = {'old': __salt__['lxc.state'](name, path=path)}
     if state['old'] is None:
         ret['result'] = False
         ret['comment'] = 'Container \'{0}\' does not exist'.format(name)
@@ -554,11 +601,11 @@ def stopped(name, kill=False):
         return ret
 
     try:
-        result = __salt__['lxc.stop'](name, kill=kill)
+        result = __salt__['lxc.stop'](name, kill=kill, path=path)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret['result'] = False
         ret['comment'] = exc.strerror
-        state['new'] = __salt__['lxc.state'](name)
+        state['new'] = __salt__['lxc.state'](name, path=path)
     else:
         state['new'] = result['state']['new']
         if state['new'] != 'stopped':
@@ -588,7 +635,7 @@ def created(name, **kwargs):
     return present(name, **kwargs)
 
 
-def started(name, restart=False):
+def started(name, path=None, restart=False):
     '''
     .. deprecated:: 2015.5.0
         Use :mod:`lxc.running <salt.states.lxc.running>`
@@ -598,7 +645,7 @@ def started(name, restart=False):
         'The lxc.started state has been renamed to lxc.running, please use '
         'lxc.running'
     )
-    return running(name, restart=restart)
+    return running(name, restart=restart, path=path)
 
 
 def cloned(name,
@@ -606,6 +653,7 @@ def cloned(name,
            snapshot=True,
            size=None,
            vgname=None,
+           path=None,
            profile=None):
     '''
     .. deprecated:: 2015.5.0
@@ -622,6 +670,7 @@ def cloned(name,
                    snapshot=snapshot,
                    size=size,
                    vgname=vgname,
+                   path=path,
                    profile=profile)
 
 
@@ -663,6 +712,13 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
         is deprecated.
 
     Edit LXC configuration options
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.5.0
+
 
     .. code-block:: bash
 
