@@ -1262,8 +1262,14 @@ class Cloud(object):
                 # a small pause makes the sync work reliably
                 time.sleep(3)
 
-                mopts_ = salt.config.DEFAULT_MASTER_OPTS
-                mopts_.update(salt.config.minion_config('/etc/salt/master'))
+                mopts_ = salt.config.DEFAULT_MINION_OPTS
+                conf_path = '/'.join(__opts__['conf_file'].split('/')[:-1])
+                mopts_.update(
+                    salt.config.minion_config(
+                        os.path.join(conf_path,
+                                     'minion')
+                    )
+                )
 
                 client = salt.client.get_local_client(mopts=mopts_)
 
