@@ -184,8 +184,12 @@ def clone(cwd, repository, opts=None, user=None, identity=None,
     https_user : None
         HTTP Basic Auth username for HTTPS (only) clones
 
+        .. versionadded:: 20515.5.0
+
     https_pass : None
         HTTP Basic Auth password for HTTPS (only) clones
+
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -746,8 +750,12 @@ def remote_set(cwd, name='origin', url=None, user=None, https_user=None,
     https_user : None
         HTTP Basic Auth username for HTTPS (only) clones
 
+        .. versionadded:: 2015.5.0
+
     https_pass : None
         HTTP Basic Auth password for HTTPS (only) clones
+
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -943,8 +951,12 @@ def ls_remote(cwd, repository="origin", branch="master", user=None,
     https_user : None
         HTTP Basic Auth username for HTTPS (only) clones
 
+        .. versionadded:: 2015.5.0
+
     https_pass : None
         HTTP Basic Auth password for HTTPS (only) clones
+
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
