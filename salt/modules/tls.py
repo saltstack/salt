@@ -1216,7 +1216,8 @@ def create_ca_signed_cert(ca_name,
 
     set_ca_path(cacert_path)
 
-    ca_filename = '{0}_ca_cert'.format(ca_name)
+    if not ca_filename:
+        ca_filename = '{0}_ca_cert'.format(ca_name)
 
     if not cert_path:
         cert_path = '{0}/{1}/certs'.format(cert_base_path(), ca_name)
