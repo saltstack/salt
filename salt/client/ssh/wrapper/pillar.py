@@ -37,12 +37,12 @@ def get(key, default='', merge=False, delimiter=DEFAULT_TARGET_DELIM):
         Specify whether or not the retrieved values should be recursively
         merged into the passed default.
 
-        .. versionadded:: 2014.7.0
+        .. versionadded:: 2015.5.0
 
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
-        .. versionadded:: 2014.7.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
