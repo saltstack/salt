@@ -1690,6 +1690,43 @@ def templates():
         return [x[4:] for x in template_scripts if x.startswith('lxc-')]
 
 
+def _after_ignition_network_profile(cmd,
+                                    ret,
+                                    name,
+                                    network_profile,
+                                    path,
+                                    nic_opts):
+    _clear_context()
+    if ret['retcode'] == 0 and exists(name, path=path):
+        if network_profile:
+            network_changes = apply_network_profile(name,
+                                                    network_profile,
+                                                    path=path,
+                                                    nic_opts=nic_opts)
+
+            if network_changes:
+                log.info(
+                    'Network changes from applying network profile \'{0}\' '
+                    'to newly-created container \'{1}\':\n{2}'
+                    .format(network_profile, name, network_changes)
+                )
+        c_state = state(name, path=path)
+        return {'result': True,
+                'state': {'old': None, 'new': c_state}}
+    else:
+        if exists(name, path=path):
+            # destroy the container if it was partially created
+            cmd = 'lxc-destroy'
+            if path:
+                cmd += ' -P {0}'.format(pipes.quote(path))
+            cmd += ' -n {0}'.format(name)
+            __salt__['cmd.retcode'](cmd, python_shell=False)
+        raise CommandExecutionError(
+            'Container could not be created with cmd \'{0}\': {1}'
+            .format(cmd, ret['stderr'])
+        )
+
+
 def create(name,
            config=None,
            profile=None,
@@ -1868,43 +1905,20 @@ def create(name,
         for key, val in six.iteritems(options):
             cmd += ' --{0} {1}'.format(key, val)
 
-    ret = __salt__['cmd.run_all'](cmd,
-                                  python_shell=False,
-                                  output_loglevel='trace')
-    _clear_context()
-    if ret['retcode'] == 0 and exists(name, path=path):
-        if network_profile:
-            network_changes = apply_network_profile(name,
-                                                    network_profile,
-                                                    path=path,
-                                                    nic_opts=nic_opts)
-
-            if network_changes:
-                log.info(
-                    'Network changes from applying network profile \'{0}\' '
-                    'to newly-created container \'{1}\':\n{2}'
-                    .format(network_profile, name, network_changes)
-                )
-        c_state = state(name, path=path)
-        return {'result': True,
-                'state': {'old': None, 'new': c_state}}
-    else:
-        if exists(name, path=path):
-            # destroy the container if it was partially created
-            cmd = 'lxc-destroy'
-            if path:
-                cmd += ' -P {0}'.format(pipes.quote(path))
-            cmd += ' -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd, python_shell=False)
-        raise CommandExecutionError(
-            'Container could not be created with cmd \'{0}\': {1}'
-            .format(cmd, ret['stderr'])
-        )
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return _after_ignition_network_profile(cmd,
+                                           ret,
+                                           name,
+                                           network_profile,
+                                           path,
+                                           nic_opts)
 
 
 def clone(name,
           orig,
           profile=None,
+          network_profile=None,
+          nic_opts=None,
           **kwargs):
     '''
     Create a new container as a clone of another container
@@ -1938,6 +1952,16 @@ def clone(name,
     backing
         The type of storage to use. Set to ``lvm`` to use an LVM group.
         Defaults to filesystem within /var/lib/lxc.
+
+    network_profile
+        Network profile to use for container
+
+        .. versionadded:: 2015.5.0
+
+    nic_opts
+        give extra opts overriding network profile values
+
+        .. versionadded:: 2015.5.0
 
 
     CLI Examples:
@@ -1996,23 +2020,12 @@ def clone(name,
             if size:
                 cmd += ' --fssize {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    _clear_context()
-    if ret['retcode'] == 0 and exists(name, path=path):
-        c_state = state(name, path=path)
-        return {'result': True,
-                'state': {'old': None, 'new': c_state}}
-    else:
-        if exists(name, path=path):
-            # destroy the container if it was partially created
-            cmd = 'lxc-destroy'
-            if path:
-                cmd += ' -P {0}'.format(pipes.quote(path))
-            cmd += ' -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd, python_shell=False)
-        raise CommandExecutionError(
-            'Container could not be cloned with cmd \'{0}\': {1}'
-            .format(cmd, ret['stderr'])
-        )
+    return _after_ignition_network_profile(cmd,
+                                           ret,
+                                           name,
+                                           network_profile,
+                                           path,
+                                           nic_opts)
 
 
 def ls_(active=None, cache=True, path=None):
