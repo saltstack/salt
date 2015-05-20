@@ -127,9 +127,9 @@ def _quote_escape(item):
     e.g.: ' becomes ''
     '''
 
-    rex_sqlquote = re.compile("""'""", re.M)
+    rex_sqlquote = re.compile("'", re.M)
 
-    return rex_sqlquote.sub("""''""", item)
+    return rex_sqlquote.sub("''", item)
 
 
 def insert(queue, items):
