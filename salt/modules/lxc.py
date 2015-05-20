@@ -1325,7 +1325,7 @@ def init(name,
         try:
             clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
-            ret['comment'] = exc.message
+            ret['comment'] = exc.strerror
             if changes:
                 ret['changes'] = changes_dict
             return ret
@@ -3256,7 +3256,7 @@ def _needs_install(name, path=None):
         if 'salt-minion' not in processes:
             ret = 1
         else:
-            retcode(name, "salt-call --local service.stop salt-minion")
+            retcode(name, 'salt-call --local service.stop salt-minion')
     else:
         ret = 1
     return ret
