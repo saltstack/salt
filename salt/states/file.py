@@ -3643,7 +3643,11 @@ def copy(
     try:
         shutil.copy(source, name)
         ret['changes'] = {name: source}
-        __salt__['file.check_perms'](name, ret, user, group, mode)
+        # Preserve really means just keep the behavior of the cp command. If
+        # the filesystem we're copying to is squashed or doesn't support chown
+        # then we shouldn't be checking anything.
+        if not preserve:
+            __salt__['file.check_perms'](name, ret, user, group, mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
