@@ -67,9 +67,12 @@ def present(name,
         profile will be overridden by the parameters listed below.
 
     network_profile
-        Network Profile to use in container creation (see the :ref:`LXC Tutorial
-        <tutorial-lxc-profiles-container>` for more information). Values in a
-        profile will be overridden by the parameters listed below.
+        Network Profile to use in container creation
+        (see the :ref:`LXC Tutorial <tutorial-lxc-profiles-container>`
+        for more information). Values in a profile will be overridden by
+        the parameters listed below.
+
+        .. versionadded:: 2015.5.2
 
     **Container Creation Arguments**
 
@@ -324,7 +327,7 @@ def absent(name, stop=False, path=None)
         stop before destroying
         default: false
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     path
         path to the container parent
