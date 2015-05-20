@@ -1391,12 +1391,10 @@ def running(name,
         if runtime_kwargs.get('binds') is not None:
             if 'volumes' not in create_kwargs:
                 # Check if there are preconfigured volumes in the image
-                preconfigured_volumes = False
                 for step in __salt__['dockerng.history'](image, quiet=True):
                     if step.lstrip().startswith('VOLUME'):
-                        preconfigured_volumes = True
                         break
-                if not preconfigured_volumes:
+                else:
                     # No preconfigured volumes, we need to make our own. Use
                     # the ones from the "binds" configuration.
                     create_kwargs['volumes'] = [
