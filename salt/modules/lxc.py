@@ -920,7 +920,7 @@ class _LXCConfig(object):
     def __init__(self, **kwargs):
         kwargs = copy.deepcopy(kwargs)
         self.name = kwargs.pop('name', None)
-        path = kwargs.get('path',  DEFAULT_PATH)
+        path = kwargs.get('path', DEFAULT_PATH)
         if not path:
             path = DEFAULT_PATH
         self.data = []
