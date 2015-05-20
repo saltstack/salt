@@ -22,6 +22,7 @@ import os
 import time
 import logging
 import hashlib
+from salt.ext import six
 from salt.ext.six.moves import range
 from datetime import datetime
 
@@ -846,13 +847,17 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
     extensions_list = []
-    for name in extensions:
-        log.debug("name: {0}, critical: {1}, options: {2}".format(
-            name, extensions[name]['critical'], extensions[name]['options']))
-        extensions_list.append(OpenSSL.crypto.X509Extension(
-            name,
-            extensions[name]['critical'],
-            extensions[name]['options']))
+    for name, edata in six.iteritems(extensions):
+        if not isinstance(edata, dict):
+            continue
+        for opt in ['critical', 'options']:
+            if opt not in edata:
+                break
+        else:
+            extensions_list.append(OpenSSL.crypto.X509Extension(
+                                   name,
+                                   edata['critical'],
+                                   edata['options']))
     cert.add_extensions(extensions_list)
     cert.sign(ca_key, digest)
 
