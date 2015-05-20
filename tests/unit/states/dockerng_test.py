@@ -39,14 +39,17 @@ class DockerngTestCase(TestCase):
         '''
         Test dockerng.running function
         '''
+        mock_volume = '/container-0'
         dockerng_create = Mock()
         dockerng_start = Mock()
+        dockerng_history = MagicMock(return_value=mock_volume)
         __salt__ = {'dockerng.list_containers': MagicMock(),
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
+                    'dockerng.history': dockerng_history,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -58,7 +61,7 @@ class DockerngTestCase(TestCase):
             'image:latest',
             validate_input=False,
             name='cont',
-            volumes=['/container-0'],
+            volumes=[mock_volume],
             client_timeout=60)
         dockerng_start.assert_called_with(
             'cont',
