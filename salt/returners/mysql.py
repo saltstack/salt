@@ -198,7 +198,7 @@ def _get_serv(ret=None, commit=False):
             conn.ping()
             connect = False
         except MySQLdb.connections.OperationalError as exc:
-            log.debug('OperationalError on ping: {}'.format(exc))
+            log.debug('OperationalError on ping: {0}'.format(exc))
 
     if connect:
         log.debug('Generating new MySQL connection pool')
