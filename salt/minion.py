@@ -577,8 +577,9 @@ class Minion(MinionBase):
         # finish connecting to master
         self._connect_master_future.add_done_callback(lambda f: self.io_loop.stop())
         self.io_loop.start()
-        if self._connect_master_future.exception():
-            raise self._connect_master_future.exception()
+        future_exception = self._connect_master_future.exc_info()
+        if future_exception:
+            raise future_exception[0], future_exception[1], future_exception[2]
 
     @tornado.gen.coroutine
     def connect_master(self):
