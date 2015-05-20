@@ -302,7 +302,7 @@ def present(name,
     return ret
 
 
-def absent(name, stop=False)
+def absent(name, stop=False):
     '''
     Ensure a container is not present, destroying it if present
 
