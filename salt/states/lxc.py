@@ -18,6 +18,7 @@ def present(name,
             clone_from=None,
             snapshot=False,
             profile=None,
+            network_profile=None,
             template=None,
             options=None,
             image=None,
@@ -56,6 +57,14 @@ def present(name,
         Profile to use in container creation (see the :ref:`LXC Tutorial
         <tutorial-lxc-profiles-container>` for more information). Values in a
         profile will be overridden by the parameters listed below.
+
+    network_profile
+        Network Profile to use in container creation
+        (see the :ref:`LXC Tutorial <tutorial-lxc-profiles-container>`
+        for more information). Values in a profile will be overridden by
+        the parameters listed below.
+
+        .. versionadded:: 2015.5.2
 
     **Container Creation Arguments**
 
@@ -201,21 +210,24 @@ def present(name,
                 result = __salt__['lxc.clone'](name,
                                                clone_from,
                                                profile=profile,
+                                               network_profile=network_profile,
                                                snapshot=snapshot,
                                                size=size,
                                                backing=backing)
             else:
-                result = __salt__['lxc.create'](name,
-                                                profile=profile,
-                                                template=template,
-                                                options=options,
-                                                image=image,
-                                                config=config,
-                                                fstype=fstype,
-                                                size=size,
-                                                backing=backing,
-                                                vgname=vgname,
-                                                lvname=lvname)
+                result = __salt__['lxc.create'](
+                    name,
+                    profile=profile,
+                    network_profile=network_profile,
+                    template=template,
+                    options=options,
+                    image=image,
+                    config=config,
+                    fstype=fstype,
+                    size=size,
+                    backing=backing,
+                    vgname=vgname,
+                    lvname=lvname)
         except (CommandExecutionError, SaltInvocationError) as exc:
             ret['result'] = False
             ret['comment'] = exc.strerror
@@ -290,12 +302,18 @@ def present(name,
     return ret
 
 
-def absent(name):
+def absent(name, stop=False):
     '''
     Ensure a container is not present, destroying it if present
 
     name
         Name of the container to destroy
+
+    stop
+        stop before destroying
+        default: false
+
+        .. versionadded:: 2015.5.2
 
     .. code-block:: yaml
 
@@ -316,7 +334,7 @@ def absent(name):
         return ret
 
     try:
-        result = __salt__['lxc.destroy'](name)
+        result = __salt__['lxc.destroy'](name, stop=stop)
     except (SaltInvocationError, CommandExecutionError) as exc:
         ret['result'] = False
         ret['comment'] = 'Failed to destroy container: {0}'.format(exc)
