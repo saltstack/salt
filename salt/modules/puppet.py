@@ -222,7 +222,7 @@ def enable():
     return False
 
 
-def disable():
+def disable(message=None):
     '''
     .. versionadded:: 2014.7.0
 
@@ -244,7 +244,8 @@ def disable():
         with salt.utils.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
-                lockfile.write('{}')
+                str = "{\"disabled_message\":\"%s\"}" % message if message is not None else '{}'
+                lockfile.write(str)
                 lockfile.close()
                 return True
             except (IOError, OSError) as exc:
