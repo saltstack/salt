@@ -57,7 +57,7 @@ class TimezoneTestCase(TestCase):
                     self.assertEqual(timezone.get_zone(), '#\nA')
 
                 with patch.dict(timezone.__grains__, {'os_family': 'Gentoo'}):
-                    self.assertEqual(timezone.get_zone(), '#\nA')
+                    self.assertEqual(timezone.get_zone(), '')
 
             with patch.dict(timezone.__grains__, {'os_family': 'FreeBSD'}):
                 with patch.object(os, 'readlink',
