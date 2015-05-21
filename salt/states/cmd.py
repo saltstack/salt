@@ -132,9 +132,8 @@ it can also watch a git state for changes
           - git: my-project
 
 
-Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait
-<salt.states.cmd.wait>`?
--------------------------------------------------------------------------------
+Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
+--------------------------------------------------------------------------------------------
 
 These two states are often confused. The important thing to remember about them
 is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
@@ -159,7 +158,7 @@ executed when the state it is watching changes. Example:
           - file: /usr/local/bin/postinstall.sh
 
 How do I create an environment from a pillar map?
--------------------------------------------------------------------------------
+-------------------------------------------------
 
 The map that comes from a pillar cannot be directly consumed by the env option.
 To use it one must convert it to a list. Example:
