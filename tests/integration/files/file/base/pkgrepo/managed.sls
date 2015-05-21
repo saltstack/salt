@@ -68,6 +68,9 @@ epel-salttest:
 
 # START Ubuntu pkgrepo tests
 {% set codename = grains['oscodename'] %}
+
+# The gpodder PPA has not made a package for vivid yet - skip this test for now.
+{% if codename != 'vivid' %}
 gpodder-ppa:
   pkgrepo.managed:
     - humanname: gPodder PPA
@@ -76,19 +79,23 @@ gpodder-ppa:
     - file: /etc/apt/sources.list.d/gpodder.list
     - keyid: 89617F48
     - keyserver: keyserver.ubuntu.com
+{% endif %}
 
 nginx-ppa:
   pkgrepo.managed:
     - ppa: nginx/development
 
 {% set osrelease = salt['grains.get']('osrelease', '12.04') %}
+
 pkgrepo-deps:
   pkg.installed:
     - pkgs:
       - python-apt
       - python-software-properties
     - require_in:
+      {%- if codename != 'vivid' %}
       - pkgrepo: gpodder-ppa
+      {%- endif %}
       - pkgrepo: nginx-ppa
 # END Ubuntu pkgrepo tests
 

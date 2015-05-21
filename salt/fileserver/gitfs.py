@@ -389,13 +389,12 @@ def _get_tree_gitpython(repo, tgt_env):
     # Branch or tag not matched, check if 'tgt_env' is a commit
     if not _env_is_exposed(tgt_env):
         return None
+
     try:
         commit = repo['repo'].rev_parse(tgt_env)
-    except gitdb.exc.BadObject:
-        pass
-    else:
         return commit.tree
-    return None
+    except gitdb.exc.ODBError:
+        return None
 
 
 def _get_tree_pygit2(repo, tgt_env):

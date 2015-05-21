@@ -732,6 +732,8 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         rules = get_rules(family='ipv4')
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
+        if position is 0:
+            position = 1
 
     wait = '--wait' if _has_option('--wait', family) else ''
     cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
