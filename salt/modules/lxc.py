@@ -1278,7 +1278,6 @@ def init(name,
     changes_dict = {'init': []}
     changes = changes_dict.get('init')
 
-
     if users is None:
         users = []
     dusers = ['root']
@@ -2183,7 +2182,7 @@ def _change_state(cmd, name, expected, path=None):
 
     if path and ' -P ' not in cmd:
         cmd += ' -P {0}'.format(pipes.quote(path))
-    cmd += ' -n {1}'.format(cmd, name)
+    cmd += ' -n {0}'.format(name)
 
     error = __salt__['cmd.run_stderr'](cmd, python_shell=False)
     if error:
@@ -4529,7 +4528,7 @@ def reconfigure(name,
             edit_conf(path, out_format='commented', lxc_config=new_cfg)
         chunks = read_conf(path, out_format='commented')
         if old_chunks != chunks:
-            ret['comment'] = '{0} lxc config updated'.format(OBname)
+            ret['comment'] = '{0} lxc config updated'.format(name)
             if state(name, path=path) == 'running':
                 cret = reboot(name, path=path)
                 ret['result'] = cret['result']
