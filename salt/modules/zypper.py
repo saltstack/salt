@@ -328,7 +328,7 @@ def mod_repo(repo, **kwargs):
     repo or alias
         alias by which the zypper refers to the repo
 
-    url or mirrorlist
+    url, mirrorlist or baseurl
         the URL for zypper to reference
 
     enabled
@@ -361,7 +361,7 @@ def mod_repo(repo, **kwargs):
 
     # An attempt to add new one?
     if repo not in repos_cfg.sections():
-        url = kwargs.get('url', kwargs.get('mirrorlist'))
+        url = kwargs.get('url', kwargs.get('mirrorlist', kwargs.get('baseurl')))
         if not url:
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and no URL passed to create one.'.format(repo))
