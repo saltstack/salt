@@ -1401,11 +1401,17 @@ def running(name,
                         x['bind']
                         for x in six.itervalues(runtime_kwargs['binds'])
                     ]
-        if runtime_kwargs.get('port_bindings') is not None \
-                and create_kwargs.get('ports') is None:
-            create_kwargs['ports'] = ','.join(
-                [str(x) for x in runtime_kwargs['port_bindings']]
-            )
+        if runtime_kwargs.get('port_bindings') is not None:
+            if 'ports' not in create_kwargs:
+                # Check if there are preconfigured ports in the image
+                for step in __salt__['dockerng.history'](image, quiet=True):
+                    if step.lstrip().startswith('EXPOSE'):
+                        break
+                else:
+                    # No preconfigured ports, we need to make our own. Use
+                    # the ones from the "port_bindings" configuration.
+                    create_kwargs['ports'] = list(
+                        runtime_kwargs['port_bindings'])
 
         # Perform data type validation and, where necessary, munge
         # the data further so it is in a format that can be passed
