@@ -658,6 +658,10 @@ def _unify_sources_and_hashes(source=None, source_hash=None,
     if source:
         return (True, '', [(source, source_hash)])
 
+    # map is actually imap so both lists need to be equal length to iterate
+    # over all sources:
+    source_hashes.extend([None] * (len(sources) - len(source_hashes)))
+
     # Make a nice neat list of tuples exactly len(sources) long..
     return True, '', list(zip_longest(sources, source_hashes[:len(sources)]))
 
