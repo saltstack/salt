@@ -233,6 +233,7 @@ def disable(message=None):
     .. code-block:: bash
 
         salt '*' puppet.disable
+        salt '*' puppet.disable 'disabled for a good reason'
     '''
 
     _check_puppet()
