@@ -129,6 +129,25 @@ class Beacon(object):
 
         return True
 
+    def modify_beacon(self, name, beacon_data):
+        '''
+        Modify a beacon item
+        '''
+
+        data = {}
+        data[name] = beacon_data
+
+        log.info('Updating settings for beacon '
+                 'item: {0}'.format(name))
+        self.opts['beacons'].update(data)
+
+        # Fire the complete event back along with updated list of beacons
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True, 'beacons': self.opts['beacons']},
+                       tag='/salt/minion/minion_beacon_modify_complete')
+
+        return True
+
     def delete_beacon(self, name):
         '''
         Delete a beacon item
