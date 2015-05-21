@@ -1213,7 +1213,6 @@ def init(name,
         .. versionadded:: 2015.5.0
 
     bootstrap_url
-        import pdb;pdb.set_trace()  ## Breakpoint ##
         See lxc.bootstrap
 
     bootstrap_shell
