@@ -1357,6 +1357,7 @@ def create_ca_signed_cert(ca_name,
                                    edata['critical'],
                                    edata['options']))
     cert.add_extensions(extensions_list)
+
     cert.sign(ca_key, digest)
 
     cert_full_path = '{0}/{1}.crt'.format(cert_path, cert_filename)

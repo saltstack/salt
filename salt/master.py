@@ -293,7 +293,8 @@ class Maintenance(multiprocessing.Process):
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
             self.event.fire_event(data, tagify('present', 'presence'))
-            old_present = present
+            old_present.clear()
+            old_present.update(present)
 
 
 class Master(SMaster):
