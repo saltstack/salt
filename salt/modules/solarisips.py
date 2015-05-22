@@ -21,6 +21,13 @@ Or you can override it globally by setting the :conf_minion:`providers` paramete
     providers:
       pkg: pkgutil
 
+Or you can override it globally by setting the :conf_minion:`providers` parameter in your Minion config file like this:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgutil
+
 '''
 # Import python libs
 from __future__ import print_function
