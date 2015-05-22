@@ -79,9 +79,6 @@ Management of the Salt scheduler
 
 '''
 
-import logging
-log = logging.getLogger(__name__)
-
 
 def present(name,
             **kwargs):
@@ -317,7 +314,6 @@ def disabled(name, **kwargs):
            'comment': []}
 
     current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
-    log.debug('current_schedule {0}'.format(current_schedule))
     if name in current_schedule:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True

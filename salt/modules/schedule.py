@@ -70,6 +70,7 @@ def list_(show_all=False, where=None, return_yaml=True):
         salt '*' schedule.list show_all=True
     '''
 
+    schedule = {}
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__)
         res = __salt__['event.fire']({'func': 'list',
@@ -83,6 +84,8 @@ def list_(show_all=False, where=None, return_yaml=True):
         ret = {}
         ret['comment'] = 'Event module not available. Schedule list failed.'
         ret['result'] = True
+        log.debug('Event module not available. Schedule list failed.')
+        return ret
 
     for job in list(schedule.keys()):  # iterate over a copy since we will mutate it
         if job == 'enabled':
