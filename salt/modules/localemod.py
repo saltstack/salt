@@ -208,7 +208,7 @@ def gen_locale(locale, **kwargs):
 
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
-        valid = __salt__['file.search'](search, '^{0}( (UTF-8|ISO-8859-.).?)?$'.format(locale))
+        valid = __salt__['file.search'](search, '^{0}$'.format(locale))
     else:  # directory-based search
         if on_suse:
             search = '/usr/share/locale'
