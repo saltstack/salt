@@ -136,7 +136,6 @@ def get_master_event(opts, sock_dir, listen=True):
     '''
     Return an event object suitable for the named transport
     '''
-    sock_dir = sock_dir or opts.get('sock_dir', None)
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp'):
         return MasterEvent(sock_dir, opts)

@@ -56,7 +56,6 @@ Salt Virt
 
     cloud_controller
 
-
 LXC
 ===
 .. toctree::
