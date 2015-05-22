@@ -95,6 +95,8 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None):
     '''
     Check for the existence of a Route53 hosted zone.
 
+    .. versionadded:: Beryllium
+
     CLI Example::
 
         salt myminion boto_route53.zone_exists example.org
@@ -108,6 +110,8 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
                 key=None, keyid=None, profile=None):
     '''
     Create a Route53 hosted zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example::
 
@@ -128,6 +132,8 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
 def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a Route53 hosted zone.
+
+    .. versionadded:: Beryllium
 
     CLI Example::
 
