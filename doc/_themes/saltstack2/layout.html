@@ -53,6 +53,7 @@
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:    '{{ url_root }}',
             VERSION:     '{{ release|e }}',
+            SEARCH_CX:  '{{ search_cx }}',
             COLLAPSE_INDEX: false,
             FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
             HAS_SOURCE:  {{ has_source|lower }}
@@ -158,8 +159,8 @@
                 {% if on_saltstack %}
                 <div class="versions">
 
-                    <a id="latest" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release_version }} </a> {% if build_type == "latest" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
-                    <a id="previous" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }} </a> {% if build_type == "previous" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
+                    <a id="latest" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }} </a> {% if build_type == "latest" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
+                    <a id="previous" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }} </a> {% if build_type == "previous" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %} |
                     <a id="develop" data-container="body" data-toggle="tooltip" data-placement="bottom" title="Recent doc build from the develop branch" href="/en/develop/">Develop </a> {% if build_type == "develop" %}<i class="glyphicon glyphicon-ok"></i>{%- endif %}
                 </div>
 
@@ -265,13 +266,13 @@
                             <div class="col-sm-6">
 
                                 {% if build_type == "latest" %}
-                                <p>You are viewing docs for the latest stable release, {{ latest_release_version }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+                                <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
 
                                 {% elif build_type == "previous" %}
-                                <p>You are viewing docs for the previous stable release, {{ previous_release_version }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release_version }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+                                <p>You are viewing docs for the previous stable release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
 
                                 {% elif build_type == "develop" %}
-                                <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release_version }}</a>, or to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release_version }}</a>.</p>
+                                <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>.</p>
                                 {% endif %}
 
                                 <br>
