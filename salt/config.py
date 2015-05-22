@@ -1019,6 +1019,7 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'zmq_monitor': False,
     'con_cache': False,
     'rotate_aes_key': True,
     'cache_sreqs': True,

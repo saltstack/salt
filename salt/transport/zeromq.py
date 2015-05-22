@@ -33,7 +33,6 @@ import zmq.eventloop.zmqstream
 try:
     import zmq.utils.monitor
     HAS_ZMQ_MONITOR = True
-    EVENT_MAP = None
 except ImportError:
     HAS_ZMQ_MONITOR = False
 
@@ -287,47 +286,14 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
-        self._init_monitor()
-
-    def _init_monitor(self):
-        '''
-        Create ZMQ monitor sockets
-
-        More information:
-            http://api.zeromq.org/4-0:zmq-socket-monitor
-        '''
-        if not HAS_ZMQ_MONITOR or not self.opts['zmq_monitor']:
-            return
-
-        global EVENT_MAP
-        EVENT_MAP = {}
-        for name in dir(zmq):
-            if name.startswith('EVENT_'):
-                value = getattr(zmq, name)
-                EVENT_MAP[value] = name
-
-        def monitor_callback(msg):
-            evt = zmq.utils.monitor.parse_monitor_message(msg)
-            evt['description'] = EVENT_MAP[evt['event']]
-            log.debug("ZeroMQ event: {0}".format(evt))
-            if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
-                self._stop_monitor()
-
-        self._monitor_socket = self._socket.get_monitor_socket()
-        self._monitor_stream = zmq.eventloop.zmqstream.ZMQStream(self._monitor_socket, io_loop=self.io_loop)
-        self._monitor_stream.on_recv(monitor_callback)
-
-    def _stop_monitor(self):
-        if not HAS_ZMQ_MONITOR or not hasattr(self, '_monitor_socket') or self._monitor_socket is None:
-            return
-        self._socket.disable_monitor()
-        self._monitor_stream.close()
-        self._monitor_socket = None
-        self._monitor_stream = None
-        log.trace("Event monitor done!")
+        if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
+            self._monitor = ZeroMQSocketMonitor(self._socket)
+            self._monitor.start_io_loop(self.io_loop)
 
     def destroy(self):
-        self._stop_monitor()
+        if hasattr(self, '_monitor') and self._monitor is not None:
+            self._monitor.stop()
+            self._monitor = None
         if hasattr(self, '_stream'):
             # TODO: Optionally call stream.close() on newer pyzmq? Its broken on some
             self._stream.io_loop.remove_handler(self._stream.socket)
@@ -413,6 +379,12 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if self.opts['ipv6'] is True and hasattr(zmq, 'IPV4ONLY'):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
+            # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
+            import threading
+            self._monitor = ZeroMQSocketMonitor(self.clients)
+            t = threading.Thread(target=self._monitor.start_poll)
+            t.start()
 
         self.workers = self.context.socket(zmq.DEALER)
 
@@ -442,6 +414,9 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Cleanly shutdown the router socket
         '''
+        if hasattr(self, '_monitor') and self._monitor is not None:
+            self._monitor.stop()
+            self._monitor = None
         if hasattr(self, 'clients'):
             self.clients.close()
         self.stream.close()
@@ -846,3 +821,58 @@ class AsyncReqMessageClient(object):
         self.send_queue.append(message)
 
         return future
+
+
+class ZeroMQSocketMonitor(object):
+    __EVENT_MAP = None
+
+    def __init__(self, socket):
+        '''
+        Create ZMQ monitor sockets
+
+        More information:
+            http://api.zeromq.org/4-0:zmq-socket-monitor
+        '''
+        self._socket = socket
+        self._monitor_socket = self._socket.get_monitor_socket()
+        self._monitor_stream = None
+
+    def start_io_loop(self, io_loop):
+        log.trace("Event monitor start!")
+        self._monitor_stream = zmq.eventloop.zmqstream.ZMQStream(self._monitor_socket, io_loop=io_loop)
+        self._monitor_stream.on_recv(self.monitor_callback)
+
+    def start_poll(self):
+        log.trace("Event monitor start!")
+        while self._monitor_socket is not None and self._monitor_socket.poll():
+            msg = self._monitor_socket.recv_multipart()
+            self.monitor_callback(msg)
+
+    @property
+    def event_map(self):
+        if ZeroMQSocketMonitor.__EVENT_MAP is None:
+            event_map = {}
+            for name in dir(zmq):
+                if name.startswith('EVENT_'):
+                    value = getattr(zmq, name)
+                    event_map[value] = name
+            ZeroMQSocketMonitor.__EVENT_MAP = event_map
+        return ZeroMQSocketMonitor.__EVENT_MAP
+
+    def monitor_callback(self, msg):
+        evt = zmq.utils.monitor.parse_monitor_message(msg)
+        evt['description'] = self.event_map[evt['event']]
+        log.debug("ZeroMQ event: {0}".format(evt))
+        if evt['event'] == zmq.EVENT_MONITOR_STOPPED:
+            self.stop()
+
+    def stop(self):
+        if self._socket is None:
+            return
+        self._socket.disable_monitor()
+        self._socket = None
+        self._monitor_socket = None
+        if self._monitor_stream is not None:
+            self._monitor_stream.close()
+            self._monitor_stream = None
+        log.trace("Event monitor done!")
