@@ -272,9 +272,9 @@ class DockerngTestCase(TestCase):
                               'name': 'image:latest',
                               })
 
-    def test_check_is_running_false(self):
+    def test_check_start_false(self):
         '''
-        If check_is_running is False, then dockerng.running will not try
+        If start is False, then dockerng.running will not try
         to start a container that is stopped.
         '''
         image_id = 'abcdefg'
@@ -300,7 +300,7 @@ class DockerngTestCase(TestCase):
             ret = dockerng_state.running(
                 'cont',
                 image='image:latest',
-                check_is_running=False,
+                start=False,
                 )
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' is already "
@@ -309,9 +309,9 @@ class DockerngTestCase(TestCase):
                                'result': True,
                                })
 
-    def test_check_is_running_true(self):
+    def test_check_start_true(self):
         '''
-        If check_is_running is True, then dockerng.running will try
+        If start is True, then dockerng.running will try
         to start a container that is stopped.
         '''
         image_id = 'abcdefg'
@@ -337,7 +337,7 @@ class DockerngTestCase(TestCase):
             ret = dockerng_state.running(
                 'cont',
                 image='image:latest',
-                check_is_running=True,
+                start=True,
                 )
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' changed state.",
