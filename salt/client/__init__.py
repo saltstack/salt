@@ -611,7 +611,7 @@ class LocalClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :return: A generator
+        :return: A generator yielding the individual minion returns
 
         .. code-block:: python
 
@@ -637,9 +637,9 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
-                                                self._get_timeout(timeout),
-                                                tgt,
-                                                expr_form,
+                                                timeout=self._get_timeout(timeout),
+                                                tgt=tgt,
+                                                tgt_type=expr_form,
                                                 **kwargs):
                 if not fn_ret:
                     continue
@@ -656,13 +656,15 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Blocks while waiting for individual minions to return.
+        Yields the individual minion returns as they come in, or None
+            when no returns are available.
 
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :returns: None until the next minion returns. This allows for actions
-            to be injected in between minion returns.
+        :returns: A generator yielding the individual minion returns, or None
+            when no returns are available. This allows for actions to be
+            injected in between minion returns.
 
         .. code-block:: python
 
@@ -690,9 +692,10 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
-                                                timeout,
-                                                tgt,
-                                                expr_form,
+                                                timeout=timeout,
+                                                tgt=tgt,
+                                                tgt_type=expr_form,
+                                                block=False,
                                                 **kwargs):
                 yield fn_ret
 
@@ -833,6 +836,7 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             expect_minions=False,
+            block=True,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -995,7 +999,10 @@ class LocalClient(object):
                 break
 
             # don't spin
-            time.sleep(0.01)
+            if block:
+                time.sleep(0.01)
+            else:
+                yield
         if expect_minions:
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}
@@ -1238,7 +1245,7 @@ class LocalClient(object):
                         connected_minions = salt.utils.minions.CkMinions(self.opts).connected_ids()
                     if connected_minions and id_ not in connected_minions:
                         yield {id_: {'out': 'no_return',
-                                        'ret': 'Minion did not return. [Not connected]'}}
+                                     'ret': 'Minion did not return. [Not connected]'}}
                     else:
                         yield({
                             id_: {
