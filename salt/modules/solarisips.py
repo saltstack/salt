@@ -3,22 +3,23 @@
 IPS pkg support for Solaris
 
 This module provides support for Solaris 11 new package management - IPS (Image Packaging System).
-It is the default pkg module for Solaris 11 (and later).
+This is the default pkg module for Solaris 11 (and later).
 
 If you want to use also other packaging module (e.g. pkgutil) together with IPS, you need to override the ``pkg`` provider
-by setting the :conf_minion:`providers` parameter in your Minion config file like this:
+in sls for each package:
 
-.. code-block:: yaml
-
-    providers:
-      pkg: pkgutil
-
-Or you can set the provider in sls for each pkg:
 .. code-block:: yaml
 
     mypackage:
       pkg.installed:
         - provider: pkgutil
+
+Or you can override it globally by setting the :conf_minion:`providers` parameter in your Minion config file like this:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgutil
 
 '''
 # Import python libs
@@ -235,6 +236,7 @@ def latest_version(name, **kwargs):
     The available version of the package in the repository.
     In case of multiple match, it returns list of all matched packages.
     Accepts full or partial FMRI.
+    Please use pkg.latest_version as pkg.available_version is being deprecated.
 
     CLI Example::
 
@@ -255,7 +257,7 @@ available_version = latest_version
 
 def get_fmri(name, **kwargs):
     '''
-    Returns FMRI from partial name. Returns '' if not found.
+    Returns FMRI from partial name. Returns empty string ('') if not found.
     In case of multiple match, the function returns list of all matched packages.
 
     CLI Example::
@@ -280,7 +282,7 @@ def get_fmri(name, **kwargs):
 
 def normalize_name(name, **kwargs):
     '''
-    Normalizes pkg name to full FMRI before running pkg.install.
+    Internal function. Normalizes pkg name to full FMRI before running pkg.install.
     In case of multiple match or no match, it returns the name without modifications and lets the "pkg install" to decide what to do.
 
     CLI Example:
@@ -326,7 +328,7 @@ def search(name, versions_as_list=False, **kwargs):
 
     CLI Example::
 
-        salt '*' pkg.is_installed bash
+        salt '*' pkg.search bash
     '''
 
     ret = {}
@@ -369,6 +371,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         salt '*' pkg.install vim
         salt '*' pkg.install pkg://solaris/editor/vim
         salt '*' pkg.install pkg://solaris/editor/vim refresh=True
+        salt '*' pkg.install pkgs='["foo", "bar"]'
     '''
     if not pkgs:
         if is_installed(name):
