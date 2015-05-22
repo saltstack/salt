@@ -385,6 +385,7 @@ DigitalOcean
 Using Salt for DigitalOcean requires a ``client_key`` and an ``api_key``. These
 can be found in the DigitalOcean web interface, in the "My Settings" section,
 under the API Access tab.
+
 .. code-block:: yaml
 
     my-digitalocean-config:
