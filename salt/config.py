@@ -149,6 +149,9 @@ VALID_OPTS = {
     # Force the minion into a single environment when it fetches files from the master
     'environment': str,
 
+    # Force the minion into a single pillar root when it fetches pillar data from the master
+    'pillarenv': str,
+
     # Allows a user to provide an alternate name for top.sls
     'state_top': str,
 
@@ -698,6 +701,7 @@ DEFAULT_MINION_OPTS = {
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
+    'pillarenv': None,
     'extension_modules': '',
     'state_top': 'top.sls',
     'startup_states': '',
@@ -2595,7 +2599,7 @@ def client_config(path, env_var='SALT_CLIENT_CONFIG', defaults=None):
         client_config_dir = xdg_dir
         saltrc_config_file = 'saltrc'
     else:
-        client_config_dir = '~'
+        client_config_dir = os.path.expanduser('~')
         saltrc_config_file = '.saltrc'
 
     # Get the token file path from the provided defaults. If not found, specify

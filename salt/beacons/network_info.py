@@ -72,10 +72,10 @@ def beacon(config):
     and only emit a beacon if any of them are
     exceeded.
 
-    code_block:: yaml
-
     Emit beacon when any values are equal to
     configured values.
+
+    .. code-block:: yaml
 
         beacons:
             network_info:
@@ -92,6 +92,8 @@ def beacon(config):
 
     Emit beacon when any values are greater
     than to configured values.
+
+    .. code-block:: yaml
 
         beacons:
             network_info:

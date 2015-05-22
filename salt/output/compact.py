@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Display compact output data structure
-=================================
+=====================================
 
 
 Example output::

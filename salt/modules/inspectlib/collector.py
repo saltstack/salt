@@ -25,6 +25,7 @@ from subprocess import Popen, PIPE, STDOUT
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 from salt.utils import fsutils
+from salt.utils import reinit_crypto
 
 
 class Inspector(object):
@@ -346,7 +347,10 @@ if __name__ == '__main__':
     # Double-fork stuff
     try:
         if os.fork() > 0:
+            reinit_crypto()
             sys.exit(0)
+        else:
+            reinit_crypto()
     except OSError as ex:
         sys.exit(1)
 
@@ -356,6 +360,7 @@ if __name__ == '__main__':
     try:
         pid = os.fork()
         if pid > 0:
+            reinit_crypto()
             fpid = open(pidfile, "w")
             fpid.write("{0}\n".format(pid))
             fpid.close()
@@ -363,4 +368,5 @@ if __name__ == '__main__':
     except OSError as ex:
         sys.exit(1)
 
+    reinit_crypto()
     main(dbfile, pidfile, mode)

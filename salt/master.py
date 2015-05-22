@@ -18,10 +18,6 @@ import multiprocessing
 # Import third party libs
 import zmq
 from Crypto.PublicKey import RSA
-try:
-    import Crypto.Random
-except ImportError:
-    pass
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -297,7 +293,8 @@ class Maintenance(multiprocessing.Process):
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
             self.event.fire_event(data, tagify('present', 'presence'))
-            old_present = present
+            old_present.clear()
+            old_present.update(present)
 
 
 class Master(SMaster):
@@ -749,8 +746,7 @@ class MWorker(multiprocessing.Process):
             self.key,
             )
         self.aes_funcs = AESFuncs(self.opts)
-        if 'Crypto.Random' in sys.modules:
-            Crypto.Random.atfork()
+        salt.utils.reinit_crypto()
         self.__bind()
 
 
@@ -1118,7 +1114,8 @@ class AESFuncs(object):
             load['id'],
             load.get('saltenv', load.get('env')),
             ext=load.get('ext'),
-            pillar=load.get('pillar_override', {}))
+            pillar=load.get('pillar_override', {}),
+            pillarenv=load.get('pillarenv'))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):

@@ -99,7 +99,7 @@ def image_create(profile=None, **kwargs):
     )
 
     image = nt_ks.images.create(**fields)
-    newimage = image_list(str(image.id))
+    newimage = image_list(str(image.id), profile)
     return {newimage['name']: newimage}
 
 

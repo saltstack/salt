@@ -92,7 +92,14 @@ except Exception:
     pass
 
 # Import third party libs
-import salt.ext.six as six
+try:
+    import salt.ext.six as six
+except ImportError:
+    # Salt version <= 2014.7.0
+    try:
+        import six
+    except ImportError:
+        HAS_LIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)

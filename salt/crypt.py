@@ -23,7 +23,8 @@ try:
     from Crypto.Hash import SHA
     from Crypto.PublicKey import RSA
     from Crypto.Signature import PKCS1_v1_5
-    import Crypto.Random
+    # let this be imported, if possible
+    import Crypto.Random  # pylint: disable=W0611
 except ImportError:
     # No need for crypt in local mode
     pass
@@ -361,8 +362,7 @@ class AsyncAuth(object):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
-        if 'Crypto.Random' in sys.modules:
-            Crypto.Random.atfork()
+        salt.utils.reinit_crypto()
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:

@@ -141,7 +141,7 @@ def execute(context=None, lens=None, commands=()):
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 args = {'src': path, 'dst': dst}
             elif method == 'insert':
-                path, where, label = re.split(' (before|after) ', arg)
+                label, where, path = re.split(' (before|after) ', arg)
                 if context:
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 args = {'path': path, 'label': label, 'before': where == 'before'}

@@ -326,8 +326,8 @@ def _gen_keep_files(name, require):
         '''
         Check whether ``path`` is child of ``directory``
         '''
-        path = os.path.realpath(path)
-        directory = os.path.realpath(directory)
+        path = os.path.abspath(path)
+        directory = os.path.abspath(directory)
 
         relative = os.path.relpath(path, directory)
 
@@ -1739,6 +1739,14 @@ def directory(name,
         if not os.path.isdir(os.path.dirname(name)):
             # The parent directory does not exist, create them
             if makedirs:
+                # Make sure the drive is mapped before trying to create the
+                # path in windows
+                if salt.utils.is_windows():
+                    drive, path = os.path.splitdrive(name)
+                    if not os.path.isdir(drive):
+                        return _error(
+                            ret, 'Drive {0} is not mapped'.format(drive))
+                # Everything's good, create the path
                 __salt__['file.makedirs'](
                     name, user=user, group=group, mode=dir_mode
                 )
@@ -3787,7 +3795,11 @@ def copy(
     try:
         shutil.copy(source, name)
         ret['changes'] = {name: source}
-        __salt__['file.check_perms'](name, ret, user, group, mode)
+        # Preserve really means just keep the behavior of the cp command. If
+        # the filesystem we're copying to is squashed or doesn't support chown
+        # then we shouldn't be checking anything.
+        if not preserve:
+            __salt__['file.check_perms'](name, ret, user, group, mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))
@@ -3971,6 +3983,8 @@ def accumulated(name, filename, text, **kwargs):
         )
         return ret
     if isinstance(text, six.string_types):
+        text = (text,)
+    elif isinstance(text, dict):
         text = (text,)
     accum_data, accum_deps = _load_accumulators()
     if filename not in accum_data:
@@ -4185,7 +4199,7 @@ def serialize(name,
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
-                                    .format(formatter.capitalized())),
+                                    .format(formatter.capitalize())),
                         'name': name,
                         'result': False}
 
@@ -4220,7 +4234,7 @@ def serialize(name,
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
-                    formatter.capitalized()),
+                    formatter.capitalize()),
                 'name': name,
                 'result': False
                 }

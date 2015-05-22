@@ -43,6 +43,13 @@ from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
 
 # Try to load pwd, fallback to getpass if unsuccessful
+# Import 3rd-party libs
+try:
+    import Crypto.Random
+    HAS_CRYPTO = True
+except ImportError:
+    HAS_CRYPTO = False
+
 try:
     import pwd
 except ImportError:
@@ -330,6 +337,20 @@ def get_specific_user():
     return user
 
 
+def reinit_crypto():
+    '''
+    When a fork arrises, pycrypto needs to reinit
+    From its doc::
+
+        Caveat: For the random number generator to work correctly,
+        you must call Random.atfork() in both the parent and
+        child processes after using os.fork()
+
+    '''
+    if HAS_CRYPTO:
+        Crypto.Random.atfork()
+
+
 def daemonize(redirect_out=True):
     '''
     Daemonize a process
@@ -338,6 +359,7 @@ def daemonize(redirect_out=True):
         pid = os.fork()
         if pid > 0:
             # exit first parent
+            reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
@@ -355,6 +377,7 @@ def daemonize(redirect_out=True):
     try:
         pid = os.fork()
         if pid > 0:
+            reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
@@ -363,6 +386,8 @@ def daemonize(redirect_out=True):
             )
         )
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    reinit_crypto()
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
@@ -1032,7 +1057,7 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # Remove lock, uid, gid and mode from kwargs if present
+    # Remove lock from kwargs if present
     lock = kwargs.pop('lock', False)
 
     if lock is True:
@@ -1044,6 +1069,19 @@ def fopen(*args, **kwargs):
             '\'salt.utils.fopen()\'.'
         )
         return flopen(*args, **kwargs)
+
+    # ensure 'binary' mode is always used on windows
+    if is_windows():
+        if len(args) > 1:
+            args = list(args)
+            if 'b' not in args[1]:
+                args[1] += 'b'
+        elif kwargs.get('mode', None):
+            if 'b' not in kwargs['mode']:
+                kwargs['mode'] += 'b'
+        else:
+            # the default is to read
+            kwargs['mode'] = 'rb'
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
@@ -1204,6 +1242,42 @@ def subdict_match(data,
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
+    def _dict_match(target, pattern, regex_match=False, exact_match=False):
+        if pattern.startswith('*:'):
+            pattern = pattern[2:]
+
+        if pattern == '*':
+            # We are just checking that the key exists
+            return True
+        elif pattern in target:
+            # We might want to search for a key
+            return True
+        elif subdict_match(target,
+                         pattern,
+                         regex_match=regex_match,
+                         exact_match=exact_match):
+            return True
+        for key in target.keys():
+            if _match(key,
+                      pattern,
+                      regex_match=regex_match,
+                      exact_match=exact_match):
+                return True
+            if isinstance(target[key], dict):
+                if _dict_match(target[key],
+                               pattern,
+                               regex_match=regex_match,
+                               exact_match=exact_match):
+                    return True
+            elif isinstance(target[key], list):
+                for item in target[key]:
+                    if _match(item,
+                              pattern,
+                              regex_match=regex_match,
+                              exact_match=exact_match):
+                        return True
+        return False
+
     for idx in range(1, expr.count(delimiter) + 1):
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
@@ -1214,20 +1288,20 @@ def subdict_match(data,
         if match == {}:
             continue
         if isinstance(match, dict):
-            if matchstr == '*':
-                # We are just checking that the key exists
+            if _dict_match(match,
+                           matchstr,
+                           regex_match=regex_match,
+                           exact_match=exact_match):
                 return True
             continue
         if isinstance(match, list):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
-                    if matchstr.startswith('*:'):
-                        matchstr = matchstr[2:]
-                    if subdict_match(member,
-                                     matchstr,
-                                     regex_match=regex_match,
-                                     exact_match=exact_match):
+                    if _dict_match(member,
+                                   matchstr,
+                                   regex_match=regex_match,
+                                   exact_match=exact_match):
                         return True
                 if _match(member,
                           matchstr,
@@ -1318,14 +1392,15 @@ def mkstemp(*args, **kwargs):
 
 def clean_kwargs(**kwargs):
     '''
-    Clean out the __pub* keys from the kwargs dict passed into the execution
-    module functions. The __pub* keys are useful for tracking what was used to
-    invoke the function call, but they may not be desierable to have if
-    passing the kwargs forward wholesale.
+    Return a dict without any of the __pub* keys (or any other keys starting
+    with a dunder) from the kwargs dict passed into the execution module
+    functions. These keys are useful for tracking what was used to invoke
+    the function call, but they may not be desierable to have if passing the
+    kwargs forward wholesale.
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):
-        if not key.startswith('__pub'):
+        if not key.startswith('__'):
             ret[key] = val
     return ret
 

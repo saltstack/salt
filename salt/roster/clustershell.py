@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 :requires: clustershell
+
 https://github.com/cea-hpc/clustershell
 
 This roster resolves hostname in a pdsh/clustershell style.
@@ -8,6 +9,9 @@ This roster resolves hostname in a pdsh/clustershell style.
 When you want to use host globs for target matching, use --roster clustershell.
 
 Example:
+
+.. code-block:: bash
+
     salt-ssh --roster clustershell 'server_[1-10,21-30],test_server[5,7,9]' test.ping
 '''
 

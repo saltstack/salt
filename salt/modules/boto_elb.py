@@ -7,17 +7,23 @@ Connection module for Amazon ELB
 :configuration: This module accepts explicit elb credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+    configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         elb.keyid: GKTADJGHEIQSXMKKRBJ08H
         elb.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         elb.region: us-east-1
 
@@ -25,6 +31,8 @@ Connection module for Amazon ELB
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
+
+    .. code-block:: yaml
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H

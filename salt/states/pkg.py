@@ -33,6 +33,7 @@ Multiple packages can also be installed with the use of the pkgs
 state module
 
 .. code-block:: yaml
+
     dotdeb.repo:
       pkgrepo.managed:
         - humanname: Dotdeb
@@ -50,6 +51,13 @@ state module
           - php5-fpm
           - php5-cli
           - php5-curl
+
+.. warning::
+
+    Package names are currently case-sensitive. If the minion is using a
+    package manager which is not case-sensitive (such as :mod:`pkgng
+    <salt.modules.pkgng>`), then this state will fail if the proper case is not
+    used. This will be addressed in a future release of Salt.
 '''
 
 # Import python libs
@@ -1216,6 +1224,10 @@ def latest(
 
     skip_verify
         Skip the GPG verification check for the package to be installed
+
+    refresh
+        Update the repo database of available packages prior to installing the
+        requested package.
 
 
     Multiple Package Installation Options:

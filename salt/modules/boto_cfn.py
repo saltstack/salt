@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-
 '''
-    Connection module for Amazon Cloud Formation
+Connection module for Amazon Cloud Formation
 
-    .. versionadded:: Beryllium
+.. versionadded:: Beryllium
 
-    :configuration: This module accepts explicit AWS credentials but can also utilize
+:configuration: This module accepts explicit AWS credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+    configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         cfn.keyid: GKTADJGHEIQSXMKKRBJ08H
         cfn.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         cfn.region: us-east-1
 
@@ -32,9 +38,6 @@ from __future__ import absolute_import
 import logging
 
 log = logging.getLogger(__name__)
-
-# Import salt libs
-import salt.utils.boto
 
 # Import third party libs
 # pylint: disable=import-error
@@ -118,7 +121,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
         log.debug('Stack {0} exists.'.format(name))
         return True
     except BotoServerError as e:
-        log.warning('Could not describe stack {0}.\n{0}'.format(name, str(e)))
+        log.warning('Could not describe stack {0}.\n{1}'.format(name, str(e)))
         return False
 
 

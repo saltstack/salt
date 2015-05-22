@@ -311,7 +311,11 @@ def append(key, val, convert=False, delimiter=':'):
         return 'The key {0} is not a valid list'.format(key)
     if val in grains:
         return 'The val {0} was already in the list {1}'.format(val, key)
-    grains.append(val)
+    if isinstance(val, list):
+        for item in val:
+            grains.append(item)
+    else:
+        grains.append(val)
 
     while delimiter in key:
         key, rest = key.rsplit(delimiter, 1)

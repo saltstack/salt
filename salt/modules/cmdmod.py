@@ -84,7 +84,7 @@ def _chroot_pids(chroot):
     return pids
 
 
-def _render_cmd(cmd, cwd, template, saltenv='base'):
+def _render_cmd(cmd, cwd, template, saltenv='base', pillarenv=None, pillar_override=None):
     '''
     If template is a valid template engine, process the cmd and cwd through
     that engine.
@@ -101,7 +101,11 @@ def _render_cmd(cmd, cwd, template, saltenv='base'):
 
     kwargs = {}
     kwargs['salt'] = __salt__
-    kwargs['pillar'] = __pillar__
+    if pillarenv is not None or pillar_override is not None:
+        pillarenv = pillarenv or __opts__['pillarenv']
+        kwargs['pillar'] = _gather_pillar(pillarenv, pillar_override)
+    else:
+        kwargs['pillar'] = __pillar__
     kwargs['grains'] = __grains__
     kwargs['opts'] = __opts__
     kwargs['saltenv'] = saltenv
@@ -172,6 +176,24 @@ def _parse_env(env):
     return env
 
 
+def _gather_pillar(pillarenv, pillar_override):
+    '''
+    Whenever a state run starts, gather the pillar data fresh
+    '''
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        __grains__,
+        __opts__['id'],
+        __opts__['environment'],
+        pillar=pillar_override,
+        pillarenv=pillarenv
+    )
+    ret = pillar.compile_pillar()
+    if pillar_override and isinstance(pillar_override, dict):
+        ret.update(pillar_override)
+    return ret
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -191,6 +213,8 @@ def _run(cmd,
          reset_system_locale=True,
          ignore_retcode=False,
          saltenv='base',
+         pillarenv=None,
+         pillar_override=None,
          use_vt=False):
     '''
     Do the DRY thing and only call subprocess.Popen() once
@@ -242,7 +266,7 @@ def _run(cmd,
             cmd = 'Powershell "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
-    (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv)
+    (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
 
     ret = {}
 
@@ -508,7 +532,9 @@ def _run_quiet(cmd,
                umask=None,
                timeout=None,
                reset_system_locale=True,
-               saltenv='base'):
+               saltenv='base',
+               pillarenv=None,
+               pillar_override=None):
     '''
     Helper for running commands quietly for minion startup
     '''
@@ -525,7 +551,9 @@ def _run_quiet(cmd,
                 umask=umask,
                 timeout=timeout,
                 reset_system_locale=reset_system_locale,
-                saltenv=saltenv)['stdout']
+                saltenv=saltenv,
+                pillarenv=pillarenv,
+                pillar_override=pillar_override)['stdout']
 
 
 def _run_all_quiet(cmd,
@@ -539,7 +567,9 @@ def _run_all_quiet(cmd,
                    umask=None,
                    timeout=None,
                    reset_system_locale=True,
-                   saltenv='base'):
+                   saltenv='base',
+                   pillarenv=None,
+                   pillar_override=None):
     '''
     Helper for running commands quietly for minion startup.
     Returns a dict of return data
@@ -556,7 +586,9 @@ def _run_all_quiet(cmd,
                 umask=umask,
                 timeout=timeout,
                 reset_system_locale=reset_system_locale,
-                saltenv=saltenv)
+                saltenv=saltenv,
+                pillarenv=pillarenv,
+                pillar_override=pillar_override)
 
 
 def run(cmd,
@@ -652,6 +684,8 @@ def run(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
+               pillarenv=kwargs.get('pillarenv'),
+               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
 
     if 'pid' in ret and '__pub_jid' in kwargs:
@@ -711,12 +745,10 @@ def shell(cmd,
 
     .. versionadded:: 2015.5.0
 
-    ************************************************************
-    WARNING: This passes the cmd argument directly to the shell
-    without any further processing! Be absolutely sure that you
-    have properly santized the command passed to this function
-    and do not use untrusted inputs.
-    ************************************************************
+    .. warning:: This passes the cmd argument directly to the shell
+        without any further processing! Be absolutely sure that you
+        have properly santized the command passed to this function
+        and do not use untrusted inputs.
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
@@ -847,6 +879,8 @@ def run_stdout(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
+               pillarenv=kwargs.get('pillarenv'),
+               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel)
@@ -931,7 +965,9 @@ def run_stderr(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                use_vt=use_vt,
-               saltenv=saltenv)
+               saltenv=saltenv,
+               pillarenv=kwargs.get('pillarenv'),
+               pillar_override=kwargs.get('pillar'))
 
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
@@ -1015,6 +1051,8 @@ def run_all(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
+               pillarenv=kwargs.get('pillarenv'),
+               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel)
@@ -1100,6 +1138,8 @@ def retcode(cmd,
               reset_system_locale=reset_system_locale,
               ignore_retcode=ignore_retcode,
               saltenv=saltenv,
+              pillarenv=kwargs.get('pillarenv'),
+              pillar_override=kwargs.get('pillar'),
               use_vt=use_vt)
 
     lvl = _check_loglevel(output_loglevel)
@@ -1222,6 +1262,9 @@ def script(source,
     path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
+        if 'pillarenv' in kwargs or 'pillar' in kwargs:
+            pillarenv = kwargs.get('pillarenv', __opts__.get('pillarenv'))
+            kwargs['pillar'] = _gather_pillar(pillarenv, kwargs.get('pillar'))
         fn_ = __salt__['cp.get_template'](source,
                                           path,
                                           template,
@@ -1259,6 +1302,8 @@ def script(source,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
+               pillarenv=kwargs.get('pillarenv'),
+               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
     _cleanup_tempfile(path)
     return ret
@@ -1309,17 +1354,6 @@ def script_retcode(source,
 
         salt '*' cmd.script_retcode salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     '''
-    python_shell = _python_shell_default(python_shell,
-                                         kwargs.get('__pub_jid', ''))
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
-
     return script(source=source,
                   args=args,
                   cwd=cwd,
@@ -1332,6 +1366,7 @@ def script_retcode(source,
                   umask=umask,
                   timeout=timeout,
                   reset_system_locale=reset_system_locale,
+                  __env__=__env__,
                   saltenv=saltenv,
                   output_loglevel=output_loglevel,
                   use_vt=use_vt,
@@ -1523,6 +1558,8 @@ def run_chroot(root,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
                    saltenv=saltenv,
+                   pillarenv=kwargs.get('pillarenv'),
+                   pillar=kwargs.get('pillar'),
                    use_vt=use_vt)
 
     # Kill processes running in the chroot

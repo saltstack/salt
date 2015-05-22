@@ -18,7 +18,7 @@ class SSHClient(object):
     '''
     Create a client object for executing routines via the salt-ssh backend
 
-    .. versionaddedd:: 2015.2
+    .. versionadded:: 2015.2
     '''
     def __init__(self,
                  c_path=os.path.join(syspaths.CONFIG_DIR, 'master'),
@@ -72,7 +72,7 @@ class SSHClient(object):
         Execute a single command via the salt-ssh subsystem and return a
         generator
 
-        .. versionaddedd:: 2015.2
+        .. versionadded:: 2015.2
         '''
         ssh = self._prep_ssh(
                 tgt,
@@ -98,7 +98,7 @@ class SSHClient(object):
         Execute a single command via the salt-ssh subsystem and return all
         routines at once
 
-        .. versionaddedd:: 2015.2
+        .. versionadded:: 2015.2
         '''
         ssh = self._prep_ssh(
                 tgt,
@@ -117,7 +117,7 @@ class SSHClient(object):
         '''
         Execute a salt-ssh call synchronously.
 
-        .. versionaddedd:: 2015.2
+        .. versionadded:: 2015.2
 
         WARNING: Eauth is **NOT** respected
 

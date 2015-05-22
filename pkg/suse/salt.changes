@@ -1,4 +1,170 @@
 -------------------------------------------------------------------
+Wed May  6 20:33:53 UTC 2015 - aboe76@gmail.com
+
+- Major release 2015.5.0 Lithium
+- update to 2015.5.0
+  The 2015.5.0 feature release of Salt is focused on hardening Salt
+  and mostly on improving existing systems. A few major additions
+  are present, primarily the new Beacon system. Most enhancements
+  have been focused around improving existing features and
+  interfaces.
+
+  As usual the release notes are not exhaustive and primarily
+  include the most notable additions and improvements. Hundreds of
+  bugs have been fixed and many modules have been substantially
+  updated and added.
+
+
+  See especially the warning right on the top regarding
+  python_shell=False.
+
+  For all details see
+   http://docs.saltstack.com/en/latest/topics/releases/2015.5.0.html
+- RPM Package changes:
+- add some versions to the buildrequires to match the 2
+  requirements files from the tarball
+- Moved the depencencies to main salt package
+  except where they are specific for the package
+- Changed python-request dependency,only needed on salt-cloud
+- Added python-tornado dependency for http.py
+- Fixed zsh_completion in tarball.
+- Fixed salt-api requirements to require python-cherrypy
+- Fixed salt-cloud requiments to require salt-master
+
+-------------------------------------------------------------------
+Sun Apr 19 17:48:05 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix release 2014.7.5
+Changes:
++ Fixed a key error bug in salt-cloud
++ Updated man pages to better match documentation
++ Fixed bug concerning high CPU usage with salt-ssh
++ Fixed bugs with remounting cvfs and fuse filesystems
++ Fixed bug with alowing requisite tracking of entire sls files
++ Fixed bug with aptpkg.mod_repo returning OK even if apt-add-repository fails
++ Increased frequency of ssh terminal output checking
++ Fixed malformed locale string in localmod module
++ Fixed checking of available version of package when accept_keywords were changed
++ Fixed bug to make git.latest work with empty repositories
++ Added **kwargs to service.mod_watch which removes warnings about enable and __reqs__ not being supported by the function
++ Improved state comments to not grow so quickly on failed requisites
++ Added force argument to service to trigger force_reload
++ Fixed bug to andle pkgrepo keyids that have been converted to int
++ Fixed module.portage_config bug with appending accept_keywords
++ Fixed bug to correctly report disk usage on windows minion
++ Added the ability to specify key prefix for S3 ext_pillar
++ Fixed issues with batch mode operating on the incorrect number of minions
++ Fixed a bug with the proxmox cloud provider stacktracing on disk definition
++ Fixed a bug with the changes dictionary in the file state
++ Fixed the TCP keep alive settings to work better with SREQ caching
++ Fixed many bugs within the iptables state and module
++ Fixed bug with states by adding fun, state, and unless to the state runtime internal keywords listing
++ Added ability to eAuth against Active Directory
++ Fixed some salt-ssh issues when running on Fedora 21
++ Fixed grains.get_or_set_hash to work with multiple entries under same key
++ Added better explanations and more examples of how the Reactor calls functions to docs
++ Fixed bug to not pass ex_config_drive to libcloud unless it's explicitly enabled
++ Fixed bug with pip.install on windows
++ Fixed bug where puppet.run always returns a 0 retcode
++ Fixed race condition bug with minion scheduling via pillar
++ Made efficiency improvements and bug fixes to the windows installer
++ Updated environment variables to fix bug with pygit2 when running salt as non-root user
++ Fixed cas behavior on data module -- data.cas was not saving changes
++ Fixed GPG rendering error
++ Fixed strace error in virt.query
++ Fixed stacktrace when running chef-solo command
++ Fixed possible bug wherein uncaught exceptions seem to make zmq3 tip over when threading is involved
++ Fixed argument passing to the reactor
++ Fixed glibc caching to prevent bug where salt-minion getaddrinfo in dns_check() never got updated nameservers
+Known Issues:
++ In multimaster mode, a minion may become temporarily unresponsive if modules or pillars are refreshed at the 
+same time that one or more masters are down. This can be worked around by setting 'auth_timeout' and 'auth_tries' 
+down to shorter periods.
+
+-------------------------------------------------------------------
+Mon Mar 30 21:41:22 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix Release 2014.7.4
+- Updated patch use-forking-daemon.patch
+- fix salt-zsh-completion conflicts
++ Multi-master minions mode no longer route fileclient operations asymetrically.
+  This fixes the source of many multi-master bugs where the minion would
+  become unrepsonsive from one or more masters.
++ Fix bug wherein network.iface could produce stack traces.
++ net.arp will no longer be made available unless arp is installed on the
+  system.
++ Major performance improvements to Saltnado
++ Allow KVM module to operate under KVM itself or VMWare Fusion
++ Various fixes to the Windows installation scripts
++ Fix issue where the syndic would not correctly propogate loads to the master
+  job cache.
++ Improve error handling on invalid /etc/network/interfaces file in salt
+  networking modules
++ Fix bug where a reponse status was not checked for in fileclient.get_url
++ Enable eauth when running salt in batch mode
++ Increase timeout in Boto Route53 module
++ Fix bugs with Salt's 'tar' module option parsing
++ Fix parsing of NTP servers on Windows
++ Fix issue with blockdev tuning not reporting changes correctly
++ Update to the latest Salt bootstrap script
++ Update Linode salt-cloud driver to use either linode-python or
+  apache-libcloud
++ Fix for s3.query function to return correct headers
++ Fix for s3.head returning None for files that exist
++ Fix the disable function in win_service module so that the service is
+  disabled correctly
++ Fix race condition between master and minion when making a directory when
+  both daemons are on the same host
++ Fix an issue where file.recurse would fail at the root of an svn repo
+  when the repo has a mountpoint
++ Fix an issue where file.recurse would fail at the root of an hgfs repo
+  when the repo has a mountpoint
++ Fix an issue where file.recurse would fail at the root of an gitfs repo
+  when the repo has a mountpoint
++ Add status.master capability for Windows.
++ Various fixes to ssh_known_hosts
++ Various fixes to states.network bonding for Debian
++ The debian_ip.get_interfaces module no longer removes nameservers.
++ Better integration between grains.virtual and systemd-detect-virt and
+  virt-what
++ Fix traceback in sysctl.present state output
++ Fix for issue where mount.mounted would fail when superopts were not a part
+  of mount.active (extended=True). Also mount.mounted various fixes for Solaris
+  and FreeBSD.
++ Fix error where datetimes were not correctly safeguarded before being passed
+  into msgpack.
++ Fix file.replace regressions.  If the pattern is not found, and if dry run is False,
+  and if `backup` is False, and if a pre-existing file exists with extension `.bak`,
+  then that backup file will be overwritten. This backup behavior is a result of how `fileinput`
+  works. Fixing it requires either passing through the file twice (the
+  first time only to search for content and set a flag), or rewriting
+  `file.replace` so it doesn't use `fileinput`
++ VCS filreserver fixes/optimizations
++ Catch fileserver configuration errors on master start
++ Raise errors on invalid gitfs configurations
++ set_locale when locale file does not exist (Redhat family)
++ Fix to correctly count active devices when created mdadm array with spares
++ Fix to correctly target minions in batch mode
++ Support ssh:// urls using the gitfs dulwhich backend
++ New fileserver runner
++ Fix various bugs with argument parsing to the publish module.
++ Fix disk.usage for Synology OS
++ Fix issue with tags occurring twice with docker.pulled
++ Fix incorrect key error in SMTP returner
++ Fix condition which would remount loopback filesystems on every state run
++ Remove requsites from listens after they are called in the state system
++ Make system implementation of service.running aware of legacy service calls
++ Fix issue where publish.publish would not handle duplicate responses gracefully.
++ Accept Kali Linux for aptpkg salt execution module
++ Fix bug where cmd.which could not handle a dirname as an argument
++ Fix issue in ps.pgrep where exceptions were thrown on Windows.
+
+- Known Issues:
++ In multimaster mode, a minion may become temporarily unresponsive
+  if modules or pillars are refreshed at the same time that one
+  or more masters are down. This can be worked around by setting
+  'auth_timeout' and 'auth_tries' down to shorter periods.
+-------------------------------------------------------------------
 Thu Feb 12 19:35:34 UTC 2015 - aboe76@gmail.com
 
 - New Bugfix release 2014.7.2:

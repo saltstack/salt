@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Test States
-==================
+===========
 
 Provide test case states that enable easy testing of things to do with
  state calls, e.g. running, calling, logging, output filtering etc.
@@ -351,20 +351,22 @@ def check_pillar(name,
     Checks the presence and, optionally, the type of
     given keys in Pillar.
     Supported kwargs for types are:
-        - boolean (bool)
-        - integer (int)
-        - string (str)
-        - listing (list)
-        - dictionary (dict)
+    - boolean (bool)
+    - integer (int)
+    - string (str)
+    - listing (list)
+    - dictionary (dict)
 
     Checking for None type pillars is not implemented yet.
 
-    is-pillar-foo-present-and-bar-is-int:
-      test.check_pillar:
-        - present:
-            - foo
-        - integer:
-            - bar
+    .. code-block:: yaml
+
+        is-pillar-foo-present-and-bar-is-int:
+          test.check_pillar:
+            - present:
+                - foo
+            - integer:
+                - bar
     '''
     if not (present or boolean or integer or string or
             listing or dictionary):

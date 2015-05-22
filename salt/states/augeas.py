@@ -194,12 +194,12 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
         if diff:
             ret['comment'] = 'Changes have been saved'
-            ret['changes'] = diff
+            ret['changes'] = {'diff': diff}
         else:
             ret['comment'] = 'No changes made'
 
     else:
         ret['comment'] = 'Changes have been saved'
-        ret['changes'] = changes
+        ret['changes'] = {'updates': changes}
 
     return ret

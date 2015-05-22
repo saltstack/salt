@@ -32,6 +32,7 @@ import salt.loader
 import salt.utils
 import salt.utils.cloud
 import salt.syspaths
+from salt.utils import reinit_crypto
 from salt.utils import context
 from salt.ext.six import string_types
 from salt.template import compile_template
@@ -355,7 +356,7 @@ class CloudClient(object):
         '''
         Destroy the named VMs
         '''
-        mapper = salt.cloud.Map(self._opts_defaults())
+        mapper = salt.cloud.Map(self._opts_defaults(destroy=True))
         if isinstance(names, str):
             names = names.split(',')
         return salt.utils.cloud.simple_types_filter(
@@ -450,7 +451,7 @@ class CloudClient(object):
                 kwargs={'image': 'ami-10314d79'}
             )
         '''
-        mapper = salt.cloud.Map(self._opts_defaults(action=fun))
+        mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
         if names and not provider:
             self.opts['action'] = fun
             return mapper.do_action(names, kwargs)
@@ -1529,7 +1530,7 @@ class Cloud(object):
                         'The cloud driver, {0!r}, configured under the '
                         '{1!r} cloud provider alias was not loaded since '
                         '\'{2}()\' could not be found. Removing it from '
-                        'the available providers list'.format(
+                        'the available providers list.'.format(
                             driver, alias, fun
                         )
                     )
@@ -1551,7 +1552,7 @@ class Cloud(object):
                             'The cloud driver, {0!r}, configured under the '
                             '{1!r} cloud provider alias is not properly '
                             'configured. Removing it from the available '
-                            'providers list'.format(driver, alias)
+                            'providers list.'.format(driver, alias)
                         )
                         self.opts['providers'][alias].pop(driver)
 
@@ -2236,8 +2237,7 @@ def run_parallel_map_providers_query(data, queue=None):
     This function will be called from another process when building the
     providers map.
     '''
-    if 'Crypto.Random' in sys.modules:
-        Crypto.Random.atfork()
+    reinit_crypto()
 
     cloud = Cloud(data['opts'])
     try:

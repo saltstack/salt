@@ -230,7 +230,7 @@ def _merge_flags(new_flags, old_flags=None, conf='any'):
         old_flags = []
     args = [old_flags, new_flags]
     if conf == 'accept_keywords':
-        tmp = new_flags+ \
+        tmp = new_flags + \
             [i for i in old_flags if _check_accept_keywords(new_flags, i)]
     else:
         tmp = portage.flatten(args)
@@ -277,7 +277,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
             new_flags = list(flags)
         else:
             atom = string.strip().split()[0]
-            new_flags = portage.dep.strip_empty(string.strip().split(' '))[1:]
+            new_flags = [flag for flag in string.strip().split(' ') if flag][1:]
             if '/' not in atom:
                 atom = _p_to_cp(atom)
                 string = '{0} {1}'.format(atom, ' '.join(new_flags))
@@ -338,7 +338,7 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
                     new_contents += string.strip() + '\n'
                     added = True
                 else:
-                    old_flags = portage.dep.strip_empty(l_strip.split(' '))[1:]
+                    old_flags = [flag for flag in l_strip.split(' ') if flag][1:]
                     if conf == 'accept_keywords':
                         if not old_flags:
                             new_contents += l
@@ -418,7 +418,7 @@ def get_flags_from_package_conf(conf, atom):
                 line_package = line.split()[0]
                 line_list = _porttree().dbapi.xmatch("match-all", line_package)
                 if match_list.issubset(line_list):
-                    f_tmp = portage.dep.strip_empty(line.strip().split()[1:])
+                    f_tmp = [flag for flag in line.strip().split(' ') if flag][1:]
                     if f_tmp:
                         flags.extend(f_tmp)
                     else:

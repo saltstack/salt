@@ -257,11 +257,13 @@ def _reinterpreted_state(state):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
-            return _failout(
+            state = _failout(
                 state,
                 'Failed parsing script output! '
                 'Stdout must be JSON or a line of name=value pairs.'
             )
+            state['changes'].update(ret)
+            return state
 
     changed = _is_true(data.get('changed', 'no'))
 

@@ -19,7 +19,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
 
     HAS_PSUTIL = True
     PSUTIL2 = psutil.version_info >= (2, 0)
@@ -129,10 +129,10 @@ def top(num_processes=5, interval=3):
     '''
     result = []
     start_usage = {}
-    for pid in psutil.get_pid_list():
+    for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         start_usage[process] = user + system
@@ -140,7 +140,7 @@ def top(num_processes=5, interval=3):
     usage = set()
     for process, start in six.iteritems(start_usage):
         try:
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         now = user + system
@@ -162,9 +162,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in six.iteritems(process.get_cpu_times()._asdict()):
+        for key, value in six.iteritems(process.cpu_times()._asdict()):
             info['cpu'][key] = value
-        for key, value in six.iteritems(process.get_memory_info()._asdict()):
+        for key, value in six.iteritems(process.memory_info()._asdict()):
             info['mem'][key] = value
         result.append(info)
 
@@ -181,7 +181,7 @@ def get_pid_list():
 
         salt '*' ps.get_pid_list
     '''
-    return psutil.get_pid_list()
+    return psutil.pids()
 
 
 def proc_info(pid, attrs=None):
@@ -541,7 +541,7 @@ def boot_time(time_format=None):
     except AttributeError:
         # get_boot_time() has been removed in newer psutil versions, and has
         # been replaced by boot_time() which provides the same information.
-        b_time = int(psutil.get_boot_time())
+        b_time = int(psutil.boot_time())
     if time_format:
         # Load epoch timestamp as a datetime.datetime object
         b_time = datetime.datetime.fromtimestamp(b_time)
@@ -565,9 +565,9 @@ def network_io_counters(interface=None):
         salt '*' ps.network_io_counters interface=eth0
     '''
     if not interface:
-        return dict(psutil.network_io_counters()._asdict())
+        return dict(psutil.net_io_counters()._asdict())
     else:
-        stats = psutil.network_io_counters(pernic=True)
+        stats = psutil.net_io_counters(pernic=True)
         if interface in stats:
             return dict(stats[interface]._asdict())
         else:
@@ -607,7 +607,7 @@ def get_users():
         salt '*' ps.get_users
     '''
     try:
-        recs = psutil.get_users()
+        recs = psutil.users()
         return [dict(x._asdict()) for x in recs]
     except AttributeError:
         # get_users is only present in psutil > v0.5.0

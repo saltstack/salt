@@ -7,16 +7,23 @@ Connection module for Amazon DynamoDB
 :configuration: This module accepts explicit DynamoDB credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at::
+    further configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
+
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         region: us-east-1
 
@@ -24,6 +31,8 @@ Connection module for Amazon DynamoDB
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
+
+    .. code-block:: yaml
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -77,7 +86,9 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
     '''
     Creates a DynamoDB table.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.create_table table_name /
         region=us-east-1 /
@@ -154,7 +165,9 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a table exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.exists table_name region=us-east-1
     '''
@@ -168,7 +181,9 @@ def delete(table_name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a DynamoDB table.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_dynamodb.delete table_name region=us-east-1
     '''

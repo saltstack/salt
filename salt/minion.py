@@ -23,11 +23,17 @@ from stat import S_IMODE
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
+from salt.utils import reinit_crypto
 # pylint: enable=no-name-in-module,redefined-builtin
 
 # Import third party libs
 try:
     import zmq
+    # TODO: cleanup
+    import zmq.eventloop.ioloop
+    # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
+    if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
+        zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
     HAS_ZMQ = True
 except ImportError:
     # Running in local, zmq not needed
@@ -42,7 +48,7 @@ except ImportError:
 
 HAS_PSUTIL = False
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
     HAS_PSUTIL = True
 except ImportError:
     pass
@@ -92,11 +98,6 @@ from salt.exceptions import (
 )
 
 
-# TODO: cleanup
-import zmq.eventloop.ioloop
-# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
 import tornado.gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
@@ -355,7 +356,8 @@ class SMinion(object):
             self.opts,
             self.opts['grains'],
             self.opts['id'],
-            self.opts['environment']
+            self.opts['environment'],
+            pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -601,7 +603,8 @@ class Minion(MinionBase):
             self.opts,
             self.opts['grains'],
             self.opts['id'],
-            self.opts['environment']
+            self.opts['environment'],
+            self.opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
@@ -651,8 +654,10 @@ class Minion(MinionBase):
                 log.debug('Starting {0} proxy.'.format(p))
                 pid = os.fork()
                 if pid > 0:
+                    reinit_crypto()
                     continue
                 else:
+                    reinit_crypto()
                     proxyminion = ProxyMinion(self.opts)
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
@@ -840,7 +845,7 @@ class Minion(MinionBase):
             log.debug('modules_max_memory set, enforcing a maximum of {0}'.format(self.opts['modules_max_memory']))
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).get_memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()
             mem_limit = rss + vms + self.opts['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.get('modules_max_memory', -1) > 0:
@@ -1308,6 +1313,7 @@ class Minion(MinionBase):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv')
             ).compile_pillar()
         except SaltClientError:
             # Do not exit if a pillar refresh fails.
@@ -1365,6 +1371,8 @@ class Minion(MinionBase):
             self.beacons.enable_beacon(name)
         elif func == 'disable_beacon':
             self.beacons.disable_beacon(name)
+        elif func == 'list':
+            self.beacons.list_beacons()
 
     def environ_setenv(self, package):
         '''
@@ -2455,7 +2463,8 @@ class ProxyMinion(Minion):
             opts,
             opts['grains'],
             opts['id'],
-            opts['environment']
+            opts['environment'],
+            pillarenv=opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
