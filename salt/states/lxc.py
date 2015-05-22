@@ -466,7 +466,7 @@ def running(name, restart=False, path=None):
     return ret
 
 
-def frozen(name, start=True):
+def frozen(name, start=True, path=None):
     '''
     .. versionadded:: 2015.5.0
 
