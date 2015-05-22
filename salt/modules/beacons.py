@@ -384,7 +384,7 @@ def enable_beacon(name, **kwargs):
 
     .. versionadded:: Beryllium
 
-    :name:                  Name of the beacon to enable. 
+    :name:                  Name of the beacon to enable.
     :return:                Boolean and status message on success or failure of enable.
 
     CLI Example:
@@ -434,7 +434,7 @@ def disable_beacon(name, **kwargs):
 
     .. versionadded:: Beryllium
 
-    :name:                  Name of the beacon to enable. 
+    :name:                  Name of the beacon to enable.
     :return:                Boolean and status message on success or failure of disable.
 
     CLI Example:

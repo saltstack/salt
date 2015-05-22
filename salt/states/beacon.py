@@ -3,7 +3,7 @@
 Management of the Salt beacons
 ==============================================
 
-.. versionadded:: Beryllium 
+.. versionadded:: Beryllium
 
 .. code-block:: yaml
 
