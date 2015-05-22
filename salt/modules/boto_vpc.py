@@ -7,17 +7,23 @@ Connection module for Amazon VPC
 :configuration: This module accepts explicit VPC credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at::
+    further configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         vpc.keyid: GKTADJGHEIQSXMKKRBJ08H
         vpc.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         vpc.region: us-east-1
 
@@ -25,6 +31,8 @@ Connection module for Amazon VPC
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
+
+    .. code-block:: yaml
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -34,21 +42,30 @@ Connection module for Amazon VPC
 .. versionchanged:: Beryllium
     All methods now return a dictionary. Create and delete methods return:
 
-    .. code-blocK:: yaml
-        created: true
-    or
     .. code-block:: yaml
+
+        created: true
+
+    or
+
+    .. code-block:: yaml
+
         created: false
         error:
           message: error message
 
     Request methods (e.g., `describe_vpc`) return:
+
     .. code-block:: yaml
+
         vpcs:
           - {...}
           - {...}
+
     or
-    .. code-block:: yal
+
+    .. code-block:: yaml
+
         error:
           message: error message
 
@@ -342,7 +359,7 @@ def get_resource_id(resource, name=None, resource_id=None, region=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -366,7 +383,7 @@ def resource_exists(resource, name=None, resource_id=None, tags=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -460,7 +477,7 @@ def get_id(name=None, cidr=None, tags=None, region=None, key=None, keyid=None,
     '''
     Given VPC properties, return the VPC id if a match is found.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -483,7 +500,7 @@ def exists(vpc_id=None, name=None, cidr=None, tags=None, region=None, key=None,
     Returns True if the given VPC ID exists and returns False if the given
     VPC ID does not exist.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -513,7 +530,7 @@ def create(cidr_block, instance_tenancy=None, vpc_name=None,
     Returns {created: true} if the VPC was created and returns
     {created: False} if the VPC was not created.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -550,7 +567,7 @@ def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
     Returns {deleted: true} if the VPC was deleted and returns
     {deleted: false} if the VPC was not deleted.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -602,7 +619,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
     .. versionchanged:: Beryllium
         Added vpc_name argument
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -647,7 +664,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -740,7 +757,7 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     .. versionchanged:: Beryllium
         Added vpc_name argument
 
-    CLI examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -773,7 +790,7 @@ def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
     .. versionchanged:: Beryllium
         Added subnet_name argument
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -798,7 +815,7 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
         Added subnet_name argument
         Deprecated name argument
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -857,7 +874,7 @@ def get_subnet_association(subnets, region=None, key=None, keyid=None,
     Returns False on an error or if the given subnets are associated with
     different VPC IDs.
 
-    CLI Examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -902,7 +919,7 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
 
     .. versionadded:: Beryllium
 
-    CLI examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -934,7 +951,7 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
 
     .. versionadded:: Beryllium
 
-    CLI Examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -998,7 +1015,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
     returns False if the internet gateways was not created.
 
     .. versionadded:: Beryllium
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1038,7 +1055,7 @@ def delete_internet_gateway(internet_gateway_id=None,
 
     .. versionadded:: Beryllium
 
-    CLI examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1092,7 +1109,7 @@ def create_customer_gateway(vpn_connection_type, ip_address, bgp_asn,
     Returns the customer gateway id if the customer gateway was created and
     returns False if the customer gateway was not created.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1117,7 +1134,7 @@ def delete_customer_gateway(customer_gateway_id=None, customer_gateway_name=None
     .. versionchanged:: Beryllium
         Added customer_gateway_name argument
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1139,7 +1156,7 @@ def customer_gateway_exists(customer_gateway_id=None, customer_gateway_name=None
 
     Returns True if the customer gateway ID exists; Returns False otherwise.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1166,7 +1183,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
     .. versionchanged:: Beryllium
         Added vpc_name and vpc_id arguments
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1207,7 +1224,7 @@ def delete_dhcp_options(dhcp_options_id=None, dhcp_options_name=None,
 
     .. versionadded:: Beryllium
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1229,7 +1246,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
 
     Returns True if the DHCP options record were associated and returns False if the DHCP options record was not associated.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1259,14 +1276,14 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
     '''
     ..deprecated:: Beryllium
         This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>',
+        :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>`,
         which now takes vpc_id or vpc_name as kwargs.
 
         This function will be removed in a future release.
 
     Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
 
-    CLI example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1289,7 +1306,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, dhcp_options_name=None,
 
     Returns True if the dhcp option exists; Returns False otherwise.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1319,7 +1336,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
     .. versionchanged:: Beryllium
         Added vpc_name, subnet_id, and subnet_name arguments
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1373,7 +1390,7 @@ def delete_network_acl(network_acl_id=None, network_acl_name=None, disassociate=
     '''
     Delete a network acl based on the network_acl_id or network_acl_name provided.
 
-    CLI Examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1381,6 +1398,7 @@ def delete_network_acl(network_acl_id=None, network_acl_name=None, disassociate=
                 disassociate=false
 
     .. code-block:: bash
+
         salt myminion boto_vpc.delete_network_acl network_acl_name='myacl' \\
                 disassociate=true
 
@@ -1411,7 +1429,7 @@ def network_acl_exists(network_acl_id=None, name=None, network_acl_name=None,
 
     Returns True if the network acl exists or returns False if it doesn't exist.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1436,7 +1454,7 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
     '''
     Given a network acl and subnet ids or names, associate a network acl to a subnet.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1483,7 +1501,7 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
     '''
     ..deprecated:: Beryllium
         This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>',
+        :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>`,
         which now takes subnet_id or subnet_name as kwargs.
 
         This function will be removed in a future release.
@@ -1493,7 +1511,7 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
     Returns a dictionary containing the network acl id and the new association id if successful. If unsuccessful,
     returns False.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1510,7 +1528,7 @@ def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_
     '''
     Given a subnet ID, disassociates a network acl.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1605,7 +1623,7 @@ def create_network_acl_entry(network_acl_id=None, rule_number=None, protocol=Non
     '''
     Creates a network acl entry.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1627,7 +1645,7 @@ def replace_network_acl_entry(network_acl_id=None, rule_number=None, protocol=No
 
     Replaces a network acl entry.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1646,7 +1664,7 @@ def delete_network_acl_entry(network_acl_id=None, rule_number=None, egress=None,
     '''
     Deletes a network acl entry.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1688,7 +1706,7 @@ def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
     .. versionchanged:: Beryllium
         Added vpc_name argument
 
-    CLI Examples::
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -1711,9 +1729,9 @@ def delete_route_table(route_table_id=None, route_table_name=None,
     '''
     Deletes a route table.
 
-    CLI Examples::
+    CLI Examples:
 
-    .. code-example:: bash
+    .. code-block:: bash
 
         salt myminion boto_vpc.delete_route_table route_table_id='rtb-1f382e7d'
         salt myminion boto_vpc.delete_route_table route_table_name='myroutetable'
@@ -1729,7 +1747,7 @@ def route_table_exists(route_table_id=None, name=None, route_table_name=None,
     '''
     Checks if a route table exists.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1755,7 +1773,7 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
 
     .. versionadded:: Beryllium
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1820,7 +1838,7 @@ def associate_route_table(route_table_id=None, subnet_id=None,
     '''
     Given a route table and subnet name or id, associates the route table with the subnet.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1871,7 +1889,7 @@ def disassociate_route_table(association_id, region=None, key=None, keyid=None, 
     association_id
         The Route Table Association ID to disassociate
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1895,7 +1913,7 @@ def replace_route_table_association(association_id, route_table_id, region=None,
     '''
     Replaces a route table association.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1920,7 +1938,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
     '''
     Creates a route.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1971,7 +1989,7 @@ def delete_route(route_table_id=None, destination_cidr_block=None,
     '''
     Deletes a route.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2010,7 +2028,7 @@ def replace_route(route_table_id=None, destination_cidr_block=None,
     '''
     Replaces a route.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2057,7 +2075,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     .. versionadded:: Beryllium
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 

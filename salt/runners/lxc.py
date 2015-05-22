@@ -208,6 +208,19 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['comment'] = 'Container names are not formed as a list'
         ret['result'] = False
         return ret
+    # check that the host is alive
+    client = salt.client.get_local_client(__opts__['conf_file'])
+    alive = False
+    try:
+        if client.cmd(host, 'test.ping', timeout=20).get(host, None):
+            alive = True
+    except (TypeError, KeyError):
+        pass
+    if not alive:
+        ret['comment'] = 'Host {0} is not reachable'.format(host)
+        ret['result'] = False
+        return ret
+
     log.info('Searching for LXC Hosts')
     data = __salt__['lxc.list'](host, quiet=True)
     for host, containers in six.iteritems(data):
@@ -222,19 +235,18 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         ret['result'] = False
         return ret
 
-    client = salt.client.get_local_client(__opts__['conf_file'])
-
-    kw = dict((k, v) for k, v in six.iteritems(kwargs) if not k.startswith('__'))
+    kw = salt.utils.clean_kwargs(**kwargs)
     pub_key = kw.get('pub_key', None)
     priv_key = kw.get('priv_key', None)
     explicit_auth = pub_key and priv_key
     approve_key = kw.get('approve_key', True)
     seeds = {}
+    seed_arg = kwargs.get('seed', True)
     if approve_key and not explicit_auth:
         skey = salt.key.Key(__opts__)
         all_minions = skey.all_keys().get('minions', [])
         for name in names:
-            seed = kwargs.get('seed', True)
+            seed = seed_arg
             if name in all_minions:
                 try:
                     if client.cmd(name, 'test.ping', timeout=20).get(name, None):
@@ -256,7 +268,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     cmds = []
     for name in names:
         args = [name]
-        kw = kwargs
+        kw = salt.utils.clean_kwargs(**kwargs)
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
@@ -265,8 +277,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
                 expr_form='list', timeout=600).get(host, {})
         name = kw.pop('name', name)
         # be sure not to seed an already seeded host
-        seed = kwargs.get('seed', True)
-        kw['seed'] = seeds.get(name, seed)
+        kw['seed'] = seeds.get(name, seed_arg)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
         cmds.append(
