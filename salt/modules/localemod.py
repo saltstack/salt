@@ -261,6 +261,11 @@ def gen_locale(locale, **kwargs):
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
         valid = __salt__['file.search'](search, '^{0}$'.format(locale))
+        if not valid and not locale_info['charmap']:
+            # charmap was not supplied, so try copying the codeset
+            locale_info['charmap'] = locale_info['codeset']
+            locale = _join_locale(locale_info)
+            valid = __salt__['file.search'](search, '^{0}$'.format(locale))
     else:  # directory-based search
         if on_suse:
             search = '/usr/share/locale'
