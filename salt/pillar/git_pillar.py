@@ -67,9 +67,9 @@ the ``ext_pillar:`` configuration would be like:
 .. code-block:: yaml
 
     ext_pillar:
-      - git: _ git://gitserver/git-pillar.git root=pillar
+      - git: __env__ git://gitserver/git-pillar.git root=pillar
 
-The (optinal) root=pillar defines the directory that contains the pillar data.
+The (optional) root=pillar defines the directory that contains the pillar data.
 The corresponding ``top.sls`` would be like:
 
 .. code-block:: yaml
