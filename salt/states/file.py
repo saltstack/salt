@@ -243,6 +243,7 @@ import pprint
 import shutil
 import traceback
 import yaml
+from collections import Iterable, Mapping
 
 # Import salt libs
 import salt.payload
@@ -255,6 +256,7 @@ from salt.utils.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six import string_types
 from salt.ext.six.moves import zip_longest
 
 log = logging.getLogger(__name__)
@@ -692,6 +694,18 @@ def _get_template_texts(source_list=None,
 
     ret['data'] = txtl
     return ret
+
+
+def _validate_str_list(arg):
+    '''
+    ensure ``arg`` is a list of strings
+    '''
+    if isinstance(arg, string_types):
+        return [arg]
+    elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
+        return [str(item) for item in arg]
+    else:
+        return False
 
 
 def symlink(
@@ -2073,23 +2087,22 @@ def recurse(name,
             ret['comment'] = ('Invalid source {0!r} (must be a salt:// URI)'
                               .format(precheck))
             return ret
+    # expand source into source_list
+    source_list = _validate_str_list(source)
+    if not source_list:
+        return _error(ret, '\'source\' parameter is not a string or list of strings')
 
-    if isinstance(source, list):
-        sources = source
-    else:
-        sources = [source]
+    for idx, val in enumerate(source_list):
+        source_list[idx] = val.rstrip('/')
 
+    for precheck in source_list:
+        if not precheck.startswith('salt://'):
+            return _error(ret, ('Invalid source {0!r} '
+                                '(must be a salt:// URI)'.format(precheck)))
+
+    # Select the first source in source_list that exists
     try:
-        for idx, val in enumerate(sources):
-            sources[idx] = val.rstrip('/')
-    except AttributeError:
-        ret['result'] = False
-        ret['comment'] = '\'source\' parameter(s) must be a string'
-        return ret
-
-    # If source is a list, find which in the list actually exists
-    try:
-        source, source_hash = __salt__['file.source_list'](sources, '', __env__)
+        source, source_hash = __salt__['file.source_list'](source_list, '', __env__)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = 'Recurse failed: {0}'.format(exc)
@@ -3185,12 +3198,9 @@ def append(name,
             return tmpret
         text = tmpret['data']
 
-    for index, item in enumerate(text):
-        if isinstance(item, six.integer_types):
-            text[index] = str(item)
-
-    if isinstance(text, six.string_types):
-        text = (text,)
+    text = _validate_str_list(text)
+    if not text:
+        return _error(ret, 'Given text is not a string or a list of strings')
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
@@ -3205,15 +3215,7 @@ def append(name,
                     name, salt.utils.build_whitespace_split_regex(chunk)):
                 continue
 
-            try:
-                lines = chunk.splitlines()
-            except AttributeError:
-                log.debug(
-                    'Error appending text to {0}; given object is: {1}'.format(
-                        name, type(chunk)
-                    )
-                )
-                return _error(ret, 'Given text is not a string')
+            lines = chunk.splitlines()
 
             for line in lines:
                 if __opts__['test']:
@@ -3224,9 +3226,7 @@ def append(name,
                     __salt__['file.append'](name, line)
                 count += 1
     except TypeError:
-        ret['comment'] = 'No text found to append. Nothing appended'
-        ret['result'] = False
-        return ret
+        return _error(ret, 'No text found to append. Nothing appended')
 
     if __opts__['test']:
         nlines = slines + test_lines
@@ -3365,8 +3365,9 @@ def prepend(name,
             return tmpret
         text = tmpret['data']
 
-    if isinstance(text, six.string_types):
-        text = (text,)
+    text = _validate_str_list(text)
+    if not text:
+        return _error(ret, 'Given text is not a string or a list of strings')
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
@@ -3381,15 +3382,7 @@ def prepend(name,
                 name, salt.utils.build_whitespace_split_regex(chunk)):
             continue
 
-        try:
-            lines = chunk.splitlines()
-        except AttributeError:
-            log.debug(
-                'Error appending text to {0}; given object is: {1}'.format(
-                    name, type(chunk)
-                )
-            )
-            return _error(ret, 'Given text is not a string')
+        lines = chunk.splitlines()
 
         for line in lines:
             if __opts__['test']:

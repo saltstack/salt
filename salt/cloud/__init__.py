@@ -1261,7 +1261,18 @@ class Cloud(object):
 
                 # a small pause makes the sync work reliably
                 time.sleep(3)
-                client = salt.client.get_local_client(mopts=self.opts)
+
+                mopts_ = salt.config.DEFAULT_MINION_OPTS
+                conf_path = '/'.join(__opts__['conf_file'].split('/')[:-1])
+                mopts_.update(
+                    salt.config.minion_config(
+                        os.path.join(conf_path,
+                                     'minion')
+                    )
+                )
+
+                client = salt.client.get_local_client(mopts=mopts_)
+
                 ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
                     self.opts['sync_after_install']
                 ))

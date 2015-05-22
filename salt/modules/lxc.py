@@ -102,7 +102,7 @@ def version():
         cversion = __salt__['cmd.run_all']('lxc-ls --version')
         if not cversion['retcode']:
             ver = distutils.version.LooseVersion(cversion['stdout'])
-            if ver < '1.0':
+            if ver < distutils.version.LooseVersion('1.0'):
                 raise CommandExecutionError('LXC should be at least 1.0')
             __context__[k] = "{0}".format(ver)
     return __context__.get(k, None)
@@ -247,7 +247,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         .. versionadded:: 2015.5.2
 
     profile
-        :ref:`profile <tutorial-lxc-profiles-container>` selection 
+        :ref:`profile <tutorial-lxc-profiles-container>` selection
     network_profile
         :ref:`network profile <tutorial-lxc-profiles-network>` selection
     nic_opts
@@ -700,6 +700,8 @@ def _network_conf(conf_tuples=None, **kwargs):
     if not conf_tuples:
         conf_tuples = []
     old = _get_veths(conf_tuples)
+    if not old:
+        old = {}
 
     # if we have a profile name, get the profile and load the network settings
     # this will obviously by default  look for a profile called "eth0"
@@ -711,9 +713,6 @@ def _network_conf(conf_tuples=None, **kwargs):
         nicp = {}
     if DEFAULT_NIC not in nicp:
         nicp[DEFAULT_NIC] = {}
-
-    if not nic and not nic_opts and not old:
-        return ret
 
     kwargs = copy.deepcopy(kwargs)
     gateway = kwargs.pop('gateway', None)
@@ -807,13 +806,6 @@ def _network_conf(conf_tuples=None, **kwargs):
         # gateway (in automode) must be appended following network conf !
         if not gateway:
             gateway = args.get('gateway', None)
-        if gateway is not None and not gateway_set:
-            ret.append({'lxc.network.ipv4.gateway': gateway})
-            # only one network gateway ;)
-            gateway_set = True
-        # normally, this wont happen
-        # set the gateway if specified even if we did
-        # not managed the network underlying
         if gateway is not None and not gateway_set:
             ret.append({'lxc.network.ipv4.gateway': gateway})
             # only one network gateway ;)
@@ -1959,6 +1951,8 @@ def create(name,
             cmd += ' --{0} {1}'.format(key, val)
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    # please do not merge extra conflicting stuff
+    # inside those two line (ret =, return)
     return _after_ignition_network_profile(cmd,
                                            ret,
                                            name,
@@ -2072,6 +2066,8 @@ def clone(name,
             if size:
                 cmd += ' --fssize {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    # please do not merge extra conflicting stuff
+    # inside those two line (ret =, return)
     return _after_ignition_network_profile(cmd,
                                            ret,
                                            name,
@@ -4544,7 +4540,6 @@ def reconfigure(name,
         if kw_overrides_match is _marker:
             return profile_match
         return kw_overrides_match
-    # only touch to network if we provide new nic_opts
     if nic_opts is not None and not network_profile:
         network_profile = DEFAULT_NIC
 
