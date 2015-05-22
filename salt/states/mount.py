@@ -627,5 +627,5 @@ def mod_watch(name, user=None, **kwargs):
             ret['result'] = False
             ret['comment'] = '{0} failed to remount: {1}'.format(name, out)
     else:
-        ret['comment'] = 'Watch not supported in {1} at this time'.format(kwargs['sfun'])
+        ret['comment'] = 'Watch not supported in {0} at this time'.format(kwargs['sfun'])
     return ret
