@@ -653,6 +653,7 @@ def running(name,
             validate_ip_addrs=True,
             watch_action='force',
             client_timeout=CLIENT_TIMEOUT,
+            check_is_running=True,
             **kwargs):
     '''
     Ensure that a container with a specific configuration is present and
@@ -1306,6 +1307,13 @@ def running(name,
         .. note::
 
             This option requires Docker 1.5.0 or newer.
+
+    check_is_running : True
+        Skip running checks if set to False.
+        Useful for data only container, or for non daemonized container
+        processes.
+        Think one time commands like ``django commands`` ``migrate``
+        or ``collectstatic``.
     '''
     ret = {'name': name,
            'changes': {},
@@ -1557,7 +1565,7 @@ def running(name,
         # changes dict.
         ret['changes']['added'] = create_result
 
-    if new_container or pre_state != 'running':
+    if new_container or (pre_state != 'running' and check_is_running):
         try:
             # Start container
             __salt__['dockerng.start'](
@@ -1579,6 +1587,9 @@ def running(name,
         if pre_state != post_state:
             # If the container changed states at all, note this change in the
             # return dict.
+            comments.append(
+                 'Container \'{0}\' changed state.'.format(name)
+            )
             ret['changes']['state'] = {'old': pre_state, 'new': post_state}
 
     if changes_needed:
@@ -1652,6 +1663,9 @@ def running(name,
                     comments.append(
                         'Sent signal {0} to container'.format(watch_action)
                     )
+            elif ret['changes']:
+                # comments are already provided where the change was detected
+                assert comments
             else:
                 # Container was not replaced, no necessary changes detected
                 # in pre-flight check, and no signal sent to container
