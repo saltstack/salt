@@ -238,7 +238,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'uid': None,
                                'role': 'master',
                                'sighex': None,
-                               'prihex': None}},
+                               'prihex': None,
+                               'bufcnt': 2}},
             }
 
     def _prepare(self):
@@ -292,6 +293,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         sighex = roledata['sighex'] or self.local.data.sighex
         prihex = roledata['prihex'] or self.local.data.prihex
 
+        bufcnt = self.opts.value.get('raet_road_bufcnt', self.local.data.bufcnt)
+
         self.stack.value = RoadStack(store=self.store,
                                      keep=keep,
                                      name=name,
@@ -306,7 +309,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
                                      period=3.0,
-                                     offset=0.5)
+                                     offset=0.5,
+                                     bufcnt=bufcnt)
 
         if self.opts.value.get('raet_clear_remotes'):
             for remote in list(self.stack.value.remotes.values()):
@@ -789,7 +793,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                'inode': '.salt.lane.manor.',
                'stack': 'stack',
                'local': {'ipath': 'local',
-                          'ival': {'lanename': 'master'}},
+                          'ival': {'lanename': 'master',
+                                   'bufcnt': 100}},
             }
 
     def _prepare(self):
@@ -824,11 +829,14 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + '\n')
             raise ValueError(emsg)
 
+        bufcnt = self.opts.value.get('raet_lane_bufcnt', self.local.data.bufcnt)
+
         name = 'manor'
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
-                                    sockdirpath=self.opts.value['sock_dir'])
+                                    sockdirpath=self.opts.value['sock_dir'],
+                                    bufcnt=bufcnt)
         self.stack.value.Pk = raeting.PackKind.pack.value
         self.event_yards.value = set()
         self.local_cmd.value = deque()
