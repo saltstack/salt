@@ -950,9 +950,9 @@ def _linux_bin_exists(binary):
             pass
 
     try:
-        return len(__salt__['cmd.run_stdout'](
+        return len(__salt__['cmd.run_all'](
             'whereis -b {0}'.format(binary)
-        ).split()) > 1
+        )['stdout'].split()) > 1
     except salt.exceptions.CommandExecutionError:
         return False
 
