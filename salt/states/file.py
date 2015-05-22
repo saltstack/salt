@@ -699,7 +699,7 @@ def _validate_str_list(arg):
     '''
     ensure ``arg`` is a list of strings
     '''
-    if isinstance(arg, string_types):
+    if isinstance(arg, six.string_types):
         return [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
         return [str(item) for item in arg]
