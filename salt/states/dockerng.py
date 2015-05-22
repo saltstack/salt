@@ -653,7 +653,7 @@ def running(name,
             validate_ip_addrs=True,
             watch_action='force',
             client_timeout=CLIENT_TIMEOUT,
-            check_is_running=True,
+            start=True,
             **kwargs):
     '''
     Ensure that a container with a specific configuration is present and
@@ -1308,12 +1308,13 @@ def running(name,
 
             This option requires Docker 1.5.0 or newer.
 
-    check_is_running : True
-        Skip running checks if set to False.
-        Useful for data only container, or for non daemonized container
-        processes.
-        Think one time commands like ``django commands`` ``migrate``
-        or ``collectstatic``.
+    start : True
+        Set to ``False`` to suppress starting of the container if it exists,
+        matches the desired configuration, but is not running. This is useful
+        for data-only containers, or for non-daemonized container processes,
+        such as the django ``migrate`` and ``collectstatic`` commands. In
+        instances such as this, the container only needs to be started the
+        first time.
     '''
     ret = {'name': name,
            'changes': {},
@@ -1565,7 +1566,7 @@ def running(name,
         # changes dict.
         ret['changes']['added'] = create_result
 
-    if new_container or (pre_state != 'running' and check_is_running):
+    if new_container or (pre_state != 'running' and start):
         try:
             # Start container
             __salt__['dockerng.start'](
