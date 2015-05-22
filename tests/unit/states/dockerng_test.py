@@ -346,6 +346,50 @@ class DockerngTestCase(TestCase):
                                'result': True,
                                })
 
+    def test_running_discard_wrong_environemnt_values(self):
+        '''
+        environment values should be string.
+        It is easy to write wrong sls this way
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - environment:
+                        - KEY: 1
+
+        instead of:
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - environment:
+                        - KEY: "1"
+        '''
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.create': MagicMock(),
+                    'dockerng.start': MagicMock(),
+                    'dockerng.history': MagicMock(),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            for wrong_value in (1, .2, (), [], {}):
+                ret = dockerng_state.running(
+                    'cont',
+                    image='image:latest',
+                    environment=[{'KEY': wrong_value}])
+                self.assertEqual(ret,
+                                 {'changes': {},
+                                  'comment': 'Environment values must'
+                                  ' be strings KEY={0!r}'.format(wrong_value),
+                                  'name': 'cont',
+                                  'result': False})
+
 
 if __name__ == '__main__':
     from integration import run_tests

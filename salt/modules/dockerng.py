@@ -1239,9 +1239,18 @@ def _validate_input(action,
                             'Duplicate environment variable \'{0}\''
                             .format(key)
                         )
+                    if not isinstance(val, six.string_types):
+                        raise SaltInvocationError(
+                            'Environment values must be strings {key}={val!r}'
+                            .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
-            return
+        elif isinstance(kwargs['environment'], dict):
+            for key, val in six.iteritems(kwargs['environment']):
+                if not isinstance(val, six.string_types):
+                    raise SaltInvocationError(
+                        'Environment values must be strings {key}={val!r}'
+                        .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
                 'Invalid environment configuration. See the documentation for '
