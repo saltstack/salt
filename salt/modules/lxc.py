@@ -1900,35 +1900,9 @@ def create(name,
         for key, val in options.items():
             cmd += ' --{0} {1}'.format(key, val)
 
-    ret = __salt__['cmd.run_all'](cmd,
-                                  python_shell=False,
-                                  output_loglevel='trace')
-    _clear_context()
-    if ret['retcode'] == 0 and exists(name):
-        if network_profile:
-            network_changes = apply_network_profile(name,
-                                                    network_profile,
-                                                    nic_opts=nic_opts)
-
-            if network_changes:
-                log.info(
-                    'Network changes from applying network profile \'{0}\' '
-                    'to newly-created container \'{1}\':\n{2}'
-                    .format(network_profile, name, network_changes)
-                )
-        c_state = state(name)
-        return {'result': True,
-                'state': {'old': None, 'new': c_state}}
-    else:
-        if exists(name):
-            # destroy the container if it was partially created
-            cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd, python_shell=False)
-        raise CommandExecutionError(
-            'Container could not be created with cmd \'{0}\': {1}'
-            .format(cmd, ret['stderr'])
-        )
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    # please do not merge extra conflicting stuff
+    # inside those two line (ret =, return)
     return _after_ignition_network_profile(cmd,
                                            ret,
                                            name,
@@ -2031,20 +2005,8 @@ def clone(name,
                 cmd += ' --fssize {0}'.format(size)
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    _clear_context()
-    if ret['retcode'] == 0 and exists(name):
-        c_state = state(name)
-        return {'result': True,
-                'state': {'old': None, 'new': c_state}}
-    else:
-        if exists(name):
-            # destroy the container if it was partially created
-            cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd, python_shell=False)
-        raise CommandExecutionError(
-            'Container could not be cloned with cmd \'{0}\': {1}'
-            .format(cmd, ret['stderr'])
-        )
+    # please do not merge extra conflicting stuff
+    # inside those two line (ret =, return)
     return _after_ignition_network_profile(cmd,
                                            ret,
                                            name,
