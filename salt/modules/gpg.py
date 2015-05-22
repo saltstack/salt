@@ -643,17 +643,18 @@ def import_key(user=None,
             raise SaltInvocationError('filename does not exist.')
 
     import_result = gpg.import_keys(text)
+    counts = import_result.counts
     log.debug('imported_data {0}'.format(list(import_result.__dict__.keys())))
-    log.debug('imported_data {0}'.format(import_result.counts))
+    log.debug('imported_data {0}'.format(counts))
 
-    if import_result.imported or import_result.imported_rsa:
+    if counts['imported'] or counts['imported_rsa']:
         ret['message'] = 'Successfully imported key(s).'
-    elif import_result.unchanged:
+    elif counts['unchanged']:
         ret['message'] = 'Key(s) already exist in keychain.'
-    elif import_result.not_imported:
+    elif counts['not_imported']:
         ret['res'] = False
         ret['message'] = 'Unable to import key.'
-    elif not import_result.count:
+    elif not counts['count']:
         ret['res'] = False
         ret['message'] = 'Unable to import key.'
 
