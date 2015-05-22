@@ -424,12 +424,11 @@ def image_present(name,
     image = ':'.join(_get_repo_tag(name))
     all_tags = __salt__['dockerng.list_tags']()
 
-    if image not in all_tags and not force:
+    if image in all_tags and not force:
         ret['result'] = True
         ret['comment'] = 'Image \'{0}\' already present'.format(name)
         return ret
-
-    if image in all_tags:
+    elif force:
         try:
             image_info = __salt__['dockerng.inspect_image'](name)
         except Exception as exc:
@@ -489,8 +488,14 @@ def image_present(name,
                 .format(image, exc)
             )
             return ret
-        # Only add to the changes dict if layers were pulled
-        if image_info is None or image_update.get('Layers', {}).get('Pulled'):
+        if (image_info is not None and image_info['Id'][:12] == image_update
+                .get('Layers', {})
+                .get('Already_Pulled', [None])[0]):
+            # Image was pulled again (because of force) but was also
+            # already there. No new image was available on the registry.
+            pass
+        elif image_info is None or image_update.get('Layers', {}).get('Pulled'):
+            # Only add to the changes dict if layers were pulled
             ret['changes'] = image_update
 
     ret['result'] = image in __salt__['dockerng.list_tags']()
