@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path=None, return_bin=False, action=None, local_file=None,
-          verify_ssl=True):
+          verify_ssl=True, full_headers=False):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -231,7 +231,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
         if result.status_code != requests.codes.ok:
             return
         ret = {'headers': []}
-        for header in result.headers:
-            ret['headers'].append(header.strip())
+        if full_headers:
+            ret['headers'] = dict(result.headers)
+        else:
+            for header in result.headers:
+                ret['headers'].append(header.strip())
 
     return ret
