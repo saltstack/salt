@@ -42,6 +42,10 @@ from __future__ import absolute_import
 import logging
 import time
 
+# Import salt libs
+import salt.utils.compat
+import salt.utils.odict as odict
+
 log = logging.getLogger(__name__)
 
 # Import third party libs
@@ -55,8 +59,6 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-import salt.utils.odict as odict
-
 
 def __virtual__():
     '''
@@ -64,8 +66,13 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    __utils__['boto.assign_funcs'](__name__, 'route53')
     return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto.assign_funcs'](__name__, 'route53')
 
 
 def _is_valid_resource(_type):
@@ -74,6 +81,58 @@ def _is_valid_resource(_type):
     else:
         log.error('{0} is an unsupported resource type.'.format(_type))
         return False
+
+
+def zone_exists(zone, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check for the existence of a Route53 hosted zone.
+
+    CLI Example::
+
+        salt myminion boto_route53.zone_exists example.org
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    return bool(conn.get_zone(zone))
+
+
+def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
+                key=None, keyid=None, profile=None):
+    '''
+    Create a Route53 hosted zone.
+
+    CLI Example::
+
+        salt myminion boto_route53.create_zone example.org
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    _zone = conn.get_zone(zone, private_zone=private, vpc_id=vpc_id,
+                          vpc_region=vpc_region)
+
+    if _zone:
+        return False
+
+    conn.create_zone(zone)
+    return True
+
+
+def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a Route53 hosted zone.
+
+    CLI Example::
+
+        salt myminion boto_route53.delete_zone example.org
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    _zone = conn.get_zone(zone)
+
+    if _zone:
+        conn.delete_hosted_zone(_zone.id)
+        return True
+    return False
 
 
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
