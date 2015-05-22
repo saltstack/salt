@@ -1665,8 +1665,13 @@ def running(name,
                         'Sent signal {0} to container'.format(watch_action)
                     )
             elif ret['changes']:
-                # comments are already provided where the change was detected
-                assert comments
+                if not comments:
+                    log.warning(
+                        'dockerng.running: we detected changes without '
+                        'a specific comment for container \'{0}\'.'.format(
+                            name)
+                    )
+                    comments.append('Container \'{0}\' changed.'.format(name))
             else:
                 # Container was not replaced, no necessary changes detected
                 # in pre-flight check, and no signal sent to container
