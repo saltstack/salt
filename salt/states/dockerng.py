@@ -653,6 +653,7 @@ def running(name,
             validate_ip_addrs=True,
             watch_action='force',
             client_timeout=CLIENT_TIMEOUT,
+            start=True,
             **kwargs):
     '''
     Ensure that a container with a specific configuration is present and
@@ -1306,6 +1307,14 @@ def running(name,
         .. note::
 
             This option requires Docker 1.5.0 or newer.
+
+    start : True
+        Set to ``False`` to suppress starting of the container if it exists,
+        matches the desired configuration, but is not running. This is useful
+        for data-only containers, or for non-daemonized container processes,
+        such as the django ``migrate`` and ``collectstatic`` commands. In
+        instances such as this, the container only needs to be started the
+        first time.
     '''
     ret = {'name': name,
            'changes': {},
@@ -1557,7 +1566,7 @@ def running(name,
         # changes dict.
         ret['changes']['added'] = create_result
 
-    if new_container or pre_state != 'running':
+    if new_container or (pre_state != 'running' and start):
         try:
             # Start container
             __salt__['dockerng.start'](
@@ -1579,6 +1588,9 @@ def running(name,
         if pre_state != post_state:
             # If the container changed states at all, note this change in the
             # return dict.
+            comments.append(
+                 'Container \'{0}\' changed state.'.format(name)
+            )
             ret['changes']['state'] = {'old': pre_state, 'new': post_state}
 
     if changes_needed:
@@ -1652,6 +1664,14 @@ def running(name,
                     comments.append(
                         'Sent signal {0} to container'.format(watch_action)
                     )
+            elif ret['changes']:
+                if not comments:
+                    log.warning(
+                        'dockerng.running: we detected changes without '
+                        'a specific comment for container \'{0}\'.'.format(
+                            name)
+                    )
+                    comments.append('Container \'{0}\' changed.'.format(name))
             else:
                 # Container was not replaced, no necessary changes detected
                 # in pre-flight check, and no signal sent to container
