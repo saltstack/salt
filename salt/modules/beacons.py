@@ -27,6 +27,11 @@ def list_(return_yaml=True):
     '''
     List the beacons currently configured on the minion
 
+    .. versionadded:: Beryllium
+
+    :param return_yaml:     Whether to return YAML formatted output, default True
+    :return:                List of currently configured Beacons.
+
     CLI Example:
 
     .. code-block:: bash
@@ -65,11 +70,17 @@ def add(name, beacon_data, **kwargs):
     '''
     Add a beacon on the minion
 
+    .. versionadded:: Beryllium
+
+    :param name:            Name of the beacon to configure
+    :param beacon_data:     Dictionary or list containing configuration for beacon.
+    :return:                Boolean and status message on success or failure of add.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' beacons.add
+        salt '*' beacons.add ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
@@ -122,13 +133,19 @@ def add(name, beacon_data, **kwargs):
 
 def modify(name, beacon_data, **kwargs):
     '''
-    Modify an existing job in the schedule
+    Modify an existing beacon
+
+    .. versionadded:: Beryllium
+
+    :param name:            Name of the beacon to configure
+    :param beacon_data:     Dictionary or list containing updated configuration for beacon.
+    :return:                Boolean and status message on success or failure of modify.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' schedule.modify job1 function='test.ping' seconds=3600
+        salt '*' beacon.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
     '''
 
     ret = {'comment': '',
@@ -200,6 +217,11 @@ def delete(name, **kwargs):
     '''
     Delete a beacon item
 
+    .. versionadded:: Beryllium
+
+    :param name:            Name of the beacon to delete
+    :return:                Boolean and status message on success or failure of delete.
+
     CLI Example:
 
     .. code-block:: bash
@@ -238,6 +260,10 @@ def save():
     '''
     Save all beacons on the minion
 
+    .. versionadded:: Beryllium
+
+    :return:                Boolean and status message on success or failure of save.
+
     CLI Example:
 
     .. code-block:: bash
@@ -272,6 +298,10 @@ def save():
 def enable(**kwargs):
     '''
     Enable all beacons on the minion
+
+    .. versionadded:: Beryllium
+
+    :return:                Boolean and status message on success or failure of enable.
 
     CLI Example:
 
@@ -310,6 +340,10 @@ def disable(**kwargs):
     '''
     Disable all beaconsd jobs on the minion
 
+    .. versionadded:: Beryllium
+
+    :return:                Boolean and status message on success or failure of disable.
+
     CLI Example:
 
     .. code-block:: bash
@@ -347,6 +381,11 @@ def disable(**kwargs):
 def enable_beacon(name, **kwargs):
     '''
     Enable beacon on the minion
+
+    .. versionadded:: Beryllium
+
+    :name:                  Name of the beacon to enable. 
+    :return:                Boolean and status message on success or failure of enable.
 
     CLI Example:
 
@@ -392,6 +431,11 @@ def enable_beacon(name, **kwargs):
 def disable_beacon(name, **kwargs):
     '''
     Disable beacon on the minion
+
+    .. versionadded:: Beryllium
+
+    :name:                  Name of the beacon to enable. 
+    :return:                Boolean and status message on success or failure of disable.
 
     CLI Example:
 

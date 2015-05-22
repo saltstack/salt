@@ -3,6 +3,8 @@
 Management of the Salt beacons
 ==============================================
 
+.. versionadded:: Beryllium 
+
 .. code-block:: yaml
 
     ps:
@@ -27,9 +29,6 @@ Management of the Salt beacons
             - 1.0
 
 '''
-
-import logging
-log = logging.getLogger(__name__)
 
 
 def present(name,
