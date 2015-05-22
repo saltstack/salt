@@ -1316,16 +1316,16 @@ def running(name,
     except TypeError:
         image = ':'.join(_get_repo_tag(str(image)))
 
+    image_id = __salt__['dockerng.inspect_image'](image)['Id']
+
     if name not in __salt__['dockerng.list_containers'](all=True):
         pre_config = {}
     else:
         try:
             pre_config = __salt__['dockerng.inspect_container'](name)
-            if 'Config' in pre_config and 'Image' in pre_config['Config']:
-                current_image = ':'.join(
-                    _get_repo_tag(pre_config['Config']['Image'])
-                )
-            else:
+            try:
+                current_image_id = pre_config['Image']
+            except KeyError:
                 ret['comment'] = (
                     'Unable to detect current image for container \'{0}\'. '
                     'This might be due to a change in the Docker API.'
@@ -1436,7 +1436,7 @@ def running(name,
         if not pre_config:
             new_container = True
         else:
-            if current_image != image:
+            if current_image_id != image_id:
                 # Image name doesn't match, so there's no need to check the
                 # container configuration.
                 new_container = True

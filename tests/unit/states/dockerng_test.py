@@ -50,6 +50,7 @@ class DockerngTestCase(TestCase):
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     'dockerng.history': dockerng_history,
@@ -87,6 +88,7 @@ class DockerngTestCase(TestCase):
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     'dockerng.history': dockerng_history,
@@ -123,6 +125,7 @@ class DockerngTestCase(TestCase):
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     'dockerng.history': dockerng_history,
@@ -160,6 +163,7 @@ class DockerngTestCase(TestCase):
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
                     'dockerng.history': dockerng_history,
@@ -180,6 +184,54 @@ class DockerngTestCase(TestCase):
             port_bindings={9797: [9090]},
             validate_ip_addrs=False,
             validate_input=False)
+
+    def test_running_compare_images_by_id(self):
+        '''
+        Make sure the container is running
+        against expected image.
+
+        Here the local image is named 'image:latest' and the container
+        is also running against an image called 'image:latest'.
+        Therefore the image ids are diverging because the tag 'image:latest'
+        moved to a fresher image.
+        Thus this test make sure the old container is droped and recreated.
+        '''
+        new_fake_image_id = 'abcdefgh'
+        old_fake_image_id = '123456789'
+        dockerng_inspect_image = Mock(return_value={'Id': new_fake_image_id})
+        dockerng_inspect_container = Mock(
+            return_value={'Image': old_fake_image_id,
+                          'Config': {'Image': 'image:latest'}})
+        dockerng_list_containers = Mock(return_value=['cont'])
+        dockerng__state = Mock(return_value='running')
+        dockerng_stop = Mock(return_value={'result': True})
+        dockerng_rm = Mock(return_value=['container-id'])
+        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
+                    'dockerng.inspect_container': dockerng_inspect_container,
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.state': dockerng__state,
+                    'dockerng.pull': MagicMock(return_value=new_fake_image_id),
+                    'dockerng.create': MagicMock(return_value='new_container'),
+                    'dockerng.start': MagicMock(),
+                    'dockerng.stop': dockerng_stop,
+                    'dockerng.rm': dockerng_rm,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.running(
+                'cont',
+                image='image:latest',
+                )
+            dockerng_stop.assert_called_with('cont', timeout=10, unpause=True)
+            dockerng_rm.assert_called_with('cont')
+        self.assertEqual(ret, {'name': 'cont',
+                               'comment': "Container 'cont' was replaced",
+                               'result': True,
+                               'changes': {'added': 'new_container',
+                                           'image': new_fake_image_id,
+                                           'removed': ['container-id']}
+                               })
 
 
 if __name__ == '__main__':
