@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Routines to set up a minion
+We wanna be free to ride our machines without being hassled by The Man!
+And we wanna get loaded!
+And we wanna have a good time!
+And that's what we are gonna do. We are gonna have a good time...
 '''
 
 # Import python libs
