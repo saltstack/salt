@@ -802,6 +802,13 @@ def _network_conf(conf_tuples=None, **kwargs):
             ret.append({'lxc.network.ipv4.gateway': gateway})
             # only one network gateway ;)
             gateway_set = True
+    # normally, this wont happen
+    # set the gateway if specified even if we did
+    # not managed the network underlying
+    if gateway is not None and not gateway_set:
+        ret.append({'lxc.network.ipv4.gateway': gateway})
+        # only one network gateway ;)
+        gateway_set = True
 
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
