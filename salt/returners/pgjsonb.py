@@ -61,7 +61,7 @@ Use the following Pg database schema:
     );
     CREATE INDEX idx_jids_jsonb on jids
            USING gin (load)
-           WITH (fastupdates=on);
+           WITH (fastupdate=on);
 
     --
     -- Table structure for table `salt_returns`
