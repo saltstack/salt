@@ -385,8 +385,8 @@ class LocalClient(object):
         .. code-block:: python
 
             >>> returns = local.cmd_batch('*', 'state.highstate', bat='10%')
-            >>> for return in returns:
-            ...     print return
+            >>> for ret in returns:
+            ...     print(ret)
             {'jerry': {...}}
             {'dave': {...}}
             {'stewart': {...}}
@@ -617,7 +617,7 @@ class LocalClient(object):
 
             >>> ret = local.cmd_iter('*', 'test.ping')
             >>> for i in ret:
-            ...     print i
+            ...     print(i)
             {'jerry': {'ret': True}}
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
@@ -668,9 +668,9 @@ class LocalClient(object):
 
         .. code-block:: python
 
-            >>> ret = local.cmd_iter('*', 'test.ping')
+            >>> ret = local.cmd_iter_no_block('*', 'test.ping')
             >>> for i in ret:
-            ...     print i
+            ...     print(i)
             None
             {'jerry': {'ret': True}}
             {'dave': {'ret': True}}

@@ -42,18 +42,13 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        ping_gen = self.local.cmd_iter_no_block(*args, **self.eauth)
-        wait_until = time.time() + self.opts['timeout']
+        ping_gen = self.local.cmd_iter(*args, **self.eauth)
 
         fret = set()
         for ret in ping_gen:
             m = next(ret.iterkeys())
             if m is not None:
                 fret.add(m)
-            if time.time() > wait_until:
-                break
-            if m is None:
-                time.sleep(0.1)
         return (list(fret), ping_gen)
 
     def get_bnum(self):
