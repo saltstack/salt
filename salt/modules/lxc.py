@@ -4628,9 +4628,12 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
         for line in fp_:
             before.append(line)
 
+    lxcconfig = _LXCConfig(name=name)
+    old_net = lxcconfig._filter_data('lxc.network')
 
     network_params = {}
     for param in _network_conf(
+        conf_tuples=old_net,
         network_profile=network_profile, nic_opts=nic_opts
     ):
         network_params.update(param)
