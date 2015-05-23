@@ -98,15 +98,15 @@ Here are the options to configure your containers:
     minion
         minion configuration (see :doc:`Minion Configuration in Salt Cloud </topics/cloud/config>`)
     bootstrap_shell
-        shell for bootstaping nodes (default: /bin/sh)
+        shell for bootstraping script (default: /bin/sh)
     script
-        deploy to salt-boostrap
+        defaults to salt-boostrap
     script_args
         arguments which are given to the bootstrap script.
         the {0} placeholder will be replaced by the path which contains the
         minion config and key files, eg::
 
-            bootstrap_args="-c {0}"
+            script_args="-c {0}"
 
 
 Using profiles:
