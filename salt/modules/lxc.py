@@ -927,6 +927,7 @@ def _get_veths(net_data):
         net_data = list(net_data.items())
     nics = salt.utils.odict.OrderedDict()
     current_nic = salt.utils.odict.OrderedDict()
+    no_names = True
     for item in net_data:
         if item and isinstance(item, dict):
             item = list(item.items())[0]
@@ -941,8 +942,13 @@ def _get_veths(net_data):
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
+            no_names = False
             nics[item[1].strip()] = current_nic
         current_nic[item[0].strip()] = item[1].strip()
+    # if not ethernet card name has been collected, assuming we collected
+    # data for eth0
+    if no_names and current_nic:
+        nics[DEFAULT_NIC] = current_nic
     return nics
 
 
@@ -4135,9 +4141,12 @@ def apply_network_profile(name, network_profile, nic_opts=None):
         for line in fp_:
             before.append(line)
 
+    lxcconfig = _LXCConfig(name=name)
+    old_net = lxcconfig._filter_data('lxc.network')
 
     network_params = {}
     for param in _network_conf(
+        conf_tuples=old_net,
         network_profile=network_profile, nic_opts=nic_opts
     ):
         network_params.update(param)
