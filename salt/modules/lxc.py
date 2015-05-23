@@ -4128,12 +4128,13 @@ def apply_network_profile(name, network_profile, nic_opts=None):
         salt 'minion' lxc.apply_network_profile web1 centos \\
                 "{eth0: {disable: true}}"
     '''
-    path = '/var/lib/lxc/{0}/config'.format(name)
+    cfgpath = os.path.join('/var/lib/lxc', name, 'config')
 
     before = []
-    with salt.utils.fopen(path, 'r') as fp_:
+    with salt.utils.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             before.append(line)
+
 
     network_params = {}
     for param in _network_conf(
@@ -4141,10 +4142,10 @@ def apply_network_profile(name, network_profile, nic_opts=None):
     ):
         network_params.update(param)
     if network_params:
-        edit_conf(path, out_format='commented', **network_params)
+        edit_conf(cfgpath, out_format='commented', **network_params)
 
     after = []
-    with salt.utils.fopen(path, 'r') as fp_:
+    with salt.utils.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             after.append(line)
 
