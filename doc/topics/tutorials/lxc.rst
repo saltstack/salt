@@ -250,8 +250,27 @@ Thus you ll need
 
       lxc.network_profile.foo:
         etho:
-          link: lxcbr0    
+          link: lxcbr0
           ipv4.gateway: auto
+
+Tricky network setups Examples
+-----------------------------------
+This example covers how to make a container with both an internal ip and a
+public routable ip, wired on two veth pairs.
+
+The another interface which receives directly a public routable ip can't be on
+the first interface that we reserve for private inter LXC networking.
+
+.. code-block:: yaml
+
+    lxc.network_profile.foo:
+      eth0: {gateway: null, bridge: lxcbr0}
+      eth1:
+        # replace that by your main interface
+        'link': 'br0'
+        'mac': '00:16:5b:01:24:e1'
+        'gateway': '2.20.9.14'
+        'ipv4': '2.20.9.1'
 
 Creating a Container on the CLI
 ===============================
