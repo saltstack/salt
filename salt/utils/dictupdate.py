@@ -34,7 +34,12 @@ def update(dest, upd, dictupdate=None):
             # iterables
             dictupdate = True
     if not dictupdate:
-        dest.update(upd)
+        try:
+            dest.update(upd)
+        except AttributeError:
+            # this mapping is not a dict
+            for k in upd:
+                dest[k] = upd[k]
         return dest
     for key, val in six.iteritems(upd):
         try:
