@@ -226,11 +226,11 @@ def disable(message=None):
     '''
     .. versionadded:: 2014.7.0
     Disable the puppet agent
-    
+
     message
         .. versionadded:: 2015.5.2
         disable message to send to puppet
-        
+
     CLI Example:
 
     .. code-block:: bash
