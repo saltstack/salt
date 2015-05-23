@@ -19,7 +19,23 @@ from salt.utils.serializers.yamlex \
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd):
+def update(dest, upd, dictupdate=None):
+    # try to rely on classical dict.update
+    # if there is no overlap between the two structures.
+    # we also let the user to choose one of the plans.
+    if dictupdate is None:
+        try:
+            for k in upd:
+                if k in dest:
+                    dictupdate = True
+                    break
+        except (KeyError, TypeError):
+            # mapping may not be dicts, and may not be
+            # iterables
+            dictupdate = True
+    if not dictupdate:
+        dest.update(upd)
+        return dest
     for key, val in six.iteritems(upd):
         try:
             if isinstance(val, OrderedDict):
