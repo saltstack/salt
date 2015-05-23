@@ -107,7 +107,6 @@ def version():
     return __context__.get(k, None)
 
 
-
 def _clear_context():
     '''
     Clear any lxc variables set in __context__
