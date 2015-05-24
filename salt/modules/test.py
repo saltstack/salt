@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Module for running arbitrary tests
 '''
@@ -14,6 +13,7 @@ import random
 
 # Import Salt libs
 import salt
+import salt.utils
 import salt.version
 import salt.loader
 import salt.ext.six as six
@@ -469,9 +469,16 @@ def opts_pkg():
     return ret
 
 
-def rand_str(size=9999999999):
+def rand_str(size=9999999999, hash_type='md5'):
     '''
     Return a random string
+
+        size
+            size of the string to generate
+        hash_type
+            hash type to use
+
+            .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -479,8 +486,9 @@ def rand_str(size=9999999999):
 
         salt '*' test.rand_str
     '''
-    hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
+    return salt.utils.rand_str(
+        hash_type= __opts__.get('hash_type', hash_type),
+        size=size)
 
 
 def exception(message='Test Exception'):
