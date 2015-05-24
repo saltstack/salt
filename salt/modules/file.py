@@ -2006,13 +2006,21 @@ def search(path,
         flags=0,
         bufsize=1,
         ignore_if_missing=False,
+        multiline=False
         ):
     '''
     .. versionadded:: 0.17.0
 
     Search for occurrences of a pattern in a file
 
-    Params are identical to :py:func:`~salt.modules.file.replace`.
+    Except for multiline, params are identical to
+    :py:func:`~salt.modules.file.replace`.
+
+    multiline
+        If true, inserts 'MULTILINE' into ``flags`` and sets ``bufsize`` to
+        'file'.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -2020,6 +2028,10 @@ def search(path,
 
         salt '*' file.search /etc/crontab 'mymaintenance.sh'
     '''
+    if multiline:
+        flags = _add_flags(flags, 'MULTILINE')
+        bufsize = 'file'
+
     # This function wraps file.replace on purpose in order to enforce
     # consistent usage, compatible regex's, expected behavior, *and* bugs. :)
     # Any enhancements or fixes to one should affect the other.
@@ -2156,19 +2168,13 @@ def contains_regex_multiline(path, regex):
 
         salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
-    path = os.path.expanduser(path)
+    salt.utils.warn_until(
+        'Carbon',
+        "file.contains_regex_multiline(path, regex) is deprecated in favor of "
+        "file.search(path, regex, multiline=True)"
+    )
 
-    if not os.path.exists(path):
-        return False
-
-    try:
-        with salt.utils.filebuffer.BufferedReader(path) as breader:
-            for chunk in breader:
-                if re.search(regex, chunk, re.MULTILINE):
-                    return True
-            return False
-    except (IOError, OSError):
-        return False
+    search(path, regex, multiline=True)
 
 
 def contains_glob(path, glob_expr):
