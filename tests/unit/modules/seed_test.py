@@ -4,6 +4,8 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
+import shutil
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -14,14 +16,14 @@ from salttesting.mock import (
     mock_open,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.utils.odict
 from salt.modules import seed
-import os
-import shutil
+from salttesting.helpers import ensure_in_syspath
+
+
+ensure_in_syspath('../../')
 
 # Globals
 seed.__salt__ = {}
@@ -30,6 +32,17 @@ seed.__opts__ = {}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SeedTestCase(TestCase):
+    def test_mkconfig(self):
+        with patch.dict(seed.__opts__,
+                        {'master': 'foo'}):
+            ddd = salt.utils.odict.OrderedDict()
+            ddd['b'] = 'b'
+            ddd['a'] = 'b'
+            data = seed.mkconfig(ddd, approve_key=False)
+            with open(data['config']) as fic:
+                fdata = fic.read()
+                self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
+
     '''
     Test cases for salt.modules.seed
     '''
