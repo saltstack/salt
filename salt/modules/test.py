@@ -8,7 +8,6 @@ import os
 import sys
 import time
 import traceback
-import hashlib
 import random
 
 # Import Salt libs

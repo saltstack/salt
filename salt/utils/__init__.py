@@ -599,7 +599,6 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
     return pr
 
 
-
 def list_files(directory):
     '''
     Return a list of all files found under directory
