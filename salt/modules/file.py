@@ -1636,6 +1636,19 @@ def replace(path,
                                         append_if_not_found) \
                                      else repl
 
+    if search_only:
+        try:
+            # allow multiline searching
+            with salt.utils.filebuffer.BufferedReader(path) as breader:
+                for chunk in breader:
+                    if re.search(cpattern, chunk):
+                        return True
+                return False
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to read file '{0}'. Exception: {1}".format(path, exc)
+                )
+
     # First check the whole file, determine whether to make the replacement
     # Searching first avoids modifying the time stamp if there are no changes
     try:
@@ -1644,45 +1657,34 @@ def replace(path,
                               mode='rb',
                               buffering=bufsize) as r_file:
             for line in r_file:
-                if search_only:
-                    # Just search; bail as early as a match is found
-                    if re.search(cpattern, line):
-                        return True  # `with` block handles file closure
-                else:
-                    result, nrepl = re.subn(cpattern, repl, line, count)
+                result, nrepl = re.subn(cpattern, repl, line, count)
 
-                    # found anything? (even if no change)
-                    if nrepl > 0:
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
+
+                if prepend_if_not_found or append_if_not_found:
+                    # Search for content, so we don't continue pre/appending
+                    # the content if it's been pre/appended in a previous run.
+                    if re.search('^{0}$'.format(content), line):
+                        # Content was found, so set found.
                         found = True
 
-                    if prepend_if_not_found or append_if_not_found:
-                        # Search for content, so we don't continue pre/appending
-                        # the content if it's been pre/appended in a previous run.
-                        if re.search('^{0}$'.format(content), line):
-                            # Content was found, so set found.
-                            found = True
+                # Identity check each potential change until one change is made
+                if has_changes is False and result != line:
+                    has_changes = True
 
-                    # Identity check each potential change until one change is made
-                    if has_changes is False and result != line:
-                        has_changes = True
-
-                    # Keep track of show_changes here, in case the file isn't
-                    # modified
-                    if show_changes or append_if_not_found or \
-                       prepend_if_not_found:
-                        orig_file.append(line)
-                        new_file.append(result)
+                # Keep track of show_changes here, in case the file isn't
+                # modified
+                if show_changes or append_if_not_found or \
+                   prepend_if_not_found:
+                    orig_file.append(line)
+                    new_file.append(result)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
-            "Unable to open file '{0}'. "
-            "Exception: {1}".format(path, exc)
+            "Unable to open file '{0}'. Exception: {1}".format(path, exc)
             )
-
-    # Just search. We've searched the whole file now; if we didn't return True
-    # already, then the pattern isn't present, so return False.
-    if search_only:
-        return False
 
     if has_changes and not dry_run:
         # Write the replacement text in this block.
