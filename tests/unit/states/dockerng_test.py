@@ -272,6 +272,80 @@ class DockerngTestCase(TestCase):
                               'name': 'image:latest',
                               })
 
+    def test_check_start_false(self):
+        '''
+        If start is False, then dockerng.running will not try
+        to start a container that is stopped.
+        '''
+        image_id = 'abcdefg'
+        dockerng_create = Mock()
+        dockerng_start = Mock()
+        dockerng_list_containers = Mock(return_value=['cont'])
+        dockerng_inspect_container = Mock(
+            return_value={'Config': {'Image': 'image:latest'},
+                          'Image': image_id})
+        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
+                    'dockerng.inspect_container': dockerng_inspect_container,
+                    'dockerng.inspect_image': MagicMock(
+                        return_value={'Id': image_id}),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(side_effect=['stopped',
+                                                             'running']),
+                    'dockerng.create': dockerng_create,
+                    'dockerng.start': dockerng_start,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.running(
+                'cont',
+                image='image:latest',
+                start=False,
+                )
+        self.assertEqual(ret, {'name': 'cont',
+                               'comment': "Container 'cont' is already "
+                               "configured as specified",
+                               'changes': {},
+                               'result': True,
+                               })
+
+    def test_check_start_true(self):
+        '''
+        If start is True, then dockerng.running will try
+        to start a container that is stopped.
+        '''
+        image_id = 'abcdefg'
+        dockerng_create = Mock()
+        dockerng_start = Mock()
+        dockerng_list_containers = Mock(return_value=['cont'])
+        dockerng_inspect_container = Mock(
+            return_value={'Config': {'Image': 'image:latest'},
+                          'Image': image_id})
+        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
+                    'dockerng.inspect_container': dockerng_inspect_container,
+                    'dockerng.inspect_image': MagicMock(
+                        return_value={'Id': image_id}),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(side_effect=['stopped',
+                                                             'running']),
+                    'dockerng.create': dockerng_create,
+                    'dockerng.start': dockerng_start,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.running(
+                'cont',
+                image='image:latest',
+                start=True,
+                )
+        self.assertEqual(ret, {'name': 'cont',
+                               'comment': "Container 'cont' changed state.",
+                               'changes': {'state': {'new': 'running',
+                                                     'old': 'stopped'}},
+                               'result': True,
+                               })
+
 
 if __name__ == '__main__':
     from integration import run_tests
