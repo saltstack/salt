@@ -15,7 +15,6 @@ import tempfile
 # Import salt libs
 import salt.crypt
 import salt.utils
-import salt.utils.odict
 import salt.utils.cloud
 import salt.config
 import salt.syspaths
