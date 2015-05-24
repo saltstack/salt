@@ -6,8 +6,7 @@ minion modules.
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import cProfile
-import datetime
+
 import os
 import sys
 import time
