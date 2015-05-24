@@ -23,7 +23,6 @@ import re
 import shlex
 import shutil
 import socket
-import cProfile
 import stat
 import sys
 import pstats
@@ -44,6 +43,13 @@ from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
 from stat import S_IMODE
 # pylint: enable=import-error,redefined-builtin
+
+
+try:
+    import cProfile
+    HAS_CPROFILE = True
+except ImportError:
+    HAS_CPROFILE = False
 
 # Try to load pwd, fallback to getpass if unsuccessful
 # Import 3rd-party libs
@@ -540,13 +546,16 @@ def which_bin(exes):
 def activate_profile(test=True):
     pr = None
     if test:
-        pr = cProfile.Profile()
-        pr.enable()
+        if HAS_CPROFILE:
+            pr = cProfile.Profile()
+            pr.enable()
+        else:
+            log.error('cProfile is not available on your platform')
     return pr
 
 
 def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
-    if pr is not None:
+    if pr is not None and HAS_CPROFILE:
         try:
             pr.disable()
             if not os.path.isdir(stats_path):
