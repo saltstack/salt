@@ -1377,6 +1377,35 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             )
 
 
+class ProfilingPMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio_ = 130
+
+    def _mixin_setup(self):
+        group = self.profiling_group = optparse.OptionGroup(
+            self,
+            'Profiling support',
+            # Include description here as a string
+        )
+
+        group.add_option(
+            '--profiling-path',
+            dest='profiling_path',
+            default='/tmp/stats',
+            help=('Folder that will hold all'
+                  ' Stats generations path (/tmp/stats)')
+        )
+        group.add_option(
+            '--enable-profiling',
+            dest='profiling_enabled',
+            default=False,
+            action='store_true',
+            metavar='<USERNAME> <PROVIDER>',
+            help=('Enable generating profiling stats'
+                  ' in /tmp/stats (--profiling-path)')
+        )
+        self.add_option_group(group)
+
+
 class CloudCredentialsMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 30
 
@@ -2053,7 +2082,8 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
                                               OutputOptionsMixIn,
                                               HardCrashMixin,
                                               SaltfileMixIn,
-                                              ArgsStdinMixIn)):
+                                              ArgsStdinMixIn,
+                                              ProfilingPMixIn)):
 
     description = ('Salt call is used to execute module functions locally '
                    'on a minion')
