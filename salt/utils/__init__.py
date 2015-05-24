@@ -550,7 +550,7 @@ def activate_profile(test=True):
             pr = cProfile.Profile()
             pr.enable()
         else:
-            log.error('cProfile is not avalaible on your platform')
+            log.error('cProfile is not available on your platform')
     return pr
 
 
