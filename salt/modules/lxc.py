@@ -3556,7 +3556,6 @@ def attachable(name, path=None):
             cmd += ' -P {0}'.format(pipes.quote(path))
         cmd += ' --clear-env -n {0} -- /usr/bin/env'.format(name)
         result = __salt__['cmd.retcode'](cmd,
-                                         path=path,
                                          python_shell=False,
                                          output_loglevel='quiet',
                                          ignore_retcode=True) == 0
