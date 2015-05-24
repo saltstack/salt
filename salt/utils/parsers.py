@@ -2286,7 +2286,8 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
                                              HardCrashMixin,
                                              SaltfileMixIn,
                                              OutputOptionsMixIn,
-                                             ArgsStdinMixIn)):
+                                             ArgsStdinMixIn,
+                                             ProfilingPMixIn)):
 
     default_timeout = 1
 
