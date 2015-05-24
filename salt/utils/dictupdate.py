@@ -19,7 +19,29 @@ from salt.utils.serializers.yamlex \
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd):
+def update(dest, upd, recursive_update=None):
+    # try to rely on classical dict.update
+    # if there is no overlap between the two structures.
+    # we also let the user to choose explicitly one of the plans
+    # by setting recursive_update to an explicit bool.
+    if recursive_update is None:
+        try:
+            for k in upd:
+                if k in dest:
+                    recursive_update = True
+                    break
+        except (KeyError, TypeError):
+            # mapping may not be dicts, and may not be
+            # iterables
+            recursive_update = True
+    if not recursive_update:
+        try:
+            dest.update(upd)
+        except AttributeError:
+            # this mapping is not a dict
+            for k in upd:
+                dest[k] = upd[k]
+        return dest
     for key, val in six.iteritems(upd):
         try:
             if isinstance(val, OrderedDict):
