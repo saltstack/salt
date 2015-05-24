@@ -32,7 +32,11 @@ seed.__opts__ = {}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SeedTestCase(TestCase):
-    def test_mkconfig(self):
+    '''
+    Test cases for salt.modules.seed
+    '''
+
+    def test_mkconfig_odict(self):
         with patch.dict(seed.__opts__,
                         {'master': 'foo'}):
             ddd = salt.utils.odict.OrderedDict()
@@ -43,9 +47,6 @@ class SeedTestCase(TestCase):
                 fdata = fic.read()
                 self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
 
-    '''
-    Test cases for salt.modules.seed
-    '''
     def test_prep_bootstrap(self):
         '''
         Test to update and get the random script to a random place
