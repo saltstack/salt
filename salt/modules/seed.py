@@ -8,7 +8,6 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import shutil
-import yaml
 import logging
 import tempfile
 
