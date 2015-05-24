@@ -469,7 +469,7 @@ def opts_pkg():
     return ret
 
 
-def rand_str(size=9999999999, hash_type='md5'):
+def rand_str(size=9999999999, hash_type=None):
     '''
     Return a random string
 
@@ -486,9 +486,9 @@ def rand_str(size=9999999999, hash_type='md5'):
 
         salt '*' test.rand_str
     '''
-    return salt.utils.rand_str(
-        hash_type= __opts__.get('hash_type', hash_type),
-        size=size)
+    if not hash_type:
+        hash_type = __opts__.get('hash_type', 'md5')
+    return salt.utils.rand_str(hash_type=hash_type, size=size)
 
 
 def exception(message='Test Exception'):
