@@ -1399,7 +1399,6 @@ class ProfilingPMixIn(six.with_metaclass(MixInMeta, object)):
             dest='profiling_enabled',
             default=False,
             action='store_true',
-            metavar='<USERNAME> <PROVIDER>',
             help=('Enable generating profiling stats'
                   ' in /tmp/stats (--profiling-path)')
         )
