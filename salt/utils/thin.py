@@ -86,14 +86,21 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     with salt.utils.fopen(salt_call, 'w+') as fp_:
         fp_.write(SALTCALL)
     if os.path.isfile(thintar):
-        with salt.utils.fopen(thinver) as fh_:
-            if overwrite or not os.path.isfile(thinver):
-                try:
-                    os.remove(thintar)
-                except OSError:
-                    pass
-            elif fh_.read() == salt.version.__version__:
-                return thintar
+        if not overwrite:
+            if os.path.isfile(thinver):
+                with salt.utils.fopen(thinver) as fh_:
+                    overwrite = fh_.read() != salt.version.__version__
+            else:
+                overwrite = True
+
+        if overwrite:
+            try:
+                os.remove(thintar)
+            except OSError:
+                pass
+        else:
+            return thintar
+
     tops = [
             os.path.dirname(salt.__file__),
             os.path.dirname(jinja2.__file__),
