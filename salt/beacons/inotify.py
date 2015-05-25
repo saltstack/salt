@@ -5,8 +5,8 @@ Watch files and translate the changes into salt events
 :depends:   - pyinotify Python module >= 0.9.5
 
 :Caution:   Using generic mask options like open, access, ignored, and
-:           closed_nowrite with reactors can easily cause the reactor
-:           to loop on itself.
+            closed_nowrite with reactors can easily cause the reactor
+            to loop on itself.
 
 '''
 # Import Python libs

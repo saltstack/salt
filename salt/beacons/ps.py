@@ -36,7 +36,6 @@ def beacon(config):
             salt-master: running
             mysql: stopped
 
-
     The config above sets up beacons to check that
     processes are running or stopped.
     '''

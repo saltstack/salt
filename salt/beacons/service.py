@@ -38,7 +38,6 @@ def beacon(config):
             salt-master:
             mysql:
 
-
     The config above sets up beacons to check for
     the salt-master and mysql services.
 
@@ -67,8 +66,6 @@ def beacon(config):
             nginx:
               onchangeonly: True
               uncleanshutdown: /run/nginx.pid
-
-
     '''
     ret = []
     for service in config:
