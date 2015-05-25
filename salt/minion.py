@@ -1348,11 +1348,13 @@ class Minion(MinionBase):
         elif func == 'enable_job':
             self.schedule.enable_job(name, where)
         elif func == 'run_job':
-            self.schedule.run_job(name, where)
+            self.schedule.run_job(name)
         elif func == 'disable_job':
             self.schedule.disable_job(name, where)
         elif func == 'reload':
             self.schedule.reload(schedule)
+        elif func == 'list':
+            self.schedule.list(where)
 
     def manage_beacons(self, package):
         '''

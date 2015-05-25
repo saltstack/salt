@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import schedule
+from salt.utils.event import SaltEvent
 
 # Globals
 schedule.__salt__ = {}
@@ -46,12 +47,20 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it list the jobs currently scheduled on the minion.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': []}}):
-            self.assertEqual(schedule.list_(), 'schedule:\n  _seconds: []\n')
-            self.assertDictEqual(schedule.list_(True, False), {'_seconds': []})
+        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': []}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'_seconds': []}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertEqual(schedule.list_(), 'schedule:\n  _seconds: []\n')
+                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': []})
 
-        with patch.dict(schedule.__opts__, {'schedule': {}}):
-            self.assertDictEqual(schedule.list_(), {'schedule': {}})
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.list_(), {'schedule': {}})
 
     # 'purge' function tests: 1
 
@@ -59,9 +68,13 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it purge all the jobs currently scheduled on the minion.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}}):
-            self.assertDictEqual(schedule.purge(), {'comment': [],
-                                                    'result': True})
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.purge(), {'comment': ['Deleted job: schedule from schedule.'],
+                                                            'result': True})
 
     # 'delete' function tests: 1
 
@@ -69,10 +82,14 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it delete a job from the minion's schedule.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}}):
-            self.assertDictEqual(schedule.delete('job1'),
-                                 {'comment': 'Job job1 does not exist.',
-                                  'result': False})
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.delete('job1'),
+                                         {'comment': 'Job job1 does not exist.',
+                                          'result': False})
 
     # 'build_schedule_item' function tests: 1
 
@@ -115,21 +132,30 @@ class ScheduleTestCase(TestCase):
                  ' or "days" with "when" or "cron" options.')
         comm3 = 'Unable to use "when" and "cron" options together.  Ignoring.'
         comm4 = 'Job: job2 would be added to schedule.'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}}):
-            self.assertDictEqual(schedule.add('job1'),
-                                 {'comment': comm1, 'result': False})
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'job1': {'salt': 'salt'}}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.add('job1'),
+                                         {'comment': comm1, 'result': False})
 
-            self.assertDictEqual(schedule.add('job2', function='test.ping',
-                                              seconds=3600, when='2400'),
-                                 {'comment': comm2, 'result': False})
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.add('job2', function='test.ping',
+                                                      seconds=3600, when='2400'),
+                                         {'comment': comm2, 'result': False})
 
-            self.assertDictEqual(schedule.add('job2', function='test.ping',
-                                              when='2400', cron='2'),
-                                 {'comment': comm3, 'result': False})
-
-            self.assertDictEqual(schedule.add('job2', function='test.ping',
-                                              test=True),
-                                 {'comment': comm4, 'result': True})
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.add('job2', function='test.ping',
+                                                      when='2400', cron='2'),
+                                         {'comment': comm3, 'result': False})
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.add('job2', function='test.ping',
+                                                      test=True),
+                                         {'comment': comm4, 'result': True})
 
     # 'modify' function tests: 1
 
@@ -143,29 +169,37 @@ class ScheduleTestCase(TestCase):
         comm3 = 'Job job2 does not exist in schedule.'
         comm4 = 'Job: job3 would be modified in schedule.'
         with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1,
-                                                         'job3': {}}}):
-            self.assertDictEqual(schedule.modify('job1', function='test.ping',
-                                                 seconds=3600, when='2400'),
-                                 {'changes': {}, 'comment': comm1,
-                                  'result': False})
+                                                         'job3': {}},
+                                            'sock_dir': SOCK_DIR}):
 
-            self.assertDictEqual(schedule.modify('job1', function='test.ping',
-                                                 when='2400', cron='2'),
-                                 {'changes': {}, 'comment': comm2,
-                                  'result': False})
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'job1': JOB1,
+                                                             'job3': {}}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.modify('job1', function='test.ping',
+                                                         seconds=3600, when='2400'),
+                                         {'changes': {}, 'comment': comm1,
+                                          'result': False})
 
-            self.assertDictEqual(schedule.modify('job2'), {'changes': {},
-                                                           'comment': comm3,
-                                                           'result': False})
+                    self.assertDictEqual(schedule.modify('job1', function='test.ping',
+                                                         when='2400', cron='2'),
+                                         {'changes': {}, 'comment': comm2,
+                                          'result': False})
 
-            self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                 {'changes': {},
-                                  'comment': 'Job job1 in correct state',
-                                  'result': True})
+                    self.assertDictEqual(schedule.modify('job2'), {'changes': {},
+                                                                   'comment': comm3,
+                                                                   'result': False})
 
-            ret = schedule.modify('job3', function='test.ping', test=True)
-            del ret['changes']['diff']  # difflib formatting changes between 2.6 and 2.7
-            self.assertDictEqual(ret, {'changes': {}, 'comment': comm4, 'result': True})
+                    self.assertDictEqual(schedule.modify('job1', function='test.ping'),
+                                         {'changes': {},
+                                          'comment': 'Job job1 in correct state',
+                                          'result': True})
+
+                    ret = schedule.modify('job3', function='test.ping', test=True)
+                    if 'diff' in ret['changes']:
+                        del ret['changes']['diff']  # difflib formatting changes between 2.6 and 2.7
+                    self.assertDictEqual(ret, {'changes': {}, 'comment': comm4, 'result': True})
 
     # 'run_job' function tests: 1
 
@@ -173,10 +207,14 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it run a scheduled job on the minion immediately.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}}):
-            self.assertDictEqual(schedule.run_job('job1'),
-                                 {'comment': 'Job job1 does not exist.',
-                                  'result': False})
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.run_job('job1'),
+                                         {'comment': 'Job job1 does not exist.',
+                                          'result': False})
 
     # 'enable_job' function tests: 1
 
@@ -184,10 +222,14 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it enable a job in the minion's schedule.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}}):
-            self.assertDictEqual(schedule.enable_job('job1'),
-                                 {'comment': 'Job job1 does not exist.',
-                                  'result': False})
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.enable_job('job1'),
+                                         {'comment': 'Job job1 does not exist.',
+                                          'result': False})
 
     # 'disable_job' function tests: 1
 
@@ -195,10 +237,14 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it disable a job in the minion's schedule.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}}):
-            self.assertDictEqual(schedule.disable_job('job1'),
-                                 {'comment': 'Job job1 does not exist.',
-                                  'result': False})
+        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.disable_job('job1'),
+                                         {'comment': 'Job job1 does not exist.',
+                                          'result': False})
 
     # 'save' function tests: 1
 
@@ -208,9 +254,15 @@ class ScheduleTestCase(TestCase):
         '''
         comm1 = 'Schedule (non-pillar items) saved to ///schedule.conf.'
         with patch.dict(schedule.__opts__, {'config_dir': '', 'schedule': {},
-                                            'default_include': '/tmp'}):
-            self.assertDictEqual(schedule.save(),
-                                 {'comment': comm1, 'result': True})
+                                            'default_include': '/tmp',
+                                            'sock_dir': SOCK_DIR}):
+
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    self.assertDictEqual(schedule.save(),
+                                         {'comment': comm1, 'result': True})
 
     # 'enable' function tests: 1
 
@@ -255,54 +307,62 @@ class ScheduleTestCase(TestCase):
         comm2 = 'the following minions return False'
         comm3 = 'Moved Job job1 from schedule.'
         with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': SOCK_DIR}):
-            mock = MagicMock(return_value={})
-            with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                self.assertDictEqual(schedule.move('job1', 'minion1'),
-                                     {'comment': comm1, 'result': True})
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'job1': JOB1}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    mock = MagicMock(return_value={})
+                    with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                        self.assertDictEqual(schedule.move('job1', 'minion1'),
+                                             {'comment': comm1, 'result': True})
 
-            mock = MagicMock(return_value={'minion1': ''})
-            with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                self.assertDictEqual(schedule.move('job1', 'minion1'),
-                                     {'comment': comm2, 'minions': ['minion1'],
-                                      'result': True})
+                    mock = MagicMock(return_value={'minion1': ''})
+                    with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                        self.assertDictEqual(schedule.move('job1', 'minion1'),
+                                             {'comment': comm2, 'minions': ['minion1'],
+                                              'result': True})
 
-            mock = MagicMock(return_value={'minion1': 'job1'})
-            with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                mock = MagicMock(return_value=True)
-                with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                    self.assertDictEqual(schedule.move('job1', 'minion1'),
-                                         {'comment': comm3,
-                                          'minions': ['minion1'],
-                                          'result': True})
+                    mock = MagicMock(return_value={'minion1': 'job1'})
+                    with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                        mock = MagicMock(return_value=True)
+                        with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                            self.assertDictEqual(schedule.move('job1', 'minion1'),
+                                                 {'comment': comm3,
+                                                  'minions': ['minion1'],
+                                                  'result': True})
 
-            self.assertDictEqual(schedule.move('job3', 'minion1'),
-                                 {'comment': 'Job job3 does not exist.',
-                                  'result': False})
+                    self.assertDictEqual(schedule.move('job3', 'minion1'),
+                                         {'comment': 'Job job3 does not exist.',
+                                          'result': False})
 
         mock = MagicMock(side_effect=[{}, {'job1': {}}])
         with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': SOCK_DIR}):
-            with patch.dict(schedule.__pillar__, {'schedule': {'job1': JOB1}}):
-                mock = MagicMock(return_value={})
-                with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                    self.assertDictEqual(schedule.move('job1', 'minion1'),
-                                         {'comment': comm1,
-                                          'result': True})
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'job1': JOB1}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    with patch.dict(schedule.__pillar__, {'schedule': {'job1': JOB1}}):
+                        mock = MagicMock(return_value={})
+                        with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                            self.assertDictEqual(schedule.move('job1', 'minion1'),
+                                                 {'comment': comm1,
+                                                  'result': True})
 
-                mock = MagicMock(return_value={'minion1': ''})
-                with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                    self.assertDictEqual(schedule.move('job1', 'minion1'),
-                                         {'comment': comm2,
-                                          'minions': ['minion1'],
-                                          'result': True})
+                        mock = MagicMock(return_value={'minion1': ''})
+                        with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                            self.assertDictEqual(schedule.move('job1', 'minion1'),
+                                                 {'comment': comm2,
+                                                  'minions': ['minion1'],
+                                                  'result': True})
 
-                mock = MagicMock(return_value={'minion1': 'job1'})
-                with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                    mock = MagicMock(return_value=True)
-                    with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                        self.assertDictEqual(schedule.move('job1', 'minion1'),
-                                             {'comment': comm3,
-                                              'minions': ['minion1'],
-                                              'result': True})
+                        mock = MagicMock(return_value={'minion1': 'job1'})
+                        with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                            mock = MagicMock(return_value=True)
+                            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                                self.assertDictEqual(schedule.move('job1', 'minion1'),
+                                                     {'comment': comm3,
+                                                      'minions': ['minion1'],
+                                                      'result': True})
 
     # 'copy' function tests: 1
 
@@ -313,54 +373,63 @@ class ScheduleTestCase(TestCase):
         comm1 = 'no servers answered the published schedule.add command'
         comm2 = 'the following minions return False'
         comm3 = 'Copied Job job1 from schedule to minion(s).'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}}):
-            mock = MagicMock(return_value={})
-            with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                self.assertDictEqual(schedule.copy('job1', 'minion1'),
-                                     {'comment': comm1, 'result': True})
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': SOCK_DIR}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                _ret_value = {'complete': True, 'schedule': {'job1': {'job1': JOB1}}}
+                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
+                    mock = MagicMock(return_value={})
+                    with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                        self.assertDictEqual(schedule.copy('job1', 'minion1'),
+                                             {'comment': comm1, 'result': True})
 
-            mock = MagicMock(return_value={'minion1': ''})
-            with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                self.assertDictEqual(schedule.copy('job1', 'minion1'),
-                                     {'comment': comm2, 'minions': ['minion1'],
-                                      'result': True})
+                    mock = MagicMock(return_value={'minion1': ''})
+                    with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                        self.assertDictEqual(schedule.copy('job1', 'minion1'),
+                                             {'comment': comm2, 'minions': ['minion1'],
+                                              'result': True})
 
-            mock = MagicMock(return_value={'minion1': 'job1'})
-            with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                mock = MagicMock(return_value=True)
-                with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                    self.assertDictEqual(schedule.copy('job1', 'minion1'),
-                                         {'comment': comm3,
-                                          'minions': ['minion1'],
-                                          'result': True})
+                    mock = MagicMock(return_value={'minion1': 'job1'})
+                    with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                        mock = MagicMock(return_value=True)
+                        with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                            self.assertDictEqual(schedule.copy('job1', 'minion1'),
+                                                 {'comment': comm3,
+                                                  'minions': ['minion1'],
+                                                  'result': True})
 
-            self.assertDictEqual(schedule.copy('job3', 'minion1'),
-                                 {'comment': 'Job job3 does not exist.',
-                                  'result': False})
+                    self.assertDictEqual(schedule.copy('job3', 'minion1'),
+                                         {'comment': 'Job job3 does not exist.',
+                                          'result': False})
 
         mock = MagicMock(side_effect=[{}, {'job1': {}}])
-        with patch.dict(schedule.__opts__, {'schedule': mock}):
+        with patch.dict(schedule.__opts__, {'schedule': mock, 'sock_dir': SOCK_DIR}):
             with patch.dict(schedule.__pillar__, {'schedule': {'job1': JOB1}}):
-                mock = MagicMock(return_value={})
-                with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                    self.assertDictEqual(schedule.copy('job1', 'minion1'),
-                                         {'comment': comm1, 'result': True})
+                mock = MagicMock(return_value=True)
+                with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                    _ret_value = {'complete': True, 'schedule': {'job1': {'job1': JOB1}}}
+                    with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
 
-                mock = MagicMock(return_value={'minion1': ''})
-                with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                    self.assertDictEqual(schedule.copy('job1', 'minion1'),
-                                         {'comment': comm2,
-                                          'minions': ['minion1'],
-                                          'result': True})
+                        mock = MagicMock(return_value={})
+                        with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                            self.assertDictEqual(schedule.copy('job1', 'minion1'),
+                                                 {'comment': comm1, 'result': True})
 
-                mock = MagicMock(return_value={'minion1': 'job1'})
-                with patch.dict(schedule.__salt__, {'publish.publish': mock}):
-                    mock = MagicMock(return_value=True)
-                    with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                        self.assertDictEqual(schedule.copy('job1', 'minion1'),
-                                             {'comment': comm3,
-                                              'minions': ['minion1'],
-                                              'result': True})
+                        mock = MagicMock(return_value={'minion1': ''})
+                        with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                            self.assertDictEqual(schedule.copy('job1', 'minion1'),
+                                                 {'comment': comm2,
+                                                  'minions': ['minion1'],
+                                                  'result': True})
+
+                        mock = MagicMock(return_value={'minion1': 'job1'})
+                        with patch.dict(schedule.__salt__, {'publish.publish': mock}):
+                            mock = MagicMock(return_value=True)
+                            with patch.dict(schedule.__salt__, {'event.fire': mock}):
+                                self.assertDictEqual(schedule.copy('job1', 'minion1'),
+                                                     {'comment': comm3,
+                                                      'minions': ['minion1'],
+                                                      'result': True})
 
 
 if __name__ == '__main__':
