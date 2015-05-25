@@ -86,9 +86,9 @@ def _set_persistent_module(mod):
         return set()
     escape_mod = re.escape(mod)
     # If module is commented only uncomment it
-    if __salt__['file.contains_regex_multiline'](conf,
-                                                 '^#[\t ]*{0}[\t ]*$'.format(
-                                                     escape_mod)):
+    if __salt__['file.search'](conf,
+                               '^#[\t ]*{0}[\t ]*$'.format(escape_mod),
+                               multiline=True):
         __salt__['file.uncomment'](conf, escape_mod)
     else:
         __salt__['file.append'](conf, mod)

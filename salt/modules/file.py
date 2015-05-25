@@ -30,6 +30,7 @@ import time
 import glob
 import hashlib
 from functools import reduce  # pylint: disable=redefined-builtin
+from collections import Iterable, Mapping
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
@@ -1043,15 +1044,24 @@ def _get_flags(flags):
     Return an integer appropriate for use as a flag for the re module from a
     list of human-readable strings
 
-    >>> _get_flags(['MULTILINE', 'IGNORECASE'])
-    10
+    .. code-block:: python
+
+        >>> _get_flags(['MULTILINE', 'IGNORECASE'])
+        10
+        >>> _get_flags('MULTILINE')
+        8
+        >>> _get_flags(2)
+        2
     '''
-    if isinstance(flags, list):
+    if isinstance(flags, six.string_types):
+        flags = [flags]
+
+    if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
         _flags_acc = []
         for flag in flags:
-            _flag = getattr(re, flag.upper())
+            _flag = getattr(re, str(flag).upper())
 
-            if not isinstance(_flag, int):
+            if not isinstance(_flag, six.integer_types):
                 raise SaltInvocationError(
                     'Invalid re flag given: {0}'.format(flag)
                 )
@@ -1059,8 +1069,22 @@ def _get_flags(flags):
             _flags_acc.append(_flag)
 
         return reduce(operator.__or__, _flags_acc)
+    elif isinstance(flags, six.integer_types):
+        return flags
+    else:
+        raise SaltInvocationError(
+            'Invalid re flags: "{0}", must be given either as a single flag '
+            'string, a list of strings, or as an integer'.format(flags)
+        )
 
-    return flags
+
+def _add_flags(flags, new_flags):
+    '''
+    Combine ``flags`` and ``new_flags``
+    '''
+    flags = _get_flags(flags)
+    new_flags = _get_flags(new_flags)
+    return flags | new_flags
 
 
 def _mkstemp_copy(path,
@@ -1612,6 +1636,19 @@ def replace(path,
                                         append_if_not_found) \
                                      else repl
 
+    if search_only:
+        try:
+            # allow multiline searching
+            with salt.utils.filebuffer.BufferedReader(path) as breader:
+                for chunk in breader:
+                    if re.search(cpattern, chunk):
+                        return True
+                return False
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to read file '{0}'. Exception: {1}".format(path, exc)
+                )
+
     # First check the whole file, determine whether to make the replacement
     # Searching first avoids modifying the time stamp if there are no changes
     try:
@@ -1620,45 +1657,34 @@ def replace(path,
                               mode='rb',
                               buffering=bufsize) as r_file:
             for line in r_file:
-                if search_only:
-                    # Just search; bail as early as a match is found
-                    if re.search(cpattern, line):
-                        return True  # `with` block handles file closure
-                else:
-                    result, nrepl = re.subn(cpattern, repl, line, count)
+                result, nrepl = re.subn(cpattern, repl, line, count)
 
-                    # found anything? (even if no change)
-                    if nrepl > 0:
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
+
+                if prepend_if_not_found or append_if_not_found:
+                    # Search for content, so we don't continue pre/appending
+                    # the content if it's been pre/appended in a previous run.
+                    if re.search('^{0}$'.format(content), line):
+                        # Content was found, so set found.
                         found = True
 
-                    if prepend_if_not_found or append_if_not_found:
-                        # Search for content, so we don't continue pre/appending
-                        # the content if it's been pre/appended in a previous run.
-                        if re.search('^{0}$'.format(content), line):
-                            # Content was found, so set found.
-                            found = True
+                # Identity check each potential change until one change is made
+                if has_changes is False and result != line:
+                    has_changes = True
 
-                    # Identity check each potential change until one change is made
-                    if has_changes is False and result != line:
-                        has_changes = True
-
-                    # Keep track of show_changes here, in case the file isn't
-                    # modified
-                    if show_changes or append_if_not_found or \
-                       prepend_if_not_found:
-                        orig_file.append(line)
-                        new_file.append(result)
+                # Keep track of show_changes here, in case the file isn't
+                # modified
+                if show_changes or append_if_not_found or \
+                   prepend_if_not_found:
+                    orig_file.append(line)
+                    new_file.append(result)
 
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
-            "Unable to open file '{0}'. "
-            "Exception: {1}".format(path, exc)
+            "Unable to open file '{0}'. Exception: {1}".format(path, exc)
             )
-
-    # Just search. We've searched the whole file now; if we didn't return True
-    # already, then the pattern isn't present, so return False.
-    if search_only:
-        return False
 
     if has_changes and not dry_run:
         # Write the replacement text in this block.
@@ -1980,13 +2006,21 @@ def search(path,
         flags=0,
         bufsize=1,
         ignore_if_missing=False,
+        multiline=False
         ):
     '''
     .. versionadded:: 0.17.0
 
     Search for occurrences of a pattern in a file
 
-    Params are identical to :py:func:`~salt.modules.file.replace`.
+    Except for multiline, params are identical to
+    :py:func:`~salt.modules.file.replace`.
+
+    multiline
+        If true, inserts 'MULTILINE' into ``flags`` and sets ``bufsize`` to
+        'file'.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -1994,6 +2028,10 @@ def search(path,
 
         salt '*' file.search /etc/crontab 'mymaintenance.sh'
     '''
+    if multiline:
+        flags = _add_flags(flags, 'MULTILINE')
+        bufsize = 'file'
+
     # This function wraps file.replace on purpose in order to enforce
     # consistent usage, compatible regex's, expected behavior, *and* bugs. :)
     # Any enhancements or fixes to one should affect the other.
@@ -2130,19 +2168,13 @@ def contains_regex_multiline(path, regex):
 
         salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
-    path = os.path.expanduser(path)
+    salt.utils.warn_until(
+        'Carbon',
+        "file.contains_regex_multiline(path, regex) is deprecated in favor of "
+        "file.search(path, regex, multiline=True)"
+    )
 
-    if not os.path.exists(path):
-        return False
-
-    try:
-        with salt.utils.filebuffer.BufferedReader(path) as breader:
-            for chunk in breader:
-                if re.search(regex, chunk, re.MULTILINE):
-                    return True
-            return False
-    except (IOError, OSError):
-        return False
+    search(path, regex, multiline=True)
 
 
 def contains_glob(path, glob_expr):
