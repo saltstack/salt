@@ -222,17 +222,21 @@ def enable():
     return False
 
 
-def disable():
+def disable(message=None):
     '''
     .. versionadded:: 2014.7.0
-
     Disable the puppet agent
+
+    message
+        .. versionadded:: 2015.5.2
+        disable message to send to puppet
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' puppet.disable
+        salt '*' puppet.disable 'disabled for a good reason'
     '''
 
     _check_puppet()
@@ -244,7 +248,8 @@ def disable():
         with salt.utils.fopen(puppet.disabled_lockfile, 'w') as lockfile:
             try:
                 # Puppet chokes when no valid json is found
-                lockfile.write('{}')
+                str = '{{"disabled_message":"{0}"}}'.format(message) if message is not None else '{}'
+                lockfile.write(str)
                 lockfile.close()
                 return True
             except (IOError, OSError) as exc:
