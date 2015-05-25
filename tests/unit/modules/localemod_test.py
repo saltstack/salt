@@ -110,6 +110,28 @@ class LocalemodTestCase(TestCase):
                 self.assertTrue(localemod.gen_locale('en_US.UTF-8 UTF-8'))
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
+    def test_gen_locale_debian_no_charmap(self):
+        '''
+        Tests the return of successful gen_locale on Debian system without a charmap
+        '''
+        def file_search(search, pattern):
+            '''
+            mock file.search
+            '''
+            if len(pattern.split()) == 1:
+                return False
+            else:  # charmap was supplied
+                return True
+
+        ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
+        with patch.dict(localemod.__grains__, {'os': 'Debian'}):
+            with patch.dict(localemod.__salt__,
+                            {'file.search': file_search,
+                             'file.replace': MagicMock(return_value=True),
+                             'cmd.run_all': MagicMock(return_value=ret)}):
+                self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
+
+    @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     @patch('os.listdir', MagicMock(return_value=['en_US']))
     def test_gen_locale_ubuntu(self):
         '''
@@ -124,7 +146,6 @@ class LocalemodTestCase(TestCase):
             with patch.dict(localemod.__grains__, {'os': 'Ubuntu'}):
                 self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
 
-    @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
     def test_gen_locale_gentoo(self):
         '''
@@ -137,6 +158,28 @@ class LocalemodTestCase(TestCase):
                              'file.replace': MagicMock(return_value=True),
                              'cmd.run_all': MagicMock(return_value=ret)}):
                 self.assertTrue(localemod.gen_locale('en_US.UTF-8 UTF-8'))
+
+    @patch('os.listdir', MagicMock(return_value=['en_US.UTF-8']))
+    def test_gen_locale_gentoo_no_charmap(self):
+        '''
+        Tests the return of successful gen_locale on Gentoo system without a charmap
+        '''
+        def file_search(search, pattern):
+            '''
+            mock file.search
+            '''
+            if len(pattern.split()) == 1:
+                return False
+            else:  # charmap was supplied
+                return True
+
+        ret = {'stdout': 'saltines', 'stderr': 'biscuits', 'retcode': 0, 'pid': 1337}
+        with patch.dict(localemod.__grains__, {'os_family': 'Gentoo'}):
+            with patch.dict(localemod.__salt__,
+                            {'file.search': file_search,
+                             'file.replace': MagicMock(return_value=True),
+                             'cmd.run_all': MagicMock(return_value=ret)}):
+                self.assertTrue(localemod.gen_locale('en_US.UTF-8'))
 
     @patch('salt.utils.which', MagicMock(return_value='/some/dir/path'))
     @patch('os.listdir', MagicMock(return_value=['en_US']))
