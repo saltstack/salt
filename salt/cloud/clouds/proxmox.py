@@ -849,7 +849,8 @@ def destroy(name, call=None):
     vmobj = _getVmByName(name)
     if vmobj is not None:
         # stop the vm
-        stop(name, vmobj['vmid'], 'action')
+        if get_vm_status(vmid=vmobj['vmid'])['status'] != 'stopped':
+            stop(name, vmobj['vmid'], 'action')
 
         # wait until stopped
         if not wait_for_state(vmobj['vmid'], 'stopped'):
