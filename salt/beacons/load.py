@@ -66,7 +66,7 @@ def beacon(config):
     '''
     Emit the load averages of this host.
 
-    Specify thresholds for for each load average
+    Specify thresholds for each load average
     and only emit a beacon if any of them are
     exceeded.
 
