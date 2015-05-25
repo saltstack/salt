@@ -1168,7 +1168,7 @@ def deploy_script(host,
                 if len(comps) > 0:
                     if len(comps) > 1 or comps[0] != 'tmp':
                         ret = root_cmd(
-                            'chown {0}. \'{1}\''.format(username, tmp_dir),
+                            'chown {0} \'{1}\''.format(username, tmp_dir),
                             tty, sudo, **ssh_kwargs
                         )
                         if ret:
