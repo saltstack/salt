@@ -5,13 +5,13 @@ Release notes
 See the :doc:`version numbers</topics/releases/version_numbers>` page for more
 information about the version numbering scheme.
 
-Latest Stable Release
+Latest Branch Release
 =====================
 
 .. releasestree::
     :maxdepth: 1
 
-    2015.5.0
+    2014.7.6
 
 Previous Releases
 =================
@@ -20,7 +20,6 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
-    2015.5.*
     2014.7.*
     2014.1.*
     0.*
