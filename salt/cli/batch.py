@@ -111,7 +111,11 @@ class Batch(object):
             else:
                 for i in range(bnum - len(active)):
                     if to_run:
-                        next_.append(to_run.pop())
+                        minion_id = to_run.pop()
+                        if isinstance(minion_id, dict):
+                            next_.append(minion_id.keys()[0])
+                        else:
+                            next_.append(minion_id)
 
             active += next_
             args[0] = next_
