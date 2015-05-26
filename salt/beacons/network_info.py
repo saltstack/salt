@@ -39,7 +39,7 @@ def beacon(config):
     '''
     Emit the network statistics of this host.
 
-    Specify thresholds for for each network stat
+    Specify thresholds for each network stat
     and only emit a beacon if any of them are
     exceeded.
 
@@ -49,33 +49,33 @@ def beacon(config):
     configured values.
 
         beacons:
-            network_info:
-                eth0:
-                    - type: equal
-                    - bytes_sent: 100000
-                    - bytes_recv: 100000
-                    - packets_sent: 100000
-                    - packets_recv: 100000
-                    - errin: 100
-                    - errout: 100
-                    - dropin: 100
-                    - dropout: 100
+          network_info:
+            eth0:
+                - type: equal
+                - bytes_sent: 100000
+                - bytes_recv: 100000
+                - packets_sent: 100000
+                - packets_recv: 100000
+                - errin: 100
+                - errout: 100
+                - dropin: 100
+                - dropout: 100
 
     Emit beacon when any values are greater
     than to configured values.
 
         beacons:
-            network_info:
-                eth0:
-                    - type: greater
-                    - bytes_sent: 100000
-                    - bytes_recv: 100000
-                    - packets_sent: 100000
-                    - packets_recv: 100000
-                    - errin: 100
-                    - errout: 100
-                    - dropin: 100
-                    - dropout: 100
+          network_info:
+            eth0:
+                - type: greater
+                - bytes_sent: 100000
+                - bytes_recv: 100000
+                - packets_sent: 100000
+                - packets_recv: 100000
+                - errin: 100
+                - errout: 100
+                - dropin: 100
+                - dropout: 100
 
 
     '''
