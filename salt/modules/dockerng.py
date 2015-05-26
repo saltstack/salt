@@ -175,10 +175,14 @@ execution driver to use:
 
     docker.exec_driver: docker-exec
 
-If this configuration option is not found, Salt will check the current Docker
-version and use ``docker-exec`` for Docker 1.3 and newer. For Docker 1.2 and
-older, the appropriate interface (either nsenter_ or lxc-attach_) will be
-chosen based on the ``Execution Driver`` value returned from ``docker info``.
+If this configuration option is not found, Salt will use the appropriate
+interface (either nsenter_ or lxc-attach_) based on the ``Execution Driver``
+value returned from ``docker info``. docker-exec_ will not be used by default,
+as it is presently (as of version 1.6.2) only able to execute commands as the
+effective user of the container. Thus, if a ``USER`` directive was used to run
+as a non-privileged user, docker-exec_ would be unable to perform the action as
+root. Salt can still use docker-exec_ as an execution driver, but must be
+explicitly configured (as in the example above) to do so at this time.
 
 If possible, try to manually specify the execution driver, as it will save Salt
 a little work.
@@ -211,7 +215,9 @@ __docformat__ = 'restructuredtext en'
 # Import Python libs
 import bz2
 import copy
-import distutils.version  # pylint: disable=import-error,no-name-in-module
+# Remove unused-import from disabled pylint checks when we uncomment the logic
+# in _get_exec_driver() which checks the docker version
+import distutils.version  # pylint: disable=import-error,no-name-in-module,unused-import
 import fnmatch
 import functools
 import gzip
@@ -662,6 +668,13 @@ def _get_exec_driver():
     Get the method to be used in shell commands
     '''
     contextkey = 'docker.exec_driver'
+    '''
+    docker-exec won't be used by default until we reach a version where it
+    supports running commands as a user other than the effective user of the
+    container.
+
+    See: https://groups.google.com/forum/#!topic/salt-users/i6Eq4rf5ml0
+
     if contextkey in __context__:
         return __context__[contextkey]
 
@@ -681,7 +694,15 @@ def _get_exec_driver():
     # If the version_info tuple revealed a version < 1.3.0, the key will yet to
     # have been set in __context__, so we'll check if it's there yet and if
     # not, proceed with detecting execution driver from the output of info().
+    '''  # pylint: disable=pointless-string-statement
     if contextkey not in __context__:
+        from_config = __salt__['config.get'](contextkey, None)
+        # This if block can be removed once we make docker-exec a default
+        # option, as it is part of the logic in the commented block above.
+        if from_config is not None:
+            __context__[contextkey] = from_config
+            return from_config
+
         # For old versions of docker, lxc was the only supported driver.
         # This is a sane default.
         driver = info().get('ExecutionDriver', 'lxc-')
