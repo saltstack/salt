@@ -21,10 +21,10 @@ def update(dest, upd):
     for key, val in six.iteritems(upd):
         try:
             if isinstance(val, OrderedDict):
-                klass = OrderedDict
+                valtype = OrderedDict
             else:
-                klass = dict
-            dest_subkey = dest.get(key, klass())
+                valtype = dict
+            dest_subkey = dest.get(key, valtype())
         except AttributeError:
             dest_subkey = None
         if isinstance(dest_subkey, collections.Mapping) \
