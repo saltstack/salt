@@ -98,7 +98,8 @@ def present(name,
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
     if user_exists and not any((force, perms, tags)):
-        log.debug('User exists, and force is not set - Abandoning')
+        log.debug('RabbitMQ user %s exists, '
+                  'and force is not set.', name)
         ret['comment'] = 'User {0} already presents'.format(name)
         return ret
     else:
@@ -110,11 +111,11 @@ def present(name,
                 ret['comment'] = 'User {0} is set to be created'.format(name)
                 return ret
 
-            log.debug("User doesn't exist - Creating")
+            log.debug("RabbitMQ user %s doesn't exist - Creating", name)
             result = __salt__['rabbitmq.add_user'](
                 name, password, runas=runas)
         else:
-            log.debug('RabbitMQ user exists')
+            log.debug('RabbitMQ user %s exists', name)
             if force:
                 if __opts__['test']:
                     ret['result'] = None
@@ -129,7 +130,8 @@ def present(name,
                         name, password, runas=runas)
                     changes['new'] = 'Set password.\n'
                 else:
-                    log.debug('Password is not set - Clearing password')
+                    log.debug('Password for %s is not set - Clearing password',
+                              name)
                     if __opts__['test']:
                         ret['comment'] = ('User {0}\'s password is '
                                           'set to be removed'.format(name))
