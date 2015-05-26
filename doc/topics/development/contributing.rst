@@ -70,7 +70,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. note::
 
         If your change fixes a bug or implements a feature already filed in the
-        `issue tracker<GitHub issue tracker>`_, be sure to reference the issue
+        `issue tracker <GitHub issue tracker>`_, be sure to reference the issue
         number in the commit message body.
 
     .. code-block:: bash
@@ -88,7 +88,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
 
     If you get stuck `there are many introductory Git resources on
-    help.github.com<Git resources_>`_.
+    help.github.com <Git resources_>`_.
 
 #.  Push your locally-committed changes to your GitHub fork,
 
