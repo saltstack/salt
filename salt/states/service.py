@@ -110,7 +110,7 @@ def _enable(name, started, result=True, **kwargs):
                                                                  **kwargs)
         # Service has been enabled
         ret['changes'] = {}
-        # on upstart, certain services like upstart will always return
+        # on upstart, certain services like apparmor will always return
         # False, even if correctly activated
         # do not trigger a change
         if before_toggle_enable_status != after_toggle_enable_status:
@@ -195,7 +195,7 @@ def _disable(name, started, result=True, **kwargs):
         after_toggle_disable_status = __salt__['service.disabled'](name)
         # Service has been disabled
         ret['changes'] = {}
-        # on upstart, certain services like upstart will always return
+        # on upstart, certain services like apparmor will always return
         # False, even if correctly activated
         # do not trigger a change
         if before_toggle_disable_status != after_toggle_disable_status:
