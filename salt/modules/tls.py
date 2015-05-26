@@ -425,7 +425,7 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
             ca_name,
             ca_name)
     if not os.path.exists(certp):
-        raise ValueError('Certificate does not exists for {0}'.format(ca_name))
+        raise ValueError('Certificate does not exist for {0}'.format(ca_name))
     else:
         if as_text:
             with salt.utils.fopen(certp) as fic:
@@ -558,7 +558,8 @@ def create_ca(ca_name,
               ca_filename=None,
               digest='sha256',
               onlyif=None,
-              unless=None):
+              unless=None,
+              replace=False):
     '''
     Create a Certificate Authority (CA)
 
@@ -590,6 +591,10 @@ def create_ca(ca_name,
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
         For example, "md5" or "sha1". Default: 'sha256'
+    replace
+        Replace this certificate even if it exists
+
+        .. versionadded:: 2015.5.1
 
     Writes out a CA certificate based upon defined config values. If the file
     already exists, the function just returns assuming the CA certificate
@@ -625,7 +630,7 @@ def create_ca(ca_name,
         cert_base_path(), ca_name, ca_filename)
     ca_keyp = '{0}/{1}/{2}.key'.format(
         cert_base_path(), ca_name, ca_filename)
-    if not fixmode and ca_exists(ca_name, ca_filename=ca_filename):
+    if not replace and not fixmode and ca_exists(ca_name, ca_filename=ca_filename):
         return 'Certificate for CA named "{0}" already exists'.format(ca_name)
 
     if fixmode and not os.path.exists(certp):
@@ -817,7 +822,8 @@ def create_csr(ca_name,
                csr_filename=None,
                digest='sha256',
                type_ext=False,
-               cert_type='server'):
+               cert_type='server',
+               replace=False):
     '''
     Create a Certificate Signing Request (CSR) for a
     particular Certificate Authority (CA)
@@ -887,6 +893,11 @@ def create_csr(ca_name,
         The files normally named some_subject_CN.csr and some_subject_CN.key
         will then be saved
 
+    replace
+        Replace this signing request even if it exists
+
+        .. versionadded:: 2015.5.1
+
     Writes out a Certificate Signing Request (CSR) If the file already
     exists, the function just returns assuming the CSR already exists.
 
@@ -930,7 +941,7 @@ def create_csr(ca_name,
 
     csr_f = '{0}/{1}.csr'.format(csr_path, csr_filename)
 
-    if os.path.exists(csr_f):
+    if not replace and os.path.exists(csr_f):
         return 'Certificate Request "{0}" already exists'.format(csr_f)
 
     key = OpenSSL.crypto.PKey()
@@ -1005,7 +1016,8 @@ def create_self_signed_cert(tls_dir='tls',
                             emailAddress='xyz@pdq.net',
                             cacert_path=None,
                             cert_filename=None,
-                            digest='sha256'):
+                            digest='sha256',
+                            replace=False):
     '''
     Create a Self-Signed Certificate (CERT)
 
@@ -1034,6 +1046,10 @@ def create_self_signed_cert(tls_dir='tls',
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
         For example, "md5" or "sha1". Default: 'sha256'
+    replace
+        Replace this certificate even if it exists
+
+        .. versionadded:: 2015.5.1
 
     Writes out a Self-Signed Certificate (CERT). If the file already
     exists, the function just returns.
@@ -1071,7 +1087,7 @@ def create_self_signed_cert(tls_dir='tls',
     if not cert_filename:
         cert_filename = CN
 
-    if os.path.exists(
+    if not replace and os.path.exists(
             '{0}/{1}/certs/{2}.crt'.format(cert_base_path(),
                                            tls_dir, cert_filename)
             ):
@@ -1147,7 +1163,8 @@ def create_ca_signed_cert(ca_name,
                           cert_filename=None,
                           digest='sha256',
                           cert_type=None,
-                          type_ext=False):
+                          type_ext=False,
+                          replace=False):
     '''
     Create a Certificate (CERT) signed by a named Certificate Authority (CA)
 
@@ -1160,10 +1177,8 @@ def create_ca_signed_cert(ca_name,
 
     ca_name
         name of the CA
-
     CN
         common name matching the certificate signing request
-
     days
         number of days certificate is valid, default is 365 (1 year)
 
@@ -1186,6 +1201,10 @@ def create_ca_signed_cert(ca_name,
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
         For example, "md5" or "sha1". Default: 'sha256'
+    replace
+        Replace this certificate even if it exists
+
+        .. versionadded:: 2015.5.1
 
     cert_type
         string. Either 'server' or 'client' (see create_csr() for details).
@@ -1256,7 +1275,7 @@ def create_ca_signed_cert(ca_name,
     if not cert_filename:
         cert_filename = '{0}{1}'.format(CN, CN_ext)
 
-    if os.path.exists(
+    if not replace and os.path.exists(
             os.path.join(
                 os.path.sep.join('{0}/{1}/certs/{2}.crt'.format(
                     cert_base_path(),
@@ -1363,7 +1382,7 @@ def create_ca_signed_cert(ca_name,
                     )
 
 
-def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
+def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
     '''
     Create a PKCS#12 browser certificate for a particular Certificate (CN)
 
@@ -1375,6 +1394,10 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
         used to unlock the PKCS#12 certificate when loaded into the browser
     cacert_path
         absolute path to ca certificates root directory
+    replace
+        Replace this certificate even if it exists
+
+        .. versionadded:: 2015.5.1
 
     If the following values were set::
 
@@ -1394,7 +1417,7 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None):
         salt '*' tls.create_pkcs12 test localhost
     '''
     set_ca_path(cacert_path)
-    if os.path.exists(
+    if not replace and os.path.exists(
             '{0}/{1}/certs/{2}.p12'.format(
                 cert_base_path(),
                 ca_name,

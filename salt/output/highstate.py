@@ -114,10 +114,6 @@ def _format_host(host, data):
             hstrs.append((u'{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
-        # Strip out the result: True, without changes returns if
-        # state_verbose is False
-        if not __opts__.get('state_verbose', False):
-            data = _strip_clean(data)
         # Verify that the needed data is present
         for tname, info in six.iteritems(data):
             if isinstance(info, dict) and '__run_num__' not in info:
@@ -141,6 +137,12 @@ def _format_host(host, data):
 
             # Skip this state if it was successful & diff output was requested
             if __opts__.get('state_output_diff', False) and \
+               ret['result'] and not schanged:
+                continue
+
+            # Skip this state if state_verbose is False, the result is True and
+            # there were no changes made
+            if not __opts__.get('state_verbose', False) and \
                ret['result'] and not schanged:
                 continue
 
@@ -397,22 +399,6 @@ def _format_changes(changes):
                 __opts__)
         __opts__ = opts
     return changed, ctext
-
-
-def _strip_clean(returns):
-    '''
-    Check for the state_verbose option and strip out the result=True
-    and changes={} members of the state return list.
-    '''
-    rm_tags = []
-    for tag in returns:
-        if isinstance(tag, dict):
-            continue
-        if returns[tag]['result'] and not returns[tag]['changes']:
-            rm_tags.append(tag)
-    for tag in rm_tags:
-        returns.pop(tag)
-    return returns
 
 
 def _format_terse(tcolor, comps, ret, colors, tabular):
