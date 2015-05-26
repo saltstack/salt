@@ -85,7 +85,8 @@ def _enable(name, started, result=True, **kwargs):
         return ret
 
     # Service can be enabled
-    if __salt__['service.enabled'](name, **kwargs):
+    before_toggle_enable_status = __salt__['service.enabled'](name, **kwargs)
+    if before_toggle_enable_status:
         # Service is enabled
         if started is True:
             ret['comment'] = ('Service {0} is already enabled,'
@@ -105,9 +106,15 @@ def _enable(name, started, result=True, **kwargs):
         return ret
 
     if __salt__['service.enable'](name, **kwargs):
+        after_toggle_enable_status = __salt__['service.enabled'](name,
+                                                                 **kwargs)
         # Service has been enabled
         ret['changes'] = {}
-        ret['changes'][name] = True
+        # on upstart, certain services like apparmor will always return
+        # False, even if correctly activated
+        # do not trigger a change
+        if before_toggle_enable_status != after_toggle_enable_status:
+            ret['changes'][name] = True
         if started is True:
             ret['comment'] = ('Service {0} has been enabled,'
                               ' and is running').format(name)
@@ -160,8 +167,9 @@ def _disable(name, started, result=True, **kwargs):
                               ' service {0} is dead').format(name)
         return ret
 
+    before_toggle_disable_status = __salt__['service.disabled'](name)
     # Service can be disabled
-    if __salt__['service.disabled'](name):
+    if before_toggle_disable_status:
         # Service is disabled
         if started is True:
             ret['comment'] = ('Service {0} is already disabled,'
@@ -183,7 +191,14 @@ def _disable(name, started, result=True, **kwargs):
     if __salt__['service.disable'](name, **kwargs):
         # Service has been disabled
         ret['changes'] = {}
-        ret['changes'][name] = True
+        after_toggle_disable_status = __salt__['service.disabled'](name)
+        # Service has been disabled
+        ret['changes'] = {}
+        # on upstart, certain services like apparmor will always return
+        # False, even if correctly activated
+        # do not trigger a change
+        if before_toggle_disable_status != after_toggle_disable_status:
+            ret['changes'][name] = True
         if started is True:
             ret['comment'] = ('Service {0} has been disabled,'
                               ' and is running').format(name)
