@@ -18,6 +18,14 @@ log = logging.getLogger(__name__)
 
 
 def update(dest, upd, recursive_update=True):
+    '''
+    Recursive version of the default dict.update
+
+    Merges upd recursively into dest
+
+    If recursive_update=False, will use the classic dict.update, or fall back
+    on a manual merge (helpful for non-dict types like FunctionWrapper)
+    '''
     if recursive_update:
         for key, val in six.iteritems(upd):
             try:
