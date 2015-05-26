@@ -128,9 +128,12 @@ def installed(name,
         # Check to see if we are trying to install from a URI
         elif '://' in pkg_name:  # TODO Better way?
             for pkg_details in installed_pkgs.values():
-                pkg_from = pkg_details.get('from', '').split('://')[1]
-                if pkg_name.split('://')[1] == pkg_from:
-                    return True
+                try:
+                    pkg_from = pkg_details.get('from', '').split('://')[1]
+                    if pkg_name.split('://')[1] == pkg_from:
+                        return True
+                except IndexError:
+                     pass
         return False
 
     for pkg in pkg_list:
