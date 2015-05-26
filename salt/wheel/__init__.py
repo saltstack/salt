@@ -78,14 +78,14 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         .. code-block:: python
 
-        >>> wheel.cmd_sync({
-        'fun': 'key.finger',
-        'match': 'jerry',
-        'eauth': 'auto',
-        'username': 'saltdev',
-        'password': 'saltdev',
-        })
-        {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+            >>> wheel.cmd_sync({
+            'fun': 'key.finger',
+            'match': 'jerry',
+            'eauth': 'auto',
+            'username': 'saltdev',
+            'password': 'saltdev',
+            })
+            {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
         return self.master_call(**low)
 
