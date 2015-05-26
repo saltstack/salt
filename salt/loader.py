@@ -161,14 +161,20 @@ def minion_mods(
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
     #        with cloud providers.
-    if opts.get('providers', False):
-        providers = opts.get('providers', False)
+    providers = opts.get('providers', False)
+    if providers and isinstance(providers, dict):
         for mod in providers:
-            funcs = raw_mod(opts, providers[mod], ret.items())
-            if funcs:
-                for func in funcs:
-                    f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
-                    ret[f_key] = funcs[func]
+            # sometimes providers opts is not to diverge modules but
+            # for other configuration
+            try:
+                funcs = raw_mod(opts, providers[mod], ret.items())
+            except TypeError:
+                break
+            else:
+                if funcs:
+                    for func in funcs:
+                        f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
+                        ret[f_key] = funcs[func]
 
     ret.pack['__salt__'] = ret
 

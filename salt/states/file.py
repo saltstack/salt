@@ -243,6 +243,7 @@ import pprint
 import shutil
 import traceback
 import yaml
+from collections import Iterable, Mapping
 
 # Import salt libs
 import salt.payload
@@ -252,7 +253,7 @@ from salt.exceptions import CommandExecutionError
 from salt.utils.serializers import yaml as yaml_serializer
 from salt.utils.serializers import json as json_serializer
 import salt.ext.six as six
-from salt.ext.six import string_types, integer_types
+from salt.ext.six import string_types
 from salt.ext.six.moves import zip_longest
 
 log = logging.getLogger(__name__)
@@ -717,6 +718,18 @@ def _get_template_texts(source_list=None,
 
     ret['data'] = txtl
     return ret
+
+
+def _validate_str_list(arg):
+    '''
+    ensure ``arg`` is a list of strings
+    '''
+    if isinstance(arg, string_types):
+        return [arg]
+    elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
+        return [str(item) for item in arg]
+    else:
+        return False
 
 
 def symlink(
@@ -1286,12 +1299,11 @@ def managed(name,
         run.
     '''
     name = os.path.expanduser(name)
-    # contents must be a string
-    if contents is not None:
-        contents = str(contents)
 
-    # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
 
     # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
@@ -1305,10 +1317,30 @@ def managed(name,
             'to \'False\' to avoid reading the file unnecessarily'
         )
 
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
+    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
+        return _error(
+            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
+
+    if contents_pillar:
+        contents = __salt__['pillar.get'](contents_pillar)
+    if contents_grains:
+        contents = __salt__['grains.get'](contents_grains)
+
+    # ensure contents is a string
+    if contents:
+        validated_contents = _validate_str_list(contents)
+        if not validated_contents:
+            return _error(ret, '"contents" is not a string or list of strings')
+        if isinstance(validated_contents, list):
+            contents = os.linesep.join(validated_contents)
+        if contents_newline:
+            # Make sure file ends in newline
+            if contents and not contents.endswith(os.linesep):
+                contents += os.linesep
+
+    # Make sure that leading zeros stripped by YAML loader are added back
+    mode = __salt__['config.manage_mode'](mode)
+
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
@@ -1357,22 +1389,6 @@ def managed(name,
     if defaults and not isinstance(defaults, dict):
         return _error(
             ret, 'Defaults must be formed as a dict')
-
-    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
-        return _error(
-            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
-
-    # If contents_pillar was used, get the pillar data
-    if contents_pillar:
-        contents = __salt__['pillar.get'](contents_pillar)
-
-    if contents_grains:
-        contents = __salt__['grains.get'](contents_grains)
-
-    if contents_newline:
-        # Make sure file ends in newline
-        if contents and not contents.endswith('\n'):
-            contents += '\n'
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
@@ -2080,41 +2096,22 @@ def recurse(name,
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
-    # Handle corner case where someone uses a numeric source
-    if isinstance(source, (integer_types, float)):
-        ret['result'] = False
-        ret['comment'] = ('Invalid source {0} (cannot be numeric)'
-                          .format(source))
-        return ret
+    # expand source into source_list
+    source_list = _validate_str_list(source)
+    if not source_list:
+        return _error(ret, '\'source\' parameter is not a string or list of strings')
 
-    # Make sure that only salt fileserver paths are being used (no http(s)/ftp)
-    if isinstance(source, string_types):
-        source_precheck = [source]
-    else:
-        source_precheck = source
-    for precheck in source_precheck:
+    for idx, val in enumerate(source_list):
+        source_list[idx] = val.rstrip('/')
+
+    for precheck in source_list:
         if not precheck.startswith('salt://'):
-            ret['result'] = False
-            ret['comment'] = ('Invalid source {0!r} (must be a salt:// URI)'
-                              .format(precheck))
-            return ret
+            return _error(ret, ('Invalid source {0!r} '
+                                '(must be a salt:// URI)'.format(precheck)))
 
-    if isinstance(source, list):
-        sources = source
-    else:
-        sources = [source]
-
+    # Select the first source in source_list that exists
     try:
-        for idx, val in enumerate(sources):
-            sources[idx] = val.rstrip('/')
-    except AttributeError:
-        ret['result'] = False
-        ret['comment'] = '\'source\' parameter(s) must be a string'
-        return ret
-
-    # If source is a list, find which in the list actually exists
-    try:
-        source, source_hash = __salt__['file.source_list'](sources, '', __env__)
+        source, source_hash = __salt__['file.source_list'](source_list, '', __env__)
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = 'Recurse failed: {0}'.format(exc)
@@ -3033,12 +3030,9 @@ def append(name,
             return tmpret
         text = tmpret['data']
 
-    for index, item in enumerate(text):
-        if isinstance(item, integer_types):
-            text[index] = str(item)
-
-    if isinstance(text, string_types):
-        text = (text,)
+    text = _validate_str_list(text)
+    if not text:
+        return _error(ret, 'Given text is not a string or a list of strings')
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
@@ -3053,15 +3047,7 @@ def append(name,
                     name, salt.utils.build_whitespace_split_regex(chunk)):
                 continue
 
-            try:
-                lines = chunk.splitlines()
-            except AttributeError:
-                log.debug(
-                    'Error appending text to {0}; given object is: {1}'.format(
-                        name, type(chunk)
-                    )
-                )
-                return _error(ret, 'Given text is not a string')
+            lines = chunk.splitlines()
 
             for line in lines:
                 if __opts__['test']:
@@ -3072,9 +3058,7 @@ def append(name,
                     __salt__['file.append'](name, line)
                 count += 1
     except TypeError:
-        ret['comment'] = 'No text found to append. Nothing appended'
-        ret['result'] = False
-        return ret
+        return _error(ret, 'No text found to append. Nothing appended')
 
     if __opts__['test']:
         nlines = slines + test_lines
@@ -3213,8 +3197,9 @@ def prepend(name,
             return tmpret
         text = tmpret['data']
 
-    if isinstance(text, string_types):
-        text = (text,)
+    text = _validate_str_list(text)
+    if not text:
+        return _error(ret, 'Given text is not a string or a list of strings')
 
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
@@ -3229,15 +3214,7 @@ def prepend(name,
                 name, salt.utils.build_whitespace_split_regex(chunk)):
             continue
 
-        try:
-            lines = chunk.splitlines()
-        except AttributeError:
-            log.debug(
-                'Error appending text to {0}; given object is: {1}'.format(
-                    name, type(chunk)
-                )
-            )
-            return _error(ret, 'Given text is not a string')
+        lines = chunk.splitlines()
 
         for line in lines:
             if __opts__['test']:

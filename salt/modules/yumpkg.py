@@ -718,7 +718,7 @@ def check_db(*names, **kwargs):
     return ret
 
 
-def refresh_db(branch_arg, repo_arg, exclude_arg):
+def refresh_db(branch_arg=None, repo_arg=None, exclude_arg=None, branch=None, repo=None, exclude=None):
     '''
     Check the yum repos for updated packages
 
@@ -734,25 +734,53 @@ def refresh_db(branch_arg, repo_arg, exclude_arg):
 
         salt '*' pkg.refresh_db
     '''
+    def warn(old, new):
+        '''
+        warn about old arguments
+        '''
+        salt.utils.warn_until(
+            'Carbon',
+            '"{0}" is being deprecated in favor of "{1}"'.format(old, new)
+        )
+
+    if branch_arg:
+        warn(branch_arg, branch)
+        branch = branch_arg
+
+    if repo_arg:
+        warn(repo_arg, repo)
+        repo = repo_arg
+
+    if exclude_arg:
+        warn(exclude_arg, exclude)
+        exclude = exclude_arg
+
     retcodes = {
         100: True,
         0: None,
         1: False,
     }
 
-    clean_cmd = 'yum -q clean expire-cache {repo} {exclude} {branch}'.format(
-        repo=repo_arg,
-        exclude=exclude_arg,
-        branch=branch_arg
-    )
-    __salt__['cmd.run'](clean_cmd)
-    update_cmd = 'yum -q check-update {repo} {exclude} {branch}'.format(
-        repo=repo_arg,
-        exclude=exclude_arg,
-        branch=branch_arg
-    )
+    clean_cmd = ['yum', '-q', 'clean', 'expire-cache']
+    update_cmd = ['yum', '-q', 'check-update']
 
-    ret = __salt__['cmd.retcode'](update_cmd, ignore_retcode=True)
+    if repo:
+        clean_cmd.append(repo)
+        update_cmd.append(repo)
+
+    if exclude:
+        clean_cmd.append(exclude)
+        update_cmd.append(exclude)
+
+    if branch:
+        clean_cmd.append(branch)
+        update_cmd.append(branch)
+
+    __salt__['cmd.run'](clean_cmd, python_shell=False)
+    ret = __salt__['cmd.retcode'](update_cmd,
+                                  python_shell=False,
+                                  ignore_retcode=True)
+
     return retcodes.get(ret, False)
 
 

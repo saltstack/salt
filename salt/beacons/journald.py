@@ -46,10 +46,10 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-            journald:
-                sshd:
-                    SYSLOG_IDENTIFIER: sshd
-                    PRIORITY: 6
+          journald:
+            sshd:
+              SYSLOG_IDENTIFIER: sshd
+              PRIORITY: 6
     '''
     ret = []
     journal = _get_journal()
