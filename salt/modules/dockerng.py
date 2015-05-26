@@ -215,7 +215,9 @@ __docformat__ = 'restructuredtext en'
 # Import Python libs
 import bz2
 import copy
-import distutils.version  # pylint: disable=import-error,no-name-in-module
+# Remove unused-import from disabled pylint checks when we uncomment the logic
+# in _get_exec_driver() which checks the docker version
+import distutils.version  # pylint: disable=import-error,no-name-in-module,unused-import
 import fnmatch
 import functools
 import gzip
@@ -692,7 +694,7 @@ def _get_exec_driver():
     # If the version_info tuple revealed a version < 1.3.0, the key will yet to
     # have been set in __context__, so we'll check if it's there yet and if
     # not, proceed with detecting execution driver from the output of info().
-    '''
+    '''  # pylint: disable=pointless-string-statement
     if contextkey not in __context__:
         from_config = __salt__['config.get'](contextkey, None)
         # This if block can be removed once we make docker-exec a default
