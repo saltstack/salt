@@ -86,6 +86,7 @@ def active(outputter=None, display_progress=False):
 
 def lookup_jid(jid,
                ext_source=None,
+               returned=True,
                missing=False,
                outputter=None,
                display_progress=False):
@@ -98,8 +99,14 @@ def lookup_jid(jid,
     ext_source
         The external job cache to use. Default: `None`.
 
+    returned
+        When set to `True`, adds the minions that did return from the command.
+        Default: `True`.
+
+        .. versionadded:: Beryllium
+
     missing
-        When set to `True`, adds the minions that did not return from the command.
+        When set to `True`, adds the minions that did NOT return from the command.
         Default: `False`.
 
     display_progress
@@ -129,9 +136,11 @@ def lookup_jid(jid,
         if display_progress:
             __jid_event__.fire_event({'message': minion}, 'progress')
         if u'return' in data[minion]:
-            ret[minion] = data[minion].get(u'return')
+            if returned:
+                ret[minion] = data[minion].get(u'return')
         else:
-            ret[minion] = data[minion].get('return')
+            if returned:
+                ret[minion] = data[minion].get('return')
     if missing:
         load = mminion.returners['{0}.get_load'.format(returner)](jid)
         ckminions = salt.utils.minions.CkMinions(__opts__)
