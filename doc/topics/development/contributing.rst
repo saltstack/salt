@@ -46,7 +46,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. code-block:: bash
 
         git fetch upstream
-        git checkout -b fix-broken-thing upstream/2014.7
+        git checkout -b fix-broken-thing upstream/2015.5
 
     If you're working on a feature, create your branch from the develop branch.
 
@@ -100,7 +100,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
     .. code-block:: bash
 
         git fetch upstream
-        git rebase upstream/2014.7 fix-broken-thing
+        git rebase upstream/2015.5 fix-broken-thing
         git push --set-upstream origin fix-broken-thing
 
     or,
@@ -122,9 +122,9 @@ Fork a Repo Guide_>`_ and is well worth reading.
     https://github.com/my-account/salt/pull/new/fix-broken-thing
 
     #.  If your branch is a fix for a release branch, choose that as the base
-        branch (e.g. ``2014.7`` or ``2015.2``),
+        branch (e.g. ``2015.5``),
 
-        https://github.com/my-account/salt/compare/saltstack:2014.7...fix-broken-thing
+        https://github.com/my-account/salt/compare/saltstack:2015.5...fix-broken-thing
 
         If your branch is a feature, choose ``develop`` as the base branch,
 
@@ -174,7 +174,7 @@ The current release branch
 The current release branch is the most recent stable release. Pull requests
 containing bug fixes should be made against the release branch.
 
-The branch name will be a date-based name such as ``2015.2``.
+The branch name will be a date-based name such as ``2015.5``.
 
 Bug fixes are made on this branch so that minor releases can be cut from this
 branch without introducing surprises and new features. This approach maximizes
@@ -339,7 +339,7 @@ And ``upstream`` is the name of the remote pointing to the main Salt repo.
 
         git rebase --onto <release-branch> <orig-base> bp-1234
 
-    Note, release branches prior to ``2014.7`` will not be able to make use of
+    Note, release branches prior to ``2015.5`` will not be able to make use of
     rebase and must use cherry-picking instead.
 
 5.  Push the back-port branch to GitHub and open a new pull request.
