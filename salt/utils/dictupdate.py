@@ -17,23 +17,32 @@ from salt.utils.serializers.yamlex \
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd):
-    for key, val in six.iteritems(upd):
+def update(dest, upd, recursive_update=True):
+    if recursive_update:
+        for key, val in six.iteritems(upd):
+            try:
+                if isinstance(val, OrderedDict):
+                    valtype = OrderedDict
+                else:
+                    valtype = dict
+                dest_subkey = dest.get(key, None)
+            except AttributeError:
+                dest_subkey = None
+            if isinstance(dest_subkey, collections.Mapping) \
+                    and isinstance(val, collections.Mapping):
+                ret = update(dest_subkey, val)
+                dest[key] = ret
+            elif key:
+                dest[key] = upd[key]
+        return dest
+    else:
         try:
-            if isinstance(val, OrderedDict):
-                valtype = OrderedDict
-            else:
-                valtype = dict
-            dest_subkey = dest.get(key, None)
+            dest.update(upd)
         except AttributeError:
-            dest_subkey = None
-        if isinstance(dest_subkey, collections.Mapping) \
-                and isinstance(val, collections.Mapping):
-            ret = update(dest_subkey, val)
-            dest[key] = ret
-        elif key:
-            dest[key] = upd[key]
-    return dest
+            # this mapping is not a dict
+            for k in upd:
+                dest[k] = upd[k]
+        return dest
 
 
 def merge_list(obj_a, obj_b):
