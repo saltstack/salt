@@ -167,7 +167,6 @@ def _disable(name, started, result=True, **kwargs):
                               ' service {0} is dead').format(name)
         return ret
 
-
     before_toggle_disable_status = __salt__['service.disabled'](name)
     # Service can be disabled
     if before_toggle_disable_status:
