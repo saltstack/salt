@@ -99,14 +99,16 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     .. code-block:: bash
 
-        git rebase upstream/2014.7
+        git fetch upstream
+        git rebase upstream/2014.7 fix-broken-thing
         git push --set-upstream origin fix-broken-thing
 
     or,
 
     .. code-block:: bash
 
-        git rebase upstream/develop
+        git fetch upstream
+        git rebase upstream/develop add-cool-feature
         git push --set-upstream origin add-cool-feature
 
 #.  Find the branch on your GitHub salt fork.
