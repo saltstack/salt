@@ -24,7 +24,7 @@ def update(dest, upd):
                 valtype = OrderedDict
             else:
                 valtype = dict
-            dest_subkey = dest.get(key, valtype())
+            dest_subkey = dest.get(key, None)
         except AttributeError:
             dest_subkey = None
         if isinstance(dest_subkey, collections.Mapping) \
