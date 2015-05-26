@@ -5,6 +5,7 @@ Control Apache Traffic Server
 .. versionadded:: Beryllium
 '''
 
+
 def __virtual__():
     '''
     Only load if the Traffic Server module is available in __salt__
@@ -12,7 +13,7 @@ def __virtual__():
     return 'trafficserver' if 'trafficserver.set_var' in __salt__ else False
 
 
-def bounce_cluster():
+def bounce_cluster(name):
     '''
     Bounce all Traffic Server nodes in the cluster. Bouncing Traffic Server
     shuts down and immediately restarts Traffic Server, node-by-node.
@@ -31,14 +32,14 @@ def bounce_cluster():
         ret['comment'] = 'Bouncing cluster'
         return ret
 
-    __salt__['trafficserver.bounce_cluster']
+    __salt__['trafficserver.bounce_cluster']()
 
     ret['result'] = True
     ret['comment'] = 'Bounced cluster'
     return ret
 
 
-def bounce_local(drain=False):
+def bounce_local(name, drain=False):
     '''
     Bounce Traffic Server on the local node. Bouncing Traffic Server shuts down
     and immediately restarts the Traffic Server node.
@@ -66,19 +67,19 @@ def bounce_local(drain=False):
         ret['comment'] = 'Bouncing local node'
         return ret
 
-    if __opts__['drain']:
+    if drain:
         __salt__['trafficserver.bounce_local'](drain=True)
         ret['result'] = True
         ret['comment'] = 'Bounced local node with drain option'
         return ret
     else:
-        __salt__['trafficserver.bounce_local']
+        __salt__['trafficserver.bounce_local']()
         ret['result'] = True
         ret['comment'] = 'Bounced local node'
         return ret
 
 
-def clear_cluster():
+def clear_cluster(name):
     '''
     Clears accumulated statistics on all nodes in the cluster.
 
@@ -96,14 +97,14 @@ def clear_cluster():
         ret['comment'] = 'Clearing cluster statistics'
         return ret
 
-    __salt__['trafficserver.clear_cluster']
+    __salt__['trafficserver.clear_cluster']()
 
     ret['result'] = True
     ret['comment'] = 'Cleared cluster statistics'
     return ret
 
 
-def clear_node():
+def clear_node(name):
     '''
     Clears accumulated statistics on the local node.
 
@@ -121,14 +122,14 @@ def clear_node():
         ret['comment'] = 'Clearing local node statistics'
         return ret
 
-    __salt__['trafficserver.clear_node']
+    __salt__['trafficserver.clear_node']()
 
     ret['result'] = True
     ret['comment'] = 'Cleared local node statistics'
     return ret
 
 
-def restart_cluster():
+def restart_cluster(name):
     '''
     Restart the traffic_manager process and the traffic_server process on all
     the nodes in a cluster.
@@ -148,14 +149,14 @@ def restart_cluster():
         ret['comment'] = 'Restarting cluster'
         return ret
 
-    __salt__['trafficserver.restart_cluster']
+    __salt__['trafficserver.restart_cluster']()
 
     ret['result'] = True
     ret['comment'] = 'Restarted cluster'
     return ret
 
 
-def restart_local(drain=False):
+def restart_local(name, drain=False):
     '''
     Restart the traffic_manager and traffic_server processes on the local node.
 
@@ -182,13 +183,13 @@ def restart_local(drain=False):
         ret['comment'] = 'Restarting local node'
         return ret
 
-    if __opts__['drain']:
+    if drain:
         __salt__['trafficserver.restart_local'](drain=True)
         ret['result'] = True
         ret['comment'] = 'Restarted local node with drain option'
         return ret
     else:
-        __salt__['trafficserver.restart_local']
+        __salt__['trafficserver.restart_local']()
         ret['result'] = True
         ret['comment'] = 'Restarted local node'
         return ret
@@ -224,17 +225,14 @@ def set_var(name, value):
         )
         return ret
 
-    __salt__['trafficserver.set_var'](
-        variable=name,
-        value=value,
-    )
+    __salt__['trafficserver.set_var'](name, value)
 
     ret['result'] = True
     ret['comment'] = 'Configured {0} to {1}'.format(name, value)
     return ret
 
 
-def shutdown():
+def shutdown(name):
     '''
     Shut down Traffic Server on the local node.
 
@@ -252,14 +250,14 @@ def shutdown():
         ret['comment'] = 'Shutting down local node'
         return ret
 
-    __salt__['trafficserver.shutdown']
+    __salt__['trafficserver.shutdown']()
 
     ret['result'] = True
     ret['comment'] = 'Shutdown local node'
     return ret
 
 
-def startup():
+def startup(name):
     '''
     Start Traffic Server on the local node.
 
@@ -277,14 +275,14 @@ def startup():
         ret['comment'] = 'Starting up local node'
         return ret
 
-    __salt__['trafficserver.startup']
+    __salt__['trafficserver.startup']()
 
     ret['result'] = True
     ret['comment'] = 'Starting up local node'
     return ret
 
 
-def refresh():
+def refresh(name):
     '''
     Initiate a Traffic Server configuration file reread. Use this command to
     update the running configuration after any configuration file modification.
@@ -306,14 +304,14 @@ def refresh():
         ret['comment'] = 'Refreshing local node configuration'
         return ret
 
-    __salt__['trafficserver.refresh']
+    __salt__['trafficserver.refresh']()
 
     ret['result'] = True
     ret['comment'] = 'Refreshed local node configuration'
     return ret
 
 
-def zero_cluster():
+def zero_cluster(name):
     '''
     Reset performance statistics to zero across the cluster.
 
@@ -331,14 +329,14 @@ def zero_cluster():
         ret['comment'] = 'Zeroing cluster statistics'
         return ret
 
-    __salt__['trafficserver.zero_cluster']
+    __salt__['trafficserver.zero_cluster']()
 
     ret['result'] = True
     ret['comment'] = 'Zeroed cluster statistics'
     return ret
 
 
-def zero_node():
+def zero_node(name):
     '''
     Reset performance statistics to zero on the local node.
 
@@ -356,14 +354,14 @@ def zero_node():
         ret['comment'] = 'Zeroing local node statistics'
         return ret
 
-    __salt__['trafficserver.zero_node']
+    __salt__['trafficserver.zero_node']()
 
     ret['result'] = True
     ret['comment'] = 'Zeroed local node statistics'
     return ret
 
 
-def offline(path):
+def offline(name, path):
     '''
     Mark a cache storage device as offline. The storage is identified by a path
     which must match exactly a path specified in storage.config. This removes
