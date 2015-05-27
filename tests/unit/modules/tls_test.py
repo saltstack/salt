@@ -2,12 +2,19 @@
 '''
     :codeauthor: :email:`Joe Julian <me@joejulian.name>`
 '''
+# Import the future
+from __future__ import absolute_import
+
+NO_PYOPENSSL = False
 
 # Import Python libs
-from __future__ import absolute_import
 import shutil
 import tempfile
 import os
+try:
+    import OpenSSL
+except Exception:
+    NO_PYOPENSSL = True
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -100,14 +107,20 @@ bymYbi0l2pWqQLA2sPoRHNw=
         'emailAddress': 'xyz@pdq.net',
         'digest': 'sha256',
         'replace': False
-        }
     }
+}
+
+# Skip this test case if we don't have access to mock or PyOpenSSL.
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(NO_PYOPENSSL, 'PyOpenSSL must be installed to run these tests.')
 class TLSAddTestCase(TestCase):
+
     '''
     Test cases for salt.modules.tls
     '''
+
     def test_cert_base_path(self):
         '''
         Test for retrieving cert base path
@@ -237,7 +250,8 @@ class TLSAddTestCase(TestCase):
                 'O': 'SaltStack',
                 'ST': 'Utah',
                 'emailAddress': 'xyz@pdq.net'}
-            }
+        }
+
         def extensions_to_list(data):
             '''
             Convert dict of extensions to a list of extension names
@@ -583,7 +597,8 @@ class TLSAddTestCase(TestCase):
                                           'password')
                         self.assertEqual(
                             tls.create_pkcs12(ca_name,
-                                              _TLS_TEST_DATA['create_ca']['CN'],
+                                              _TLS_TEST_DATA[
+                                                  'create_ca']['CN'],
                                               'password',
                                               replace=True),
                             ret)
