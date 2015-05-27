@@ -4,6 +4,7 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -33,6 +34,7 @@ class LibvirtTestCase(TestCase):
     '''
     # 'keys' function tests: 1
 
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @patch('os.path.isfile', MagicMock(return_value=False))
     def test_keys(self):
         '''
