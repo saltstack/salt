@@ -73,9 +73,13 @@ __opts__ = {}
 
 def auth(profile=None, **connection_args):
     '''
-    Set up keystone credentials
+    Set up keystone credentials. Only intended to be used within Keystone-enabled modules.
 
-    Only intended to be used within Keystone-enabled modules
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keystone.auth
     '''
 
     if profile:
@@ -329,7 +333,9 @@ def endpoint_delete(service, profile=None, **connection_args):
 
 def role_create(name, profile=None, **connection_args):
     '''
-    Create named role
+    Create a named role.
+
+    CLI Example:
 
     .. code-block:: bash
 
