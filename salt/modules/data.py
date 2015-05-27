@@ -160,6 +160,8 @@ def get(key, default=None):
     '''
     Get a (list of) value(s) from the minion datastore
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -178,7 +180,9 @@ def get(key, default=None):
 
 def keys():
     '''
-    Get keys from the minion datastore
+    Get all keys from the minion datastore
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -194,6 +198,8 @@ def values():
     '''
     Get values from the minion datastore
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -208,6 +214,8 @@ def items():
     '''
     Get items from the minion datastore
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -220,13 +228,15 @@ def items():
 
 def has_key(key):
     '''
-    Get items from the minion datastore
+    Check if key is in the minion datastore
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' data.items
+        salt '*' data.has_key <mykey>
     '''
     store = load()
     return key in store
@@ -236,11 +246,13 @@ def pop(key, default=None):
     '''
     Pop (return & delete) a value from the minion datastore
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' data.pop <key> False
+        salt '*' data.pop <key> "there was no val"
     '''
     store = load()
     val = store.pop(key, default)
