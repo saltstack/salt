@@ -23,7 +23,7 @@ import time
 import datetime
 import logging
 import hashlib
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range as _range
 
 HAS_SSL = False
 try:
@@ -828,7 +828,7 @@ def create_ca_signed_cert(ca_name, CN, days=365, cacert_path=None, digest='sha25
         # so we mimic the newly get_extensions method present in ultra
         # recent pyopenssl distros
         native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(req._req)
-        for i in range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
+        for i in _range(OpenSSL._util.lib.sk_X509_EXTENSION_num(native_exts_obj)):
             ext = OpenSSL.crypto.X509Extension.__new__(OpenSSL.crypto.X509Extension)
             ext._extension = OpenSSL._util.lib.sk_X509_EXTENSION_value(native_exts_obj, i)
             exts.append(ext)
