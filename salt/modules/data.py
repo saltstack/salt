@@ -149,3 +149,22 @@ def cas(key, value, old_value):
     store[key] = value
     dump(store)
     return True
+
+
+def pop(key):
+    '''
+    Return & remove a value from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.pop <key>
+    '''
+    store = load()
+    val = None
+    if key in store:
+        val = store.pop(key)
+    dump(store)
+
+    return val
