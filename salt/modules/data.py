@@ -156,6 +156,24 @@ def cas(key, value, old_value):
     return True
 
 
+def pop(key, default=None):
+    '''
+    Pop (return & delete) a value from the minion datastore
+
+    .. versionadded:: 2015.5.2
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.pop <key> "there was no val"
+    '''
+    store = load()
+    val = store.pop(key, default)
+    dump(store)
+    return val
+
+
 def get(key, default=None):
     '''
     Get a (list of) value(s) from the minion datastore
@@ -240,21 +258,3 @@ def has_key(key):
     '''
     store = load()
     return key in store
-
-
-def pop(key, default=None):
-    '''
-    Pop (return & delete) a value from the minion datastore
-
-    .. versionadded:: Beryllium
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' data.pop <key> "there was no val"
-    '''
-    store = load()
-    val = store.pop(key, default)
-    dump(store)
-    return val
