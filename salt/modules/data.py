@@ -8,10 +8,16 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import ast
+import logging
 
 # Import salt libs
 import salt.utils
 import salt.payload
+
+# Import 3rd-party lib
+import salt.ext.six as six
+
+log = logging.getLogger(__name__)
 
 
 def clear():
@@ -100,20 +106,24 @@ def getval(key):
     '''
     Get a value from the minion datastore
 
+    .. deprecated:: Beryllium
+         Use ``get`` instead
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' data.getval <key>
     '''
-    store = load()
-    if key in store:
-        return store[key]
+    return get(key)
 
 
-def getvals(*keys):
+def getvals(*keylist):
     '''
     Get values from the minion datastore
+
+    .. deprecated:: Beryllium
+         Use ``get`` instead
 
     CLI Example:
 
@@ -121,12 +131,7 @@ def getvals(*keys):
 
         salt '*' data.getvals <key> [<key> ...]
     '''
-    store = load()
-    ret = []
-    for key in keys:
-        if key in store:
-            ret.append(store[key])
-    return ret
+    return get(keylist)
 
 
 def cas(key, value, old_value):
@@ -149,3 +154,95 @@ def cas(key, value, old_value):
     store[key] = value
     dump(store)
     return True
+
+
+def get(key, default=None):
+    '''
+    Get a (list of) value(s) from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.get <key(s)>
+    '''
+    store = load()
+
+    if isinstance(key, six.string_types):
+        return store.get(key, default)
+    elif default is None:
+        return [store[k] for k in key if k in store]
+    else:
+        return [store.get(k, default) for k in key]
+
+
+def keys():
+    '''
+    Get keys from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.keys
+    '''
+    store = load()
+    return store.keys()
+
+
+def values():
+    '''
+    Get values from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.values
+    '''
+    store = load()
+    return store.values()
+
+
+def items():
+    '''
+    Get items from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.items
+    '''
+    store = load()
+    return store.items()
+
+
+def has_key(key):
+    '''
+    Get items from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.items
+    '''
+    store = load()
+    return key in store
+
+
+def pop(key, default=None):
+    '''
+    Pop (return & delete) a value from the minion datastore
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.pop <key> False
+    '''
+    store = load()
+    val = store.pop(key, default)
+    dump(store)
+    return val
