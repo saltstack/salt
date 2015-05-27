@@ -1731,7 +1731,7 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
                'road_stack': '.salt.road.manor.stack',
                'master_events': '.salt.var.master_events'}
 
-    def postinitio(self):
+    def _prepare(self):
         self.master_events.value = deque()
 
     def action(self):
