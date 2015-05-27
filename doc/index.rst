@@ -12,24 +12,6 @@ and fast enough to communicate with those servers in *seconds*.
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
-.. seealso:: Other Documentation
-
-    Download an offline copy of the latest Salt documentation:
-
-    * `PDF`_
-    * `ePub`_
-
-    See documentation for past Salt releases at http://salt.readthedocs.org.
-    Download offline copies on the `ReadTheDocs download page`_.
-
-    Watch announcements, demonstrations, and video tutorials on the `SaltStack
-    YouTube channel`_.
-
-.. _`PDF`: https://media.readthedocs.org/pdf/salt/latest/salt.pdf
-.. _`ePub`: https://media.readthedocs.org/epub/salt/latest/salt.epub
-.. _`ReadTheDocs download page`: https://readthedocs.org/projects/salt/downloads/
-.. _`SaltStack YouTube channel`: http://www.youtube.com/saltstack
-
 Download
 ========
 
@@ -47,18 +29,28 @@ shell script, which automates the install correctly on  multiple platforms:
 
     https://github.com/saltstack/salt-bootstrap
 
-Getting Started
+Get Started
 ===============
 
-This walkthrough helps individuals to get started quickly and gain a
+A new `Get Started Guide <http://docs.saltstack.com/en/getstarted/>`_ walks you 
+through the basics of getting SaltStack up and running. You'll learn how to:
+
+* Install and configure SaltStack
+* Remotely execute commands across all managed systems
+* Design, develop, and deploy system configurations
+
+Tutorials
+=========
+
+This walkthrough is an additional tutorial to help you get started quickly and gain a
 foundational knowledge of Salt:
 
-:doc:`Official Salt Walkthrough</topics/tutorials/walkthrough>`
+:doc:`Official Salt Walkthrough </topics/tutorials/walkthrough>`
 
 The following getting started tutorials are also available:
 
 States - Configuration Management with Salt:
-    - :doc:`Getting Started with States<topics/tutorials/starting_states>`
+    - :doc:`Getting Started with States <topics/tutorials/starting_states>`
     - :doc:`Basic config management <topics/tutorials/states_pt1>`
     - :doc:`Less basic config management <topics/tutorials/states_pt2>`
     - :doc:`Advanced techniques <topics/tutorials/states_pt3>`

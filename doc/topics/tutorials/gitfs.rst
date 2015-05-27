@@ -424,7 +424,7 @@ master, each configured git remote will be searched.
 
 
 Branches, Environments, and Top Files
-====================================
+=====================================
 
 When using the gitfs backend, branches, and tags will be mapped to environments
 using the branch/tag name as an identifier.
