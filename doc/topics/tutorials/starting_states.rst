@@ -467,7 +467,7 @@ times to call shell commands to gather data.
 
 
 Introducing the Python, PyDSL, and the Pyobjects Renderers
----------------------------------------------------------
+----------------------------------------------------------
 
 Sometimes the chosen default renderer might not have enough logical power to
 accomplish the needed task. When this happens, the Python renderer can be

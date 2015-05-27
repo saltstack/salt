@@ -44,6 +44,7 @@ class Mock(object):
 MOCK_MODULES = [
     # salt core
     'Crypto',
+    'Crypto.Signature',
     'Crypto.Cipher',
     'Crypto.Hash',
     'Crypto.PublicKey',
@@ -102,6 +103,7 @@ MOCK_MODULES = [
     'rabbitmq_server',
     'redis',
     'requests',
+    'requests.exceptions',
     'rpm',
     'rpmUtils',
     'rpmUtils.arch',
@@ -153,8 +155,25 @@ project = 'Salt'
 copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
-#release = '.'.join(map(str, salt.version.__version_info__))
-release = '2015.5.0' # also update release versions in 'html_context'
+latest_release = '2015.5.0'  # latest release
+previous_release = '2014.7.6'  # latest release from previous branch
+previous_release_dir = '2014.7'  # path on web server for previous branch
+build_type = 'latest'  # latest, previous, develop
+
+# set release to 'version' for develop so sha is used
+# - otherwise -
+# set release to 'latest_release' or 'previous_release'
+
+release = latest_release # version, latest_release, previous_release
+
+# Set google custom search engine
+
+if release == latest_release:
+    search_cx = '004624818632696854117:yfmprrbw3pk'
+elif release.startswith('2014.7'):
+    search_cx = '004624818632696854117:thhslradbru'
+else:
+    search_cx = '004624818632696854117:haj7bjntf4s'  # develop
 
 needs_sphinx = '1.3'
 
@@ -193,11 +212,12 @@ autosummary_generate = True
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
+.. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-"""
+""".format(release=latest_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
@@ -266,10 +286,11 @@ html_context = {
     'github_base': 'https://github.com/saltstack/salt',
     'github_issues': 'https://github.com/saltstack/salt/issues',
     'github_downloads': 'https://github.com/saltstack/salt/downloads',
-    'latest_release_version': '2015.5.0',
-    'previous_release_version': '2014.7.6',
-    'previous_release_dir': '2014.7',
-    'build_type': 'latest', #latest, previous, develop
+    'latest_release': latest_release,
+    'previous_release': previous_release,
+    'previous_release_dir': previous_release_dir,
+    'search_cx': search_cx,
+    'build_type': build_type,
 }
 
 html_use_index = True

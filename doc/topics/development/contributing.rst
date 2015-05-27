@@ -87,8 +87,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
         #       modified:   path/to/file2
 
 
-    If you get stuck `there are many introductory Git resources on
-    help.github.com <Git resources_>`_.
+    If you get stuck, there are many introductory Git resources on
+    http://help.github.com.
 
 #.  Push your locally-committed changes to your GitHub fork,
 

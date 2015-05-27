@@ -17,8 +17,8 @@ A REST API for Salt
     <acl-eauth>` system which requires additional configuration not described
     here.
 
-    Example production-ready configuration; add to the Salt master config file
-    and restart the ``salt-master`` and ``salt-api`` daemons:
+Example production-ready configuration; add to the Salt master config file
+and restart the ``salt-master`` and ``salt-api`` daemons:
 
     .. code-block:: yaml
 

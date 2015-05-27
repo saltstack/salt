@@ -143,14 +143,14 @@ def new_zone(zone, restart=True):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.new_zone my_zone
 
     By default firewalld will be reloaded. However, to avoid reloading
     you need to specify the restart as False
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.new_zone my_zone False
     '''
@@ -171,14 +171,14 @@ def delete_zone(zone, restart=True):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.delete_zone my_zone
 
     By default firewalld will be reloaded. However, to avoid reloading
     you need to specify the restart as False
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.delete_zone my_zone False
     '''
@@ -199,7 +199,7 @@ def set_default_zone(zone):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.set_default_zone damian
     '''
@@ -212,14 +212,14 @@ def new_service(name, restart=True):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.new_service my_service
 
     By default firewalld will be reloaded. However, to avoid reloading
     you need to specify the restart as False
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.new_service my_service False
     '''
@@ -240,14 +240,14 @@ def delete_service(name, restart=True):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.delete_service my_service
 
     By default firewalld will be reloaded. However, to avoid reloading
     you need to specify the restart as False
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.delete_service my_service False
     '''
@@ -268,13 +268,13 @@ def list_all(zone=None):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.list_all
 
     List a specific zone
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.list_all my_zone
     '''
@@ -307,13 +307,13 @@ def list_services(zone=None):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.list_services
 
     List a specific zone
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.list_services my_zone
     '''
@@ -331,13 +331,13 @@ def add_service(name, zone=None, permanent=True):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.add_service ssh
 
     To assign a service to a specific zone
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.add_service ssh my_zone
     '''
@@ -359,13 +359,13 @@ def remove_service(name, zone=None, permanent=True):
 
     CLI Example:
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.remove_service ssh
 
     To remove a service from a specific zone
 
-    .. code-block::
+    .. code-block:: bash
 
         salt '*' firewalld.remove_service ssh dmz
     '''
