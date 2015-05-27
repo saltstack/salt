@@ -133,7 +133,7 @@ def installed(name,
                     if pkg_name.split('://')[1] == pkg_from:
                         return True
                 except IndexError:
-                     pass
+                    pass
         return False
 
     for pkg in pkg_list:
