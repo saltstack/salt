@@ -52,7 +52,7 @@ If supported by the cloud provider, a PowerShell script may be used to open up
 this port automatically, using the cloud provider's `userdata`. The following
 script would open up port 445, and apply the changes:
 
-.. code-block:: other
+.. code-block:: powershell
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
