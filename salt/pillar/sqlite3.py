@@ -53,7 +53,6 @@ import logging
 import sqlite3
 
 # Import Salt libs
-import salt.utils
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
@@ -72,7 +71,7 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
     def _db_name(cls):
         return 'SQLite3'
 
-    def _get_options():
+    def _get_options(self):
         '''
         Returns options used for the SQLite3 connection.
         '''
@@ -89,11 +88,11 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
         return _options
 
     @contextmanager
-    def _get_cursor():
+    def _get_cursor(self):
         '''
         Yield a SQLite3 cursor
         '''
-        _options = _get_options()
+        _options = self._get_options()
         conn = sqlite3.connect(_options.get('database'),
                                timeout=float(_options.get('timeout')))
         cursor = conn.cursor()
@@ -104,6 +103,7 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
         finally:
             conn.close()
 
+
 def ext_pillar(minion_id,
                pillar,
                *args,
@@ -111,4 +111,4 @@ def ext_pillar(minion_id,
     '''
     Execute queries against SQLite3, merge and return as a dict
     '''
-    return  SQLite3ExtPillar().fetch(minion_id, pillar, *args, **kwargs)
+    return SQLite3ExtPillar().fetch(minion_id, pillar, *args, **kwargs)

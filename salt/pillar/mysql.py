@@ -87,7 +87,7 @@ class MySQLExtPillar(SqlBaseExtPillar):
     def _db_name(cls):
         return 'MySQL'
 
-    def _get_options():
+    def _get_options(self):
         '''
         Returns options used for the MySQL connection.
         '''
@@ -107,11 +107,11 @@ class MySQLExtPillar(SqlBaseExtPillar):
         return _options
 
     @contextmanager
-    def _get_cursor():
+    def _get_cursor(self):
         '''
         Yield a MySQL cursor
         '''
-        _options = _get_options()
+        _options = self._get_options()
         conn = MySQLdb.connect(host=_options['host'],
                                user=_options['user'],
                                passwd=_options['pass'],
@@ -141,6 +141,7 @@ class MySQLExtPillar(SqlBaseExtPillar):
 
         return super(MySQLExtPillar, self).extract_queries(args, kwargs)
 
+
 def ext_pillar(minion_id,
                pillar,
                *args,
@@ -148,4 +149,4 @@ def ext_pillar(minion_id,
     '''
     Execute queries against MySQL, merge and return as a dict
     '''
-    return  MySQLExtPillar().fetch(minion_id, pillar, *args, **kwargs)
+    return MySQLExtPillar().fetch(minion_id, pillar, *args, **kwargs)
