@@ -252,12 +252,12 @@ class FileTestCase(TestCase):
                                                   group=group), ret)
 
     # 'absent' function tests: 1
-
+    @patch.object(os.path, 'islink', MagicMock(return_value=False))
     def test_absent(self):
         '''
         Test to make sure that the named file or directory is absent.
         '''
-        name = '/etc/grub.conf'
+        name = '/fake/file.conf'
 
         ret = {'name': name,
                'result': False,
