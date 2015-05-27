@@ -317,13 +317,31 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _cnames_present(name, cnames, region, key, keyid, profile)
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
-            return ret
+    if cnames:
+        lb = __salt__['boto_elb.get_elb_config'](
+            name, region, key, keyid, profile
+        )
+        for cname in cnames:
+            _ret  = __salt__['state.single'](
+                'boto_route53.present',
+                name=cname.get('name'),
+                value=lb['dns_name'],
+                zone=cname.get('zone'),
+                record_type='CNAME',
+                identifier=cname.get('identifier', None),
+                ttl=cname.get('ttl', None),
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile
+            )
+            _ret = _ret.values()[0]
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if not _ret['result']:
+                ret['result'] = _ret['result']
+                if ret['result'] is False:
+                    return ret
     _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -741,108 +759,6 @@ def _subnets_present(
     return ret
 
 
-def _cnames_present(
-        name,
-        cnames,
-        region,
-        key,
-        keyid,
-        profile):
-    ret = {'result': True, 'comment': '', 'changes': {}}
-    if not cnames:
-        cnames = []
-    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
-    if not lb:
-        if not __opts__['test']:
-            ret['result'] = False
-        msg = 'Failed to retrieve ELB {0}.'.format(name)
-        ret['comment'] = msg
-        return ret
-    to_create = []
-    to_update = []
-    for cname in cnames:
-        _name = cname.get('name', None)
-        _zone = cname.get('zone', None)
-        if not _name or not _zone:
-            raise SaltInvocationError('cnames must provide name and zone'
-                                      ' attributes.')
-        record = __salt__['boto_route53.get_record'](_name, _zone, 'CNAME',
-                                                     False, region, key,
-                                                     keyid, profile)
-        if not record:
-            to_create.append(cname)
-        elif record['value'].rstrip('.') != lb['dns_name'].rstrip('.'):
-            to_update.append(cname)
-    if to_create or to_update:
-        if __opts__['test']:
-            msg = 'ELB {0} to have cnames modified.'.format(name)
-            ret['comment'] = msg
-            ret['result'] = None
-            return ret
-        if to_create:
-            created = []
-            not_created = []
-            for cname in to_create:
-                _name = cname.get('name')
-                _zone = cname.get('zone')
-                _iden = cname.get('identifier', None)
-                _ttl = cname.get('ttl', None)
-                _created = __salt__['boto_route53.add_record'](
-                    _name, lb['dns_name'], _zone, 'CNAME', _iden, _ttl, region,
-                    key, keyid, profile)
-                if _created:
-                    created.append(_name)
-                else:
-                    not_created.append(_name)
-            if created:
-                msg = 'Created cnames {0}.'.format(','.join(created))
-                ret['comment'] = msg
-            if not_created:
-                msg = 'Failed to create cnames {0}.'
-                msg = msg.format(','.join(not_created))
-                if 'comment' in ret:
-                    ret['comment'] = ret['comment'] + ' ' + msg
-                else:
-                    ret['comment'] = msg
-                ret['result'] = False
-        if to_update:
-            updated = []
-            not_updated = []
-            for cname in to_update:
-                _name = cname.get('name')
-                _zone = cname.get('zone')
-                _iden = cname.get('identifier', None)
-                _ttl = cname.get('ttl', None)
-                _updated = __salt__['boto_route53.update_record'](
-                    _name, lb['dns_name'], _zone, 'CNAME', _iden, _ttl, region,
-                    key, keyid, profile)
-                if _updated:
-                    updated.append(_name)
-                else:
-                    not_updated.append(_name)
-            if updated:
-                msg = 'Updated cnames {0}.'.format(','.join(updated))
-                if 'comment' in ret:
-                    ret['comment'] = ret['comment'] + ' ' + msg
-                else:
-                    ret['comment'] = msg
-            if not_updated:
-                msg = 'Failed to update cnames {0}.'
-                msg = msg.format(','.join(not_updated))
-                if 'comment' in ret:
-                    ret['comment'] = ret['comment'] + ' ' + msg
-                else:
-                    ret['comment'] = msg
-                ret['result'] = False
-        # We can't track old, since we'd need to know the zone to
-        # search for the ELB in the value.
-        ret['changes']['new'] = {'cnames': to_create + to_update}
-    else:
-        msg = 'cnames already set on ELB {0}.'.format(name)
-        ret['comment'] = msg
-    return ret
-
-
 def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
     '''helper method for present.  ensure that cloudwatch_alarms are set'''
     # load data from alarms_from_pillar
@@ -870,7 +786,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
         ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
         results = ret.values()[0]
         if not results["result"]:
-            merged_return_value["result"] = False
+            merged_return_value["result"] = results["result"]
         if results.get("changes", {}) != {}:
             merged_return_value["changes"][info["name"]] = results["changes"]
         if "comment" in results:
