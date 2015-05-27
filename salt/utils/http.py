@@ -54,7 +54,6 @@ from salt.ext.six.moves.urllib.error import URLError
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
 from tornado.httpclient import HTTPClient
-from tornado.httpclient import HTTPError
 
 try:
     import requests
