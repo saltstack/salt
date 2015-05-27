@@ -12,12 +12,11 @@ from salt.beacons import inotify
 # Salt testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import destructiveTest, ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.integration import ModuleCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 
 # Third-party libs
 try:
-    import pyinotify
+    import pyinotify  # pylint: disable=unused-import
     HAS_PYINOTIFY = True
 except ImportError:
     HAS_PYINOTIFY = False
