@@ -863,7 +863,8 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock}):
+                            {'file.contains_regex_multiline': mock,
+                             'file.search': mock}):
                 comt = ('Pattern already commented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -874,6 +875,7 @@ class FileTestCase(TestCase):
 
             with patch.dict(filestate.__salt__,
                             {'file.contains_regex_multiline': mock_t,
+                             'file.search': mock_t,
                              'file.comment': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
@@ -918,6 +920,7 @@ class FileTestCase(TestCase):
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
                             {'file.contains_regex_multiline': mock,
+                             'file.search': mock,
                              'file.uncomment': mock_t}):
                 comt = ('Pattern already uncommented')
                 ret.update({'comment': comt, 'result': True})
@@ -972,7 +975,8 @@ class FileTestCase(TestCase):
                          'file.makedirs': mock_t,
                          'file.stats': mock_f,
                          'cp.get_template': mock_f,
-                         'file.contains_regex_multiline': mock_err}):
+                         'file.contains_regex_multiline': mock_err,
+                         'file.search': mock_err}):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
                         ' directory - new\n')
@@ -1054,6 +1058,7 @@ class FileTestCase(TestCase):
                          'file.stats': mock_f,
                          'cp.get_template': mock_f,
                          'file.contains_regex_multiline': mock_f,
+                         'file.search': mock_f,
                          'file.prepend': mock_t}):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
