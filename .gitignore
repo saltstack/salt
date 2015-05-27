@@ -24,9 +24,8 @@ lib64
 pip/
 share/
 tests/integration/tmp/
-
-# tox - ignore any tox-created virtualenv dirs
-.tox
+tests/cachedir/
+tests/unit/templates/roots/
 
 # setuptools stuff
 *.egg-info
@@ -52,8 +51,8 @@ htmlcov/
 tags
 
 # ignore Vagrant file
-Vagrantfile
-.vagrant
+**/Vagrantfile
+**/.vagrant
 
 # Compiled translation files should not be VCS'ed
 # locale/zh_CN/LC_MESSAGES/topics/virt/nic.mo
@@ -65,6 +64,10 @@ _version.py
 
 # Ignore grains file written out during tests
 tests/integration/files/conf/grains
+/salt/_syspaths.py
+
+# ignore the local root
+/root/**
 
 # Ignore file cache created by jinja tests
 tests/unit/templates/roots
