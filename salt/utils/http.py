@@ -54,6 +54,7 @@ from salt.ext.six.moves.urllib.error import URLError
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
 from tornado.httpclient import HTTPClient
+from tornado.httpclient import HTTPError
 
 try:
     import requests
@@ -243,8 +244,7 @@ def query(url,
             sess_cookies = salt.ext.six.moves.http_cookiejar.LWPCookieJar(cookie_jar)
         if not os.path.isfile(cookie_jar):
             sess_cookies.save()
-        else:
-            sess_cookies.load()
+        sess_cookies.load()
 
     if test is True:
         if test_url is None:
@@ -280,6 +280,9 @@ def query(url,
         result.raise_for_status()
         if stream is True or handle is True:
             return {'handle': result}
+
+        log.debug(result.url)
+        log.trace(data)
 
         result_status_code = result.status_code
         result_headers = result.headers
@@ -379,16 +382,21 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
-        result = HTTPClient().fetch(
-            tornado.httputil.url_concat(url, params),
-            method=method,
-            headers=header_dict,
-            auth_username=username,
-            auth_password=password,
-            body=data,
-            validate_cert=verify_ssl,
-            **req_kwargs
-        )
+        try:
+            result = HTTPClient().fetch(
+                tornado.httputil.url_concat(url, params),
+                method=method,
+                headers=header_dict,
+                auth_username=username,
+                auth_password=password,
+                body=data,
+                validate_cert=verify_ssl,
+                **req_kwargs
+            )
+        except tornado.httpclient.HTTPError as exc:
+            ret['status'] = exc.code
+            ret['error'] = str(exc)
+            return ret
 
         if stream is True or handle is True:
             return {'handle': result}
@@ -729,7 +737,11 @@ def parse_cookie_header(header):
             cookie['version'] = 0
         if cookie['rest'] == '':
             cookie['rest'] = {}
+        if cookie['expires'] == '':
+            cookie['expires'] = 0
 
+        if 'httponly' in cookie:
+            del cookie['httponly']
         ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
