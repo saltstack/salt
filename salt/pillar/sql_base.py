@@ -176,13 +176,13 @@ from __future__ import absolute_import
 # tests/unit/pillar/mysql_test.py may help understand this code.
 
 # Import python libs
-from contextlib import contextmanager
 import logging
-import abc # Added in python2.6 so always available
+import abc  # Added in python2.6 so always available
 
 # Import Salt libs
 from salt.utils.odict import OrderedDict
 from salt.ext.six.moves import range
+from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -193,12 +193,11 @@ def __virtual__():
     return False
 
 
-class SqlBaseExtPillar(object):
+class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
     '''
     This class receives and processes the database rows in a database
     agnostic way.
     '''
-    __metaclass__ = abc.ABCMeta
 
     result = None
     focus = None
@@ -416,7 +415,6 @@ class SqlBaseExtPillar(object):
                 elif isinstance(d[k], list):
                     d[k] = [d[k]]
 
-
     def fetch(self,
               minion_id,
               pillar,  # pylint: disable=W0613
@@ -426,14 +424,14 @@ class SqlBaseExtPillar(object):
         Execute queries, merge and return as a dict.
         '''
         db_name = self._db_name()
-        log.info('Querying {0} for information for {1}'.format(db_name,  minion_id))
+        log.info('Querying {0} for information for {1}'.format(db_name, minion_id))
         #
         #    log.debug('ext_pillar {0} args: {1}'.format(db_name, args))
         #    log.debug('ext_pillar {0} kwargs: {1}'.format(db_name, kwargs))
         #
         # Most of the heavy lifting is in this class for ease of testing.
         qbuffer = self.extract_queries(args, kwargs)
-        with _get_cursor() as cursor:
+        with self._get_cursor() as cursor:
             for root, details in qbuffer:
                 # Run the query
                 cursor.execute(details['query'], (minion_id,))
@@ -450,8 +448,7 @@ class SqlBaseExtPillar(object):
                 self.ignore_null = details['ignore_null']
                 self.process_results(cursor.fetchall())
 
-                log.debug('ext_pillar {0}: Return data: {1}'.format(db_name,
-                      self))
+                log.debug('ext_pillar {0}: Return data: {1}'.format(db_name, self))
         return self.result
 
 
