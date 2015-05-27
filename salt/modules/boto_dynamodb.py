@@ -13,6 +13,8 @@ Connection module for Amazon DynamoDB
 
     If IAM roles are not used you need to specify them either in a pillar or
     in the minion's config file::
+
+
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
@@ -23,7 +25,7 @@ Connection module for Amazon DynamoDB
     If a region is not specified, the default is us-east-1.
 
     It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+    as a passed in dict, or as a string to pull from pillars or minion config::
 
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H

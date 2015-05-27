@@ -10,7 +10,7 @@ services, and so may incur charges.
 This module uses ``boto``, which can be installed via package, or pip.
 
 This module accepts explicit elb credentials but can also utilize
-IAM roles assigned to the instance through Instance Profiles. Dynamic
+IAM roles assigned to the instance through Instance Profiles. Dynamic 
 credentials are then automatically obtained from AWS API and no further
 configuration is necessary. More information available `here
 <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.

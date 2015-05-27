@@ -2391,7 +2391,7 @@ def replace(name,
         Filesystem path to the file to be edited.
 
     pattern
-        Python's `regular expression search<https://docs.python.org/2/library/re.html>`_.
+        Python's `regular expression search <https://docs.python.org/2/library/re.html>`_.
 
     repl
         The replacement text.

@@ -26,7 +26,7 @@ values (defaults to ``sdb``). The database and table will be created if they
 do not exist.
 
 Advanced Usage:
-==============
+===============
 
 Instead of a table name, it is possible to provide custom SQL statements to
 create the table(s) and get and set values.

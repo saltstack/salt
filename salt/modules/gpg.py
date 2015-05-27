@@ -6,7 +6,6 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
 .. versionadded:: 2015.5.0
 
 .. note::
-
     The ``python-gnupg`` library and gpg binary are
     required to be installed.
 

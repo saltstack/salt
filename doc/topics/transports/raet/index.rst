@@ -1,3 +1,5 @@
+.. _raet:
+
 ==================
 The RAET Transport
 ==================
@@ -135,3 +137,8 @@ externally developed cryptography system.
 For more information on libsodium and CurveCP please see:
 http://doc.libsodium.org/
 http://curvecp.org/
+
+Programming Intro
+=================
+
+:ref:`Raet Programming Introduction <raet-programming>`

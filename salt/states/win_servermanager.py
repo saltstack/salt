@@ -75,17 +75,21 @@ def removed(name):
     Remove the windows feature
     name:
         short name of the feature (the right column in win_servermanager.list_available)
+
     Note:
-    Some features require a reboot after uninstallation. If so the feature will not be completly uninstalled until
+        Some features require a reboot after uninstallation. If so the feature will not be completly uninstalled until
     the server is restarted.
+
     Example:
-    Run ``salt MinionName win_servermanager.list_installed`` to get a list of all features installed. Use the top
+        Run ``salt MinionName win_servermanager.list_installed`` to get a list of all features installed. Use the top
     name listed for each feature, not the indented one. Do not use the role or feature names mentioned in the
     PKGMGR documentation.
-    .. code-block:: yaml
-        ISWebserverRole:
-          win_servermanager.removed:
-            - name: Web-Server
+
+        .. code-block:: yaml
+            ISWebserverRole:
+              win_servermanager.removed:
+                - name: Web-Server
+
     '''
     ret = {'name': name,
            'result': True,
