@@ -212,7 +212,7 @@ def gen_locale(locale, **kwargs):
         if not valid and not locale_info['charmap']:
             # charmap was not supplied, so try copying the codeset
             locale_info['charmap'] = locale_info['codeset']
-            locale = _join_locale(locale_info)
+            locale = salt.utils.locales.join_locale(locale_info)
             valid = __salt__['file.search'](search, '^{0}$'.format(locale))
     else:  # directory-based search
         if on_suse:
