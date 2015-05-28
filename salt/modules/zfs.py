@@ -78,11 +78,19 @@ def __virtual__():
     '''
     Makes sure that ZFS kernel module is loaded.
     '''
-    kernel_module_chk = {
-        'FreeBSD': 'kldstat -q -m zfs',
-        'Linux': 'modinfo zfs',
-    }
-    cmd = kernel_module_chk.get(__grains__['kernel'], '')
+    on_freebsd = __grains__['kernel'] == 'FreeBSD'
+    on_linux = __grains__['kernel'] == 'Linux'
+
+    cmd = ''
+    if on_freebsd:
+        cmd = 'kldstat -q -m zfs'
+    elif on_linux:
+        modinfo = salt.utils.which('modinfo')
+        if modinfo:
+            cmd = '{0} zfs'.format(modinfo)
+        else:
+            cmd = 'ls /sys/module/zfs'
+
     if cmd and salt_cmd.retcode(cmd, output_loglevel='quiet') == 0:
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
