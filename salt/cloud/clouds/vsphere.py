@@ -367,6 +367,9 @@ def _deploy(vm_):
         ),
         'sudo_password': config.get_cloud_config_value(
             'sudo_password', vm_, __opts__, default=None
+        ),
+        'key_filename': config.get_cloud_config_value(
+            'key_filename', vm_, __opts__, default=None
         )
     }
 
