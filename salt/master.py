@@ -2379,6 +2379,8 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
+            elif clear_load.get('key', 'invalid') == self.key.get('root'):
+                clear_load.pop('key')
             else:
                 if clear_load['user'] in self.key:
                     # User is authorised, check key and check perms
