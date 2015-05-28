@@ -361,7 +361,13 @@ def _deploy(vm_):
         'script_env': config.get_cloud_config_value(
             'script_env', vm_, __opts__
         ),
-        'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
+        'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_),
+        'sudo': config.get_cloud_config_value(
+            'sudo', vm_, __opts__, default=(template_user != 'root')
+        ),
+        'sudo_password': config.get_cloud_config_value(
+            'sudo_password', vm_, __opts__, default=None
+        )
     }
 
     # Store what was used to the deploy the VM
