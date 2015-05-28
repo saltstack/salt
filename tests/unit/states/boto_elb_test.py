@@ -97,20 +97,12 @@ class BotoElbTestCase(TestCase):
                             self.assertDictEqual(boto_elb.present
                                                  (name, listeners), ret)
 
-                            with patch.object(boto_elb, '_cnames_present',
+                            with patch.object(boto_elb, '_alarms_present',
                                               mock_elb_present):
-                                comt = ('     ')
-                                ret.update({'comment': comt})
+                                ret.update({'result': True})
                                 self.assertDictEqual(boto_elb.present
                                                      (name, listeners,
                                                       alarms=alarms), ret)
-
-                                with patch.object(boto_elb, '_alarms_present',
-                                                  mock_elb_present):
-                                    ret.update({'result': True})
-                                    self.assertDictEqual(boto_elb.present
-                                                         (name, listeners,
-                                                          alarms=alarms), ret)
 
     # 'absent' function tests: 1
 
