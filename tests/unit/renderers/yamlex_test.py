@@ -13,7 +13,7 @@ ensure_in_syspath('../..')
 import salt.state
 from salt.config import minion_config
 from salt.template import compile_template_str
-from salt.utils.serializers import yamlex
+from salt.serializers import yamlex
 
 basic_template = '''#!yamlex
 foo: bar

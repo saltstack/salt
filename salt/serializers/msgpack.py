@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.serializers.msgpack
+    salt.serializers.msgpack
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements MsgPack serializer.
@@ -13,7 +13,7 @@ from copy import copy
 
 # Import Salt Libs
 from salt.log import setup_console_logger
-from salt.utils.serializers import DeserializationError, SerializationError
+from salt.serializers import DeserializationError, SerializationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
