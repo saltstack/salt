@@ -29,6 +29,9 @@ import logging
 # Import salt libs
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -162,7 +165,7 @@ def present(name,
                                    'is set to be changed'.format(name))
                 return ret
             for vhost_perm in perms:
-                for vhost, perm in vhost_perm.iteritems():
+                for vhost, perm in six.iteritems(vhost_perm):
                     result.update(__salt__['rabbitmq.set_permissions'](
                         vhost, name, perm[0], perm[1], perm[2], runas)
                     )
