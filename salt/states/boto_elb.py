@@ -322,7 +322,7 @@ def present(
             name, region, key, keyid, profile
         )
         for cname in cnames:
-            _ret  = __salt__['state.single'](
+            _ret = __salt__['state.single'](
                 'boto_route53.present',
                 name=cname.get('name'),
                 value=lb['dns_name'],
