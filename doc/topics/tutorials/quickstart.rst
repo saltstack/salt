@@ -3,7 +3,7 @@ Salt Masterless Quickstart
 ==========================
 
 .. _`Vagrant`: http://www.vagrantup.com/
-.. _`salty-vagrant`: https://github.com/saltstack/salty-vagrant
+.. _`Vagrant salt provisioner`: http://docs.vagrantup.com/v2/provisioning/salt.html
 .. _`salt-bootstrap`: https://github.com/saltstack/salt-bootstrap
 
 Running a masterless salt-minion lets you use Salt's configuration management
@@ -32,16 +32,16 @@ for any OS with a Bourne shell:
     wget -O - https://bootstrap.saltstack.com | sudo sh
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
-to test out salt, the `salty-vagrant`_ tool will  provision the VM for you.
+to test out salt, the `Vagrant salt provisioner`_ will provision the VM for you.
 
 Telling Salt to Run Masterless
 ===================================
 
-To instruct the minion to not look for a master when running
-the :conf_minion:`file_client` configuration option needs to be set.
+To instruct the minion to not look for a master, the :conf_minion:`file_client`
+configuration option needs to be set in the minion configuration file.
 By default the :conf_minion:`file_client` is set to ``remote`` so that the
-minion knows that file server and pillar data are to be gathered from the
-master. When setting the :conf_minion:`file_client` option to ``local`` the
+minion gathers file server and pillar data from the salt master.
+When setting the :conf_minion:`file_client` option to ``local`` the
 minion is configured to not gather this data from the master.
 
 .. code-block:: yaml
