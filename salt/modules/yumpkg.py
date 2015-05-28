@@ -1218,7 +1218,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     Hold packages with ``yum -q versionlock``.
 
     name
-        The name of the package to be deleted.
+        The name of the package to be held.
 
     Multiple Package Options:
 
