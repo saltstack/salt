@@ -26,6 +26,8 @@ def update(dest, upd, recursive_update=True):
     If recursive_update=False, will use the classic dict.update, or fall back
     on a manual merge (helpful for non-dict types like FunctionWrapper)
     '''
+    if dest is None:
+        return upd
     if recursive_update:
         for key, val in six.iteritems(upd):
             try:
@@ -40,7 +42,7 @@ def update(dest, upd, recursive_update=True):
                     and isinstance(val, collections.Mapping):
                 ret = update(dest_subkey, val)
                 dest[key] = ret
-            elif key:
+            else:
                 dest[key] = upd[key]
         return dest
     else:
