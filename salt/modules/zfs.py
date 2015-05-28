@@ -17,7 +17,6 @@ import sys
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ def _available_commands():
         return False
 
     ret = {}
-    res = salt_cmd.run_stderr(
+    res = __salt__['cmd.run_stderr'](
         '{0} -?'.format(zfs_path),
         output_loglevel='trace',
         ignore_retcode=True
@@ -91,7 +90,7 @@ def __virtual__():
         else:
             cmd = 'ls /sys/module/zfs'
 
-    if cmd and salt_cmd.retcode(cmd, output_loglevel='quiet') == 0:
+    if cmd and __salt__['cmd.retcode'](cmd, output_loglevel='quiet') == 0:
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
         return 'zfs'
@@ -116,7 +115,7 @@ def _make_function(cmd_name, doc):
         ret = {}
 
         # Run the command.
-        res = salt_cmd.run_all(
+        res = __salt__['cmd.run_all'](
                 '{0} {1} {2}'.format(
                     _check_zfs(),
                     cmd_name,
