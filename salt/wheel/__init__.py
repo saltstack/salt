@@ -26,6 +26,15 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     Salt Master and it must be done using the same user that the Salt Master is
     running as. Unless :conf_master:`external_auth` is configured and the user
     is authorized to execute wheel functions: (``@wheel``).
+
+    Usage:
+
+    .. code-block:: python
+
+        import salt.config
+        import salt.wheel
+        opts = salt.config.master_config('/etc/salt/master')
+        wheel = salt.wheel.WheelClient(opts)
     '''
     client = 'wheel'
     tag_prefix = 'wheel'
@@ -69,14 +78,14 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
         .. code-block:: python
 
-        >>> wheel.cmd_sync({
-        'fun': 'key.finger',
-        'match': 'jerry',
-        'eauth': 'auto',
-        'username': 'saltdev',
-        'password': 'saltdev',
-        })
-        {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+            >>> wheel.cmd_sync({
+            'fun': 'key.finger',
+            'match': 'jerry',
+            'eauth': 'auto',
+            'username': 'saltdev',
+            'password': 'saltdev',
+            })
+            {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
         return self.master_call(**low)
 
@@ -102,6 +111,16 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         fun = low.pop('fun')
         return self.async(fun, low)
+
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None):
+        '''
+        Execute a function
+
+        .. code-block:: python
+
+            >>> wheel.cmd('key.finger', ['jerry'])
+            {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+        '''
 
 
 Wheel = WheelClient  # for backward-compat
