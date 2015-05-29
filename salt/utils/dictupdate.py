@@ -31,10 +31,6 @@ def update(dest, upd, recursive_update=True):
     if recursive_update:
         for key, val in six.iteritems(upd):
             try:
-                if isinstance(val, OrderedDict):
-                    valtype = OrderedDict
-                else:
-                    valtype = dict
                 dest_subkey = dest.get(key, None)
             except AttributeError:
                 dest_subkey = None
