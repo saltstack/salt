@@ -915,6 +915,11 @@ def running(name,
                   - VAR1=value
                   - VAR2=value
 
+        .. note::
+
+            Values must be strings. Otherwise it will be considered
+            as an error.
+
     ports
         A list of ports to expose on the container. Can either be a
         comma-separated list or a YAML list. If the protocol is omitted, the

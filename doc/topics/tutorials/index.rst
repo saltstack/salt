@@ -48,6 +48,8 @@ Advanced Topics
     gitfs
     walkthrough_macosx
     writing_tests
+    http
+    lxc
 
 Salt Virt
 ==========

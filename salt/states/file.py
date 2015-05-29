@@ -251,8 +251,8 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.utils.serializers import yaml as yaml_serializer
-from salt.utils.serializers import json as json_serializer
+from salt.serializers import yaml as yaml_serializer
+from salt.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -1274,12 +1274,11 @@ def managed(name,
         run.
     '''
     name = os.path.expanduser(name)
-    # contents must be a string
-    if contents is not None:
-        contents = str(contents)
 
-    # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
 
     # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
@@ -1293,10 +1292,30 @@ def managed(name,
             'to \'False\' to avoid reading the file unnecessarily'
         )
 
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
+    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
+        return _error(
+            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
+
+    if contents_pillar:
+        contents = __salt__['pillar.get'](contents_pillar)
+    if contents_grains:
+        contents = __salt__['grains.get'](contents_grains)
+
+    # ensure contents is a string
+    if contents:
+        validated_contents = _validate_str_list(contents)
+        if not validated_contents:
+            return _error(ret, '"contents" is not a string or list of strings')
+        if isinstance(validated_contents, list):
+            contents = os.linesep.join(validated_contents)
+        if contents_newline:
+            # Make sure file ends in newline
+            if contents and not contents.endswith(os.linesep):
+                contents += os.linesep
+
+    # Make sure that leading zeros stripped by YAML loader are added back
+    mode = __salt__['config.manage_mode'](mode)
+
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
@@ -1345,22 +1364,6 @@ def managed(name,
     if defaults and not isinstance(defaults, dict):
         return _error(
             ret, 'Defaults must be formed as a dict')
-
-    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
-        return _error(
-            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
-
-    # If contents_pillar was used, get the pillar data
-    if contents_pillar:
-        contents = __salt__['pillar.get'](contents_pillar)
-
-    if contents_grains:
-        contents = __salt__['grains.get'](contents_grains)
-
-    if contents_newline:
-        # Make sure file ends in newline
-        if contents and not contents.endswith('\n'):
-            contents += '\n'
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
@@ -2409,7 +2412,7 @@ def replace(name,
         Filesystem path to the file to be edited.
 
     pattern
-        Python's `regular expression search<https://docs.python.org/2/library/re.html>`_.
+        Python's `regular expression search <https://docs.python.org/2/library/re.html>`_.
 
     repl
         The replacement text.
@@ -2845,8 +2848,8 @@ def comment(name, regex, char='#', backup='.bak'):
     unanchor_regex = regex.lstrip('^').rstrip('$')
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__['file.contains_regex_multiline'](name, regex):
-        if __salt__['file.contains_regex_multiline'](name, unanchor_regex):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, unanchor_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -2866,8 +2869,7 @@ def comment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](name,
-                                                              unanchor_regex)
+    ret['result'] = __salt__['file.search'](name, unanchor_regex, multiline=True)
 
     if slines != nlines:
         if not salt.utils.istextfile(name):
@@ -2931,13 +2933,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
         return _error(ret, check_msg)
 
     # Make sure the pattern appears in the file
-    if __salt__['file.contains_regex_multiline'](
-            name, '^[ \t]*{0}'.format(regex.lstrip('^'))):
+    if __salt__['file.search'](
+            name,
+            '^[ \t]*{0}'.format(regex.lstrip('^')),
+            multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.contains_regex_multiline'](
-            name, '{0}[ \t]*{1}'.format(char, regex.lstrip('^'))):
+    elif __salt__['file.search'](
+            name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
         # Line exists and is commented
         pass
     else:
@@ -2958,8 +2964,10 @@ def uncomment(name, regex, char='#', backup='.bak'):
         nlines = fp_.readlines()
 
     # Check the result
-    ret['result'] = __salt__['file.contains_regex_multiline'](
-        name, '^[ \t]*{0}'.format(regex.lstrip('^'))
+    ret['result'] = __salt__['file.search'](
+        name,
+        '^[ \t]*{0}'.format(regex.lstrip('^')),
+        multiline=True
     )
 
     if slines != nlines:
@@ -3192,8 +3200,10 @@ def append(name,
     try:
         for chunk in text:
 
-            if __salt__['file.contains_regex_multiline'](
-                    name, salt.utils.build_whitespace_split_regex(chunk)):
+            if __salt__['file.search'](
+                    name,
+                    salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
                 continue
 
             lines = chunk.splitlines()
@@ -3359,8 +3369,10 @@ def prepend(name,
     preface = []
     for chunk in text:
 
-        if __salt__['file.contains_regex_multiline'](
-                name, salt.utils.build_whitespace_split_regex(chunk)):
+        if __salt__['file.search'](
+                name,
+                salt.utils.build_whitespace_split_regex(chunk),
+                multiline=True):
             continue
 
         lines = chunk.splitlines()
@@ -4198,7 +4210,7 @@ def serialize(name,
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
         # TODO remove json round-trip when all dataset will use
-        # utils.serializers
+        # serializers
         contents = pprint.pformat(
             json.loads(
                 json.dumps(dataset),

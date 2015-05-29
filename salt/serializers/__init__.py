@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.serializers
+    salt.serializers
     ~~~~~~~~~~~~~~~~~~~~~~
 
     This module implements all the serializers needed by salt.

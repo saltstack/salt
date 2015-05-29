@@ -13,28 +13,41 @@ import copy
 import logging
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
-from salt.utils.serializers.yamlex \
+from salt.serializers.yamlex \
     import merge_recursive as _yamlex_merge_recursive
 
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd, recursive_update=None):
-    # try to rely on classical dict.update
-    # if there is no overlap between the two structures.
-    # we also let the user to choose explicitly one of the plans
-    # by setting recursive_update to an explicit bool.
-    if recursive_update is None:
-        try:
-            for k in upd:
-                if k in dest:
-                    recursive_update = True
-                    break
-        except (KeyError, TypeError):
-            # mapping may not be dicts, and may not be
-            # iterables
-            recursive_update = True
-    if not recursive_update:
+def update(dest, upd, recursive_update=True):
+    '''
+    Recursive version of the default dict.update
+
+    Merges upd recursively into dest
+
+    If recursive_update=False, will use the classic dict.update, or fall back
+    on a manual merge (helpful for non-dict types like FunctionWrapper)
+    '''
+    if dest is None:
+        return upd
+    if recursive_update:
+        for key, val in six.iteritems(upd):
+            try:
+                if isinstance(val, OrderedDict):
+                    valtype = OrderedDict
+                else:
+                    valtype = dict
+                dest_subkey = dest.get(key, None)
+            except AttributeError:
+                dest_subkey = None
+            if isinstance(dest_subkey, collections.Mapping) \
+                    and isinstance(val, collections.Mapping):
+                ret = update(dest_subkey, val)
+                dest[key] = ret
+            else:
+                dest[key] = upd[key]
+        return dest
+    else:
         try:
             dest.update(upd)
         except AttributeError:
@@ -42,23 +55,6 @@ def update(dest, upd, recursive_update=None):
             for k in upd:
                 dest[k] = upd[k]
         return dest
-    for key, val in six.iteritems(upd):
-        try:
-            if isinstance(val, OrderedDict):
-                klass = OrderedDict
-            else:
-                klass = dict
-            dest_subkey = dest.get(key, klass())
-        except AttributeError:
-            dest_subkey = None
-
-        if isinstance(dest_subkey, collections.Mapping) \
-                and isinstance(val, collections.Mapping):
-            ret = update(dest_subkey, val)
-            dest[key] = ret
-        elif key:
-            dest[key] = upd[key]
-    return dest
 
 
 def merge_list(obj_a, obj_b):
@@ -72,7 +68,7 @@ def merge_list(obj_a, obj_b):
 
 
 def merge_recurse(obj_a, obj_b):
-    copied = copy.copy(obj_a)
+    copied = copy.deepcopy(obj_a)
     return update(copied, obj_b)
 
 

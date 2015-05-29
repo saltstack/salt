@@ -216,6 +216,15 @@ def _parse_openssl_crl(crl_filename):
     return crl
 
 
+def _get_signing_policy(name):
+    policies = __salt__['pillar.get']('x509_signing_policies', None)
+    if policies:
+        signing_policy = policies.get(name)
+        if signing_policy:
+            return signing_policy
+    return __salt__['config.get']('x509_signing_policies', {}).get(name)
+
+
 def _pretty_hex(hex_str):
     '''
     Nicely formats hex strings
@@ -779,10 +788,10 @@ def sign_remote_certificate(argdic, **kwargs):
 
     signing_policy = {}
     if 'signing_policy' in argdic:
-        if argdic['signing_policy'] not in __salt__['config.get']('x509_signing_policies'):
+        signing_policy = _get_signing_policy(argdic['signing_policy'])
+        if not signing_policy:
             return 'Signing policy {0} does not exist.'.format(argdic['signing_policy'])
 
-        signing_policy = __salt__['config.get']('x509_signing_policies')[argdic['signing_policy']]
         if isinstance(signing_policy, list):
             dict_ = {}
             for item in signing_policy:
@@ -801,7 +810,7 @@ def sign_remote_certificate(argdic, **kwargs):
         return str(except_)
 
 
-def get_signing_policy(signing_policy):
+def get_signing_policy(signing_policy_name):
     '''
     Returns the details of a names signing policy, including the text of the public key that will be used
     to sign it. Does not return the private key.
@@ -812,9 +821,9 @@ def get_signing_policy(signing_policy):
 
         salt '*' x509.get_signing_policy www
     '''
-    if signing_policy not in __salt__['config.get']('x509_signing_policies'):
-        return 'Signing policy {0} does not exist.'.format(signing_policy)
-    signing_policy = __salt__['config.get']('x509_signing_policies')[signing_policy]
+    signing_policy = _get_signing_policy(signing_policy_name)
+    if not signing_policy:
+        return 'Signing policy {0} does not exist.'.format(signing_policy_name)
     if isinstance(signing_policy, list):
         dict_ = {}
         for item in signing_policy:
@@ -1074,7 +1083,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     signing_policy = {}
     if 'signing_policy' in kwargs:
-        signing_policy = __salt__['config.get']('x509_signing_policies')[kwargs['signing_policy']]
+        signing_policy = _get_signing_policy(kwargs['signing_policy'])
         if isinstance(signing_policy, list):
             dict_ = {}
             for item in signing_policy:

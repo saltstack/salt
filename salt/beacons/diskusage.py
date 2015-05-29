@@ -41,17 +41,15 @@ def beacon(config):
     '''
     Monitor the disk usage of the minion
 
-    Specify thresholds for for each load average
-    and only emit a beacon if any of them are
+    Specify thresholds for each disk and only emit a beacon if any of them are
     exceeded.
 
     .. code-block:: yaml
 
         beacons:
-            diskusage:
-              - /: 63%
-              - /mnt/nfs: 50%
-
+          diskusage:
+            - /: 63%
+            - /mnt/nfs: 50%
     '''
     ret = []
     for diskusage in config:

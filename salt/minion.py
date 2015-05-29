@@ -818,7 +818,7 @@ class Minion(MinionBase):
         try:
             beacons = self.process_beacons(self.functions)
         except Exception as exc:
-            log.critical('Beacon processing errored: {0}. No beacons will be procssed.'.format(traceback.format_exc(exc)))
+            log.critical('Beacon processing failed: {0}. No beacons will be processed.'.format(traceback.format_exc(exc)))
             beacons = None
         if beacons:
             self._fire_master(events=beacons)
@@ -1348,11 +1348,13 @@ class Minion(MinionBase):
         elif func == 'enable_job':
             self.schedule.enable_job(name, where)
         elif func == 'run_job':
-            self.schedule.run_job(name, where)
+            self.schedule.run_job(name)
         elif func == 'disable_job':
             self.schedule.disable_job(name, where)
         elif func == 'reload':
             self.schedule.reload(schedule)
+        elif func == 'list':
+            self.schedule.list(where)
 
     def manage_beacons(self, package):
         '''
@@ -1365,6 +1367,8 @@ class Minion(MinionBase):
 
         if func == 'add':
             self.beacons.add_beacon(name, beacon_data)
+        elif func == 'modify':
+            self.beacons.modify_beacon(name, beacon_data)
         elif func == 'delete':
             self.beacons.delete_beacon(name)
         elif func == 'enable':

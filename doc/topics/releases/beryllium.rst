@@ -36,3 +36,11 @@ Also, tar will parse its options differently if short options are used with or
 without a preceding ``-``, so it is better to not confuse the user into
 thinking they're using the non- ``-`` format, when really they are using the
 with- ``-`` format.
+
+Deprecations
+============
+
+The ``digital_ocean.py`` Salt Cloud driver was removed in favor of the
+``digital_ocean_v2.py`` driver as DigitalOcean has removed support for APIv1.
+The ``digital_ocean_v2.py`` was renamed to ``digital_ocean.py`` and supports
+DigitalOcean's APIv2.
