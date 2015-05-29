@@ -14,7 +14,9 @@ LXC Management with Salt
     Some features are only currently available in the ``develop`` branch, and
     are new in the upcoming 2015.5.0 release. These new features will be
     clearly labeled.
-    
+    Even in 2015.5 release, you will need up to the last changeset of this
+    stable branch for the salt-cloud stuff to work correctly.
+
 
 Dependencies
 ============
@@ -48,8 +50,10 @@ order. This allows for profiles to be defined centrally in the master config
 file, with several options for overriding them (if necessary) on groups of
 minions or individual minions.
 
-There are two types of profiles, one for defining the parameters used in
-container creation, and one for defining the container's network interface(s).
+There are two types of profiles:
+
+    - One for defining the parameters used in container creation/clone.
+    - One for defining the container's network interface(s) settings.
 
 .. _tutorial-lxc-profiles-container:
 
@@ -143,9 +147,15 @@ Parameter          2015.5.0 and Newer 2014.7.x and Earlier
 
 Network Profiles
 ----------------
-
 LXC network profiles are defined defined underneath the ``lxc.network_profile``
-config option:
+config option.
+By default, the module uses a DHCP based configuration and try to guess a bridge to
+get connectivity.
+
+
+.. warning::
+
+   on pre **2015.5.2**, you need to specify explitly the network bridge
 
 .. code-block:: yaml
 
@@ -226,6 +236,41 @@ container-by-container basis, for instance using the ``nic_opts`` argument to
     for instance, typically are configured for eth0 to use DHCP, which will
     conflict with static IP addresses set at the container level.
 
+
+Old lxc support (<1.0.7)
+---------------------------
+
+With saltstack **2015.5.2** and above, normally the setting is autoselected, but
+before, you ll need to teach your network profile to set
+**lxc.network.ipv4.gateway** to **auto** when using a classic ipv4 configuration.
+
+Thus you ll need
+
+.. code-block:: yaml
+
+      lxc.network_profile.foo:
+        etho:
+          link: lxcbr0
+          ipv4.gateway: auto
+
+Tricky network setups Examples
+-----------------------------------
+This example covers how to make a container with both an internal ip and a
+public routable ip, wired on two veth pairs.
+
+The another interface which receives directly a public routable ip can't be on
+the first interface that we reserve for private inter LXC networking.
+
+.. code-block:: yaml
+
+    lxc.network_profile.foo:
+      eth0: {gateway: null, bridge: lxcbr0}
+      eth1:
+        # replace that by your main interface
+        'link': 'br0'
+        'mac': '00:16:5b:01:24:e1'
+        'gateway': '2.20.9.14'
+        'ipv4': '2.20.9.1'
 
 Creating a Container on the CLI
 ===============================
@@ -462,6 +507,13 @@ To run a command and return all information:
 .. code-block:: bash
 
     salt myminion lxc.run_cmd web1 'tail /var/log/messages' stdout=True stderr=True
+
+
+Container Management Using salt-cloud
+========================================
+
+Salt cloud uses under the hood the salt runner and module to manage containers,
+Please look at :ref:`this chapter <config_lxc>`
 
 
 Container Management Using States

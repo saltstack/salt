@@ -22,6 +22,7 @@ import time
 import shutil
 import re
 import random
+import distutils.version
 
 # Import salt libs
 import salt
@@ -82,6 +83,30 @@ def __virtual__():
     return False
 
 
+def version():
+    '''
+    Return the actual lxc client version
+
+        .. versionadded:: 2015.5.2
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.version
+
+    '''
+    k = 'lxc.version'
+    if not __context__.get(k, None):
+        cversion = __salt__['cmd.run_all']('lxc-ls --version')
+        if not cversion['retcode']:
+            ver = distutils.version.LooseVersion(cversion['stdout'])
+            if ver < distutils.version.LooseVersion('1.0'):
+                raise CommandExecutionError('LXC should be at least 1.0')
+            __context__[k] = "{0}".format(ver)
+    return __context__.get(k, None)
+
+
 def _clear_context():
     '''
     Clear any lxc variables set in __context__
@@ -135,7 +160,7 @@ def search_lxc_bridges():
             if ifc in running_bridges:
                 bridges.add(ifc)
             elif os.path.exists(
-                'a/sys/devices/virtual/net/{0}/bridge'.format(ifc)
+                '/sys/devices/virtual/net/{0}/bridge'.format(ifc)
             ):
                 bridges.add(ifc)
         bridges = list(bridges)
@@ -208,36 +233,16 @@ def cloud_init_interface(name, vm_=None, **kwargs):
 
     name
         name of the lxc container to create
-    from_container
-        which container we use as a template
-        when running lxc.clone
-    image
-        which template do we use when we
-        are using lxc.create. This is the default
-        mode unless you specify something in from_container
-    backing
-        which backing store to use.
-        Values can be: overlayfs, dir(default), lvm, zfs, brtfs
-    fstype
-        When using a blockdevice level backing store,
-        which filesystem to use on
-    size
-        When using a blockdevice level backing store,
-        which size for the filesystem to use on
-    snapshot
-        Use snapshot when cloning the container source
-    vgname
-        if using LVM: vgname
-    lgname
-        if using LVM: lvname
     pub_key
         public key to preseed the minion with.
         Can be the keycontent or a filepath
     priv_key
         private key to preseed the minion with.
         Can be the keycontent or a filepath
+    profile
+        :ref:`profile <tutorial-lxc-profiles-container>` selection
     network_profile
-        salt lxc network profile selection
+        :ref:`network profile <tutorial-lxc-profiles-network>` selection
     nic_opts
         per interface settings compatibles with
         network profile (ipv4/ipv6/link/gateway/mac/netmask)
@@ -262,15 +267,34 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         autostart the container at boot time
     password
         administrative password for the container
-    users
-        administrative users for the container
-        default: [root] and [root, ubuntu] on ubuntu
-    default_nic
-        name of the first interface, you should
-        really not override this
 
-    Legacy but still supported options:
 
+    .. warning::
+
+        Legacy but still supported options:
+
+    from_container
+        which container we use as a template
+        when running lxc.clone
+    image
+        which template do we use when we
+        are using lxc.create. This is the default
+        mode unless you specify something in from_container
+    backing
+        which backing store to use.
+        Values can be: overlayfs, dir(default), lvm, zfs, brtfs
+    fstype
+        When using a blockdevice level backing store,
+        which filesystem to use on
+    size
+        When using a blockdevice level backing store,
+        which size for the filesystem to use on
+    snapshot
+        Use snapshot when cloning the container source
+    vgname
+        if using LVM: vgname
+    lgname
+        if using LVM: lvname
     ip
         ip for the primary nic
     mac
@@ -298,6 +322,13 @@ def cloud_init_interface(name, vm_=None, **kwargs):
                  'netmask': '', (default)
                  'ip': '22.1.4.25'}
 
+    users
+        administrative users for the container
+        default: [root] and [root, ubuntu] on ubuntu
+    default_nic
+        name of the first interface, you should
+        really not override this
+
     CLI Example:
 
     .. code-block:: bash
@@ -309,62 +340,63 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         vm_ = {}
     vm_ = copy.deepcopy(vm_)
     vm_ = salt.utils.dictupdate.update(vm_, kwargs)
-    if 'profile' in vm_:
-        profile_data = copy.deepcopy(vm_['profile'])
-        if isinstance(profile_data, dict):
-            profile_name = profile_data.pop('name', name)
-        else:
-            # assuming profile is a string (profile name)
-            profile_name = profile_data
-            profile_data = {}
-        profile = get_container_profile(profile_name, **profile_data)
-    else:
-        profile = {}
+
+    profile_data = copy.deepcopy(
+        vm_.get('lxc_profile',
+                vm_.get('profile', {})))
+    if not isinstance(profile_data, (dict, six.string_types)):
+        profile_data = {}
+    profile = get_container_profile(profile_data)
+
+    def _cloud_get(k, default=None):
+        return vm_.get(k, profile.get(k, default))
+
     if name is None:
         name = vm_['name']
     # if we are on ubuntu, default to ubuntu
     default_template = ''
     if __grains__.get('os', '') in ['Ubuntu']:
         default_template = 'ubuntu'
-    image = vm_.get('image', profile.get('template',
-                                         default_template))
-    backing = vm_.get('backing', 'dir')
+    image = _cloud_get('image')
+    if not image:
+        _cloud_get('template', default_template)
+    backing = _cloud_get('backing', 'dir')
     if image:
         profile['template'] = image
-    vgname = vm_.get('vgname', None)
+    vgname = _cloud_get('vgname', None)
     if vgname:
         profile['vgname'] = vgname
     if backing:
         profile['backing'] = backing
-    snapshot = vm_.get('snapshot', False)
-    autostart = bool(vm_.get('autostart', True))
-    dnsservers = vm_.get('dnsservers', [])
+    snapshot = _cloud_get('snapshot', False)
+    autostart = bool(_cloud_get('autostart', True))
+    dnsservers = _cloud_get('dnsservers', [])
     if not dnsservers:
         dnsservers = ['8.8.8.8', '4.4.4.4']
-    password = vm_.get('password', 's3cr3t')
-    password_encrypted = vm_.get('password_encrypted', False)
-    fstype = vm_.get('fstype', None)
-    lvname = vm_.get('lvname', None)
-    pub_key = vm_.get('pub_key', None)
-    priv_key = vm_.get('priv_key', None)
-    size = vm_.get('size', '20G')
-    script = vm_.get('script', None)
-    script_args = vm_.get('script_args', None)
-    users = vm_.get('users', None)
+    password = _cloud_get('password', 's3cr3t')
+    password_encrypted = _cloud_get('password_encrypted', False)
+    fstype = _cloud_get('fstype', None)
+    lvname = _cloud_get('lvname', None)
+    pub_key = _cloud_get('pub_key', None)
+    priv_key = _cloud_get('priv_key', None)
+    size = _cloud_get('size', '20G')
+    script = _cloud_get('script', None)
+    script_args = _cloud_get('script_args', None)
+    users = _cloud_get('users', None)
     if users is None:
         users = []
-    ssh_username = vm_.get('ssh_username', None)
+    ssh_username = _cloud_get('ssh_username', None)
     if ssh_username and (ssh_username not in users):
         users.append(ssh_username)
-    net_profile = vm_.get('network_profile', _marker)
-    nic_opts = kwargs.pop('nic_opts', None)
-    netmask = vm_.get('netmask', '24')
-    bridge = vm_.get('bridge', None)
-    gateway = vm_.get('gateway', None)
-    unconditional_install = vm_.get('unconditional_install', False)
-    force_install = vm_.get('force_install', True)
-    config = _get_salt_config(vm_.get('config', {}), **vm_)
-    default_nic = vm_.get('default_nic', DEFAULT_NIC)
+    network_profile = _cloud_get('network_profile', None)
+    nic_opts = kwargs.get('nic_opts', None)
+    netmask = _cloud_get('netmask', '24')
+    bridge = _cloud_get('bridge', None)
+    gateway = _cloud_get('gateway', None)
+    unconditional_install = _cloud_get('unconditional_install', False)
+    force_install = _cloud_get('force_install', True)
+    config = _get_salt_config(_cloud_get('config', {}), **vm_)
+    default_nic = _cloud_get('default_nic', DEFAULT_NIC)
     # do the interface with lxc.init mainly via nic_opts
     # to avoid extra and confusing extra use cases.
     if not isinstance(nic_opts, dict):
@@ -379,9 +411,9 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         nic_opts = bnic_opts
     gw = None
     # legacy salt.cloud scheme for network interfaces settings support
-    bridge = vm_.get('bridge', None)
-    ip = vm_.get('ip', None)
-    mac = vm_.get('mac', None)
+    bridge = _cloud_get('bridge', None)
+    ip = _cloud_get('ip', None)
+    mac = _cloud_get('mac', None)
     if ip:
         fullip = ip
         if netmask:
@@ -389,7 +421,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         eth0['ipv4'] = fullip
         if mac is not None:
             eth0['mac'] = mac
-    for ix, iopts in enumerate(vm_.get("additional_ips", [])):
+    for ix, iopts in enumerate(_cloud_get("additional_ips", [])):
         ifh = "eth{0}".format(ix+1)
         ethx = nic_opts.setdefault(ifh, {})
         if gw is None:
@@ -440,13 +472,13 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface = {}
     lxc_init_interface['name'] = name
     lxc_init_interface['config'] = config
-    lxc_init_interface['memory'] = vm_.get('memory', 0)  # nolimit
+    lxc_init_interface['memory'] = _cloud_get('memory', 0)  # nolimit
     lxc_init_interface['pub_key'] = pub_key
     lxc_init_interface['priv_key'] = priv_key
     lxc_init_interface['nic_opts'] = nic_opts
     for clone_from in ['clone_from', 'clone', 'from_container']:
         # clone_from should default to None if not available
-        lxc_init_interface['clone_from'] = vm_.get(clone_from, None)
+        lxc_init_interface['clone_from'] = _cloud_get(clone_from, None)
         if lxc_init_interface['clone_from'] is not None:
             break
     lxc_init_interface['profile'] = profile
@@ -462,19 +494,63 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     )
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
-    lxc_init_interface['bootstrap_shell'] = vm_.get('bootstrap_shell', 'sh')
+    lxc_init_interface['bootstrap_shell'] = _cloud_get('bootstrap_shell', 'sh')
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
     lxc_init_interface['password_encrypted'] = password_encrypted
     # be sure not to let objects goes inside the return
     # as this return will be msgpacked for use in the runner !
-    if net_profile is not _marker:
-        lxc_init_interface['network_profile'] = net_profile
+    lxc_init_interface['network_profile'] = network_profile
     for i in ['cpu', 'cpuset', 'cpushare']:
-        if vm_.get(i, None):
-            lxc_init_interface[i] = vm_[i]
+        if _cloud_get(i, None):
+            try:
+                lxc_init_interface[i] = vm_[i]
+            except KeyError:
+                lxc_init_interface[i] = profile[i]
     return lxc_init_interface
+
+
+def _get_profile(key, old_key, name, **kwargs):
+    if isinstance(name, dict):
+        profilename = name.pop('name', None)
+        return _get_profile(key, old_key, profilename, **name)
+
+    if name is None:
+        profile_match = {}
+    else:
+        profile_match = \
+            __salt__['config.get'](
+                'lxc.{1}:{0}'.format(name, key),
+                default=None,
+                merge='recurse'
+            )
+        if profile_match is None:
+            # Try legacy profile location
+            profile_match = \
+                __salt__['config.get'](
+                    'lxc.{1}:{0}'.format(name, old_key), None)
+            if profile_match is not None:
+                salt.utils.warn_until(
+                    'Boron',
+                    'lxc.{1} has been deprecated, please configure LXC '
+                    'container profiles under lxc.{0} instead'.format(
+                        key, old_key))
+            else:
+                # No matching profile, make the profile an empty dict so that
+                # overrides can be applied below.
+                profile_match = {}
+
+    if not isinstance(profile_match, dict):
+        raise CommandExecutionError('lxc.{0} must be a dictionary'.format(key))
+
+    # Overlay the kwargs to override matched profile data
+    overrides = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    profile_match = salt.utils.dictupdate.update(
+        copy.deepcopy(profile_match),
+        overrides
+    )
+    return profile_match
 
 
 def get_container_profile(name=None, **kwargs):
@@ -514,51 +590,11 @@ def get_container_profile(name=None, **kwargs):
         salt-call lxc.get_container_profile centos
         salt-call lxc.get_container_profile ubuntu template=ubuntu backing=overlayfs
     '''
-    if isinstance(name, dict):
-        profilename = name.pop('name', None)
-        return get_container_profile(profilename, **name)
-
-    if name is None:
-        profile_match = {}
-    else:
-        profile_match = \
-            __salt__['config.get'](
-                'lxc.container_profile:{0}'.format(name),
-                default=None,
-                merge='recurse'
-            )
-        if profile_match is None:
-            # Try legacy profile location
-            profile_match = \
-                __salt__['config.get']('lxc.profile:{0}'.format(name), None)
-            if profile_match is not None:
-                salt.utils.warn_until(
-                    'Boron',
-                    'lxc.profile has been deprecated, please configure LXC '
-                    'container profiles under lxc.container_profile instead'
-                )
-            else:
-                # No matching profile, make the profile an empty dict so that
-                # overrides can be applied below.
-                profile_match = {}
-
-    if not isinstance(profile_match, dict):
-        raise CommandExecutionError('Container profile must be a dictionary')
-
-    # Overlay the kwargs to override matched profile data
-    overrides = copy.deepcopy(kwargs)
-    for key in overrides.keys():
-        if key.startswith('__'):
-            # Remove pub data from kwargs
-            overrides.pop(key)
-    profile_match = salt.utils.dictupdate.update(
-        copy.deepcopy(profile_match),
-        overrides
-    )
-    return profile_match
+    profile = _get_profile('container_profile', 'profile', name, **kwargs)
+    return profile
 
 
-def get_network_profile(name=None):
+def get_network_profile(name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -583,6 +619,14 @@ def get_network_profile(name=None):
             type: veth
             flags: up
 
+    To disable entirely net:
+
+    .. code-block:: yaml
+
+        lxc.network_profile.centos:
+          eth0:
+            disable: true
+
     Parameters set in a profile can be overridden by passing additional
     arguments to this function.
 
@@ -605,29 +649,9 @@ def get_network_profile(name=None):
 
         salt-call lxc.get_network_profile default
     '''
-    if name is None:
-        net_profile = None
-    else:
-        net_profile = \
-            __salt__['config.get'](
-                'lxc.network_profile:{0}'.format(name),
-                default=None,
-                merge='recurse'
-            )
-        if net_profile is None:
-            # Try legacy profile location
-            net_profile = \
-                __salt__['config.get']('lxc.nic:{0}'.format(name), None)
-            if net_profile is not None:
-                salt.utils.warn_until(
-                    'Boron',
-                    'lxc.nic has been deprecated, please configure LXC '
-                    'network profiles under lxc.network_profile instead'
-                )
 
-    if name == DEFAULT_NIC and not net_profile:
-        net_profile = {DEFAULT_NIC: {}}
-    return net_profile if net_profile is not None else {}
+    profile = _get_profile('network_profile', 'nic', name, **kwargs)
+    return profile
 
 
 def _rand_cpu_str(cpu):
@@ -658,121 +682,132 @@ def _network_conf(conf_tuples=None, **kwargs):
             overrides or extra nics in the form {nic_name: {set: tings}
 
     '''
-    nic = kwargs.pop('network_profile', None)
+    nic = kwargs.get('network_profile', None)
     ret = []
-    nic_opts = kwargs.pop('nic_opts', {})
+    nic_opts = kwargs.get('nic_opts', {})
     if nic_opts is None:
         # coming from elsewhere
         nic_opts = {}
     if not conf_tuples:
         conf_tuples = []
     old = _get_veths(conf_tuples)
-    if not nic and not nic_opts and not old:
-        return ret
-    kwargs = copy.deepcopy(kwargs)
-    gateway = kwargs.pop('gateway', None)
-    bridge = kwargs.get('bridge', None)
+    if not old:
+        old = {}
 
     # if we have a profile name, get the profile and load the network settings
     # this will obviously by default  look for a profile called "eth0"
     # or by what is defined in nic_opts
     # and complete each nic settings by sane defaults
-    if isinstance(nic, six.string_types):
+    if nic and isinstance(nic, (six.string_types, dict)):
         nicp = get_network_profile(nic)
-        if nic_opts:
-            for dev, args in nic_opts.items():
-                ethx = nicp.setdefault(dev, {})
-                try:
-                    ethx = salt.utils.dictupdate.update(ethx, args)
-                except AttributeError:
-                    raise SaltInvocationError('Invalid nic_opts configuration')
-        ifs = [a for a in nicp]
-        ifs += [a for a in old if a not in nicp]
-        ifs.sort()
-        gateway_set = False
-        for dev in ifs:
-            args = nicp.get(dev, {})
-            opts = nic_opts.get(dev, {}) if nic_opts else {}
-            old_if = old.get(dev, {})
-            flags = opts.get('flags', '')
-            mac = opts.get('mac', '')
-            type_ = opts.get('type', args.get('type', ''))
-            link = opts.get('link', args.get('link', ''))
-            ipv4 = opts.get('ipv4')
-            ipv6 = opts.get('ipv6')
-            infos = salt.utils.odict.OrderedDict([
-                ('lxc.network.type', {
-                    'test': not type_,
-                    'value': type_,
-                    'old': old_if.get('lxc.network.type'),
-                    'default': 'veth'}),
-                ('lxc.network.name', {
-                    'test': False,
-                    'value': dev,
-                    'old': dev,
-                    'default': dev}),
-                ('lxc.network.flags', {
-                    'test': not flags,
-                    'value': flags,
-                    'old': old_if.get('lxc.network.flags'),
-                    'default': 'up'}),
-                ('lxc.network.link', {
-                    'test': not link,
-                    'value': link,
-                    'old': old_if.get('lxc.network.link'),
-                    'default': search_lxc_bridge()}),
-                ('lxc.network.hwaddr', {
-                    'test': not mac,
-                    'value': mac,
-                    'old': old_if.get('lxc.network.hwaddr'),
-                    'default': salt.utils.gen_mac()}),
-                ('lxc.network.ipv4', {
-                    'test': not ipv4,
-                    'value': ipv4,
-                    'old': old_if.get('lxc.network.ipv4', ''),
-                    'default': None}),
-                ('lxc.network.ipv6', {
-                    'test': not ipv6,
-                    'value': ipv6,
-                    'old': old_if.get('lxc.network.ipv6', ''),
-                    'default': None})])
-            # for each parameter, if not explicitly set, the
-            # config value present in the LXC configuration should
-            # take precedence over the profile configuration
-            for info in list(infos.keys()):
-                bundle = infos[info]
-                if bundle['test']:
-                    if bundle['old']:
-                        bundle['value'] = bundle['old']
-                    elif bundle['default']:
-                        bundle['value'] = bundle['default']
-            for info, data in infos.items():
-                if data['value']:
-                    ret.append({info: data['value']})
-            for key, val in six.iteritems(args):
-                if key == 'link' and bridge:
-                    val = bridge
-                val = opts.get(key, val)
-                if key in [
-                    'type', 'flags', 'name',
-                    'gateway', 'mac', 'link', 'ipv4', 'ipv6'
-                ]:
-                    continue
-                ret.append({'lxc.network.{0}'.format(key): val})
-            # gateway (in automode) must be appended following network conf !
-            if not gateway:
-                gateway = args.get('gateway', None)
-            if gateway is not None and not gateway_set:
-                ret.append({'lxc.network.ipv4.gateway': gateway})
-                # only one network gateway ;)
-                gateway_set = True
-        # normally, this wont happen
-        # set the gateway if specified even if we did
-        # not managed the network underlying
+    else:
+        nicp = {}
+    if DEFAULT_NIC not in nicp:
+        nicp[DEFAULT_NIC] = {}
+
+    kwargs = copy.deepcopy(kwargs)
+    gateway = kwargs.pop('gateway', None)
+    bridge = kwargs.get('bridge', None)
+    if nic_opts:
+        for dev, args in six.iteritems(nic_opts):
+            ethx = nicp.setdefault(dev, {})
+            try:
+                ethx = salt.utils.dictupdate.update(ethx, args)
+            except AttributeError:
+                raise SaltInvocationError('Invalid nic_opts configuration')
+    ifs = [a for a in nicp]
+    ifs += [a for a in old if a not in nicp]
+    ifs.sort()
+    gateway_set = False
+    for dev in ifs:
+        args = nicp.get(dev, {})
+        opts = nic_opts.get(dev, {}) if nic_opts else {}
+        old_if = old.get(dev, {})
+        disable = opts.get('disable', args.get('disable', False))
+        if disable:
+            continue
+        mac = opts.get('mac',
+                       opts.get('hwaddr',
+                                args.get('mac',
+                                         args.get('hwaddr', ''))))
+        type_ = opts.get('type', args.get('type', ''))
+        flags = opts.get('flags', args.get('flags', ''))
+        link = opts.get('link', args.get('link', ''))
+        ipv4 = opts.get('ipv4', args.get('ipv4', ''))
+        ipv6 = opts.get('ipv6', args.get('ipv6', ''))
+        infos = salt.utils.odict.OrderedDict([
+            ('lxc.network.type', {
+                'test': not type_,
+                'value': type_,
+                'old': old_if.get('lxc.network.type'),
+                'default': 'veth'}),
+            ('lxc.network.name', {
+                'test': False,
+                'value': dev,
+                'old': dev,
+                'default': dev}),
+            ('lxc.network.flags', {
+                'test': not flags,
+                'value': flags,
+                'old': old_if.get('lxc.network.flags'),
+                'default': 'up'}),
+            ('lxc.network.link', {
+                'test': not link,
+                'value': link,
+                'old': old_if.get('lxc.network.link'),
+                'default': search_lxc_bridge()}),
+            ('lxc.network.hwaddr', {
+                'test': not mac,
+                'value': mac,
+                'old': old_if.get('lxc.network.hwaddr'),
+                'default': salt.utils.gen_mac()}),
+            ('lxc.network.ipv4', {
+                'test': not ipv4,
+                'value': ipv4,
+                'old': old_if.get('lxc.network.ipv4', ''),
+                'default': None}),
+            ('lxc.network.ipv6', {
+                'test': not ipv6,
+                'value': ipv6,
+                'old': old_if.get('lxc.network.ipv6', ''),
+                'default': None})])
+        # for each parameter, if not explicitly set, the
+        # config value present in the LXC configuration should
+        # take precedence over the profile configuration
+        for info in list(infos.keys()):
+            bundle = infos[info]
+            if bundle['test']:
+                if bundle['old']:
+                    bundle['value'] = bundle['old']
+                elif bundle['default']:
+                    bundle['value'] = bundle['default']
+        for info, data in infos.items():
+            if data['value']:
+                ret.append({info: data['value']})
+        for key, val in six.iteritems(args):
+            if key == 'link' and bridge:
+                val = bridge
+            val = opts.get(key, val)
+            if key in [
+                'type', 'flags', 'name',
+                'gateway', 'mac', 'link', 'ipv4', 'ipv6'
+            ]:
+                continue
+            ret.append({'lxc.network.{0}'.format(key): val})
+        # gateway (in automode) must be appended following network conf !
+        if not gateway:
+            gateway = args.get('gateway', None)
         if gateway is not None and not gateway_set:
             ret.append({'lxc.network.ipv4.gateway': gateway})
             # only one network gateway ;)
             gateway_set = True
+    # normally, this wont happen
+    # set the gateway if specified even if we did
+    # not managed the network underlying
+    if gateway is not None and not gateway_set:
+        ret.append({'lxc.network.ipv4.gateway': gateway})
+        # only one network gateway ;)
+        gateway_set = True
 
     new = _get_veths(ret)
     # verify that we did not loose the mac settings
@@ -800,6 +835,14 @@ def _network_conf(conf_tuples=None, **kwargs):
     for val in new.values():
         for row in val:
             ret.append(salt.utils.odict.OrderedDict([(row, val[row])]))
+    # on old versions of lxc, still support the gateway auto mode
+    # if we didnt explicitly say no to
+    # (lxc.network.ipv4.gateway: auto)
+    if (
+        distutils.version.LooseVersion(version()) <= '1.0.7' and
+        True not in ['ipv4.gateway' in a for a in ret]
+    ):
+        ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret
 
 
@@ -884,6 +927,7 @@ def _get_veths(net_data):
         net_data = list(net_data.items())
     nics = salt.utils.odict.OrderedDict()
     current_nic = salt.utils.odict.OrderedDict()
+    no_names = True
     for item in net_data:
         if item and isinstance(item, dict):
             item = list(item.items())[0]
@@ -898,8 +942,13 @@ def _get_veths(net_data):
         if item[0] == 'lxc.network.type':
             current_nic = salt.utils.odict.OrderedDict()
         if item[0] == 'lxc.network.name':
+            no_names = False
             nics[item[1].strip()] = current_nic
         current_nic[item[0].strip()] = item[1].strip()
+    # if not ethernet card name has been collected, assuming we collected
+    # data for eth0
+    if no_names and current_nic:
+        nics[DEFAULT_NIC] = current_nic
     return nics
 
 
@@ -1042,7 +1091,7 @@ def init(name,
          cpushare=None,
          memory=None,
          profile=None,
-         network_profile=_marker,
+         network_profile=None,
          nic=_marker,
          nic_opts=None,
          cpu=None,
@@ -1230,6 +1279,7 @@ def init(name,
     ret = {'name': name,
            'changes': {}}
 
+    profile = get_container_profile(copy.deepcopy(profile))
     if bool(nic) and nic is not _marker:
         salt.utils.warn_until(
             'Boron',
@@ -1237,7 +1287,9 @@ def init(name,
             'please use \'network_profile\' instead.'
         )
         network_profile = nic
-    if network_profile is _marker:
+    if not network_profile:
+        network_profile = profile.get('network_profile')
+    if not network_profile:
         network_profile = DEFAULT_NIC
 
     try:
@@ -1266,7 +1318,6 @@ def init(name,
         if user not in users:
             users.append(user)
 
-    profile = get_container_profile(copy.deepcopy(profile))
     kw_overrides = copy.deepcopy(kwargs)
 
     def select(key, default=None):
@@ -1861,35 +1912,9 @@ def create(name,
         for key, val in options.items():
             cmd += ' --{0} {1}'.format(key, val)
 
-    ret = __salt__['cmd.run_all'](cmd,
-                                  python_shell=False,
-                                  output_loglevel='trace')
-    _clear_context()
-    if ret['retcode'] == 0 and exists(name):
-        if network_profile:
-            network_changes = apply_network_profile(name,
-                                                    network_profile,
-                                                    nic_opts=nic_opts)
-
-            if network_changes:
-                log.info(
-                    'Network changes from applying network profile \'{0}\' '
-                    'to newly-created container \'{1}\':\n{2}'
-                    .format(network_profile, name, network_changes)
-                )
-        c_state = state(name)
-        return {'result': True,
-                'state': {'old': None, 'new': c_state}}
-    else:
-        if exists(name):
-            # destroy the container if it was partially created
-            cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd, python_shell=False)
-        raise CommandExecutionError(
-            'Container could not be created with cmd \'{0}\': {1}'
-            .format(cmd, ret['stderr'])
-        )
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    # please do not merge extra conflicting stuff
+    # inside those two line (ret =, return)
     return _after_ignition_network_profile(cmd,
                                            ret,
                                            name,
@@ -1992,20 +2017,8 @@ def clone(name,
                 cmd += ' --fssize {0}'.format(size)
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    _clear_context()
-    if ret['retcode'] == 0 and exists(name):
-        c_state = state(name)
-        return {'result': True,
-                'state': {'old': None, 'new': c_state}}
-    else:
-        if exists(name):
-            # destroy the container if it was partially created
-            cmd = 'lxc-destroy -n {0}'.format(name)
-            __salt__['cmd.retcode'](cmd, python_shell=False)
-        raise CommandExecutionError(
-            'Container could not be cloned with cmd \'{0}\': {1}'
-            .format(cmd, ret['stderr'])
-        )
+    # please do not merge extra conflicting stuff
+    # inside those two line (ret =, return)
     return _after_ignition_network_profile(cmd,
                                            ret,
                                            name,
@@ -4113,24 +4126,35 @@ def apply_network_profile(name, network_profile, nic_opts=None):
         salt 'minion' lxc.apply_network_profile web1 \\
                 "{'eth0': {'mac': 'xx:xx:xx:xx:xx:yy'}}"
                 nic_opts="{'eth0': {'mac': 'xx:xx:xx:xx:xx:xx'}}"
+
+    The special case to disable use of ethernet nics:
+
+    .. code-block:: bash
+
+        salt 'minion' lxc.apply_network_profile web1 centos \\
+                "{eth0: {disable: true}}"
     '''
-    path = '/var/lib/lxc/{0}/config'.format(name)
+    cfgpath = os.path.join('/var/lib/lxc', name, 'config')
 
     before = []
-    with salt.utils.fopen(path, 'r') as fp_:
+    with salt.utils.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             before.append(line)
 
+    lxcconfig = _LXCConfig(name=name)
+    old_net = lxcconfig._filter_data('lxc.network')
+
     network_params = {}
     for param in _network_conf(
+        conf_tuples=old_net,
         network_profile=network_profile, nic_opts=nic_opts
     ):
         network_params.update(param)
     if network_params:
-        edit_conf(path, out_format='commented', **network_params)
+        edit_conf(cfgpath, out_format='commented', **network_params)
 
     after = []
-    with salt.utils.fopen(path, 'r') as fp_:
+    with salt.utils.fopen(cfgpath, 'r') as fp_:
         for line in fp_:
             after.append(line)
 

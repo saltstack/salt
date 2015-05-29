@@ -65,6 +65,13 @@ Halite
 
     halite
 
+LXC
+===
+.. toctree::
+    :maxdepth: 2
+
+    lxc
+
 Using Salt at scale
 ===================
 .. toctree::
