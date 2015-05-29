@@ -2634,3 +2634,39 @@ def human_size_to_bytes(human_size):
     size_num = int(match.group(1))
     unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
     return size_num * unit_multiplier
+
+
+def to_str(s, encoding=None):
+    '''
+    Given unicode (py2), bytes (py3), or str, return str
+    '''
+    if six.PY3:
+        if isinstance(s, bytes):
+            return s.decode(encoding or __salt_system_encoding__)
+        return str(s)
+    else:
+        if isinstance(s, unicode):
+            return s.encode(encoding or __salt_system_encoding__)
+        return str(s)
+
+
+def to_bytes(s, encoding=None):
+    '''
+    Given str, bytearray, or bytes, return bytes (python 3 only)
+    '''
+    if six.PY3:
+        if isinstance(s, str):
+            return s.encode(encoding or __salt_system_encoding__)
+        return bytes(s)
+    raise TypeError('bytes object not available in python 2')
+
+
+def to_unicode(s, encoding=None):
+    '''
+    Given str or unicode, return unicode (python 2 only)
+    '''
+    if six.PY2:
+        if isinstance(s, str):
+            return s.decode(encoding or __salt_system_encoding__)
+        return unicode(s)
+    raise TypeError('unicode object not available in python 3')
