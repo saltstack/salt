@@ -160,6 +160,8 @@ def run(name, **kwargs):
             rarg = 'm_name'
         elif arg == 'fun':
             rarg = 'm_fun'
+        elif arg == 'names':
+            rarg = 'm_names'
         else:
             rarg = arg
         if rarg not in kwargs and arg not in defaults:
