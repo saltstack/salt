@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Module for managing Windows Updates using the Windows Update Agent.
 
 .. versionadded:: 2015.8.0
@@ -7,7 +7,9 @@ Module for managing Windows Updates using the Windows Update Agent.
 :depends:
         - win32com
         - pythoncom
-'''
+"""
+from __future__ import absolute_import
+
 # Import Python libs
 import logging
 
@@ -15,6 +17,7 @@ import logging
 try:
     import win32com.client
     import pythoncom
+
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -22,50 +25,50 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
+jjjj
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems
-    '''
+    """
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
     return False
 
 
-def _wua_search(skipHidden=True,
-                skipInstalled=True,
-                skipPresent=False,
-                skipReboot=False,
-                softwareUpdates=True,
-                driverUpdates=True):
-
+def _wua_search(skip_hidden=True,
+                skip_installed=True,
+                skip_present=False,
+                skip_reboot=False,
+                software_updates=True,
+                driver_updates=True):
     # Build the search string
-    searchString = ''
-    searchParams = []
+    search_string = ''
+    search_params = []
 
-    if skipHidden:
-        searchParams.append('IsHidden=0')
+    if skip_hidden:
+        search_params.append('IsHidden=0')
 
-    if skipInstalled:
-        searchParams.append('IsInstalled=0')
+    if skip_installed:
+        search_params.append('IsInstalled=0')
 
-    if skipPresent:
-        searchParams.append('IsPresent=0')
+    if skip_present:
+        search_params.append('IsPresent=0')
 
-    if skipReboot:
-        searchParams.append('RebootRequired=0')
+    if skip_reboot:
+        search_params.append('RebootRequired=0')
 
-    for i in searchParams:
-        searchString += '{0} and '.format(i)
+    for i in search_params:
+        search_string += '{0} and '.format(i)
 
-    if softwareUpdates and driverUpdates:
-        searchString += 'Type=\'Software\' or Type=\'Driver\''
-    elif softwareUpdates:
-        searchString += 'Type=\'Software\''
-    elif driverUpdates:
-        searchString += 'Type=\'Driver\''
+    if software_updates and driver_updates:
+        search_string += 'Type=\'Software\' or Type=\'Driver\''
+    elif software_updates:
+        search_string += 'Type=\'Software\''
+    elif driver_updates:
+        search_string += 'Type=\'Driver\''
     else:
         log.debug('Neither Software nor Drivers included in search. Results will be empty.')
         return False
@@ -80,20 +83,17 @@ def _wua_search(skipHidden=True,
     wua_searcher = wua_session.CreateUpdateSearcher()
 
     # Search for updates
-    results = None
     try:
         log.debug('Searching for updates: {0}'.format(searchString))
         results = wua_searcher.Search(searchString)
         log.debug('Search completed successfully')
+        return results.Updates
     except Exception as exc:
         log.info('Search for updates failed. {0}'.format(exc))
         return exc
 
-    return results.Updates
-
 
 def _filter_list_by_category(updates, categories=None):
-
     # This function filters the updates list based on Category
 
     if not updates:
@@ -103,28 +103,27 @@ def _filter_list_by_category(updates, categories=None):
 
     for update in updates:
 
-        categoryMatch = False
+        category_match = False
 
         # If no categories were passed, return all categories
         # Set categoryMatch to True
         if categories is None:
-            categoryMatch = True
+            category_match = True
         else:
             # Loop through each category found in the update
             for category in update.Categories:
                 # If the update category exists in the list of categories
                 # passed, then set categoryMatch to True
                 if category.Name in categories:
-                    categoryMatch = True
+                    category_match = True
 
-        if categoryMatch:
+        if category_match:
             update_list.Add(update)
 
     return update_list
 
 
 def _filter_list_by_severity(updates, severities=None):
-
     # This function filters the updates list based on Category
 
     if not updates:
@@ -134,28 +133,27 @@ def _filter_list_by_severity(updates, severities=None):
 
     for update in updates:
 
-        severityMatch = False
+        severity_match = False
 
         # If no severities were passed, return all categories
-        # Set severityMatch to True
+        # Set severity_match to True
         if severities is None:
-            severityMatch = True
+            severity_match = True
         else:
             # If the severity exists in the list of severities passed, then set
-            # severityMatch to True
+            # severity_match to True
             if update.MsrcSeverity in severities:
-                severityMatch = True
+                severity_match = True
 
-        if severityMatch:
+        if severity_match:
             update_list.Add(update)
 
     return update_list
 
 
 def _list_updates_build_summary(updates):
-
     if updates.Count == 0:
-        return "Nothing to return"
+        return 'Nothing to return'
 
     results = {}
 
@@ -206,9 +204,8 @@ def _list_updates_build_summary(updates):
 
 
 def _list_updates_build_report(updates):
-
     if updates.Count == 0:
-        return "Nothing to return"
+        return 'Nothing to return'
 
     results = {}
 
@@ -218,42 +215,42 @@ def _list_updates_build_report(updates):
 
     for update in updates:
 
-        GUID = update.Identity.UpdateID
-        results[GUID] = {}
-        results[GUID]['GUID'] = GUID
+        guid = update.Identity.UpdateID
+        results[guid] = {}
+        results[guid]['guid'] = guid
         title = update.Title
-        results[GUID]['Title'] = title
-        KB = ""
+        results[guid]['Title'] = title
+        kb = ""
         if "KB" in title:
-            KB = title[title.find("(") + 1: title.find(")")]
-        results[GUID]['KB'] = KB
-        results[GUID]['Description'] = update.Description
-        results[GUID]['Downloaded'] = str(update.IsDownloaded)
-        results[GUID]['Installed'] = str(update.IsInstalled)
-        results[GUID]['Mandatory'] = str(update.IsMandatory)
-        results[GUID]['UserInput'] = str(update.InstallationBehavior.CanRequestUserInput)
-        results[GUID]['EULAAccepted'] = str(update.EulaAccepted)
+            kb = title[title.find("(") + 1: title.find(")")]
+        results[guid]['KB'] = kb
+        results[guid]['Description'] = update.Description
+        results[guid]['Downloaded'] = str(update.IsDownloaded)
+        results[guid]['Installed'] = str(update.IsInstalled)
+        results[guid]['Mandatory'] = str(update.IsMandatory)
+        results[guid]['UserInput'] = str(update.InstallationBehavior.CanRequestUserInput)
+        results[guid]['EULAAccepted'] = str(update.EulaAccepted)
 
         # Severity of the Update
         # Can be: Critical, Important, Low, Moderate, <unspecified or empty>
-        results[GUID]['Severity'] = str(update.MsrcSeverity)
+        results[guid]['Severity'] = str(update.MsrcSeverity)
 
         # This value could easily be confused with the Reboot Behavior value
         # This is stating whether or not the INSTALLED update is awaiting
         # reboot
-        results[GUID]['NeedsReboot'] = str(update.RebootRequired)
+        results[guid]['NeedsReboot'] = str(update.RebootRequired)
 
         # Interpret the RebootBehavior value
         # This value is referencing an update that has NOT been installed
         rb = {0: 'Never Requires Reboot',
               1: 'Always Requires Reboot',
               2: 'Can Require Reboot'}
-        results[GUID]['RebootBehavior'] = rb[update.InstallationBehavior.RebootBehavior]
+        results[guid]['RebootBehavior'] = rb[update.InstallationBehavior.RebootBehavior]
 
         # Add categories (nested list)
-        results[GUID]['Categories'] = []
+        results[guid]['Categories'] = []
         for category in update.Categories:
-            results[GUID]['Categories'].append(category.Name)
+            results[guid]['Categories'].append(category.Name)
 
     return results
 
@@ -261,7 +258,7 @@ def _list_updates_build_report(updates):
 def list_update(name=None,
                 download=False,
                 install=False):
-    '''
+    """
     Returns details for all updates that match the search criteria
 
     name
@@ -321,9 +318,9 @@ def list_update(name=None,
         # Not all updates have an associated KB
         salt '*' wua.list_update 'Microsoft Camera Codec Pack'
 
-    '''
+    """
     if name is None:
-        return "Nothing to list"
+        return 'Nothing to list'
 
     # Initialize the PyCom system
     pythoncom.CoInitialize()
@@ -338,23 +335,23 @@ def list_update(name=None,
     wua_found = win32com.client.Dispatch('Microsoft.Update.UpdateColl')
 
     # Try searching for the GUID first
-    searchString = 'UpdateID=\'{0}\''.format(name)
+    search_string = 'UpdateID=\'{0}\''.format(name)
 
-    log.debug('Searching for update: {0}'.format(searchString.lower()))
+    log.debug('Searching for update: {0}'.format(search_string.lower()))
     try:
-        foundUsingGUID = False
-        wua_search_result = wua_searcher.Search(searchString.lower())
+        found_using_guid = False
+        wua_search_result = wua_searcher.Search(search_string.lower())
         if wua_search_result.Updates.Count > 0:
-            foundUsingGUID = True
+            found_using_guid = True
         else:
             return "No update found"
-    except Exception as exc:
+    except Exception:
         log.debug('GUID not found, searching Title: {0}'.format(name))
-        searchString = 'Type=\'Software\' or Type=\'Driver\''
-        wua_search_result = wua_searcher.Search(searchString)
+        search_string = 'Type=\'Software\' or Type=\'Driver\''
+        wua_search_result = wua_searcher.Search(search_string)
 
     # Populate wua_found
-    if foundUsingGUID:
+    if found_using_guid:
         # Found using GUID so there should only be one
         # Add it to the collection
         for update in wua_search_result.Updates:
@@ -367,16 +364,16 @@ def list_update(name=None,
                 wua_found.Add(update)
 
     if install:
-        GUIDList = []
+        guid_list = []
         for update in wua_found:
-            GUIDList.append(update.Identity.UpdateID)
-        return install_updates(GUIDList)
+            guid_list.append(update.Identity.UpdateID)
+        return install_updates(guid_list)
 
     if download:
-        GUIDList = []
+        guid_list = []
         for update in wua_found:
-            GUIDList.append(update.Identity.UpdateID)
-        return download_updates(GUIDList)
+            guid_list.append(update.Identity.UpdateID)
+        return download_updates(guid_list)
 
     return _list_updates_build_report(wua_found)
 
@@ -389,7 +386,7 @@ def list_updates(software=True,
                  severities=None,
                  download=False,
                  install=False):
-    '''
+    """
     Returns a detailed list of available updates or a summary
 
     software
@@ -500,11 +497,11 @@ def list_updates(software=True,
         salt '*' wua.list_updates categories=['Feature Packs','Windows 8.1']\
                 summary=True
 
-    '''
+    """
     # Get the list of updates
-    updates = _wua_search(softwareUpdates=software,
-                          driverUpdates=drivers,
-                          skipInstalled=not installed)
+    updates = _wua_search(software_updates=software,
+                          driver_updates=drivers,
+                          skip_installed=not installed)
 
     # Filter the list of updates
     updates = _filter_list_by_category(updates=updates,
@@ -515,19 +512,19 @@ def list_updates(software=True,
 
     # If the list is empty after filtering, return a message
     if not updates:
-        return "No updates found. Check software and drivers parameters. One must be true."
+        return 'No updates found. Check software and drivers parameters. One must be true.'
 
     if install:
-        GUIDList = []
+        guid_list = []
         for update in updates:
-            GUIDList.append(update.Identity.UpdateID)
-        return install_updates(GUIDList)
+            guid_list.append(update.Identity.UpdateID)
+        return install_updates(guid_list)
 
     if download:
-        GUIDList = []
+        guid_list = []
         for update in updates:
-            GUIDList.append(update.Identity.UpdateID)
-        return download_updates(GUIDList)
+            guid_list.append(update.Identity.UpdateID)
+        return download_updates(guid_list)
 
     if summary:
         return _list_updates_build_summary(updates)
@@ -535,8 +532,8 @@ def list_updates(software=True,
         return _list_updates_build_report(updates)
 
 
-def download_update(GUID=None):
-    '''
+def download_update(guid=None):
+    """
     Downloads a single update
 
     GUID
@@ -548,12 +545,12 @@ def download_update(GUID=None):
 
         salt '*' win_wua.download_update 12345678-abcd-1234-abcd-1234567890ab
 
-    '''
-    return download_updates([GUID])
+    """
+    return download_updates([guid])
 
 
-def download_updates(GUID=None):
-    '''
+def download_updates(guid=None):
+    """
     Downloads updates that match the list of passed GUIDs. It's easier to use
     this function by using list_updates and setting install=True.
 
@@ -566,11 +563,11 @@ def download_updates(GUID=None):
 
         # Normal Usage
         salt '*' win_wua.download_updates \
-                GUID=['12345678-abcd-1234-abcd-1234567890ab',\
+                guid=['12345678-abcd-1234-abcd-1234567890ab',\
                       '87654321-dcba-4321-dcba-ba0987654321']
-    '''
+    """
     # Check for empty GUID
-    if GUID is None:
+    if guid is None:
         return "No GUID Specified"
 
     # Initialize the PyCom system
@@ -578,7 +575,7 @@ def download_updates(GUID=None):
 
     # Create a session with the Windows Update Agent
     wua_session = win32com.client.Dispatch('Microsoft.Update.Session')
-    wua_session.ClientApplicationID = "Salt: Install Update"
+    wua_session.ClientApplicationID = 'Salt: Install Update'
 
     # Create the Searcher, Downloader, Installer, and Collections
     wua_searcher = wua_session.CreateUpdateSearcher()
@@ -588,28 +585,28 @@ def download_updates(GUID=None):
     ret = {}
 
     # Searching for the GUID
-    searchString = ''
-    searchList = ''
+    search_string = ''
+    search_list = ''
     log.debug('Searching for updates:')
-    for ident in GUID:
+    for ident in guid:
         log.debug('{0}'.format(ident))
-        if searchString == '':
-            searchString = 'UpdateID=\'{0}\''.format(ident.lower())
-            searchList = '{0}'.format(ident.lower())
+        if search_string == '':
+            search_string = 'UpdateID=\'{0}\''.format(ident.lower())
+            search_list = '{0}'.format(ident.lower())
         else:
-            searchString += ' or UpdateID=\'{0}\''.format(ident.lower())
-            searchList += '\n{0}'.format(ident.lower())
+            search_string += ' or UpdateID=\'{0}\''.format(ident.lower())
+            search_list += '\n{0}'.format(ident.lower())
 
     try:
-        wua_search_result = wua_searcher.Search(searchString)
+        wua_search_result = wua_searcher.Search(search_string)
         if wua_search_result.Updates.Count == 0:
-            log.debug('No Updates found for:\n\t\t{0}'.format(searchList))
+            log.debug('No Updates found for:\n\t\t{0}'.format(search_list))
             ret['Success'] = False
-            ret['Details'] = 'No Updates found: {0}'.format(searchList)
+            ret['Details'] = 'No Updates found: {0}'.format(search_list)
             return ret
-    except Exception as exc:
-        log.debug('Invalid Search String: {0}'.format(searchString))
-        return 'Invalid Search String: {0}'.format(searchString)
+    except Exception:
+        log.debug('Invalid Search String: {0}'.format(search_string))
+        return 'Invalid Search String: {0}'.format(search_string)
 
     # List updates found
     log.debug('Found the following updates:')
@@ -625,7 +622,7 @@ def download_updates(GUID=None):
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
             log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula # pylint: disable=W0104
+            update.AcceptEula  # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
@@ -657,7 +654,7 @@ def download_updates(GUID=None):
         ret['Success'] = False
         ret['Result'] = format(error)
 
-        hr, msg, exc, arg = error.args # pylint: disable=W0633
+        hr, msg, exc, arg = error.args  # pylint: disable=W0633
         # Error codes found at the following site:
         # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
         fc = {-2145124316: 'No Updates: 0x80240024',
@@ -692,14 +689,14 @@ def download_updates(GUID=None):
     ret['Message'] = rc[result.ResultCode]
 
     for i in range(wua_download_list.Count):
-        UID = wua_download_list.Item(i).Identity.UpdateID
-        ret['Updates'][UID]['Result'] = rc[result.GetUpdateResult(i).ResultCode]
+        uid = wua_download_list.Item(i).Identity.UpdateID
+        ret['Updates'][uid]['Result'] = rc[result.GetUpdateResult(i).ResultCode]
 
     return ret
 
 
-def install_update(GUID=None):
-    '''
+def install_update(guid=None):
+    """
     Installs a single update
 
     GUID
@@ -711,12 +708,12 @@ def install_update(GUID=None):
 
         salt '*' win_wua.install_update 12345678-abcd-1234-abcd-1234567890ab
 
-    '''
-    return install_updates([GUID])
+    """
+    return install_updates([guid])
 
 
-def install_updates(GUID=None):
-    '''
+def install_updates(guid=None):
+    """
     Installs updates that match the passed criteria. It's easier to use this
     function by using list_updates and setting install=True.
 
@@ -729,19 +726,19 @@ def install_updates(GUID=None):
 
         # Normal Usage
         salt '*' win_wua.install_updates \
-                GUID=['12345678-abcd-1234-abcd-1234567890ab',\
+                guid=['12345678-abcd-1234-abcd-1234567890ab',\
                       '87654321-dcba-4321-dcba-ba0987654321']
-    '''
+    """
     # Check for empty GUID
-    if GUID is None:
-        return "No GUID Specified"
+    if guid is None:
+        return 'No GUID Specified'
 
     # Initialize the PyCom system
     pythoncom.CoInitialize()
 
     # Create a session with the Windows Update Agent
     wua_session = win32com.client.Dispatch('Microsoft.Update.Session')
-    wua_session.ClientApplicationID = "Salt: Install Update"
+    wua_session.ClientApplicationID = 'Salt: Install Update'
 
     # Create the Searcher, Downloader, Installer, and Collections
     wua_searcher = wua_session.CreateUpdateSearcher()
@@ -753,28 +750,28 @@ def install_updates(GUID=None):
     ret = {}
 
     # Searching for the GUID
-    searchString = ''
-    searchList = ''
+    search_string = ''
+    search_list = ''
     log.debug('Searching for updates:')
-    for ident in GUID:
+    for ident in guid:
         log.debug('{0}'.format(ident))
-        if searchString == '':
-            searchString = 'UpdateID=\'{0}\''.format(ident.lower())
-            searchList = '{0}'.format(ident.lower())
+        if search_string == '':
+            search_string = 'UpdateID=\'{0}\''.format(ident.lower())
+            search_list = '{0}'.format(ident.lower())
         else:
-            searchString += ' or UpdateID=\'{0}\''.format(ident.lower())
-            searchList += '\n{0}'.format(ident.lower())
+            search_string += ' or UpdateID=\'{0}\''.format(ident.lower())
+            search_list += '\n{0}'.format(ident.lower())
 
     try:
-        wua_search_result = wua_searcher.Search(searchString)
+        wua_search_result = wua_searcher.Search(search_string)
         if wua_search_result.Updates.Count == 0:
-            log.debug('No Updates found for:\n\t\t{0}'.format(searchList))
+            log.debug('No Updates found for:\n\t\t{0}'.format(search_list))
             ret['Success'] = False
-            ret['Details'] = 'No Updates found: {0}'.format(searchList)
+            ret['Details'] = 'No Updates found: {0}'.format(search_list)
             return ret
-    except Exception as exc:
-        log.debug('Invalid Search String: {0}'.format(searchString))
-        return 'Invalid Search String: {0}'.format(searchString)
+    except Exception:
+        log.debug('Invalid Search String: {0}'.format(search_string))
+        return 'Invalid Search String: {0}'.format(search_string)
 
     # List updates found
     log.debug('Found the following update:')
@@ -790,7 +787,7 @@ def install_updates(GUID=None):
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
             log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula # pylint: disable=W0104
+            update.AcceptEula  # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
@@ -813,7 +810,7 @@ def install_updates(GUID=None):
         wua_downloader.Updates = wua_download_list
 
         try:
-            result = wua_downloader.Download()
+            wua_downloader.Download()
             log.debug('Download Complete')
 
         except Exception as error:
@@ -821,7 +818,7 @@ def install_updates(GUID=None):
             ret['Success'] = False
             ret['Result'] = format(error)
 
-            hr, msg, exc, arg = error.args # pylint: disable=W0633
+            hr, msg, exc, arg = error.args  # pylint: disable=W0633
             # Error codes found at the following site:
             # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
             fc = {-2145124316: 'No Updates: 0x80240024',
@@ -839,7 +836,6 @@ def install_updates(GUID=None):
             return ret
 
     # Install the updates
-    rebootMayBeRequired = False
     for update in wua_search_result.Updates:
         # Make sure the update has actually been downloaded
         if update.IsDownloaded:
@@ -867,7 +863,7 @@ def install_updates(GUID=None):
         ret['Success'] = False
         ret['Result'] = format(error)
 
-        hr, msg, exc, arg = error.args # pylint: disable=W0633
+        hr, msg, exc, arg = error.args  # pylint: disable=W0633
         # Error codes found at the following site:
         # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
         fc = {-2145124316: 'No Updates: 0x80240024',
@@ -904,8 +900,8 @@ def install_updates(GUID=None):
           1: 'Always Reboot',
           2: 'Poss Reboot'}
     for i in range(wua_install_list.Count):
-        UID = wua_install_list.Item(i).Identity.UpdateID
-        ret['Updates'][UID]['Result'] = rc[result.GetUpdateResult(i).ResultCode]
-        ret['Updates'][UID]['RebootBehavior'] = rb[wua_install_list.Item(i).InstallationBehavior.RebootBehavior]
+        uid = wua_install_list.Item(i).Identity.UpdateID
+        ret['Updates'][uid]['Result'] = rc[result.GetUpdateResult(i).ResultCode]
+        ret['Updates'][uid]['RebootBehavior'] = rb[wua_install_list.Item(i).InstallationBehavior.RebootBehavior]
 
     return ret
