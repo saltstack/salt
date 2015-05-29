@@ -106,17 +106,17 @@ def list_nodes(call=None):
 
     ret = {}
     for node in items['servers']:
-        private_ips = []
         public_ips = []
+        private_ips = []
         image_id = ''
 
-        if 'public_ip' in node and node['public_ip'] is not None:
-            public_ips.append(node['public_ip']['address'])
+        if node.get('public_ip'):
+            public_ips = [node['public_ip']['address']]
 
-        if 'private_ip' in node and node['private_ip'] is not None:
-            private_ips.append(node['private_ip'])
+        if node.get('private_ip'):
+            private_ips = [node['private_ip']]
 
-        if 'image' in node and node['image'] is not None:
+        if node.get('image'):
             image_id = node['image']['id']
 
         ret[node['name']] = {
