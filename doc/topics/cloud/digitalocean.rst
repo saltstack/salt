@@ -1,15 +1,29 @@
-==================================
+=================================
 Getting Started With DigitalOcean
-==================================
+=================================
 
 DigitalOcean is a public cloud provider that specializes in Linux instances.
 
 
 Configuration
 =============
-Using Salt for DigitalOcean requires a personal_access_token, an ssh_key_file,
-and at least one SSH key name in ssh_key_names, more can be added by comma-separating them.
-The personal_access_token can be found in the Digital Ocean web interface,
+Starting in Salt 2015.5.0, a new DigitalOcean driver was added to Salt Cloud to support
+DigitalOcean's new API, APIv2. The original driver, referred to ``digital_ocean`` will
+be supported throughout the 2015.5.x releases of Salt, but will then be removed in Salt
+Beryllium in favor of the APIv2 driver, ``digital_ocean_v2``. The following documentation
+is relevant to the new driver, ``digital_ocean_v2``. To see documentation related to the
+original ``digital_ocean`` driver, please see the
+:mod:`DigitalOcean Salt Cloud Driver <salt.cloud.clouds.digital_ocean>`
+
+.. note::
+
+    When Salt Beryllium is released, the original ``digital_ocean`` driver will no longer
+    be supported and the ``digital_ocean_v2`` driver will become the ``digital_ocean``
+    driver.
+
+Using Salt for DigitalOcean requires a ``personal_access_token``, an ``ssh_key_file``,
+and at least one SSH key name in ``ssh_key_names``. More can be added by separating each key
+with a comma. The ``personal_access_token`` can be found in the DigitalOcean web interface
 in the "Apps & API" section. The SSH key name can be found under the "SSH Keys" section.
 
 .. code-block:: yaml
@@ -43,6 +57,30 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
         private_networking: True
         backups_enabled: True
         ipv6: True
+
+Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
+command:
+
+.. code-block:: bash
+
+    # salt-cloud --list-locations my-digitalocean-config
+    my-digitalocean-config:
+        ----------
+        digital_ocean:
+            ----------
+            Amsterdam 1:
+                ----------
+                available:
+                    False
+                features:
+                    [u'backups']
+                name:
+                    Amsterdam 1
+                sizes:
+                    []
+                slug:
+                    ams1
+    ...SNIP...
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
