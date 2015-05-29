@@ -241,10 +241,10 @@ Old lxc support (<1.0.7)
 ---------------------------
 
 With saltstack **2015.5.2** and above, normally the setting is autoselected, but
-before, you ll need to teach your network profile to set
+before, you'll need to teach your network profile to set
 **lxc.network.ipv4.gateway** to **auto** when using a classic ipv4 configuration.
 
-Thus you ll need
+Thus you'll need
 
 .. code-block:: yaml
 
