@@ -2645,7 +2645,7 @@ def to_str(s, encoding=None):
             return s.decode(encoding or __salt_system_encoding__)
         return str(s)
     else:
-        if isinstance(s, unicode):
+        if isinstance(s, six.text_type):
             return s.encode(encoding or __salt_system_encoding__)
         return str(s)
 
@@ -2668,5 +2668,5 @@ def to_unicode(s, encoding=None):
     if six.PY2:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)
+        return six.text_type(s)
     raise TypeError('unicode object not available in python 3')
