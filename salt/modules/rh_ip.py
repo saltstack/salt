@@ -986,16 +986,19 @@ def build_routes(iface, **settings):
     routecfg6 = template.render(routes=opts6)
 
     if settings['test']:
-        return _read_temp("\n".join([routecfg, routecfg6]))
+        routes = _read_temp(routecfg)
+        routes.extend(_read_temp(routecfg6))
+        return routes
 
-    if opts4:
-        _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, 'route-{0}')
-        path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
-    if opts6:
-        _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, 'route6-{0}')
-        path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+    _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, 'route-{0}')
+    _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, 'route6-{0}')
 
-    return _read_file(path).extend(_read_file(path6))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+
+    routes = _read_file(path)
+    routes.extend(_read_file(path6))
+    return routes
 
 
 def down(iface, iface_type):
@@ -1069,7 +1072,10 @@ def get_routes(iface):
         salt '*' ip.get_routes eth0
     '''
     path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
-    return _read_file(path)
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+    routes = _read_file(path)
+    routes.extend(_read_file(path6))
+    return routes
 
 
 def get_network_settings():
