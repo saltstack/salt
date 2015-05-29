@@ -1,29 +1,33 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Scaleway Cloud Module
 ==========================
-The Scaleway cloud module is used to interact with your Scaleway BareMetal Servers.
-Use of this module only requires the ``api_key`` parameter to be set. Set up the
-cloud configuration at ``/etc/salt/cloud.providers`` or
+
+The Scaleway cloud module is used to interact with your Scaleway BareMetal
+Servers.
+
+Use of this module only requires the ``api_key`` parameter to be set. Set up
+the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/scaleway.conf``:
+
 .. code-block:: yaml
     scaleway-config:
       # Scaleway organization and token
       access_key: 0e604a2c-aea6-4081-acb2-e1d1258ef95c
       token: be8fd96b-04eb-4d39-b6ba-a9edbcf17f12
       provider: scaleway
+
 :depends: requests
-'''
+"""
 
 from __future__ import absolute_import
 
-# Import python libs
-import os
 import copy
-import time
 import json
-import pprint
 import logging
+import os
+import pprint
+import time
 
 try:
     import requests
@@ -31,8 +35,6 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
-# Import salt cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -41,16 +43,16 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+import salt.utils.cloud
 
-# Get logging started
+
 log = logging.getLogger(__name__)
 
 
 # Only load in this module if the Scaleway configurations are in place
 def __virtual__():
-    '''
-    Check for Scaleway configurations.
-    '''
+    """ Check for Scaleway configurations.
+    """
     if not HAS_REQUESTS:
         return False
 
@@ -59,10 +61,10 @@ def __virtual__():
 
     return True
 
+
 def get_configured_provider():
-    '''
-    Return the first configured instance.
-    '''
+    """ Return the first configured instance.
+    """
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'scaleway',
@@ -71,10 +73,10 @@ def get_configured_provider():
 
 # def avail_locations(call=None):
 
+
 def avail_images(call=None):
-    '''
-    Return a list of the images that are on the provider
-    '''
+    """ Return a list of the images that are on the provider.
+    """
     if call == 'action':
         raise SaltCloudSystemExit(
             'The avail_images function must be called with '
@@ -92,10 +94,10 @@ def avail_images(call=None):
 
 # def avail_sizes(call=None):
 
+
 def list_nodes(call=None):
-    '''
-    Return a list of the BareMetal servers that are on the provider
-    '''
+    """ Return a list of the BareMetal servers that are on the provider.
+    """
     if call == 'action':
         raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
@@ -111,12 +113,12 @@ def list_nodes(call=None):
 
         if 'public_ip' in node and node['public_ip'] is not None:
             public_ips.append(node['public_ip']['address'])
- 
+
         if 'private_ip' in node and node['private_ip'] is not None:
             private_ips.append(node['private_ip'])
-        if 'image' in node and node['image'] is not None:
-            image_id =  node['image']['id']
 
+        if 'image' in node and node['image'] is not None:
+            image_id = node['image']['id']
 
         ret[node['name']] = {
             'id': node['id'],
@@ -128,13 +130,13 @@ def list_nodes(call=None):
         }
     return ret
 
+
 def list_nodes_full(call=None):
-    '''
-    Return a list of the BareMetal servers that are on the provider
-    '''
+    """ Return a list of the BareMetal servers that are on the provider.
+    """
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes_full function must be called with -f or --function.'
+            'list_nodes_full must be called with -f or --function'
         )
 
     items = query(method='servers')
@@ -149,18 +151,19 @@ def list_nodes_full(call=None):
             ret[node['name']][item] = value
     return ret
 
+
 def list_nodes_select(call=None):
-    '''
-    Return a list of the BareMetal servers that are on the provider, with select fields
-    '''
+    """ Return a list of the BareMetal servers that are on the provider, with
+    select fields.
+    """
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
 
+
 def get_image(vm_):
-    '''
-    Return the image object to use
-    '''
+    """ Return the image object to use.
+    """
     images = avail_images()
     vm_image = str(config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
@@ -172,19 +175,25 @@ def get_image(vm_):
         'The specified image, {0!r}, could not be found.'.format(vm_image)
     )
 
+
 def create_node(args):
-    '''
-    Create a node
-    '''
+    """ Create a node.
+    """
     node = query(method='servers', args=args, http_method='post')
 
-    action = query(method='servers', server_id=node['server']['id'], command='action', args={'action': 'poweron'}, http_method='post')
+    action = query(
+        method='servers',
+        server_id=node['server']['id'],
+        command='action',
+        args={'action': 'poweron'},
+        http_method='post'
+    )
     return node
 
+
 def create(vm_):
-    '''
-    Create a single VM from a data dict
-    '''
+    """ Create a single VM from a data dict.
+    """
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -216,7 +225,6 @@ def create(vm_):
         {'kwargs': kwargs},
         transport=__opts__['transport']
     )
-
 
     try:
         ret = create_node(kwargs)
@@ -306,7 +314,8 @@ def create(vm_):
             'script_args': config.get_cloud_config_value(
                 'script_args', vm_, __opts__
             ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
+            'script_env': config.get_cloud_config_value('script_env', vm_,
+                                                        __opts__),
             'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
         }
 
@@ -377,10 +386,10 @@ def create(vm_):
     return ret
 
 
-def query(method='servers', server_id=None, command=None, args=None, http_method='get'):
-    '''
-    Make a call to the Scaleway API
-    '''
+def query(method='servers', server_id=None, command=None, args=None,
+          http_method='get'):
+    """ Make a call to the Scaleway API.
+    """
     base_path = str(config.get_cloud_config_value(
         'api_root',
         get_configured_provider(),
@@ -407,13 +416,15 @@ def query(method='servers', server_id=None, command=None, args=None, http_method
     data = json.dumps(args)
 
     requester = getattr(requests, http_method)
-    request = requester(path, data=data, headers={'X-Auth-Token': token, 'Content-Type': 'application/json'})
+    request = requester(
+        path, data=data,
+        headers={'X-Auth-Token': token, 'Content-Type': 'application/json'}
+    )
     if request.status_code > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
             'Error: {1!r}'.format(
                 request.getcode(),
-                #request.read()
                 request.text
             )
         )
@@ -426,10 +437,10 @@ def query(method='servers', server_id=None, command=None, args=None, http_method
 
     return request.json()
 
+
 def script(vm_):
-    '''
-    Return the script deployment object
-    '''
+    """ Return the script deployment object.
+    """
     return salt.utils.cloud.os_script(
         config.get_cloud_config_value('script', vm_, __opts__),
         vm_,
@@ -439,10 +450,10 @@ def script(vm_):
         )
     )
 
+
 def show_instance(name, call=None):
-    '''
-    Show the details from a Scaleway BareMetal server
-    '''
+    """ Show the details from a Scaleway BareMetal server.
+    """
     if call != 'action':
         raise SaltCloudSystemExit(
             'The show_instance action must be called with -a or --action.'
@@ -450,6 +461,7 @@ def show_instance(name, call=None):
     node = _get_node(name)
     salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
     return node
+
 
 def _get_node(name):
     attempts = 10
@@ -468,13 +480,14 @@ def _get_node(name):
             time.sleep(0.5)
     return {}
 
+
 def destroy(name, call=None):
-    '''
-    Destroy a node. Will check termination protection and warn if enabled.
+    """ Destroy a node. Will check termination protection and warn if enabled.
+
     CLI Example:
     .. code-block:: bash
         salt-cloud --destroy mymachine
-    '''
+    """
     if call == 'function':
         raise SaltCloudSystemExit(
             'The destroy action must be called with -d, --destroy, '
@@ -490,7 +503,10 @@ def destroy(name, call=None):
     )
 
     data = show_instance(name, call='action')
-    node = query(method='servers', server_id=data['id'], command='action', args={'action': 'terminate'}, http_method='post')
+    node = query(
+        method='servers', server_id=data['id'], command='action',
+        args={'action': 'terminate'}, http_method='post'
+    )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -501,8 +517,8 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        salt.utils.cloud.delete_minion_cachedir(
+            name, __active_provider_name__.split(':')[0], __opts__
+        )
 
     return node
-
-
