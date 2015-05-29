@@ -240,12 +240,10 @@ def create(vm_):
         return False
 
     def __query_node_data(vm_name):
+        """ Called to check if the server has a public IP address.
+        """
         data = show_instance(vm_name, 'action')
-        if not data:
-            # Trigger an error in the wait_for_ip function
-            return False
-
-        if data.get('public_ip') is not None:
+        if data and data.get('public_ip'):
             return data
         return False
 
