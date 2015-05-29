@@ -4,6 +4,8 @@
 '''
 # Import Python libs
 from __future__ import absolute_import
+import os
+import shutil
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -13,14 +15,14 @@ from salttesting.mock import (
     MagicMock,
     patch)
 
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.utils.odict
 from salt.modules import seed
-import os
-import shutil
+from salttesting.helpers import ensure_in_syspath
+
+
+ensure_in_syspath('../../')
 
 # Globals
 seed.__salt__ = {}
@@ -32,6 +34,18 @@ class SeedTestCase(TestCase):
     '''
     Test cases for salt.modules.seed
     '''
+
+    def test_mkconfig_odict(self):
+        with patch.dict(seed.__opts__,
+                        {'master': 'foo'}):
+            ddd = salt.utils.odict.OrderedDict()
+            ddd['b'] = 'b'
+            ddd['a'] = 'b'
+            data = seed.mkconfig(ddd, approve_key=False)
+            with open(data['config']) as fic:
+                fdata = fic.read()
+                self.assertEqual(fdata, 'b: b\na: b\nmaster: foo\n')
+
     def test_prep_bootstrap(self):
         '''
         Test to update and get the random script to a random place

@@ -8,13 +8,13 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import shutil
-import yaml
 import logging
 import tempfile
 
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.utils.cloud
 import salt.config
 import salt.syspaths
 import uuid
@@ -203,7 +203,7 @@ def mkconfig(config=None,
     # Write the new minion's config to a tmp file
     tmp_config = os.path.join(tmp, 'minion')
     with salt.utils.fopen(tmp_config, 'w+') as fp_:
-        fp_.write(yaml.dump(config, default_flow_style=False))
+        fp_.write(salt.utils.cloud.salt_config_to_yaml(config))
 
     # Generate keys for the minion
     pubkeyfn = os.path.join(tmp, 'minion.pub')
