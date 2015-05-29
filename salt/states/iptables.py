@@ -324,6 +324,9 @@ def append(name, family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -444,6 +447,9 @@ def insert(name, family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -560,6 +566,9 @@ def delete(name, family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
