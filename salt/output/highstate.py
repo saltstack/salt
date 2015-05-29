@@ -54,7 +54,7 @@ Example output:
                   ret:
                       True
 
-    Summary
+    Summary for myminion
     ------------
     Succeeded: 1
     Failed:    0
@@ -287,7 +287,7 @@ def _format_host(host, data):
         hstrs.append(
             colorfmt.format(
                 colors['CYAN'],
-                u'\nSummary\n{0}'.format('-' * line_max_len),
+                u'\nSummary for {0}\n{1}'.format(host, '-' * line_max_len),
                 colors
             )
         )
