@@ -2184,6 +2184,8 @@ def create_multiprocessing(parallel_data, queue=None):
     This function will be called from another process when running a map in
     parallel mode. The result from the create is always a json object.
     '''
+    reinit_crypto()
+
     parallel_data['opts']['output'] = 'json'
     cloud = Cloud(parallel_data['opts'])
     try:
@@ -2214,6 +2216,8 @@ def destroy_multiprocessing(parallel_data, queue=None):
     This function will be called from another process when running a map in
     parallel mode. The result from the destroy is always a json object.
     '''
+    reinit_crypto()
+
     parallel_data['opts']['output'] = 'json'
     clouds = salt.loader.clouds(parallel_data['opts'])
 
