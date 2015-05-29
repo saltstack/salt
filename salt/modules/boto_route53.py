@@ -165,6 +165,14 @@ def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
     return False
 
 
+def _encode_name(name):
+    return name.replace('*', r'\052')
+
+
+def _decode_name(name):
+    return name.replace(r'\052', '*')
+
+
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                keyid=None, profile=None, split_dns=False, private_zone=False):
     '''
@@ -190,6 +198,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     if not _is_valid_resource(_type):
         return None
 
+    name = _encode_name(name)
     if _type == 'A':
         _record = _zone.get_a(name, fetch_all)
     elif _type == 'CNAME':
@@ -198,7 +207,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
         _record = _zone.get_mx(name, fetch_all)
 
     if _record:
-        ret['name'] = _record.name
+        ret['name'] = _decode_name(_record.name)
         ret['value'] = _record.to_print()
         ret['record_type'] = _record.type
         ret['ttl'] = _record.ttl

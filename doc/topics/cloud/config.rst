@@ -472,7 +472,7 @@ And in the map file:
 .. note::
 
     In the cloud profile that uses this provider configuration, the syntax for the
-    ``provider`` required field would be ``provdier: devhost10-lxc`.
+    ``provider`` required field would be ``provider: devhost10-lxc``.
 
 .. _config_saltify:
 

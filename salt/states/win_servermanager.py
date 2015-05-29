@@ -83,16 +83,15 @@ def removed(name):
         the server is restarted.
 
     Example:
-    Run ``salt MinionName win_servermanager.list_installed`` to get a list of all features installed. Use the top
+        Run ``salt MinionName win_servermanager.list_installed`` to get a list of all features installed. Use the top
     name listed for each feature, not the indented one. Do not use the role or feature names mentioned in the
     PKGMGR documentation.
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        ISWebserverRole:
-          win_servermanager.removed:
-            - name: Web-Server
-
+            ISWebserverRole:
+              win_servermanager.removed:
+                - name: Web-Server
     '''
     ret = {'name': name,
            'result': True,

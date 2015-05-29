@@ -57,6 +57,24 @@ def _get_rabbitmq_plugin():
     return rabbitmq
 
 
+def _output_to_dict(cmdoutput, values_mapper=None):
+    '''Convert rabbitmqctl output to a dict of data
+    cmdoutput: string output of rabbitmqctl commands
+    values_mapper: function object to process the values part of each line
+    '''
+    ret = {}
+    if values_mapper is None:
+        values_mapper = lambda string: string.split('\t')
+
+    # remove first and last line: Listing ... - ...done
+    data_rows = cmdoutput.splitlines()[1:-1]
+    for row in data_rows:
+        key, values = row.split('\t', 1)
+        ret[key] = values_mapper(values)
+
+    return ret
+
+
 def list_users(runas=None):
     '''
     Return a list of users based off of rabbitmqctl user_list.
@@ -67,19 +85,14 @@ def list_users(runas=None):
 
         salt '*' rabbitmq.list_users
     '''
-    ret = {}
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqctl list_users',
                               runas=runas)
-    for line in res.splitlines():
-        if '...' not in line or line == '\n':
-            parts = line.split('\t')
-            if len(parts) < 2:
-                continue
-            user, properties = parts[0], parts[1]
-            ret[user] = properties
-    return ret
+
+    # func to get tags from string such as "[admin, monitoring]"
+    func = lambda string: set(string[1:-1].split(','))
+    return _output_to_dict(res, func)
 
 
 def list_vhosts(runas=None):
@@ -96,9 +109,9 @@ def list_vhosts(runas=None):
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqctl list_vhosts',
                               runas=runas)
-    lines = res.splitlines()
-    vhost_list = [line for line in lines if '...' not in line]
-    return vhost_list
+
+    # remove first and last line: Listing ... - ...done
+    return res.splitlines()[1:-1]
 
 
 def user_exists(name, runas=None):
@@ -313,7 +326,8 @@ def list_permissions(vhost, runas=None):
         'rabbitmqctl list_permissions -p {0}'.format(vhost),
         python_shell=False,
         runas=runas)
-    return [r.split('\t') for r in res.splitlines()]
+
+    return _output_to_dict(res)
 
 
 def list_user_permissions(name, runas=None):
@@ -332,7 +346,8 @@ def list_user_permissions(name, runas=None):
         'rabbitmqctl list_user_permissions {0}'.format(name),
         python_shell=False,
         runas=runas)
-    return [r.split('\t') for r in res.splitlines()]
+
+    return _output_to_dict(res)
 
 
 def set_user_tags(name, tags, runas=None):
@@ -346,6 +361,10 @@ def set_user_tags(name, tags, runas=None):
     '''
     if runas is None:
         runas = salt.utils.get_user()
+
+    if tags and isinstance(tags, (list, tuple)):
+        tags = ' '.join(tags)
+
     res = __salt__['cmd.run'](
         'rabbitmqctl set_user_tags {0} {1}'.format(name, tags),
         python_shell=False,
