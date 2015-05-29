@@ -8,6 +8,7 @@ Module for managing the Salt beacons on a minion
 
 # Import Python libs
 from __future__ import absolute_import
+import difflib
 import os
 import yaml
 
@@ -25,6 +26,11 @@ __func_alias__ = {
 def list_(return_yaml=True):
     '''
     List the beacons currently configured on the minion
+
+    .. versionadded:: Beryllium
+
+    :param return_yaml:     Whether to return YAML formatted output, default True
+    :return:                List of currently configured Beacons.
 
     CLI Example:
 
@@ -64,15 +70,25 @@ def add(name, beacon_data, **kwargs):
     '''
     Add a beacon on the minion
 
+    .. versionadded:: Beryllium
+
+    :param name:            Name of the beacon to configure
+    :param beacon_data:     Dictionary or list containing configuration for beacon.
+    :return:                Boolean and status message on success or failure of add.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' beacons.add
+        salt '*' beacons.add ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
 
     '''
     ret = {'comment': 'Failed to add beacon {0}.'.format(name),
            'result': False}
+
+    if name in list_(return_yaml=False):
+        ret['comment'] = 'Beacon {0} is already configured.'.format(name)
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['result'] = True
@@ -115,9 +131,96 @@ def add(name, beacon_data, **kwargs):
     return ret
 
 
+def modify(name, beacon_data, **kwargs):
+    '''
+    Modify an existing beacon
+
+    .. versionadded:: Beryllium
+
+    :param name:            Name of the beacon to configure
+    :param beacon_data:     Dictionary or list containing updated configuration for beacon.
+    :return:                Boolean and status message on success or failure of modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' beacon.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+    '''
+
+    ret = {'comment': '',
+           'result': True}
+
+    current_beacons = list_(return_yaml=False)
+    if name not in current_beacons:
+        ret['comment'] = 'Beacon {0} is not configured.'.format(name)
+        return ret
+
+    if 'test' in kwargs and kwargs['test']:
+        ret['result'] = True
+        ret['comment'] = 'Beacon: {0} would be added.'.format(name)
+    else:
+        # Attempt to load the beacon module so we have access to the validate function
+        try:
+            beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
+            log.debug('Successfully imported beacon.')
+        except ImportError:
+            ret['comment'] = 'Beacon {0} does not exist'.format(name)
+            return ret
+
+        # Attempt to validate
+        if hasattr(beacon_module, 'validate'):
+            valid = beacon_module.validate(beacon_data)
+        else:
+            log.info('Beacon {0} does not have a validate'
+                     ' function,  skipping validation.'.format(name))
+            valid = True
+
+        if not valid:
+            ret['comment'] = 'Beacon {0} configuration invalid, not modifying.'.format(name)
+            return ret
+
+        _current = current_beacons[name]
+        _new = beacon_data
+
+        if _new == _current:
+            ret['comment'] = 'Job {0} in correct state'.format(name)
+            return ret
+
+        _current_lines = ['{0}:{1}\n'.format(key, value)
+                          for (key, value) in sorted(_current.items())]
+        _new_lines = ['{0}:{1}\n'.format(key, value)
+                      for (key, value) in sorted(_new.items())]
+        _diff = difflib.unified_diff(_current_lines, _new_lines)
+
+        ret['changes'] = {}
+        ret['changes']['diff'] = ''.join(_diff)
+
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'name': name, 'beacon_data': beacon_data, 'func': 'modify'}, 'manage_beacons')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_modify_complete', wait=30)
+                if event_ret and event_ret['complete']:
+                    beacons = event_ret['beacons']
+                    if name in beacons and beacons[name] == beacon_data:
+                        ret['result'] = True
+                        ret['comment'] = 'Modified beacon: {0}.'.format(name)
+                        return ret
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Beacon add failed.'
+    return ret
+
+
 def delete(name, **kwargs):
     '''
     Delete a beacon item
+
+    .. versionadded:: Beryllium
+
+    :param name:            Name of the beacon to delete
+    :return:                Boolean and status message on success or failure of delete.
 
     CLI Example:
 
@@ -157,6 +260,10 @@ def save():
     '''
     Save all beacons on the minion
 
+    .. versionadded:: Beryllium
+
+    :return:                Boolean and status message on success or failure of save.
+
     CLI Example:
 
     .. code-block:: bash
@@ -191,6 +298,10 @@ def save():
 def enable(**kwargs):
     '''
     Enable all beacons on the minion
+
+    .. versionadded:: Beryllium
+
+    :return:                Boolean and status message on success or failure of enable.
 
     CLI Example:
 
@@ -229,6 +340,10 @@ def disable(**kwargs):
     '''
     Disable all beaconsd jobs on the minion
 
+    .. versionadded:: Beryllium
+
+    :return:                Boolean and status message on success or failure of disable.
+
     CLI Example:
 
     .. code-block:: bash
@@ -266,6 +381,11 @@ def disable(**kwargs):
 def enable_beacon(name, **kwargs):
     '''
     Enable beacon on the minion
+
+    .. versionadded:: Beryllium
+
+    :name:                  Name of the beacon to enable.
+    :return:                Boolean and status message on success or failure of enable.
 
     CLI Example:
 
@@ -311,6 +431,11 @@ def enable_beacon(name, **kwargs):
 def disable_beacon(name, **kwargs):
     '''
     Disable beacon on the minion
+
+    .. versionadded:: Beryllium
+
+    :name:                  Name of the beacon to enable.
+    :return:                Boolean and status message on success or failure of disable.
 
     CLI Example:
 

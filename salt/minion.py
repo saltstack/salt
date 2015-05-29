@@ -1367,6 +1367,8 @@ class Minion(MinionBase):
 
         if func == 'add':
             self.beacons.add_beacon(name, beacon_data)
+        elif func == 'modify':
+            self.beacons.modify_beacon(name, beacon_data)
         elif func == 'delete':
             self.beacons.delete_beacon(name)
         elif func == 'enable':
