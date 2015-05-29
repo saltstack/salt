@@ -22,7 +22,7 @@ cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 from __future__ import absolute_import
 
-# Import python libs
+# Import Python Libs
 import os
 import copy
 import time
@@ -36,7 +36,10 @@ try:
 except ImportError:
     HAS_REQUESTS = False
 
-# Import salt cloud libs
+# Import Salt Libs
+from salt.utils import warn_until
+
+# Import Salt Cloud Libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -69,6 +72,13 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
+    warn_until(
+        'Beryllium',
+        'The digital_ocean driver is deprecated and will be removed in Salt Beryllium. '
+        'Please convert your digital ocean provider configs to use the digital_ocean_v2 '
+        'driver.'
+    )
+
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'digital_ocean',
