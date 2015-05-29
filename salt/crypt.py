@@ -820,7 +820,8 @@ class AsyncAuth(object):
         if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
 
-            if payload['pub_key'] != local_master_pub:
+            if payload['pub_key'].replace('\n', '').replace('\r', '') != \
+                    local_master_pub.replace('\n', '').replace('\r', ''):
                 if not self.check_auth_deps(payload):
                     return ''
 

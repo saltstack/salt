@@ -28,14 +28,12 @@ import salt.ext.six as six
 try:
     import boto
     from boto.exception import BotoServerError
-
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
 try:
     from moto import mock_ec2
-
     HAS_MOTO = True
 except ImportError:
     HAS_MOTO = False
@@ -58,6 +56,8 @@ except ImportError:
 # which was added in boto 2.8.0
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto_version = '2.8.0'
+required_moto_version = '0.3.7'
+
 region = 'us-east-1'
 access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
@@ -97,8 +97,11 @@ def _has_required_moto():
         return False
     else:
         import pkg_resources
-
-        if LooseVersion(pkg_resources.get_distribution('moto').version) < LooseVersion('0.3.7'):
+        from pkg_resources import DistributionNotFound
+        try:
+            if LooseVersion(pkg_resources.get_distribution('moto').version) < LooseVersion(required_moto_version):
+                return False
+        except DistributionNotFound:
             return False
         return True
 

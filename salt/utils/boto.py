@@ -233,7 +233,7 @@ def get_error(e):
         error = ET.fromstring(body).find('Errors').find('Error')
         error = {'code': error.find('Code').text,
                  'message': error.find('Message').text}
-    except (AttributeError, ET.ParseError):
+    except (AttributeError, SyntaxError, ET.ParseError):
         error = None
 
     if error:

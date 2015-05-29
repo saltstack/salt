@@ -1274,12 +1274,11 @@ def managed(name,
         run.
     '''
     name = os.path.expanduser(name)
-    # contents must be a string
-    if contents is not None:
-        contents = str(contents)
 
-    # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
+    ret = {'changes': {},
+           'comment': '',
+           'name': name,
+           'result': True}
 
     # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
@@ -1293,10 +1292,30 @@ def managed(name,
             'to \'False\' to avoid reading the file unnecessarily'
         )
 
-    ret = {'changes': {},
-           'comment': '',
-           'name': name,
-           'result': True}
+    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
+        return _error(
+            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
+
+    if contents_pillar:
+        contents = __salt__['pillar.get'](contents_pillar)
+    if contents_grains:
+        contents = __salt__['grains.get'](contents_grains)
+
+    # ensure contents is a string
+    if contents:
+        validated_contents = _validate_str_list(contents)
+        if not validated_contents:
+            return _error(ret, '"contents" is not a string or list of strings')
+        if isinstance(validated_contents, list):
+            contents = os.linesep.join(validated_contents)
+        if contents_newline:
+            # Make sure file ends in newline
+            if contents and not contents.endswith(os.linesep):
+                contents += os.linesep
+
+    # Make sure that leading zeros stripped by YAML loader are added back
+    mode = __salt__['config.manage_mode'](mode)
+
     if not name:
         return _error(ret, 'Must provide name to file.exists')
     user = _test_owner(kwargs, user=user)
@@ -1345,22 +1364,6 @@ def managed(name,
     if defaults and not isinstance(defaults, dict):
         return _error(
             ret, 'Defaults must be formed as a dict')
-
-    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
-        return _error(
-            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
-
-    # If contents_pillar was used, get the pillar data
-    if contents_pillar:
-        contents = __salt__['pillar.get'](contents_pillar)
-
-    if contents_grains:
-        contents = __salt__['grains.get'](contents_grains)
-
-    if contents_newline:
-        # Make sure file ends in newline
-        if contents and not contents.endswith('\n'):
-            contents += '\n'
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
