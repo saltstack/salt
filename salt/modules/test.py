@@ -9,11 +9,11 @@ import os
 import sys
 import time
 import traceback
-import hashlib
 import random
 
 # Import Salt libs
 import salt
+import salt.utils
 import salt.version
 import salt.loader
 import salt.ext.six as six
@@ -469,9 +469,16 @@ def opts_pkg():
     return ret
 
 
-def rand_str(size=9999999999):
+def rand_str(size=9999999999, hash_type=None):
     '''
     Return a random string
+
+        size
+            size of the string to generate
+        hash_type
+            hash type to use
+
+            .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -479,8 +486,9 @@ def rand_str(size=9999999999):
 
         salt '*' test.rand_str
     '''
-    hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
+    if not hash_type:
+        hash_type = __opts__.get('hash_type', 'md5')
+    return salt.utils.rand_str(hash_type=hash_type, size=size)
 
 
 def exception(message='Test Exception'):
