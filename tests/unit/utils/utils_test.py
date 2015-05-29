@@ -18,10 +18,10 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict
-from salt import utils
 from salt.utils import args
+from salt.utils.odict import OrderedDict
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
+from salt import utils
 
 # Import Python libraries
 import os
@@ -727,6 +727,34 @@ class UtilsTestCase(TestCase):
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
+
+    def test_to_str(self):
+        if six.PY3:
+            # TODO: py3 tests
+            pass
+        else:
+            self.assertEqual(utils.to_str('plugh'), 'plugh')
+            self.assertEqual(utils.to_str(u'plugh'), 'plugh')
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
+            self.assertEqual(utils.to_str(un, 'utf-8'), ut)
+
+    def test_to_bytes(self):
+        if six.PY3:
+            # TODO: py3 tests
+            pass
+        else:
+            self.assertRaises(TypeError, utils.to_bytes, '')
+
+    def test_to_unicode(self):
+        if six.PY3:
+            self.assertRaises(TypeError, utils.to_unicode, '')
+        else:
+            self.assertEqual(utils.to_unicode('xyzzy', 'utf-8'), u'xyzzy')
+            ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
+
 
 if __name__ == '__main__':
     from integration import run_tests
