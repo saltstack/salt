@@ -91,6 +91,22 @@ def _is_valid_resource(_type):
         return False
 
 
+def _get_split_zone(zone, _conn, private_zone):
+    '''
+    With boto route53, zones can only be matched by name
+    or iterated over in a list.  Since the name will be the
+    same for public and private zones in a split DNS situation,
+    iterate over the list and match the zone name and public/private
+    status.
+    '''
+    for _zone in _conn.get_zones():
+        if _zone.name == zone:
+            _private_zone = True if _zone.config['PrivateZone'].lower() == 'true' else False
+            if _private_zone == private_zone:
+                return _zone
+    return False
+
+
 def zone_exists(zone, region=None, key=None, keyid=None, profile=None):
     '''
     Check for the existence of a Route53 hosted zone.
@@ -150,7 +166,7 @@ def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
 
 
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
-               keyid=None, profile=None):
+               keyid=None, profile=None, split_dns=False, private_zone=False):
     '''
     Get a record from a zone.
 
@@ -160,7 +176,10 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone)
+    if split_dns:
+        _zone = _get_split_zone(zone, conn, private_zone)
+    else:
+        _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
@@ -189,7 +208,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None,
-               wait_for_sync=True):
+               wait_for_sync=True, split_dns=False, private_zone=False):
     '''
     Add a record to a zone.
 
@@ -199,7 +218,10 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone)
+    if split_dns:
+        _zone = _get_split_zone(zone, conn, private_zone)
+    else:
+        _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
@@ -224,7 +246,7 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                   region=None, key=None, keyid=None, profile=None,
-                  wait_for_sync=True):
+                  wait_for_sync=True, split_dns=False, private_zone=False):
     '''
     Modify a record in a zone.
 
@@ -234,7 +256,10 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone)
+    if split_dns:
+        _zone = _get_split_zone(zone, conn, private_zone)
+    else:
+        _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
@@ -259,7 +284,7 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
                   region=None, key=None, keyid=None, profile=None,
-                  wait_for_sync=True):
+                  wait_for_sync=True, split_dns=False, private_zone=False):
     '''
     Modify a record in a zone.
 
@@ -269,7 +294,10 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone)
+    if split_dns:
+        _zone = _get_split_zone(zone, conn, private_zone)
+    else:
+        _zone = conn.get_zone(zone)
     if not _zone:
         msg = 'Failed to retrieve zone {0}'.format(zone)
         log.error(msg)
