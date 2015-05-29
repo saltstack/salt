@@ -32,7 +32,7 @@ import warnings
 import string
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
 # pylint: disable=redefined-builtin
@@ -2571,7 +2571,7 @@ def to_str(s, encoding=None):
             return s.decode(encoding or __salt_system_encoding__)
         return str(s)
     else:
-        if isinstance(s, six.text_type):
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return s.encode(encoding or __salt_system_encoding__)
         return str(s)
 
@@ -2594,5 +2594,5 @@ def to_unicode(s, encoding=None):
     if six.PY2:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return six.text_type(s)
+        return unicode(s)  # pylint: disable=incompatible-py3-code
     raise TypeError('unicode object not available in python 3')
