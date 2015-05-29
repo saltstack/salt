@@ -108,16 +108,16 @@ class RhipTestCase(TestCase):
         
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock()):
-                    with patch.object(rh_ip, '_read_temp', return_value='A'):
-                        self.assertEqual(rh_ip.build_routes('i', test='t'), 'A')
+                    with patch.object(rh_ip, '_read_temp', return_value=['A']):
+                        self.assertEqual(rh_ip.build_routes('i', test='t'), ['A', 'A'])
         
-                    with patch.object(rh_ip, '_read_file', return_value='A'):
+                    with patch.object(rh_ip, '_read_file', return_value=['A']):
                         with patch.object(os.path, 'join', return_value='A'):
                             with patch.object(rh_ip, '_write_file_iface',
                                               return_value=None):
                                 self.assertEqual(rh_ip.build_routes('i',
                                                                     test=None),
-                                                 'A')
+                                                 ['A', 'A'])
 
     def test_down(self):
         '''
@@ -160,8 +160,8 @@ class RhipTestCase(TestCase):
         Test to return the contents of the interface routes script.
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.object(rh_ip, '_read_file', return_value='A'):
-                self.assertEqual(rh_ip.get_routes('iface'), 'A')
+            with patch.object(rh_ip, '_read_file', return_value=['A']):
+                self.assertEqual(rh_ip.get_routes('iface'), ['A', 'A'])
 
     def test_get_network_settings(self):
         '''
