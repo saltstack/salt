@@ -955,12 +955,12 @@ def build_routes(iface, **settings):
 
         salt '*' ip.build_routes eth0 <settings>
     '''
-    
+
     template = 'rh6_route_eth.jinja'
     if __grains__['osrelease'][:1] < 6:
         template = 'route_eth.jinja'
     log.debug('Template name: ' + template)
-    
+
     iface = iface.lower()
     opts = _parse_routes(iface, settings)
     log.debug("Opts: \n {0}".format(opts))
@@ -974,7 +974,7 @@ def build_routes(iface, **settings):
     opts6 = []
     opts4 = []
     for route in opts['routes']:
-        ipaddr = route['ipaddr'] 
+        ipaddr = route['ipaddr']
         if salt.utils.validate.net.ipv6_addr(ipaddr):
             opts6.append(route)
         else:
@@ -984,7 +984,7 @@ def build_routes(iface, **settings):
 
     routecfg = template.render(routes=opts4)
     routecfg6 = template.render(routes=opts6)
-    
+
     if settings['test']:
         return _read_temp("\n".join([routecfg, routecfg6]))
 
