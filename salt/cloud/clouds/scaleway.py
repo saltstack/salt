@@ -31,9 +31,8 @@ import time
 
 try:
     import requests
-    HAS_REQUESTS = True
 except ImportError:
-    HAS_REQUESTS = False
+    requests = None
 
 import salt.config as config
 from salt.exceptions import (
@@ -53,7 +52,7 @@ log = logging.getLogger(__name__)
 def __virtual__():
     """ Check for Scaleway configurations.
     """
-    if not HAS_REQUESTS:
+    if requests is None:
         return False
 
     if get_configured_provider() is False:
