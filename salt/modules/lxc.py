@@ -619,7 +619,7 @@ def get_network_profile(name=None, **kwargs):
             type: veth
             flags: up
 
-    To disable entirely net:
+    To disable networking entirely:
 
     .. code-block:: yaml
 
