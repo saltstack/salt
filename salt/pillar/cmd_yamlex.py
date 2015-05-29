@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-from salt.utils.serializers.yamlex import deserialize
+from salt.serializers.yamlex import deserialize
 
 # Set up logging
 log = logging.getLogger(__name__)
