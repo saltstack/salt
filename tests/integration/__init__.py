@@ -1044,7 +1044,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
-    __slots__ = ('client', '_salt_client_config_file_name_')
+    __slots__ = ()
 
     @property
     def client(self):
