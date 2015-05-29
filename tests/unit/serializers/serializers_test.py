@@ -16,8 +16,8 @@ from textwrap import dedent
 import jinja2
 
 # Import salt libs
-from salt.utils.serializers import json, yamlex, yaml, msgpack
-from salt.utils.serializers import SerializationError
+from salt.serializers import json, yamlex, yaml, msgpack
+from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
 SKIP_MESSAGE = '%s is unavailable, do prerequisites have been met?'

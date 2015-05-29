@@ -40,7 +40,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-from salt.utils.serializers import json
+from salt.serializers import json
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs

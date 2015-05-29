@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.serializers.yaml
+    salt.serializers.yaml
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements YAML serializer.
@@ -16,7 +16,7 @@ import yaml
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
 
-from salt.utils.serializers import DeserializationError, SerializationError
+from salt.serializers import DeserializationError, SerializationError
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
 

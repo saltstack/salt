@@ -251,8 +251,8 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.utils.serializers import yaml as yaml_serializer
-from salt.utils.serializers import json as json_serializer
+from salt.serializers import yaml as yaml_serializer
+from salt.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -4210,7 +4210,7 @@ def serialize(name,
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
         # TODO remove json round-trip when all dataset will use
-        # utils.serializers
+        # serializers
         contents = pprint.pformat(
             json.loads(
                 json.dumps(dataset),

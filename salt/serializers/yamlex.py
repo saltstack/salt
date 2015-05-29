@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.serializers.yamlex
+    salt.serializers.yamlex
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     YAMLEX is a format that allows for things like sls files to be
@@ -23,7 +23,7 @@
 
     .. code-block:: python
 
-        from salt.utils.serializers import yamlex
+        from salt.serializers import yamlex
 
         with open('state.sls', 'r') as stream:
             obj = yamlex.deserialize(stream)
@@ -56,7 +56,7 @@
 
     .. code-block:: python
 
-        from salt.utils.serializers import yaml
+        from salt.serializers import yaml
         yml_obj = yaml.deserialize(str(obj))
         assert yml_obj == obj
 
@@ -110,7 +110,7 @@ from copy import copy
 
 
 # Import Salt Libs
-from salt.utils.serializers import DeserializationError, SerializationError
+from salt.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
 
