@@ -156,7 +156,8 @@ def gid_to_group(gid):
     try:
         return grp.getgrgid(gid).gr_name
     except (KeyError, NameError):
-        return ''
+        # If group is not present, fall back to the gid.
+        return gid
 
 
 def group_to_gid(group):
@@ -243,7 +244,8 @@ def uid_to_user(uid):
     try:
         return pwd.getpwuid(uid).pw_name
     except (KeyError, NameError):
-        return ''
+        # If user is not present, fall back to the uid.
+        return uid
 
 
 def user_to_uid(user):
