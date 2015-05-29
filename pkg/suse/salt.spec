@@ -16,7 +16,7 @@
 #
 
 Name:           salt
-Version:        2015.5.0
+Version:        2015.5.1
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -58,10 +58,6 @@ BuildRequires:  python-pip
 BuildRequires:  python-salt-testing
 BuildRequires:  python-unittest2
 BuildRequires:  python-xml
-%if 0%{?suse_version} >= 1210
-BuildRequires:  python-pssh
-%{?systemd_requires}
-%endif
 
 #for docs
 BuildRequires:  python-sphinx
@@ -253,6 +249,7 @@ cd doc && make html && rm _build/html/.buildinfo && rm _build/html/_images/proxy
 %install
 python setup.py install --prefix=%{_prefix} --root=%{buildroot}
 %fdupes %{buildroot}%{_prefix}
+%fdupes $RPM_BUILD_ROOT%{python_sitelib}
 
 ## create missing directories
 mkdir -p %{buildroot}%{_sysconfdir}/salt/master.d
@@ -491,10 +488,10 @@ install -Dpm 0644 pkg/zsh_completion.zsh %{buildroot}/etc/zsh_completion.d/%{nam
 %{_bindir}/salt-key
 %{_bindir}/salt-run
 %{_mandir}/man1/salt-master.1.gz
-%{_mandir}/man1/salt.1.gz
 %{_mandir}/man1/salt-cp.1.gz
 %{_mandir}/man1/salt-key.1.gz
 %{_mandir}/man1/salt-run.1.gz
+%{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/sysconfig/SuSEfirewall2.d/services/salt
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/master
 %attr(0644, root, root) %config(noreplace) %{_sysconfdir}/salt/roster
@@ -520,7 +517,6 @@ install -Dpm 0644 pkg/zsh_completion.zsh %{buildroot}/etc/zsh_completion.d/%{nam
 %{_bindir}/salt-unity
 %{_mandir}/man1/salt-unity.1.gz
 %{_mandir}/man1/salt-call.1.gz
-%{_mandir}/man7/salt.7.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %attr(755,root,root)%{python_sitelib}/salt/cloud/deploy/*.sh
 %{python_sitelib}/*
