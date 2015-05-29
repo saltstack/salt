@@ -463,16 +463,14 @@ def show_instance(name, call=None):
 
 
 def _get_node(name):
-    attempts = 10
-    while attempts >= 0:
+    for attempt in reversed(range(10)):
         try:
             return list_nodes_full()[name]
         except KeyError:
-            attempts -= 1
             log.debug(
                 'Failed to get the data for the node {0!r}. Remaining '
                 'attempts {1}'.format(
-                    name, attempts
+                    name, attempt
                 )
             )
             # Just a little delay between attempts...
