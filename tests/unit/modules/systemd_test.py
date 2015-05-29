@@ -23,6 +23,7 @@ from salt.modules import systemd
 
 # Globals
 systemd.__salt__ = {}
+systemd.__context__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -44,10 +45,28 @@ class SystemdTestCase(TestCase):
         '''
             Test to return a list of all enabled services
         '''
+        def sysv(name):
+            if name in ['d', 'e']:
+                return True
+            return False
+
+        def sysve(name):
+            if name in ['e']:
+                return True
+            return False
+
         mock = MagicMock(return_value={"a": "enabled", "b": "enabled",
                                        "c": "disabled"})
-        with patch.object(systemd, '_get_all_unit_files', mock):
-            self.assertListEqual(systemd.get_enabled(), ["a", "b"])
+        lmock = MagicMock(return_value={"d": "disabled",
+                                        "a": "disabled",
+                                        "b": "disabled",
+                                        "e": "disabled"})
+        with patch.object(systemd, "_sysv_is_disabled", sysve):
+            with patch.object(systemd, "_service_is_sysv", sysv):
+                with patch.object(systemd, '_get_all_unit_files', mock):
+                    with patch.object(systemd, '_get_all_units', lmock):
+                        self.assertListEqual(
+                            systemd.get_enabled(), ["a", "b", "d"])
 
     def test_get_disabled(self):
         '''
@@ -174,22 +193,34 @@ class SystemdTestCase(TestCase):
         '''
             Test to enable the named service to start when the system boots
         '''
+        exe = MagicMock(return_value='foo')
+        tmock = MagicMock(return_value=True)
         mock = MagicMock(return_value=False)
         with patch.object(systemd, '_untracked_custom_unit_found', mock):
             with patch.object(systemd, '_unit_file_changed', mock):
                 with patch.dict(systemd.__salt__, {'cmd.retcode': mock}):
-                    self.assertTrue(systemd.enable("sshd"))
+                    with patch.object(systemd, "_service_is_sysv", mock):
+                        self.assertTrue(systemd.enable("sshd"))
+                    with patch.object(systemd, "_get_service_exec", exe):
+                        with patch.object(systemd, "_service_is_sysv", tmock):
+                            self.assertTrue(systemd.enable("sshd"))
 
     def test_disable(self):
         '''
             Test to disable the named service to not
             start when the system boots
         '''
+        exe = MagicMock(return_value='foo')
+        tmock = MagicMock(return_value=True)
         mock = MagicMock(return_value=False)
         with patch.object(systemd, '_untracked_custom_unit_found', mock):
             with patch.object(systemd, '_unit_file_changed', mock):
                 with patch.dict(systemd.__salt__, {'cmd.retcode': mock}):
-                    self.assertTrue(systemd.disable("sshd"))
+                    with patch.object(systemd, "_service_is_sysv", mock):
+                        self.assertTrue(systemd.disable("sshd"))
+                    with patch.object(systemd, "_get_service_exec", exe):
+                        with patch.object(systemd, "_service_is_sysv", tmock):
+                            self.assertTrue(systemd.disable("sshd"))
 
     def test_enabled(self):
         '''
