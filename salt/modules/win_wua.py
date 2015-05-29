@@ -226,13 +226,13 @@ def _list_updates_build_report(updates):
         KB = ""
         if "KB" in title:
             KB = title[title.find("(") + 1: title.find(")")]
-        results[GUID]['KB'] = KB # KB pulled from the title if found
-        results[GUID]['Description']  = update.Description
-        results[GUID]['Downloaded']   = str(update.IsDownloaded) # Has update been downloaded
-        results[GUID]['Installed']    = str(update.IsInstalled) # Has update been installed
-        results[GUID]['Mandatory']    = str(update.IsMandatory) # Is update mandatory
-        results[GUID]['UserInput']    = str(update.InstallationBehavior.CanRequestUserInput)
-        results[GUID]['EULAAccepted'] = str(update.EulaAccepted) # Has EULA been accepted
+        results[GUID]['KB'] = KB
+        results[GUID]['Description'] = update.Description
+        results[GUID]['Downloaded'] = str(update.IsDownloaded)
+        results[GUID]['Installed'] = str(update.IsInstalled)
+        results[GUID]['Mandatory'] = str(update.IsMandatory)
+        results[GUID]['UserInput'] = str(update.InstallationBehavior.CanRequestUserInput)
+        results[GUID]['EULAAccepted'] = str(update.EulaAccepted)
 
         # Severity of the Update
         # Can be: Critical, Important, Low, Moderate, <unspecified or empty>
@@ -258,9 +258,9 @@ def _list_updates_build_report(updates):
     return results
 
 
-def list_update( name=None,
-                 download=False,
-                 install=False ):
+def list_update(name=None,
+                download=False,
+                install=False):
     '''
     Returns details for all updates that match the search criteria
 
@@ -340,7 +340,7 @@ def list_update( name=None,
     # Try searching for the GUID first
     searchString = 'UpdateID=\'{0}\''.format(name)
 
-    log.debug( 'Searching for update: {0}'.format(searchString.lower()))
+    log.debug('Searching for update: {0}'.format(searchString.lower()))
     try:
         foundUsingGUID = False
         wua_search_result = wua_searcher.Search(searchString.lower())
@@ -577,7 +577,7 @@ def download_updates(GUID=None):
     pythoncom.CoInitialize()
 
     # Create a session with the Windows Update Agent
-    wua_session = win32com.client.Dispatch( 'Microsoft.Update.Session' )
+    wua_session = win32com.client.Dispatch('Microsoft.Update.Session')
     wua_session.ClientApplicationID = "Salt: Install Update"
 
     # Create the Searcher, Downloader, Installer, and Collections
@@ -625,7 +625,7 @@ def download_updates(GUID=None):
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
             log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula
+            update.AcceptEula # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
@@ -657,7 +657,7 @@ def download_updates(GUID=None):
         ret['Success'] = False
         ret['Result'] = format(error)
 
-        hr,msg,exc,arg = error.args
+        hr, msg, exc, arg = error.args # pylint: disable=W0633
         # Error codes found at the following site:
         # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
         fc = {-2145124316: 'No Updates: 0x80240024',
@@ -676,15 +676,15 @@ def download_updates(GUID=None):
 
     log.debug('Download Complete')
 
-    rc = {0:'Download Not Started',
-          1:'Download In Progress',
-          2:'Download Succeeded',
-          3:'Download Succeeded With Errors',
-          4:'Download Failed',
-          5:'Download Aborted'}
+    rc = {0: 'Download Not Started',
+          1: 'Download In Progress',
+          2: 'Download Succeeded',
+          3: 'Download Succeeded With Errors',
+          4: 'Download Failed',
+          5: 'Download Aborted'}
     log.debug(rc[result.ResultCode])
 
-    if result.ResultCode in [2,3]:
+    if result.ResultCode in [2, 3]:
         ret['Success'] = True
     else:
         ret['Success'] = False
@@ -773,7 +773,7 @@ def install_updates(GUID=None):
             ret['Details'] = 'No Updates found: {0}'.format(searchList)
             return ret
     except Exception as exc:
-        log.debug( 'Invalid Search String: {0}'.format(searchString))
+        log.debug('Invalid Search String: {0}'.format(searchString))
         return 'Invalid Search String: {0}'.format(searchString)
 
     # List updates found
@@ -784,13 +784,13 @@ def install_updates(GUID=None):
         ret['Updates'][update.Identity.UpdateID] = {}
         ret['Updates'][update.Identity.UpdateID]['Title'] = update.Title
         if update.IsInstalled:
-            log.debug( 'Already Installed: {0}'.format(update.Identity.UpdateID))
+            log.debug('Already Installed: {0}'.format(update.Identity.UpdateID))
             log.debug('\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyInstalled'] = True
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
             log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula
+            update.AcceptEula # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
@@ -821,7 +821,7 @@ def install_updates(GUID=None):
             ret['Success'] = False
             ret['Result'] = format(error)
 
-            hr,msg,exc,arg = error.args
+            hr, msg, exc, arg = error.args # pylint: disable=W0633
             # Error codes found at the following site:
             # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
             fc = {-2145124316: 'No Updates: 0x80240024',
@@ -867,7 +867,7 @@ def install_updates(GUID=None):
         ret['Success'] = False
         ret['Result'] = format(error)
 
-        hr,msg,exc,arg = error.args
+        hr, msg, exc, arg = error.args # pylint: disable=W0633
         # Error codes found at the following site:
         # https://msdn.microsoft.com/en-us/library/windows/desktop/hh968413(v=vs.85).aspx
         fc = {-2145124316: 'No Updates: 0x80240024',
@@ -877,7 +877,7 @@ def install_updates(GUID=None):
         except KeyError:
             failure_code = 'Unknown Failure: {0}'.format(error)
 
-        log.debug( 'Download Failed: {0}'.format(failure_code))
+        log.debug('Download Failed: {0}'.format(failure_code))
         ret['error_msg'] = failure_code
         ret['location'] = 'Install Section of install_updates'
         ret['file'] = 'win_wua.py'
@@ -892,10 +892,10 @@ def install_updates(GUID=None):
           5: 'Installation Aborted'}
     log.debug(rc[result.ResultCode])
 
-    if result.ResultCode in [2,3]:
+    if result.ResultCode in [2, 3]:
         ret['Success'] = True
         ret['NeedsReboot'] = result.RebootRequired
-        log.debug('NeedsReboot'.format(result.RebootRequired))
+        log.debug('NeedsReboot: '.format(result.RebootRequired))
     else:
         ret['Success'] = False
 
