@@ -159,18 +159,18 @@ def list_nodes_select(call=None):
     )
 
 
-def get_image(vm_):
+def get_image(server_):
     """ Return the image object to use.
     """
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
-        'image', vm_, __opts__, search_global=False
+    server_image = str(config.get_cloud_config_value(
+        'image', server_, __opts__, search_global=False
     ))
     for image in images:
-        if vm_image in (images[image]['name'], images[image]['id']):
+        if server_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, {0!r}, could not be found.'.format(server_image)
     )
 
 
@@ -189,37 +189,37 @@ def create_node(args):
     return node
 
 
-def create(vm_):
-    """ Create a single VM from a data dict.
+def create(server_):
+    """ Create a single BareMetal server from a data dict.
     """
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
+        'salt/cloud/{0}/creating'.format(server_['name']),
         {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'name': server_['name'],
+            'profile': server_['profile'],
+            'provider': server_['provider'],
         },
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating a BareMetal server {0}'.format(server_['name']))
 
     access_key = config.get_cloud_config_value(
         'access_key', get_configured_provider(), __opts__, search_global=False
     )
 
     kwargs = {
-        'name': vm_['name'],
+        'name': server_['name'],
         'organization': access_key,
-        'image': get_image(vm_),
+        'image': get_image(server_),
     }
 
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        'salt/cloud/{0}/requesting'.format(server_['name']),
         {'kwargs': kwargs},
         transport=__opts__['transport']
     )
@@ -231,7 +231,7 @@ def create(vm_):
             'Error creating {0} on Scaleway\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: {1}'.format(
-                vm_['name'],
+                server_['name'],
                 str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
@@ -239,10 +239,10 @@ def create(vm_):
         )
         return False
 
-    def __query_node_data(vm_name):
+    def __query_node_data(server_name):
         """ Called to check if the server has a public IP address.
         """
-        data = show_instance(vm_name, 'action')
+        data = show_instance(server_name, 'action')
         if data and data.get('public_ip'):
             return data
         return False
@@ -250,27 +250,27 @@ def create(vm_):
     try:
         data = salt.utils.cloud.wait_for_ip(
             __query_node_data,
-            update_args=(vm_['name'],),
+            update_args=(server_['name'],),
             timeout=config.get_cloud_config_value(
-                'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+                'wait_for_ip_timeout', server_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value(
-                'wait_for_ip_interval', vm_, __opts__, default=10),
+                'wait_for_ip_interval', server_, __opts__, default=10),
         )
     except (SaltCloudExecutionTimeout, SaltCloudExecutionFailure) as exc:
         try:
             # It might be already up, let's destroy it!
-            destroy(vm_['name'])
+            destroy(server_['name'])
         except SaltCloudSystemExit:
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
 
     ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
+        'ssh_username', server_, __opts__, default='root'
     )
 
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
+    if config.get_cloud_config_value('deploy', server_, __opts__) is True:
+        deploy_script = script(server_)
         if data.get('public_ip') is not None:
             ip_address = data['public_ip']['address']
 
@@ -279,58 +279,58 @@ def create(vm_):
             'host': ip_address,
             'username': ssh_username,
             'script': deploy_script,
-            'name': vm_['name'],
+            'name': server_['name'],
             'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
+                'tmp_dir', server_, __opts__, default='/tmp/.saltcloud'
             ),
             'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
+                'deploy_command', server_, __opts__,
                 default='/tmp/.saltcloud/deploy.sh',
             ),
             'start_action': __opts__['start_action'],
             'parallel': __opts__['parallel'],
             'sock_dir': __opts__['sock_dir'],
             'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
+            'minion_pem': server_['priv_key'],
+            'minion_pub': server_['pub_key'],
             'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
+            'preseed_minion_keys': server_.get('preseed_minion_keys', None),
             'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
+                'display_ssh_output', server_, __opts__, default=True
             ),
             'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
+                'sudo', server_, __opts__, default=(ssh_username != 'root')
             ),
             'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
+                'sudo_password', server_, __opts__, default=None
             ),
             'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
+                'tty', server_, __opts__, default=False
             ),
             'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
+                'script_args', server_, __opts__
             ),
-            'script_env': config.get_cloud_config_value('script_env', vm_,
+            'script_env': config.get_cloud_config_value('script_env', server_,
                                                         __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
+            'minion_conf': salt.utils.cloud.minion_config(__opts__, server_)
         }
 
         # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
+        if config.get_cloud_config_value('make_master', server_, __opts__) is True:
             deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
+            deploy_kwargs['master_pub'] = server_['master_pub']
+            deploy_kwargs['master_pem'] = server_['master_pem']
+            master_conf = salt.utils.cloud.master_config(__opts__, server_)
             deploy_kwargs['master_conf'] = master_conf
 
             if master_conf.get('syndic_master', None):
                 deploy_kwargs['make_syndic'] = True
 
         deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
+            'make_minion', server_, __opts__, default=True
         )
 
-        # Store what was used to the deploy the VM
+        # Store what was used to the deploy the BareMetal server
         event_kwargs = copy.deepcopy(deploy_kwargs)
         del event_kwargs['minion_pem']
         del event_kwargs['minion_pub']
@@ -342,7 +342,7 @@ def create(vm_):
         salt.utils.cloud.fire_event(
             'event',
             'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
+            'salt/cloud/{0}/deploying'.format(server_['name']),
             {'kwargs': event_kwargs},
             transport=__opts__['transport']
         )
@@ -350,31 +350,31 @@ def create(vm_):
         deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
 
         if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
+            log.info('Salt installed on {0}'.format(server_['name']))
         else:
             log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
+                'Failed to start Salt on BareMetal server {0}'.format(
+                    server_['name']
                 )
             )
 
     ret.update(data)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created BareMetal server {0[name]!r}'.format(server_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
+        '{0[name]!r} BareMetal server creation details:\n{1}'.format(
+            server_, pprint.pformat(data)
         )
     )
 
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
+        'salt/cloud/{0}/created'.format(server_['name']),
         {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'name': server_['name'],
+            'profile': server_['profile'],
+            'provider': server_['provider'],
         },
         transport=__opts__['transport']
     )
@@ -434,15 +434,15 @@ def query(method='servers', server_id=None, command=None, args=None,
     return request.json()
 
 
-def script(vm_):
+def script(server_):
     """ Return the script deployment object.
     """
     return salt.utils.cloud.os_script(
-        config.get_cloud_config_value('script', vm_, __opts__),
-        vm_,
+        config.get_cloud_config_value('script', server_, __opts__),
+        server_,
         __opts__,
         salt.utils.cloud.salt_config_to_yaml(
-            salt.utils.cloud.minion_config(__opts__, vm_)
+            salt.utils.cloud.minion_config(__opts__, server_)
         )
     )
 
