@@ -9,6 +9,7 @@ Module for managing Windows Updates using the Windows Update Agent.
         - pythoncom
 """
 from __future__ import absolute_import
+from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 
 # Import Python libs
 import logging
@@ -25,7 +26,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
-jjjj
 log = logging.getLogger(__name__)
 
 
@@ -84,8 +84,8 @@ def _wua_search(skip_hidden=True,
 
     # Search for updates
     try:
-        log.debug('Searching for updates: {0}'.format(searchString))
-        results = wua_searcher.Search(searchString)
+        log.debug('Searching for updates: {0}'.format(search_string))
+        results = wua_searcher.Search(search_string)
         log.debug('Search completed successfully')
         return results.Updates
     except Exception as exc:
@@ -891,7 +891,7 @@ def install_updates(guid=None):
     if result.ResultCode in [2, 3]:
         ret['Success'] = True
         ret['NeedsReboot'] = result.RebootRequired
-        log.debug('NeedsReboot: '.format(result.RebootRequired))
+        log.debug('NeedsReboot: {0}'.format(result.RebootRequired))
     else:
         ret['Success'] = False
 
