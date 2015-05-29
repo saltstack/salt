@@ -49,13 +49,17 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         func = 'pkg.mod_repo'
         os_grain = self.run_function('grains.item', ['os'])['os']
+        os_release = self.run_function('grains.item', ['os_release'])['os_release']
 
         if os_grain == 'Ubuntu':
             repo = 'ppa:saltstack/salt'
             uri = 'http://ppa.launchpad.net/saltstack/salt/ubuntu'
             ret = self.run_function(func, [repo, 'comps=main'])
             self.assertNotEqual(ret, {})
-            self.assertIn(uri, ret.keys()[0])
+            if os_release.startswith('12.'):
+                self.assertIn(repo, ret.keys()[0])
+            else:
+                self.assertIn(uri, ret.keys()[0])
 
             self.run_function('pkg.del_repo', [repo])
         else:
