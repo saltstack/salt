@@ -6,6 +6,15 @@ DigitalOcean Cloud Module
 The DigitalOcean cloud module is used to control access to the DigitalOcean
 VPS system.
 
+.. note::
+
+    Due to Digital Ocean deprecating its original API, this salt-cloud driver for
+    Digital Ocean will be deprecated in Salt Beryllium. The digital_ocean_v2 driver
+    that is currently available on all 2015.5.x releases will be used instead.
+    Starting in Beryllium, the digital_ocean_v2.py driver will be renamed to
+    digital_ocean.py and this driver will be removed. Please convert any original
+    digital_ocean provider configs to use the new digital_ocean_v2 provider configs.
+
 Use of this module only requires the ``api_key`` parameter to be set. Set up the
 cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/digital_ocean.conf``:
