@@ -395,7 +395,7 @@ def query(method='servers', server_id=None, command=None, args=None,
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default='https://api.cloud.online.net'
+        default='https://api.scaleway.com'
     ))
 
     path = '{0}/{1}/'.format(base_path, method)
