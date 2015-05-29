@@ -19,24 +19,42 @@ from salt.serializers.yamlex \
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd):
-    for key, val in six.iteritems(upd):
-        try:
-            if isinstance(val, OrderedDict):
-                klass = OrderedDict
-            else:
-                klass = dict
-            dest_subkey = dest.get(key, klass())
-        except AttributeError:
-            dest_subkey = None
+def update(dest, upd, recursive_update=True):
+    '''
+    Recursive version of the default dict.update
 
-        if isinstance(dest_subkey, collections.Mapping) \
-                and isinstance(val, collections.Mapping):
-            ret = update(dest_subkey, val)
-            dest[key] = ret
-        elif key:
-            dest[key] = upd[key]
-    return dest
+    Merges upd recursively into dest
+
+    If recursive_update=False, will use the classic dict.update, or fall back
+    on a manual merge (helpful for non-dict types like FunctionWrapper)
+    '''
+    if dest is None:
+        return upd
+    if recursive_update:
+        for key, val in six.iteritems(upd):
+            try:
+                if isinstance(val, OrderedDict):
+                    valtype = OrderedDict
+                else:
+                    valtype = dict
+                dest_subkey = dest.get(key, None)
+            except AttributeError:
+                dest_subkey = None
+            if isinstance(dest_subkey, collections.Mapping) \
+                    and isinstance(val, collections.Mapping):
+                ret = update(dest_subkey, val)
+                dest[key] = ret
+            else:
+                dest[key] = upd[key]
+        return dest
+    else:
+        try:
+            dest.update(upd)
+        except AttributeError:
+            # this mapping is not a dict
+            for k in upd:
+                dest[k] = upd[k]
+        return dest
 
 
 def merge_list(obj_a, obj_b):
@@ -50,7 +68,7 @@ def merge_list(obj_a, obj_b):
 
 
 def merge_recurse(obj_a, obj_b):
-    copied = copy.copy(obj_a)
+    copied = copy.deepcopy(obj_a)
     return update(copied, obj_b)
 
 

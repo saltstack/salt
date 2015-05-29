@@ -596,17 +596,13 @@ def _parse_interfaces(interface_files=None):
                         iface_dict['ethtool'][attr] = valuestr
 
                     elif attr.startswith('bond'):
-                        if '-' in attr:
-                            opt = attr.split('-', 1)[1]
-                        elif '_' in attr:
-                            # Just in case configuration still has bond_
-                            opt = attr.split('_', 1)[1]
+                        opt = re.split(r'[_-]', attr, maxsplit=1)[1]
                         if 'bonding' not in iface_dict:
                             iface_dict['bonding'] = salt.utils.odict.OrderedDict()
                         iface_dict['bonding'][opt] = valuestr
 
                     elif attr.startswith('bridge'):
-                        opt = attr.split('-', 1)[1]
+                        opt = re.split(r'[_-]', attr, maxsplit=1)[1]
                         if 'bridging' not in iface_dict:
                             iface_dict['bridging'] = salt.utils.odict.OrderedDict()
                         iface_dict['bridging'][opt] = valuestr

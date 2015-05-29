@@ -398,8 +398,8 @@ class LocalClient(object):
         .. code-block:: python
 
             >>> returns = local.cmd_batch('*', 'state.highstate', bat='10%')
-            >>> for return in returns:
-            ...     print return
+            >>> for ret in returns:
+            ...     print(ret)
             {'jerry': {...}}
             {'dave': {...}}
             {'stewart': {...}}
@@ -629,13 +629,13 @@ class LocalClient(object):
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :return: A generator
+        :return: A generator yielding the individual minion returns
 
         .. code-block:: python
 
             >>> ret = local.cmd_iter('*', 'test.ping')
             >>> for i in ret:
-            ...     print i
+            ...     print(i)
             {'jerry': {'ret': True}}
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
@@ -655,9 +655,9 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
-                                                self._get_timeout(timeout),
-                                                tgt,
-                                                expr_form,
+                                                timeout=self._get_timeout(timeout),
+                                                tgt=tgt,
+                                                tgt_type=expr_form,
                                                 **kwargs):
                 if not fn_ret:
                     continue
@@ -674,19 +674,21 @@ class LocalClient(object):
             kwarg=None,
             **kwargs):
         '''
-        Blocks while waiting for individual minions to return.
+        Yields the individual minion returns as they come in, or None
+            when no returns are available.
 
         The function signature is the same as :py:meth:`cmd` with the
         following exceptions.
 
-        :returns: None until the next minion returns. This allows for actions
-            to be injected in between minion returns.
+        :returns: A generator yielding the individual minion returns, or None
+            when no returns are available. This allows for actions to be
+            injected in between minion returns.
 
         .. code-block:: python
 
-            >>> ret = local.cmd_iter('*', 'test.ping')
+            >>> ret = local.cmd_iter_no_block('*', 'test.ping')
             >>> for i in ret:
-            ...     print i
+            ...     print(i)
             None
             {'jerry': {'ret': True}}
             {'dave': {'ret': True}}
@@ -708,9 +710,10 @@ class LocalClient(object):
         else:
             for fn_ret in self.get_iter_returns(pub_data['jid'],
                                                 pub_data['minions'],
-                                                timeout,
-                                                tgt,
-                                                expr_form,
+                                                timeout=timeout,
+                                                tgt=tgt,
+                                                tgt_type=expr_form,
+                                                block=False,
                                                 **kwargs):
                 yield fn_ret
 
@@ -863,6 +866,7 @@ class LocalClient(object):
             tgt_type='glob',
             expect_minions=False,
             gather_errors=True,
+            block=True,
             **kwargs):
         '''
         Watch the event system and return job data as it comes in
@@ -1035,7 +1039,10 @@ class LocalClient(object):
                 break
 
             # don't spin
-            time.sleep(0.01)
+            if block:
+                time.sleep(0.01)
+            else:
+                yield
         if expect_minions:
             for minion in list((minions - found)):
                 yield {minion: {'failed': True}}

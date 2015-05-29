@@ -6,23 +6,23 @@ Ensure a Linux ACL is present
 
   .. code-block:: yaml
 
-    root:
-      acl.present:
-        - name: /root
-        - acl_type: users
-        - acl_name: damian
-        - perms: rwx
+     root:
+       acl.present:
+         - name: /root
+         - acl_type: users
+         - acl_name: damian
+         - perms: rwx
 
 Ensure a Linux ACL does not exist
 
   .. code-block:: yaml
 
-    root:
-      acl.absent:
-        - name: /root
-        - acl_type: user
-        - acl_name: damian
-        - perms: rwx
+     root:
+       acl.absent:
+         - name: /root
+         - acl_type: user
+         - acl_name: damian
+         - perms: rwx
 '''
 
 # Import Python libs

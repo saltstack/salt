@@ -240,6 +240,7 @@ def disable(message=None):
 
         salt '*' puppet.disable
         salt '*' puppet.disable 'disabled for a good reason'
+
     '''
 
     _check_puppet()

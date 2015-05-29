@@ -30,7 +30,7 @@ Connection module for Amazon DynamoDB
     If a region is not specified, the default is us-east-1.
 
     It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+    as a passed in dict, or as a string to pull from pillars or minion config::
 
     .. code-block:: yaml
 
