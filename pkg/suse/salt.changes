@@ -1,4 +1,19 @@
 -------------------------------------------------------------------
+Sat May 23 18:31:44 UTC 2015 - aboe76@gmail.com
+
+- New Bugfix release 2015.5.1
+  salt.runners.cloud.action() has changed the fun keyword argument to func. 
+  Please update any calls to this function in the cloud runner.
+  
+  for more details:
+  http://docs.saltstack.com/en/latest/topics/releases/2015.5.1.html
+
+-------------------------------------------------------------------
+Fri May 15 21:04:44 UTC 2015 - aboe76@gmail.com
+
+- Removed python-pssh depency not needed anymore.
+
+-------------------------------------------------------------------
 Wed May  6 20:33:53 UTC 2015 - aboe76@gmail.com
 
 - Major release 2015.5.0 Lithium
