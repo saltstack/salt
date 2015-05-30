@@ -28,7 +28,7 @@ def update(dest, upd, recursive_update=True):
     '''
     if dest is None:
         return upd
-    if not (set(dest.keys()) & set(upd.keys())):
+    if not (set(list(dest.keys())) & set(list(upd.keys()))):
         recursive_update = False
     if recursive_update:
         for key, val in six.iteritems(upd):
