@@ -10,7 +10,6 @@ import collections
 import copy
 import logging
 import salt.ext.six as six
-from salt.utils.odict import OrderedDict
 from salt.utils.serializers.yamlex \
     import merge_recursive as _yamlex_merge_recursive
 
@@ -29,7 +28,7 @@ def update(dest, upd, recursive_update=True):
     if dest is None:
         return upd
     updkeys = list(upd.keys())
-    if not (set(list(dest.keys())) & set(updkeys)):
+    if not set(list(dest.keys())) & set(updkeys):
         recursive_update = False
     if recursive_update:
         for key in updkeys:
