@@ -262,7 +262,9 @@ def avail_images():
 def list_nodes(conn=None, call=None):
     hide = False
     names = __opts__.get('names', [])
-    profile = __opts__.get('profile', [])
+    profiles = __opts__.get('profiles', {})
+    profile = __opts__.get('profile',
+                           __opts__.get('internal_lxc_profile', []))
     destroy_opt = __opts__.get('destroy', False)
     action = __opts__.get('action', '')
     for opt in ['full_query', 'select_query', 'query']:
@@ -365,6 +367,12 @@ last message: {comment}'''.format(**ret)
 def destroy(vm_, call=None):
     '''Destroy a lxc container'''
     destroy_opt = __opts__.get('destroy', False)
+    profiles = __opts__.get('profiles', {})
+    profile = __opts__.get('profile',
+                           __opts__.get('internal_lxc_profile', []))
+    path = None
+    if profile and profile in profiles:
+        path = profiles[profile].get('path', None)
     action = __opts__.get('action', '')
     if action != 'destroy' and not destroy_opt:
         raise SaltCloudSystemExit(
@@ -407,17 +415,19 @@ def create(vm_, call=None):
     NOTE: Most of the initialization code has been moved and merged
     with the lxc runner and lxc.init functions
     '''
-    __grains__ = _salt('grains.items')
     prov = get_configured_provider(vm_)
     if not prov:
         return
-    profile = vm_.get('profile', None)
-    if not profile:
-        profile = {}
+    # we cant use profile as a configuration key as it conflicts
+    # with salt cloud internals
+    profile = vm_.get(
+        'lxc_profile',
+        vm_.get('container_profile', None))
+
     salt.utils.cloud.fire_event(
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
-        {'name': vm_['name'], 'profile': vm_['profile'],
+        {'name': vm_['name'], 'profile': profile,
          'provider': vm_['provider'], },
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
@@ -429,6 +439,7 @@ def create(vm_, call=None):
     # get the minion key pair to distribute back to the container
     kwarg = copy.deepcopy(vm_)
     kwarg['host'] = prov['target']
+    kwarg['profile'] = profile
     cret = _runner().cmd('lxc.cloud_init', [vm_['name']], kwarg=kwarg)
     ret['runner_return'] = cret
     ret['result'] = cret['result']
@@ -445,6 +456,7 @@ def create(vm_, call=None):
     # exists hence the need to remove profile from global opts once
     # current container is created.
     if 'profile' in __opts__:
+        __opts__['internal_lxc_profile'] = __opts__['profile']
         del __opts__['profile']
 
     return ret
