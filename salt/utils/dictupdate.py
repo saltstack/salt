@@ -25,8 +25,9 @@ def update(dest, upd, recursive_update=True):
     If recursive_update=False, will use the classic dict.update, or fall back
     on a manual merge (helpful for non-dict types like FunctionWrapper)
     '''
-    if dest is None:
-        return upd
+    if (not isinstance(dest, collections.Mapping)) \
+            or (not isinstance(upd, collections.Mapping)):
+        raise TypeError('Cannot update using non-dict types in dictupdate.update()')
     updkeys = list(upd.keys())
     if not set(list(dest.keys())) & set(updkeys):
         recursive_update = False
