@@ -28,10 +28,12 @@ def update(dest, upd, recursive_update=True):
     '''
     if dest is None:
         return upd
-    if not (set(list(dest.keys())) & set(list(upd.keys()))):
+    updkeys = list(upd.keys())
+    if not (set(list(dest.keys())) & set(updkeys)):
         recursive_update = False
     if recursive_update:
-        for key, val in six.iteritems(upd):
+        for key in updkeys:
+            val = upd[key]
             try:
                 dest_subkey = dest.get(key, None)
             except AttributeError:
