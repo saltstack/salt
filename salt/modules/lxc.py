@@ -627,7 +627,7 @@ def get_network_profile(name=None, **kwargs):
             type: veth
             flags: up
 
-    To disable entirely net:
+    To disable networking entirely:
 
     .. code-block:: yaml
 
@@ -789,7 +789,7 @@ def _network_conf(conf_tuples=None, **kwargs):
                     bundle['value'] = bundle['old']
                 elif bundle['default']:
                     bundle['value'] = bundle['default']
-        for info, data in infos.items():
+        for info, data in six.iteritems(infos):
             if data['value']:
                 ret.append({info: data['value']})
         for key, val in six.iteritems(args):
