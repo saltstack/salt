@@ -105,12 +105,12 @@ class RhipTestCase(TestCase):
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock(side_effect=mock)):
                     self.assertEqual(rh_ip.build_routes('iface'), '')
-        
+
                 with patch.object(jinja2.Environment,
                                   'get_template', MagicMock()):
                     with patch.object(rh_ip, '_read_temp', return_value=['A']):
                         self.assertEqual(rh_ip.build_routes('i', test='t'), ['A', 'A'])
-        
+
                     with patch.object(rh_ip, '_read_file', return_value=['A']):
                         with patch.object(os.path, 'join', return_value='A'):
                             with patch.object(rh_ip, '_write_file_iface',
