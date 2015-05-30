@@ -17,7 +17,6 @@ import json
 import logging
 
 # Import salt libs
-from salt.exceptions import SaltException
 from salt.exceptions import SaltInvocationError
 import salt.utils.http
 
@@ -54,7 +53,7 @@ def _get_token():
         persist_session=True,
         opts=__opts__,
     )
-    if not 'dict' in result:
+    if 'dict' not in result:
         return None
 
     return result['dict']['OperationResult']['SecurityToken']
@@ -116,7 +115,7 @@ def _query(action=None,
         persist_session=True,
         opts=__opts__,
     )
-    log.debug('RallyDev Response Status Code: {0}'.format( result['status']))
+    log.debug('RallyDev Response Status Code: {0}'.format(result['status']))
     if 'error' in result:
         log.error(result['error'])
         return [result['status'], result['error']]
