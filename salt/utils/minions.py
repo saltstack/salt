@@ -19,6 +19,10 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 HAS_RANGE = False
 try:
     import seco.range  # pylint: disable=import-error
@@ -314,27 +318,31 @@ class CkMinions(object):
                         grains = self.serial.load(fp_).get('grains')
                 except (IOError, OSError):
                     continue
-                num_parts = len(expr.split('/'))
-                if num_parts > 2:
-                    # Target is not valid CIDR, no minions match
-                    return []
-                elif num_parts == 2:
-                    # Target is CIDR
-                    if not salt.utils.network.in_subnet(
-                            expr,
-                            addrs=grains.get('ipv4', [])) and id_ in minions:
-                        minions.remove(id_)
-                else:
-                    # Target is an IPv4 address
-                    import socket
-                    try:
-                        socket.inet_aton(expr)
-                    except socket.error:
-                        # Not a valid IPv4 address, no minions match
-                        return []
+
+                match = True
+                tgt = expr
+                try:
+                    tgt = ipaddress.ip_network(tgt)
+                    # Target is a network
+                    proto = 'ipv{0}'.format(tgt.version)
+                    if proto not in self.opts['grains']:
+                        match=False
                     else:
-                        if expr not in grains.get('ipv4', []) and id_ in minions:
-                            minions.remove(id_)
+                        match=salt.utils.network.in_subnet(tgt, self.opts['grains'][proto])
+                except:  # pylint: disable=bare-except
+                    try:
+                       # Target should be an address
+                        proto = 'ipv{0}'.format(ipaddress.ip_address(tgt).version)
+                        if proto not in self.opts['grains']:
+                            match=False
+                        else:
+                            match=tgt in self.opts['grains'][proto]
+                    except:  # pylint: disable=bare-except
+                        log.error('Invalid IP/CIDR target {0}"'.format(tgt))
+
+                if not match and id_ in minions:
+                    minions.remove(id_)
+
         return list(minions)
 
     def _check_range_minions(self, expr, greedy):

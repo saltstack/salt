@@ -2302,6 +2302,7 @@ class Matcher(object):
         '''
         Matches based on IP address or CIDR notation
         '''
+
         try:
             tgt = ipaddress.ip_network(tgt)
             # Target is a network

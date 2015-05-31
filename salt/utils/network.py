@@ -846,20 +846,36 @@ def interface_ip(iface):
         return error
 
 
-def subnets():
+def _subnets(proto='inet'):
     '''
     Returns a list of subnets to which the host belongs
     '''
     ifaces = interfaces()
-    subnetworks = []
+    ret = set()
 
-    for ipv4_info in six.itervalues(ifaces):
-        for ipv4 in ipv4_info.get('inet', []):
-            if ipv4['address'] == '127.0.0.1':
-                continue
-            network = calculate_subnet(ipv4['address'], ipv4['netmask'])
-            subnetworks.append(network)
-    return subnetworks
+    for ip_info in six.itervalues(ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
+
+        for intf in addrs:
+            intf = ipaddress.ip_interface('{0.address}/{0.netmask}'.format(intf))
+            if not intf.is_loopback:
+                ret.add(intf.network)
+    return [str(net) for net in sorted(ret)]
+
+
+def subnets():
+    '''
+    Returns a list of subnets to which the host belongs
+    '''
+    return _subnets('inet')
+
+
+def subnets6():
+    '''
+    Returns a list of subnets to which the host belongs
+    '''
+    return _subnets('inet6')
 
 
 def in_subnet(cidr, addr=None):
@@ -894,6 +910,11 @@ def ip_in_subnet(addr, cidr):
 
 
 def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
+    '''
+    Return the full list of IP adresses matching the criteria
+
+    proto = inet|inet6
+    '''
     ret = set()
 
     ifaces = interface_data \
@@ -910,11 +931,11 @@ def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto
         addrs = ip_info.get(proto, [])
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
 
-        for ip in addrs:
-            addr = ipaddress.ip_address(ip.get('address'))
+        for addr in addrs:
+            addr = ipaddress.ip_address(addr.get('address'))
             if not addr.is_loopback or include_loopback:
-                ret.add(str(addr))
-    return sorted(list(ret))
+                ret.add(addr)
+    return [str(addr) for addr in sorted(ret)]
 
 
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):
