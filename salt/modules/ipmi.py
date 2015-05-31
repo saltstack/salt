@@ -1,30 +1,31 @@
 # -*- coding: utf-8 -*-
 '''
-Support IPMI commands over LAN
+Support IPMI commands over LAN. This module does not talk to the local
+systems hardware through IPMI drivers. It uses a python module `pyghmi`.
 
 :depends: Python module pyghmi.
-    You can install pyghmi using pip like:
-    
+    You can install pyghmi using pip:
+
     .. code-block:: bash
-    
+
         pip install pyghmi
 
 :configuration: The following configuration defaults can be
     define (pillar or config files):
 
     .. code-block:: python
-    
+
         ipmi.config:
             api_host: 127.0.0.1
             api_user: admin
             api_pass: apassword
             api_port: 623
             api_kg: None
-    
+
     Usage can override the config defaults:
 
     .. code-block:: bash
-    
+
             salt-call ipmi.get_user api_host=myipmienabled.system
                                     api_user=admin api_pass=pass
                                     uid=1
@@ -284,13 +285,13 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
                 alerting:
                 per_msg_auth:
                 user_level_auth:
-                access_mode:{
+                access_mode:{ (ONE OF)
                     0: 'disabled',
                     1: 'pre_boot',
                     2: 'always',
                     3: 'shared'
                 }
-                privilege_level: {
+                privilege_level: { (ONE OF)
                     1: 'callback',
                     2: 'user',
                     3: 'operator',
@@ -381,12 +382,12 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
     :param privilege_level:
     User Privilege Limit. (Determines the maximum privilege level that the
     user is allowed to switch to on the specified channel.)
-        * callback
-        * user
-        * operator
-        * administrator
-        * proprietary
-        * no_access
+        - callback
+        - user
+        - operator
+        - administrator
+        - proprietary
+        - no_access
 
     :param kwargs:
         - api_host=127.0.0.1
@@ -412,23 +413,23 @@ def get_user_access(uid, channel=14, **kwargs):
     :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         channel_info:
-            max_user_count = maximum number of user IDs on this channel
-            enabled_users = count of User ID slots presently in use
-            users_with_fixed_names = count of user IDs with fixed names
+            - max_user_count = maximum number of user IDs on this channel
+            - enabled_users = count of User ID slots presently in use
+            - users_with_fixed_names = count of user IDs with fixed names
         access:
-            callback
-            link_auth
-            ipmi_msg
-            privilege_level: [reserved, callback, user, operator
-                             administrator, proprietary, no_access]
+            - callback
+            - link_auth
+            - ipmi_msg
+            - privilege_level: [reserved, callback, user, operator
+                               administrator, proprietary, no_access]
 
 
 
@@ -496,10 +497,10 @@ def set_user_password(uid, mode='set_password', password=None, **kwargs):
     :param uid: id number of user.  see: get_names_uid()['name']
 
     :param mode:
-        disable       = disable user connections
-        enable        = enable user connections
-        set_password  = set or ensure password
-        test_password = test password is correct
+        - disable       = disable user connections
+        - enable        = enable user connections
+        - set_password  = set or ensure password
+        - test_password = test password is correct
     :param password: max 16 char string
         (optional when mode is [disable or enable])
     :param kwargs:
@@ -774,11 +775,11 @@ def get_user(uid, channel=14, **kwargs):
         uid: (int)
         channel: (int)
         access:
-            callback (bool)
-            link_auth (bool)
-            ipmi_msg (bool)
-            privilege_level: (str)[callback, user, operatorm administrator, proprietary, no_access]
-
+            - callback (bool)
+            - link_auth (bool)
+            - ipmi_msg (bool)
+            - privilege_level: (str)[callback, user, operatorm administrator,
+                                    proprietary, no_access]
     CLI Examples:
 
     .. code-block:: bash
@@ -808,10 +809,10 @@ def get_users(channel=14, **kwargs):
         uid: (int)
         channel: (int)
         access:
-            callback (bool)
-            link_auth (bool)
-            ipmi_msg (bool)
-            privilege_level: (str)[callback, user, operatorm administrator,
+            - callback (bool)
+            - link_auth (bool)
+            - ipmi_msg (bool)
+            - privilege_level: (str)[callback, user, operatorm administrator,
                                     proprietary, no_access]
 
     CLI Examples:
