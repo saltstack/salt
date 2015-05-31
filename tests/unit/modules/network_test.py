@@ -278,6 +278,12 @@ class NetworkTestCase(TestCase):
         with patch.object(salt.ext.ipaddress.IPv6Address, 'is_private',
                           return_value=True):
             self.assertTrue(network.is_private('::1'))
+        with patch.object(salt.ext.ipaddress.IPv4Address, 'is_private',
+                          return_value=False):
+            self.assertFalse(network.is_private('8.8.8.8'))
+        with patch.object(salt.ext.ipaddress.IPv6Address, 'is_private',
+                          return_value=False):
+            self.assertFalse(network.is_private('2620:0:ccc::2'))
 
     def test_is_loopback(self):
         '''
@@ -289,6 +295,12 @@ class NetworkTestCase(TestCase):
         with patch.object(salt.ext.ipaddress.IPv6Address, 'is_loopback',
                           return_value=True):
             self.assertTrue(network.is_loopback('::1'))
+        with patch.object(salt.ext.ipaddress.IPv4Address, 'is_loopback',
+                          return_value=False):
+            self.assertFalse(network.is_loopback('192.168.0.1'))
+        with patch.object(salt.ext.ipaddress.IPv6Address, 'is_loopback',
+                          return_value=False):
+            self.assertFalse(network.is_loopback('2a02:f6e:a000:80:84d8:8332:7866:4e07'))
 
     def test_get_bufsize(self):
         '''
