@@ -6,6 +6,8 @@ Manage IPMI devices over LAN
 The following configuration defaults can be defined in the
 minion, master config or pillar:
 
+.. code-block:: python
+
     ipmi.config:
         api_host: 127.0.0.1
         api_user: admin
@@ -23,6 +25,7 @@ Every call can override the config defaults:
             - api_host: myipmi.hostname.com
             - api_user: root
             - api_pass: apassword
+            - api_kg: None
 
     ensure myipmi system is powered on:
         ipmi.power:
@@ -58,10 +61,11 @@ def boot_device(name='default', **kwargs):
         * default -- remove any IPMI directed boot device request
 
     kwargs
-        api_host=localhost
-        api_user=admin
-        api_pass=
-        api_port=623
+        - api_host=localhost
+        - api_user=admin
+        - api_pass=
+        - api_port=623
+        - api_kg=None
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     org = __salt__['ipmi.get_bootdev'](**kwargs)
@@ -103,10 +107,11 @@ def power(name='power_on', wait=300, **kwargs):
         (defaults to 300 seconds)
 
     kwargs
-        api_host=localhost
-        api_user=admin
-        api_pass=
-        api_port=623
+        - api_host=localhost
+        - api_user=admin
+        - api_pass=
+        - api_port=623
+        - api_kg=None
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     org = __salt__['ipmi.get_power'](**kwargs)
@@ -198,10 +203,11 @@ def user_present(name, uid, password, channel=14, callback=False,
         * no_access
 
     kwargs
-        api_host=localhost
-        api_user=admin
-        api_pass=
-        api_port=623
+        - api_host=localhost
+        - api_user=admin
+        - api_pass=
+        - api_port=623
+        - api_kg=None
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     org_user = __salt__['ipmi.get_user'](uid=uid, channel=channel, **kwargs)
@@ -258,10 +264,11 @@ def user_absent(name, channel=14, **kwargs):
         channel to remove user access from defaults to 14 for auto.
 
     kwargs
-        api_host=localhost
-        api_user=admin
-        api_pass=
-        api_port=623
+        - api_host=localhost
+        - api_user=admin
+        - api_pass=
+        - api_port=623
+        - api_kg=None
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     user_id_list = __salt__['ipmi.get_name_uids'](name, channel, **kwargs)
