@@ -730,7 +730,7 @@ def calc_net(ip_addr, netmask=None):
 
     .. versionadded:: Beryllium
     '''
-    return salt.utils.network.get_net(ip_addr, netmask)
+    return salt.utils.network.calc_net(ip_addr, netmask)
 
 
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
