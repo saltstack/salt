@@ -6,7 +6,7 @@ Manage IPMI devices over LAN
 The following configuration defaults can be defined in the
 minion, master config or pillar:
 
-.. code-block:: python
+.. code-block:: yaml
 
     ipmi.config:
         api_host: 127.0.0.1
