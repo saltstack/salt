@@ -83,6 +83,9 @@ import hashlib
 import binascii
 import datetime
 import base64
+import msgpack
+import json
+import re
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -109,9 +112,11 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt import syspaths
 from salt.utils import namespaced_function
 from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
+import salt.utils.http as http
 import salt.utils.aws as aws
 
 # Import salt.cloud libs
@@ -170,6 +175,8 @@ EC2_RETRY_CODES = [
     'InsufficientAddressCapacity',
     'InsufficientReservedInstanceCapacity',
 ]
+
+JS_COMMENT_RE = re.compile(r'/\*.*?\*/', re.S)
 
 
 # Only load in this module if the EC2 configurations are in place
@@ -4008,3 +4015,169 @@ def get_password_data(
             ret['password'] = key_obj.decrypt(pwdata, sentinel)
 
     return ret
+
+
+def update_pricing(kwargs=None, call=None):
+    '''
+    Download most recent pricing information from AWS and convert to a local
+    JSON file.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f update_pricing my-ec2-config
+        salt-cloud -f update_pricing my-ec2-config type=linux
+
+    .. versionadded:: Beryllium
+    '''
+    sources = {
+        'linux': 'https://a0.awsstatic.com/pricing/1/ec2/linux-od.min.js',
+        'rhel': 'https://a0.awsstatic.com/pricing/1/ec2/rhel-od.min.js',
+        'sles': 'https://a0.awsstatic.com/pricing/1/ec2/sles-od.min.js',
+        'mswin': 'https://a0.awsstatic.com/pricing/1/ec2/mswin-od.min.js',
+        'mswinsql': 'https://a0.awsstatic.com/pricing/1/ec2/mswinSQL-od.min.js',
+        'mswinsqlweb': 'https://a0.awsstatic.com/pricing/1/ec2/mswinSQLWeb-od.min.js',
+    }
+
+    if kwargs is None:
+        kwargs = {}
+
+    if 'type' not in kwargs:
+        for source in sources:
+            _parse_pricing(sources[source], source)
+    else:
+        _parse_pricing(sources[kwargs['type']], kwargs['type'])
+
+
+def _parse_pricing(url, name):
+    '''
+    Download and parse an individual pricing file from AWS
+
+    .. versionadded:: Beryllium
+    '''
+    price_js = http.query(url, text=True)
+
+    items = []
+    current_item = ''
+
+    price_js = re.sub(JS_COMMENT_RE, '', price_js['text'])
+    price_js = price_js.strip().rstrip(');').lstrip('callback(')
+    for keyword in (
+        'vers',
+        'config',
+        'rate',
+        'valueColumns',
+        'currencies',
+        'instanceTypes',
+        'type',
+        'ECU',
+        'storageGB',
+        'name',
+        'vCPU',
+        'memoryGiB',
+        'storageGiB',
+        'USD',
+    ):
+        price_js = price_js.replace(keyword, '"{0}"'.format(keyword))
+
+    for keyword in ('region', 'price', 'size'):
+        price_js = price_js.replace(keyword, '"{0}"'.format(keyword))
+        price_js = price_js.replace('"{0}"s'.format(keyword), '"{0}s"'.format(keyword))
+
+    price_js = price_js.replace('""', '"')
+
+    # Turn the data into something that's easier/faster to process
+    regions = {}
+    price_json = json.loads(price_js)
+    for region in price_json['config']['regions']:
+        sizes = {}
+        for itype in region['instanceTypes']:
+            for size in itype['sizes']:
+                sizes[size['size']] = size
+        regions[region['region']] = sizes
+
+    outfile = os.path.join(
+        syspaths.CACHE_DIR, 'cloud', 'ec2-pricing-{0}.p'.format(name)
+    )
+    with salt.utils.fopen(outfile, 'w') as fho:
+        msgpack.dump(regions, fho)
+
+    return True
+
+
+def show_pricing(kwargs=None, call=None):
+    '''
+    Show pricing for a particular profile. This is only an estimate, based on
+    unofficial pricing sources.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_pricing my-ec2-config my-profile
+
+    If pricing sources have not been cached, they will be downloaded. Once they
+    have been cached, they will not be updated automatically. To manually update
+    all prices, use the following command:
+
+    .. code-block:: bash
+
+        salt-cloud -f update_pricing <provider>
+
+    .. versionadded:: Beryllium
+    '''
+    profile = __opts__['profiles'].get(kwargs['profile'], {})
+    if not profile:
+        return {'Error': 'The requested profile was not found'}
+
+    # Make sure the profile belongs to ec2
+    provider = profile.get('provider', '0:0')
+    comps = provider.split(':')
+    if len(comps) < 2 or comps[1] != 'ec2':
+        return {'Error': 'The requested profile does not belong to EC2'}
+
+    image_id = profile.get('image', None)
+    image_dict = show_image({'image': image_id}, 'function')
+    image_info = image_dict[0]
+
+    # Find out what platform it is
+    if image_info.get('imageOwnerAlias', '') == 'amazon':
+        if image_info.get('platform', '') == 'windows':
+            image_description = image_info.get('description', '')
+            if 'sql' in image_description.lower():
+                if 'web' in image_description.lower():
+                    name = 'mswinsqlweb'
+                else:
+                    name = 'mswinsql'
+            else:
+                name = 'mswin'
+        elif image_info.get('imageLocation', '').strip().startswith('amazon/suse'):
+            name = 'sles'
+        else:
+            name = 'linux'
+    elif image_info.get('imageOwnerId', '') == '309956199498':
+        name = 'rhel'
+    else:
+        name = 'linux'
+
+    pricefile = os.path.join(
+        syspaths.CACHE_DIR, 'cloud', 'ec2-pricing-{0}.p'.format(name)
+    )
+
+    if not os.path.isfile(pricefile):
+        update_pricing({'type': name}, 'function')
+
+    with salt.utils.fopen(pricefile, 'r') as fhi:
+        ec2_price = msgpack.load(fhi)
+
+    region = get_location(profile)
+    size = profile.get('size', None)
+    if size is None:
+        return {'Error': 'The requested profile does not contain a size'}
+
+    try:
+        return ec2_price[region][size]
+    except KeyError:
+        return {'Error': 'The size ({0}) in the requested profile does not have '
+                'a price associated with it for the {1} region'.format(size, region)}
