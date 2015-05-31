@@ -6,12 +6,15 @@ Support IPMI commands over LAN
 
 :warning: pyghmi version >= 0.6.21
 
-you can install pyghmi using somthing like:
+you can install pyghmi using pip like:
 
-    git clone https://github.com/stackforge/pyghmi.git
-    sudo mv pyghmi/pyghmi /usr/lib/python2.6/site-packages/pyghmi
+.. code-block:: bash
 
-The following configuration defaults can be define in the pillar:
+    pip install pyghmi
+
+The following configuration defaults can be define (pillar or config files):
+
+.. code-block:: python
 
     ipmi.config:
         api_host: 127.0.0.1
@@ -20,11 +23,14 @@ The following configuration defaults can be define in the pillar:
         api_port: 623
         api_kg: None
 
-most calls can override the api connection config defaults:
 
-    salt-call ipmi.get_user api_host=myipmienabled.system
-                            api_user=admin api_pass=pass
-                            uid=1
+Calls can override the api connection config defaults:
+
+.. code-block:: bash
+
+        salt-call ipmi.get_user api_host=myipmienabled.system
+                                api_user=admin api_pass=pass
+                                uid=1
 '''
 
 # Import Python Libs
@@ -65,7 +71,7 @@ def _get_config(**kwargs):
     return config
 
 
-class IpmiCommand(object):
+class _IpmiCommand(object):
     o = None
 
     def __init__(self, **kwargs):
@@ -83,7 +89,7 @@ class IpmiCommand(object):
             self.o.ipmi_session.logout()
 
 
-class IpmiSession(object):
+class _IpmiSession(object):
     o = None
 
     def _onlogon(self, response):
@@ -140,7 +146,7 @@ def raw_command(netfn, command, bridge_request=None, data=(), retry=True, delay_
         salt-call ipmi.raw_command netfn=0x06 command=0x46 data=[0x02]
         # this will return the name of the user with id 2 in bytes
     '''
-    with IpmiSession(**kwargs) as s:
+    with _IpmiSession(**kwargs) as s:
         r = s.raw_command(netfn=int(netfn),
                         command=int(command),
                         bridge_request=bridge_request,
@@ -170,7 +176,7 @@ def fast_connect_test(**kwargs):
     try:
         if 'api_login_timeout' not in kwargs:
             kwargs['api_login_timeout'] = 0
-        with IpmiSession(**kwargs) as s:
+        with _IpmiSession(**kwargs) as s:
             # TODO: should a test command be fired?
             #s.raw_command(netfn=6, command=1, retry=False)
             return True
@@ -253,7 +259,7 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
 
         salt-call ipmi.set_channel_access privilege_level='administrator'
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_channel_access(channel, access_update_mode, alerting, per_msg_auth, user_level_auth,
                                     access_mode, privilege_update_mode, privilege_level)
 
@@ -298,7 +304,7 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
 
         salt-call ipmi.get_channel_access channel=1
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_channel_access(channel)
 
 
@@ -328,7 +334,7 @@ def get_channel_info(channel=14, **kwargs):
 
         salt-call ipmi.get_channel_info
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_channel_info(channel)
 
 
@@ -392,7 +398,7 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
 
         salt-call ipmi.set_user_access uid=2 privilege_level='operator'
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_user_access(uid, channel, callback, link_auth, ipmi_msg, privilege_level)
 
 
@@ -429,7 +435,7 @@ def get_user_access(uid, channel=14, **kwargs):
         salt-call ipmi.get_user_access uid=2
     '''
     ## user access available during call-in or callback direct connection
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_user_access(uid, channel=channel)
 
 
@@ -451,7 +457,7 @@ def set_user_name(uid, name, **kwargs):
 
         salt-call ipmi.set_user_name uid=2 name='steverweber'
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_user_name(uid, name)
 
 
@@ -473,7 +479,7 @@ def get_user_name(uid, return_none_on_error=True, **kwargs):
 
         salt-call ipmi.get_user_name uid=2
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_user_name(uid, return_none_on_error=True)
 
 
@@ -508,7 +514,7 @@ def set_user_password(uid, mode='set_password', password=None, **kwargs):
                                          uid=1 password=newPass
         salt-call ipmi.set_user_password uid=1 mode=enable
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         s.set_user_password(uid, mode='set_password', password=password)
     return True
 
@@ -535,7 +541,7 @@ def get_health(**kwargs):
 
         salt-call ipmi.get_health api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_health()
 
 
@@ -558,7 +564,7 @@ def get_power(**kwargs):
 
         salt-call ipmi.get_power api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_power()['powerstate']
 
 
@@ -580,7 +586,7 @@ def get_sensor_data(**kwargs):
 
         salt-call ipmi.get_sensor_data api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         data = {}
         for reading in s.get_sensor_data():
             data[reading['name']] = reading
@@ -608,7 +614,7 @@ def get_bootdev(**kwargs):
 
         salt-call ipmi.get_bootdev api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_bootdev()
 
 
@@ -645,7 +651,7 @@ def set_power(state='power_on', wait=True, **kwargs):
         state = 'on'
     if state is False or state == 'power_off':
         state = 'off'
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_power(state, wait=wait)
 
 
@@ -683,7 +689,7 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
 
         salt-call ipmi.set_bootdev bootdev=network persist=True
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_bootdev(bootdev)
 
 
@@ -709,7 +715,7 @@ def set_identify(on=True, duration=600, **kwargs):
 
         salt-call ipmi.set_identify
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_identify(on=on, duration=duration)
 
 
@@ -791,7 +797,7 @@ def get_users(channel=14, **kwargs):
 
         salt-call ipmi.get_users api_host=172.168.0.7
     '''
-    with IpmiCommand(**kwargs) as c:
+    with _IpmiCommand(**kwargs) as c:
         return c.get_users(channel)
 
 
@@ -821,7 +827,7 @@ def create_user(uid, name, password, channel=14, callback=False,
 
         salt-call ipmi.create_user uid=2 name=steverweber api_host=172.168.0.7 api_pass=nevertell
     '''
-    with IpmiCommand(**kwargs) as c:
+    with _IpmiCommand(**kwargs) as c:
         return c.create_user(uid, name, password, channel, callback,
                              link_auth, ipmi_msg, privilege_level)
 
@@ -844,5 +850,5 @@ def user_delete(uid, channel=14, **kwargs):
 
         salt-call ipmi.user_delete uid=2
     '''
-    with IpmiCommand(**kwargs) as c:
+    with _IpmiCommand(**kwargs) as c:
         return c.user_delete(uid, channel)
