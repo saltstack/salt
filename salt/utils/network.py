@@ -756,11 +756,11 @@ def interfaces():
 
 
 def get_net_start(ipaddr, netmask):
-    ipaddr_octets = ipaddr.split('.')
-    netmask_octets = netmask.split('.')
-    net_start_octets = [str(int(ipaddr_octets[x]) & int(netmask_octets[x]))
-                        for x in range(0, 4)]
-    return '.'.join(net_start_octets)
+    '''
+    Return the address of the network
+    '''
+    net = ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False)
+    return str(net.network_address)
 
 
 def get_net_size(mask):
