@@ -884,13 +884,9 @@ def ip_in_subnet(ip_addr, cidr):
     return in_subnet(cidr, [ip_addr])
 
 
-def ip_addrs(interface=None, include_loopback=False, interface_data=None):
-    '''
-    Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
-    ignored, unless 'include_loopback=True' is indicated. If 'interface' is
-    provided, then only IP addresses from that interface will be returned.
-    '''
+def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
     ret = set()
+
     ifaces = interface_data \
         if isinstance(interface_data, dict) \
         else interfaces()
@@ -901,17 +897,24 @@ def ip_addrs(interface=None, include_loopback=False, interface_data=None):
                               if k == interface])
         if not target_ifaces:
             log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in six.itervalues(target_ifaces):
-        for ipv4 in ipv4_info.get('inet', []):
-            loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
-            if not loopback or include_loopback:
-                ret.add(ipv4['address'])
-        for secondary in ipv4_info.get('secondary', []):
-            addr = secondary.get('address')
-            if addr and secondary.get('type') == 'inet':
-                if include_loopback or (not include_loopback and not in_subnet('127.0.0.0/8', [addr])):
-                    ret.add(addr)
+    for ip_info in six.itervalues(target_ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
+
+        for ip in addrs:
+            addr = ipaddress.ip_address(ip.get('address'))
+            if not addr.is_loopback or include_loopback:
+                ret.add(str(addr))
     return sorted(list(ret))
+
+
+def ip_addrs(interface=None, include_loopback=False, interface_data=None):
+    '''
+    Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
+    ignored, unless 'include_loopback=True' is indicated. If 'interface' is
+    provided, then only IP addresses from that interface will be returned.
+    '''
+    return _ip_addrs(interface, include_loopback, interface_data, 'inet')
 
 
 def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
@@ -920,27 +923,7 @@ def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
     '''
-    ret = set()
-    ifaces = interface_data \
-        if isinstance(interface_data, dict) \
-        else interfaces()
-    if interface is None:
-        target_ifaces = ifaces
-    else:
-        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
-                              if k == interface])
-        if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in six.itervalues(target_ifaces):
-        for ipv6 in ipv6_info.get('inet6', []):
-            if include_loopback or ipv6['address'] != '::1':
-                ret.add(ipv6['address'])
-        for secondary in ipv6_info.get('secondary', []):
-            addr = secondary.get('address')
-            if addr and secondary.get('type') == 'inet6':
-                if include_loopback or addr != '::1':
-                    ret.add(addr)
-    return sorted(list(ret))
+    return _ip_addrs(interface, include_loopback, interface_data, 'inet6')
 
 
 def hex2ip(hex_ip, invert=False):
