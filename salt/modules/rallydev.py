@@ -2,6 +2,8 @@
 '''
 Support for RallyDev
 
+.. versionadded:: Beryllium
+
 Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
 
 .. code-block: yaml
