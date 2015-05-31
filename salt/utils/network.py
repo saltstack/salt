@@ -853,12 +853,20 @@ def _subnets(proto='inet'):
     ifaces = interfaces()
     ret = set()
 
+    if proto == 'inet':
+        subnet = 'netmask'
+    elif proto == 'inet6':
+        subnet = 'prefixlen'
+    else:
+        log.error('Invalid proto {0} calling subnets()'.format(proto))
+        return
+
     for ip_info in six.itervalues(ifaces):
         addrs = ip_info.get(proto, [])
         addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
 
         for intf in addrs:
-            intf = ipaddress.ip_interface('{0.address}/{0.netmask}'.format(intf))
+            intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
             if not intf.is_loopback:
                 ret.add(intf.network)
     return [str(net) for net in sorted(ret)]
