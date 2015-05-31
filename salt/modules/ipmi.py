@@ -60,7 +60,7 @@ def _get_config(**kwargs):
         'api_port': 623,
         'api_user': 'admin',
         'api_pass': '',
-        'api_key': None,
+        'api_kg': None,
         'api_login_timeout': 2,
     }
     if '__salt__' in globals():
@@ -79,7 +79,7 @@ class _IpmiCommand(object):
         config = _get_config(**kwargs)
         self.o = command.Command(bmc=config['api_host'], userid=config['api_user'],
                                  password=config['api_pass'], port=config['api_port'],
-                                 kg=config['api_key'])
+                                 kg=config['api_kg'])
 
     def __enter__(self):
         return self.o
@@ -103,7 +103,7 @@ class _IpmiSession(object):
                                  userid=config['api_user'],
                                  password=config['api_pass'],
                                  port=config['api_port'],
-                                 kg=config['api_key'],
+                                 kg=config['api_kg'],
                                  onlogon=self._onlogon)
         while not self.o.logged:
             # override timeout
