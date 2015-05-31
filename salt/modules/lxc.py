@@ -84,6 +84,12 @@ def __virtual__():
     return False
 
 
+def get_root_path(path):
+    if not path:
+        path = __opts__.get('lxc.root_path', DEFAULT_PATH)
+    return path
+
+
 def version():
     '''
     Return the actual lxc client version
@@ -970,9 +976,7 @@ class _LXCConfig(object):
     def __init__(self, **kwargs):
         kwargs = copy.deepcopy(kwargs)
         self.name = kwargs.pop('name', None)
-        path = kwargs.get('path', DEFAULT_PATH)
-        if not path:
-            path = DEFAULT_PATH
+        path = get_root_path(kwargs.get('path', None))
         self.data = []
         if self.name:
             self.path = os.path.join(path, self.name, 'config')
@@ -1347,9 +1351,7 @@ def init(name,
         return kw_overrides_match
 
     path = select('path')
-    bpath = path
-    if not bpath:
-        bpath = DEFAULT_PATH
+    bpath = get_root_path(path)
     state_pre = state(name, path=path)
     tvg = select('vgname')
     vgname = tvg if tvg else __salt__['config.get']('lxc.vgname')
@@ -2217,7 +2219,7 @@ def list_(extra=False, limit=None, path=None):
     return ret
 
 
-def _change_state(cmd, name, expected, path=None):
+def _change_state(cmd, name, expected, path=None, use_vt=None):
     pre = state(name, path=path)
     if pre == expected:
         return {'result': True,
@@ -2238,7 +2240,7 @@ def _change_state(cmd, name, expected, path=None):
         cmd += ' -P {0}'.format(pipes.quote(path))
     cmd += ' -n {0}'.format(name)
 
-    error = __salt__['cmd.run_stderr'](cmd, python_shell=False)
+    error = __salt__['cmd.run_stderr'](cmd, python_shell=False, use_vt=use_vt)
     if error:
         raise CommandExecutionError(
             'Error changing state for container \'{0}\' using command '
@@ -2365,19 +2367,23 @@ def start(name, **kwargs):
 
         .. versionadded:: 2015.5.2
 
+    use_vt
+        run the command through VT
+
+        .. versionadded:: 2015.5.5
+
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion lxc.start name
     '''
-    path = kwargs.get('path', DEFAULT_PATH)
+    path = kwargs.get('path', None)
+    cpath = get_root_path(path)
     lxc_config = kwargs.get('lxc_config', None)
     cmd = 'lxc-start'
-    if not path:
-        path = DEFAULT_PATH
     if not lxc_config:
-        lxc_config = os.path.join(path, name, 'config')
+        lxc_config = os.path.join(cpath, name, 'config')
     # we try to start, even without config, if global opts are there
     if os.path.exists(lxc_config):
         cmd += ' -f {0}'.format(pipes.quote(lxc_config))
@@ -2394,10 +2400,12 @@ def start(name, **kwargs):
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
         )
-    return _change_state(cmd, name, 'running', path=path)
+    # using vt while starting is better as lxc-start may go zombie.
+    use_vt = kwargs.get('use_vt', None)
+    return _change_state(cmd, name, 'running', path=path, use_vt=use_vt)
 
 
-def stop(name, kill=False, path=None):
+def stop(name, kill=False, path=None, use_vt=None):
     '''
     Stop the named container
 
@@ -2415,6 +2423,11 @@ def stop(name, kill=False, path=None):
         .. versionchanged:: 2015.5.0
             Default value changed to ``False``
 
+    use_vt
+        run the command through VT
+
+        .. versionadded:: 2015.5.5
+
     CLI Example:
 
     .. code-block:: bash
@@ -2431,7 +2444,7 @@ def stop(name, kill=False, path=None):
     cmd = 'lxc-stop'
     if kill:
         cmd += ' -k'
-    ret = _change_state(cmd, name, 'stopped', path=path)
+    ret = _change_state(cmd, name, 'stopped', use_vt=use_vt, path=path)
     ret['state']['old'] = orig_state
     return ret
 
@@ -2452,12 +2465,18 @@ def freeze(name, **kwargs):
 
         .. versionadded:: 2015.5.0
 
+    use_vt
+        run the command through VT
+
+        .. versionadded:: 2015.5.5
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' lxc.freeze name
     '''
+    use_vt = kwargs.get('use_vt', None)
     path = kwargs.get('path', None)
     _ensure_exists(name, path=path)
     orig_state = state(name, path=path)
@@ -2471,7 +2490,7 @@ def freeze(name, **kwargs):
     cmd = 'lxc-freeze'
     if path:
         cmd += ' -P {0}'.format(pipes.quote(path))
-    ret = _change_state(cmd, name, 'frozen', path=path)
+    ret = _change_state(cmd, name, 'frozen', use_vt=use_vt, path=path)
     if orig_state == 'stopped' and start_:
         ret['state']['old'] = orig_state
         ret['started'] = True
@@ -2479,7 +2498,7 @@ def freeze(name, **kwargs):
     return ret
 
 
-def unfreeze(name, path=None):
+def unfreeze(name, path=None, use_vt=None):
     '''
     Unfreeze the named container.
 
@@ -2489,6 +2508,10 @@ def unfreeze(name, path=None):
 
         .. versionadded:: 2015.5.2
 
+    use_vt
+        run the command through VT
+
+        .. versionadded:: 2015.5.5
 
     CLI Example:
 
@@ -2504,7 +2527,7 @@ def unfreeze(name, path=None):
     cmd = 'lxc-unfreeze'
     if path:
         cmd += ' -P {0}'.format(pipes.quote(path))
-    return _change_state(cmd, name, 'running', path=path)
+    return _change_state(cmd, name, 'running', path=path, use_vt=use_vt)
 
 
 def destroy(name, stop=False, path=None):
@@ -2698,12 +2721,11 @@ def info(name, path=None):
         return __context__[cachekey]
     except KeyError:
         _ensure_exists(name, path=path)
-        if not path:
-            path = DEFAULT_PATH
+        cpath = get_root_path(path)
         try:
-            conf_file = os.path.join(path, name, 'config')
+            conf_file = os.path.join(cpath, name, 'config')
         except AttributeError:
-            conf_file = os.path.join(path, str(name), 'config')
+            conf_file = os.path.join(cpath, str(name), 'config')
 
         if not os.path.isfile(conf_file):
             raise CommandExecutionError(
@@ -2913,9 +2935,8 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
 
     '''
     _ensure_exists(name, path=path)
-    if not path:
-        path = DEFAULT_PATH
-    lxc_conf_p = os.path.join(path, name, 'config')
+    cpath = get_root_path(path)
+    lxc_conf_p = os.path.join(cpath, name, 'config')
     if not os.path.exists(lxc_conf_p):
         raise SaltInvocationError(
             'Configuration file {0} does not exist'.format(lxc_conf_p)
@@ -4534,9 +4555,8 @@ def reconfigure(name,
 
     '''
     changes = {}
-    if not path:
-        path = DEFAULT_PATH
-    path = os.path.join(path, name, 'config')
+    cpath = get_root_path(path)
+    path = os.path.join(cpath, name, 'config')
     ret = {'name': name,
            'comment': 'config for {0} up to date'.format(name),
            'result': True,
@@ -4624,9 +4644,8 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
         salt 'minion' lxc.apply_network_profile web1 centos \\
                 "{eth0: {disable: true}}"
     '''
-    if not path:
-        path = DEFAULT_PATH
-    cfgpath = os.path.join(path, name, 'config')
+    cpath = get_root_path(path)
+    cfgpath = os.path.join(cpath, name, 'config')
 
     before = []
     with salt.utils.fopen(cfgpath, 'r') as fp_:
