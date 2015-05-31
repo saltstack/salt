@@ -25,10 +25,11 @@ Setting up Service Account Authentication:
   - Create or navigate to your desired Project.
   - Make sure Google Compute Engine service is enabled under the Services
     section.
-  - Go to "APIs and auth" and then the "Registered apps" section.
-  - Click the "REGISTER APP" button and give it a meaningful name.
-  - Select "Web Application" and click "Register".
-  - Select Certificate, then "Generate Certificate"
+  - Go to "APIs and auth" section, and then the "Credentials" link.
+  - Click the "CREATE NEW CLIENT ID" button.
+  - Select "Service Account" and click "Create Client ID" button.
+  - This will automatically download a .json file; ignore it.
+  - Look for a new "Service Account" section in the page, click on the "Generate New P12 key" button
   - Copy the Email Address for inclusion in your /etc/salt/cloud file
     in the 'service_account_email_address' setting.
   - Download the Private Key
@@ -45,7 +46,7 @@ Setting up Service Account Authentication:
 
     my-gce-config:
       # The Google Cloud Platform Project ID
-      project: google.com:erjohnso
+      project: "my-project-id"
       # The Service ACcount client ID
       service_account_email_address: 1234567890@developer.gserviceaccount.com
       # The location of the private key (PEM format)
