@@ -136,6 +136,7 @@ def raw_command(netfn, command, bridge_request=None, data=(), retry=True, delay_
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :returns: dict -- The response from IPMI device
 
@@ -166,6 +167,7 @@ def fast_connect_test(**kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -252,6 +254,7 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -277,6 +280,7 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :return: A Python dict with the following keys/values:
         {
@@ -318,6 +322,7 @@ def get_channel_info(channel=14, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :return:
     session_support:
@@ -391,6 +396,7 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -413,6 +419,7 @@ def get_user_access(uid, channel=14, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :return:
         channel_info:
@@ -450,6 +457,7 @@ def set_user_name(uid, name, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -472,6 +480,7 @@ def get_user_name(uid, return_none_on_error=True, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -501,6 +510,7 @@ def set_user_password(uid, mode='set_password', password=None, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :return:
         True on success
@@ -534,6 +544,7 @@ def get_health(**kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Example:
 
@@ -557,6 +568,7 @@ def get_power(**kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Example:
 
@@ -579,6 +591,7 @@ def get_sensor_data(**kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Example:
 
@@ -607,6 +620,7 @@ def get_bootdev(**kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Example:
 
@@ -638,6 +652,7 @@ def set_power(state='power_on', wait=True, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :returns: dict -- A dict describing the response retrieved
 
@@ -680,6 +695,7 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :returns: dict or True -- If callback is not provided, the response
 
@@ -708,6 +724,7 @@ def set_identify(on=True, duration=600, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -724,6 +741,12 @@ def get_channel_max_user_count(channel=14, **kwargs):
     Get max users in channel
 
     :param channel: number [1:7]
+    :param kwargs:
+        api_host=127.0.0.1
+        api_user=admin
+        api_pass=example
+        api_port=623
+        api_kg=None
     :return: int -- often 16
 
     CLI Examples:
@@ -740,11 +763,14 @@ def get_user(uid, channel=14, **kwargs):
     '''
     Get user from uid and access on channel
 
+    :param uid: user number [1:16]
+    :param channel: number [1:7]
     :param kwargs:
         api_host=127.0.0.1
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :return:
         name: (str)
@@ -772,13 +798,13 @@ def get_users(channel=14, **kwargs):
     '''
     get list of users and access information
 
-    :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
         api_host=127.0.0.1
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     :return:
         name: (str)
@@ -820,6 +846,7 @@ def create_user(uid, name, password, channel=14, callback=False,
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
@@ -843,6 +870,7 @@ def user_delete(uid, channel=14, **kwargs):
         api_user=admin
         api_pass=example
         api_port=623
+        api_kg=None
 
     CLI Examples:
 
