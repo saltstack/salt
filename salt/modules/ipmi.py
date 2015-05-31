@@ -2,35 +2,32 @@
 '''
 Support IPMI commands over LAN
 
-:depends: Python module pyghmi
+:depends: Python module pyghmi.
+    You can install pyghmi using pip like:
+    
+    .. code-block:: bash
+    
+        pip install pyghmi
 
-:warning: pyghmi version >= 0.6.21
+:configuration: The following configuration defaults can be
+    define (pillar or config files):
 
-you can install pyghmi using pip like:
+    .. code-block:: python
+    
+        ipmi.config:
+            api_host: 127.0.0.1
+            api_user: admin
+            api_pass: apassword
+            api_port: 623
+            api_kg: None
+    
+    Usage can override the config defaults:
 
-.. code-block:: bash
-
-    pip install pyghmi
-
-The following configuration defaults can be define (pillar or config files):
-
-.. code-block:: python
-
-    ipmi.config:
-        api_host: 127.0.0.1
-        api_user: admin
-        api_pass: apassword
-        api_port: 623
-        api_kg: None
-
-
-Calls can override the api connection config defaults:
-
-.. code-block:: bash
-
-        salt-call ipmi.get_user api_host=myipmienabled.system
-                                api_user=admin api_pass=pass
-                                uid=1
+    .. code-block:: bash
+    
+            salt-call ipmi.get_user api_host=myipmienabled.system
+                                    api_user=admin api_pass=pass
+                                    uid=1
 '''
 
 # Import Python Libs
@@ -132,11 +129,11 @@ def raw_command(netfn, command, bridge_request=None, data=(), retry=True, delay_
                         the bridge request.
     :param data: Command data as a tuple or list
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :returns: dict -- The response from IPMI device
 
@@ -163,11 +160,11 @@ def fast_connect_test(**kwargs):
     This uses an aggressive timeout value!
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -195,51 +192,50 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
     Set channel access
 
     :param channel: number [1:7]
-
-    :param access_update_mode:
-        dont_change  = don't set or change Channel Access
-        non_volatile = set non-volatile Channel Access
-        volatile     = set volatile (active) setting of Channel Access
+    :param access_update_mode: one of
+        - 'dont_change'  = don't set or change Channel Access
+        - 'non_volatile' = set non-volatile Channel Access
+        - 'volatile'     = set volatile (active) setting of Channel Access
 
     :param alerting: PEF Alerting Enable/Disable
-    True  = enable PEF Alerting
-    False = disable PEF Alerting on this channel
-            (Alert Immediate command can still be used to generate alerts)
+        - True  = enable PEF Alerting
+        - False = disable PEF Alerting on this channel
+                (Alert Immediate command can still be used to generate alerts)
 
     :param per_msg_auth: Per-message Authentication
-    True  = enable
-    False = disable Per-message Authentication. [Authentication required to
-            activate any session on this channel, but authentication not
-            used on subsequent packets for the session.]
+        - True  = enable
+        - False = disable Per-message Authentication. [Authentication required to
+                activate any session on this channel, but authentication not
+                used on subsequent packets for the session.]
 
     :param user_level_auth: User Level Authentication Enable/Disable.
-    True  = enable User Level Authentication. All User Level commands are
-        to be authenticated per the Authentication Type that was
-        negotiated when the session was activated.
-    False = disable User Level Authentication. Allow User Level commands to
-        be executed without being authenticated.
-        If the option to disable User Level Command authentication is
-        accepted, the BMC will accept packets with Authentication Type
-        set to None if they contain user level commands.
-        For outgoing packets, the BMC returns responses with the same
-        Authentication Type that was used for the request.
+        - True  = enable User Level Authentication. All User Level commands are
+            to be authenticated per the Authentication Type that was
+            negotiated when the session was activated.
+        - False = disable User Level Authentication. Allow User Level commands to
+            be executed without being authenticated.
+            If the option to disable User Level Command authentication is
+            accepted, the BMC will accept packets with Authentication Type
+            set to None if they contain user level commands.
+            For outgoing packets, the BMC returns responses with the same
+            Authentication Type that was used for the request.
 
     :param access_mode: Access Mode for IPMI messaging
-    (PEF Alerting is enabled/disabled separately from IPMI messaging)
-    disabled = disabled for IPMI messaging
-    pre_boot = pre-boot only channel only available when system is in a
-            powered down state or in BIOS prior to start of boot.
-    always   = channel always available regardless of system mode.
-            BIOS typically dedicates the serial connection to the BMC.
-    shared   = same as always available, but BIOS typically leaves the
-            serial port available for software use.
+        (PEF Alerting is enabled/disabled separately from IPMI messaging)
+        * disabled = disabled for IPMI messaging
+        * pre_boot = pre-boot only channel only available when system is in a
+                powered down state or in BIOS prior to start of boot.
+        * always   = channel always available regardless of system mode.
+                BIOS typically dedicates the serial connection to the BMC.
+        * shared   = same as always available, but BIOS typically leaves the
+                serial port available for software use.
 
     :param privilege_update_mode: Channel Privilege Level Limit.
         This value sets the maximum privilege level
         that can be accepted on the specified channel.
-        dont_change  = don't set or change channel Privilege Level Limit
-        non_volatile = non-volatile Privilege Level Limit according
-        volatile     = volatile setting of Privilege Level Limit
+        * dont_change  = don't set or change channel Privilege Level Limit
+        * non_volatile = non-volatile Privilege Level Limit according
+        * volatile     = volatile setting of Privilege Level Limit
 
     :param privilege_level: Channel Privilege Level Limit
         * reserved      = unused
@@ -250,11 +246,11 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
         * proprietary   = used by OEM
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -273,34 +269,35 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
 
     :param channel: number [1:7]
     :param read_mode:
-        non_volatile  = get non-volatile Channel Access
-        volatile      = get present volatile (active) setting of Channel Access
+        - non_volatile  = get non-volatile Channel Access
+        - volatile      = get present volatile (active) setting of Channel Access
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return: A Python dict with the following keys/values:
-        {
-        - alerting:
-        - per_msg_auth:
-        - user_level_auth:
-        - access_mode:{
-            0: 'disabled',
-            1: 'pre_boot',
-            2: 'always',
-            3: 'shared'
+        .. code-block:: python
+            {
+                alerting:
+                per_msg_auth:
+                user_level_auth:
+                access_mode:{
+                    0: 'disabled',
+                    1: 'pre_boot',
+                    2: 'always',
+                    3: 'shared'
+                }
+                privilege_level: {
+                    1: 'callback',
+                    2: 'user',
+                    3: 'operator',
+                    4: 'administrator',
+                    5: 'proprietary',
+                }
             }
-        - privilege_level: {
-            1: 'callback',
-            2: 'user',
-            3: 'operator',
-            4: 'administrator',
-            5: 'proprietary',
-            }
-        }
 
     CLI Examples:
 
@@ -318,11 +315,11 @@ def get_channel_info(channel=14, **kwargs):
 
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
     session_support:
@@ -392,11 +389,11 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
         * no_access
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -453,11 +450,11 @@ def set_user_name(uid, name, **kwargs):
     :param uid: user number [1:16]
     :param name: username (limit of 16bytes)
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -476,11 +473,11 @@ def get_user_name(uid, return_none_on_error=True, **kwargs):
     :param uid: user number [1:16]
     :param return_none_on_error: return None on error
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -506,11 +503,11 @@ def set_user_password(uid, mode='set_password', password=None, **kwargs):
     :param password: max 16 char string
         (optional when mode is [disable or enable])
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         True on success
@@ -540,11 +537,11 @@ def get_health(**kwargs):
     good health: {'badreadings': [], 'health': 0}
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -564,11 +561,11 @@ def get_power(**kwargs):
     either 'on' or 'off' to indicate current state.
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -587,11 +584,11 @@ def get_sensor_data(**kwargs):
     Iterates sensor reading objects
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -616,11 +613,11 @@ def get_bootdev(**kwargs):
     next reboot.
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -639,20 +636,20 @@ def set_power(state='power_on', wait=True, **kwargs):
     :param name:
         * power_on -- system turn on
         * power_off -- system turn off (without waiting for OS)
-        * shutdown' -- request OS proper shutdown
-        * reset' -- reset (without waiting for OS)
-        * boot' -- If system is off, then 'on', else 'reset'
+        * shutdown -- request OS proper shutdown
+        * reset -- reset (without waiting for OS)
+        * boot -- If system is off, then 'on', else 'reset'
 
     :param ensure: If (bool True), do not return until system actually completes
                 requested state change for 300 seconds.
                 If a non-zero (int), adjust the wait time to the
                 requested number of seconds
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :returns: dict -- A dict describing the response retrieved
 
@@ -691,11 +688,11 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
                     In practice, this flag not being set does not preclude
                     UEFI boot on any system I've encountered.
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :returns: dict or True -- If callback is not provided, the response
 
@@ -720,11 +717,11 @@ def set_identify(on=True, duration=600, **kwargs):
     :param duration: Set if wanting to request turn on for a duration
                     in seconds, None = indefinitely.
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -742,11 +739,11 @@ def get_channel_max_user_count(channel=14, **kwargs):
 
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
     :return: int -- often 16
 
     CLI Examples:
@@ -766,11 +763,11 @@ def get_user(uid, channel=14, **kwargs):
     :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         name: (str)
@@ -800,11 +797,11 @@ def get_users(channel=14, **kwargs):
 
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         name: (str)
@@ -842,11 +839,11 @@ def create_user(uid, name, password, channel=14, callback=False,
         * proprietary
         * no_access
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -866,11 +863,11 @@ def user_delete(uid, channel=14, **kwargs):
     :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
-        api_kg=None
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
