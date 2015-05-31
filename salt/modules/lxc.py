@@ -2413,7 +2413,7 @@ def start(name, **kwargs):
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
         )
     # using vt while starting is better as lxc-start may go zombie.
-    use_vt = kwargs.get('use_vt', None)
+    use_vt = kwargs.get('use_vt', True)
     return _change_state(cmd, name, 'running', path=path, use_vt=use_vt)
 
 
