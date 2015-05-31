@@ -85,6 +85,18 @@ def __virtual__():
 
 
 def get_root_path(path):
+    '''
+    Get the configured lxc root for containers
+
+    .. versionadded:: 2015.5.5
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lxc.get_root_path
+
+    '''
     if not path:
         path = __opts__.get('lxc.root_path', DEFAULT_PATH)
     return path
