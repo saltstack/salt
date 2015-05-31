@@ -2,6 +2,8 @@
 '''
 Support for BambooHR
 
+.. versionadded:: Beryllium
+
 Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
 
 .. code-block: yaml
