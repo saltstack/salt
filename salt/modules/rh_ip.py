@@ -956,24 +956,49 @@ def build_routes(iface, **settings):
         salt '*' ip.build_routes eth0 <settings>
     '''
 
+    template = 'rh6_route_eth.jinja'
+    if __grains__['osrelease'][:1] < 6:
+        template = 'route_eth.jinja'
+    log.debug('Template name: ' + template)
+
     iface = iface.lower()
     opts = _parse_routes(iface, settings)
+    log.debug("Opts: \n {0}".format(opts))
     try:
-        template = JINJA.get_template('route_eth.jinja')
+        template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
         log.error(
-            'Could not load template route_eth.jinja'
+            'Could not load template {0}'.format(template)
         )
         return ''
-    routecfg = template.render(routes=opts['routes'])
+    opts6 = []
+    opts4 = []
+    for route in opts['routes']:
+        ipaddr = route['ipaddr']
+        if salt.utils.validate.net.ipv6_addr(ipaddr):
+            opts6.append(route)
+        else:
+            opts4.append(route)
+    log.debug("IPv4 routes:\n{0}".format(opts4))
+    log.debug("IPv6 routes:\n{0}".format(opts6))
+
+    routecfg = template.render(routes=opts4)
+    routecfg6 = template.render(routes=opts6)
 
     if settings['test']:
-        return _read_temp(routecfg)
+        routes = _read_temp(routecfg)
+        routes.extend(_read_temp(routecfg6))
+        return routes
 
     _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, 'route-{0}')
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, 'route6-{0}')
 
-    return _read_file(path)
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+
+    routes = _read_file(path)
+    routes.extend(_read_file(path6))
+    return routes
 
 
 def down(iface, iface_type):
@@ -1047,7 +1072,10 @@ def get_routes(iface):
         salt '*' ip.get_routes eth0
     '''
     path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
-    return _read_file(path)
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+    routes = _read_file(path)
+    routes.extend(_read_file(path6))
+    return routes
 
 
 def get_network_settings():

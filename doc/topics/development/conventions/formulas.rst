@@ -944,7 +944,7 @@ XML.)
 
 .. code-block:: yaml
 
-    {% load_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
+    {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
         'appX:server_xml_overrides', 
         default=server_xml_defaults,
@@ -980,7 +980,7 @@ example:
 .. code-block:: yaml
 
     {# Load the map file. #}
-    {% load_yaml 'app/defaults.yaml' as app_defaults %}
+    {% import_yaml 'app/defaults.yaml' as app_defaults %}
 
     {# Extract the relevant subset for the app configured on the current
        machine (configured via a grain in this example). #}
