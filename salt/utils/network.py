@@ -774,12 +774,16 @@ def get_net_size(mask):
     return len(binary_str.rstrip('0'))
 
 
-def calculate_subnet(ipaddr, netmask):
+def calc_net(ipaddr, netmask=None):
     '''
-    Takes IP and netmask and returns the network in CIDR-notation.
-    (The IP can be any IP inside this subnet.)
+    Takes IP (CIDR notation supported) and optionally netmask
+    and returns the network in CIDR-notation.
+    (The IP can be any IP inside the subnet)
     '''
-    return str(ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False))
+    if netmask is not None:
+        ipaddr = '{0}/{1}'.format(ipaddr, netmask)
+
+    return str(ipaddress.ip_network(ipaddr, strict=False))
 
 
 def _ipv4_to_bits(ipaddr):

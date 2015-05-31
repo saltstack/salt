@@ -715,19 +715,22 @@ def ip_in_subnet(ip_addr, cidr):
     return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
-def calculate_subnet(ip_addr, netmask):
+def calc_net(ip_addr, netmask=None):
     '''
-    Returns the CIDR of a subnet based on an IP address and network.
+    Returns the CIDR of a subnet based on
+    an IP address (CIDR notation supported)
+    and optional netmask.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' network.calculate_subnet 172.17.0.5 255.255.255.240
+        salt '*' network.get_net 172.17.0.5 255.255.255.240
+        salt '*' network.get_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
 
     .. versionadded:: Beryllium
     '''
-    return salt.utils.network.calculate_subnet(ip_addr, netmask)
+    return salt.utils.network.get_net(ip_addr, netmask)
 
 
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
