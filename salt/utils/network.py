@@ -858,9 +858,9 @@ def subnets():
     return subnetworks
 
 
-def in_subnet(cidr, addrs=None):
+def in_subnet(cidr, addr=None):
     '''
-    Returns True if host is within specified subnet, otherwise False
+    Returns True if host or (any of) addrs is within specified subnet, otherwise False
     '''
     try:
         cidr = ipaddress.ip_network(cidr)
@@ -868,20 +868,25 @@ def in_subnet(cidr, addrs=None):
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
-    if addrs is None:
-        addrs = ip_addrs()
+    if addr is None:
+        addr = ip_addrs()
+    elif isinstance(addr, six.string_types):
+        return ipaddress.ip_address(addr) in cidr
 
-    for ip_addr in addrs:
+    for ip_addr in addr:
         if ipaddress.ip_address(ip_addr) in cidr:
             return True
     return False
 
 
-def ip_in_subnet(ip_addr, cidr):
+def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
+
+    .. deprecated:: Beryllium
+       Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
-    return in_subnet(cidr, [ip_addr])
+    return in_subnet(cidr, addr)
 
 
 def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):

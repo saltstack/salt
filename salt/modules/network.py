@@ -712,7 +712,7 @@ def ip_in_subnet(ip_addr, cidr):
 
         salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
     '''
-    return salt.utils.network.ip_in_subnet(ip_addr, cidr)
+    return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
 def calculate_subnet(ip_addr, netmask):
