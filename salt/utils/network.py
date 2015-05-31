@@ -866,14 +866,14 @@ def _subnets(proto='inet'):
 
 def subnets():
     '''
-    Returns a list of subnets to which the host belongs
+    Returns a list of IPv4 subnets to which the host belongs
     '''
     return _subnets('inet')
 
 
 def subnets6():
     '''
-    Returns a list of subnets to which the host belongs
+    Returns a list of IPv6 subnets to which the host belongs
     '''
     return _subnets('inet6')
 

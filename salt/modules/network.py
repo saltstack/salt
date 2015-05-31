@@ -678,7 +678,7 @@ def interface_ip(iface):
 
 def subnets():
     '''
-    Returns a list of subnets to which the host belongs
+    Returns a list of IPv4 subnets to which the host belongs
 
     CLI Example:
 
@@ -687,6 +687,19 @@ def subnets():
         salt '*' network.subnets
     '''
     return salt.utils.network.subnets()
+
+
+def subnets6():
+    '''
+    Returns a list of IPv6 subnets to which the host belongs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.subnets
+    '''
+    return salt.utils.network.subnets6()
 
 
 def in_subnet(cidr):
