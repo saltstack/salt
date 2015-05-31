@@ -725,8 +725,8 @@ def calc_net(ip_addr, netmask=None):
 
     .. code-block:: bash
 
-        salt '*' network.get_net 172.17.0.5 255.255.255.240
-        salt '*' network.get_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
+        salt '*' network.calc_net 172.17.0.5 255.255.255.240
+        salt '*' network.calc_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
 
     .. versionadded:: Beryllium
     '''
