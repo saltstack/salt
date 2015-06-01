@@ -12,7 +12,6 @@ import collections
 import copy
 import logging
 import salt.ext.six as six
-from salt.utils.odict import OrderedDict
 from salt.serializers.yamlex import merge_recursive as _yamlex_merge_recursive
 
 log = logging.getLogger(__name__)
