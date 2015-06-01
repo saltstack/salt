@@ -643,7 +643,7 @@ def show_pricing(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_pricing my-ec2-config my-profile
+        salt-cloud -f show_pricing my-softlayerhw-config my-profile
 
     If pricing sources have not been cached, they will be downloaded. Once they
     have been cached, they will not be updated automatically. To manually update
@@ -659,7 +659,7 @@ def show_pricing(kwargs=None, call=None):
     if not profile:
         return {'Error': 'The requested profile was not found'}
 
-    # Make sure the profile belongs to ec2
+    # Make sure the profile belongs to Softlayer HW
     provider = profile.get('provider', '0:0')
     comps = provider.split(':')
     if len(comps) < 2 or comps[1] != 'softlayer_hw':
