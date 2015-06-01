@@ -32,6 +32,7 @@ from collections import namedtuple
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range
 try:
     import timelib  # pylint: disable=import-error,unused-import
     HAS_TIMELIB = True
@@ -744,7 +745,7 @@ class UtilsTestCase(TestCase):
         if six.PY3:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
             self.assertEqual(utils.to_str('áéíóúý'), 'áéíóúý')
-            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
             ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
             self.assertEqual(utils.to_str(ut, 'utf-8'), un)
             self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
@@ -761,7 +762,7 @@ class UtilsTestCase(TestCase):
                 self.assertRaises(TypeError, utils.to_bytes, x)
             self.assertEqual(utils.to_bytes('xyzzy'), b'xyzzy')
             ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
-            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
             self.assertEqual(utils.to_bytes(ut), ut)
             self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
             self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
