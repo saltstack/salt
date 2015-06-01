@@ -25,7 +25,6 @@ from __future__ import absolute_import
 import copy
 import json
 import logging
-import os
 import pprint
 import time
 
@@ -36,7 +35,6 @@ except ImportError:
 
 import salt.config as config
 from salt.exceptions import (
-    SaltCloudConfigError,
     SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
@@ -70,6 +68,7 @@ def get_configured_provider():
         ('token',)
     )
 
+
 def avail_images(call=None):
     ''' Return a list of the images that are on the provider.
     '''
@@ -87,6 +86,7 @@ def avail_images(call=None):
             ret[image['id']][item] = str(image[item])
 
     return ret
+
 
 def list_nodes(call=None):
     ''' Return a list of the BareMetal servers that are on the provider.
