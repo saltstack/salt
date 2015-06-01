@@ -86,6 +86,7 @@ import base64
 import msgpack
 import json
 import re
+import decimal
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -4177,7 +4178,23 @@ def show_pricing(kwargs=None, call=None):
         return {'Error': 'The requested profile does not contain a size'}
 
     try:
-        return ec2_price[region][size]
+        raw = ec2_price[region][size]
     except KeyError:
         return {'Error': 'The size ({0}) in the requested profile does not have '
                 'a price associated with it for the {1} region'.format(size, region)}
+
+    ret = {}
+    if kwargs.get('raw', False):
+        ret['_raw'] = raw
+
+    ret['per_hour'] = 0
+    for col in raw.get('valueColumns', []):
+        ret['per_hour'] += decimal.Decimal(col['prices'].get('USD', 0))
+
+    ret['per_hour'] = decimal.Decimal(ret['per_hour'])
+    ret['per_day'] = ret['per_hour'] * 24
+    ret['per_week'] = ret['per_day'] * 7
+    ret['per_month'] = ret['per_day'] * 30
+    ret['per_year'] = ret['per_week'] * 52
+
+    return ret
