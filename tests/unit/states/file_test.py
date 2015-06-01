@@ -159,6 +159,7 @@ class FileTestCase(TestCase):
         mock_user = MagicMock(return_value=user)
         mock_grp = MagicMock(return_value=group)
         mock_file = MagicMock(side_effect=[OSError, True])
+        mock_tree = MagicMock(side_effect=[True, OSError])
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
@@ -203,13 +204,14 @@ class FileTestCase(TestCase):
 
                 with patch.object(os.path, 'isdir', mock_dir):
                     with patch.object(os.path, 'lexists', mock_t):
-                        comt = ('File exists where the backup target SALT'
-                                ' should go')
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT'),
-                                             ret)
+                        with patch.object(shutil, 'rmtree', mock_tree):
+                            comt = ('File exists where the backup target SALT'
+                                    ' should go')
+                            ret.update({'comment': comt, 'result': False})
+                            self.assertDictEqual(filestate.symlink
+                                                (name, target, user=user,
+                                                group=group, backupname='SALT'),
+                                                ret)
 
                         comt = ('Something exists where the backup target'
                                 ' SALTshould go')
