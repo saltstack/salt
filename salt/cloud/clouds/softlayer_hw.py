@@ -33,6 +33,7 @@ import copy
 import pprint
 import logging
 import time
+import decimal
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -128,6 +129,8 @@ def avail_locations(call=None):
 
     available = conn.getAvailableLocations(id=50)
     for location in available:
+        if location.get('isAvailable', 0) is 0:
+            continue
         ret[location['locationId']]['available'] = True
 
     return ret
@@ -629,3 +632,56 @@ def list_vlans(call=None):
 
     conn = get_conn(service='Account')
     return conn.getNetworkVlans()
+
+
+def show_pricing(kwargs=None, call=None):
+    '''
+    Show pricing for a particular profile. This is only an estimate, based on
+    unofficial pricing sources.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_pricing my-softlayerhw-config my-profile
+
+    If pricing sources have not been cached, they will be downloaded. Once they
+    have been cached, they will not be updated automatically. To manually update
+    all prices, use the following command:
+
+    .. code-block:: bash
+
+        salt-cloud -f update_pricing <provider>
+
+    .. versionadded:: Beryllium
+    '''
+    profile = __opts__['profiles'].get(kwargs['profile'], {})
+    if not profile:
+        return {'Error': 'The requested profile was not found'}
+
+    # Make sure the profile belongs to Softlayer HW
+    provider = profile.get('provider', '0:0')
+    comps = provider.split(':')
+    if len(comps) < 2 or comps[1] != 'softlayer_hw':
+        return {'Error': 'The requested profile does not belong to Softlayer HW'}
+
+    raw = {}
+    ret = {}
+    ret['per_hour'] = 0
+    conn = get_conn(service='SoftLayer_Product_Item_Price')
+    for item in profile:
+        if item in ('profile', 'provider', 'location'):
+            continue
+        price = conn.getObject(id=profile[item])
+        raw[item] = price
+        ret['per_hour'] += decimal.Decimal(price.get('hourlyRecurringFee', 0))
+
+    ret['per_day'] = ret['per_hour'] * 24
+    ret['per_week'] = ret['per_day'] * 7
+    ret['per_month'] = ret['per_day'] * 30
+    ret['per_year'] = ret['per_week'] * 52
+
+    if kwargs.get('raw', False):
+        ret['_raw'] = raw
+
+    return {profile['profile']: ret}
