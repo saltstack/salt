@@ -12,7 +12,9 @@ import shutil
 import tempfile
 import os
 try:
-    import OpenSSL
+    # We're not going to actually use OpenSSL, we just want to check that
+    # it's installed.
+    import OpenSSL  # pylint: disable=unused-import
 except Exception:
     NO_PYOPENSSL = True
 
