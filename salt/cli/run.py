@@ -5,6 +5,8 @@ from __future__ import absolute_import
 import os
 
 from salt.utils import parsers
+from salt.utils import activate_profile
+from salt.utils import output_profile
 from salt.utils.verify import check_user
 from salt.exceptions import SaltClientError
 
@@ -23,6 +25,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        profiling_enabled = self.options.profiling_enabled
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
@@ -33,6 +36,13 @@ class SaltRun(parsers.SaltRunOptionParser):
         # someone tries to use the runners via the python API
         try:
             if check_user(self.config['user']):
-                runner.run()
+                pr = activate_profile(profiling_enabled)
+                try:
+                    runner.run()
+                finally:
+                    output_profile(
+                        pr,
+                        stats_path=self.options.profiling_path,
+                        stop=True)
         except SaltClientError as exc:
             raise SystemExit(str(exc))

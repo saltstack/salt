@@ -31,14 +31,16 @@ the jinja templating system would look like this:
     {% endif %}
 
 It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
-templating option. The template would be a python script which would need to
-contain a function called ``run()``, which returns a string. The returned
-string will be the contents of the managed file. For example:
+templating option. The template would be a Python script which would need to
+contain a function called ``run()``, which returns a string. All arguments
+to the state will be made available to the Python script as globals. The
+returned string will be the contents of the managed file. For example:
 
 .. code-block:: python
 
     def run():
-        lines = ('foo', 'bar', 'baz')
+        lines = ['foo', 'bar', 'baz']
+        lines.extend([source, name, user, context])  # Arguments as globals
         return '\\n\\n'.join(lines)
 
 .. note::
@@ -251,8 +253,8 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-from salt.utils.serializers import yaml as yaml_serializer
-from salt.utils.serializers import json as json_serializer
+from salt.serializers import yaml as yaml_serializer
+from salt.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -2412,7 +2414,7 @@ def replace(name,
         Filesystem path to the file to be edited.
 
     pattern
-        Python's `regular expression search<https://docs.python.org/2/library/re.html>`_.
+        Python's `regular expression search <https://docs.python.org/2/library/re.html>`_.
 
     repl
         The replacement text.
@@ -4210,7 +4212,7 @@ def serialize(name,
         # round-trip this through JSON to avoid OrderedDict types
         # there's probably a more performant way to do this...
         # TODO remove json round-trip when all dataset will use
-        # utils.serializers
+        # serializers
         contents = pprint.pformat(
             json.loads(
                 json.dumps(dataset),

@@ -53,18 +53,17 @@ def _enqueue(revent):
     '''
     Enqueue the event
     '''
-    __context__['inotify.que'].append(revent)
+    __context__['inotify.queue'].append(revent)
 
 
 def _get_notifier():
     '''
     Check the context for the notifier and construct it if not present
     '''
-    if 'inotify.notifier' in __context__:
-        return __context__['inotify.notifier']
-    __context__['inotify.que'] = collections.deque()
-    wm = pyinotify.WatchManager()
-    __context__['inotify.notifier'] = pyinotify.Notifier(wm, _enqueue)
+    if 'inotify.notifier' not in __context__:
+        __context__['inotify.queue'] = collections.deque()
+        wm = pyinotify.WatchManager()
+        __context__['inotify.notifier'] = pyinotify.Notifier(wm, _enqueue)
     return __context__['inotify.notifier']
 
 
@@ -152,56 +151,55 @@ def beacon(config):
               recurse: True
               auto_add: True
 
-    The mask list can contain options:
-        * access            File was accessed
-        * attrib            Metadata changed
-        * close_nowrite     Unwrittable file closed
-        * close_write       Writtable file was closed
-        * create            File created
-        * delete            File deleted
-        * delete_self       Named file or directory deleted
-        * excl_unlink
-        * ignored
-        * modify            File was modified
-        * moved_from        File being watched was moved
-        * moved_to          File moved into watched area
-        * move_self         Named file was moved
-        * oneshot
+    The mask list can contain the following events (the default mask is create,
+    delete, and modify):
+        * access            File accessed
+        * attrib            File metadata changed
+        * close_nowrite     Unwritable file closed
+        * close_write       Writable file closed
+        * create            File created in watched directory
+        * delete            File deleted from watched directory
+        * delete_self       Watched file or directory deleted
+        * modify            File modified
+        * moved_from        File moved out of watched directory
+        * moved_to          File moved into watched directory
+        * move_self         Watched file moved
+        * open              File opened
+
+    The mask can also contain the following options:
+        * dont_follow       Don't dereference symbolic links
+        * excl_unlink       Omit events for children after they have been unlinked
+        * oneshot           Remove watch after one event
         * onlydir           Operate only if name is directory
-        * open              File was opened
-        * unmount           Backing fs was unmounted
+
     recurse:
-      Tell the beacon to recursively watch files in the directory
+      Recursively watch files in the directory
     auto_add:
-      Automatically start adding files that are created in the watched directory
+      Automatically start watching files that are created in the watched directory
     '''
     ret = []
     notifier = _get_notifier()
     wm = notifier._watch_manager
+
     # Read in existing events
-    # remove watcher files that are not in the config
-    # update all existing files with watcher settings
-    # return original data
     if notifier.check_events(1):
         notifier.read_events()
         notifier.process_events()
-        while __context__['inotify.que']:
-            sub = {}
-            event = __context__['inotify.que'].popleft()
-            sub['tag'] = event.path
-            sub['path'] = event.pathname
-            sub['change'] = event.maskname
+        queue = __context__['inotify.queue']
+        while queue:
+            event = queue.popleft()
+            sub = {'tag': event.path,
+                   'path': event.pathname,
+                   'change': event.maskname}
             ret.append(sub)
 
+    # Get paths currently being watched
     current = set()
     for wd in wm.watches:
         current.add(wm.watches[wd].path)
-    need = set(config)
-    for path in current.difference(need):
-        # These need to be removed
-        for wd in wm.watches:
-            if path == wm.watches[wd].path:
-                wm.rm_watch(wd)
+
+    # Update existing watches and add new ones
+    # TODO: make the config handle more options
     for path in config:
         if isinstance(config[path], dict):
             mask = config[path].get('mask', DEFAULT_MASK)
@@ -220,14 +218,8 @@ def beacon(config):
             mask = DEFAULT_MASK
             rec = False
             auto_add = False
-        # TODO: make the config handle more options
-        if path not in current:
-            wm.add_watch(
-                path,
-                mask,
-                rec=rec,
-                auto_add=auto_add)
-        else:
+
+        if path in current:
             for wd in wm.watches:
                 if path == wm.watches[wd].path:
                     update = False
@@ -236,9 +228,9 @@ def beacon(config):
                     if wm.watches[wd].auto_add != auto_add:
                         update = True
                     if update:
-                        wm.update_watch(
-                            wd,
-                            mask=mask,
-                            rec=rec,
-                            auto_add=auto_add)
+                        wm.update_watch(wd, mask=mask, rec=rec, auto_add=auto_add)
+        else:
+            wm.add_watch(path, mask, rec=rec, auto_add=auto_add)
+
+    # Return event data
     return ret

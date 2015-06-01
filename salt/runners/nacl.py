@@ -9,14 +9,14 @@ share your pillar data with others that you trust. I dont advise making your pil
 regardless if they are encrypted or not.
 
 The following configurations can be defined in the master config
-so your users can create encrypted passwords using the runner nacl.
+so your users can create encrypted passwords using the runner nacl::
 
     cat /etc/salt/master.d/nacl.conf
     nacl.config:
         key: None
         keyfile: /root/.nacl
 
-Now with the config in the master you can use the runner nacl like:
+Now with the config in the master you can use the runner nacl like::
 
     salt-run nacl.enc 'data'
 

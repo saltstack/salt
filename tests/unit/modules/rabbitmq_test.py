@@ -47,7 +47,7 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it return a list of vhost based on rabbitmqctl list_vhosts.
         '''
-        mock_run = MagicMock(return_value='saltstack')
+        mock_run = MagicMock(return_value='...\nsaltstack\n...')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertListEqual(rabbitmq.list_vhosts(), ['saltstack'])
 
@@ -69,7 +69,7 @@ class RabbitmqTestCase(TestCase):
         Test if it return whether the vhost exists based
         on rabbitmqctl list_vhosts.
         '''
-        mock_run = MagicMock(return_value='saltstack')
+        mock_run = MagicMock(return_value='...\nsaltstack\n...')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertTrue(rabbitmq.vhost_exists('saltstack'))
 
@@ -167,10 +167,10 @@ class RabbitmqTestCase(TestCase):
         Test if it list permissions for a user
         via rabbitmqctl list_user_permissions.
         '''
-        mock_run = MagicMock(return_value='saltstack')
+        mock_run = MagicMock(return_value='...\nsaltstack\tsaltstack\n...')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertListEqual(rabbitmq.list_user_permissions('myuser'),
-                                 [['saltstack']])
+            self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
+                                 {'saltstack': ['saltstack']})
 
     # 'set_user_tags' function tests: 1
 

@@ -249,6 +249,7 @@ Section -Post
   WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" "DependOnService" "nsi"
 
   ExecWait "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
+  ExecWait "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
   RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
   Call updateMinionConfig

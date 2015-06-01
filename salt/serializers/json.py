@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.utils.serializers.json
+    salt.serializers.json
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Implements JSON serializer.
@@ -16,7 +16,7 @@ except ImportError:
     import json
 
 from salt.ext.six import string_types
-from salt.utils.serializers import DeserializationError, SerializationError
+from salt.serializers import DeserializationError, SerializationError
 
 __all__ = ['deserialize', 'serialize', 'available']
 

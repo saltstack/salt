@@ -42409,7 +42409,7 @@ Execute an svn update on all of the repos
 .sp
 Reference documentation on Salt\(aqs internal code.
 .SS Contents
-.SS salt.serializers
+.SS salt.aggregation
 .SS salt.utils.aggregation
 .sp
 This library makes it possible to introspect dataset and aggregate nodes
@@ -42954,7 +42954,7 @@ or if the specified timeout is not an int or a float
 Thrown when token authentication fails
 .UNINDENT
 .SS salt.serializers
-.SS salt.utils.serializers
+.SS salt.serializers
 .sp
 This module implements all the serializers needed by salt.
 Each serializer offers the same functions and attributes:
@@ -42970,14 +42970,14 @@ function for serializing a Python object
 flag that tells if the serializer is available
 (all dependencies are met etc.)
 .UNINDENT
-.SS salt.utils.serializers.json
+.SS salt.serializers.json
 .sp
 Implements JSON serializer.
 .sp
 It\(aqs just a wrapper around json (or simplejson if available).
 .INDENT 0.0
 .TP
-.B salt.utils.serializers.json.deserialize(stream_or_string, **options)
+.B salt.serializers.json.deserialize(stream_or_string, **options)
 Deserialize any string of stream like object into a Python data structure.
 .INDENT 7.0
 .TP
@@ -42992,7 +42992,7 @@ Deserialize any string of stream like object into a Python data structure.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.utils.serializers.json.serialize(obj, **options)
+.B salt.serializers.json.serialize(obj, **options)
 Serialize Python data to JSON.
 .INDENT 7.0
 .TP
@@ -43005,7 +43005,7 @@ Serialize Python data to JSON.
 .UNINDENT
 .UNINDENT
 .UNINDENT
-.SS salt.utils.serializers.yaml
+.SS salt.serializers.yaml
 .sp
 Implements YAML serializer.
 .sp
@@ -43013,7 +43013,7 @@ Underneath, it is based on pyyaml and use the safe dumper and loader.
 It also use C bindings if they are available.
 .INDENT 0.0
 .TP
-.B salt.utils.serializers.yaml.deserialize(stream_or_string, **options)
+.B salt.serializers.yaml.deserialize(stream_or_string, **options)
 Deserialize any string of stream like object into a Python data structure.
 .INDENT 7.0
 .TP
@@ -43028,7 +43028,7 @@ Deserialize any string of stream like object into a Python data structure.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.utils.serializers.yaml.serialize(obj, **options)
+.B salt.serializers.yaml.serialize(obj, **options)
 Serialize Python data to YAML.
 .INDENT 7.0
 .TP
@@ -43041,12 +43041,12 @@ Serialize Python data to YAML.
 .UNINDENT
 .UNINDENT
 .UNINDENT
-.SS salt.utils.serializers.msgpack
+.SS salt.serializers.msgpack
 .sp
 Implements MsgPack serializer.
 .INDENT 0.0
 .TP
-.B salt.utils.serializers.msgpack.deserialize(stream_or_string, **options)
+.B salt.serializers.msgpack.deserialize(stream_or_string, **options)
 Deserialize any string of stream like object into a Python data structure.
 .INDENT 7.0
 .TP
@@ -43061,7 +43061,7 @@ Deserialize any string of stream like object into a Python data structure.
 .UNINDENT
 .INDENT 0.0
 .TP
-.B salt.utils.serializers.msgpack.serialize(obj, **options)
+.B salt.serializers.msgpack.serialize(obj, **options)
 Serialize Python data to MsgPack.
 .INDENT 7.0
 .TP

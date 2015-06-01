@@ -48,6 +48,8 @@ Advanced Topics
     gitfs
     walkthrough_macosx
     writing_tests
+    http
+    lxc
 
 Salt Virt
 ==========
@@ -55,6 +57,13 @@ Salt Virt
     :maxdepth: 2
 
     cloud_controller
+
+LXC
+===
+.. toctree::
+    :maxdepth: 2
+
+    lxc
 
 Using Salt at scale
 ===================

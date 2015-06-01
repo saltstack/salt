@@ -48,18 +48,13 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        ping_gen = self.local.cmd_iter_no_block(*args, **self.eauth)
-        wait_until = time.time() + self.opts['timeout']
+        ping_gen = self.local.cmd_iter(*args, **self.eauth)
 
         fret = set()
         for ret in ping_gen:
             m = next(six.iterkeys(ret))
             if m is not None:
                 fret.add(m)
-            if time.time() > wait_until:
-                break
-            if m is None:
-                time.sleep(0.1)
         return (list(fret), ping_gen)
 
     def get_bnum(self):
@@ -115,7 +110,11 @@ class Batch(object):
             else:
                 for i in range(bnum - len(active)):
                     if to_run:
-                        next_.append(to_run.pop())
+                        minion_id = to_run.pop()
+                        if isinstance(minion_id, dict):
+                            next_.append(minion_id.keys()[0])
+                        else:
+                            next_.append(minion_id)
 
             active += next_
             args[0] = next_

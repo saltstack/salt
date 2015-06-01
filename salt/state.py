@@ -2983,7 +2983,8 @@ class BaseHighState(object):
         try:
             top = self.get_top()
         except SaltRenderError as err:
-            ret[tag_name]['comment'] = err.error
+            ret[tag_name]['comment'] = 'Unable to render top file: '
+            ret[tag_name]['comment'] += err.error
             return ret
         except Exception:
             trb = traceback.format_exc()

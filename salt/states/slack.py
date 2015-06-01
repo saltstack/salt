@@ -17,6 +17,7 @@ This state is useful for sending messages to Slack during state runs.
         - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 
 The api key can be specified in the master or minion configuration like below:
+
 .. code-block:: yaml
 
     slack:

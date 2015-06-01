@@ -66,7 +66,6 @@ def update_config(file_name, yaml_contents):
             'client': 'wheel',
             'eauth': 'pam',
         }
-
     '''
     file_name = '{0}{1}'.format(file_name, '.conf')
     dir_path = os.path.join(__opts__['config_dir'],

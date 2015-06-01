@@ -818,7 +818,7 @@ class Minion(MinionBase):
         try:
             beacons = self.process_beacons(self.functions)
         except Exception as exc:
-            log.critical('Beacon processing errored: {0}. No beacons will be procssed.'.format(traceback.format_exc(exc)))
+            log.critical('Beacon processing failed: {0}. No beacons will be processed.'.format(traceback.format_exc(exc)))
             beacons = None
         if beacons:
             self._fire_master(events=beacons)
@@ -1367,6 +1367,8 @@ class Minion(MinionBase):
 
         if func == 'add':
             self.beacons.add_beacon(name, beacon_data)
+        elif func == 'modify':
+            self.beacons.modify_beacon(name, beacon_data)
         elif func == 'delete':
             self.beacons.delete_beacon(name)
         elif func == 'enable':

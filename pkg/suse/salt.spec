@@ -16,7 +16,7 @@
 #
 
 Name:           salt
-Version:        2015.5.0
+Version:        2015.5.1
 Release:        0
 Summary:        A parallel remote execution system
 License:        Apache-2.0
@@ -58,10 +58,6 @@ BuildRequires:  python-pip
 BuildRequires:  python-salt-testing
 BuildRequires:  python-unittest2
 BuildRequires:  python-xml
-%if 0%{?suse_version} >= 1210
-BuildRequires:  python-pssh
-%{?systemd_requires}
-%endif
 
 #for docs
 BuildRequires:  python-sphinx

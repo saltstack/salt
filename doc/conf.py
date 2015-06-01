@@ -44,6 +44,7 @@ class Mock(object):
 MOCK_MODULES = [
     # salt core
     'Crypto',
+    'Crypto.Signature',
     'Crypto.Cipher',
     'Crypto.Hash',
     'Crypto.PublicKey',
@@ -161,7 +162,7 @@ project = 'Salt'
 copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.5.0'  # latest release
+latest_release = '2015.5.1'  # latest release
 previous_release = '2014.7.6'  # latest release from previous branch
 previous_release_dir = '2014.7'  # path on web server for previous branch
 build_type = 'develop'  # latest, previous, develop
