@@ -90,7 +90,9 @@ def __virtual__():
         else:
             cmd = 'ls /sys/module/zfs'
 
-    if cmd and __salt__['cmd.retcode'](cmd, output_loglevel='quiet') == 0:
+    if cmd and __salt__['cmd.retcode'](
+        cmd, output_loglevel='quiet', ignore_retcode=True
+    ) == 0:
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
         return 'zfs'
