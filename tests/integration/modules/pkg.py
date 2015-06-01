@@ -45,11 +45,11 @@ class PkgModuleTest(integration.ModuleCase,
     @destructiveTest
     def test_mod_del_repo(self):
         '''
-        test modifying a software repository
+        test modifying and deleting a software repository
         '''
         func = 'pkg.mod_repo'
         os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['os_release'])['os_release']
+        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
 
         if os_grain == 'Ubuntu':
             repo = 'ppa:saltstack/salt'
