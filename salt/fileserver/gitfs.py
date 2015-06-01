@@ -855,11 +855,15 @@ def _init_gitpython(rp_, repo_url, ssl_verify):
     if not os.listdir(rp_):
         # Repo cachedir is empty, initialize a new repo there
         repo = git.Repo.init(rp_)
+        # TODO change this when git.Repo.init supports choosing backend.
+        # for now using Repo.init to initialize new Repo then replaces the
+        # returned Repo object with another instance with cgit backend.
+        repo = git.Repo(rp_, odbt=git.GitCmdObjectDB)
         new = True
     else:
         # Repo cachedir exists, try to attach
         try:
-            repo = git.Repo(rp_)
+            repo = git.Repo(rp_, odbt=git.GitCmdObjectDB)
         except git.exc.InvalidGitRepositoryError:
             log.error(_INVALID_REPO.format(rp_, repo_url))
             return None, new
