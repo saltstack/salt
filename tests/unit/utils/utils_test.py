@@ -629,7 +629,12 @@ class UtilsTestCase(TestCase):
         # To to ensure safe exit if str passed doesn't evaluate to True
         self.assertFalse(utils.is_bin_str(''))
 
-        # TODO: Test binary detection
+        nontext = 3 * (''.join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)]))
+        almost_bin_str = '{0}{1}'.format(LORUM_IPSUM[:100], nontext[:42])
+        self.assertFalse(utils.is_bin_str(almost_bin_str))
+
+        bin_str = almost_bin_str + '\x01'
+        self.assertTrue(utils.is_bin_str(bin_str))
 
     def test_repack_dict(self):
         list_of_one_element_dicts = [{'dict_key_1': 'dict_val_1'},
@@ -729,20 +734,32 @@ class UtilsTestCase(TestCase):
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
 
     def test_to_str(self):
+        for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+            self.assertRaises(TypeError, utils.to_str, x)
         if six.PY3:
-            # TODO: py3 tests
-            pass
+            self.assertEqual(utils.to_str('plugh'), 'plugh')
+            self.assertEqual(utils.to_str('áéíóúý'), 'áéíóúý')
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            self.assertEqual(utils.to_str(ut, 'utf-8'), un)
+            self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
         else:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
-            self.assertEqual(utils.to_str(u'plugh'), 'plugh')
+            self.assertEqual(utils.to_str(u'áéíóúý'), 'áéíóúý')
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             self.assertEqual(utils.to_str(un, 'utf-8'), ut)
 
     def test_to_bytes(self):
         if six.PY3:
-            # TODO: py3 tests
-            pass
+            for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+                self.assertRaises(TypeError, utils.to_bytes, x)
+            self.assertEqual(utils.to_bytes('xyzzy'), b'xyzzy')
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            self.assertEqual(utils.to_bytes(ut), ut)
+            self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
+            self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
         else:
             self.assertRaises(TypeError, utils.to_bytes, '')
 
