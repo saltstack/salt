@@ -30,7 +30,8 @@ def present(name,
             lvname=None,
             path=None):
     '''
-    .. versionchanged:: 2015.5.0
+    .. versionchanged:: Beryllium
+
         The :mod:`lxc.created <salt.states.lxc.created>` state has been renamed
         to ``lxc.present``, and the :mod:`lxc.cloned <salt.states.lxc.cloned>`
         state has been merged into this state.
@@ -44,7 +45,7 @@ def present(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
 
     running : False
@@ -53,7 +54,7 @@ def present(name,
         * If ``None``, do nothing with regards to the running state of the
           container
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
     clone_from
         Create named container as a clone of the specified container
@@ -93,6 +94,7 @@ def present(name,
             <salt.modules.lxc.images>` function.
 
     options
+
         .. versionadded:: 2015.5.0
 
         Template-specific options to pass to the lxc-create command. These
@@ -333,7 +335,7 @@ def absent(name, stop=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
 
     .. code-block:: yaml
@@ -388,7 +390,7 @@ def running(name, restart=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
     restart : False
         Restart container if it is already running
@@ -485,7 +487,7 @@ def frozen(name, start=True, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
 
     start : True
@@ -573,7 +575,7 @@ def stopped(name, kill=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
     kill : False
         Do not wait for the container to stop, kill all tasks in the container.
@@ -581,13 +583,6 @@ def stopped(name, kill=False, path=None):
         argument.
 
         .. versionadded:: 2015.5.0
-
-    path
-        path to the container parent
-        default: /var/lib/lxc (system default)
-
-        .. versionadded:: 2015.5.0
-
 
     .. code-block:: yaml
 
@@ -735,7 +730,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
 
     .. code-block:: bash
