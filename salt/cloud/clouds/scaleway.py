@@ -3,6 +3,8 @@
 Scaleway Cloud Module
 ==========================
 
+.. versionadded:: Beryllium
+
 The Scaleway cloud module is used to interact with your Scaleway BareMetal
 Servers.
 
@@ -40,6 +42,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.ext.six.moves import range
 import salt.utils.cloud
 
 
@@ -454,7 +457,7 @@ def show_instance(name, call=None):
 
 
 def _get_node(name):
-    for attempt in reversed(range(10)):
+    for attempt in reversed(list(range(10))):
         try:
             return list_nodes_full()[name]
         except KeyError:
