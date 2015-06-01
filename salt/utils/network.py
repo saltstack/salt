@@ -756,11 +756,11 @@ def interfaces():
 
 
 def get_net_start(ipaddr, netmask):
-    ipaddr_octets = ipaddr.split('.')
-    netmask_octets = netmask.split('.')
-    net_start_octets = [str(int(ipaddr_octets[x]) & int(netmask_octets[x]))
-                        for x in range(0, 4)]
-    return '.'.join(net_start_octets)
+    '''
+    Return the address of the network
+    '''
+    net = ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False)
+    return str(net.network_address)
 
 
 def get_net_size(mask):
@@ -774,12 +774,16 @@ def get_net_size(mask):
     return len(binary_str.rstrip('0'))
 
 
-def calculate_subnet(ipaddr, netmask):
+def calc_net(ipaddr, netmask=None):
     '''
-    Takes IP and netmask and returns the network in CIDR-notation.
-    (The IP can be any IP inside this subnet.)
+    Takes IP (CIDR notation supported) and optionally netmask
+    and returns the network in CIDR-notation.
+    (The IP can be any IP inside the subnet)
     '''
-    return str(ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False))
+    if netmask is not None:
+        ipaddr = '{0}/{1}'.format(ipaddr, netmask)
+
+    return str(ipaddress.ip_network(ipaddr, strict=False))
 
 
 def _ipv4_to_bits(ipaddr):
@@ -842,25 +846,49 @@ def interface_ip(iface):
         return error
 
 
-def subnets():
+def _subnets(proto='inet'):
     '''
     Returns a list of subnets to which the host belongs
     '''
     ifaces = interfaces()
-    subnetworks = []
+    ret = set()
 
-    for ipv4_info in six.itervalues(ifaces):
-        for ipv4 in ipv4_info.get('inet', []):
-            if ipv4['address'] == '127.0.0.1':
-                continue
-            network = calculate_subnet(ipv4['address'], ipv4['netmask'])
-            subnetworks.append(network)
-    return subnetworks
+    if proto == 'inet':
+        subnet = 'netmask'
+    elif proto == 'inet6':
+        subnet = 'prefixlen'
+    else:
+        log.error('Invalid proto {0} calling subnets()'.format(proto))
+        return
+
+    for ip_info in six.itervalues(ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
+
+        for intf in addrs:
+            intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            if not intf.is_loopback:
+                ret.add(intf.network)
+    return [str(net) for net in sorted(ret)]
 
 
-def in_subnet(cidr, addrs=None):
+def subnets():
     '''
-    Returns True if host is within specified subnet, otherwise False
+    Returns a list of IPv4 subnets to which the host belongs
+    '''
+    return _subnets('inet')
+
+
+def subnets6():
+    '''
+    Returns a list of IPv6 subnets to which the host belongs
+    '''
+    return _subnets('inet6')
+
+
+def in_subnet(cidr, addr=None):
+    '''
+    Returns True if host or (any of) addrs is within specified subnet, otherwise False
     '''
     try:
         cidr = ipaddress.ip_network(cidr)
@@ -868,20 +896,54 @@ def in_subnet(cidr, addrs=None):
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
-    if addrs is None:
-        addrs = ip_addrs()
+    if addr is None:
+        addr = ip_addrs()
+    elif isinstance(addr, six.string_types):
+        return ipaddress.ip_address(addr) in cidr
 
-    for ip_addr in addrs:
+    for ip_addr in addr:
         if ipaddress.ip_address(ip_addr) in cidr:
             return True
     return False
 
 
-def ip_in_subnet(ip_addr, cidr):
+def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
+
+    .. deprecated:: Beryllium
+       Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
-    return in_subnet(cidr, [ip_addr])
+    return in_subnet(cidr, addr)
+
+
+def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
+    '''
+    Return the full list of IP adresses matching the criteria
+
+    proto = inet|inet6
+    '''
+    ret = set()
+
+    ifaces = interface_data \
+        if isinstance(interface_data, dict) \
+        else interfaces()
+    if interface is None:
+        target_ifaces = ifaces
+    else:
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
+                              if k == interface])
+        if not target_ifaces:
+            log.error('Interface {0} not found.'.format(interface))
+    for ip_info in six.itervalues(target_ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
+
+        for addr in addrs:
+            addr = ipaddress.ip_address(addr.get('address'))
+            if not addr.is_loopback or include_loopback:
+                ret.add(addr)
+    return [str(addr) for addr in sorted(ret)]
 
 
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):
@@ -890,28 +952,7 @@ def ip_addrs(interface=None, include_loopback=False, interface_data=None):
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     '''
-    ret = set()
-    ifaces = interface_data \
-        if isinstance(interface_data, dict) \
-        else interfaces()
-    if interface is None:
-        target_ifaces = ifaces
-    else:
-        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
-                              if k == interface])
-        if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in six.itervalues(target_ifaces):
-        for ipv4 in ipv4_info.get('inet', []):
-            loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
-            if not loopback or include_loopback:
-                ret.add(ipv4['address'])
-        for secondary in ipv4_info.get('secondary', []):
-            addr = secondary.get('address')
-            if addr and secondary.get('type') == 'inet':
-                if include_loopback or (not include_loopback and not in_subnet('127.0.0.0/8', [addr])):
-                    ret.add(addr)
-    return sorted(list(ret))
+    return _ip_addrs(interface, include_loopback, interface_data, 'inet')
 
 
 def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
@@ -920,27 +961,7 @@ def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
     '''
-    ret = set()
-    ifaces = interface_data \
-        if isinstance(interface_data, dict) \
-        else interfaces()
-    if interface is None:
-        target_ifaces = ifaces
-    else:
-        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
-                              if k == interface])
-        if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in six.itervalues(target_ifaces):
-        for ipv6 in ipv6_info.get('inet6', []):
-            if include_loopback or ipv6['address'] != '::1':
-                ret.add(ipv6['address'])
-        for secondary in ipv6_info.get('secondary', []):
-            addr = secondary.get('address')
-            if addr and secondary.get('type') == 'inet6':
-                if include_loopback or addr != '::1':
-                    ret.add(addr)
-    return sorted(list(ret))
+    return _ip_addrs(interface, include_loopback, interface_data, 'inet6')
 
 
 def hex2ip(hex_ip, invert=False):

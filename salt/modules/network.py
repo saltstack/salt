@@ -678,7 +678,7 @@ def interface_ip(iface):
 
 def subnets():
     '''
-    Returns a list of subnets to which the host belongs
+    Returns a list of IPv4 subnets to which the host belongs
 
     CLI Example:
 
@@ -687,6 +687,19 @@ def subnets():
         salt '*' network.subnets
     '''
     return salt.utils.network.subnets()
+
+
+def subnets6():
+    '''
+    Returns a list of IPv6 subnets to which the host belongs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.subnets
+    '''
+    return salt.utils.network.subnets6()
 
 
 def in_subnet(cidr):
@@ -712,22 +725,25 @@ def ip_in_subnet(ip_addr, cidr):
 
         salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
     '''
-    return salt.utils.network.ip_in_subnet(ip_addr, cidr)
+    return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
-def calculate_subnet(ip_addr, netmask):
+def calc_net(ip_addr, netmask=None):
     '''
-    Returns the CIDR of a subnet based on an IP address and network.
+    Returns the CIDR of a subnet based on
+    an IP address (CIDR notation supported)
+    and optional netmask.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' network.calculate_subnet 172.17.0.5 255.255.255.240
+        salt '*' network.calc_net 172.17.0.5 255.255.255.240
+        salt '*' network.calc_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
 
     .. versionadded:: Beryllium
     '''
-    return salt.utils.network.calculate_subnet(ip_addr, netmask)
+    return salt.utils.network.calc_net(ip_addr, netmask)
 
 
 def ip_addrs(interface=None, include_loopback=False, cidr=None):

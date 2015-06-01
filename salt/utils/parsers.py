@@ -959,7 +959,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             '-S', '--ipcidr',
             default=False,
             action='store_true',
-            help=('Match based on Subnet (CIDR notation) or IPv4 address.')
+            help=('Match based on Subnet (CIDR notation) or IP address.')
         )
 
         self._create_process_functions()
