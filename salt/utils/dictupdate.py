@@ -13,8 +13,7 @@ import copy
 import logging
 import salt.ext.six as six
 from salt.utils.odict import OrderedDict
-from salt.serializers.yamlex \
-    import merge_recursive as _yamlex_merge_recursive
+from salt.serializers.yamlex import merge_recursive as _yamlex_merge_recursive
 
 log = logging.getLogger(__name__)
 
@@ -28,15 +27,16 @@ def update(dest, upd, recursive_update=True):
     If recursive_update=False, will use the classic dict.update, or fall back
     on a manual merge (helpful for non-dict types like FunctionWrapper)
     '''
-    if dest is None:
-        return upd
+    if (not isinstance(dest, collections.Mapping)) \
+            or (not isinstance(upd, collections.Mapping)):
+        raise TypeError('Cannot update using non-dict types in dictupdate.update()')
+    updkeys = list(upd.keys())
+    if not set(list(dest.keys())) & set(updkeys):
+        recursive_update = False
     if recursive_update:
-        for key, val in six.iteritems(upd):
+        for key in updkeys:
+            val = upd[key]
             try:
-                if isinstance(val, OrderedDict):
-                    valtype = OrderedDict
-                else:
-                    valtype = dict
                 dest_subkey = dest.get(key, None)
             except AttributeError:
                 dest_subkey = None
