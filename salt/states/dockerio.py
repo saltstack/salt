@@ -640,9 +640,8 @@ def installed(name,
         List of volumes (see notes for the running function)
 
     For other parameters, see absolutely first the salt.modules.dockerio
-    execution module and the docker-py python bindings for docker
-    documentation
-    <https://github.com/dotcloud/docker-py#api>`_ for
+    execution module and the `docker-py python bindings for docker
+    documentation <https://github.com/dotcloud/docker-py#api>`_ for
     `docker.create_container`.
 
     .. note::
