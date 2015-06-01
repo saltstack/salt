@@ -134,7 +134,7 @@ def run(name,
         path to the container parent (for LXC only)
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -283,7 +283,7 @@ def copy_to(name,
         path to the container parent (for LXC only)
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: Beryllium
 
     CLI Example:
 
