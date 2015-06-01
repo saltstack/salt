@@ -4197,4 +4197,4 @@ def show_pricing(kwargs=None, call=None):
     ret['per_month'] = ret['per_day'] * 30
     ret['per_year'] = ret['per_week'] * 52
 
-    return ret
+    return {profile['profile']: ret}
