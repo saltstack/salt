@@ -324,6 +324,11 @@ class UtilsTestCase(TestCase):
         self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {})
         self.assertDictEqual(utils.clean_kwargs(foo_bar='gwar'), {'foo_bar': 'gwar'})
 
+    def test_sanitize_win_path_string(self):
+        p = '\\windows\\system'
+        self.assertEqual(utils.sanitize_win_path_string('\\windows\\system'), '\\windows\\system')
+        self.assertEqual(utils.sanitize_win_path_string('\\bo:g|us\\p?at*h>'), '\\bo_g_us\\p_at_h_')
+
     def test_check_state_result(self):
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
         self.assertFalse(utils.check_state_result([]), "Failed to handle an invalid data type.")
