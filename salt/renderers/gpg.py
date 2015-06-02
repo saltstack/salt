@@ -109,7 +109,11 @@ LOG = logging.getLogger(__name__)
 
 GPG_BINARY = salt.utils.which('gpg')
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
-DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+
+if __salt__['config.get']('gpg_keydir'):
+    DEFAULT_GPG_KEYDIR = __salt__['config.get']('gpg_keydir')
+else:
+    DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
 def _decrypt_ciphertext(cipher):
