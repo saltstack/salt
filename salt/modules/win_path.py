@@ -156,7 +156,7 @@ def add(path, index=0):
 
 
 def remove(path):
-    '''
+    r'''
     Remove the directory from the SYSTEM path
 
     Returns:
