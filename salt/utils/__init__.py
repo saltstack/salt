@@ -2044,7 +2044,7 @@ def warn_until(version,
             Replacement for warnings.formatwarning that disables the echoing of
             the 'line' parameter.
             '''
-            return '{0}:{1}: {2}: {3}'.format(
+            return '{0}:{1}: {2}: {3}\n'.format(
                 filename, lineno, category.__name__, message
             )
         saved = warnings.formatwarning
