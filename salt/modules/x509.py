@@ -32,7 +32,7 @@ from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 try:
     import M2Crypto
     HAS_M2 = True
-except:
+except ImportError:
     HAS_M2 = False
 
 __virtualname__ = 'x509'
