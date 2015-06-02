@@ -143,7 +143,6 @@ def pillar_format(ret, keys, value):
   Perform data formatting to be used as pillar data and
   merge it with the current pillar data
   '''
-  Get t
   if value == None:
     return ret
   array_data = value.split('\n')
