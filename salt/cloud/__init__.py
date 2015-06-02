@@ -2203,7 +2203,7 @@ def create_multiprocessing(parallel_data, queue=None):
         )
         return {parallel_data['name']: {'Error': str(exc)}}
 
-    if parallel_data['opts'].get('show_deploy_args', False) is False and 'deploy_kwargs' in output:
+    if parallel_data['opts'].get('show_deploy_args', False) is False:
         output.pop('deploy_kwargs', None)
 
     return {
