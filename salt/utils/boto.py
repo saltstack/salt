@@ -222,31 +222,26 @@ def get_connection_func(service, module=None):
 
 
 def get_error(e):
+    # The returns from boto modules vary greatly between modules. We need to
+    # assume that none of the data we're looking for exists.
     aws = {}
-    if e.status:
+    if hasattr(e, 'status'):
         aws['status'] = e.status
-    if e.reason:
+    if hasattr(e, 'reason'):
         aws['reason'] = e.reason
-    error = {}
-    if hasattr(e, 'message'):
-        error['message'] = e.message
-    if hasattr(e, 'error_code'):
-        error['code'] = e.error_code
-    if not error:
-        try:
-            body = e.body or ''
-            error = ET.fromstring(body).find('Errors').find('Error')
-            error = {'code': error.find('Code').text,
-                     'message': error.find('Message').text}
-        except (AttributeError, ET.ParseError):
-            error = None
+    if hasattr(e, 'message') and e.message != '':
+        aws['message'] = e.message
+    if hasattr(e, 'error_code') and e.error_code is not None:
+        aws['code'] = e.error_code
 
-    if error:
-        aws.update(error)
-        message = '{0}: {1}'.format(aws.get('reason', ''),
-                                    error['message'])
+    if 'message' in aws and 'reason' in aws:
+        message = '{0}: {1}'.format(aws['reason'], aws['message'])
+    elif 'message' in aws:
+        message = aws['message']
+    elif 'reason' in aws:
+        message = aws['reason']
     else:
-        message = aws.get('reason')
+        message = ''
     r = {'message': message}
     if aws:
         r['aws'] = aws
