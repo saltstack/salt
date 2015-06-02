@@ -595,6 +595,8 @@ class Client(object):
                 stream=True,
                 **get_kwargs
             )
+            if 'handle' not in query:
+                raise MinionError('Error: {0}'.format(query['error']))
             response = query['handle']
             chunk_size = 32 * 1024
             if not no_cache:
