@@ -40,6 +40,8 @@ __outputter__ = {
 # http://stackoverflow.com/a/12414913/127816
 _infinitedict = lambda: collections.defaultdict(_infinitedict)
 
+_non_existent_key = 'NonExistentValueMagicNumberSpK3hnufdHfeBUXCfqVK'
+
 log = logging.getLogger(__name__)
 
 
@@ -555,3 +557,115 @@ def get_or_set_hash(name,
             setval(name, val)
 
     return get(name)
+
+
+def set(key,
+        val='',
+        force=False,
+        destructive=False,
+        delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    Set a key to an arbitrary value. It is used like setval but works
+    with nested keys.
+
+    This function is conservative. It will only overwrite an entry if
+    its value and the given one are not a list or a dict. The `force`
+    parameter is used to allow overwriting in all cases.
+
+    .. versionadded:: FIXME
+
+    :param force: Force writing over existing entry if given or existing
+                  values are list or dict. Defaults to False.
+    :param destructive: If an operation results in a key being removed,
+                  delete the key, too. Defaults to False.
+    :param delimiter:
+        Specify an alternate delimiter to use when traversing a nested dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.set 'apps:myApp:port' 2209
+        salt '*' grains.set 'apps:myApp' '{port: 2209}'
+    '''
+
+    ret = {'comment': [],
+           'changes': {},
+           'result': True}
+
+    # Get val type
+    _new_value_type = 'simple'
+    if isinstance(val, dict):
+        _new_value_type = 'complex'
+    elif isinstance(val, list):
+        _new_value_type = 'complex'
+
+    _existing_value = get(key, _non_existent_key, delimiter)
+    _value = _existing_value
+
+    _existing_value_type = 'simple'
+    if _existing_value == _non_existent_key:
+        _existing_value_type = None
+    elif isinstance(_existing_value, dict):
+        _existing_value_type = 'complex'
+    elif isinstance(_existing_value, list):
+        _existing_value_type = 'complex'
+
+    if _existing_value_type is not None and _existing_value == val:
+        ret['comment'] = 'The value \'{0}\' was already set for key \'{1}\''.format(val, key)
+        return ret
+
+    if _existing_value is not None and not force:
+        if _existing_value_type == 'complex':
+            ret['comment'] = 'The key \'{0}\' exists but is a dict or a list. '.format(key) \
+                 + 'Use \'force=True\' to overwrite.'
+            ret['result'] = False
+            return ret
+        elif _new_value_type == 'complex' and _existing_value_type is not None:
+            ret['comment'] = 'The key \'{0}\' exists and the given value is a '.format(key) \
+                 + 'dict or a list. Use \'force=True\' to overwrite.'
+            ret['result'] = False
+            return ret
+        else:
+            _value = val
+    else:
+        _value = val
+
+    # Process nested grains
+    while delimiter in key:
+        key, rest = key.rsplit(delimiter, 1)
+        _existing_value = get(key, {}, delimiter)
+        if isinstance(_existing_value, dict):
+            if _value is None and destructive:
+                if rest in _existing_value.keys():
+                    _existing_value.pop(rest)
+            else:
+                _existing_value.update({rest: _value})
+        elif isinstance(_existing_value, list):
+            _list_updated = False
+            if rest in _existing_value:
+                _existing_value.remove(rest)
+            else:
+                for _item in _existing_value:
+                    if isinstance(_item, dict) and rest in _item:
+                        _item.update({rest: _value})
+                        _list_updated = True
+            if not _list_updated:
+                _existing_value.append({rest: _value})
+        elif _existing_value == rest or force:
+            _existing_value = {rest: _value}
+        else:
+            ret['comment'] = 'The key \'{0}\' value is \'{1}\', '.format(key, _existing_value) \
+                 + 'which is different from the provided key \'{0}\'. '.format(rest) \
+                 + 'Use \'force=True\' to overwrite.'
+            ret['result'] = False
+            return ret
+        _value = _existing_value
+
+    _setval_ret = setval(key, _value, destructive=destructive)
+    if isinstance(_setval_ret, dict):
+        ret['changes'] = _setval_ret
+    else:
+        ret['comment'] = _setval_ret
+        ret['result'] = False
+    return ret
