@@ -2675,7 +2675,7 @@ def to_bytes(s, encoding=None):
             return s
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str or bytearray')
 
