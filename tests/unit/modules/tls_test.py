@@ -118,6 +118,7 @@ bymYbi0l2pWqQLA2sPoRHNw=
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_PYOPENSSL, 'PyOpenSSL must be installed to run these tests.')
 class TLSAddTestCase(TestCase):
+    maxDiff = None
 
     '''
     Test cases for salt.modules.tls
