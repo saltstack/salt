@@ -169,7 +169,7 @@ def item(*args, **kwargs):
     '''
     ret = {}
     default = kwargs.get('default', '')
-    delimiter = kwargs.get('delimiter', ':')
+    delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
 
     try:
         for arg in args:
@@ -276,7 +276,7 @@ def setval(key, val, destructive=False):
     return setvals({key: val}, destructive)
 
 
-def append(key, val, convert=False, delimiter=':'):
+def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.17.0
 
@@ -547,8 +547,8 @@ def get_or_set_hash(name,
     if ret is None:
         val = ''.join([random.SystemRandom().choice(chars) for _ in range(length)])
 
-        if ':' in name:
-            root, rest = name.split(':', 1)
+        if DEFAULT_TARGET_DELIM in name:
+            root, rest = name.split(DEFAULT_TARGET_DELIM, 1)
             curr = get(root, _infinitedict())
             val = _dict_from_path(rest, val)
             curr.update(val)
