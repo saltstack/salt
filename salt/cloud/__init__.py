@@ -2114,7 +2114,7 @@ class Map(Cloud):
                 output[name] = self.create(
                     profile, local_master=local_master
                 )
-                if self.opts.get('show_deploy_args', False) is False:
+                if self.opts.get('show_deploy_args', False) is False and 'deploy_kwargs' in output:
                     output[name].pop('deploy_kwargs', None)
             except SaltCloudException as exc:
                 log.error(
@@ -2203,7 +2203,7 @@ def create_multiprocessing(parallel_data, queue=None):
         )
         return {parallel_data['name']: {'Error': str(exc)}}
 
-    if parallel_data['opts'].get('show_deploy_args', False) is False:
+    if parallel_data['opts'].get('show_deploy_args', False) is False and 'deploy_kwargs' in output:
         output.pop('deploy_kwargs', None)
 
     return {
