@@ -60,11 +60,18 @@ def create_event(name, message_type, routing_key='everyone', **kwargs):
 
         entity_id
             The name of alerting entity. If not provided, a random name will be assigned.
+
         timestamp
             Timestamp of the alert in seconds since epoch. Defaults to the time the alert is received at VictorOps.
 
+        timestamp_fmt
+            The date format for the timestamp parameter.  Defaults to ''%Y-%m-%dT%H:%M:%S'.
+
         state_start_time
             The time this entity entered its current state (seconds since epoch). Defaults to the time alert is received.
+
+        state_start_time_fmt
+            The date format for the timestamp parameter. Defaults to '%Y-%m-%dT%H:%M:%S'.
 
         state_message
             Any additional status information from the alert item.
@@ -86,14 +93,20 @@ def create_event(name, message_type, routing_key='everyone', **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
+
     if __opts__['test']:
         ret['comment'] = 'Need to create event: {0}'.format(name)
         return ret
-    __salt__['victorops.create_event'](
+
+    res = __salt__['victorops.create_event'](
         message_type=message_type,
         routing_key=routing_key,
         **kwargs
     )
-    ret['result'] = True
-    ret['comment'] = 'Created event: {0}'.format(name)
+    if res['result'] == 'success':
+        ret['result'] = True
+        ret['comment'] = 'Created event: {0} for entity {1}'.format(name, res['entity_id'])
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create event: {0}'.format(res['message'])
     return ret
