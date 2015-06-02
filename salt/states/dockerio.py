@@ -479,20 +479,13 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
 
         .. note::
 
-            See first the documentation for salt file.managed
-            <http://docs.saltstack.com/en/latest/ref/states/all/_
-            salt.states.file.html#salt.states.file.managed>
+            See first the documentation for Salt `file.managed
+            <http://docs.saltstack.com/en/latest/ref/states/all/salt.states.file.html#salt.states.file.managed>`_
 
     source_hash
         This can be one of the following:
             1. a source hash string
             2. the URI of a file that contains source hash strings
-
-            .. note::
-
-                See first the documentation for salt file.managed
-                <http://docs.saltstack.com/en/latest/ref/states/all/_
-                salt.states.file.html#salt.states.file.managed>
 
     force
         Load even if the image exists
