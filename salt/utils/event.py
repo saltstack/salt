@@ -277,7 +277,7 @@ class SaltEvent(object):
         self.sub = self.context.socket(zmq.SUB)
         self.sub.connect(self.puburi)
         self.poller.register(self.sub, zmq.POLLIN)
-        self.sub.setsockopt(zmq.SUBSCRIBE, '')
+        self.sub.setsockopt_string(zmq.SUBSCRIBE, u'')
         self.sub.setsockopt(zmq.LINGER, 5000)
         self.cpub = True
 
