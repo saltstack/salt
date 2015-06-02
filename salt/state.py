@@ -66,6 +66,7 @@ STATE_REQUISITE_IN_KEYWORDS = frozenset([
     'listen_in',
     ])
 STATE_RUNTIME_KEYWORDS = frozenset([
+    'name',  # name of the highstate running
     'fun',
     'state',
     'check_cmd',
