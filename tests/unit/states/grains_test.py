@@ -149,7 +149,7 @@ class GrainsTestCase(TestCase):
         ret2 = {'changes': {}, 'name': self.name, 'result': True,
                 'comment': 'Grain cheese does not exist'}
 
-        ret3 = {'changes': {}, 'name': self.name, 'result': True,
+        ret3 = {'changes': {}, 'name': self.name, 'result': False,
                 'comment': 'Grain cheese is not a valid list'}
 
         with patch.dict(grains.__grains__, {self.name: ['eves']}):
@@ -203,10 +203,10 @@ class GrainsTestCase(TestCase):
                 'result': None,
                 'comment': comment}
 
-        ret3 = {'changes': {}, 'name': self.name, 'result': True,
+        ret3 = {'changes': {}, 'name': self.name, 'result': False,
                 'comment': 'Grain cheese does not exist'}
 
-        ret4 = {'changes': {}, 'name': self.name, 'result': True,
+        ret4 = {'changes': {}, 'name': self.name, 'result': False,
                 'comment': 'Grain cheese is not a valid list'}
 
         with patch.dict(grains.__grains__, {self.name: ['edam']}):
