@@ -77,7 +77,7 @@ Available Functions
 
   .. note::
 
-      The ``port_bindings`` argument above is a dictionary. The double
+      The ``ports`` argument above is a dictionary. The double
       indentation is required for PyYAML to load the data structure
       properly as a python dictionary. More information can be found
       :ref:`here <nested-dict-indentation>`
