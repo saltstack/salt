@@ -149,6 +149,9 @@ class GrainsTestCase(TestCase):
         ret2 = {'changes': {}, 'name': self.name, 'result': True,
                 'comment': 'Grain cheese does not exist'}
 
+        ret3 = {'changes': {}, 'name': self.name, 'result': False,
+                'comment': 'Grain cheese is not a valid list'}
+
         with patch.dict(grains.__grains__, {self.name: ['eves']}):
             self.assertDictEqual(grains.list_absent(self.name, self.value), ret)
 
@@ -158,6 +161,9 @@ class GrainsTestCase(TestCase):
                                      ret1)
 
         self.assertDictEqual(grains.list_absent(self.name, self.value), ret2)
+
+        with patch.dict(grains.__grains__, {self.name: 'eves'}):
+            self.assertDictEqual(grains.list_absent(self.name, self.value), ret3)
 
     # 'absent' function tests: 1
 
@@ -197,8 +203,11 @@ class GrainsTestCase(TestCase):
                 'result': None,
                 'comment': comment}
 
-        ret3 = {'changes': {}, 'name': self.name, 'result': True,
+        ret3 = {'changes': {}, 'name': self.name, 'result': False,
                 'comment': 'Grain cheese does not exist'}
+
+        ret4 = {'changes': {}, 'name': self.name, 'result': False,
+                'comment': 'Grain cheese is not a valid list'}
 
         with patch.dict(grains.__grains__, {self.name: ['edam']}):
             self.assertDictEqual(grains.append(self.name, self.value), ret)
@@ -213,6 +222,9 @@ class GrainsTestCase(TestCase):
                                                    convert=True), ret2)
 
         self.assertDictEqual(grains.append(self.name, self.value), ret3)
+
+        with patch.dict(grains.__grains__, {self.name: 'eves'}):
+            self.assertDictEqual(grains.append(self.name, self.value), ret4)
 
 
 if __name__ == '__main__':

@@ -360,7 +360,8 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         else:
             rule.append('--{0} {1}'.format(item, kwargs[item]))
 
-    rule += after_jump
+    rule += ' '.join(after_jump)
+
 
     if full in ['True', 'true']:
         if not table:

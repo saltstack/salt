@@ -2273,7 +2273,9 @@ def _change_state(cmd,
         val = pkwargs[i]
         if val is _marker:
             pkwargs.pop(i, None)
+
     error = __salt__['cmd.run_stderr'](cmd, **pkwargs)
+
     if error:
         raise CommandExecutionError(
             'Error changing state for container \'{0}\' using command '
@@ -2434,8 +2436,7 @@ def start(name, **kwargs):
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
         )
-    # using vt while starting is better as lxc-start may go zombie.
-    # use_vt = kwargs.get('use_vt', True)
+    # lxc-start daemonize itself violently, we must not communicate with it
     use_vt = kwargs.get('use_vt', None)
     with_communicate = kwargs.get('with_communicate', False)
     return _change_state(cmd, name, 'running',
