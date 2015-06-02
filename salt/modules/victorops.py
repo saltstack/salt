@@ -99,24 +99,38 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
     Create an event in VictorOps. Designed for use in states.
 
     The following parameters are required:
-        :param message_type:        One of the following values: INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, RECOVERY.
+
+    :param message_type:            One of the following values: INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, RECOVERY.
 
     The following parameters are optional:
-        :param routing_key:         The key for where messages should be routed. By default, sent to
-                                    'everyone' route.
-        :param entity_id:           The name of alerting entity. If not provided, a random name will be assigned.
-        :param timestamp:           Timestamp of the alert in seconds since epoch. Defaults to the
-                                    time the alert is received at VictorOps.
-        :param state_start_time:    The time this entity entered its current state
-                                    (seconds since epoch). Defaults to the time alert is received.
-        :param state_message:       Any additional status information from the alert item.
-        :param entity_is_host:      Used within VictorOps to select the appropriate
-                                    display format for the incident.
-        :param entity_display_name: Used within VictorOps to display a human-readable name for the entity.
-        :param ack_message:         A user entered comment for the acknowledgment.
-        :param ack_author:          The user that acknowledged the incident.
 
-    :return:                    A dictionary with result, entity_id, and message if result was failure.
+    :param routing_key:             The key for where messages should be routed. By default, sent to
+                                    'everyone' route.
+
+    :param entity_id:               The name of alerting entity. If not provided, a random name will be assigned.
+
+    :param timestamp:               Timestamp of the alert in seconds since epoch. Defaults to the
+                                    time the alert is received at VictorOps.
+
+    :param timestamp_fmt            The date format for the timestamp parameter.
+
+    :param state_start_time:        The time this entity entered its current state
+                                    (seconds since epoch). Defaults to the time alert is received.
+
+    :param state_start_time_fmt:    The date format for the timestamp parameter.
+
+    :param state_message:           Any additional status information from the alert item.
+
+    :param entity_is_host:          Used within VictorOps to select the appropriate
+                                    display format for the incident.
+
+    :param entity_display_name:     Used within VictorOps to display a human-readable name for the entity.
+
+    :param ack_message:             A user entered comment for the acknowledgment.
+
+    :param ack_author:              The user that acknowledged the incident.
+
+    :return:                        A dictionary with result, entity_id, and message if result was failure.
 
     CLI Example:
 
@@ -124,8 +138,10 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
 
         salt myminion victorops.create_event message_type='CRITICAL' routing_key='everyone' \
                  entity_id='hostname/diskspace'
+
         salt myminion victorops.create_event message_type='ACKNOWLEDGEMENT' routing_key='everyone' \
                  entity_id='hostname/diskspace' ack_message='Acknowledged' ack_author='username'
+
         salt myminion victorops.create_event message_type='RECOVERY' routing_key='everyone' \
                  entity_id='hostname/diskspace'
 
