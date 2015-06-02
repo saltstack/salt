@@ -2642,25 +2642,26 @@ def human_size_to_bytes(human_size):
 
 def to_str(s, encoding=None):
     '''
-    Given unicode (py2), bytes, bytearray, or str, return str
+    Given str, bytes, bytearray, or unicode (py2), return str
     '''
     if isinstance(s, str):
         return s
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
             return s.decode(encoding or __salt_system_encoding__)
-        raise TypeError('expected bytes, bytearray, or str')
+        raise TypeError('expected str, bytes, or bytearray')
     else:
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
-            return s.encode(encoding or __salt_system_encoding__)
         if isinstance(s, bytearray):
             return str(s)
-        raise TypeError('expected str, unicode, or bytearray')
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+            return s.encode(encoding or __salt_system_encoding__)
+        raise TypeError('expected str, bytearray, or unicode')
 
 
 def to_bytes(s, encoding=None):
     '''
-    Given str, bytearray, or bytes, return bytes (str for python 2)
+    Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
+    python 2)
     '''
     if six.PY3:
         if isinstance(s, bytes):
@@ -2669,23 +2670,18 @@ def to_bytes(s, encoding=None):
             return bytes(s)
         if isinstance(s, str):
             return s.encode(encoding or __salt_system_encoding__)
-        raise TypeError('expected str, bytes, or bytearray')
+        raise TypeError('expected bytes, bytearray, or str')
     else:
-        if isinstance(s, str):
-            return s
-        if isinstance(s, bytearray):
-            return str(s)
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
-            return s.encode(encoding or __salt_system_encoding__)
-        raise TypeError('expected str or bytearray')
+        return to_str(s, encoding)
 
 
 def to_unicode(s, encoding=None):
     '''
-    Given str or unicode, return unicode (python 2 only)
+    Given str or unicode, return unicode (str for python 3)
     '''
-    if six.PY2:
+    if six.PY3:
+        return to_str(s, encoding)
+    else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
         return unicode(s)  # pylint: disable=incompatible-py3-code
-    raise TypeError('unicode object not available in python 3')
