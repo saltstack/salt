@@ -42,7 +42,12 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
-REQUIRED_FUNCS = ('zk_concurrency.lock', 'zk_concurrency.unlock')
+# TODO: use depends decorator to make these per function deps, instead of all or nothing
+REQUIRED_FUNCS = (
+    'zk_concurrency.lock',
+    'zk_concurrency.unlock',
+    'zk_concurrency.party_members',
+)
 __virtualname__ = 'zk_concurrency'
 
 
@@ -124,5 +129,32 @@ def unlock(path,
         ret['result'] = True
     else:
         ret['comment'] = 'Unable to find lease for path {0}'.format(path)
+
+    return ret
+
+
+def min_party(path,
+              zk_hosts,
+              min_nodes,
+              ):
+    '''
+    Ensure that there are `min_nodes` in the party at `path`
+    '''
+    ret = {'name': path,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    nodes = __salt__['zk_concurrency.party_members'](path, zk_hosts)
+    if not isinstance(nodes, list):
+        raise Exception('Error from zk_concurrency.party_members, return was not a list: {0}'.format(nodes))
+
+    num_nodes = len(nodes)
+
+    if num_nodes >= min_nodes:
+        ret['result'] = None if __opts__['test'] else True
+        ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Currently {0} nodes, which is < {1}'.format(num_nodes, min_nodes)
 
     return ret
