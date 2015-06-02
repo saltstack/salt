@@ -836,7 +836,7 @@ def _format_instance_info_select(vm, selection):
         vm_select_info['path'] = vm["config.files.vmPathName"]
 
     if 'tools_status' in selection:
-        vm_select_info['tools_status'] = str(vm["guest.toolsStatus"])
+        vm_select_info['tools_status'] = str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
 
     if ('private_ips' or 'mac_address' or 'networks') in selection:
         network_full_info = {}
