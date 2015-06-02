@@ -190,6 +190,7 @@ def list_absent(name, value):
                 .format(name, value)
             ret['changes'] = {'deleted': value}
         else:
+            ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'\
                 .format(name)
     else:
@@ -304,8 +305,10 @@ def append(name, value, convert=False):
                     .format(name, value)
                 ret['changes'] = {'added': value}
             else:
+                ret['result'] = False
                 ret['comment'] = 'Grain {0} is not a valid list'\
                     .format(name)
     else:
+        ret['result'] = False
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
