@@ -755,11 +755,12 @@ class UtilsTestCase(TestCase):
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             self.assertEqual(utils.to_str(un, 'utf-8'), ut)
+            self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), ut)
 
     def test_to_bytes(self):
+        for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+            self.assertRaises(TypeError, utils.to_bytes, x)
         if six.PY3:
-            for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
-                self.assertRaises(TypeError, utils.to_bytes, x)
             self.assertEqual(utils.to_bytes('xyzzy'), b'xyzzy')
             ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
             un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
@@ -767,7 +768,12 @@ class UtilsTestCase(TestCase):
             self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
             self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
         else:
-            self.assertRaises(TypeError, utils.to_bytes, '')
+            self.assertEqual(utils.to_bytes('xyzzy'), 'xyzzy')
+            ut = ''.join([chr(x) for x in (0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29)])
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            self.assertEqual(utils.to_bytes(ut), ut)
+            self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
+            self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
 
     def test_to_unicode(self):
         if six.PY3:
