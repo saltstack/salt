@@ -51,9 +51,8 @@ class _camconsts:
     SECTOR_SIZE = 'sector size'
     MEDIA_RPM = 'media RPM'
 
-
-_identify_attribs = {key: _camconsts.__dict__[key] for key in
-                     _camconsts.__dict__ if not key.startswith('__')}.values()
+_identify_attribs = [_camconsts.__dict__[key] for key in
+                     _camconsts.__dict__ if not key.startswith('__')]
 
 
 def _freebsd_disks():
