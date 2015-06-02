@@ -210,7 +210,7 @@ class SaltEvent(object):
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         # Only use the first 10 chars to keep longer hashes from exceeding the
         # max socket path length.
-        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
+        id_hash = hash_type(salt.utils.to_bytes(self.opts.get('id', ''))).hexdigest()[:10]
         if node == 'master':
             if self.opts.get('ipc_mode', '') == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
@@ -661,7 +661,7 @@ class AsyncEventPublisher(object):
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         # Only use the first 10 chars to keep longer hashes from exceeding the
         # max socket path length.
-        id_hash = hash_type(self.opts.get('id', '')).hexdigest()[:10]
+        id_hash = hash_type(salt.utils.to_bytes(self.opts.get('id', ''))).hexdigest()[:10]
         epub_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)

@@ -1923,11 +1923,8 @@ def date_cast(date):
         if isinstance(date, six.string_types):
             try:
                 if HAS_TIMELIB:
-                    if six.PY3:
-                        # yes, timelib.strtodatetime wants bytes, not str :/
-                        return timelib.strtodatetime(to_bytes(date))
-                    else:
-                        return timelib.strtodatetime(date)
+                    # py3: yes, timelib.strtodatetime wants bytes, not str :/
+                    return timelib.strtodatetime(to_bytes(date))
             except ValueError:
                 pass
 
@@ -2645,23 +2642,25 @@ def human_size_to_bytes(human_size):
 
 def to_str(s, encoding=None):
     '''
-    Given unicode (py2), bytes/bytearray (py3), or str, return str
+    Given unicode (py2), bytes, bytearray, or str, return str
     '''
     if isinstance(s, str):
         return s
     if six.PY3:
         if isinstance(s, (bytes, bytearray)):
             return s.decode(encoding or __salt_system_encoding__)
-        raise TypeError('expected bytes or str')
+        raise TypeError('expected bytes, bytearray, or str')
     else:
         if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return s.encode(encoding or __salt_system_encoding__)
-        raise TypeError('expected unicode or str')
+        if isinstance(s, bytearray):
+            return str(s)
+        raise TypeError('expected str, unicode, or bytearray')
 
 
 def to_bytes(s, encoding=None):
     '''
-    Given str, bytearray, or bytes, return bytes (python 3 only)
+    Given str, bytearray, or bytes, return bytes (str for python 2)
     '''
     if six.PY3:
         if isinstance(s, bytes):
@@ -2671,7 +2670,14 @@ def to_bytes(s, encoding=None):
         if isinstance(s, str):
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytes, or bytearray')
-    raise TypeError('bytes object not available in python 2')
+    else:
+        if isinstance(s, str):
+            return s
+        if isinstance(s, bytearray):
+            return str(s)
+        if isinstance(s, unicode):
+            return s.encode(encoding or __salt_system_encoding__)
+        raise TypeError('expected str or bytearray')
 
 
 def to_unicode(s, encoding=None):
