@@ -170,7 +170,6 @@ def query(url,
             data_file, data_render, data_renderer, template_dict, opts
         )
 
-    log.debug('Using {0} Method'.format(method))
     if method == 'POST':
         log.trace('POST Data: {0}'.format(pprint.pformat(data)))
 
@@ -273,6 +272,7 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
+        log.debug('data type {0}'.format(type(data)))
         result = sess.request(
             method, url, params=params, data=data, **req_kwargs
         )
@@ -281,6 +281,7 @@ def query(url,
             return {'handle': result}
 
         log.debug(result.url)
+        log.debug(result.request.__dict__)
         log.trace(data)
 
         result_status_code = result.status_code
