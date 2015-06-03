@@ -10,6 +10,7 @@ import subprocess
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -46,12 +47,13 @@ def version(context=None):
         ['systemctl', '--version'],
         close_fds=True,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
+    outstr = salt.utils.to_str(stdout)
     try:
-        ret = int(stdout.splitlines()[0].split()[-1])
+        ret = int(outstr.splitlines()[0].split()[-1])
     except (IndexError, ValueError):
         log.error(
             'Unable to determine systemd version from systemctl '
-            '--version, output follows:\n{0}'.format(stdout)
+            '--version, output follows:\n{0}'.format(outstr)
         )
         return None
     else:

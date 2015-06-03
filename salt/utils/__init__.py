@@ -589,8 +589,8 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
                 else:
                     log.info('PROFILING (dot): {0} generated'.format(fico))
                 log.trace('pyprof2calltree output:')
-                log.trace(pro.stdout.read().strip() +
-                          pro.stderr.read().strip())
+                log.trace(to_str(pro.stdout.read()).strip() +
+                          to_str(pro.stderr.read()).strip())
             else:
                 log.info('You can run {0} for additional stats.'.format(cmd))
         finally:
