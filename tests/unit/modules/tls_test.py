@@ -261,7 +261,17 @@ class TLSAddTestCase(TestCase):
             if 'extensions' in data.keys():
                 data['extensions'] = None
             return data
-        self.assertEqual(ignore_extensions(tls.cert_info(certp)), ret)
+
+        # older pyopenssl versions don't have extensions or
+        # signature_algorithms
+        def remove_not_in_result(source, reference):
+            if 'signature_algorithm' not in reference:
+                del source['signature_algorithm']
+            if 'extensions' not in reference:
+                del source['extensions']
+        result = ignore_extensions(tls.cert_info(certp))
+        remove_not_in_result(ret, result)
+        self.assertEqual(result, ret)
 
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
