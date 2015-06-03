@@ -2162,7 +2162,7 @@ def _change_state(cmd,
     # communicate with it, but just wait for the exit status
     pkwargs = {'python_shell': False,
                'with_communicate': with_communicate,
-               'use_vt': 'use_vt',
+               'use_vt': use_vt,
                'stdin': stdin,
                'stdout': stdout,
                'stderr': stderr}
