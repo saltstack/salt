@@ -2137,7 +2137,14 @@ def list_(extra=False, limit=None):
     return ret
 
 
-def _change_state(cmd, name, expected):
+def _change_state(cmd,
+                  name,
+                  expected,
+                  stdin=_marker,
+                  stdout=_marker,
+                  stderr=_marker,
+                  with_communicate=_marker,
+                  use_vt=_marker):
     pre = state(name)
     if pre == expected:
         return {'result': True,
@@ -2150,8 +2157,22 @@ def _change_state(cmd, name, expected):
         __salt__['cmd.run']('lxc-stop -k -n {0}'.format(name),
                             python_shell=False)
 
+    # certain lxc commands need to be taken with care (lxc-start)
+    # as te command itself mess with double forks; we must not
+    # communicate with it, but just wait for the exit status
+    pkwargs = {'python_shell': False,
+               'with_communicate': with_communicate,
+               'use_vt': use_vt,
+               'stdin': stdin,
+               'stdout': stdout,
+               'stderr': stderr}
+    for i in [a for a in pkwargs]:
+        val = pkwargs[i]
+        if val is _marker:
+            pkwargs.pop(i, None)
     cmd = '{0} -n {1}'.format(cmd, name)
-    error = __salt__['cmd.run_stderr'](cmd, python_shell=False)
+    error = __salt__['cmd.run_stderr'](cmd, **pkwargs)
+
     if error:
         raise CommandExecutionError(
             'Error changing state for container \'{0}\' using command '
@@ -2258,7 +2279,15 @@ def start(name, **kwargs):
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
         )
-    return _change_state('lxc-start -d', name, 'running')
+    # lxc-start daemonize itself violently, we must not communicate with it
+    use_vt = kwargs.get('use_vt', None)
+    with_communicate = kwargs.get('with_communicate', False)
+    return _change_state('lxc-start -d', name, 'running',
+                         stdout=None,
+                         stderr=None,
+                         stdin=None,
+                         with_communicate=with_communicate,
+                         use_vt=use_vt)
 
 
 def stop(name, kill=False):
