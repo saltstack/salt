@@ -616,6 +616,7 @@ VALID_OPTS = {
     'ssh_user': str,
     'ssh_scan_ports': str,
     'ssh_scan_timeout': float,
+    'ssh_identities_only': bool,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
