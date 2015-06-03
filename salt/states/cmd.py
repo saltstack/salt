@@ -632,6 +632,7 @@ def run(name,
         output_loglevel='debug',
         quiet=False,
         timeout=None,
+        ignore_timeout=False,
         use_vt=False,
         **kwargs):
     '''
@@ -725,6 +726,10 @@ def run(name,
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
+    ignore_timeout
+        Ignore the timeout of commands, which is useful for running nohup
+        processes.
 
     creates
         Only run if the file specified by ``creates`` does not exist.
@@ -823,6 +828,14 @@ def run(name,
         ret['changes'] = cmd_all
         ret['result'] = not bool(cmd_all['retcode'])
         ret['comment'] = 'Command "{0}" run'.format(name)
+
+        # Ignore timeout errors if asked (for nohups) and treat cmd as a success
+        if ignore_timeout:
+            trigger = 'Timed out after'
+            if ret['changes'].get('retcode') == 1 and trigger in ret['changes'].get('stdout'):
+                ret['changes']['retcode'] = 0
+                ret['result'] = True
+
         if stateful:
             ret = _reinterpreted_state(ret)
         if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
