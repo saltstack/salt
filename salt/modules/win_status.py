@@ -344,7 +344,7 @@ def master(master=None, connected=True):
             log.error('Failed netstat')
             raise
 
-        lines = data.split('\n')
+        lines = salt.utils.to_str(data).split('\n')
         for line in lines:
             if 'ESTABLISHED' not in line:
                 continue
