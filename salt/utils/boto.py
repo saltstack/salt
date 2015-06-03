@@ -46,7 +46,6 @@ from functools import partial
 from salt.ext.six import string_types  # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
-from salt._compat import ElementTree as ET
 
 # Import third party libs
 # pylint: disable=import-error
