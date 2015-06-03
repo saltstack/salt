@@ -2234,12 +2234,12 @@ def list_(extra=False, limit=None, path=None):
 def _change_state(cmd,
                   name,
                   expected,
-                  path=None,
                   stdin=_marker,
                   stdout=_marker,
                   stderr=_marker,
                   with_communicate=_marker,
-                  use_vt=_marker):
+                  use_vt=_marker,
+                  path=None):
     pre = state(name, path=path)
     if pre == expected:
         return {'result': True,
@@ -2256,6 +2256,10 @@ def _change_state(cmd,
         __salt__['cmd.run'](scmd,
                             python_shell=False)
 
+    if path and ' -P ' not in cmd:
+        cmd += ' -P {0}'.format(pipes.quote(path))
+    cmd += ' -n {0}'.format(name)
+
     # certain lxc commands need to be taken with care (lxc-start)
     # as te command itself mess with double forks; we must not
     # communicate with it, but just wait for the exit status
@@ -2269,10 +2273,6 @@ def _change_state(cmd,
         val = pkwargs[i]
         if val is _marker:
             pkwargs.pop(i, None)
-
-    if path and ' -P ' not in cmd:
-        cmd += ' -P {0}'.format(pipes.quote(path))
-    cmd += ' -n {0}'.format(name)
 
     error = __salt__['cmd.run_stderr'](cmd, **pkwargs)
 
@@ -2436,15 +2436,15 @@ def start(name, **kwargs):
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
         )
-    # using vt while starting is better as lxc-start may go zombie.
-    use_vt = kwargs.get('use_vt', True)
+    # lxc-start daemonize itself violently, we must not communicate with it
+    use_vt = kwargs.get('use_vt', None)
     with_communicate = kwargs.get('with_communicate', False)
     return _change_state(cmd, name, 'running',
-                         path=path,
                          stdout=None,
                          stderr=None,
                          stdin=None,
                          with_communicate=with_communicate,
+                         path=path,
                          use_vt=use_vt)
 
 
