@@ -430,7 +430,8 @@ def _run(cmd,
             ret['retcode'] = 1
             return ret
 
-        out, err = proc.stdout, proc.stderr
+        out = salt.utils.to_str(proc.stdout)
+        err = salt.utils.to_str(proc.stderr)
 
         if rstrip:
             if out is not None:
