@@ -30,6 +30,7 @@ Full list of builtin state modules
     boto_elb
     boto_iam
     boto_iam_role
+    boto_kms
     boto_lc
     boto_rds
     boto_route53

@@ -35,6 +35,7 @@ Full list of builtin execution modules
     boto_elasticache
     boto_elb
     boto_iam
+    boto_kms
     boto_rds
     boto_route53
     boto_secgroup
