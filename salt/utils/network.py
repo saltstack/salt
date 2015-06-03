@@ -1078,7 +1078,7 @@ def _sunos_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1124,7 +1124,7 @@ def _freebsd_remotes_on(port, which_end):
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1174,7 +1174,7 @@ def _windows_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1220,7 +1220,7 @@ def remotes_on_local_tcp_port(port):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
@@ -1273,7 +1273,7 @@ def remotes_on_remote_tcp_port(port):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
