@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 os.environ['TZ'] = 'UTC'
 time.tzset()
 
+
 def __virtual__():
     '''
     Only load this module if the ca config options are set
