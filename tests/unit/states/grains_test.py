@@ -11,7 +11,7 @@ import os
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 ensure_in_syspath('../../')
 
@@ -23,8 +23,6 @@ import integration
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase):
-
-    # 'present' function tests: 4
 
     def setUp(self):
         grains_test_dir = '__salt_test_state_grains'
@@ -41,6 +39,8 @@ class GrainsTestCase(TestCase):
                 'retcode': 0,
                 'stderr': '',
                 'stdout': ''}),
+            'grains.get':    grainsmod.get,
+            'grains.set':    grainsmod.set,
             'grains.setval': grainsmod.setval,
             'grains.delval': grainsmod.delval,
             'grains.append': grainsmod.append,
@@ -49,6 +49,8 @@ class GrainsTestCase(TestCase):
         }
         if not os.path.exists(os.path.join(integration.TMP, grains_test_dir)):
             os.mkdir(os.path.join(integration.TMP, grains_test_dir))
+
+    # 'present' function tests: 10
 
     def test_present_add(self):
         # Set a non existing grain
@@ -61,6 +63,28 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
+
+        # Set a non existing nested grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.present(
+            name='foo:is:nested',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': 'bar'}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+
+        # Set a non existing nested dict grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.present(
+            name='foo:is:nested',
+            value={'bar': 'is a dict'})
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'bar': 'is a dict'}}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': {'bar': 'is a dict'}}}})
 
     def test_present_already_set(self):
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
@@ -75,6 +99,30 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
 
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        # Nested grain already set
+        ret = grains.present(
+            name='foo:is:nested',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain is already set')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        # Nested dict grain already set
+        ret = grains.present(
+            name='foo:is',
+            value={'nested': 'bar'})
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain is already set')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+
     def test_present_overwrite(self):
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
         # Overwrite an existing grain
@@ -87,28 +135,6 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': 'newbar'})
 
-        # Overwrite a grain to a list
-        ret = grains.present(
-            name='foo',
-            value=['l1', 'l2'])
-        self.assertEqual(ret['result'], True)
-        self.assertEqual(ret['changes'], {'foo': ['l1', 'l2']})
-        self.assertEqual(
-            grains.__grains__,
-            {'a': 'aval', 'foo': ['l1', 'l2']})
-
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
-        # Fails setting a grain to a dict
-        ret = grains.present(
-            name='foo',
-            value={'k1': 'v1'})
-        self.assertEqual(ret['result'], False)
-        self.assertEqual(ret['comment'], 'Grain value cannot be dict')
-        self.assertEqual(ret['changes'], {})
-        self.assertEqual(
-            grains.__grains__,
-            {'a': 'aval', 'foo': 'bar'})
-
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
         # Clear a grain (set to None)
         ret = grains.present(
@@ -120,10 +146,220 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': None})
 
-    def test_present_unknown_failure(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        # Overwrite an existing nested grain
+        ret = grains.present(
+            name='foo:is:nested',
+            value='newbar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': 'newbar'}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'newbar'}}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Clear a nested grain (set to None)
+        ret = grains.present(
+            name='foo:is:nested',
+            value=None)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': None}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': None}}})
+
+    def test_present_fail_overwrite(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'val'}}}
+        # Overwrite an existing grain
+        ret = grains.present(
+            name='foo:is',
+            value='newbar')
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'val'}}}
+        # Clear a grain (set to None)
+        ret = grains.present(
+            name='foo:is',
+            value=None)
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
+
+    def test_present_fails_to_set_dict_or_list(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Fails to overwrite a grain to a list
+        ret = grains.present(
+            name='foo',
+            value=['l1', 'l2'])
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'The key \'foo\' exists and the '
+                                       + 'given value is a dict or a list. '
+                                       + 'Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Fails setting a grain to a dict
+        ret = grains.present(
+            name='foo',
+            value={'k1': 'v1'})
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'The key \'foo\' exists and the given '
+                                       + 'value is a dict or a list. Use '
+                                       + '\'force=True\' to overwrite.')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        # Fails to overwrite a nested grain to a list
+        ret = grains.present(
+            name='foo,is,nested',
+            value=['l1', 'l2'],
+            delimiter=',')
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(ret['comment'], 'The key \'foo:is:nested\' exists and the '
+                                       + 'given value is a dict or a list. '
+                                       + 'Use \'force=True\' to overwrite.')
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        # Fails setting a nested grain to a dict
+        ret = grains.present(
+            name='foo:is:nested',
+            value={'k1': 'v1'})
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'The key \'foo:is:nested\' exists and the '
+                                       + 'given value is a dict or a list. '
+                                       + 'Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+
+    def test_present_force_to_set_dict_or_list(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Force to overwrite a grain to a list
+        ret = grains.present(
+            name='foo',
+            value=['l1', 'l2'],
+            force=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Set grain foo to [\'l1\', \'l2\']')
+        self.assertEqual(ret['changes'], {'foo': ['l1', 'l2']})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['l1', 'l2']})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Force setting a grain to a dict
+        ret = grains.present(
+            name='foo',
+            value={'k1': 'v1'},
+            force=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Set grain foo to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['changes'], {'foo': {'k1': 'v1'}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'k1': 'v1'}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        # Force to overwrite a nested grain to a list
+        ret = grains.present(
+            name='foo,is,nested',
+            value=['l1', 'l2'],
+            delimiter=',',
+            force=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': ['l1', 'l2']}}})
+        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to [\'l1\', \'l2\']')
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': ['l1', 'l2']}}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}, 'and': 'other'}}
+        # Force setting a nested grain to a dict
+        ret = grains.present(
+            name='foo:is:nested',
+            value={'k1': 'v1'},
+            force=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
+
+    def test_present_fails_to_convert_value_to_key(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Fails converting a value to a nested grain key
+        ret = grains.present(
+            name='foo:is:nested',
+            value={'k1': 'v1'})
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'The key \'foo\' value is \'bar\', '
+                               + 'which is different from the provided '
+                               + 'key \'is\'. Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['changes'], {})
+
+    def test_present_overwrite_test(self):
+        grains.__opts__['test'] = True
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Overwrite an existing grain
+        ret = grains.present(
+            name='foo',
+            value='newbar')
+        self.assertEqual(ret['result'], None)
+        self.assertEqual(ret['changes'], {'new': 'foo'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
+
+    def test_present_convert_value_to_key(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'is'}
+        # Converts a value to a nested grain key
+        ret = grains.present(
+            name='foo:is:nested',
+            value={'k1': 'v1'})
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}}})
+
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['one', 'is', 'correct']}
+        # Converts a list element to a nested grain key
+        ret = grains.present(
+            name='foo:is:nested',
+            value={'k1': 'v1'})
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Set grain foo:is:nested to {\'k1\': \'v1\'}')
+        self.assertEqual(ret['changes'], {'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
+
+    @patch('salt.modules.grains.setval')
+    def test_present_unknown_failure(self, mocked_setval):
+        mocked_setval.return_value = 'Failed to set grain foo'
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
         # Unknown reason failure
-        grainsmod.__salt__['grains.setval'] = MagicMock()
         ret = grains.present(
             name='foo',
             value='baz')
@@ -134,7 +370,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
 
-    # 'absent' function tests: 3
+    # 'absent' function tests: 5
 
     def test_absent_already(self):
         # Unset a non existent grain
@@ -143,6 +379,17 @@ class GrainsTestCase(TestCase):
             name='foo')
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['comment'], 'Grain foo does not exist')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
+
+        # Unset a non existent nested grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.absent(
+            name='foo:is:nested')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo:is:nested does not exist')
         self.assertEqual(ret['changes'], {})
         self.assertEqual(
             grains.__grains__,
@@ -160,6 +407,54 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': None})
 
+        # Unset a nested grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        ret = grains.absent(
+            name='foo,is,nested',
+            delimiter=',')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value for grain foo:is:nested was set to None')
+        self.assertEqual(ret['changes'], {'grain': 'foo:is:nested', 'value': None})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['order', {'is': {'nested': None}}, 'correct']})
+
+        # Unset a nested value don't change anything
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']}
+        ret = grains.absent(
+            name='foo:is:nested')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo:is:nested does not exist')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']})
+
+    def test_absent_fails_nested_complex_grain(self):
+        # Unset a nested complex grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        ret = grains.absent(
+            name='foo:is')
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
+
+    def test_absent_force_nested_complex_grain(self):
+        # Unset a nested complex grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        ret = grains.absent(
+            name='foo:is',
+            force=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value for grain foo:is was set to None')
+        self.assertEqual(ret['changes'], {'grain': 'foo:is', 'value': None})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['order', {'is': None}, 'correct']})
+
     def test_absent_delete(self):
         # Delete a grain
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
@@ -172,6 +467,18 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval'})
+
+        # Delete a nested grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        ret = grains.absent(
+            name='foo:is:nested',
+            destructive=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo:is:nested was deleted')
+        self.assertEqual(ret['changes'], {'deleted': 'foo:is:nested'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['order', {'is': {}}, 'correct']})
 
     # 'append' function tests: 5
 
@@ -208,7 +515,6 @@ class GrainsTestCase(TestCase):
         ret = grains.append(
             name='foo',
             value='baz')
-        # Note from dr4Ke: should be false, IMO
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
         self.assertEqual(ret['changes'], {})
@@ -236,7 +542,6 @@ class GrainsTestCase(TestCase):
         ret = grains.append(
             name='foo',
             value='bar')
-        # Note from dr4Ke: should be false, IMO
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['comment'], 'Grain foo does not exist')
         self.assertEqual(ret['changes'], {})
@@ -244,7 +549,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval'})
 
-    # 'list_present' function tests: 5
+    # 'list_present' function tests: 6
 
     def test_list_present(self):
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
@@ -258,6 +563,17 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar', 'baz']})
 
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': ['bar']}}}
+        ret = grains.list_present(
+            name='foo:is:nested',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Append value baz to grain foo:is:nested')
+        self.assertEqual(ret['changes'], {'new': {'foo': {'is': {'nested': ['bar', 'baz']}}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': ['bar', 'baz']}}})
+
     def test_list_present_inexistent(self):
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
         ret = grains.list_present(
@@ -269,6 +585,18 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['baz']})
+
+    def test_list_present_inexistent_nested(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.list_present(
+            name='foo:is:nested',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Append value baz to grain foo:is:nested')
+        self.assertEqual(ret['changes'], {'new': {'foo': {'is': {'nested': ['baz']}}}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'is': {'nested': ['baz']}}})
 
     def test_list_present_not_a_list(self):
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
@@ -339,7 +667,6 @@ class GrainsTestCase(TestCase):
         ret = grains.list_absent(
             name='foo',
             value='bar')
-        # Note from dr4Ke: should be false, IMO
         self.assertEqual(ret['result'], False)
         self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
         self.assertEqual(ret['changes'], {})
