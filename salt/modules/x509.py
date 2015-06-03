@@ -12,7 +12,6 @@ import os
 import logging
 import hashlib
 import glob
-import M2Crypto
 import random
 import ctypes
 import tempfile
@@ -28,6 +27,15 @@ import salt.ext.six as six
 from salt.utils.odict import OrderedDict
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
+
+# Import 3rd Party Libs
+try:
+    import M2Crypto
+    HAS_M2 = True
+except ImportError:
+    HAS_M2 = False
+
+__virtualname__ = 'x509'
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +60,13 @@ EXT_NAME_MAPPINGS = OrderedDict([
                     ])
 
 CERT_DEFAULTS = {'days_valid': 365, 'version': 3, 'serial_bits': 64, 'algorithm': 'sha256'}
+
+
+def __virtual__():
+    if HAS_M2:
+        return __virtualname__
+    else:
+        return False
 
 
 class _Ctx(ctypes.Structure):

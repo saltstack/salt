@@ -38,31 +38,12 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.pkg.rpm
 from salt.exceptions import (
     CommandExecutionError, MinionError, SaltInvocationError
 )
 
 log = logging.getLogger(__name__)
-
-__QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
-
-# These arches compiled from the rpmUtils.arch python module source
-__ARCHES_64 = ('x86_64', 'athlon', 'amd64', 'ia32e', 'ia64', 'geode')
-__ARCHES_32 = ('i386', 'i486', 'i586', 'i686')
-__ARCHES_PPC = ('ppc', 'ppc64', 'ppc64iseries', 'ppc64pseries')
-__ARCHES_S390 = ('s390', 's390x')
-__ARCHES_SPARC = (
-    'sparc', 'sparcv8', 'sparcv9', 'sparcv9v', 'sparc64', 'sparc64v'
-)
-__ARCHES_ALPHA = (
-    'alpha', 'alphaev4', 'alphaev45', 'alphaev5', 'alphaev56',
-    'alphapca56', 'alphaev6', 'alphaev67', 'alphaev68', 'alphaev7'
-)
-__ARCHES_ARM = ('armv5tel', 'armv5tejl', 'armv6l', 'armv7l')
-__ARCHES_SH = ('sh3', 'sh4', 'sh4a')
-
-__ARCHES = __ARCHES_64 + __ARCHES_32 + __ARCHES_PPC + __ARCHES_S390 + \
-    __ARCHES_ALPHA + __ARCHES_ARM + __ARCHES_SH
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -87,41 +68,16 @@ def __virtual__():
     return False
 
 
-def _parse_pkginfo(line):
-    '''
-    A small helper to parse a repoquery; returns a namedtuple
-    '''
-    # Importing `collections` here since this function is re-namespaced into
-    # another module
-    import collections
-    pkginfo = collections.namedtuple(
-        'PkgInfo',
-        ('name', 'version', 'arch', 'repoid')
-    )
-
-    try:
-        name, pkg_version, release, arch, repoid = line.split('_|-')
-    # Handle unpack errors (should never happen with the queryformat we are
-    # using, but can't hurt to be careful).
-    except ValueError:
-        return None
-
-    if not _check_32(arch):
-        if arch not in (__grains__['osarch'], 'noarch'):
-            name += '.{0}'.format(arch)
-    if release:
-        pkg_version += '-{0}'.format(release)
-
-    return pkginfo(name, pkg_version, arch, repoid)
-
-
 def _repoquery_pkginfo(repoquery_args):
     '''
     Wrapper to call repoquery and parse out all the tuples
     '''
     ret = []
     for line in _repoquery(repoquery_args, ignore_stderr=True):
-        pkginfo = _parse_pkginfo(line)
+        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+            line,
+            osarch=__grains__['osarch']
+        )
         if pkginfo is not None:
             ret.append(pkginfo)
     return ret
@@ -143,7 +99,9 @@ def _check_repoquery():
             raise CommandExecutionError('Unable to install yum-utils')
 
 
-def _repoquery(repoquery_args, query_format=__QUERYFORMAT, ignore_stderr=False):
+def _repoquery(repoquery_args,
+               query_format=salt.utils.pkg.rpm.QUERYFORMAT,
+               ignore_stderr=False):
     '''
     Runs a repoquery command and returns a list of namedtuples
     '''
@@ -154,8 +112,8 @@ def _repoquery(repoquery_args, query_format=__QUERYFORMAT, ignore_stderr=False):
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
         comment = ''
-        # when checking for packages some yum modules return data via
-        # stderr that don't cause non-zero return codes.  A perfect
+        # When checking for packages some yum modules return data via
+        # stderr that don't cause non-zero return codes. j perfect
         # example of this is when spacewalk is installed but not yet
         # registered. We should ignore those when getting pkginfo.
         if 'stderr' in call and not salt.utils.is_true(ignore_stderr):
@@ -239,40 +197,6 @@ def _get_branch_option(**kwargs):
         log.info('Adding branch {0!r}'.format(branch))
         branch_arg = ('--branch={0!r}'.format(branch))
     return branch_arg
-
-
-def _check_32(arch):
-    '''
-    Returns True if both the OS arch and the passed arch are 32-bit
-    '''
-    return all(x in __ARCHES_32 for x in (__grains__['osarch'], arch))
-
-
-def _rpm_pkginfo(name):
-    '''
-    Parses RPM metadata and returns a pkginfo namedtuple
-    '''
-    # REPOID is not a valid tag for the rpm command. Remove it and replace it
-    # with 'none'
-    queryformat = __QUERYFORMAT.replace('%{REPOID}', 'none')
-    output = __salt__['cmd.run_stdout'](
-        'rpm -qp --queryformat {0!r} {1}'.format(_cmd_quote(queryformat), name),
-        output_loglevel='trace',
-        ignore_retcode=True
-    )
-    return _parse_pkginfo(output)
-
-
-def _rpm_installed(name):
-    '''
-    Parses RPM metadata to determine if the RPM target is already installed.
-    Returns the name of the installed package if found, otherwise None.
-    '''
-    pkg = _rpm_pkginfo(name)
-    try:
-        return pkg.name if pkg.name in list_pkgs() else None
-    except AttributeError:
-        return None
 
 
 def _get_yum_config():
@@ -391,11 +315,12 @@ def normalize_name(name):
     '''
     try:
         arch = name.rsplit('.', 1)[-1]
-        if arch not in __ARCHES + ('noarch',):
+        if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
             return name
     except ValueError:
         return name
-    if arch in (__grains__['osarch'], 'noarch') or _check_32(arch):
+    if arch in (__grains__['osarch'], 'noarch') \
+            or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
         return name[:-(len(arch) + 1)]
     return name
 
@@ -449,7 +374,7 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
         try:
             arch = name.rsplit('.', 1)[-1]
-            if arch not in __ARCHES:
+            if arch not in salt.utils.pkg.rpm.ARCHES:
                 arch = __grains__['osarch']
         except ValueError:
             arch = __grains__['osarch']
@@ -476,7 +401,7 @@ def latest_version(*names, **kwargs):
     for name in names:
         for pkg in (x for x in updates if x.name == name):
             if pkg.arch == 'noarch' or pkg.arch == namearch_map[name] \
-                    or _check_32(pkg.arch):
+                    or salt.utils.pkg.rpm.check_32(pkg.arch):
                 ret[name] = pkg.version
                 # no need to check another match, if there was one
                 break
@@ -926,13 +851,11 @@ def install(name=None,
         architecture as an actual part of the name such as kernel modules
         which match a specific kernel version.
 
+        .. code-block:: bash
+
+            salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+
         .. versionadded:: 2014.7.0
-
-    Example:
-
-    .. code-block:: bash
-
-        salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
 
 
     Returns a dict containing the new package names and versions::
@@ -976,36 +899,63 @@ def install(name=None,
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
-            rpm_info = _rpm_pkginfo(pkg_source)
-            if rpm_info is not None:
-                pkg_params_items.append([rpm_info.name, rpm_info.version, pkg_source])
+            if 'lowpkg.bin_pkg_info' in __salt__:
+                rpm_info = __salt__['lowpkg.bin_pkg_info'](pkg_source)
             else:
-                pkg_params_items.append([pkg_source, None, pkg_source])
+                rpm_info = None
+            if rpm_info is None:
+                log.error(
+                    'pkg.install: Unable to get rpm information for {0}. '
+                    'Version comparisons will be unavailable, and return '
+                    'data may be inaccurate if reinstall=True.'
+                    .format(pkg_source)
+                )
+                pkg_params_items.append([pkg_source])
+            else:
+                pkg_params_items.append(
+                    [rpm_info['name'], pkg_source, rpm_info['version']]
+                )
 
     for pkg_item_list in pkg_params_items:
-        pkgname = pkg_item_list[0]
-        version_num = pkg_item_list[1]
-        if version_num is None:
-            if reinstall and pkg_type == 'repository' and pkgname in old:
-                to_reinstall[pkgname] = pkgname
-            else:
-                targets.append(pkgname)
+        if pkg_type == 'repository':
+            pkgname, version_num = pkg_item_list
         else:
-            cver = old.get(pkgname, '')
-            arch = ''
             try:
-                namepart, archpart = pkgname.rsplit('.', 1)
+                pkgname, pkgpath, version_num = pkg_item_list
             except ValueError:
-                pass
-            else:
-                if archpart in __ARCHES:
-                    arch = '.' + archpart
-                    pkgname = namepart
+                pkgname = None
+                pkgpath = pkg_item_list[0]
+                version_num = None
 
+        if version_num is None:
             if pkg_type == 'repository':
+                if reinstall and pkgname in old:
+                    to_reinstall[pkgname] = pkgname
+                else:
+                    targets.append(pkgname)
+            else:
+                targets.append(pkgpath)
+        else:
+            # If we are installing a package file and not one from the repo,
+            # and version_num is not None, then we can assume that pkgname is
+            # not None, since the only way version_num is not None is if RPM
+            # metadata parsing was successful.
+            if pkg_type == 'repository':
+                arch = ''
+                try:
+                    namepart, archpart = pkgname.rsplit('.', 1)
+                except ValueError:
+                    pass
+                else:
+                    if archpart in salt.utils.pkg.rpm.ARCHES:
+                        arch = '.' + archpart
+                        pkgname = namepart
+
                 pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
             else:
-                pkgstr = pkg_item_list[2]
+                pkgstr = pkgpath
+
+            cver = old.get(pkgname, '')
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
@@ -1051,25 +1001,14 @@ def install(name=None,
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
 
-    versionName = pkgname
     ret = salt.utils.compare_dicts(old, new)
 
-    if sources is not None:
-        versionName = pkgname + '-' + new.get(pkgname, '')
-        if pkgname in ret:
-            ret[versionName] = ret.pop(pkgname)
     for pkgname in to_reinstall:
-        if not versionName not in old:
-            ret.update({versionName: {'old': old.get(pkgname, ''),
+        if pkgname not in ret or pkgname in old:
+            ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
-        else:
-            if versionName not in ret:
-                ret.update({versionName: {'old': old.get(pkgname, ''),
-                                      'new': new.get(pkgname, '')}})
     if ret:
         __context__.pop('pkg._avail', None)
-    elif sources is not None:
-        ret = {versionName: {}}
     return ret
 
 

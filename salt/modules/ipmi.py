@@ -1,30 +1,34 @@
 # -*- coding: utf-8 -*-
 '''
-Support IPMI commands over LAN
+Support IPMI commands over LAN. This module does not talk to the local
+systems hardware through IPMI drivers. It uses a python module `pyghmi`.
 
-:depends: Python module pyghmi
+:depends: Python module pyghmi.
+    You can install pyghmi using pip:
 
-:warning: pyghmi version >= 0.6.21
+    .. code-block:: bash
 
-you can install pyghmi using somthing like:
+        pip install pyghmi
 
-    git clone https://github.com/stackforge/pyghmi.git
-    sudo mv pyghmi/pyghmi /usr/lib/python2.6/site-packages/pyghmi
+:configuration: The following configuration defaults can be
+    define (pillar or config files):
 
-The following configuration defaults can be define in the pillar:
+    .. code-block:: python
 
-    ipmi.config:
-        api_host: 127.0.0.1
-        api_user: admin
-        api_pass: apassword
-        api_port: 623
-        api_kg: None
+        ipmi.config:
+            api_host: 127.0.0.1
+            api_user: admin
+            api_pass: apassword
+            api_port: 623
+            api_kg: None
 
-most calls can override the api connection config defaults:
+    Usage can override the config defaults:
 
-    salt-call ipmi.get_user api_host=myipmienabled.system
-                            api_user=admin api_pass=pass
-                            uid=1
+    .. code-block:: bash
+
+            salt-call ipmi.get_user api_host=myipmienabled.system
+                                    api_user=admin api_pass=pass
+                                    uid=1
 '''
 
 # Import Python Libs
@@ -54,7 +58,7 @@ def _get_config(**kwargs):
         'api_port': 623,
         'api_user': 'admin',
         'api_pass': '',
-        'api_key': None,
+        'api_kg': None,
         'api_login_timeout': 2,
     }
     if '__salt__' in globals():
@@ -65,7 +69,7 @@ def _get_config(**kwargs):
     return config
 
 
-class IpmiCommand(object):
+class _IpmiCommand(object):
     o = None
 
     def __init__(self, **kwargs):
@@ -73,7 +77,7 @@ class IpmiCommand(object):
         config = _get_config(**kwargs)
         self.o = command.Command(bmc=config['api_host'], userid=config['api_user'],
                                  password=config['api_pass'], port=config['api_port'],
-                                 kg=config['api_key'])
+                                 kg=config['api_kg'])
 
     def __enter__(self):
         return self.o
@@ -83,7 +87,7 @@ class IpmiCommand(object):
             self.o.ipmi_session.logout()
 
 
-class IpmiSession(object):
+class _IpmiSession(object):
     o = None
 
     def _onlogon(self, response):
@@ -97,7 +101,7 @@ class IpmiSession(object):
                                  userid=config['api_user'],
                                  password=config['api_pass'],
                                  port=config['api_port'],
-                                 kg=config['api_key'],
+                                 kg=config['api_kg'],
                                  onlogon=self._onlogon)
         while not self.o.logged:
             # override timeout
@@ -126,10 +130,11 @@ def raw_command(netfn, command, bridge_request=None, data=(), retry=True, delay_
                         the bridge request.
     :param data: Command data as a tuple or list
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :returns: dict -- The response from IPMI device
 
@@ -140,7 +145,7 @@ def raw_command(netfn, command, bridge_request=None, data=(), retry=True, delay_
         salt-call ipmi.raw_command netfn=0x06 command=0x46 data=[0x02]
         # this will return the name of the user with id 2 in bytes
     '''
-    with IpmiSession(**kwargs) as s:
+    with _IpmiSession(**kwargs) as s:
         r = s.raw_command(netfn=int(netfn),
                         command=int(command),
                         bridge_request=bridge_request,
@@ -156,10 +161,11 @@ def fast_connect_test(**kwargs):
     This uses an aggressive timeout value!
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -170,7 +176,7 @@ def fast_connect_test(**kwargs):
     try:
         if 'api_login_timeout' not in kwargs:
             kwargs['api_login_timeout'] = 0
-        with IpmiSession(**kwargs) as s:
+        with _IpmiSession(**kwargs) as s:
             # TODO: should a test command be fired?
             #s.raw_command(netfn=6, command=1, retry=False)
             return True
@@ -187,51 +193,50 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
     Set channel access
 
     :param channel: number [1:7]
-
-    :param access_update_mode:
-        dont_change  = don't set or change Channel Access
-        non_volatile = set non-volatile Channel Access
-        volatile     = set volatile (active) setting of Channel Access
+    :param access_update_mode: one of
+        - 'dont_change'  = don't set or change Channel Access
+        - 'non_volatile' = set non-volatile Channel Access
+        - 'volatile'     = set volatile (active) setting of Channel Access
 
     :param alerting: PEF Alerting Enable/Disable
-    True  = enable PEF Alerting
-    False = disable PEF Alerting on this channel
-            (Alert Immediate command can still be used to generate alerts)
+        - True  = enable PEF Alerting
+        - False = disable PEF Alerting on this channel
+                (Alert Immediate command can still be used to generate alerts)
 
     :param per_msg_auth: Per-message Authentication
-    True  = enable
-    False = disable Per-message Authentication. [Authentication required to
-            activate any session on this channel, but authentication not
-            used on subsequent packets for the session.]
+        - True  = enable
+        - False = disable Per-message Authentication. [Authentication required to
+                activate any session on this channel, but authentication not
+                used on subsequent packets for the session.]
 
     :param user_level_auth: User Level Authentication Enable/Disable.
-    True  = enable User Level Authentication. All User Level commands are
-        to be authenticated per the Authentication Type that was
-        negotiated when the session was activated.
-    False = disable User Level Authentication. Allow User Level commands to
-        be executed without being authenticated.
-        If the option to disable User Level Command authentication is
-        accepted, the BMC will accept packets with Authentication Type
-        set to None if they contain user level commands.
-        For outgoing packets, the BMC returns responses with the same
-        Authentication Type that was used for the request.
+        - True  = enable User Level Authentication. All User Level commands are
+            to be authenticated per the Authentication Type that was
+            negotiated when the session was activated.
+        - False = disable User Level Authentication. Allow User Level commands to
+            be executed without being authenticated.
+            If the option to disable User Level Command authentication is
+            accepted, the BMC will accept packets with Authentication Type
+            set to None if they contain user level commands.
+            For outgoing packets, the BMC returns responses with the same
+            Authentication Type that was used for the request.
 
     :param access_mode: Access Mode for IPMI messaging
-    (PEF Alerting is enabled/disabled separately from IPMI messaging)
-    disabled = disabled for IPMI messaging
-    pre_boot = pre-boot only channel only available when system is in a
-            powered down state or in BIOS prior to start of boot.
-    always   = channel always available regardless of system mode.
-            BIOS typically dedicates the serial connection to the BMC.
-    shared   = same as always available, but BIOS typically leaves the
-            serial port available for software use.
+        (PEF Alerting is enabled/disabled separately from IPMI messaging)
+        * disabled = disabled for IPMI messaging
+        * pre_boot = pre-boot only channel only available when system is in a
+                powered down state or in BIOS prior to start of boot.
+        * always   = channel always available regardless of system mode.
+                BIOS typically dedicates the serial connection to the BMC.
+        * shared   = same as always available, but BIOS typically leaves the
+                serial port available for software use.
 
     :param privilege_update_mode: Channel Privilege Level Limit.
         This value sets the maximum privilege level
         that can be accepted on the specified channel.
-        dont_change  = don't set or change channel Privilege Level Limit
-        non_volatile = non-volatile Privilege Level Limit according
-        volatile     = volatile setting of Privilege Level Limit
+        * dont_change  = don't set or change channel Privilege Level Limit
+        * non_volatile = non-volatile Privilege Level Limit according
+        * volatile     = volatile setting of Privilege Level Limit
 
     :param privilege_level: Channel Privilege Level Limit
         * reserved      = unused
@@ -242,10 +247,11 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
         * proprietary   = used by OEM
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -253,7 +259,7 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
 
         salt-call ipmi.set_channel_access privilege_level='administrator'
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_channel_access(channel, access_update_mode, alerting, per_msg_auth, user_level_auth,
                                     access_mode, privilege_update_mode, privilege_level)
 
@@ -264,33 +270,35 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
 
     :param channel: number [1:7]
     :param read_mode:
-        non_volatile  = get non-volatile Channel Access
-        volatile      = get present volatile (active) setting of Channel Access
+        - non_volatile  = get non-volatile Channel Access
+        - volatile      = get present volatile (active) setting of Channel Access
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
-    :return: A Python dict with the following keys/values::
-        {
-        - alerting:
-        - per_msg_auth:
-        - user_level_auth:
-        - access_mode:{
-            0: 'disabled',
-            1: 'pre_boot',
-            2: 'always',
-            3: 'shared'
+    :return: A Python dict with the following keys/values:
+        .. code-block:: python
+            {
+                alerting:
+                per_msg_auth:
+                user_level_auth:
+                access_mode:{ (ONE OF)
+                    0: 'disabled',
+                    1: 'pre_boot',
+                    2: 'always',
+                    3: 'shared'
+                }
+                privilege_level: { (ONE OF)
+                    1: 'callback',
+                    2: 'user',
+                    3: 'operator',
+                    4: 'administrator',
+                    5: 'proprietary',
+                }
             }
-        - privilege_level: {
-            1: 'callback',
-            2: 'user',
-            3: 'operator',
-            4: 'administrator',
-            5: 'proprietary'
-            }
-        }
 
     CLI Examples:
 
@@ -298,7 +306,7 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
 
         salt-call ipmi.get_channel_access channel=1
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_channel_access(channel)
 
 
@@ -308,10 +316,11 @@ def get_channel_info(channel=14, **kwargs):
 
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         session_support:
@@ -328,7 +337,7 @@ def get_channel_info(channel=14, **kwargs):
 
         salt-call ipmi.get_channel_info
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_channel_info(channel)
 
 
@@ -373,18 +382,19 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
     :param privilege_level:
     User Privilege Limit. (Determines the maximum privilege level that the
     user is allowed to switch to on the specified channel.)
-        * callback
-        * user
-        * operator
-        * administrator
-        * proprietary
-        * no_access
+        - callback
+        - user
+        - operator
+        - administrator
+        - proprietary
+        - no_access
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -392,7 +402,7 @@ def set_user_access(uid, channel=14, callback=True, link_auth=True, ipmi_msg=Tru
 
         salt-call ipmi.set_user_access uid=2 privilege_level='operator'
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_user_access(uid, channel, callback, link_auth, ipmi_msg, privilege_level)
 
 
@@ -403,22 +413,23 @@ def get_user_access(uid, channel=14, **kwargs):
     :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         channel_info:
-            max_user_count = maximum number of user IDs on this channel
-            enabled_users = count of User ID slots presently in use
-            users_with_fixed_names = count of user IDs with fixed names
+            - max_user_count = maximum number of user IDs on this channel
+            - enabled_users = count of User ID slots presently in use
+            - users_with_fixed_names = count of user IDs with fixed names
         access:
-            callback
-            link_auth
-            ipmi_msg
-            privilege_level: [reserved, callback, user, operator
-                             administrator, proprietary, no_access]
+            - callback
+            - link_auth
+            - ipmi_msg
+            - privilege_level: [reserved, callback, user, operator
+                               administrator, proprietary, no_access]
 
 
 
@@ -429,7 +440,7 @@ def get_user_access(uid, channel=14, **kwargs):
         salt-call ipmi.get_user_access uid=2
     '''
     ## user access available during call-in or callback direct connection
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_user_access(uid, channel=channel)
 
 
@@ -440,10 +451,11 @@ def set_user_name(uid, name, **kwargs):
     :param uid: user number [1:16]
     :param name: username (limit of 16bytes)
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -451,7 +463,7 @@ def set_user_name(uid, name, **kwargs):
 
         salt-call ipmi.set_user_name uid=2 name='steverweber'
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_user_name(uid, name)
 
 
@@ -462,10 +474,11 @@ def get_user_name(uid, return_none_on_error=True, **kwargs):
     :param uid: user number [1:16]
     :param return_none_on_error: return None on error
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -473,7 +486,7 @@ def get_user_name(uid, return_none_on_error=True, **kwargs):
 
         salt-call ipmi.get_user_name uid=2
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_user_name(uid, return_none_on_error=True)
 
 
@@ -484,17 +497,18 @@ def set_user_password(uid, mode='set_password', password=None, **kwargs):
     :param uid: id number of user.  see: get_names_uid()['name']
 
     :param mode:
-        disable       = disable user connections
-        enable        = enable user connections
-        set_password  = set or ensure password
-        test_password = test password is correct
+        - disable       = disable user connections
+        - enable        = enable user connections
+        - set_password  = set or ensure password
+        - test_password = test password is correct
     :param password: max 16 char string
         (optional when mode is [disable or enable])
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         True on success
@@ -508,7 +522,7 @@ def set_user_password(uid, mode='set_password', password=None, **kwargs):
                                          uid=1 password=newPass
         salt-call ipmi.set_user_password uid=1 mode=enable
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         s.set_user_password(uid, mode='set_password', password=password)
     return True
 
@@ -524,10 +538,11 @@ def get_health(**kwargs):
     good health: {'badreadings': [], 'health': 0}
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -535,7 +550,7 @@ def get_health(**kwargs):
 
         salt-call ipmi.get_health api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_health()
 
 
@@ -547,10 +562,11 @@ def get_power(**kwargs):
     either 'on' or 'off' to indicate current state.
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -558,7 +574,7 @@ def get_power(**kwargs):
 
         salt-call ipmi.get_power api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_power()['powerstate']
 
 
@@ -569,10 +585,11 @@ def get_sensor_data(**kwargs):
     Iterates sensor reading objects
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -580,7 +597,7 @@ def get_sensor_data(**kwargs):
 
         salt-call ipmi.get_sensor_data api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         data = {}
         for reading in s.get_sensor_data():
             data[reading['name']] = reading
@@ -597,10 +614,11 @@ def get_bootdev(**kwargs):
     next reboot.
 
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Example:
 
@@ -608,7 +626,7 @@ def get_bootdev(**kwargs):
 
         salt-call ipmi.get_bootdev api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.get_bootdev()
 
 
@@ -619,19 +637,20 @@ def set_power(state='power_on', wait=True, **kwargs):
     :param name:
         * power_on -- system turn on
         * power_off -- system turn off (without waiting for OS)
-        * shutdown' -- request OS proper shutdown
-        * reset' -- reset (without waiting for OS)
-        * boot' -- If system is off, then 'on', else 'reset'
+        * shutdown -- request OS proper shutdown
+        * reset -- reset (without waiting for OS)
+        * boot -- If system is off, then 'on', else 'reset'
 
     :param ensure: If (bool True), do not return until system actually completes
                 requested state change for 300 seconds.
                 If a non-zero (int), adjust the wait time to the
                 requested number of seconds
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :returns: dict -- A dict describing the response retrieved
 
@@ -645,7 +664,7 @@ def set_power(state='power_on', wait=True, **kwargs):
         state = 'on'
     if state is False or state == 'power_off':
         state = 'off'
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_power(state, wait=wait)
 
 
@@ -670,10 +689,11 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
                     In practice, this flag not being set does not preclude
                     UEFI boot on any system I've encountered.
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :returns: dict or True -- If callback is not provided, the response
 
@@ -683,7 +703,7 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
 
         salt-call ipmi.set_bootdev bootdev=network persist=True
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_bootdev(bootdev)
 
 
@@ -698,10 +718,11 @@ def set_identify(on=True, duration=600, **kwargs):
     :param duration: Set if wanting to request turn on for a duration
                     in seconds, None = indefinitely.
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -709,7 +730,7 @@ def set_identify(on=True, duration=600, **kwargs):
 
         salt-call ipmi.set_identify
     '''
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         return s.set_identify(on=on, duration=duration)
 
 
@@ -718,6 +739,12 @@ def get_channel_max_user_count(channel=14, **kwargs):
     Get max users in channel
 
     :param channel: number [1:7]
+    :param kwargs:
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
     :return: int -- often 16
 
     CLI Examples:
@@ -734,22 +761,25 @@ def get_user(uid, channel=14, **kwargs):
     '''
     Get user from uid and access on channel
 
+    :param uid: user number [1:16]
+    :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         name: (str)
         uid: (int)
         channel: (int)
         access:
-            callback (bool)
-            link_auth (bool)
-            ipmi_msg (bool)
-            privilege_level: (str)[callback, user, operatorm administrator, proprietary, no_access]
-
+            - callback (bool)
+            - link_auth (bool)
+            - ipmi_msg (bool)
+            - privilege_level: (str)[callback, user, operatorm administrator,
+                                    proprietary, no_access]
     CLI Examples:
 
     .. code-block:: bash
@@ -766,23 +796,23 @@ def get_users(channel=14, **kwargs):
     '''
     get list of users and access information
 
-    :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     :return:
         name: (str)
         uid: (int)
         channel: (int)
         access:
-            callback (bool)
-            link_auth (bool)
-            ipmi_msg (bool)
-            privilege_level: (str)[callback, user, operatorm administrator,
+            - callback (bool)
+            - link_auth (bool)
+            - ipmi_msg (bool)
+            - privilege_level: (str)[callback, user, operatorm administrator,
                                     proprietary, no_access]
 
     CLI Examples:
@@ -791,7 +821,7 @@ def get_users(channel=14, **kwargs):
 
         salt-call ipmi.get_users api_host=172.168.0.7
     '''
-    with IpmiCommand(**kwargs) as c:
+    with _IpmiCommand(**kwargs) as c:
         return c.get_users(channel)
 
 
@@ -810,10 +840,11 @@ def create_user(uid, name, password, channel=14, callback=False,
         * proprietary
         * no_access
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -821,7 +852,7 @@ def create_user(uid, name, password, channel=14, callback=False,
 
         salt-call ipmi.create_user uid=2 name=steverweber api_host=172.168.0.7 api_pass=nevertell
     '''
-    with IpmiCommand(**kwargs) as c:
+    with _IpmiCommand(**kwargs) as c:
         return c.create_user(uid, name, password, channel, callback,
                              link_auth, ipmi_msg, privilege_level)
 
@@ -833,10 +864,11 @@ def user_delete(uid, channel=14, **kwargs):
     :param uid: user number [1:16]
     :param channel: number [1:7]
     :param kwargs:
-        api_host=127.0.0.1
-        api_user=admin
-        api_pass=example
-        api_port=623
+        - api_host=127.0.0.1
+        - api_user=admin
+        - api_pass=example
+        - api_port=623
+        - api_kg=None
 
     CLI Examples:
 
@@ -844,5 +876,5 @@ def user_delete(uid, channel=14, **kwargs):
 
         salt-call ipmi.user_delete uid=2
     '''
-    with IpmiCommand(**kwargs) as c:
+    with _IpmiCommand(**kwargs) as c:
         return c.user_delete(uid, channel)
