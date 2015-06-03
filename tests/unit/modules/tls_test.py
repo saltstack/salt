@@ -27,6 +27,7 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
+from salttesting.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.modules import tls
@@ -273,6 +274,7 @@ class TLSAddTestCase(TestCase):
         remove_not_in_result(ret, result)
         self.assertEqual(result, ret)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_ca(self):
@@ -307,6 +309,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_ca(self):
@@ -344,6 +347,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_csr(self):
@@ -378,6 +382,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_csr(self):
@@ -415,6 +420,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_self_signed_cert(self):
@@ -449,6 +455,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_self_signed_cert(self):
@@ -483,6 +490,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_ca_signed_cert(self):
@@ -513,6 +521,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_ca_signed_cert(self):
@@ -547,6 +556,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_create_pkcs12(self):
@@ -579,6 +589,7 @@ class TLSAddTestCase(TestCase):
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
 
+    @destructiveTest
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
     def test_recreate_pkcs12(self):
