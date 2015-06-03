@@ -74,5 +74,5 @@ class ConsulPillarTestCase(TestCase):
         test_dict = {}
         with patch.dict(test_dict, SIMPLE_DICT):
             self.assertDictEqual(pillar.dict_merge(test_dict, SIMPLE_DICT), SIMPLE_DICT)
-        with patch.dict(test_dict, { 'key1': { 'key3': {'key4': 'value'}}}):
-            self.assertDictEqual(pillar.dict_merge(test_dict, SIMPLE_DICT), { 'key1': { 'key2': 'val1', 'key3': {'key4': 'value'}}})
+        with patch.dict(test_dict, {'key1': {'key3': {'key4': 'value'}}}):
+            self.assertDictEqual(pillar.dict_merge(test_dict, SIMPLE_DICT), {'key1': {'key2': 'val1', 'key3': {'key4': 'value'}}})
