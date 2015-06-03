@@ -434,7 +434,7 @@ each cloud profile. Note that the number of instance stores varies by instance
 type.  If more mappings are provided than are supported by the instance type,
 mappings will be created in the order provided and additional mappings will be
 ignored. Consult the `AWS documentation`_ for a listing of the available
-instance stores, device names, and mount points.
+instance stores, and device names.
 
 .. code-block:: yaml
 
@@ -465,7 +465,6 @@ existing volume use the ``volume_id`` parameter.
 .. code-block:: yaml
 
     device: /dev/xvdj
-    mount_point: /mnt/my_ebs
     volume_id: vol-12345abcd
 
 Or, to create a volume from an EBS snapshot, use the ``snapshot`` parameter.
@@ -473,7 +472,6 @@ Or, to create a volume from an EBS snapshot, use the ``snapshot`` parameter.
 .. code-block:: yaml
 
     device: /dev/xvdj
-    mount_point: /mnt/my_ebs
     snapshot: snap-abcd12345
 
 Note that ``volume_id`` will take precedence over the ``snapshot`` parameter.
