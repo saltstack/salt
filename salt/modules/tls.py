@@ -39,6 +39,9 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+# Always use UTC for certificate info
+os.environ['TZ'] = 'UTC'
+time.tzset()
 
 def __virtual__():
     '''

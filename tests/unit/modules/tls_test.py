@@ -230,7 +230,7 @@ class TLSAddTestCase(TestCase):
             ca_name,
             ca_name)
         ret = {
-            'not_after': 1462405161.0,
+            'not_after': 1462379961.0,
             'signature_algorithm': 'sha256WithRSAEncryption',
             'extensions': None,
             'fingerprint': ('96:72:B3:0A:1D:34:37:05:75:57:44:7E:08:81:A7:09:'
@@ -244,7 +244,7 @@ class TLSAddTestCase(TestCase):
                 'ST': 'Utah',
                 'emailAddress':
                 'xyz@pdq.net'},
-            'not_before': 1430869161.0,
+            'not_before': 1430843961.0,
             'issuer': {
                 'C': 'US',
                 'CN': 'localhost',
