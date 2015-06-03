@@ -497,9 +497,16 @@ def _virtual(osdata):
 
         cmd = '{0} {1}'.format(command, ' '.join(args))
 
-        ret = __salt__['cmd.run_all'](cmd)
+        try:
+            ret = __salt__['cmd.run_all'](cmd)
 
-        if ret['retcode'] > 0:
+            if ret['retcode'] > 0:
+                if salt.log.is_logging_configured():
+                    if salt.utils.is_windows():
+                        continue
+                    failed_commands.add(command)
+                continue
+        except salt.exceptions.CommandExecutionError:
             if salt.log.is_logging_configured():
                 if salt.utils.is_windows():
                     continue
