@@ -1,230 +1,352 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+unit tests for the grains state
 '''
-# Import Python libs
+
 from __future__ import absolute_import
-
-# Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch
-)
-
+# Import Salt Testing libs
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 ensure_in_syspath('../../')
 
-# Import Salt Libs
-from salt.states import grains
+from salt.modules import grains as grainsmod
+from salt.states import grains as grains
 
-grains.__opts__ = {}
-grains.__salt__ = {}
-grains.__grains__ = {}
+grainsmod.__opts__ = grains.__opts__ = {
+    'test': False,
+    'conf_file': '/tmp/__salt_test_state_grains',
+    'cachedir':  '/tmp/__salt_test_state_grains_cache_dir',
+}
+
+grainsmod.__salt__ = grains.__salt__ = {
+    'cmd.run_all': MagicMock(return_value={
+        'pid': 5,
+        'retcode': 0,
+        'stderr': '',
+        'stdout': ''}),
+    'grains.setval': grainsmod.setval,
+    'grains.delval': grainsmod.delval,
+    'grains.append': grainsmod.append,
+    'grains.remove': grainsmod.remove,
+}
 
 
+@patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase):
-    '''
-    Test cases for salt.states.grains
-    '''
-    name = 'cheese'
-    value = 'edam'
 
-    # 'present' function tests: 1
+    # 'present' function tests: 4
 
-    def test_present(self):
-        '''
-        Test to ensure that a grain is set
-        '''
-        ret = {'comment': 'Grain value cannot be dict',
-               'changes': {}, 'name': self.name, 'result': False}
+    def test_present_add(self):
+        # Set a non existing grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.present(
+            name='foo',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': 'bar'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
 
-        ret1 = {'changes': {}, 'name': self.name, 'result': True,
-                'comment': 'Grain is already set'}
+    def test_present_already_set(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Grain already set
+        ret = grains.present(
+            name='foo',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain is already set')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
 
-        ret2 = {'changes': {'new': self.name}, 'name': self.name,
-                'result': None, 'comment': 'Grain cheese is set to be added'}
+    def test_present_overwrite(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Overwrite an existing grain
+        ret = grains.present(
+            name='foo',
+            value='newbar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': 'newbar'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'newbar'})
 
-        ret3 = {'changes': {}, 'name': self.name, 'result': False,
-                'comment': 'Failed to set grain cheese'}
+        # Overwrite a grain to a list
+        ret = grains.present(
+            name='foo',
+            value=['l1', 'l2'])
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': ['l1', 'l2']})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['l1', 'l2']})
 
-        ret4 = {'changes': {self.name: self.value}, 'name': self.name,
-                'result': True, 'comment': 'Set grain cheese to edam'}
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Fails setting a grain to a dict
+        ret = grains.present(
+            name='foo',
+            value={'k1': 'v1'})
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Grain value cannot be dict')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
 
-        self.assertDictEqual(grains.present(self.name, {}), ret)
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Clear a grain (set to None)
+        ret = grains.present(
+            name='foo',
+            value=None)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['changes'], {'foo': None})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': None})
 
-        with patch.dict(grains.__grains__, {self.name: self.value}):
-            self.assertDictEqual(grains.present(self.name, self.value), ret1)
+    def test_present_unknown_failure(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        # Unknown reason failure
+        grainsmod.__salt__['grains.setval'] = MagicMock()
+        ret = grains.present(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Failed to set grain foo')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
 
-        with patch.dict(grains.__opts__, {'test': True}):
-            self.assertDictEqual(grains.present(self.name, self.value), ret2)
+    # 'absent' function tests: 3
 
-        with patch.dict(grains.__opts__, {'test': False}):
-            mock = MagicMock(side_effect=[{self.name: 'eves'},
-                                          {self.name: self.value}])
-            with patch.dict(grains.__salt__, {'grains.setval': mock}):
-                self.assertDictEqual(grains.present(self.name, self.value),
-                                     ret3)
+    def test_absent_already(self):
+        # Unset a non existent grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.absent(
+            name='foo')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo does not exist')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
 
-                self.assertDictEqual(grains.present(self.name, self.value),
-                                     ret4)
+    def test_absent_unset(self):
+        # Unset a grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        ret = grains.absent(
+            name='foo')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value for grain foo was set to None')
+        self.assertEqual(ret['changes'], {'grain': 'foo', 'value': None})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': None})
 
-    # 'list_present' function tests: 1
+    def test_absent_delete(self):
+        # Delete a grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        ret = grains.absent(
+            name='foo',
+            destructive=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo was deleted')
+        self.assertEqual(ret['changes'], {'deleted': 'foo'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
 
-    def test_list_present(self):
-        '''
-        Test to ensure the value is present in the list type grain
-        '''
-        ret = {'changes': {}, 'name': self.name, 'result': False,
-               'comment': 'Grain cheese is not a valid list'}
-
-        with patch.dict(grains.__grains__, {self.name: self.value}):
-            self.assertDictEqual(grains.list_present(self.name, self.value),
-                                 ret)
-
-        ret = {'changes': {}, 'name': self.name, 'result': True,
-               'comment': 'Value edam is already in grain cheese'}
-
-        with patch.dict(grains.__grains__, {self.name: [self.value]}):
-            self.assertDictEqual(grains.list_present(self.name, self.value),
-                                 ret)
-
-        ret = {'changes': {'new': None}, 'name': self.name, 'result': None,
-               'comment': 'Grain cheese is set to be added'}
-
-        ret1 = {'changes': {'new': ['eves']}, 'name': self.name, 'result': None,
-                'comment': 'Value edam is set to be appended to grain cheese'}
-
-        ret2 = {'changes': {}, 'name': self.name, 'result': False,
-                'comment': 'Failed append value edam to grain cheese'}
-
-        with patch.dict(grains.__opts__, {'test': True}):
-            self.assertDictEqual(grains.list_present(self.name, self.value),
-                                 ret)
-
-            with patch.dict(grains.__grains__, {self.name: ['eves']}):
-                self.assertDictEqual(grains.list_present(self.name, self.value),
-                                     ret1)
-
-                with patch.dict(grains.__opts__, {'test': False}):
-                    mock = MagicMock(return_value={self.name: 'eves'})
-                    with patch.dict(grains.__salt__, {'grains.append': mock}):
-                        self.assertDictEqual(grains.list_present(self.name,
-                                                                 self.value),
-                                             ret2)
-
-        ret = {'changes': {'new': self.value}, 'name': self.name,
-               'result': True, 'comment': 'Append value edam to grain cheese'}
-
-        def add_grain(name, value):
-            '''
-            Add key: value to __grains__ dict.
-            '''
-            grains.__grains__[name].append(value)
-            return value
-
-        with patch.dict(grains.__opts__, {'test': False}):
-            with patch.dict(grains.__grains__, {self.name: []}):
-                with patch.dict(grains.__salt__, {'grains.append': add_grain}):
-                    self.assertDictEqual(grains.list_present(self.name,
-                                                             self.value), ret)
-
-    # 'list_absent' function tests: 1
-
-    def test_list_absent(self):
-        '''
-        Test to delete a value from a grain formed as a list
-        '''
-        ret = {'changes': {}, 'name': self.name, 'result': True,
-               'comment': 'Value edam is absent from grain cheese'}
-
-        ret1 = {'changes': {'deleted': self.value}, 'name': self.name,
-                'result': None,
-                'comment': 'Value edam in grain cheese is set to be deleted'}
-
-        ret2 = {'changes': {}, 'name': self.name, 'result': True,
-                'comment': 'Grain cheese does not exist'}
-
-        ret3 = {'changes': {}, 'name': self.name, 'result': False,
-                'comment': 'Grain cheese is not a valid list'}
-
-        with patch.dict(grains.__grains__, {self.name: ['eves']}):
-            self.assertDictEqual(grains.list_absent(self.name, self.value), ret)
-
-        with patch.dict(grains.__opts__, {'test': True}):
-            with patch.dict(grains.__grains__, {self.name: [self.value]}):
-                self.assertDictEqual(grains.list_absent(self.name, self.value),
-                                     ret1)
-
-        self.assertDictEqual(grains.list_absent(self.name, self.value), ret2)
-
-        with patch.dict(grains.__grains__, {self.name: 'eves'}):
-            self.assertDictEqual(grains.list_absent(self.name, self.value), ret3)
-
-    # 'absent' function tests: 1
-
-    def test_absent(self):
-        '''
-        Test to delete a grain from the grains config file
-        '''
-        ret = {'changes': {'grain': self.name, 'value': None},
-               'name': self.name, 'result': None,
-               'comment': 'Value for grain cheese is set to be deleted (None)'}
-
-        ret1 = {'changes': {}, 'name': self.name, 'result': True,
-                'comment': 'Grain cheese does not exist'}
-
-        with patch.dict(grains.__opts__, {'test': True}):
-            with patch.dict(grains.__grains__, {self.name: ['edam']}):
-                self.assertDictEqual(grains.absent(self.name), ret)
-
-        self.assertDictEqual(grains.absent(self.name), ret1)
-
-    # 'append' function tests: 1
+    # 'append' function tests: 5
 
     def test_append(self):
-        '''
-        Test to append a value to a list in the grains config file
-        '''
-        ret = {'changes': {}, 'name': self.name, 'result': True,
-               'comment': 'Value edam is already in the list for grain cheese'}
+        # Append to an existing list
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        ret = grains.append(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
+        self.assertEqual(ret['changes'], {'added': 'baz'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['bar', 'baz']})
 
-        ret1 = {'changes': {'added': self.value}, 'name': self.name,
-                'result': None,
-                'comment': 'Value edam in grain cheese is set to be added'}
+    def test_append_already(self):
+        # Append to an existing list
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        ret = grains.append(
+            name='foo',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value bar is already in the list '
+                                       + 'for grain foo')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['bar']})
 
-        comment = ('Grain cheese is set to be converted to list'
-                   ' and value edam will be added')
-        ret2 = {'changes': {'added': self.value}, 'name': self.name,
-                'result': None,
-                'comment': comment}
+    def test_append_fails_not_a_list(self):
+        # Fail to append to an existing grain, not a list
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'bar': 'val'}}
+        ret = grains.append(
+            name='foo',
+            value='baz')
+        # Note from dr4Ke: should be false, IMO
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'bar': 'val'}})
 
-        ret3 = {'changes': {}, 'name': self.name, 'result': False,
-                'comment': 'Grain cheese does not exist'}
+    def test_append_convert_to_list(self):
+        # Append to an existing grain, converting to a list
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'bar': 'val'}}
+        ret = grains.append(
+            name='foo',
+            value='baz',
+            convert=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
+        self.assertEqual(ret['changes'], {'added': 'baz'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': [{'bar': 'val'}, 'baz']})
 
-        ret4 = {'changes': {}, 'name': self.name, 'result': False,
-                'comment': 'Grain cheese is not a valid list'}
+    def test_append_fails_inexistent(self):
+        # Append to a non existing grain
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.append(
+            name='foo',
+            value='bar')
+        # Note from dr4Ke: should be false, IMO
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Grain foo does not exist')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
 
-        with patch.dict(grains.__grains__, {self.name: ['edam']}):
-            self.assertDictEqual(grains.append(self.name, self.value), ret)
+    # 'list_present' function tests: 5
 
-        with patch.dict(grains.__grains__, {self.name: ['eves']}):
-            with patch.dict(grains.__opts__, {'test': True}):
-                self.assertDictEqual(grains.append(self.name, self.value), ret1)
+    def test_list_present(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        ret = grains.list_present(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Append value baz to grain foo')
+        self.assertEqual(ret['changes'], {'new': {'foo': ['bar', 'baz']}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['bar', 'baz']})
 
-        with patch.dict(grains.__grains__, {self.name: 'edam'}):
-            with patch.dict(grains.__opts__, {'test': True}):
-                self.assertDictEqual(grains.append(self.name, self.value,
-                                                   convert=True), ret2)
+    def test_list_present_inexistent(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.list_present(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Append value baz to grain foo')
+        self.assertEqual(ret['changes'], {'new': {'foo': ['baz']}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['baz']})
 
-        self.assertDictEqual(grains.append(self.name, self.value), ret3)
+    def test_list_present_not_a_list(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        ret = grains.list_present(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
 
-        with patch.dict(grains.__grains__, {self.name: 'eves'}):
-            self.assertDictEqual(grains.append(self.name, self.value), ret4)
+    def test_list_present_already(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        ret = grains.list_present(
+            name='foo',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value bar is already in grain foo')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['bar']})
+
+    def test_list_present_unknown_failure(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        # Unknown reason failure
+        grainsmod.__salt__['grains.append'] = MagicMock()
+        ret = grains.list_present(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Failed append value baz to grain foo')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['bar']})
+
+    # 'list_absent' function tests: 4
+
+    def test_list_absent(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        ret = grains.list_absent(
+            name='foo',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value bar was deleted from grain foo')
+        self.assertEqual(ret['changes'], {'deleted': 'bar'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': []})
+
+    def test_list_absent_inexistent(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        ret = grains.list_absent(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo does not exist')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
+
+    def test_list_absent_not_a_list(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        ret = grains.list_absent(
+            name='foo',
+            value='bar')
+        # Note from dr4Ke: should be false, IMO
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
+
+    def test_list_absent_already(self):
+        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        ret = grains.list_absent(
+            name='foo',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value baz is absent from grain foo')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': ['bar']})
 
 
 if __name__ == '__main__':
