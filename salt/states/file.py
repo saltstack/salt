@@ -4228,10 +4228,28 @@ def serialize(name,
                 }
 
     if __opts__['test']:
-        ret['comment'] = (
-            'Dataset will be serialized and stored into {0}'
-        ).format(name)
-        ret['result'] = None
+        ret['changes'] = __salt__['file.check_managed_changes'](
+            name=name,
+            source=None,
+            source_hash={},
+            user=user,
+            group=group,
+            mode=mode,
+            template=None,
+            context=None,
+            defaults=None,
+            saltenv=__env__,
+            contents=contents,
+            **kwargs
+        )
+
+        if ret['changes']:
+            ret['result'] = None
+            ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(name)
+        else:
+            ret['result'] = True
+            ret['comment'] = 'The file {0} is in the correct state'.format(name)
+
         return ret
 
     return __salt__['file.manage_file'](name=name,

@@ -2231,7 +2231,15 @@ def list_(extra=False, limit=None, path=None):
     return ret
 
 
-def _change_state(cmd, name, expected, path=None, use_vt=None):
+def _change_state(cmd,
+                  name,
+                  expected,
+                  stdin=_marker,
+                  stdout=_marker,
+                  stderr=_marker,
+                  with_communicate=_marker,
+                  use_vt=_marker,
+                  path=None):
     pre = state(name, path=path)
     if pre == expected:
         return {'result': True,
@@ -2252,7 +2260,22 @@ def _change_state(cmd, name, expected, path=None, use_vt=None):
         cmd += ' -P {0}'.format(pipes.quote(path))
     cmd += ' -n {0}'.format(name)
 
-    error = __salt__['cmd.run_stderr'](cmd, python_shell=False, use_vt=use_vt)
+    # certain lxc commands need to be taken with care (lxc-start)
+    # as te command itself mess with double forks; we must not
+    # communicate with it, but just wait for the exit status
+    pkwargs = {'python_shell': False,
+               'with_communicate': with_communicate,
+               'use_vt': use_vt,
+               'stdin': stdin,
+               'stdout': stdout,
+               'stderr': stderr}
+    for i in [a for a in pkwargs]:
+        val = pkwargs[i]
+        if val is _marker:
+            pkwargs.pop(i, None)
+
+    error = __salt__['cmd.run_stderr'](cmd, **pkwargs)
+
     if error:
         raise CommandExecutionError(
             'Error changing state for container \'{0}\' using command '
@@ -2413,9 +2436,16 @@ def start(name, **kwargs):
         raise CommandExecutionError(
             'Container \'{0}\' is frozen, use lxc.unfreeze'.format(name)
         )
-    # using vt while starting is better as lxc-start may go zombie.
-    use_vt = kwargs.get('use_vt', True)
-    return _change_state(cmd, name, 'running', path=path, use_vt=use_vt)
+    # lxc-start daemonize itself violently, we must not communicate with it
+    use_vt = kwargs.get('use_vt', None)
+    with_communicate = kwargs.get('with_communicate', False)
+    return _change_state(cmd, name, 'running',
+                         stdout=None,
+                         stderr=None,
+                         stdin=None,
+                         with_communicate=with_communicate,
+                         path=path,
+                         use_vt=use_vt)
 
 
 def stop(name, kill=False, path=None, use_vt=None):
