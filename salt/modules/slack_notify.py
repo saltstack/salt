@@ -19,6 +19,7 @@ Module for sending messages to Slack
 # Import Python libs
 from __future__ import absolute_import
 import logging
+import urllib
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -26,13 +27,6 @@ from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves import range
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
-
-try:
-    import requests
-    from requests.exceptions import ConnectionError
-    ENABLED = True
-except ImportError:
-    ENABLED = False
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'slack'
@@ -44,12 +38,15 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
-    if not ENABLED:
-        return False
     return __virtualname__
 
 
-def _query(function, api_key=None, method='GET', data=None):
+def _query(function,
+           api_key=None,
+           args=None,
+           method='GET',
+           header_dict=None,
+           data=None):
     '''
     Slack object method function to construct and execute on the API URL.
 
@@ -59,11 +56,7 @@ def _query(function, api_key=None, method='GET', data=None):
     :param data:        The data to be sent for POST method.
     :return:            The json response from the API call or False.
     '''
-    headers = {}
     query_params = {}
-
-    if data is None:
-        data = {}
 
     ret = {'message': '',
            'res': True}
@@ -98,43 +91,50 @@ def _query(function, api_key=None, method='GET', data=None):
     base_url = _urljoin(api_url, '/api/')
     path = slack_functions.get(function).get('request')
     url = _urljoin(base_url, path, False)
+
+    if not isinstance(args, dict):
+        query_params = {}
     query_params['token'] = api_key
 
-    try:
-        result = requests.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=query_params,
-            data=data,
-            verify=True,
-        )
-    except ConnectionError as e:
-        ret['message'] = e
-        ret['res'] = False
-        return ret
+    if header_dict is None:
+        header_dict = {}
 
-    if result.status_code == salt.ext.six.moves.http_client.OK:
-        result = result.json()
+    if method != 'POST':
+        header_dict['Accept'] = 'application/json'
+
+    result = salt.utils.http.query(
+        url,
+        method,
+        params=query_params,
+        data=data,
+        decode=True,
+        status=True,
+        header_dict=header_dict,
+        opts=__opts__,
+    )
+
+    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
+        _result = result['dict']
         response = slack_functions.get(function).get('response')
-        if 'error' in result:
-            ret['message'] = result['error']
+        if 'error' in _result:
+            ret['message'] = _result['error']
             ret['res'] = False
             return ret
-        ret['message'] = result.get(response)
+        ret['message'] = _result.get(response)
         return ret
-    elif result.status_code == salt.ext.six.moves.http_client.NO_CONTENT:
+    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
         return True
     else:
         log.debug(url)
         log.debug(query_params)
         log.debug(data)
         log.debug(result)
-        if 'error' in result:
+        _result = result['dict']
+        if 'error' in _result:
             ret['message'] = result['error']
             ret['res'] = False
             return ret
-        ret['message'] = result
+        ret['message'] = _result.get(response)
         return ret
 
 
@@ -265,15 +265,18 @@ def post_message(channel,
     if not from_name:
         log.error('from_name is a required option.')
 
-    parameters = dict()
-    parameters['channel'] = channel
-    parameters['username'] = from_name
-    parameters['text'] = message
+    parameters = {
+        'channel': channel,
+        'username': from_name,
+        'text': message
+    }
 
+    # Slack wants the body on POST to be urlencoded.
     result = _query(function='message',
                     api_key=api_key,
                     method='POST',
-                    data=parameters)
+                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                    data=urllib.urlencode(parameters))
 
     if result['res']:
         return True
