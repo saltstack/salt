@@ -57,7 +57,8 @@ class Shell(object):
             timeout=None,
             sudo=False,
             tty=False,
-            mods=None):
+            mods=None,
+            identities_only=False):
         self.opts = opts
         self.host = host
         self.user = user
@@ -68,6 +69,7 @@ class Shell(object):
         self.sudo = sudo
         self.tty = tty
         self.mods = mods
+        self.identities_only = identities_only
 
     def get_error(self, errstr):
         '''
@@ -108,6 +110,8 @@ class Shell(object):
             options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
             options.append('User={0}'.format(self.user))
+        if self.identities_only:
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
@@ -143,6 +147,8 @@ class Shell(object):
             options.append('Port={0}'.format(self.port))
         if self.user:
             options.append('User={0}'.format(self.user))
+        if self.identities_only:
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:

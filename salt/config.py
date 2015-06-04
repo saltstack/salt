@@ -616,6 +616,7 @@ VALID_OPTS = {
     'ssh_user': str,
     'ssh_scan_ports': str,
     'ssh_scan_timeout': float,
+    'ssh_identities_only': bool,
 
     # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
@@ -999,6 +1000,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_user': 'root',
     'ssh_scan_ports': '22',
     'ssh_scan_timeout': 0.01,
+    'ssh_identities_only': False,
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),

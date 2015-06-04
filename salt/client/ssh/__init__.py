@@ -225,6 +225,10 @@ class SSH(object):
                 'ssh_sudo',
                 salt.config.DEFAULT_MASTER_OPTS['ssh_sudo']
             ),
+            'identities_only': self.opts.get(
+                'ssh_identities_only',
+                salt.config.DEFAULT_MASTER_OPTS['ssh_identities_only']
+            ),
         }
         if self.opts.get('rand_thin_dir'):
             self.defaults['thin_dir'] = os.path.join(
@@ -582,6 +586,7 @@ class Single(object):
             thin=None,
             mine=False,
             minion_opts=None,
+            identities_only=False,
             **kwargs):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
@@ -627,7 +632,8 @@ class Single(object):
                 'timeout': timeout,
                 'sudo': sudo,
                 'tty': tty,
-                'mods': self.mods}
+                'mods': self.mods,
+                'identities_only': identities_only}
         self.minion_opts = opts.get('ssh_minion_opts', {})
         if minion_opts is not None:
             self.minion_opts.update(minion_opts)
