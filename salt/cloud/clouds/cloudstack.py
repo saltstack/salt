@@ -568,6 +568,7 @@ def block_device_mappings(vm_):
         'block_device_mappings', vm_, __opts__, search_global=True
     )
 
+
 def cloudstack_displayname(vm_):
     '''
     Return display name of VM:
