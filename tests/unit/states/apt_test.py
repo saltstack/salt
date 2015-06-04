@@ -18,16 +18,16 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.states import apt
+from salt.states import aptpkg
 
-apt.__opts__ = {}
-apt.__salt__ = {}
+aptpkg.__opts__ = {}
+aptpkg.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AptTestCase(TestCase):
     '''
-    Test cases for salt.states.apt
+    Test cases for salt.states.aptpkg
     '''
     # 'held' function tests: 1
 
@@ -43,8 +43,8 @@ class AptTestCase(TestCase):
                'comment': 'Package {0} does not have a state'.format(name)}
 
         mock = MagicMock(return_value=False)
-        with patch.dict(apt.__salt__, {'pkg.get_selections': mock}):
-            self.assertDictEqual(apt.held(name), ret)
+        with patch.dict(aptpkg.__salt__, {'pkg.get_selections': mock}):
+            self.assertDictEqual(aptpkg.held(name), ret)
 
 
 if __name__ == '__main__':
