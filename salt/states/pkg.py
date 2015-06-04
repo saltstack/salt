@@ -1262,7 +1262,7 @@ def latest(
 
     targets = {}
     problems = []
-    cmp_func = __salt__.get('version_cmp')
+    cmp_func = __salt__.get('pkg.version_cmp', __salt__.get('version_cmp'))
     for pkg in desired_pkgs:
         if not avail[pkg]:
             if not cur[pkg]:
