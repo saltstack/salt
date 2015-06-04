@@ -1262,6 +1262,7 @@ def latest(
 
     targets = {}
     problems = []
+    cmp_func = __salt__.get('version_cmp')
     for pkg in desired_pkgs:
         if not avail[pkg]:
             if not cur[pkg]:
@@ -1273,7 +1274,7 @@ def latest(
                     ver1=cur[pkg],
                     oper='<',
                     ver2=avail[pkg],
-                    cmp_func=__salt__.get('version_cmp')):
+                    cmp_func=cmp_func):
             targets[pkg] = avail[pkg]
 
     if problems:
