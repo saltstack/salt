@@ -776,14 +776,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         mod_name = function_name.split('.')[0]
         if mod_name in self.loaded_modules:
-            return '{0!r} is not available.'.format(function_name)
+            return '\'{0}\' is not available.'.format(function_name)
         else:
             if self.missing_modules.get(mod_name) is not None:
-                return '\'{0}\' __virtual__ returned False: {1}'.format(mod_name, self.missing_modules[mod_name])
-            elif self.missing_modules.get(mod_name) is None:
-                return '\'{0}\' __virtual__ returned False'.format(mod_name)
+                # Error in the __virtual__ function of an existing module
+                return '\'{0}\' __virtual__ returned False: {1}'.format(
+                    mod_name, self.missing_modules[mod_name]
+                )
             else:
-                return '\'{0}\' is not available.'.format(function_name)
+                return 'Module \'{0}\' is not available.'.format(mod_name)
 
     def refresh_file_mapping(self):
         '''
