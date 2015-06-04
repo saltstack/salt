@@ -161,7 +161,7 @@ def _linux_gpu_data():
 
     devs = []
     try:
-        lspci_out = __salt__['cmd.run']('lspci -vmm')
+        lspci_out = __salt__['cmd.run']('{0} -vmm'.format(lspci))
 
         cur_dev = {}
         error = False
@@ -495,7 +495,7 @@ def _virtual(osdata):
         if not cmd:
             continue
 
-        cmd = '{0} {1}'.format(command, ' '.join(args))
+        cmd = '{0} {1}'.format(cmd, ' '.join(args))
 
         try:
             ret = __salt__['cmd.run_all'](cmd)
