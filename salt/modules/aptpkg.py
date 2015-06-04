@@ -1119,8 +1119,8 @@ def version_cmp(pkg1, pkg2):
     '''
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
-            cmd = 'dpkg --compare-versions {0!r} {1} ' \
-                  '{2!r}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
+            cmd = 'dpkg --compare-versions {0} {1} ' \
+                  '{2}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
             retcode = __salt__['cmd.retcode'](
                 cmd, output_loglevel='trace', ignore_retcode=True
             )
