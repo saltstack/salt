@@ -18,7 +18,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.states import apt
+from salt.states import aptpkg
 
 apt.__opts__ = {}
 apt.__salt__ = {}
@@ -27,7 +27,7 @@ apt.__salt__ = {}
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AptTestCase(TestCase):
     '''
-    Test cases for salt.states.apt
+    Test cases for salt.states.aptpkg
     '''
     # 'held' function tests: 1
 
