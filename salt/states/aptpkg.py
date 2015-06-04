@@ -22,13 +22,9 @@ def __virtual__():
     '''
     Only work on apt-based platforms with pkg.get_selections
     '''
-    try:
-        __salt__['pkg.get_selections']
-    except KeyError:
-        # direct access not to iterate over lazyloader
-        return False
-    else:
-        return __virtualname__
+    return (__virtualname__
+            if __salt__.get('pkg.get_selections', False)
+            else False)
 
 
 def held(name):
