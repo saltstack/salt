@@ -873,11 +873,9 @@ def start(container,
 
         salt '*' docker.start <container id>
     '''
-    if not binds:
-        binds = {}
-
-    if not isinstance(binds, dict):
-        raise SaltInvocationError('binds must be formatted as a dictionary')
+    if binds:
+        if not isinstance(binds, dict):
+            raise SaltInvocationError('binds must be formatted as a dictionary')
 
     client = _get_client()
     status = base_status.copy()
