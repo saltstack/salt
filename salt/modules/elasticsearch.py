@@ -69,31 +69,20 @@ def _get_instance(hosts=None, profile=None):
     '''
     Return the elasticsearch instance
     '''
-    es = None
-
-    if profile is None:
-        profile = 'elasticsearch'
-
-    if isinstance(profile, string_types):
-        _profile = __salt__['config.option'](profile, None)
-    elif isinstance(profile, dict):
-        _profile = profile
-    if _profile:
-        hosts = _profile.get('host', None)
-        if not hosts:
-            hosts = _profile.get('hosts', None)
-
-    if not hosts:
+    if profile:
+        if isinstance(profile, string_types):
+            _profile = __salt__['config.option'](profile)
+        elif isinstance(profile, dict):
+            _profile = profile
+        if _profile:
+            hosts = _profile.get('host')
+            if not hosts:
+                hosts = _profile.get('hosts')
+    else:
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
-    try:
-        es = elasticsearch.Elasticsearch(hosts)
-        if not es.ping():
-            raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
-    except elasticsearch.exceptions.ConnectionError:
-        raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}'.format(hosts))
-    return es
+    return elasticsearch.Elasticsearch(hosts)
 
 
 def alias_create(indices, alias, hosts=None, body=None, profile=None):
