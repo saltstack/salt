@@ -120,9 +120,10 @@ def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
     '''
     return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
 
+
 def rand_int(start=1, end=10):
     '''
-    .. versionadded: 2015.5.1
+    .. versionadded: 2015.5.3
 
     Returns a random integer number between the start and end number.
 
