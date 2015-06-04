@@ -265,6 +265,12 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
+    displayname = cloudstack_displayname(vm_)
+    if displayname:
+        kwargs['ex_displayname'] = displayname
+    else:
+        kwargs['ex_displayname'] = kwargs['name']
+
     volumes = {}
     ex_blockdevicemappings = block_device_mappings(vm_)
     if ex_blockdevicemappings:
@@ -560,4 +566,16 @@ def block_device_mappings(vm_):
     '''
     return config.get_cloud_config_value(
         'block_device_mappings', vm_, __opts__, search_global=True
+    )
+
+
+def cloudstack_displayname(vm_):
+    '''
+    Return display name of VM:
+
+    ::
+        "minion1"
+    '''
+    return config.get_cloud_config_value(
+        'cloudstack_displayname', vm_, __opts__, search_global=True
     )
