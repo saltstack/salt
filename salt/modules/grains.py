@@ -643,13 +643,13 @@ def set(key,
                 _existing_value.update({rest: _value})
         elif isinstance(_existing_value, list):
             _list_updated = False
-            if rest in _existing_value:
-                _existing_value.remove(rest)
-            else:
-                for _item in _existing_value:
-                    if isinstance(_item, dict) and rest in _item:
-                        _item.update({rest: _value})
-                        _list_updated = True
+            for _index, _item in enumerate(_existing_value):
+                if _item == rest:
+                    _existing_value[_index] = {rest: _value}
+                    _list_updated = True
+                elif isinstance(_item, dict) and rest in _item:
+                    _item.update({rest: _value})
+                    _list_updated = True
             if not _list_updated:
                 _existing_value.append({rest: _value})
         elif _existing_value == rest or force:
