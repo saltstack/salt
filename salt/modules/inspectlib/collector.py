@@ -24,6 +24,7 @@ from subprocess import Popen, PIPE, STDOUT
 # Import Salt Libs
 from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
+import salt.utils
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
 
@@ -73,6 +74,7 @@ class Inspector(object):
         pkg_name = None
         pkg_configs = []
 
+        out = salt.utils.to_str(out)
         for line in out.split(os.linesep):
             line = line.strip()
             if not line:
@@ -99,6 +101,7 @@ class Inspector(object):
             cfgs = list()
             out, err = self._syscall("rpm", None, None, '-V', '--nodeps', '--nodigest',
                                      '--nosignature', '--nomtime', '--nolinkto', pkg_name)
+            out = salt.utils.to_str(out)
             for line in out.split(os.linesep):
                 line = line.strip()
                 if not line or line.find(" c ") < 0 or line.split(" ")[0].find("5") < 0:

@@ -13,7 +13,7 @@ import re
 import salt.utils
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
-# pylint: disable=import-error,redefined-builtin
+# pylint: disable=import-error,redefined-builtin,incompatible-py3-code
 from salt.ext.six.moves import (
     zip,
     shlex_quote as _cmd_quote
