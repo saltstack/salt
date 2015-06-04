@@ -62,6 +62,13 @@ def bin_pkg_info(path, saltenv='base'):
     saltenv : base
         Salt fileserver envrionment from which to retrieve the package. Ignored
         if ``path`` is a local file path on the minion.
+
+    CLI Example:
+    
+    .. code-block:: bash
+        
+        salt '*' lowpkg.bin_pkg_info /root/salt-2015.5.1-2.el7.noarch.rpm
+        salt '*' lowpkg.bin_pkg_info salt://salt-2015.5.1-2.el7.noarch.rpm
     '''
     # If the path is a valid protocol, pull it down using cp.cache_file
     if __salt__['config.valid_fileproto'](path):
