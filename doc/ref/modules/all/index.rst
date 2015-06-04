@@ -44,6 +44,7 @@ Full list of builtin execution modules
     bsd_shadow
     btrfs
     cassandra
+    cassandra_cql
     chef
     chocolatey
     cloud
@@ -55,6 +56,7 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
+    cytest
     daemontools
     darwin_sysctl
     data
@@ -118,6 +120,7 @@ Full list of builtin execution modules
     influx
     ini_manage
     introspect
+    ipmi
     ipset
     iptables
     jboss7
@@ -155,6 +158,7 @@ Full list of builtin execution modules
     mount
     munin
     mysql
+    nacl
     nagios
     netbsd_sysctl
     netbsdservice
@@ -255,6 +259,7 @@ Full list of builtin execution modules
     sysmod
     sysrc
     system
+    system_profiler
     systemd
     test
     test_virtual

@@ -17,7 +17,6 @@ Full list of builtin pillar modules
     django_orm
     ec2_pillar
     etcd_pillar
-    file_encode
     file_tree
     foreman
     git_pillar
