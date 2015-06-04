@@ -1270,11 +1270,10 @@ def latest(
                 log.error(msg)
                 problems.append(msg)
         elif not cur[pkg] \
-                or salt.utils.compare_versions(
-                    ver1=cur[pkg],
-                    oper='<',
-                    ver2=avail[pkg],
-                    cmp_func=cmp_func):
+                or salt.utils.compare_versions(ver1=cur[pkg],
+                                               oper='<',
+                                               ver2=avail[pkg],
+                                               cmp_func=cmp_func):
             targets[pkg] = avail[pkg]
 
     if problems:
