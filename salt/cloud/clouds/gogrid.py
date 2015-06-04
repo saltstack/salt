@@ -51,13 +51,16 @@ get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
+avail_locations = namespaced_function(avail_locations, globals())
 script = namespaced_function(script, globals())
 destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
-
+reboot = namespaced_function(reboot, globals())
+get_node = namespaced_function(get_node, globals())
+get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 # Only load in this module is the GOGRID configurations are in place
 def __virtual__():
