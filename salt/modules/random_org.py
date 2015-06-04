@@ -27,12 +27,6 @@ import json
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 import salt.ext.six.moves.http_client
 
-try:
-    import requests
-    from requests.exceptions import ConnectionError
-    ENABLED = True
-except ImportError:
-    ENABLED = False
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
