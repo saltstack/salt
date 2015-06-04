@@ -128,12 +128,20 @@ class SSHClient(object):
                 })
             {'silver': {'fun_args': [], 'jid': '20141202152721523072', 'return': True, 'retcode': 0, 'success': True, 'fun': 'test.ping', 'id': 'silver'}}
         '''
+
+        kwargs = copy.deepcopy(low)
+
+        for ignore in ['tgt', 'fun', 'arg', 'timeout', 'expr_form', 'kwarg']:
+            if ignore in kwargs:
+                del kwargs[ignore]
+
         return self.cmd(low['tgt'],
                         low['fun'],
                         low.get('arg', []),
                         low.get('timeout'),
                         low.get('expr_form'),
-                        low.get('kwarg'))
+                        low.get('kwarg'),
+                        **kwargs)
 
     def cmd_async(self, low, timeout=None):
         '''
