@@ -972,6 +972,7 @@ class RemoteClient(Client):
             )
         )
         d_tries = 0
+        transport_tries = 0
         path = self._check_proto(path)
         load = {'path': path,
                 'saltenv': saltenv,
@@ -989,45 +990,54 @@ class RemoteClient(Client):
                 else:
                     return False
             fn_ = salt.utils.fopen(dest, 'wb+')
+
         while True:
             if not fn_:
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
             data = self.channel.send(load)
-            if 'data' not in data:
-                log.error('Data is {0}'.format(data))
-                self._refresh_channel()
-            if not data['data']:
-                if not fn_ and data['dest']:
-                    # This is a 0 byte file on the master
+            try:
+                if not data['data']:
+                    if not fn_ and data['dest']:
+                        # This is a 0 byte file on the master
+                        with self._cache_loc(data['dest'], saltenv) as cache_dest:
+                            dest = cache_dest
+                            with salt.utils.fopen(cache_dest, 'wb+') as ofile:
+                                ofile.write(data['data'])
+                    if 'hsum' in data and d_tries < 3:
+                        # Master has prompted a file verification, if the
+                        # verification fails, re-download the file. Try 3 times
+                        d_tries += 1
+                        hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
+                        if hsum != data['hsum']:
+                            log.warn('Bad download of file {0}, attempt {1} '
+                                     'of 3'.format(path, d_tries))
+                            continue
+                    break
+                if not fn_:
                     with self._cache_loc(data['dest'], saltenv) as cache_dest:
                         dest = cache_dest
-                        with salt.utils.fopen(cache_dest, 'wb+') as ofile:
-                            ofile.write(data['data'])
-                if 'hsum' in data and d_tries < 3:
-                    # Master has prompted a file verification, if the
-                    # verification fails, re-download the file. Try 3 times
-                    d_tries += 1
-                    hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
-                    if hsum != data['hsum']:
-                        log.warn('Bad download of file {0}, attempt {1} '
-                                 'of 3'.format(path, d_tries))
-                        continue
-                break
-            if not fn_:
-                with self._cache_loc(data['dest'], saltenv) as cache_dest:
-                    dest = cache_dest
-                    # If a directory was formerly cached at this path, then
-                    # remove it to avoid a traceback trying to write the file
-                    if os.path.isdir(dest):
-                        salt.utils.rm_rf(dest)
-                    fn_ = salt.utils.fopen(dest, 'wb+')
-            if data.get('gzip', None):
-                data = salt.utils.gzip_util.uncompress(data['data'])
-            else:
-                data = data['data']
-            fn_.write(data)
+                        # If a directory was formerly cached at this path, then
+                        # remove it to avoid a traceback trying to write the file
+                        if os.path.isdir(dest):
+                            salt.utils.rm_rf(dest)
+                        fn_ = salt.utils.fopen(dest, 'wb+')
+                if data.get('gzip', None):
+                    data = salt.utils.gzip_util.uncompress(data['data'])
+                else:
+                    data = data['data']
+                fn_.write(data)
+            except (TypeError, KeyError) as e:
+                transport_tries += 1
+                log.error('Data transport is broken, got: {0}, type: {1}, '
+                          'exception: {2}, attempt {3} of 3'.format(
+                              data, type(data), e, transport_tries)
+                          )
+                self._refresh_channel()
+                if transport_tries > 3:
+                    break
+
         if fn_:
             fn_.close()
             log.info(
