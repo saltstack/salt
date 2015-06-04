@@ -680,10 +680,11 @@ example, the following macro could be used to write a php.ini config file:
 
 .. code-block:: yaml
 
-    PHP:
-      engine: 'On'
-      short_open_tag: 'Off'
-      error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
+    php_ini:
+      PHP:
+        engine: 'On'
+        short_open_tag: 'Off'
+        error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
 
 ``/srv/salt/php.ini.tmpl``:
 
@@ -691,8 +692,8 @@ example, the following macro could be used to write a php.ini config file:
 
     {% macro php_ini_serializer(data) %}
     {% for section_name, name_val_pairs in data.items() %}
-    [{{ section }}]
-    {% for name, val in name_val_pairs.items() %}
+    [{{ section_name }}]
+    {% for name, val in name_val_pairs.items() -%}
     {{ name }} = "{{ val }}"
     {% endfor %}
     {% endfor %}
