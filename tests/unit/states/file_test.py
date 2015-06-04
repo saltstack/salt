@@ -212,13 +212,13 @@ class FileTestCase(TestCase):
                                               group=group, backupname='SALT'),
                                              ret)
 
-                            comt = ('Something exists where the backup target'
-                                    ' SALTshould go')
-                            ret.update({'comment': comt, 'result': False})
-                            self.assertDictEqual(filestate.symlink
-                                                (name, target, user=user,
-                                                group=group, backupname='SALT',
-                                                force=True), ret)
+                        comt = ('Something exists where the backup target'
+                                ' SALTshould go')
+                        ret.update({'comment': comt, 'result': False})
+                        self.assertDictEqual(filestate.symlink
+                                            (name, target, user=user,
+                                            group=group, backupname='SALT',
+                                            force=True), ret)
 
                     with patch.object(os.path, 'isfile', mock_t):
                         comt = ('File exists where the symlink {0} should be'
