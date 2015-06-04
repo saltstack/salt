@@ -302,12 +302,11 @@ class SaltEvent(object):
         start = time.time()
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
-            # convert to milliseconds
-            socks = dict(self.poller.poll(wait * 1000))
-            if socks.get(self.sub) != zmq.POLLIN:
-                continue
-
             try:
+                # convert to milliseconds
+                socks = dict(self.poller.poll(wait * 1000))
+                if socks.get(self.sub) != zmq.POLLIN:
+                    continue
                 # Please do not use non-blocking mode here.
                 # Reliability is more important than pure speed on the event bus.
                 ret = self.get_event_block()
