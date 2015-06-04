@@ -75,12 +75,12 @@ class PkgresTestCase(TestCase):
                                  (None, None))
 
             with patch.object(pkg_resource, 'pack_sources',
-                              return_value={'A': 'a'}):
+                              return_value={'A': '/a'}):
                 with patch.dict(pkg_resource.__salt__,
                                 {'config.valid_fileproto':
                                  MagicMock(return_value=False)}):
                     self.assertEqual(pkg_resource.parse_targets(sources='s'),
-                                     (['a'], 'file'))
+                                     (['/a'], 'file'))
 
             with patch.object(pkg_resource, 'pack_sources',
                               return_value={'A': 'a'}):
