@@ -14,6 +14,10 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+# Define the module's virtual name
+__virtualname__ = 'apt'
+
+
 def __virtual__():
     '''
     Only work on apt-based platforms with pkg.get_selections
