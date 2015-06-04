@@ -27,10 +27,11 @@ def __virtual__():
 
 
 def _encode(string):
-    if isinstance(string, six.text_type):
-        string = string.encode('utf-8')
-    elif not string:
-        string = ''
+    try:
+        string = salt.utils.to_str(string)
+    except TypeError:
+        if not string:
+            string = ''
     return "{0}".format(string)
 
 
