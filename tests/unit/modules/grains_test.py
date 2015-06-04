@@ -447,12 +447,12 @@ class GrainsModuleTestCase(TestCase):
                                                 'c': 8})
 
     def test_set_nested_list_replace_key(self):
-        grainsmod.__grains__ = {'a': 'aval', 'b': ['l1', 'l2'], 'c': 8}
+        grainsmod.__grains__ = {'a': 'aval', 'b': ['l1', 'l2', 'l3'], 'c': 8}
         res = grainsmod.set('b,l2', 'val2', delimiter=',')
         self.assertTrue(res['result'])
-        self.assertEqual(res['changes'], {'b': ['l1', {'l2': 'val2'}]})
+        self.assertEqual(res['changes'], {'b': ['l1', {'l2': 'val2'}, 'l3']})
         self.assertEqual(grainsmod.__grains__, {'a': 'aval',
-                                                'b': ['l1', {'l2': 'val2'}],
+                                                'b': ['l1', {'l2': 'val2'}, 'l3'],
                                                 'c': 8})
 
     def test_set_nested_list_update_dict_key(self):
