@@ -13,10 +13,10 @@ import re
 import salt.utils
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
-# pylint: enable=import-error,redefined-builtin
-from salt.exceptions import commandexecutionerror, saltinvocationerror
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip, shlex_quote as _cmd_quote
+# pylint: enable=import-error,redefined-builtin
+from salt.exceptions import commandexecutionerror, saltinvocationerror
 
 log = logging.getLogger(__name__)
 
