@@ -62,6 +62,7 @@ reboot = namespaced_function(reboot, globals())
 get_node = namespaced_function(get_node, globals())
 get_salt_interface = namespaced_function(get_salt_interface, globals())
 
+
 # Only load in this module is the GOGRID configurations are in place
 def __virtual__():
     '''
