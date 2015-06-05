@@ -1215,6 +1215,6 @@ def ssh_version():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()
     try:
-        return ret[1].split(',')[0].split('_')[1]
+        return ret[1].split(b',')[0].split(b'_')[1]
     except IndexError:
         return '2.0'

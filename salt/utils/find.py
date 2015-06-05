@@ -568,8 +568,8 @@ class ExecOption(Option):
                 log.error(
                     'Error running command: {0}\n\n{1}'.format(
                     command,
-                    err))
-            return "{0}:\n{1}\n".format(command, out)
+                    salt.utils.to_str(err)))
+            return "{0}:\n{1}\n".format(command, salt.utils.to_str(out))
 
         except Exception as e:
             log.error(

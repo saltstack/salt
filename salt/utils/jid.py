@@ -8,7 +8,7 @@ import hashlib
 import os
 
 import salt.utils
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def gen_jid():
@@ -22,7 +22,7 @@ def is_jid(jid):
     '''
     Returns True if the passed in value is a job id
     '''
-    if not isinstance(jid, string_types):
+    if not isinstance(jid, six.string_types):
         return False
     if len(jid) != 20:
         return False
@@ -43,7 +43,7 @@ def jid_dir(jid, cachedir, sum_type):
     'returner, this util function will be removed-- please use '
     'the returner'
     )
-    jid = str(jid)
+    jid = salt.utils.to_bytes(str(jid)) if six.PY3 else str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 

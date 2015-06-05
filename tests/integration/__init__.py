@@ -327,7 +327,7 @@ class TestDaemon(object):
         )
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_err)))
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, TMP_CONF_DIR)
         auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
@@ -370,7 +370,7 @@ class TestDaemon(object):
         )
         _, keygen_dsa_err = keygen_process_dsa.communicate()
         if keygen_dsa_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_dsa_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_dsa_err)))
 
         keygen_process_ecdsa = subprocess.Popen(
             [keygen, '-t',
@@ -390,7 +390,7 @@ class TestDaemon(object):
         )
         _, keygen_escda_err = keygen_process_ecdsa.communicate()
         if keygen_escda_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_escda_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_escda_err)))
 
         keygen_process_ed25519 = subprocess.Popen(
             [keygen, '-t',
@@ -410,7 +410,7 @@ class TestDaemon(object):
         )
         _, keygen_ed25519_err = keygen_process_ed25519.communicate()
         if keygen_ed25519_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_ed25519_err)))
 
         with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
@@ -431,7 +431,7 @@ class TestDaemon(object):
         )
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
-            print('sshd had errors on startup: {0}'.format(sshd_err))
+            print('sshd had errors on startup: {0}'.format(salt.utils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
@@ -1044,7 +1044,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
-    __slots__ = ('client', '_salt_client_config_file_name_')
+    __slots__ = ()
 
     @property
     def client(self):
@@ -1296,7 +1296,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
             self.skipTest(
                 'Failed to get the output of \'git describe\'. '
                 'Error: {0!r}'.format(
-                    err
+                    salt.utils.to_str(err)
                 )
             )
 
