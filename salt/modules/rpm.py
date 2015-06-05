@@ -14,10 +14,8 @@ import salt.utils
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import (
-    zip,
-    shlex_quote as _cmd_quote
-)
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves import zip
 # pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
