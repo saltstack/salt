@@ -1151,6 +1151,43 @@ def _freebsd_remotes_on(port, which_end):
     return remotes
 
 
+def _openbsd_remotes_on(port, which_end):
+    '''
+    OpenBSD specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    $ netstat -nf inet
+    Active Internet connections
+    Proto   Recv-Q Send-Q  Local Address          Foreign Address        (state)
+    tcp          0      0  10.0.0.101.4505        10.0.0.1.45329         ESTABLISHED
+    tcp          0      0  10.0.0.101.4505        10.0.0.100.50798       ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-nf', 'inet'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit('.', 1)
+        remote_host, remote_port = chunks[4].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+    return remotes
+
+
 def _windows_remotes_on(port, which_end):
     r'''
     Windows specific helper function.
@@ -1211,6 +1248,8 @@ def remotes_on_local_tcp_port(port):
         return _sunos_remotes_on(port, 'local_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'local_port')
+    if salt.utils.is_openbsd():
+        return _openbsd_remotes_on(port, 'local_port')
     if salt.utils.is_windows():
         return _windows_remotes_on(port, 'local_port')
 
@@ -1264,6 +1303,8 @@ def remotes_on_remote_tcp_port(port):
         return _sunos_remotes_on(port, 'remote_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'remote_port')
+    if salt.utils.is_openbsd():
+        return _openbsd_remotes_on(port, 'remote_port')
     if salt.utils.is_windows():
         return _windows_remotes_on(port, 'remote_port')
 
