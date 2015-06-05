@@ -563,7 +563,8 @@ def create_container(image,
                      volumes_from=None,
                      name=None,
                      cpu_shares=None,
-                     cpuset=None):
+                     cpuset=None,
+                     binds=None):
     '''
     Create a new container
 
@@ -582,10 +583,26 @@ def create_container(image,
     ports
         port redirections ``({'222': {}})``
     volumes
-        list of volume mappings::
+        list of volume mappings in either local volume, bound volume, or read-only
+        bound volume form::
 
-            (['/mountpoint/in/container:/guest/foo', '/same/path/mounted/point'])
+            (['/var/lib/mysql/', '/usr/local/etc/ssl:/etc/ssl', '/etc/passwd:/etc/passwd:ro'])
+    binds
+        complete dictionary of bound volume mappings::
 
+            { '/usr/local/etc/ssl/certs/internal.crt': {
+                'bind': '/etc/ssl/certs/com.example.internal.crt',
+                'ro': True
+                },
+              '/var/lib/mysql': {
+                'bind': '/var/lib/mysql/',
+                'ro': False
+                }
+            }
+
+        This dictionary is suitable for feeding directly into the Docker API, and all
+        keys are required.
+        (see http://docker-py.readthedocs.org/en/latest/volumes/)
     tty
         attach ttys, Default is ``False``
     stdin_open
@@ -606,21 +623,28 @@ def create_container(image,
     '''
     status = base_status.copy()
     client = _get_client()
+
+    # In order to permit specification of bind volumes in the volumes field,
+    #  we'll look through it for bind-style specs and move them. This is purely
+    #  for CLI convenience and backwards-compatibility, as states.dockerio
+    #  should parse volumes before this, and the binds argument duplicates this.
+    # N.B. this duplicates code in states.dockerio._parse_volumes()
+    if isinstance(volumes, list):
+        for volume in volumes:
+            if ':' in volume:
+                volspec = volume.split(':')
+                source = volspec[0]
+                target = volspec[1]
+                ro = False
+                try:
+                    if len(volspec) > 2:
+                        ro = volspec[2] == "ro"
+                except IndexError:
+                    pass
+                binds[source] = {'bind': target, 'ro': ro}
+                volumes.remove(volume)
+
     try:
-        mountpoints = {}
-        binds = {}
-        # create empty mountpoints for them to be
-        # editable
-        # either we have a list of guest or host:guest
-        if isinstance(volumes, list):
-            for mountpoint in volumes:
-                mounted = mountpoint
-                if ':' in mountpoint:
-                    parts = mountpoint.split(':')
-                    mountpoint = parts[1]
-                    mounted = parts[0]
-                mountpoints[mountpoint] = {}
-                binds[mounted] = mountpoint
         container_info = client.create_container(
             image=image,
             command=command,
@@ -633,11 +657,12 @@ def create_container(image,
             ports=ports,
             environment=environment,
             dns=dns,
-            volumes=mountpoints,
+            volumes=volumes,
             volumes_from=volumes_from,
             name=name,
             cpu_shares=cpu_shares,
-            cpuset=cpuset
+            cpuset=cpuset,
+            host_config=docker.utils.create_host_config(binds=binds)
         )
         container = container_info['Id']
         callback = _valid
