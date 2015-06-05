@@ -236,7 +236,7 @@ class TLSAddTestCase(TestCase):
             'extensions': None,
             'fingerprint': ('96:72:B3:0A:1D:34:37:05:75:57:44:7E:08:81:A7:09:'
                             '0C:E1:8F:5F:4D:0C:49:CE:5B:D2:6B:45:D3:4D:FF:31'),
-            'serial_number': 284092004844685647925744086791559203700L,
+            'serial_number': 284092004844685647925744086791559203700,
             'subject': {
                 'C': 'US',
                 'CN': 'localhost',
