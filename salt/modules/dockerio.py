@@ -675,8 +675,9 @@ def create_container(image,
         }
         __salt__['mine.send']('docker.get_containers', host=True)
         return callback(status, id_=container, comment=comment, out=out)
-    except Exception:
+    except Exception, e:
         _invalid(status, id_=image, out=traceback.format_exc())
+        raise e
     __salt__['mine.send']('docker.get_containers', host=True)
     return status
 
