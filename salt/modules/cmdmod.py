@@ -270,8 +270,8 @@ def _run(cmd,
             # Getting the environment for the runas user
             # There must be a better way to do this.
             py_code = (
-                'import os, itertools; '
-                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+                'import sys, os, itertools; '
+                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
             )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
