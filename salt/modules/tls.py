@@ -127,6 +127,10 @@ log = logging.getLogger(__name__)
 two_digit_year_fmt = "%y%m%d%H%M%SZ"
 four_digit_year_fmt = "%Y%m%d%H%M%SZ"
 
+# Always use UTC for certificate info
+os.environ['TZ'] = 'UTC'
+time.tzset()
+
 
 def __virtual__():
     '''
