@@ -158,6 +158,7 @@ def _get_opts(localconfig=None):
     opts = copy.deepcopy(__opts__)
     if localconfig:
         opts = salt.config.minion_config(localconfig, defaults=opts)
+    opts['grains'] = __grains__
     return opts
 
 
