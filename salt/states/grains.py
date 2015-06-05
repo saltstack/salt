@@ -10,6 +10,10 @@ file on the minions, by default at: /etc/salt/grains
 Note: This does NOT override any grains set in the minion file.
 '''
 
+from __future__ import absolute_import
+from salt.defaults import DEFAULT_TARGET_DELIM
+import re
+
 
 def present(name, value):
     '''
@@ -198,7 +202,10 @@ def list_absent(name, value):
     return ret
 
 
-def absent(name, destructive=False):
+def absent(name,
+           destructive=False,
+           delimiter=DEFAULT_TARGET_DELIM,
+           force=False):
     '''
     .. versionadded:: 2014.7.0
 
@@ -210,17 +217,31 @@ def absent(name, destructive=False):
     :param destructive: If destructive is True, delete the entire grain. If
         destructive is False, set the grain's value to None. Defaults to False.
 
+    :param force: If force is True, the existing grain will be overwritten
+        regardless of its existing or provided value type. Defaults to False
+        .. versionadded:: FIXME
+
+    :param delimiter: A delimiter different from the default can be provided.
+        .. versionadded:: FIXME
+
+    .. versionchanged:: FIXME
+    This state now support nested grains. It is also more conservative:
+    if a grain has a value that is a list or a dict, it will not be removed
+    unless the `force` parameter is True
+
     .. code-block:: yaml
 
       grain_name:
         grains.absent
     '''
 
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
-    if name in __grains__:
+    grain = __salt__['grains.get'](name, None)
+    if grain:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
@@ -232,14 +253,20 @@ def absent(name, destructive=False):
                                  'deleted (None)'.format(name)
                 ret['changes'] = {'grain': name, 'value': None}
             return ret
-        __salt__['grains.delval'](name, destructive)
-        if destructive is True:
-            ret['comment'] = 'Grain {0} was deleted'.format(name)
-            ret['changes'] = {'deleted': name}
-        else:
-            ret['comment'] = 'Value for grain {0} was set to {1}'\
-                .format(name, None)
-            ret['changes'] = {'grain': name, 'value': None}
+        ret = __salt__['grains.set'](name,
+                                     None,
+                                     destructive=destructive,
+                                     force=force)
+        if ret['result']:
+            if destructive is True:
+                ret['comment'] = 'Grain {0} was deleted'\
+                    .format(name)
+                ret['changes'] = {'deleted': name}
+            else:
+                ret['comment'] = 'Value for grain {0} was set to None' \
+                                 .format(name)
+                ret['changes'] = {'grain': name, 'value': None}
+        ret['name'] = name
     else:
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
