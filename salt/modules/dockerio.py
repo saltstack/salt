@@ -621,6 +621,7 @@ def create_container(image,
         salt '*' docker.create_container o/ubuntu volumes="['/s','/m:/f']"
 
     '''
+    log.trace("modules.dockerio.create_container() called for image " + image)
     status = base_status.copy()
     client = _get_client()
 
@@ -664,6 +665,7 @@ def create_container(image,
             cpuset=cpuset,
             host_config=docker.utils.create_host_config(binds=binds)
         )
+        log.trace("docker.client.create_container returned: " + str(container_info))
         container = container_info['Id']
         callback = _valid
         comment = 'Container created'

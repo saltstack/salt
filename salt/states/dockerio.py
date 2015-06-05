@@ -240,6 +240,7 @@ def _parse_volumes(volumes):
             }
 
     '''
+    log.trace("Parsing given volumes dict: " + str(volumes))
     bindvolumes = {}
     contvolumes = []
     if isinstance(volumes, dict):
