@@ -5,15 +5,15 @@ Module for fetching artifacts from Artifactory
 
 # Import python libs
 from __future__ import absolute_import
-import urllib2
 import os
 import xml.etree.ElementTree as ET
-from urllib2 import HTTPError
 import logging
 
 # Import Salt libs
 import salt.utils
 import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
+from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
+from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ def _get_artifact_metadata_url(artifactory_url, repository, group_id, artifact_i
 def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_id):
     artifact_metadata_url = _get_artifact_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
     try:
-        artifact_metadata_xml = urllib2.urlopen(artifact_metadata_url).read()
+        artifact_metadata_xml = urllib.request.urlopen(artifact_metadata_url).read()
     except HTTPError as http_error:
         message = 'Could not fetch data from url: {url}, HTTPError: {error}'
         raise Exception(message.format(url=artifact_metadata_url, error=http_error))
@@ -257,7 +257,7 @@ def _get_snapshot_version_metadata_url(artifactory_url, repository, group_id, ar
 def _get_snapshot_version_metadata_xml(artifactory_url, repository, group_id, artifact_id, version):
     snapshot_version_metadata_url = _get_snapshot_version_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
     try:
-        snapshot_version_metadata_xml = urllib2.urlopen(snapshot_version_metadata_url).read()
+        snapshot_version_metadata_xml = urllib.request.urlopen(snapshot_version_metadata_url).read()
     except HTTPError as http_error:
         message = 'Could not fetch data from url: {url}, HTTPError: {error}'
         raise Exception(message.format(url=snapshot_version_metadata_url, error=http_error))
@@ -320,14 +320,14 @@ def __save_artifact(artifact_url, target_file):
 
     log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
     try:
-        f = urllib2.urlopen(artifact_url)
+        f = urllib.request.urlopen(artifact_url)
         with salt.utils.fopen(target_file, "wb") as local_file:
             local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
         result['changes']['downloaded_file'] = target_file
         result['target_file'] = target_file
-    except (HTTPError, urllib2.URLError) as e:
+    except (HTTPError, URLError) as e:
         result['status'] = False
         result['comment'] = __get_error_comment(e, artifact_url)
 
@@ -351,7 +351,7 @@ def __download(request_url):
     content = None
     comment = None
     try:
-        url = urllib2.urlopen(request_url)
+        url = urllib.request.urlopen(request_url)
         content = url.read()
         success = True
     except HTTPError as e:
