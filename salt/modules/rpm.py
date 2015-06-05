@@ -62,9 +62,9 @@ def bin_pkg_info(path, saltenv='base'):
         if ``path`` is a local file path on the minion.
 
     CLI Example:
-    
+
     .. code-block:: bash
-        
+
         salt '*' lowpkg.bin_pkg_info /root/salt-2015.5.1-2.el7.noarch.rpm
         salt '*' lowpkg.bin_pkg_info salt://salt-2015.5.1-2.el7.noarch.rpm
     '''
