@@ -164,7 +164,7 @@ elasticsearch profile via pillars:
 The behavior of this module is to create dashboards if they do not exist, to
 add rows if they do not exist in existing dashboards, and to update rows if
 they exist in dashboards. The module will not manage rows that are not defined,
- allowing users to manage their own custom rows.
+allowing users to manage their own custom rows.
 '''
 from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
