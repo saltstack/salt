@@ -20,6 +20,8 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import random_org
 
+random_org.__opts__ = {}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class RandomOrgTestCase(TestCase):
