@@ -1548,6 +1548,14 @@ def is_freebsd():
     return sys.platform.startswith('freebsd')
 
 
+@real_memoize
+def is_openbsd():
+    '''
+    Simple function to return if host is OpenBSD or not
+    '''
+    return sys.platform.startswith('openbsd')
+
+
 def is_fcntl_available(check_sunos=False):
     '''
     Simple function to check if the `fcntl` module is available or not.
