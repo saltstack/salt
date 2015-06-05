@@ -12,8 +12,8 @@ A state module to manage blockdevices
         - read-only: True
 
     master-data:
-      blockdev.tuned::
-        - name : /dev/vg/master-data
+      blockdev.tuned:
+        - name: /dev/vg/master-data
         - read-only: True
         - read-ahead: 1024
 
