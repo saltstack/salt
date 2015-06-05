@@ -84,24 +84,26 @@ def beacon(config):
 
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
-        * access            File accessed
-        * attrib            File metadata changed
-        * close_nowrite     Unwritable file closed
-        * close_write       Writable file closed
-        * create            File created in watched directory
-        * delete            File deleted from watched directory
-        * delete_self       Watched file or directory deleted
-        * modify            File modified
-        * moved_from        File moved out of watched directory
-        * moved_to          File moved into watched directory
-        * move_self         Watched file moved
-        * open              File opened
+
+    * access            File accessed
+    * attrib            File metadata changed
+    * close_nowrite     Unwritable file closed
+    * close_write       Writable file closed
+    * create            File created in watched directory
+    * delete            File deleted from watched directory
+    * delete_self       Watched file or directory deleted
+    * modify            File modified
+    * moved_from        File moved out of watched directory
+    * moved_to          File moved into watched directory
+    * move_self         Watched file moved
+    * open              File opened
 
     The mask can also contain the following options:
-        * dont_follow       Don't dereference symbolic links
-        * excl_unlink       Omit events for children after they have been unlinked
-        * oneshot           Remove watch after one event
-        * onlydir           Operate only if name is directory
+
+    * dont_follow       Don't dereference symbolic links
+    * excl_unlink       Omit events for children after they have been unlinked
+    * oneshot           Remove watch after one event
+    * onlydir           Operate only if name is directory
 
     recurse:
       Recursively watch files in the directory

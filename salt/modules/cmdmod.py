@@ -579,18 +579,18 @@ def run(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    *************************************************************************
-    WARNING: This function does not process commands through a shell
-    unless the python_shell flag is set to True. This means that any
-    shell-specific functionality such as 'echo' or the use of pipes,
-    redirection or &&, should either be migrated to cmd.shell or
-    have the python_shell=True flag set here.
+    .. warning::
 
-    The use of python_shell=True means that the shell will accept _any_ input
-    including potentially malicious commands such as 'good_command;rm -rf /'.
-    Be absolutely certain that you have sanitized your input prior to using
-    python_shell=True
-    *************************************************************************
+        This function does not process commands through a shell
+        unless the python_shell flag is set to True. This means that any
+        shell-specific functionality such as 'echo' or the use of pipes,
+        redirection or &&, should either be migrated to cmd.shell or
+        have the python_shell=True flag set here.
+
+        The use of python_shell=True means that the shell will accept _any_ input
+        including potentially malicious commands such as 'good_command;rm -rf /'.
+        Be absolutely certain that you have sanitized your input prior to using
+        python_shell=True
 
     CLI Example:
 
@@ -707,12 +707,12 @@ def shell(cmd,
 
     .. versionadded:: 2015.5.0
 
-    ************************************************************
-    WARNING: This passes the cmd argument directly to the shell
-    without any further processing! Be absolutely sure that you
-    have properly santized the command passed to this function
-    and do not use untrusted inputs.
-    ************************************************************
+    .. warning ::
+
+        This passes the cmd argument directly to the shell
+        without any further processing! Be absolutely sure that you
+        have properly santized the command passed to this function
+        and do not use untrusted inputs.
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.

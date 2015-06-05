@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-Control the state system on the minion
+Control the state system on the minion.
+
+State Caching
+-------------
+
+When a highstate is called, the minion automatically caches a copy of the last high data.
+If you then run a highstate with cache=True it will use that cached highdata and won't hit the fileserver.
 '''
 from __future__ import absolute_import
 

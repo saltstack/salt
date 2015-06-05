@@ -289,6 +289,22 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
+.. conf_minion:: grains_cache
+
+``grains_cache``
+----------------
+
+Default: ``False``
+
+The minion can locally cache grain data instead of refreshing the data
+each time the grain is referenced. By default this feature is disabled,
+to enable set grains_cache to ``True``.
+
+.. code-block:: yaml
+
+    cache_jobs: False
+
+
 .. conf_minion:: sock_dir
 
 ``sock_dir``

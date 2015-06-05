@@ -681,10 +681,9 @@ def generateBlobs(api_key=None,
 
     .. code-block:: bash
 
-        salt '*' get_intergers number=5 min=1 max=6
+        salt '*' get_integers number=5 min=1 max=6
 
-        salt '*' get_intergers number=5 min=1 max=6
-
+        salt '*' get_integers number=5 min=1 max=6
     '''
     ret = {'res': True}
 
