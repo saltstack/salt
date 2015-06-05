@@ -161,8 +161,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                   .format(salt.syspaths.BOOTSTRAP))
         res = False
     else:
-        log.warn('No useful action performed on '
-                 '{0}'.format(mpt))
+        log.warning('No useful action performed on {0}'.format(mpt))
         res = False
 
     _umount(mpt, ftype)
