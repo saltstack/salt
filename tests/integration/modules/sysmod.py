@@ -71,6 +71,7 @@ class SysModuleTest(integration.ModuleCase):
                 'container_resource.run',
                 'nspawn.stop',
                 'nspawn.restart',
+                'lowpkg.bin_pkg_info',
         )
 
         for fun in docs:
