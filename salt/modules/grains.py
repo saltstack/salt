@@ -589,7 +589,7 @@ def set(key,
         salt '*' grains.set 'apps:myApp' '{port: 2209}'
     '''
 
-    ret = {'comment': [],
+    ret = {'comment': '',
            'changes': {},
            'result': True}
 
