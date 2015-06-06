@@ -1853,8 +1853,8 @@ def health_checks(consul_url=None, service=None, **kwargs):
             ret['res'] = False
             return ret
 
-    if not node:
-        raise SaltInvocationError('Required argument "node" is missing.')
+    if not service:
+        raise SaltInvocationError('Required argument "service" is missing.')
 
     if 'dc' in kwargs:
         query_params['dc'] = kwargs['dc']
