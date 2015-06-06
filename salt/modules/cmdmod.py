@@ -434,9 +434,9 @@ def _run(cmd,
 
         if rstrip:
             if out is not None:
-                out = out.rstrip()
+                out = salt.utils.to_str(out).rstrip()
             if err is not None:
-                err = err.rstrip()
+                err = salt.utils.to_str(err).rstrip()
         ret['pid'] = proc.process.pid
         ret['retcode'] = proc.process.returncode
         ret['stdout'] = out

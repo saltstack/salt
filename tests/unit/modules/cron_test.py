@@ -5,7 +5,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-from StringIO import StringIO
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -16,6 +15,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import cron
+from salt.ext.six.moves import StringIO
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'
@@ -41,6 +41,7 @@ def get_crontab(*args, **kw):
 
 
 def set_crontab(val):
+    CRONTAB.seek(0)
     CRONTAB.truncate(0)
     CRONTAB.write(val)
 
@@ -475,7 +476,7 @@ class CronTestCase(TestCase):
                 self.assertEqual(
                     get_crontab(),
                     inc_tests[idx], (
-                        "idx {0}\n '{1}'\n != \n'{2}'\n\n\n"
+                        "idx {0}\n'{1}'\n != \n'{2}'\n\n\n"
                         "{1!r} != {2!r}"
                     ).format(
                         idx, get_crontab(), inc_tests[idx]))

@@ -222,4 +222,5 @@ class MasterACLTestCase(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(LoadAuthTestCase, needs_daemon=False)
+    tests = [LoadAuthTestCase, MasterACLTestCase]
+    run_tests(*tests, needs_daemon=False)
