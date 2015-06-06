@@ -639,14 +639,16 @@ def linux_interfaces():
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ip("{0}\n{1}".format(cmd1, cmd2))
+        ifaces = _interfaces_ip("{0}\n{1}".format(
+            salt.utils.to_str(cmd1),
+            salt.utils.to_str(cmd2)))
     elif ifconfig_path:
         cmd = subprocess.Popen(
             '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ifconfig(cmd)
+        ifaces = _interfaces_ifconfig(salt.utils.to_str(cmd))
     return ifaces
 
 
@@ -1078,7 +1080,7 @@ def _sunos_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1124,7 +1126,7 @@ def _freebsd_remotes_on(port, which_end):
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1211,7 +1213,7 @@ def _windows_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1259,7 +1261,7 @@ def remotes_on_local_tcp_port(port):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
@@ -1314,7 +1316,7 @@ def remotes_on_remote_tcp_port(port):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:

@@ -4,7 +4,7 @@ Some of the utils used by salt
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 import contextlib
 import copy
 import collections
@@ -34,7 +34,7 @@ import string
 import subprocess
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
 # pylint: disable=redefined-builtin
@@ -267,7 +267,7 @@ def get_context(template, line, num_lines=5, marker=None):
 
     # warning: jinja content may contain unicode strings
     # instead of utf-8.
-    buf = [i.encode('UTF-8') if isinstance(i, six.text_type) else i for i in buf]
+    buf = [to_str(i) if isinstance(i, six.text_type) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
 
@@ -593,8 +593,8 @@ def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
                 else:
                     log.info('PROFILING (dot): {0} generated'.format(fico))
                 log.trace('pyprof2calltree output:')
-                log.trace(pro.stdout.read().strip() +
-                          pro.stderr.read().strip())
+                log.trace(to_str(pro.stdout.read()).strip() +
+                          to_str(pro.stderr.read()).strip())
             else:
                 log.info('You can run {0} for additional stats.'.format(cmd))
         finally:
@@ -1030,8 +1030,7 @@ def istextfile(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     '''
-    PY3 = sys.version_info[0] == 3  # pylint: disable=C0103
-    int2byte = (lambda x: bytes((x,))) if PY3 else chr
+    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
         b'\n\r\t\f\b')
@@ -1498,7 +1497,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = string.maketrans(intab, outtab)
+    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, six.text_type):
@@ -1936,7 +1935,8 @@ def date_cast(date):
         if isinstance(date, six.string_types):
             try:
                 if HAS_TIMELIB:
-                    return timelib.strtodatetime(date)
+                    # py3: yes, timelib.strtodatetime wants bytes, not str :/
+                    return timelib.strtodatetime(to_bytes(date))
             except ValueError:
                 pass
 
@@ -2342,15 +2342,19 @@ def is_bin_str(data):
     if not data:
         return False
 
-    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
-    _null_trans = string.maketrans('', '')
-    # Get the non-text characters (maps a character to itself then
-    # use the 'remove' option to get rid of the text characters.)
-    text = data.translate(_null_trans, text_characters)
+    text_characters = ''.join([chr(x) for x in range(32, 127)] + list('\n\r\t\b'))
+    # Get the non-text characters (map each character to itself then use the
+    # 'remove' option to get rid of the text characters.)
+    if six.PY3:
+        trans = ''.maketrans('', '', text_characters)
+        nontext = data.translate(trans)
+    else:
+        trans = string.maketrans('', '')
+        nontext = data.translate(trans, text_characters)
 
     # If more than 30% non-text characters, then
     # this is considered a binary file
-    if len(text) / len(data) > 0.30:
+    if len(nontext) / len(data) > 0.30:
         return True
     return False
 
@@ -2646,3 +2650,50 @@ def human_size_to_bytes(human_size):
     size_num = int(match.group(1))
     unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
     return size_num * unit_multiplier
+
+
+def to_str(s, encoding=None):
+    '''
+    Given str, bytes, bytearray, or unicode (py2), return str
+    '''
+    if isinstance(s, str):
+        return s
+    if six.PY3:
+        if isinstance(s, (bytes, bytearray)):
+            return s.decode(encoding or __salt_system_encoding__)
+        raise TypeError('expected str, bytes, or bytearray')
+    else:
+        if isinstance(s, bytearray):
+            return str(s)
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+            return s.encode(encoding or __salt_system_encoding__)
+        raise TypeError('expected str, bytearray, or unicode')
+
+
+def to_bytes(s, encoding=None):
+    '''
+    Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
+    python 2)
+    '''
+    if six.PY3:
+        if isinstance(s, bytes):
+            return s
+        if isinstance(s, bytearray):
+            return bytes(s)
+        if isinstance(s, str):
+            return s.encode(encoding or __salt_system_encoding__)
+        raise TypeError('expected bytes, bytearray, or str')
+    else:
+        return to_str(s, encoding)
+
+
+def to_unicode(s, encoding=None):
+    '''
+    Given str or unicode, return unicode (str for python 3)
+    '''
+    if six.PY3:
+        return to_str(s, encoding)
+    else:
+        if isinstance(s, str):
+            return s.decode(encoding or __salt_system_encoding__)
+        return unicode(s)  # pylint: disable=incompatible-py3-code

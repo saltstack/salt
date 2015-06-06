@@ -2346,8 +2346,9 @@ def get_id(opts, cache_minion_id=False):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.readline().strip()
-                if name.startswith(codecs.BOM):  # Remove BOM if exists
-                    name = name.replace(codecs.BOM, '', 1)
+                bname = salt.utils.to_bytes(name)
+                if bname.startswith(codecs.BOM):  # Remove BOM if exists
+                    name = salt.utils.to_str(bname.replace(codecs.BOM, '', 1))
             if name:
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False

@@ -249,7 +249,7 @@ class Script(Target):
         self.tgt = tgt
         self.tgt_type = tgt_type
         inventory, error = subprocess.Popen([inventory_file], shell=True, stdout=subprocess.PIPE).communicate()
-        self.inventory = json.loads(inventory)
+        self.inventory = json.loads(salt.utils.to_str(inventory))
         self.meta = self.inventory.get('_meta', {})
         self.groups = dict()
         self.hostvars = dict()
