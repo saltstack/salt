@@ -338,11 +338,15 @@ def get_specific_user():
     more specific
     '''
     user = get_user()
-    env_vars = ('SUDO_USER',)
-    if user == 'root':
-        for evar in env_vars:
-            if evar in os.environ:
-                return 'sudo_{0}'.format(os.environ[evar])
+    if is_windows():
+        if ctypes.windll.shell32.IsUserAnAdmin() != 0:
+            return 'sudo_{0}'.format(user)
+    else:
+        env_vars = ('SUDO_USER',)
+        if user == 'root':
+            for evar in env_vars:
+                if evar in os.environ:
+                    return 'sudo_{0}'.format(os.environ[evar])
     return user
 
 
