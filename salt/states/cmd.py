@@ -731,6 +731,8 @@ def run(name,
         Ignore the timeout of commands, which is useful for running nohup
         processes.
 
+        .. versionadded:: Beryllium
+
     creates
         Only run if the file specified by ``creates`` does not exist.
 
