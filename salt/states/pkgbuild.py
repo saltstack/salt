@@ -49,3 +49,22 @@ def built(
             saltenv)
     ret['comment'] = 'Packages Built'
     return ret
+
+
+def repo(name):
+    '''
+    Make a package repository, the name is directoty to turn into a repo.
+    This state is best used with onchanges linked to your package building
+    states
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': '',
+           'result': True}
+    if __opts__['test'] == True:
+        ret['result'] = None
+        ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
+        return ret
+    __salt__['pkgbuild.make_repo'](name)
+    ret['changes'] = {'refresh': True}
+    return ret
