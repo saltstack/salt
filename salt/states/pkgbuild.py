@@ -7,14 +7,14 @@ import os
 
 def built(
         name,
-        results,
-        always,
         runas,
         dest_dir,
         spec,
         sources,
         template,
         tgt,
+        results=None,
+        always=False,
         saltenv='base'):
     '''
     Ensure that the named package is built and exists in the named directory
@@ -39,7 +39,7 @@ def built(
         ret['comment'] = 'Packages need to be built'
         ret['result'] = None
         return ret
-    ret['changes'] = __salt__['pkgbuild'](
+    ret['changes'] = __salt__['pkgbuild.build'](
             runas,
             tgt,
             dest_dir,
