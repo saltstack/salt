@@ -19,7 +19,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # Import salt libs
 import salt.utils
 
-__virtualname__ = 'rpmbuild'
+__virtualname__ = 'pkgbuild'
 
 
 def __virtual__():
@@ -65,10 +65,11 @@ def _get_src(tree_base, source, saltenv='base'):
     if parsed.scheme:
         lsrc = __salt__['cp.get_file'](source, dest, saltenv=saltenv)
     else:
-        shutil.copy(source, dest)
+        lsrc = source
+    shutil.copy(lsrc, dest)
 
 
-def mksrpm(dest_dir, spec, sources, template, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, template, saltenv='base'):
     '''
     Create a source rpm from the given 
     '''
@@ -104,7 +105,7 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
         except (IOError, OSError):
             pass
     srpm_dir = tempfile.mkdtemp()
-    srpms = mksrpm(srpm_dir, spec, sources, template, saltenv)
+    srpms = make_src_pkg(srpm_dir, spec, sources, template, saltenv)
     for srpm in srpms:
         results_dir = tempfile.mkdtemp()
         cmd = 'mock -r {0} --rebuild {1} --resultsdir {2}'.format(
@@ -131,7 +132,7 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
     return ret
 
 
-def yum_repo(repodir):
+def make_repo(repodir):
     '''
     Given the repodir, create a yum repository out of the rpms therein
     '''
