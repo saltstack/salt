@@ -151,7 +151,8 @@ def install(pkg=None,
 
 def uninstall(pkg,
               dir=None,
-              runas=None):
+              runas=None,
+              env=None):
     '''
     Uninstall an NPM package.
 
@@ -166,6 +167,13 @@ def uninstall(pkg,
 
     runas
         The user to run NPM with
+
+    env
+        Environment variables to set when invoking npm. Uses the same ``env``
+        format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
+        function.
+
+        .. versionadded:: 2015.5.3
 
     CLI Example:
 
@@ -182,7 +190,7 @@ def uninstall(pkg,
 
     cmd += ' "{0}"'.format(pkg)
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas)
+    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas, env=env)
 
     if result['retcode'] != 0:
         log.error(result['stderr'])
