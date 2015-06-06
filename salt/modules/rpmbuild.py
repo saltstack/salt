@@ -37,7 +37,7 @@ def _mk_tree():
     basedir = tempfile.mkdtemp()
     paths = ['BUILD', 'RPMS', 'SOURCES', 'SPECS', 'SRPMS']
     for path in paths:
-        full = os.path.join(basedir, 'rpmbuild', path)
+        full = os.path.join(basedir, path)
         os.makedirs(full)
     return basedir
 
@@ -47,7 +47,7 @@ def _get_spec(tree_base, spec, template, saltenv='base'):
     Get the spec file and place it in the SPECS dir
     '''
     spec_tgt = os.path.basename(spec)
-    dest = os.path.join(tree_base, 'rpmbuild', 'SPECS', spec_tgt)
+    dest = os.path.join(tree_base, 'SPECS', spec_tgt)
     return __salt__['cp.get_file'](
             spec,
             dest,
@@ -61,12 +61,11 @@ def _get_src(tree_base, source, saltenv='base'):
     '''
     parsed = _urlparse(source)
     sbase = os.path.basename(source)
-    dest = os.path.join(tree_base, 'rpmbuild', 'SOURCES', sbase)
+    dest = os.path.join(tree_base, 'SOURCES', sbase)
     if parsed.scheme:
         lsrc = __salt__['cp.get_file'](source, dest, saltenv=saltenv)
     else:
-        lsrc = source
-    shutil.copy(lsrc, dest)
+        shutil.copy(source, dest)
 
 
 def make_src_pkg(dest_dir, spec, sources, template, saltenv='base'):
@@ -79,9 +78,9 @@ def make_src_pkg(dest_dir, spec, sources, template, saltenv='base'):
         sources = sources.split(',')
     for src in sources:
         _get_src(tree_base, src, saltenv)
-    cmd = 'rpmbuild -bs {0}'.format(spec_path)
+    cmd = 'rpmbuild --define "_topdir {0}" -bs {1}'.format(tree_base, spec_path)
     __salt__['cmd.run'](cmd)
-    srpms = os.path.join(tree_base, 'rpmbuild', 'SRPMS')
+    srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
@@ -107,8 +106,13 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
     srpm_dir = tempfile.mkdtemp()
     srpms = make_src_pkg(srpm_dir, spec, sources, template, saltenv)
     for srpm in srpms:
+        dbase = os.path.dirname(srpm)
+        cmd = 'chown {0} -R {1}'.format(runas, dbase)
+        __salt__['cmd.run'](cmd)
         results_dir = tempfile.mkdtemp()
-        cmd = 'mock -r {0} --rebuild {1} --resultsdir {2}'.format(
+        cmd = 'chown {0} -R {1}'.format(runas, results_dir)
+        __salt__['cmd.run'](cmd)
+        cmd = 'mock -r {0} --rebuild {1} --resultdir {2}'.format(
                 tgt,
                 srpm,
                 results_dir)
