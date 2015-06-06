@@ -42,7 +42,7 @@ def _clean_keys(key):
     return key
 
 
-class _camconsts:
+class _camconsts(object):
     PROTOCOL = 'protocol'
     DEVICE_MODEL = 'device model'
     FIRMWARE_REVISION = 'firmware revision'
@@ -72,27 +72,26 @@ def _freebsd_disks():
 
 def _freebsd_camcontrol(device):
     camcontrol = salt.utils.which('camcontrol')
-
     ret = {}
 
     def parse_identify_attribs(line):
         for attrib in _identify_attribs:
-            search = re.search('^{}\s+(.*)'.format(attrib), line)
+            search = re.search(r'^{}\s+(.*)'.format(attrib), line)
             if search:
                 ret[_clean_keys(attrib)] = search.group(1)
 
     identify = __salt__['cmd.run']('{0} identify {1}'.format(camcontrol,
                                                              device))
-    for line in identify.split('\n'):
+    for line in identify.splitlines():
         parse_identify_attribs(line)
 
     def parse_inquiry(inquiry):
         if not ret.get(_clean_keys(_camconsts.DEVICE_MODEL)):
-            model = re.search('\s<(.+?)>', inquiry)
+            model = re.search(r'\s<(.+?)>', inquiry)
             if model:
                 ret[_clean_keys(_camconsts.DEVICE_MODEL)] = model.group(1)
         if not ret.get(_clean_keys(_camconsts.SERIAL_NUMBER)):
-            sn = re.search('\sSerial Number\s+(\w+)\s', inquiry)
+            sn = re.search(r'\sSerial Number\s+(\w+)\s', inquiry)
             if sn:
                 ret[_clean_keys(_camconsts.SERIAL_NUMBER)] = sn.group(1)
 
