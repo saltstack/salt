@@ -16,6 +16,19 @@ import tempfile
 import shutil
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
+# Import salt libs
+import salt.utils
+
+__virtualname__ = 'rpmbuild'
+
+
+def __virtual__():
+    '''
+    Only if rpmdevtools, createrepo and mock are available
+    '''
+    if salt.utils.which('mock'):
+        return __virtualname__
+
 
 def _mk_tree():
     '''
@@ -77,3 +90,50 @@ def mksrpm(dest_dir, spec, sources, template, saltenv='base'):
         shutil.move(full, tgt)
         ret.append(tgt)
     return ret
+
+
+def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
+    '''
+    Given the package destination directory, the spec file source and package
+    sources, use mock to safely build the rpm defined in the spec file
+    '''
+    ret = {}
+    if not os.path.isdir(dest_dir):
+        try:
+            os.makedirs(dest_dir)
+        except (IOError, OSError):
+            pass
+    srpm_dir = tempfile.mkdtemp()
+    srpms = mksrpm(srpm_dir, spec, sources, template, saltenv)
+    for srpm in srpms:
+        results_dir = tempfile.mkdtemp()
+        cmd = 'mock -r {0} --rebuild {1} --resultsdir {2}'.format(
+                tgt,
+                srpm,
+                results_dir)
+        __salt__['cmd.run'](cmd, runas=runas)
+        for rpm in os.listdir(results_dir):
+            full = os.path.join(results_dir, rpm)
+            if rpm.endswith('src.rpm'):
+                sdest = os.path.join(dest_dir, 'SRPMS', rpm)
+                if not os.path.isdir(sdest):
+                    try:
+                        os.makedirs(sdest)
+                    except (IOError, OSError):
+                        pass
+                shutil.move(full, sdest)
+            elif rpm.endswith('.rpm'):
+                bdist = os.path.join(dest_dir, rpm)
+                shutil.move(full, bdist)
+            else:
+                with salt.utils.fopen(full, 'r') as fp_:
+                    ret[rpm] = fp_.read()
+    return ret
+
+
+def yum_repo(repodir):
+    '''
+    Given the repodir, create a yum repository out of the rpms therein
+    '''
+    cmd = 'createrepo {0}'.format(repodir)
+    __salt__['cmd.run'](cmd)
