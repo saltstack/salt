@@ -76,7 +76,7 @@ def _freebsd_camcontrol(device):
 
     def parse_identify_attribs(line):
         for attrib in _identify_attribs:
-            search = re.search(r'^{}\s+(.*)'.format(attrib), line)
+            search = re.search(r'^{0}\s+(.*)'.format(attrib), line)
             if search:
                 ret[_clean_keys(attrib)] = search.group(1)
 
