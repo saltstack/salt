@@ -87,7 +87,7 @@ def make_src_pkg(dest_dir, spec, sources, template, saltenv='base'):
     for fn_ in os.listdir(srpms):
         full = os.path.join(srpms, fn_)
         tgt = os.path.join(dest_dir, fn_)
-        shutil.move(full, tgt)
+        shutil.copy(full, tgt)
         ret.append(tgt)
     return ret
 
@@ -126,13 +126,15 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
                         os.makedirs(sdest)
                     except (IOError, OSError):
                         pass
-                shutil.move(full, sdest)
+                shutil.copy(full, sdest)
             elif rpm.endswith('.rpm'):
                 bdist = os.path.join(dest_dir, rpm)
-                shutil.move(full, bdist)
+                shutil.copy(full, bdist)
             else:
                 with salt.utils.fopen(full, 'r') as fp_:
                     ret[rpm] = fp_.read()
+        shutil.rmtree(results_dir)
+    shutil.rmtree(srpm_dir)
     return ret
 
 
