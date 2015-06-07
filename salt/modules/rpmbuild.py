@@ -1,13 +1,10 @@
 '''
-Make rpm buld tree
-get sources
-get spec
-make srpm
-run mock on the srpm
-git srpm a target location
-run createrepo on a target location
+RPM Package builder system
 
-deps rpmdevtools, createrepo, mock
+This system allows for all of th ecomponents to build rpms safely in chrooted
+environments. This also provides a function to generate yum repositories
+
+This module impliments the pkgbuild interface
 '''
 
 # Import python libs
@@ -68,9 +65,16 @@ def _get_src(tree_base, source, saltenv='base'):
         shutil.copy(source, dest)
 
 
-def make_src_pkg(dest_dir, spec, sources, template, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     '''
-    Create a source rpm from the given 
+    Create a source rpm from the given spec file and sources
+
+    CLI Example:
+
+        salt '*' pkgbuild.make_src_pkg /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+
+    This example command should build the libnacl SOURCE package and place it in
+    /var/www/html/ on the minion
     '''
     tree_base = _mk_tree()
     spec_path = _get_spec(tree_base, spec, template, saltenv)
@@ -96,6 +100,13 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
     '''
     Given the package destination directory, the spec file source and package
     sources, use mock to safely build the rpm defined in the spec file
+
+    CLI Example:
+
+        salt '*' pkgbuild.make_src_pkg mock epel-7-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+
+    This example command should build the libnacl package for rhel 7 using user
+    "mock" and place it in /var/www/html/ on the minion
     '''
     ret = {}
     if not os.path.isdir(dest_dir):
@@ -141,6 +152,10 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
 def make_repo(repodir):
     '''
     Given the repodir, create a yum repository out of the rpms therein
+
+    CLI Example::
+
+        salt '*' pkgbuild.make_repo /var/www/html/
     '''
     cmd = 'createrepo {0}'.format(repodir)
     __salt__['cmd.run'](cmd)
