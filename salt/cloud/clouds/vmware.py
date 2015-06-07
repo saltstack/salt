@@ -2062,7 +2062,7 @@ def create(vm_):
         'extra_config', vm_, __opts__, default=None
     )
     power = config.get_cloud_config_value(
-        'power_on', vm_, __opts__, default=False
+        'power_on', vm_, __opts__, default=True
     )
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
