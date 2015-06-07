@@ -44,5 +44,5 @@ The ``digital_ocean.py`` Salt Cloud driver was removed in favor of the
 ``digital_ocean_v2.py`` driver as DigitalOcean has removed support for APIv1.
 The ``digital_ocean_v2.py`` was renamed to ``digital_ocean.py`` and supports
 DigitalOcean's APIv2.
-The ``vsphere.py`` Salt Cloud driver was removed in favor of the ``vmware.py``
-driver.
+The ``vsphere.py`` Salt Cloud driver has been deprecated in favor of the
+``vmware.py`` driver.
