@@ -2422,18 +2422,21 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
     return ret
 
 
-def stop(name, call=None):
+def stop(name=None, call=None, kwargs=None):
     '''
     Stop a node
     '''
-    if call != 'action':
+    if call == 'function':
+        name = kwargs.get('name', None)
+
+    if name is None:
         raise SaltCloudSystemExit(
-            'The stop action must be called with -a or --action.'
+            'The stop action requires a name.'
         )
 
     log.info('Stopping node {0}'.format(name))
 
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name).values()[0]['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -2446,18 +2449,21 @@ def stop(name, call=None):
     return result
 
 
-def start(name, call=None):
+def start(name=None, call=None, kwargs=None):
     '''
     Start a node
     '''
-    if call != 'action':
+    if call == 'function':
+        name = kwargs.get('name', None)
+
+    if name is None:
         raise SaltCloudSystemExit(
-            'The start action must be called with -a or --action.'
+            'The start action requires a name.'
         )
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name).values()[0]['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -2695,7 +2701,7 @@ def rename(name, kwargs, call=None):
     )
 
 
-def destroy(name, call=None):
+def destroy(name=None, call=None, kwargs=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
 
@@ -2706,12 +2712,15 @@ def destroy(name, call=None):
         salt-cloud --destroy mymachine
     '''
     if call == 'function':
+      name = kwargs.get('name', None)
+
+    if not name:
         raise SaltCloudSystemExit(
-            'The destroy action must be called with -d, --destroy, '
-            '-a or --action.'
+            'The destroy action requires a name.'
         )
 
     node_metadata = _get_node(name)
+    name = node_metadata.keys()[0]
     instance_id = node_metadata[name]['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
     protected = show_term_protect(
@@ -3304,7 +3313,7 @@ def keepvol_on_destroy(name, kwargs=None, call=None):
                           volume_id=volume_id, value='false')
 
 
-def delvol_on_destroy(name, kwargs=None, call=None):
+def delvol_on_destroy(name=None, kwargs=None, call=None):
     '''
     Delete all/specified EBS volumes upon instance termination
 
@@ -3314,13 +3323,11 @@ def delvol_on_destroy(name, kwargs=None, call=None):
 
         salt-cloud -a delvol_on_destroy mymachine
     '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The delvol_on_destroy action must be called with -a or --action.'
-        )
-
     if not kwargs:
         kwargs = {}
+
+    if call == 'function':
+        name = kwargs.get('name', None)
 
     device = kwargs.get('device', None)
     volume_id = kwargs.get('volume_id', None)
@@ -3333,8 +3340,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
                    value=None, requesturl=None):
 
     if not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name).values()[0]['instanceId']
 
     if requesturl:
         data = aws.query(requesturl=requesturl,
@@ -3472,24 +3478,21 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     '''
     Attach a volume to an instance
     '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The attach_volume action must be called with -a or --action.'
-        )
-
     if not kwargs:
         kwargs = {}
 
-    if 'instance_id' in kwargs:
-        instance_id = kwargs['instance_id']
-
-    if name and not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+    if call == 'function':
+        name = kwargs.get('name', None)
 
     if not name and not instance_id:
         log.error('Either a name or an instance_id is required.')
         return False
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if not instance_id:
+        instance_id = _get_node(name).values()[0]['instanceId']
 
     if 'volume_id' not in kwargs:
         log.error('A volume_id is required.')
@@ -3531,13 +3534,11 @@ def detach_volume(name=None, kwargs=None, instance_id=None, call=None):
     '''
     Detach a volume from an instance
     '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The detach_volume action must be called with -a or --action.'
-        )
-
     if not kwargs:
         kwargs = {}
+
+    if call == 'function':
+        name = kwargs.get('name', None)
 
     if 'volume_id' not in kwargs:
         log.error('A volume_id is required.')
