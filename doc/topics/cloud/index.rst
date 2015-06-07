@@ -62,6 +62,7 @@ Cloud Provider Specifics
         Getting Started With SoftLayer <softlayer>
         Getting Started With Vexxhost <vexxhost>
         Getting Started With VMware <vmware>
+        Getting Started With vSphere <vsphere>
 
 Miscellaneous Options
 =====================
