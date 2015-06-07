@@ -61,6 +61,7 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
+    cytest
     daemontools
     darwin_pkgutil
     darwin_sysctl
@@ -272,6 +273,7 @@ Full list of builtin execution modules
     sysmod
     sysrc
     system
+    system_profiler
     systemd
     test
     test_virtual

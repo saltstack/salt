@@ -373,7 +373,6 @@ class SaltEvent(object):
             socks = dict(self.poller.poll(wait * 1000))
             if socks.get(self.sub) != zmq.POLLIN:
                 continue
-
             try:
                 # Please do not use non-blocking mode here. Reliability is
                 # more important than pure speed on the event bus.
