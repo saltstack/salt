@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The pkgbuild state is the front of Salt package building backend. It
 automatically
@@ -40,6 +41,7 @@ automatically
       pkgbuild.repo
 '''
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 
 
@@ -133,7 +135,7 @@ def repo(name):
            'changes': {},
            'comment': '',
            'result': True}
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
         return ret

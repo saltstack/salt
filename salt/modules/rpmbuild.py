@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 RPM Package builder system
 
@@ -8,6 +9,7 @@ This module impliments the pkgbuild interface
 '''
 
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 import tempfile
 import shutil
