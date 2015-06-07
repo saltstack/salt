@@ -18,10 +18,10 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict
-from salt import utils
 from salt.utils import args
+from salt.utils.odict import OrderedDict
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
+from salt import utils
 
 # Import Python libraries
 import os
@@ -32,6 +32,7 @@ from collections import namedtuple
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range
 try:
     import timelib  # pylint: disable=import-error,unused-import
     HAS_TIMELIB = True
@@ -323,6 +324,11 @@ class UtilsTestCase(TestCase):
         self.assertDictEqual(utils.clean_kwargs(__pub_foo='bar'), {})
         self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {})
         self.assertDictEqual(utils.clean_kwargs(foo_bar='gwar'), {'foo_bar': 'gwar'})
+
+    def test_sanitize_win_path_string(self):
+        p = '\\windows\\system'
+        self.assertEqual(utils.sanitize_win_path_string('\\windows\\system'), '\\windows\\system')
+        self.assertEqual(utils.sanitize_win_path_string('\\bo:g|us\\p?at*h>'), '\\bo_g_us\\p_at_h_')
 
     def test_check_state_result(self):
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
@@ -629,7 +635,12 @@ class UtilsTestCase(TestCase):
         # To to ensure safe exit if str passed doesn't evaluate to True
         self.assertFalse(utils.is_bin_str(''))
 
-        # TODO: Test binary detection
+        nontext = 3 * (''.join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)]))
+        almost_bin_str = '{0}{1}'.format(LORUM_IPSUM[:100], nontext[:42])
+        self.assertFalse(utils.is_bin_str(almost_bin_str))
+
+        bin_str = almost_bin_str + '\x01'
+        self.assertTrue(utils.is_bin_str(bin_str))
 
     def test_repack_dict(self):
         list_of_one_element_dicts = [{'dict_key_1': 'dict_val_1'},
@@ -727,6 +738,57 @@ class UtilsTestCase(TestCase):
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
+
+    def test_to_str(self):
+        for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+            self.assertRaises(TypeError, utils.to_str, x)
+        if six.PY3:
+            self.assertEqual(utils.to_str('plugh'), 'plugh')
+            self.assertEqual(utils.to_str('áéíóúý'), 'áéíóúý')
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            self.assertEqual(utils.to_str(ut, 'utf-8'), un)
+            self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
+        else:
+            self.assertEqual(utils.to_str('plugh'), 'plugh')
+            self.assertEqual(utils.to_str(u'áéíóúý'), 'áéíóúý')
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
+            self.assertEqual(utils.to_str(un, 'utf-8'), ut)
+            self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), ut)
+
+    def test_to_bytes(self):
+        for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+            self.assertRaises(TypeError, utils.to_bytes, x)
+        if six.PY3:
+            self.assertEqual(utils.to_bytes('xyzzy'), b'xyzzy')
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            self.assertEqual(utils.to_bytes(ut), ut)
+            self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
+            self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
+        else:
+            self.assertEqual(utils.to_bytes('xyzzy'), 'xyzzy')
+            ut = ''.join([chr(x) for x in (0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29)])
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            self.assertEqual(utils.to_bytes(ut), ut)
+            self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
+            self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
+
+    def test_to_unicode(self):
+        if six.PY3:
+            self.assertEqual(utils.to_unicode('plugh'), 'plugh')
+            self.assertEqual(utils.to_unicode('áéíóúý'), 'áéíóúý')
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
+            self.assertEqual(utils.to_unicode(bytearray(ut), 'utf-8'), un)
+        else:
+            self.assertEqual(utils.to_unicode('xyzzy', 'utf-8'), u'xyzzy')
+            ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
+
 
 if __name__ == '__main__':
     from integration import run_tests

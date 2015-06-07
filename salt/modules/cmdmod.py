@@ -294,8 +294,8 @@ def _run(cmd,
             # Getting the environment for the runas user
             # There must be a better way to do this.
             py_code = (
-                'import os, itertools; '
-                'print \"\\0\".join(itertools.chain(*os.environ.items()))'
+                'import sys, os, itertools; '
+                'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
             )
             if __grains__['os'] in ['MacOS', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
@@ -434,9 +434,9 @@ def _run(cmd,
 
         if rstrip:
             if out is not None:
-                out = out.rstrip()
+                out = salt.utils.to_str(out).rstrip()
             if err is not None:
-                err = err.rstrip()
+                err = salt.utils.to_str(err).rstrip()
         ret['pid'] = proc.process.pid
         ret['retcode'] = proc.process.returncode
         ret['stdout'] = out

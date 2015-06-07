@@ -548,8 +548,8 @@ def _clean_stale(repo, local_refs=None):
                 # Rename heads to match the ref names from
                 # pygit2.Repository.listall_references()
                 remote_refs.append(
-                    line.split()[-1].replace('refs/heads/',
-                                             'refs/remotes/origin/')
+                    line.split()[-1].replace(b'refs/heads/',
+                                             b'refs/remotes/origin/')
                 )
             except IndexError:
                 continue

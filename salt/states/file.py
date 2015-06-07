@@ -3737,7 +3737,7 @@ def copy(
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
             if hash1 != hash2:
-                changed = False
+                changed = True
         if not force:
             changed = False
         elif not __opts__['test']:
