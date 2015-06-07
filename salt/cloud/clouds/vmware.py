@@ -481,7 +481,7 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
         if not adapter_type:
             err_msg = "The type of '{0}' has not been specified".format(scsi_adapter_label)
         else:
-            err_msg = "Cannot create '{0}' of invalid/unsupported type '{1}'".format(scsi_adapter_label, adapter_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_adapter_label, adapter_type)
         raise SaltCloudSystemExit(err_msg)
 
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -2217,12 +2217,12 @@ def create(vm_):
         if not template:
             clone_spec.powerOn = power
 
-        log.debug('clone_spec set to \n{0}\n'.format(
+        log.debug('clone_spec set to:\n{0}'.format(
             pprint.pformat(clone_spec))
         )
 
         try:
-            log.info("Creating {0} from {1}({2})\n".format(vm_['name'], clone_type, vm_['clonefrom']))
+            log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
             salt.utils.cloud.fire_event(
                 'event',
                 'requesting instance',
