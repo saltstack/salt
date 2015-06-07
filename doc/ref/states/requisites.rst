@@ -508,7 +508,7 @@ at the end of a state run, after all states have completed.
 
  configure-apache2:
    file.managed:
-     - path: /etc/apache2/apache2.conf
+     - name: /etc/apache2/apache2.conf
      - source: salt://apache2/apache2.conf
 
 This example will cause apache2 to be restarted when the apache2.conf file is
@@ -522,7 +522,7 @@ changed, but the apache2 restart will happen at the end of the state run.
 
  configure-apache2:
    file.managed:
-     - path: /etc/apache2/apache2.conf
+     - name: /etc/apache2/apache2.conf
      - source: salt://apache2/apache2.conf
      - listen_in:
        - service: apache2
@@ -547,7 +547,7 @@ same privileges as the salt-minion.
 
     comment-repo:
       file.replace:
-        - path: /etc/yum.repos.d/fedora.repo
+        - name: /etc/yum.repos.d/fedora.repo
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
