@@ -21,4 +21,8 @@ DIVERGENCES TO KEEP AT ALL COSTS:
     - proposed as fix but unrelated: https://github.com/saltstack/salt/pull/22950
     - tried to rediscuss on https://github.com/saltstack/salt/issues/23317
 
+- [environ hotfix / 337ed10cfc9f53724e653e9d3ccef317005d9817](https://github.com/makinacorpus/salt/commit/337ed10cfc9f53724e653e9d3ccef317005d9817)
+
+       - See https://github.com/saltstack/salt/issues/24480
+
 - iptables needs sync, currently this is a mix from stable/develop, waiting again a bit
