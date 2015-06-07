@@ -316,11 +316,12 @@ def bootstrap(vm_, opts):
             has_ssh_agent = True
 
     if key_filename is None and ('password' not in vm_
-                                 or not vm_['password']) and has_ssh_agent is False:
+                                 or not vm_['password']) and ('win_password' not in vm_ or not vm_['win_password']) and has_ssh_agent is False:
         raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and there is no password set for the vm. '
-            'Check your provider for the \'change_password\' option.'
+            'Cannot deploy Salt in a VM if the \'key_filename\' setting '
+            'is not set and there is no password set for the VM. '
+            'Check the provider docs for \'change_password\' option if it '
+            'is supported by your provider.'
         )
 
     ret = {}
