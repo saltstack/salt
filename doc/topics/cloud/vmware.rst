@@ -170,7 +170,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``memory``
     Enter the memory size (in MB or GB) that you want the VM/template to have. If
     not specified, the current VM/template\'s memory size is used. Example
-    ``memory: 8GB`` or ``memory: 2048MB``.
+    ``memory: 8GB`` or ``memory: 8192MB``.
 
 ``devices``
     Enter the device specifications here. Currently, the following devices can be
