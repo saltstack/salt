@@ -776,7 +776,6 @@ def trust_key(keyid=None,
         salt '*' gpg.trust_key keyid='3FAD9F1E' trust_level='marginally'
         salt '*' gpg.trust_key fingerprint='53C96788253E58416D20BCD352952C84C3252192' trust_level='not_trusted'
         salt '*' gpg.trust_key keys=3FAD9F1E trust_level='ultimately' user='username'
-
     '''
     ret = {
            'res': True,
