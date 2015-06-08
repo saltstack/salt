@@ -755,7 +755,7 @@ def _wait_for_vmware_tools(vm_ref, max_wait_minute):
 def _wait_for_ip(vm_ref, max_wait_minute):
     max_wait_minute_vmware_tools = max_wait_minute - 5
     max_wait_minute_ip = max_wait_minute - max_wait_minute_vmware_tools
-    vmware_tools_status =  _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
+    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
     if not vmware_tools_status:
         return False
 
