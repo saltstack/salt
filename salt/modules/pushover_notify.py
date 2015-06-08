@@ -19,6 +19,7 @@ Module for sending messages to Pushover (https://www.pushover.net)
 # Import Python libs
 from __future__ import absolute_import
 import logging
+import urllib
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -26,12 +27,9 @@ from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-try:
-    import requests
-    from requests.exceptions import ConnectionError
-    ENABLED = True
-except ImportError:
-    ENABLED = False
+# Import salt libs
+from salt.exceptions import SaltInvocationError
+import salt.utils.http
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'pushover'
@@ -43,8 +41,6 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
-    if not ENABLED:
-        return False
     return __virtualname__
 
 
@@ -52,6 +48,7 @@ def _query(function,
            token=None,
            api_version='1',
            method='POST',
+           header_dict=None,
            data=None,
            query_params=None):
     '''
@@ -64,13 +61,6 @@ def _query(function,
     :param data:        The data to be sent for POST method.
     :return:            The json response from the API call or False.
     '''
-    headers = {}
-
-    if query_params is None:
-        query_params = {}
-
-    if data is None:
-        data = {}
 
     ret = {'message': '',
            'res': True}
@@ -90,38 +80,34 @@ def _query(function,
         },
     }
 
-    if not token:
-        try:
-            options = __salt__['config.option']('pushover')
-            if not token:
-                token = options.get('token')
-        except (NameError, KeyError, AttributeError):
-            log.error('No PushOver token found.')
-            ret['message'] = 'No PushOver token found.'
-            ret['res'] = False
-            return ret
-
     api_url = 'https://api.pushover.net'
     base_url = _urljoin(api_url, api_version + '/')
     path = pushover_functions.get(function).get('request')
     url = _urljoin(base_url, path, False)
 
-    try:
-        result = requests.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=query_params,
-            data=data,
-            verify=True,
-        )
-    except ConnectionError as e:
-        ret['message'] = e
-        ret['res'] = False
-        return ret
+    if not query_params:
+        query_params = {}
 
-    if result.status_code == salt.ext.six.moves.http_client.OK:
-        result = result.json()
+    decode = True
+    if method == 'DELETE':
+        decode = False
+
+    result = salt.utils.http.query(
+        url,
+        method,
+        params=query_params,
+        data=data,
+        header_dict=header_dict,
+        decode=decode,
+        decode_type='json',
+        text=True,
+        status=True,
+        cookies=True,
+        persist_session=True,
+        opts=__opts__,
+    )
+
+    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         response = pushover_functions.get(function).get('response')
         if response in result and result[response] == 0:
             ret['res'] = False
@@ -129,15 +115,13 @@ def _query(function,
         return ret
     else:
         try:
-            result = result.json()
-            if response in result and result[response] == 0:
+            if 'response' in result and result[response] == 0:
                 ret['res'] = False
             ret['message'] = result
-            return ret
         except ValueError:
             ret['res'] = False
             ret['message'] = result
-            return ret
+        return ret
 
 
 def _validate_sound(sound,
@@ -147,6 +131,10 @@ def _validate_sound(sound,
     :param sound:       The sound that we want to verify
     :param token:       The PushOver token.
     '''
+    res = {
+            'message': 'Sound is invalid',
+            'result': False
+           }
     parameters = dict()
     parameters['token'] = token
 
@@ -158,15 +146,28 @@ def _validate_sound(sound,
         if 'message' in response:
             _message = response.get('message', '')
             if 'status' in _message:
-                if _message.get('status', '') == 1:
-                    sounds = _message.get('sounds', '')
-                    if sound in sounds:
-                        return True
-                    else:
-                        log.info('Warning: {0} not a valid sound.'.format(sound))
-                        return False
+                if _message.get('dict', {}).get('status', None) == 1:
+                    res['result'] = True
+                    res['message'] = 'User key is valid.'
                 else:
-                    log.info('Error: {0}'.format(''.join(_message.get('errors'))))
+                    res['result'] = False
+                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
+    return res
+
+    if response['res']:
+        if 'message' in response:
+            _message = response.get('message', '')
+            if 'status' in _message:
+                if _message.get('dict', {}).get('status', '') == 1:
+                    sounds = _message.get('dict', {}).get('sounds', '')
+                    if sound in sounds:
+                        res['message'] = 'Valid sound.'.format(sound)
+                        res['result'] = True
+                    else:
+                        res['message'] = 'Warning: {0} not a valid sound.'.format(sound)
+                        res['result'] = False
+                else:
+                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
     return False
 
 
@@ -179,24 +180,33 @@ def _validate_user(user,
     :param device:      The device for the user.
     :param token:       The PushOver token.
     '''
+    res = {
+            'message': 'User key is invalid',
+            'result': False
+           }
+
     parameters = dict()
     parameters['user'] = user
     parameters['token'] = token
-    parameters['device'] = device
+    if device:
+        parameters['device'] = device
 
     response = _query(function='validate_user',
                       method='POST',
-                      data=parameters)
+                      header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                      data=urllib.urlencode(parameters))
 
     if response['res']:
         if 'message' in response:
             _message = response.get('message', '')
             if 'status' in _message:
-                if _message.get('status', '') == 1:
-                    return True
+                if _message.get('dict', {}).get('status', None) == 1:
+                    res['result'] = True
+                    res['message'] = 'User key is valid.'
                 else:
-                    log.info('Error: {0}'.format(''.join(_message.get('errors'))))
-    return False
+                    res['result'] = False
+                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
+    return res
 
 
 def post_message(user=None,
@@ -234,16 +244,24 @@ def post_message(user=None,
     '''
 
     if not token:
-        log.error('token is a required argument.')
+        token = __salt__['config.option']('pushover.token')
+        if not token:
+            raise SaltInvocationError('Pushover token is unavailable.')
 
     if not user:
-        log.error('user is a required argument.')
+        user = __salt__['config.option']('pushover.user')
+        if not user:
+            raise SaltInvocationError('Pushover user key is unavailable.')
 
     if not message:
-        log.error('message is a required argument.')
+        raise SaltInvocationError('Required paramter "message" is missing.')
 
-    if not _validate_user(user, device, token):
-        return
+    user_validate = _validate_user(user, device, token)
+    if not user_validate['result']:
+        return user_validate
+
+    if not title:
+        title = 'Message from SaltStack'
 
     parameters = dict()
     parameters['user'] = user
@@ -260,7 +278,8 @@ def post_message(user=None,
 
     result = _query(function='message',
                     method='POST',
-                    data=parameters)
+                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                    data=urllib.urlencode(parameters))
 
     if result['res']:
         return True
