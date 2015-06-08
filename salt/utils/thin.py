@@ -30,6 +30,12 @@ try:
 except ImportError:
     # Older jinja does not need markupsafe
     HAS_MARKUPSAFE = False
+
+try:
+    import xml
+    HAS_XML = True
+except ImportError:
+    HAS_XML = False
 # pylint: enable=import-error,no-name-in-module
 
 try:
@@ -114,6 +120,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
 
     if HAS_SSL_MATCH_HOSTNAME:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
+
+    if HAS_XML:
+        # For openSUSE, which apparently doesn't include the whole stdlib
+        tops.append(os.path.dirname(xml.__file__))
 
     for mod in [m for m in extra_mods.split(',') if m]:
         if mod not in locals() and mod not in globals():
