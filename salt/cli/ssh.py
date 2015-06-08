@@ -13,6 +13,7 @@ class SaltSSH(parsers.SaltSSHOptionParser):
 
     def run(self):
         self.parse_args()
+        self.setup_logfile_logger()
 
         ssh = salt.client.ssh.SSH(self.config)
         ssh.run()
