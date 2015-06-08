@@ -7,7 +7,7 @@ from __future__ import absolute_import
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
 
 ensure_in_syspath('../../')
 
@@ -30,10 +30,10 @@ grainsmod.__salt__ = grains.__salt__ = {
     'grains.delval': grainsmod.delval,
     'grains.append': grainsmod.append,
     'grains.remove': grainsmod.remove,
+    'saltutil.sync_grains': MagicMock()
 }
 
 
-@patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase):
 
