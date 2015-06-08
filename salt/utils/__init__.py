@@ -51,19 +51,12 @@ try:
 except ImportError:
     HAS_CPROFILE = False
 
-# Try to load pwd, fallback to getpass if unsuccessful
 # Import 3rd-party libs
 try:
     import Crypto.Random
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
-
-try:
-    import pwd
-except ImportError:
-    import getpass
-    pwd = None
 
 try:
     import timelib
@@ -276,10 +269,10 @@ def get_user():
     '''
     Get the current user
     '''
-    if pwd is not None:
+    if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
     else:
-        return getpass.getuser()
+        return win32api.GetUserName()
 
 
 def get_uid(user=None):
@@ -290,7 +283,7 @@ def get_uid(user=None):
     systems which do not support pwd or os.geteuid
     it will return None.
     """
-    if pwd is None:
+    if not HAS_PWD:
         result = None
     elif user is None:
         try:
