@@ -687,7 +687,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         opts = opts.split(',')
 
     if not os.path.exists(name) and mkmnt:
-        __salt__['file.mkdir'](name=name, user=user)
+        __salt__['file.mkdir'](name, user=user)
 
     args = ''
     if opts is not None:
