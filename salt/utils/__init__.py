@@ -637,11 +637,12 @@ def gen_mac(prefix='AC:DE:48'):
 
 def mac_str_to_bytes(mac_str):
     '''
-    Convert a MAC address string into bytes. Works with or without delimiters,
-    e.g.:
+    Convert a MAC address string into bytes. Works with or without separators:
 
-    mac_str_to_bytes('08:00:27:13:69:77')
-    mac_str_to_bytes('080027136977')
+    b1 = mac_str_to_bytes('08:00:27:13:69:77')
+    b2 = mac_str_to_bytes('080027136977')
+    assert b1 == b2
+    assert isinstance(b1, bytes)
     '''
     if len(mac_str) == 12:
         pass
