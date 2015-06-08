@@ -983,7 +983,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         mod_opts = {}
         for key, val in list(opts.items()):
-            if key in ('logger', 'grains'):
+            if key == 'logger':
                 continue
             mod_opts[key] = val
         return mod_opts
