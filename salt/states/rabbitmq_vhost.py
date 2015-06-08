@@ -98,7 +98,7 @@ def present(name,
 
     if vhost_exists:
         owner_perms = __salt__['rabbitmq.list_permissions'](name, runas=runas)
-        for eowner, eperms in owner_perms.iteritem():
+        for eowner, eperms in owner_perms.iteritems():
             if eowner == owner and eperms == [conf, write, read]:
                 ret['comment'] = 'Nothing to do'
                 return ret
