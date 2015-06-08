@@ -477,7 +477,7 @@ def query(url,
             return ret
 
         if decode_type == 'json':
-            ret['dict'] = json.loads(result_text)
+            ret['dict'] = json.loads(salt.utils.to_str(result_text))
         elif decode_type == 'xml':
             ret['dict'] = []
             items = ET.fromstring(result_text)
