@@ -59,7 +59,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import match
+from re import match, findall
 import atexit
 import pprint
 import logging
@@ -313,7 +313,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
 def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     random_key = randint(-2099, -2000)
 
-    size_kb = int(size_gb) * 1024 * 1024
+    size_kb = int(size_gb * 1024.0 * 1024.0)
 
     disk_spec = vim.vm.device.VirtualDeviceSpec()
     disk_spec.fileOperation = 'create'
@@ -355,11 +355,11 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name, ada
         if isinstance(network_adapter, type(edited_network_adapter)):
             edited_network_adapter = network_adapter
         else:
-            log.debug("Changing type of {0} from {1} to {2}".format(network_adapter.deviceInfo.label, type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(), adapter_type))
+            log.debug("Changing type of '{0}' from '{1}' to '{2}'".format(network_adapter.deviceInfo.label, type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(), adapter_type))
     else:
         # If type not specified or does not match, dont change adapter type
         if adapter_type:
-            log.error("Cannot change type of {0} to {1}. Not changing type".format(network_adapter.deviceInfo.label, adapter_type))
+            log.error("Cannot change type of '{0}' to '{1}'. Not changing type".format(network_adapter.deviceInfo.label, adapter_type))
         edited_network_adapter = network_adapter
 
     if switch_type == 'standard':
@@ -378,9 +378,9 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name, ada
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
-            err_msg = "The switch type to be used by {0} has not been specified".format(network_adapter.deviceInfo.label)
+            err_msg = "The switch type to be used by '{0}' has not been specified".format(network_adapter.deviceInfo.label)
         else:
-            err_msg = "Cannot create {0}. Invalid/unsupported switch type {1}".format(network_adapter.deviceInfo.label, switch_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(network_adapter.deviceInfo.label, switch_type)
         raise SaltCloudSystemExit(err_msg)
 
     edited_network_adapter.key = network_adapter.key
@@ -412,9 +412,9 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
         if not adapter_type:
-            log.debug("The type of {0} has not been specified. Creating of default type vmxnet3".format(network_adapter_label))
+            log.debug("The type of '{0}' has not been specified. Creating of default type 'vmxnet3'".format(network_adapter_label))
         else:
-            log.error("Cannot create network adapter of type {0}. Creating {1} of default type vmxnet3".format(adapter_type, network_adapter_label))
+            log.error("Cannot create network adapter of type '{0}'. Creating '{1}' of default type 'vmxnet3'".format(adapter_type, network_adapter_label))
         network_spec.device = vim.vm.device.VirtualVmxnet3()
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -434,9 +434,9 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     else:
         # If switch type not specified or does not match, show error and return
         if not switch_type:
-            err_msg = "The switch type to be used by {0} has not been specified".format(network_adapter_label)
+            err_msg = "The switch type to be used by '{0}' has not been specified".format(network_adapter_label)
         else:
-            err_msg = "Cannot create {0}. Invalid/unsupported switch type {1}".format(network_adapter_label, switch_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(network_adapter_label, switch_type)
         raise SaltCloudSystemExit(err_msg)
 
     network_spec.device.key = random_key
@@ -479,9 +479,9 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     else:
         # If type not specified or does not match, show error and return
         if not adapter_type:
-            err_msg = "The type of {0} has not been specified".format(scsi_adapter_label)
+            err_msg = "The type of '{0}' has not been specified".format(scsi_adapter_label)
         else:
-            err_msg = "Cannot create {0} of invalid/unsupported type {1}".format(scsi_adapter_label, adapter_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_adapter_label, adapter_type)
         raise SaltCloudSystemExit(err_msg)
 
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -557,9 +557,9 @@ def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mo
     else:
         # If device_type not specified or does not match, create drive of Client type with Passthough mode
         if not device_type:
-            log.debug("The device_type of {0} has not been specified. Creating of default type client_device".format(drive_label))
+            log.debug("The 'device_type' of '{0}' has not been specified. Creating of default type 'client_device'".format(drive_label))
         else:
-            log.error("Cannot create CD/DVD drive of type {0}. Creating {1} of default type client_device".format(device_type, drive_label))
+            log.error("Cannot create CD/DVD drive of type '{0}'. Creating '{1}' of default type 'client_device'".format(device_type, drive_label))
         drive_spec.device.backing = vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo()
         drive_spec.device.deviceInfo.summary = 'Remote Device'
 
@@ -615,8 +615,8 @@ def _manage_devices(devices, vm):
                 unit_number += 1
                 existing_disks_label.append(device.deviceInfo.label)
                 if device.deviceInfo.label in list(devices['disk'].keys()):
-                    size_gb = devices['disk'][device.deviceInfo.label]['size']
-                    size_kb = int(size_gb) * 1024 * 1024
+                    size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+                    size_kb = int(size_gb * 1024.0 * 1024.0)
                     if device.capacityInKB < size_kb:
                         # expand the disk
                         disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
@@ -675,7 +675,7 @@ def _manage_devices(devices, vm):
         log.debug("Hard disks to create: {0}".format(disks_to_create))
         for disk_label in disks_to_create:
             # create the disk
-            size_gb = devices['disk'][disk_label]['size']
+            size_gb = float(devices['disk'][disk_label]['size'])
             disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
             device_specs.append(disk_spec)
             unit_number += 1
@@ -721,7 +721,7 @@ def _manage_devices(devices, vm):
                 else:
                     controller_key = None
             if not controller_key:
-                log.error('No more available controllers for {0}. All IDE controllers are currently in use'.format(cd_drive_label))
+                log.error("No more available controllers for '{0}'. All IDE controllers are currently in use".format(cd_drive_label))
             else:
                 cd_drive_spec = _add_new_cd_or_dvd_drive_helper(cd_drive_label, controller_key, device_type, mode, iso_path)
                 device_specs.append(cd_drive_spec)
@@ -735,27 +735,51 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_ip(vm_ref, max_wait_minute):
+def _wait_for_vmware_tools(vm_ref, max_wait_minute):
     time_counter = 0
     starttime = time.time()
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
         if time_counter % 5 == 0:
-            log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm_ref.name, time_counter))
+            log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
+        if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
+            log.info("[ {0} ] Succesfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
+            return True
+
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
+    return False
+
+
+def _wait_for_ip(vm_ref, max_wait_minute):
+    max_wait_minute_vmware_tools = max_wait_minute - 5
+    max_wait_minute_ip = max_wait_minute - max_wait_minute_vmware_tools
+    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
+    if not vmware_tools_status:
+        return False
+
+    time_counter = 0
+    starttime = time.time()
+    max_wait_second = int(max_wait_minute_ip * 60)
+    while time_counter < max_wait_second:
+        if time_counter % 5 == 0:
+            log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
         if vm_ref.summary.guest.ipAddress:
             if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-                log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                 return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
                     if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
-                        log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                        log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
+    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} minutes".format(vm_ref.name, max_wait_minute_ip))
     return False
 
 
@@ -1974,6 +1998,7 @@ def destroy(name, call=None):
                     )
                     return 'failed to destroy'
             try:
+                log.info('Destroying VM {0}'.format(name))
                 task = vm["object"].Destroy_Task()
                 _wait_for_task(task, name, "destroy")
             except Exception as exc:
@@ -2062,7 +2087,7 @@ def create(vm_):
         'extra_config', vm_, __opts__, default=None
     )
     power = config.get_cloud_config_value(
-        'power_on', vm_, __opts__, default=False
+        'power_on', vm_, __opts__, default=True
     )
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
@@ -2088,13 +2113,13 @@ def create(vm_):
         if resourcepool:
             resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
             if not resourcepool_ref:
-                log.error('Specified resource pool: {0} does not exist'.format(resourcepool))
+                log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a resource pool that exists.')
         elif cluster:
             cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
             if not cluster_ref:
-                log.error('Specified cluster: {0} does not exist'.format(cluster))
+                log.error("Specified cluster: '{0}' does not exist".format(cluster))
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a cluster that exists.')
             else:
@@ -2104,26 +2129,26 @@ def create(vm_):
                 'You must either specify a cluster or a resource pool when cloning from a template.'
             )
         else:
-            log.debug('Using resource pool used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
+            log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
             folder_ref = _get_mor_by_property(vim.Folder, folder)
             if not folder_ref:
-                log.error('Specified folder: {0} does not exist'.format(folder))
-                log.debug('Using folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
+                log.error("Specified folder: '{0}' does not exist".format(folder))
+                log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
                 folder_ref = object_ref.parent
         elif datacenter:
             datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
             if not datacenter_ref:
-                log.error('Specified datacenter: {0} does not exist'.format(datacenter))
-                log.debug('Using datacenter folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
+                log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
+                log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
                 folder_ref = object_ref.parent
             else:
                 folder_ref = datacenter_ref.vmFolder
         else:
-            log.debug('Using folder in which {0} {1} is present'.format(clone_type, vm_['clonefrom']))
+            log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
 
         # Create the relocation specs
@@ -2142,27 +2167,41 @@ def create(vm_):
             else:
                 datastore_cluster_ref = _get_mor_by_property(vim.StoragePod, datastore)
                 if not datastore_cluster_ref:
-                    log.error('Specified datastore/datastore cluster: {0} does not exist'.format(datastore))
-                    log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
+                    log.error("Specified datastore/datastore cluster: '{0}' does not exist".format(datastore))
+                    log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
         else:
-            log.debug('No datastore/datastore cluster specified')
-            log.debug('Using datastore used by the {0} {1}'.format(clone_type, vm_['clonefrom']))
+            log.debug("No datastore/datastore cluster specified")
+            log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         if host:
             host_ref = _get_mor_by_property(vim.HostSystem, host)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
-                log.error('Specified host: {0} does not exist'.format(host))
+                log.error("Specified host: '{0}' does not exist".format(host))
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
 
         if num_cpus:
-            config_spec.numCPUs = num_cpus
+            log.debug("Setting cpu to: {0}".format(num_cpus))
+            config_spec.numCPUs = int(num_cpus)
 
         if memory:
-            config_spec.memoryMB = memory
+            try:
+                memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
+                if memory_unit.lower() == "mb":
+                    memory_mb = int(memory_num)
+                elif memory_unit.lower() == "gb":
+                    memory_mb = int(float(memory_num)*1024.0)
+                else:
+                    err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                    log.error(err_msg)
+                    return {'Error': err_msg}
+            except ValueError:
+                memory_mb = int(memory)
+            log.debug("Setting memory to: {0} MB".format(memory_mb))
+            config_spec.memoryMB = memory_mb
 
         if devices:
             specs = _manage_devices(devices, object_ref)
@@ -2202,12 +2241,12 @@ def create(vm_):
         if not template:
             clone_spec.powerOn = power
 
-        log.debug('clone_spec set to {0}\n'.format(
+        log.debug('clone_spec set to:\n{0}'.format(
             pprint.pformat(clone_spec))
         )
 
         try:
-            log.info("Creating {0} from {1}({2})\n".format(vm_['name'], clone_type, vm_['clonefrom']))
+            log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
             salt.utils.cloud.fire_event(
                 'event',
                 'requesting instance',
@@ -2243,31 +2282,27 @@ def create(vm_):
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
                 _wait_for_task(task, vm_name, "clone", 5, 'info')
         except Exception as exc:
+            err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
             log.error(
-                'Error creating {0}: {1}'.format(
-                    vm_['name'],
-                    exc
-                ),
+                err_msg,
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
-            return False
+            return {'Error': err_msg}
 
         new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
 
-        # If it a template or if it does not need to be powered on, or if deploy is False then do not wait for ip
+        # If it a template or if it does not need to be powered on then do not wait for the IP
         if not template and power:
             ip = _wait_for_ip(new_vm_ref, 20)
             if ip:
-                log.debug("IP is: {0}".format(ip))
-                # ssh or smb using ip and install salt
+                log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
+                # ssh or smb using ip and install salt only if deploy is True
                 if deploy:
                     vm_['key_filename'] = key_filename
                     vm_['ssh_host'] = ip
 
                     salt.utils.cloud.bootstrap(vm_, __opts__)
-            else:
-                log.warning("Could not get IP information for {0}".format(vm_name))
 
         data = show_instance(vm_name, call='action')
 
@@ -2282,11 +2317,12 @@ def create(vm_):
             },
             transport=__opts__['transport']
         )
-    else:
-        log.error("clonefrom option hasn\'t been specified. Exiting.")
-        return False
+        return data
 
-    return {vm_name: data}
+    else:
+        err_msg = "clonefrom option hasn\'t been specified. Exiting."
+        log.error(err_msg)
+        return {'Error': err_msg}
 
 
 def create_datacenter(kwargs=None, call=None):

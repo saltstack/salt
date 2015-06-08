@@ -137,6 +137,8 @@ def rand_int(start=1, end=10):
     end : 10
         Any valid integer number
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' random.rand_int 1 10
