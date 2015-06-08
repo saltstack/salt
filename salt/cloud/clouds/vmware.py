@@ -748,7 +748,7 @@ def _wait_for_vmware_tools(vm_ref, max_wait_minute):
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. VMware tools still not in 'Running' state after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
     return False
 
 
