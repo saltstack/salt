@@ -3,7 +3,15 @@
 vSphere Cloud Module
 ====================
 
-.. versionadded:: 2014.7.0
+.. note::
+
+    .. deprecated:: Carbon
+
+        The :py:func:`vsphere <salt.cloud.clouds.vsphere>` cloud driver has been
+        deprecated in favor of the :py:func:`vmware <salt.cloud.clouds.vmware>`
+        cloud driver and will be removed in Salt Carbon. Please refer to
+        :doc:`Getting started with VMware </topics/cloud/vmware>` to get started
+        and convert your vsphere provider configurations to use the vmware driver.
 
 The vSphere cloud module is used to control access to VMWare vSphere.
 
@@ -76,6 +84,7 @@ import time
 import salt.utils.cloud
 import salt.utils.xmlutil
 from salt.exceptions import SaltCloudSystemExit
+from salt.utils import warn_until
 
 # Import salt cloud libs
 import salt.config as config
@@ -110,6 +119,11 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
+    warn_until(
+        'Carbon',
+        'The vsphere driver is deprecated in favor of the vmware driver and will be removed '
+        'in Salt Carbon. Please convert your vsphere provider configs to use the vmware driver.'
+    )
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'vsphere',
