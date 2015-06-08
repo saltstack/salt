@@ -186,6 +186,27 @@ minion. In your pillar file, you would use something like this:
 Cloud Configurations
 ====================
 
+Scaleway
+--------
+
+To use Salt Cloud with Scaleway, you need to get an ``access key`` and an ``API token``. ``API tokens`` are unique identifiers associated with your Scaleway account.
+To retrieve your ``access key`` and ``API token``, log-in to the Scaleway control panel, open the pull-down menu on your account name and click on "My Credentials" link.
+
+If you do not have ``API token`` you can create one by clicking the "Create New Token" button on the right corner.
+
+.. code-block:: yaml
+
+    my-scaleway-config:
+      access_key: 15cf404d-4560-41b1-9a0c-21c3d5c4ff1f
+      token: a7347ec8-5de1-4024-a5e3-24b77d1ba91d
+      provider: scaleway
+
+.. note::
+
+    In the cloud profile that uses this provider configuration, the syntax for the
+    ``provider`` required field would be ``provider: my-scaleway-config``.
+
+
 Rackspace
 ---------
 

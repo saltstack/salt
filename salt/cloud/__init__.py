@@ -2114,7 +2114,7 @@ class Map(Cloud):
                 output[name] = self.create(
                     profile, local_master=local_master
                 )
-                if self.opts.get('show_deploy_args', False) is False:
+                if self.opts.get('show_deploy_args', False) is False and 'deploy_kwargs' in output:
                     output[name].pop('deploy_kwargs', None)
             except SaltCloudException as exc:
                 log.error(

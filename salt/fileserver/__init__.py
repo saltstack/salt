@@ -199,7 +199,7 @@ def diff_mtime_map(map1, map2):
     Is there a change to the mtime map? return a boolean
     '''
     # check if the mtimes are the same
-    if cmp(sorted(map1), sorted(map2)) != 0:
+    if sorted(map1) != sorted(map2):
         #log.debug('diff_mtime_map: the maps are different')
         return True
 

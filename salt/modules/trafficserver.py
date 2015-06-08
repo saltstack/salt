@@ -33,7 +33,7 @@ def _subprocess(cmd):
 
     try:
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        ret = proc.communicate()[0].strip()
+        ret = utils.to_str(proc.communicate()[0]).strip()
         retcode = proc.wait()
 
         if ret:

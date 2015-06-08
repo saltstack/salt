@@ -126,6 +126,7 @@ class TestFileState(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileTestCase(TestCase):
+
     '''
     Test cases for salt.states.file
     '''
@@ -215,9 +216,9 @@ class FileTestCase(TestCase):
                                 ' SALTshould go')
                         ret.update({'comment': comt, 'result': False})
                         self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT',
-                                              force=True), ret)
+                                            (name, target, user=user,
+                                            group=group, backupname='SALT',
+                                            force=True), ret)
 
                     with patch.object(os.path, 'isfile', mock_t):
                         comt = ('File exists where the symlink {0} should be'
@@ -1506,13 +1507,30 @@ class FileTestCase(TestCase):
         ret.update({'comment': comt, 'result': False})
         self.assertDictEqual(filestate.serialize(name, dataset=True,
                                                  formatter='A'), ret)
+        mock_changes = MagicMock(return_value=True)
+        mock_no_changes = MagicMock(return_value=False)
 
-        with patch.dict(filestate.__opts__, {'test': True}):
-            comt = ('Dataset will be serialized and stored into {0}'
-                    .format(name))
-            ret.update({'comment': comt, 'result': None})
-            self.assertDictEqual(filestate.serialize(name, dataset=True,
-                                                     formatter='python'), ret)
+        # __opts__['test']=True with changes
+        with patch.dict(filestate.__salt__,
+                        {'file.check_managed_changes': mock_changes}):
+            with patch.dict(filestate.__opts__, {'test': True}):
+                comt = ('Dataset will be serialized and stored into {0}'
+                        .format(name))
+                ret.update({'comment': comt, 'result': None, 'changes': True})
+                self.assertDictEqual(
+                    filestate.serialize(name, dataset=True,
+                                        formatter='python'), ret)
+
+        # __opts__['test']=True without changes
+        with patch.dict(filestate.__salt__,
+                        {'file.check_managed_changes': mock_no_changes}):
+            with patch.dict(filestate.__opts__, {'test': True}):
+                comt = ('The file {0} is in the correct state'
+                        .format(name))
+                ret.update({'comment': comt, 'result': True, 'changes': False})
+                self.assertDictEqual(
+                    filestate.serialize(name,
+                                        dataset=True, formatter='python'), ret)
 
         mock = MagicMock(return_value=ret)
         with patch.dict(filestate.__opts__, {'test': False}):

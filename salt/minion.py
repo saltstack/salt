@@ -22,6 +22,10 @@ from stat import S_IMODE
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
 from salt.utils import reinit_crypto
 # pylint: enable=no-name-in-module,redefined-builtin
@@ -2296,28 +2300,28 @@ class Matcher(object):
 
     def ipcidr_match(self, tgt):
         '''
-        Matches based on ip address or CIDR notation
+        Matches based on IP address or CIDR notation
         '''
-        num_parts = len(tgt.split('/'))
-        if num_parts > 2:
-            # Target is not valid CIDR
-            return False
-        elif num_parts == 2:
-            # Target is CIDR
-            return salt.utils.network.in_subnet(
-                tgt,
-                addrs=self.opts['grains'].get('ipv4', [])
-            )
-        else:
-            # Target is an IPv4 address
-            import socket
-            try:
-                socket.inet_aton(tgt)
-            except socket.error:
-                # Not a valid IPv4 address
+
+        try:
+            tgt = ipaddress.ip_network(tgt)
+            # Target is a network
+            proto = 'ipv{0}'.format(tgt.version)
+            if proto not in self.opts['grains']:
                 return False
             else:
-                return tgt in self.opts['grains'].get('ipv4', [])
+                return salt.utils.network.in_subnet(tgt, self.opts['grains'][proto])
+        except:  # pylint: disable=bare-except
+            try:
+               # Target should be an address
+                proto = 'ipv{0}'.format(ipaddress.ip_address(tgt).version)
+                if proto not in self.opts['grains']:
+                    return False
+                else:
+                    return tgt in self.opts['grains'][proto]
+            except:  # pylint: disable=bare-except
+                log.error('Invalid IP/CIDR target {0}"'.format(tgt))
+                return False
 
     def range_match(self, tgt):
         '''

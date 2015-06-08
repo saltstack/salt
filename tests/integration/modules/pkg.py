@@ -47,11 +47,11 @@ class PkgModuleTest(integration.ModuleCase,
     @destructiveTest
     def test_mod_del_repo(self):
         '''
-        test modifying a software repository
+        test modifying and deleting a software repository
         '''
         func = 'pkg.mod_repo'
         os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['os_release'])['os_release']
+        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
 
         if os_grain == 'Ubuntu':
             repo = 'ppa:saltstack/salt'
@@ -59,7 +59,8 @@ class PkgModuleTest(integration.ModuleCase,
             ret = self.run_function(func, [repo, 'comps=main'])
             self.assertNotEqual(ret, {})
             if os_release.startswith('12.'):
-                self.assertIn(repo, ret.keys()[0])
+                self.assertIn(repo, ret)
+                self.assertTrue(ret[repo]['result'])
             else:
                 self.assertIn(uri, ret.keys()[0])
 
@@ -111,16 +112,31 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         test holding and unholding a package
         '''
-        func = 'pkg.hold'
         pkg = 'htop'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
+        available = self.run_function('sys.doc', ['pkg.hold'])
 
-        if os_family == 'RedHat':
-            self.run_function('pkg.install', ['yum-plugin-versionlock'])
-            ret = self.run_function(func, [pkg])
+        if available:
+            if os_family == 'RedHat':
+                versionlock = self.run_function('pkg.version', ['yum-plugin-versionlock'])
+                if not versionlock:
+                    self.run_function('pkg.install', ['yum-plugin-versionlock'])
+
+            hold_ret = self.run_function('pkg.hold', [pkg])
+            self.assertIn(pkg, hold_ret)
+            self.assertTrue(hold_ret[pkg]['result'])
+
+            unhold_ret = self.run_function('pkg.unhold', [pkg])
+            self.assertIn(pkg, unhold_ret)
+            self.assertTrue(hold_ret[pkg]['result'])
+
+            if os_family == 'RedHat':
+                if not versionlock:
+                    self.run_function('pkg.remove', ['yum-plugin-versionlock'])
+
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
-            self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
+            self.skipTest('{0} is unavailable on {1}'.format('pkg.hold', os_grain))
 
     @requires_network()
     @destructiveTest

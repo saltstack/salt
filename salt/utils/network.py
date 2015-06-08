@@ -639,14 +639,16 @@ def linux_interfaces():
             close_fds=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ip("{0}\n{1}".format(cmd1, cmd2))
+        ifaces = _interfaces_ip("{0}\n{1}".format(
+            salt.utils.to_str(cmd1),
+            salt.utils.to_str(cmd2)))
     elif ifconfig_path:
         cmd = subprocess.Popen(
             '{0} -a'.format(ifconfig_path),
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT).communicate()[0]
-        ifaces = _interfaces_ifconfig(cmd)
+        ifaces = _interfaces_ifconfig(salt.utils.to_str(cmd))
     return ifaces
 
 
@@ -756,11 +758,11 @@ def interfaces():
 
 
 def get_net_start(ipaddr, netmask):
-    ipaddr_octets = ipaddr.split('.')
-    netmask_octets = netmask.split('.')
-    net_start_octets = [str(int(ipaddr_octets[x]) & int(netmask_octets[x]))
-                        for x in range(0, 4)]
-    return '.'.join(net_start_octets)
+    '''
+    Return the address of the network
+    '''
+    net = ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False)
+    return str(net.network_address)
 
 
 def get_net_size(mask):
@@ -774,12 +776,16 @@ def get_net_size(mask):
     return len(binary_str.rstrip('0'))
 
 
-def calculate_subnet(ipaddr, netmask):
+def calc_net(ipaddr, netmask=None):
     '''
-    Takes IP and netmask and returns the network in CIDR-notation.
-    (The IP can be any IP inside this subnet.)
+    Takes IP (CIDR notation supported) and optionally netmask
+    and returns the network in CIDR-notation.
+    (The IP can be any IP inside the subnet)
     '''
-    return str(ipaddress.ip_network('{0}/{1}'.format(ipaddr, netmask), strict=False))
+    if netmask is not None:
+        ipaddr = '{0}/{1}'.format(ipaddr, netmask)
+
+    return str(ipaddress.ip_network(ipaddr, strict=False))
 
 
 def _ipv4_to_bits(ipaddr):
@@ -842,25 +848,49 @@ def interface_ip(iface):
         return error
 
 
-def subnets():
+def _subnets(proto='inet'):
     '''
     Returns a list of subnets to which the host belongs
     '''
     ifaces = interfaces()
-    subnetworks = []
+    ret = set()
 
-    for ipv4_info in six.itervalues(ifaces):
-        for ipv4 in ipv4_info.get('inet', []):
-            if ipv4['address'] == '127.0.0.1':
-                continue
-            network = calculate_subnet(ipv4['address'], ipv4['netmask'])
-            subnetworks.append(network)
-    return subnetworks
+    if proto == 'inet':
+        subnet = 'netmask'
+    elif proto == 'inet6':
+        subnet = 'prefixlen'
+    else:
+        log.error('Invalid proto {0} calling subnets()'.format(proto))
+        return
+
+    for ip_info in six.itervalues(ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
+
+        for intf in addrs:
+            intf = ipaddress.ip_interface('{0}/{1}'.format(intf['address'], intf[subnet]))
+            if not intf.is_loopback:
+                ret.add(intf.network)
+    return [str(net) for net in sorted(ret)]
 
 
-def in_subnet(cidr, addrs=None):
+def subnets():
     '''
-    Returns True if host is within specified subnet, otherwise False
+    Returns a list of IPv4 subnets to which the host belongs
+    '''
+    return _subnets('inet')
+
+
+def subnets6():
+    '''
+    Returns a list of IPv6 subnets to which the host belongs
+    '''
+    return _subnets('inet6')
+
+
+def in_subnet(cidr, addr=None):
+    '''
+    Returns True if host or (any of) addrs is within specified subnet, otherwise False
     '''
     try:
         cidr = ipaddress.ip_network(cidr)
@@ -868,20 +898,54 @@ def in_subnet(cidr, addrs=None):
         log.error('Invalid CIDR \'{0}\''.format(cidr))
         return False
 
-    if addrs is None:
-        addrs = ip_addrs()
+    if addr is None:
+        addr = ip_addrs()
+    elif isinstance(addr, six.string_types):
+        return ipaddress.ip_address(addr) in cidr
 
-    for ip_addr in addrs:
+    for ip_addr in addr:
         if ipaddress.ip_address(ip_addr) in cidr:
             return True
     return False
 
 
-def ip_in_subnet(ip_addr, cidr):
+def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
+
+    .. deprecated:: Beryllium
+       Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
-    return in_subnet(cidr, [ip_addr])
+    return in_subnet(cidr, addr)
+
+
+def _ip_addrs(interface=None, include_loopback=False, interface_data=None, proto='inet'):
+    '''
+    Return the full list of IP adresses matching the criteria
+
+    proto = inet|inet6
+    '''
+    ret = set()
+
+    ifaces = interface_data \
+        if isinstance(interface_data, dict) \
+        else interfaces()
+    if interface is None:
+        target_ifaces = ifaces
+    else:
+        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
+                              if k == interface])
+        if not target_ifaces:
+            log.error('Interface {0} not found.'.format(interface))
+    for ip_info in six.itervalues(target_ifaces):
+        addrs = ip_info.get(proto, [])
+        addrs.extend([addr for addr in ip_info.get('secondary', []) if addr.get('type') == proto])
+
+        for addr in addrs:
+            addr = ipaddress.ip_address(addr.get('address'))
+            if not addr.is_loopback or include_loopback:
+                ret.add(addr)
+    return [str(addr) for addr in sorted(ret)]
 
 
 def ip_addrs(interface=None, include_loopback=False, interface_data=None):
@@ -890,28 +954,7 @@ def ip_addrs(interface=None, include_loopback=False, interface_data=None):
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     '''
-    ret = set()
-    ifaces = interface_data \
-        if isinstance(interface_data, dict) \
-        else interfaces()
-    if interface is None:
-        target_ifaces = ifaces
-    else:
-        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
-                              if k == interface])
-        if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
-    for ipv4_info in six.itervalues(target_ifaces):
-        for ipv4 in ipv4_info.get('inet', []):
-            loopback = in_subnet('127.0.0.0/8', [ipv4.get('address')]) or ipv4.get('label') == 'lo'
-            if not loopback or include_loopback:
-                ret.add(ipv4['address'])
-        for secondary in ipv4_info.get('secondary', []):
-            addr = secondary.get('address')
-            if addr and secondary.get('type') == 'inet':
-                if include_loopback or (not include_loopback and not in_subnet('127.0.0.0/8', [addr])):
-                    ret.add(addr)
-    return sorted(list(ret))
+    return _ip_addrs(interface, include_loopback, interface_data, 'inet')
 
 
 def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
@@ -920,27 +963,7 @@ def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
     '''
-    ret = set()
-    ifaces = interface_data \
-        if isinstance(interface_data, dict) \
-        else interfaces()
-    if interface is None:
-        target_ifaces = ifaces
-    else:
-        target_ifaces = dict([(k, v) for k, v in six.iteritems(ifaces)
-                              if k == interface])
-        if not target_ifaces:
-            log.error('Interface {0} not found.'.format(interface))
-    for ipv6_info in six.itervalues(target_ifaces):
-        for ipv6 in ipv6_info.get('inet6', []):
-            if include_loopback or ipv6['address'] != '::1':
-                ret.add(ipv6['address'])
-        for secondary in ipv6_info.get('secondary', []):
-            addr = secondary.get('address')
-            if addr and secondary.get('type') == 'inet6':
-                if include_loopback or addr != '::1':
-                    ret.add(addr)
-    return sorted(list(ret))
+    return _ip_addrs(interface, include_loopback, interface_data, 'inet6')
 
 
 def hex2ip(hex_ip, invert=False):
@@ -1057,7 +1080,7 @@ def _sunos_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1103,7 +1126,7 @@ def _freebsd_remotes_on(port, which_end):
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
 
     for line in lines:
         chunks = line.split()
@@ -1130,6 +1153,43 @@ def _freebsd_remotes_on(port, which_end):
     return remotes
 
 
+def _openbsd_remotes_on(port, which_end):
+    '''
+    OpenBSD specific helper function.
+    Returns set of ipv4 host addresses of remote established connections
+    on local or remote tcp port.
+
+    Parses output of shell 'netstat' to get connections
+
+    $ netstat -nf inet
+    Active Internet connections
+    Proto   Recv-Q Send-Q  Local Address          Foreign Address        (state)
+    tcp          0      0  10.0.0.101.4505        10.0.0.1.45329         ESTABLISHED
+    tcp          0      0  10.0.0.101.4505        10.0.0.100.50798       ESTABLISHED
+    '''
+    remotes = set()
+    try:
+        data = subprocess.check_output(['netstat', '-nf', 'inet'])  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError:
+        log.error('Failed netstat')
+        raise
+
+    lines = data.split('\n')
+    for line in lines:
+        if 'ESTABLISHED' not in line:
+            continue
+        chunks = line.split()
+        local_host, local_port = chunks[3].rsplit('.', 1)
+        remote_host, remote_port = chunks[4].rsplit('.', 1)
+
+        if which_end == 'remote_port' and int(remote_port) != port:
+            continue
+        if which_end == 'local_port' and int(local_port) != port:
+            continue
+        remotes.add(remote_host)
+    return remotes
+
+
 def _windows_remotes_on(port, which_end):
     r'''
     Windows specific helper function.
@@ -1153,7 +1213,7 @@ def _windows_remotes_on(port, which_end):
         log.error('Failed netstat')
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         if 'ESTABLISHED' not in line:
             continue
@@ -1190,6 +1250,8 @@ def remotes_on_local_tcp_port(port):
         return _sunos_remotes_on(port, 'local_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'local_port')
+    if salt.utils.is_openbsd():
+        return _openbsd_remotes_on(port, 'local_port')
     if salt.utils.is_windows():
         return _windows_remotes_on(port, 'local_port')
 
@@ -1199,7 +1261,7 @@ def remotes_on_local_tcp_port(port):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:
@@ -1243,6 +1305,8 @@ def remotes_on_remote_tcp_port(port):
         return _sunos_remotes_on(port, 'remote_port')
     if salt.utils.is_freebsd():
         return _freebsd_remotes_on(port, 'remote_port')
+    if salt.utils.is_openbsd():
+        return _openbsd_remotes_on(port, 'remote_port')
     if salt.utils.is_windows():
         return _windows_remotes_on(port, 'remote_port')
 
@@ -1252,7 +1316,7 @@ def remotes_on_remote_tcp_port(port):
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
-    lines = data.split('\n')
+    lines = salt.utils.to_str(data).split('\n')
     for line in lines:
         chunks = line.split()
         if not chunks:

@@ -6,13 +6,14 @@ Common resources for LXC and systemd-nspawn containers
 
 These functions are not designed to be called directly, but instead from the
 :mod:`lxc <salt.modules.lxc>`, :mod:`nspawn <salt.modules.nspawn>`, and
-:mod:`docker-ng <salt.modules.dockerng>` execution modules. They provide for
+:mod:`dockerng <salt.modules.dockerng>` execution modules. They provide for
 common logic to be re-used for common actions.
 '''
 
 # Import python libs
 from __future__ import absolute_import
 import functools
+import copy
 import logging
 import os
 import pipes
@@ -39,7 +40,7 @@ def _validate(wrapped):
         container_type = kwargs.get('container_type')
         exec_driver = kwargs.get('exec_driver')
         valid_driver = {
-            'docker-ng': ('lxc-attach', 'nsenter', 'docker-exec'),
+            'dockerng': ('lxc-attach', 'nsenter', 'docker-exec'),
             'lxc': ('lxc-attach',),
             'nspawn': ('nsenter',),
         }
@@ -123,10 +124,17 @@ def run(name,
         python_shell=True,
         output_loglevel='debug',
         ignore_retcode=False,
+        path=None,
         use_vt=False,
         keep_env=None):
     '''
     Common logic for running shell commands in containers
+
+    path
+        path to the container parent (for LXC only)
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -158,6 +166,8 @@ def run(name,
 
     if exec_driver == 'lxc-attach':
         full_cmd = 'lxc-attach '
+        if path:
+            full_cmd += '-P {0} '.format(pipes.quote(path))
         if keep_env is not True:
             full_cmd += '--clear-env '
             if 'PATH' not in to_keep:
@@ -262,11 +272,18 @@ def copy_to(name,
             source,
             dest,
             container_type=None,
+            path=None,
             exec_driver=None,
             overwrite=False,
             makedirs=False):
     '''
     Common logic for copying files to containers
+
+    path
+        path to the container parent (for LXC only)
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -276,9 +293,27 @@ def copy_to(name,
     '''
     # Get the appropriate functions
     state = __salt__['{0}.state'.format(container_type)]
-    run_all = __salt__['{0}.run_all'.format(container_type)]
 
-    c_state = state(name)
+    def run_all(*args, **akwargs):
+        akwargs = copy.deepcopy(akwargs)
+        if container_type in ['lxc'] and 'path' not in akwargs:
+            akwargs['path'] = path
+        return __salt__['{0}.run_all'.format(container_type)](
+            *args, **akwargs)
+
+    state_kwargs = {}
+    cmd_kwargs = {'ignore_retcode': True}
+    if container_type in ['lxc']:
+        cmd_kwargs['path'] = path
+        state_kwargs['path'] = path
+
+    def _state(name):
+        if state_kwargs:
+            return state(name, **state_kwargs)
+        else:
+            return state(name)
+
+    c_state = _state(name)
     if c_state != 'running':
         raise CommandExecutionError(
             'Container \'{0}\' is not running'.format(name)
@@ -302,7 +337,7 @@ def copy_to(name,
         raise SaltInvocationError('Destination path must be absolute')
     if run_all(name,
                'test -d {0}'.format(pipes.quote(dest)),
-               ignore_retcode=True)['retcode'] == 0:
+               **cmd_kwargs)['retcode'] == 0:
         # Destination is a directory, full path to dest file will include the
         # basename of the source file.
         dest = os.path.join(dest, source_name)
@@ -313,10 +348,11 @@ def copy_to(name,
         dest_dir, dest_name = os.path.split(dest)
         if run_all(name,
                    'test -d {0}'.format(pipes.quote(dest_dir)),
-                   ignore_retcode=True)['retcode'] != 0:
+                   **cmd_kwargs)['retcode'] != 0:
             if makedirs:
                 result = run_all(name,
-                                 'mkdir -p {0}'.format(pipes.quote(dest_dir)))
+                                 'mkdir -p {0}'.format(pipes.quote(dest_dir)),
+                                 **cmd_kwargs)
                 if result['retcode'] != 0:
                     error = ('Unable to create destination directory {0} in '
                              'container \'{1}\''.format(dest_dir, name))
@@ -330,7 +366,7 @@ def copy_to(name,
                 )
     if not overwrite and run_all(name,
                                  'test -e {0}'.format(pipes.quote(dest)),
-                                 ignore_retcode=True)['retcode'] == 0:
+                                 **cmd_kwargs)['retcode'] == 0:
         raise CommandExecutionError(
             'Destination path {0} already exists. Use overwrite=True to '
             'overwrite it'.format(dest)
@@ -350,9 +386,12 @@ def copy_to(name,
     # and passing it as stdin to run(). This will keep down memory
     # usage for the minion and make the operation run quicker.
     if exec_driver == 'lxc-attach':
+        lxcattach = 'lxc-attach'
+        if path:
+            lxcattach += ' -P {0}'.format(pipes.quote(path))
         copy_cmd = (
-            'cat "{0}" | lxc-attach --clear-env --set-var {1} -n {2} -- '
-            'tee "{3}"'.format(local_file, PATH, name, dest)
+            'cat "{0}" | {4} --clear-env --set-var {1} -n {2} -- '
+            'tee "{3}"'.format(local_file, PATH, name, dest, lxcattach)
         )
     elif exec_driver == 'nsenter':
         pid = __salt__['{0}.pid'.format(container_type)](name)

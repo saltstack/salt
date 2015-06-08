@@ -74,8 +74,8 @@ with the role. This is the default behavior of the AWS console.
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
 If ``delete_policies: False`` is specified, existing policies that are not in
-the given list of policies will not be deleted. These allow manual
-modifications on the IAM role to be persistent.
+the given list of policies will not be deleted. This allows manual modifications
+on the IAM role to be persistent. This functionality was added in Beryllium.
 '''
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate
@@ -141,6 +141,13 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+    delete_policies
+        Deletes existing policies that are not in the given list of policies. Default
+        value is ``True``. If ``False`` is specified, existing policies will not be deleted
+        allowing manual modifications on the IAM role to be persistent.
+
+        .. versionadded:: Beryllium
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _role_present(name, policy_document, path, region, key, keyid,

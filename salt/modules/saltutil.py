@@ -421,6 +421,27 @@ def sync_utils(saltenv=None, refresh=True):
     return ret
 
 
+def sync_log_handlers(saltenv=None, refresh=True):
+    '''
+    .. versionadded:: Beryllium
+
+    Sync utility source files from the _log_handlers directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _log_handlers directory, base is the default
+    environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_log_handlers
+    '''
+    ret = _sync('log_handlers', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
@@ -463,6 +484,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['returners'] = sync_returners(saltenv, False)
     ret['outputters'] = sync_outputters(saltenv, False)
     ret['utils'] = sync_utils(saltenv, False)
+    ret['log_handlers'] = sync_log_handlers(saltenv, False)
     if refresh:
         refresh_modules()
     return ret
@@ -510,7 +532,7 @@ def refresh_modules(async=True):
     '''
     Signal the minion to refresh the module and grain data
 
-    The default is to refresh module asyncrhonously. To block
+    The default is to refresh module asynchronously. To block
     until the module refresh is complete, set the 'async' flag
     to False.
 

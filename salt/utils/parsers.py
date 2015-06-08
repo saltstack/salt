@@ -959,7 +959,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             '-S', '--ipcidr',
             default=False,
             action='store_true',
-            help=('Match based on Subnet (CIDR notation) or IPv4 address.')
+            help=('Match based on Subnet (CIDR notation) or IP address.')
         )
 
         self._create_process_functions()
@@ -2492,6 +2492,14 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Set this flag to attempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
                  'initial deployment of keys very fast and easy'
+        )
+        auth_group.add_option(
+            '--identities-only',
+            dest='ssh_identities_only',
+            default=False,
+            action='store_true',
+            help='Use the only authentication identity files configured in the '
+                 'ssh_config files. See IdentitiesOnly flag in man ssh_config'
         )
         self.add_option_group(auth_group)
 

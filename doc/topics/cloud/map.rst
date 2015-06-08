@@ -97,6 +97,15 @@ A map file may also be used with the various query options:
 
     Proceed? [N/y]
 
+.. warning:: Specifying Nodes with Maps on the Command Line
+    Specifying the name of a node or nodes with the maps options on the command
+    line is *not* supported. This is especially important to remember when
+    using ``--destroy`` with maps; ``salt-cloud`` will ignore any arguments
+    passed in which are not directly relevant to the map file. *When using
+    ``--destroy`` with a map, every node in the map file will be deleted!*
+    Maps don't provide any useful information for destroying individual nodes,
+    and should not be used to destroy a subset of a map.
+
 
 Setting up New Salt Masters
 ===========================

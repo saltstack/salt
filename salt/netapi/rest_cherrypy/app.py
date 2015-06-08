@@ -128,7 +128,7 @@ The token may be sent in one of two ways:
 
   .. code-block:: bash
 
-  curl -sSk https://localhost:8000 \
+      curl -sSk https://localhost:8000 \
             -H 'Accept: application/x-yaml' \
             -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
             -d client=local \

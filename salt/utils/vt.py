@@ -46,7 +46,7 @@ else:
     import resource
 
 # Import salt libs
-from salt.utils import reinit_crypto
+import salt.utils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
@@ -487,7 +487,7 @@ class Terminal(object):
                 # Close parent FDs
                 os.close(stdout_parent_fd)
                 os.close(stderr_parent_fd)
-                reinit_crypto()
+                salt.utils.reinit_crypto()
 
                 # ----- Make STDOUT the controlling PTY --------------------->
                 child_name = os.ttyname(stdout_child_fd)
@@ -548,7 +548,7 @@ class Terminal(object):
                 # <---- Duplicate Descriptors --------------------------------
             else:
                 # Parent. Close Child PTY's
-                reinit_crypto()
+                salt.utils.reinit_crypto()
                 os.close(stdout_child_fd)
                 os.close(stderr_child_fd)
 
@@ -635,7 +635,9 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        os.read(self.child_fde, maxsize)
+                        salt.utils.to_str(
+                            os.read(self.child_fde, maxsize)
+                        )
                     )
 
                     if not stderr:
@@ -666,7 +668,9 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        os.read(self.child_fd, maxsize)
+                        salt.utils.to_str(
+                            os.read(self.child_fd, maxsize)
+                        )
                     )
 
                     if not stdout:
