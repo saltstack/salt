@@ -15,6 +15,9 @@ from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
+# Import salt libs
+import salt.utils.http
+
 import base64
 import json
 
