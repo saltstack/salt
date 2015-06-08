@@ -34,6 +34,7 @@ grainsmod.__salt__ = grains.__salt__ = {
 
 
 @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
+@patch.dict(grains.__salt__, {'saltutil.sync_grains': MagicMock()})
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase):
 
