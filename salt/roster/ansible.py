@@ -84,6 +84,7 @@ There is also the option of specifying a dynamic inventory, and generating it on
 This is the format that an inventory script needs to output to work with ansible, and thus here.
 
 .. code-block:: bash
+
     [~]# salt-ssh --roster-file /etc/salt/hosts salt.gtmanfred.com test.ping
     salt.gtmanfred.com:
             True
