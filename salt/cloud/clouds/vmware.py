@@ -735,27 +735,51 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_ip(vm_ref, max_wait_minute):
+def _wait_for_vmware_tools(vm_ref, max_wait_minute):
     time_counter = 0
     starttime = time.time()
     max_wait_second = int(max_wait_minute * 60)
     while time_counter < max_wait_second:
         if time_counter % 5 == 0:
-            log.info("[ {0} ] Waiting to get IP information [{1} s]".format(vm_ref.name, time_counter))
+            log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
+        if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
+            log.info("[ {0} ] Succesfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
+            return True
+
+        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
+        time_counter += 1
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not in 'Running' state after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
+    return False
+
+
+def _wait_for_ip(vm_ref, max_wait_minute):
+    max_wait_minute_vmware_tools = max_wait_minute - 5
+    max_wait_minute_ip = max_wait_minute - max_wait_minute_vmware_tools
+    vmware_tools_status =  _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
+    if not vmware_tools_status:
+        return False
+
+    time_counter = 0
+    starttime = time.time()
+    max_wait_second = int(max_wait_minute_ip * 60)
+    while time_counter < max_wait_second:
+        if time_counter % 5 == 0:
+            log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
         if vm_ref.summary.guest.ipAddress:
             if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-                log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                 return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
                     if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
-                        log.info("[ {0} ] Successfully got IP information in {1} seconds".format(vm_ref.name, time_counter))
+                        log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
+    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} minutes".format(vm_ref.name, max_wait_minute_ip))
     return False
 
 
@@ -2272,15 +2296,13 @@ def create(vm_):
         if not template and power:
             ip = _wait_for_ip(new_vm_ref, 20)
             if ip:
-                log.debug("IP is: {0}".format(ip))
+                log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
                 # ssh or smb using ip and install salt only if deploy is True
                 if deploy:
                     vm_['key_filename'] = key_filename
                     vm_['ssh_host'] = ip
 
                     salt.utils.cloud.bootstrap(vm_, __opts__)
-            else:
-                log.warning("Could not get IP information for {0}".format(vm_name))
 
         data = show_instance(vm_name, call='action')
 
