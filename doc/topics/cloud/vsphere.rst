@@ -2,6 +2,16 @@
 Getting Started With vSphere
 ============================
 
+.. note::
+
+    .. deprecated:: Carbon
+
+        The :py:func:`vsphere <salt.cloud.clouds.vsphere>` cloud driver has been
+        deprecated in favor of the :py:func:`vmware <salt.cloud.clouds.vmware>`
+        cloud driver and will be removed in Salt Carbon. Please refer to
+        :doc:`Getting started with VMware </topics/cloud/vmware>` instead to get
+        started with the configuration.
+
 VMware vSphere is a management platform for virtual infrastructure and cloud
 computing.
 
