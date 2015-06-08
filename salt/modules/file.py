@@ -1319,8 +1319,8 @@ def line(path, content, match=None, mode=None, location=None,
     if before is None and after is None and not match:
         match = content
 
-    body = salt.utils.fopen(path, mode='rb').read()
-    body_before = hashlib.sha256(body).hexdigest()
+    body = salt.utils.fopen(path, mode='r').read()
+    body_before = hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
     after = _regex_to_static(body, after)
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
@@ -1447,7 +1447,7 @@ def line(path, content, match=None, mode=None, location=None,
                                         "Unable to ensure line without knowing "
                                         "where to put it before and/or after.")
 
-    changed = body_before != hashlib.sha256(body).hexdigest()
+    changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
 
     if backup and changed:
         try:
@@ -1460,10 +1460,10 @@ def line(path, content, match=None, mode=None, location=None,
 
     if changed:
         if show_changes:
-            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'rb').readlines(), body.splitlines()))
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').readlines(), body.splitlines()))
         fh_ = None
         try:
-            fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+            fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
             fh_.write(body)
         finally:
             if fh_:
@@ -1656,7 +1656,7 @@ def replace(path,
     try:
         # Use a read-only handle to open the file
         with salt.utils.fopen(path,
-                              mode='rb',
+                              mode='r',
                               buffering=bufsize) as r_file:
             for line in r_file:
                 result, nrepl = re.subn(cpattern, repl, line, count)
@@ -1700,12 +1700,12 @@ def replace(path,
         try:
             # Open the file in write mode
             with salt.utils.fopen(path,
-                        mode='wb',
+                        mode='w',
                         buffering=bufsize) as w_file:
                 try:
                     # Open the temp file in read mode
                     with salt.utils.fopen(temp_file,
-                                          mode='rb',
+                                          mode='r',
                                           buffering=bufsize) as r_file:
                         for line in r_file:
                             result, nrepl = re.subn(cpattern, repl,
@@ -1746,7 +1746,7 @@ def replace(path,
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
                     fh_.write(line)
             finally:
@@ -1898,7 +1898,7 @@ def blockreplace(path,
     try:
         fi_file = fileinput.input(path,
                     inplace=False, backup=False,
-                    bufsize=1, mode='rb')
+                    bufsize=1, mode='r')
         for line in fi_file:
 
             result = line
@@ -1984,7 +1984,7 @@ def blockreplace(path,
 
             # write new content in the file while avoiding partial reads
             try:
-                fh_ = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
                     fh_.write(line)
             finally:
@@ -2250,23 +2250,25 @@ def append(path, *args, **kwargs):
         else:
             args = [kwargs['args']]
 
-    with salt.utils.fopen(path, "r+") as ofile:
-        # Make sure we have a newline at the end of the file
+    # Make sure we have a newline at the end of the file. Do this in binary
+    # mode so SEEK_END with nonzero offset will work.
+    with salt.utils.fopen(path, 'rb+') as ofile:
+        linesep = salt.utils.to_bytes(os.linesep)
         try:
-            ofile.seek(-1, os.SEEK_END)
+            ofile.seek(-len(linesep), os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
+            if exc.errno in (errno.EINVAL, errno.ESPIPE):
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
                 raise
         else:
-            if ofile.read(1) != '\n':
+            if ofile.read(len(linesep)) != linesep:
                 ofile.seek(0, os.SEEK_END)
-                ofile.write('\n')
-            else:
-                ofile.seek(0, os.SEEK_END)
-        # Append lines
+                ofile.write(linesep)
+    # Append lines in text mode
+    with salt.utils.fopen(path, 'r+') as ofile:
+        ofile.seek(0, os.SEEK_END)
         for line in args:
             ofile.write('{0}\n'.format(line))
 
@@ -2507,7 +2509,7 @@ def truncate(path, length):
         salt '*' file.truncate /path/to/file 512
     '''
     path = os.path.expanduser(path)
-    with salt.utils.fopen(path, 'r+') as seek_fh:
+    with salt.utils.fopen(path, 'rb+') as seek_fh:
         seek_fh.truncate(int(length))
 
 
@@ -3566,8 +3568,8 @@ def check_file_meta(
                         changes['diff'] = bdiff
                     else:
                         with contextlib.nested(
-                                salt.utils.fopen(sfn, 'rb'),
-                                salt.utils.fopen(name, 'rb')) as (src, name_):
+                                salt.utils.fopen(sfn, 'r'),
+                                salt.utils.fopen(name, 'r')) as (src, name_):
                             slines = src.readlines()
                             nlines = name_.readlines()
                         changes['diff'] = \
@@ -3582,8 +3584,8 @@ def check_file_meta(
             tmp_.write(str(contents))
         # Compare the static contents with the named file
         with contextlib.nested(
-                salt.utils.fopen(tmp, 'rb'),
-                salt.utils.fopen(name, 'rb')) as (src, name_):
+                salt.utils.fopen(tmp, 'r'),
+                salt.utils.fopen(name, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
         if ''.join(nlines) != ''.join(slines):
@@ -3783,8 +3785,8 @@ def manage_file(name,
                     ret['changes']['diff'] = bdiff
                 else:
                     with contextlib.nested(
-                            salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(real_name, 'rb')) as (src, name_):
+                            salt.utils.fopen(sfn, 'r'),
+                            salt.utils.fopen(real_name, 'r')) as (src, name_):
                         slines = src.readlines()
                         nlines = name_.readlines()
 
@@ -3811,8 +3813,8 @@ def manage_file(name,
 
             # Compare contents of files to know if we need to replace
             with contextlib.nested(
-                    salt.utils.fopen(tmp, 'rb'),
-                    salt.utils.fopen(real_name, 'rb')) as (src, name_):
+                    salt.utils.fopen(tmp, 'r'),
+                    salt.utils.fopen(real_name, 'r')) as (src, name_):
                 slines = src.readlines()
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
