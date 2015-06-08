@@ -127,9 +127,9 @@ def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
 
 def rand_int(start=1, end=10):
     '''
-    .. versionadded: 2015.5.3
-
     Returns a random integer number between the start and end number.
+
+    .. versionadded: 2015.5.3
 
     start : 1
         Any valid integer number
