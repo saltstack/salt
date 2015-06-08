@@ -139,10 +139,10 @@ class Batch(object):
             for ping_ret in self.ping_gen:
                 if ping_ret is None:
                     break
-                if ping_ret not in self.minions:
-                    self.minions.append(ping_ret)
-                    to_run.append(ping_ret)
-
+                m = next(ping_ret.iterkeys())
+                if m not in self.minions:
+                    self.minions.append(m)
+                    to_run.append(m)
             for queue in iters:
                 try:
                     # Gather returns until we get to the bottom
