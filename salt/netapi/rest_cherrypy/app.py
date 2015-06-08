@@ -7,16 +7,18 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
-:depends:   - CherryPy Python module. Versions 3.2.{2,3,4} are strongly
-    recommended due to a known `SSL error
-    <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
-    introduced in version 3.2.5. The issue was reportedly resolved with
-    CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
+:depends:
+    - CherryPy Python module. Versions 3.2.{2,3,4} are strongly
+      recommended due to a known `SSL error
+      <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
+      introduced in version 3.2.5. The issue was reportedly resolved with
+      CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
     - Java: https://github.com/SUSE/saltstack-netapi-client-java
     - Python: https://github.com/saltstack/pepper
-:configuration: All authentication is done through Salt's :ref:`external auth
+:configuration:
+    All authentication is done through Salt's :ref:`external auth
     <acl-eauth>` system which requires additional configuration not described
     here.
 

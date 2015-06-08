@@ -63,6 +63,7 @@ Full list of builtin state modules
     influxdb_database
     influxdb_user
     ini_manage
+    ipmi
     ipset
     iptables
     jboss7
@@ -142,6 +143,7 @@ Full list of builtin state modules
     sysrc
     test
     timezone
+    tls
     tomcat
     user
     vbox_guest

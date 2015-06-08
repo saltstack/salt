@@ -2432,3 +2432,15 @@ List of git repositories to include with the local repo.
 
     win_gitrepos:
       - 'https://github.com/saltstack/salt-winrepo.git'
+
+To specify a specific revision of the repository, preface the
+repository location with a commit ID:
+
+.. code-block:: yaml
+
+    win_gitrepos:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replacing ``<commit_id>`` with the ID from GitHub. Specifying a commit
+ID is useful if you need to revert to a previous version if an error
+is introduced in the latest version.
