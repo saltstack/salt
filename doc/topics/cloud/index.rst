@@ -173,6 +173,7 @@ Cloud Provider Specifics
         Getting Started With Rackspace <rackspace>
         Getting Started With SoftLayer <softlayer>
         Getting Started With Vexxhost <vexxhost>
+        Getting Started With vSphere <vsphere>
 
 
 
