@@ -1249,13 +1249,18 @@ def get_repo(repo, **kwargs):
                                             ppa_name, dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
-                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
-                        __grains__['lsb_distrib_codename'])[0]
-                else:
-                    repo = softwareproperties.ppa.expand_ppa_line(
-                        repo,
-                        __grains__['lsb_distrib_codename'])[0]
+                try:
+                    if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                        repo = softwareproperties.ppa.PPAShortcutHandler(
+                            repo).expand(dist)[0]
+                    else:
+                        repo = softwareproperties.ppa.expand_ppa_line(
+                            repo,
+                            dist)[0]
+                except NameError as name_error:
+                    raise CommandExecutionError(
+                        'Could not find ppa {0}: {1}'.format(repo, name_error)
+                    )
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 

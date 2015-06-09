@@ -163,8 +163,10 @@ def user_present(name, uid, password, channel=14, callback=False,
 
     callback
         User Restricted to Callback
+
         False = User Privilege Limit is determined by the User Privilege Limit
             parameter privilege_level, for both callback and non-callback connections.
+
         True  = User Privilege Limit is determined by the privilege_level
             parameter for callback connections, but is restricted to Callback
             level for non-callback connections. Thus, a user can only initiate

@@ -795,7 +795,8 @@ class Minion(MinionBase):
                              ' {0}'.format(opts['master']))
                     if opts['master_shuffle']:
                         shuffle(opts['master'])
-                elif isinstance(opts['master'], str):
+                # if opts['master'] is a str and we have never created opts['master_list']
+                elif isinstance(opts['master'], str) and ('master_list' not in opts):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
                     opts['master'] = list(opts['master'])

@@ -178,8 +178,8 @@ and all changes made.
             salt-minion -l debug
 
     Run the minion in the foreground
-        By not starting the minion in daemon mode (:option:`-d <salt-minion
-        -d>`) one can view any output from the minion as it works:
+        By not starting the minion in daemon mode (:option:`-d <salt-minion -d>`)
+        one can view any output from the minion as it works:
 
         .. code-block:: bash
 

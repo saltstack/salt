@@ -590,9 +590,7 @@ def import_key(user=None,
     .. code-block:: bash
 
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
-
         salt '*' gpg.import_key filename='/path/to/public-key-file'
-
     '''
     ret = {
            'res': True,
@@ -749,7 +747,6 @@ def trust_key(keyid=None,
         salt '*' gpg.trust_key fingerprint='53C96788253E58416D20BCD352952C84C3252192' trust_level='not_trusted'
 
         salt '*' gpg.trust_key keys=3FAD9F1E trust_level='ultimately' user='username'
-
     '''
     ret = {
            'res': True,
