@@ -29,6 +29,7 @@ PILLAR_DATA = [
     {'Value': None, 'Key': u'test-shared/sites/'},
     {'Value': 'Test User', 'Key': u'test-shared/user/full_name'},
     {'Value': 'adm\nwww-data\nmlocate', 'Key': u'test-shared/user/groups'},
+    {'Value': '"adm\nwww-data\nmlocate"', 'Key': u'test-shared/user/dontsplit'},
     {'Value': None, 'Key': u'test-shared/user/blankvalue'},
     {'Value': 'test', 'Key': u'test-shared/user/login'},
     {'Value': None, 'Key': u'test-shared/user/'}
@@ -65,9 +66,14 @@ class ConsulPillarTestCase(TestCase):
             pillar_data = pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
             pillar.consul_fetch.assert_called_once_with('consul_connection', 'test-shared/')
             assert pillar_data.keys() == [u'user', u'sites']
-            #print(type(pillar_data[u'user'][u'groups']))
-            assert isinstance(pillar_data[u'user'][u'groups'], list)
             self.assertNotIn('blankvalue', pillar_data[u'user'])
+
+    def test_value_parsing(self):
+        pillar = self.get_pillar()
+        with patch.object(consul_pillar, 'consul_fetch', MagicMock(return_value=('2232', PILLAR_DATA))):
+            pillar_data = pillar.ext_pillar('testminion', {}, 'consul_config root=test-shared/')
+            assert isinstance(pillar_data[u'user'][u'groups'], list)
+            assert isinstance(pillar_data[u'user'][u'dontsplit'], str)
 
     def test_dict_merge(self):
         pillar = self.get_pillar()
