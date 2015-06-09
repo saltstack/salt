@@ -37,27 +37,19 @@ class RabbitmqVhostTestCase(TestCase):
         Test to ensure the RabbitMQ VHost exists.
         '''
         name = 'virtual_host'
-        owner = 'rabbit_user'
 
         ret = {'name': name,
                'changes': {},
                'result': True,
                'comment': ''}
 
-        mock_t = MagicMock(side_effect=[True, False])
-        mock_lst = MagicMock(return_value=[[owner, None, None, None]])
+        mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_vhost.__salt__,
-                        {'rabbitmq.vhost_exists': mock_t,
-                         'rabbitmq.list_permissions': mock_lst}):
-            comt = ('Nothing to do')
-            ret.update({'comment': comt})
-            self.assertDictEqual(rabbitmq_vhost.present(name, owner=owner), ret)
-
+                        {'rabbitmq.vhost_exists': mock}):
             with patch.dict(rabbitmq_vhost.__opts__, {'test': True}):
                 comt = ('Creating VHost virtual_host')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(rabbitmq_vhost.present(name, owner=owner),
-                                     ret)
+                self.assertDictEqual(rabbitmq_vhost.present(name), ret)
 
     # 'absent' function tests: 1
 
