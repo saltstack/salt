@@ -81,7 +81,7 @@ def present(name,
             'information or see #6961.'
         )
 
-    if any(user, owner, conf, write, read):
+    if any((user, owner, conf, write, read)):
         salt.utils.warn_until(
             'Beryllium',
             'Passed \'owner\', \'user\', \'conf\', \'write\' or \'read\' '
