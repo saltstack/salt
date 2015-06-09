@@ -37,6 +37,15 @@ without a preceding ``-``, so it is better to not confuse the user into
 thinking they're using the non- ``-`` format, when really they are using the
 with- ``-`` format.
 
+Win System Module
+=================
+
+The unit of the ``timeout`` parameter in the ``system.halt``,
+``system.poweroff``, ``system.reboot``,  and ``system.shutdown`` functions has
+been changed from seconds to minutes in order to be consistent with the linux
+timeout setting. (:issue:`24411`)  Optionally, the unit can be reverted to
+seconds by specifying ``in_seconds=True``.
+
 Deprecations
 ============
 
