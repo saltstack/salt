@@ -99,7 +99,7 @@ class RhipTestCase(TestCase):
         '''
         Test to build a route script for a network interface.
         '''
-        with patch.dict(rh_ip.__grains__, {'osrelease': 'osrelease'}):
+        with patch.dict(rh_ip.__grains__, {'osrelease': '5.0'}):
             with patch.object(rh_ip, '_parse_routes', MagicMock()):
                 mock = jinja2.exceptions.TemplateNotFound('foo')
                 with patch.object(jinja2.Environment,
