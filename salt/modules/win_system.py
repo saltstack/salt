@@ -33,17 +33,32 @@ def __virtual__():
     return __virtualname__
 
 
-def halt(timeout=5):
+def _convert_minutes_seconds(timeout, in_seconds=False):
+    '''
+    convert timeout to seconds
+    '''
+    return timeout if in_seconds else timeout*60
+
+
+def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system
+
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.halt
+        salt '*' system.halt 5
     '''
-    return shutdown(timeout)
+    return shutdown(timeout, in_seconds)
 
 
 def init(runlevel):
@@ -66,45 +81,71 @@ def init(runlevel):
     return 'Not implemented on Windows at this time.'
 
 
-def poweroff(timeout=5):
+def poweroff(timeout=5, in_seconds=False):
     '''
     Poweroff a running system
 
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.poweroff
+        salt '*' system.poweroff 5
     '''
-    return shutdown(timeout)
+    return shutdown(timeout, in_seconds)
 
 
-def reboot(timeout=5):
+def reboot(timeout=5, in_seconds=False):
     '''
     Reboot the system
 
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.reboot
+        salt '*' system.reboot 5
     '''
-    cmd = ['shutdown', '/r', '/t', '{0}'.format(timeout)]
+    seconds = _convert_minutes_seconds(timeout, in_seconds)
+    cmd = ['shutdown', '/r', '/t', '{0}'.format(seconds)]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
-def shutdown(timeout=5):
+def shutdown(timeout=5, in_seconds=False):
     '''
     Shutdown a running system
+
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.shutdown
+        salt '*' system.shutdown 5
     '''
-    cmd = ['shutdown', '/s', '/t', '{0}'.format(timeout)]
+    seconds = _convert_minutes_seconds(timeout, in_seconds)
+    cmd = ['shutdown', '/s', '/t', '{0}'.format(seconds)]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
