@@ -50,6 +50,12 @@ except ImportError:
     HAS_APT = False
 
 try:
+    import apt_pkg
+    HAS_APTPKG = True
+except ImportError:
+    HAS_APTPKG = False
+
+try:
     import softwareproperties.ppa
     HAS_SOFTWAREPROPERTIES = True
 except ImportError:
@@ -1149,10 +1155,19 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
+    # if we have apt_pkg, this will be quickier this way
+    # and also do not rely on shell.
+    if HAS_APTPKG:
+        try:
+            return apt_pkg.version_compare(pkg1, pkg2)
+        except (TypeError, ValueError):
+            # try to use shell version in case of errors via
+            # the python binding
+            pass
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
-            cmd = 'dpkg --compare-versions {0!r} {1} ' \
-                  '{2!r}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
+            cmd = 'dpkg --compare-versions {0} {1} ' \
+                  '{2}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
             retcode = __salt__['cmd.retcode'](
                 cmd, output_loglevel='trace', ignore_retcode=True
             )

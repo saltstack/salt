@@ -242,3 +242,8 @@ dl.function {
     font-size: 14pt;
 
 }
+.intro-text {
+    font-size: 18pt;
+    line-height: 1.3;
+    font-weight: 300;
+}
