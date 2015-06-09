@@ -101,6 +101,7 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import time
+import calendar
 import logging
 import hashlib
 import salt.utils
@@ -126,10 +127,6 @@ log = logging.getLogger(__name__)
 
 two_digit_year_fmt = "%y%m%d%H%M%SZ"
 four_digit_year_fmt = "%Y%m%d%H%M%SZ"
-
-# Always use UTC for certificate info
-os.environ['TZ'] = 'UTC'
-time.tzset()
 
 
 def __virtual__():
@@ -219,7 +216,7 @@ def _new_serial(ca_name, CN):
             '{0}_{1}_{2}'.format(
                 ca_name,
                 CN,
-                int(time.time()))
+                int(calendar.timegm(time.gmtime())))
         ).hexdigest(),
         16
     )
@@ -354,7 +351,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                 try:
                     days = (datetime.strptime(
                         cert.get_notAfter(),
-                        '%Y%m%d%H%M%SZ') - datetime.now()).days
+                        '%Y%m%d%H%M%SZ') - datetime.utcnow()).days
                 except (ValueError, TypeError):
                     days = 365
                 subj = cert.get_subject()
@@ -710,7 +707,7 @@ def create_ca(ca_name,
                                                 key)
     write_key = True
     if os.path.exists(ca_keyp):
-        bck = "{0}.{1}".format(ca_keyp, datetime.now().strftime(
+        bck = "{0}.{1}".format(ca_keyp, datetime.utcnow().strftime(
             "%Y%m%d%H%M%S"))
         with salt.utils.fopen(ca_keyp) as fic:
             old_key = fic.read().strip()
@@ -1526,12 +1523,12 @@ def cert_info(cert_path, digest='sha256'):
         'subject': dict(cert.get_subject().get_components()),
         'issuer': dict(cert.get_issuer().get_components()),
         'serial_number': cert.get_serial_number(),
-        'not_before': time.mktime(datetime.strptime(
+        'not_before': calendar.timegm(time.strptime(
             cert.get_notBefore(),
-            date_fmt).timetuple()),
-        'not_after': time.mktime(datetime.strptime(
+            date_fmt)),
+        'not_after': calendar.timegm(time.strptime(
             cert.get_notAfter(),
-            date_fmt).timetuple()),
+            date_fmt)),
     }
 
     # add additional info if your version of pyOpenSSL supports it
@@ -1735,7 +1732,7 @@ def revoke_cert(
         re.escape(index_serial_subject))
     index_r_data = 'R\t{0}\t{1}\t{2}'.format(
         expire_date,
-        _four_digit_year_to_two_digit(datetime.now()),
+        _four_digit_year_to_two_digit(datetime.utcnow()),
         index_serial_subject)
 
     ret = {}
