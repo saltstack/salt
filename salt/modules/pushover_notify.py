@@ -131,9 +131,9 @@ def _validate_sound(sound,
     :param sound:       The sound that we want to verify
     :param token:       The PushOver token.
     '''
-    res = {
+    ret = {
             'message': 'Sound is invalid',
-            'result': False
+            'res': False
            }
     parameters = dict()
     parameters['token'] = token
@@ -146,29 +146,17 @@ def _validate_sound(sound,
         if 'message' in response:
             _message = response.get('message', '')
             if 'status' in _message:
-                if _message.get('dict', {}).get('status', None) == 1:
-                    res['result'] = True
-                    res['message'] = 'User key is valid.'
-                else:
-                    res['result'] = False
-                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
-    return res
-
-    if response['res']:
-        if 'message' in response:
-            _message = response.get('message', '')
-            if 'status' in _message:
                 if _message.get('dict', {}).get('status', '') == 1:
                     sounds = _message.get('dict', {}).get('sounds', '')
                     if sound in sounds:
-                        res['message'] = 'Valid sound.'.format(sound)
-                        res['result'] = True
+                        ret['message'] = 'Valid sound {0}.'.format(sound)
+                        ret['res'] = True
                     else:
-                        res['message'] = 'Warning: {0} not a valid sound.'.format(sound)
-                        res['result'] = False
+                        ret['message'] = 'Warning: {0} not a valid sound.'.format(sound)
+                        ret['res'] = False
                 else:
-                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
-    return False
+                    ret['message'] = ''.join(_message.get('dict', {}).get('errors'))
+    return ret
 
 
 def _validate_user(user,
@@ -273,7 +261,7 @@ def post_message(user=None,
     parameters['retry'] = retry
     parameters['message'] = message
 
-    if sound and _validate_sound(sound, token):
+    if sound and _validate_sound(sound, token)['res']:
         parameters['sound'] = sound
 
     result = _query(function='message',
