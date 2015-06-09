@@ -613,7 +613,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return ret['installed']
 
 
-def autoremove(list_only=False):
+def autoremove(list_only=False, purge=False):
     '''
     .. versionadded:: 2015.5.0
 
@@ -624,6 +624,10 @@ def autoremove(list_only=False):
         Only retrieve the list of packages to be auto-removed, do not actually
         perform the auto-removal.
 
+    purge : False
+        Also remove package config data when autoremoving packages.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -631,14 +635,15 @@ def autoremove(list_only=False):
 
         salt '*' pkg.autoremove
         salt '*' pkg.autoremove list_only=True
+        salt '*' pkg.autoremove purge=True
     '''
     if list_only:
         ret = []
-        out = __salt__['cmd.run'](
-            ['apt-get', '--assume-no', 'autoremove'],
-            python_shell=False,
-            ignore_retcode=True
-        )
+        cmd = ['apt-get', '--assume-no']
+        if purge:
+            cmd.append('--purge')
+        cmd.append('autoremove')
+        out = __salt__['cmd.run'](cmd, python_shell=False, ignore_retcode=True)
         found = False
         for line in out.splitlines():
             if found is True:
@@ -652,10 +657,11 @@ def autoremove(list_only=False):
         return ret
     else:
         old = list_pkgs()
-        __salt__['cmd.run'](
-            ['apt-get', '--assume-yes', 'autoremove'],
-            python_shell=False
-        )
+        cmd = ['apt-get', '--assume-yes']
+        if purge:
+            cmd.append('--purge')
+        cmd.append('autoremove')
+        __salt__['cmd.run'](cmd, python_shell=False)
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
         return salt.utils.compare_dicts(old, new)
