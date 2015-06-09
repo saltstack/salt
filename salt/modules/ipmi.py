@@ -778,7 +778,7 @@ def get_user(uid, channel=14, **kwargs):
         - api_kg=None
 
     return
-    
+
         .. code-block:: none
 
             name: (str)
