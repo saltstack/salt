@@ -249,8 +249,10 @@ class BtrfsTestCase(TestCase):
         with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
             mock = MagicMock(return_value={'/dev/sda3': {'type': 'ext4'}})
             with patch.object(salt.utils.fsutils, '_blkid_output', mock):
-                self.assertDictEqual(btrfs.convert('/dev/sda3', permanent=True),
-                                     ret)
+                mock = MagicMock(return_value={'/dev/sda3': [{'mount_point': None}]})
+                with patch.object(salt.utils.fsutils, '_get_mounts', mock):
+                    self.assertDictEqual(btrfs.convert('/dev/sda3', permanent=True),
+                                        ret)
 
     def test_convert_device_error(self):
         '''

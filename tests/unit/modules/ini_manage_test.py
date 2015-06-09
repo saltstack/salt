@@ -48,7 +48,7 @@ empty_option=
     maxDiff = None
 
     def setUp(self):
-        self.tfile = tempfile.NamedTemporaryFile(delete=False)
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
         self.tfile.write(self.TEST_FILE_CONTENT)
         self.tfile.close()
 
@@ -122,7 +122,7 @@ empty_option=
         ini.set_option(self.tfile.name, {
             'SectionB': {'test3': 'new value 3B'},
         })
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
         self.assertIn('\nempty_option=\n', file_content,
                       'empty_option was not preserved')
@@ -131,7 +131,7 @@ empty_option=
         ini.set_option(self.tfile.name, {
             'SectionB': {'test3': 'new value 3B'},
         })
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
         self.assertEqual('''\
 # Comment on the first line

@@ -133,6 +133,7 @@ four_digit_year_fmt = "%Y%m%d%H%M%SZ"
 # time.tzset()
 
 
+
 def __virtual__():
     '''
     Only load this module if the ca config options are set
@@ -717,9 +718,9 @@ def create_ca(ca_name,
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{0}/{1}{2}.key." ').format(
+    ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
         cert_base_path(), ca_name, ca_filename)
-    ret += ('Created CA "{0}": "{1}/{2}{3}.crt."').format(
+    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
         ca_name, cert_base_path(), ca_name, ca_filename)
 
     return ret
@@ -996,11 +997,11 @@ def create_csr(ca_name,
                     )
                 )
 
-    ret = 'Created Private Key: "{0}/{1}.key." '.format(
+    ret = 'Created Private Key: "{0}{1}.key." '.format(
                     csr_path,
                     csr_filename
                     )
-    ret += 'Created CSR for "{0}": "{1}/{2}.csr."'.format(
+    ret += 'Created CSR for "{0}": "{1}{2}.csr."'.format(
                     CN,
                     csr_path,
                     csr_filename

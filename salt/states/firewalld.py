@@ -79,7 +79,7 @@ def present(name,
             ret['comment'][name] = '`{0}` will be created'.format(name)
         else:
             __salt__['firewalld.new_zone'](name)
-            ret['changes'][name] = '`{0}` zone has been successfully created'
+            ret['changes'][name] = '`{0}` zone has been successfully created'.format(name)
     else:
         ret['comment'][name] = '`{0}` zone already exists'.format(name)
 

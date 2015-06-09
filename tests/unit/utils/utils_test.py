@@ -78,6 +78,14 @@ class UtilsTestCase(TestCase):
         expected_mac = '00:16:3E:01:01:01'
         self.assertEqual(ret, expected_mac)
 
+    def test_mac_str_to_bytes(self):
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '31337')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '0001020304056')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '00:01:02:03:04:056')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
+        self.assertEqual(b'\x10\x08\x06\x04\x02\x00', utils.mac_str_to_bytes('100806040200'))
+        self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', utils.mac_str_to_bytes('f8e7d6c5b4a3'))
+
     def test_ip_bracket(self):
         test_ipv4 = '127.0.0.1'
         test_ipv6 = '::1'
