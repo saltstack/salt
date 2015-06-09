@@ -40,15 +40,13 @@ class RabbitmqVhostTestCase(TestCase):
 
         ret = {'name': name,
                'changes': {},
-               'result': True,
-               'comment': ''}
+               'result': None,
+               'comment': 'Creating VHost virtual_host'}
 
         mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_vhost.__salt__,
                         {'rabbitmq.vhost_exists': mock}):
             with patch.dict(rabbitmq_vhost.__opts__, {'test': True}):
-                comt = ('Creating VHost virtual_host')
-                ret.update({'comment': comt, 'result': None})
                 self.assertDictEqual(rabbitmq_vhost.present(name), ret)
 
     # 'absent' function tests: 1
