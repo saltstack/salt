@@ -1679,7 +1679,7 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
     '''
     try:
         return _uninstall(action='purge', name=name, version=version,
-                          pkgs=pkgs, normalize=normalize **kwargs)
+                          pkgs=pkgs, normalize=normalize, **kwargs)
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},
