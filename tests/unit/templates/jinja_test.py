@@ -398,6 +398,8 @@ class TestGetTemplate(TestCase):
         __builtins__.__salt_system_encoding__ = encoding
 
     def test_render_with_utf8_syntax_error(self):
+        encoding = __builtins__.__salt_system_encoding__
+        __builtins__.__salt_system_encoding__ = 'utf-8'
         template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
         self.assertRaisesRegexp(
@@ -407,6 +409,7 @@ class TestGetTemplate(TestCase):
             template,
             dict(opts=self.local_opts, saltenv='test')
         )
+        __builtins__.__salt_system_encoding__ = encoding
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
