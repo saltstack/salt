@@ -131,7 +131,9 @@ def list_upgrades(refresh=False):
         r'"^\s|^:"'
     ).format(' '.join(options))
 
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=True)
 
     if call['retcode'] != 0:
         comment = ''
