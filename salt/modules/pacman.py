@@ -128,7 +128,9 @@ def list_upgrades(refresh=False):
 
     cmd = ('pacman {0}').format(' '.join(options))
 
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=True)
 
     if call['retcode'] != 0:
         comment = ''
