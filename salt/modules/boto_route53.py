@@ -83,14 +83,6 @@ def __init__(opts):
         __utils__['boto.assign_funcs'](__name__, 'route53')
 
 
-def _is_valid_resource(_type):
-    if _type in ('A', 'CNAME', 'MX'):
-        return True
-    else:
-        log.error('{0} is an unsupported resource type.'.format(_type))
-        return False
-
-
 def _get_split_zone(zone, _conn, private_zone):
     '''
     With boto route53, zones can only be matched by name
@@ -195,9 +187,6 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     _type = record_type.upper()
     ret = odict.OrderedDict()
 
-    if not _is_valid_resource(_type):
-        return None
-
     name = _encode_name(name)
     if _type == 'A':
         _record = _zone.get_a(name, fetch_all)
@@ -205,6 +194,8 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
         _record = _zone.get_cname(name, fetch_all)
     elif _type == 'MX':
         _record = _zone.get_mx(name, fetch_all)
+    else:
+        _record = _zone.find_records(name, _type, all=fetch_all)
 
     if _record:
         ret['name'] = _decode_name(_record.name)
@@ -237,9 +228,6 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
-    if not _is_valid_resource(_type):
-        return False
-
     if _type == 'A':
         status = _zone.add_a(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn, wait_for_sync)
@@ -250,7 +238,11 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
         status = _zone.add_mx(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
-        return True
+        # add_record requires a ttl value, annoyingly.
+        if ttl is None:
+            ttl = 60
+        status = _zone.add_record(_type, name, value, ttl, identifier)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
 
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
@@ -275,9 +267,6 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
-    if not _is_valid_resource(_type):
-        return False
-
     if _type == 'A':
         status = _zone.update_a(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn, wait_for_sync)
@@ -288,7 +277,11 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         status = _zone.update_mx(name, value, ttl, identifier)
         return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
-        return True
+        old_record = _zone.find_records(name, _type)
+        if not old_record:
+            return False
+        status = _zone.update_record(old_record, value, ttl, identifier)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
@@ -313,9 +306,6 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         return False
     _type = record_type.upper()
 
-    if not _is_valid_resource(_type):
-        return False
-
     if _type == 'A':
         status = _zone.delete_a(name, identifier, all_records)
         return _wait_for_sync(status.id, conn, wait_for_sync)
@@ -326,7 +316,11 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         status = _zone.delete_mx(name, identifier, all_records)
         return _wait_for_sync(status.id, conn, wait_for_sync)
     else:
-        return True
+        old_record = _zone.find_records(name, _type, all=all_records)
+        if not old_record:
+            return False
+        status = _zone.delete_record(old_record)
+        return _wait_for_sync(status.id, conn, wait_for_sync)
 
 
 def _wait_for_sync(status, conn, wait_for_sync):
