@@ -2,7 +2,9 @@
 '''
 RPM Package builder system
 
-This system allows for all of th ecomponents to build rpms safely in chrooted
+.. versionadded:: Beryllium
+
+This system allows for all of the components to build rpms safely in chrooted
 environments. This also provides a function to generate yum repositories
 
 This module impliments the pkgbuild interface
@@ -13,7 +15,7 @@ from __future__ import absolute_import, print_function
 import os
 import tempfile
 import shutil
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.utils
