@@ -55,7 +55,7 @@ def _get_modules_conf():
     Return location of modules config file.
     Default: /etc/modules
     '''
-    if  'systemd' in __grains__:
+    if 'systemd' in __grains__:
         return '/etc/modules-load.d/salt_managed.conf'
     return '/etc/modules'
 
