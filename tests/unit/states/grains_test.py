@@ -40,6 +40,7 @@ class GrainsTestCase(TestCase):
 
     # 'present' function tests: 4
 
+    @patch.dict(grainsmod.__salt__, {'saltutil.sync_grains': MagicMock()})
     def test_present_add(self):
         # Set a non existing grain
         grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
