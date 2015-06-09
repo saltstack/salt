@@ -316,6 +316,9 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
     ca_filename
         alternative filename for the CA
 
+        .. versionadded:: 2015.5.3
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -379,6 +382,9 @@ def ca_exists(ca_name, cacert_path=None, ca_filename=None):
         absolute path to ca certificates root directory
     ca_filename
         alternative filename for the CA
+
+        .. versionadded:: 2015.5.3
+
 
     CLI Example:
 
@@ -456,6 +462,9 @@ def get_ca_signed_cert(ca_name,
     cert_filename
         alternative filename for the certificate, useful when using special characters in the CN
 
+        .. versionadded:: 2015.5.3
+
+
     CLI Example:
 
     .. code-block:: bash
@@ -497,6 +506,9 @@ def get_ca_signed_key(ca_name,
         absolute path to certificates root directory
     key_filename
         alternative filename for the key, useful when using special characters
+
+        .. versionadded:: 2015.5.3
+
         in the CN
 
     CLI Example:
@@ -591,6 +603,9 @@ def create_ca(ca_name,
         absolute path to ca certificates root directory
     ca_filename
         alternative filename for the CA
+
+        .. versionadded:: 2015.5.3
+
     digest
         The message digest algorithm. Must be a string describing a digest
         algorithm supported by OpenSSL (by EVP_get_digestbyname, specifically).
@@ -1191,6 +1206,9 @@ def create_ca_signed_cert(ca_name,
     ca_filename
         alternative filename for the CA
 
+        .. versionadded:: 2015.5.3
+
+
     cert_path
         full path to the certificates directory
 
@@ -1199,6 +1217,9 @@ def create_ca_signed_cert(ca_name,
         characters in the CN. If this option is set it will override
         the certificate filename output effects of ``cert_type``.
         ``type_ext`` will be completely overridden.
+
+        .. versionadded:: 2015.5.3
+
 
     digest
         The message digest algorithm. Must be a string describing a digest
@@ -1553,6 +1574,9 @@ def create_empty_crl(
         absolute path to ca certificates root directory
     ca_filename
         alternative filename for the CA
+
+        .. versionadded:: 2015.5.3
+
     crl_file
         full path to the CRL file
 
