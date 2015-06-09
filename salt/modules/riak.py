@@ -53,6 +53,8 @@ def stop():
     '''
     Stop Riak
 
+    .. versionchanged:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -76,11 +78,16 @@ def cluster_join(username, hostname):
     '''
     Join a Riak cluster
 
+    .. versionchanged:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' riak.cluster_join <user> <host>
+
+    username - The riak username to join the cluster
+    hostname - The riak hostname you are connecting to
     '''
     ret = {'comment': '', 'success': False}
 
@@ -101,11 +108,16 @@ def cluster_leave(username, hostname):
     '''
     Leave a Riak cluster
 
+    .. versionadded:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' riak.cluster_leave <username> <host>
+
+    username - The riak username to join the cluster
+    hostname - The riak hostname you are connecting to
     '''
     ret = {'comment': '', 'success': False}
 
@@ -126,6 +138,8 @@ def cluster_plan():
     '''
     Review Cluster Plan
 
+    .. versionchanged:: Beryllium
+
     CLI Example:
 
     .. code-block:: bash
@@ -143,6 +157,8 @@ def cluster_plan():
 def cluster_commit():
     '''
     Commit Cluster Changes
+
+    .. versionchanged:: Beryllium
 
     CLI Example:
 
@@ -166,6 +182,8 @@ def cluster_commit():
 def member_status():
     '''
     Get cluster member status
+
+    .. versionchanged:: Beryllium
 
     CLI Example:
 
@@ -208,6 +226,8 @@ def member_status():
 def status():
     '''
     Current node status
+
+    .. versionadded:: Beryllium
 
     CLI Example:
 
