@@ -2198,7 +2198,7 @@ def create(vm_):
                     err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
                     log.error(err_msg)
                     return {'Error': err_msg}
-            except ValueError:
+            except TypeError, ValueError:
                 memory_mb = int(memory)
             log.debug("Setting memory to: {0} MB".format(memory_mb))
             config_spec.memoryMB = memory_mb
