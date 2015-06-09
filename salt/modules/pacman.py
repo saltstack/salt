@@ -145,7 +145,7 @@ def list_upgrades(refresh=False):
         out = call['stdout']
 
     output = iter(out.splitlines())
-    output.next()  # Skip informational output line
+    next(output)  # Skip informational output line
     for line in output:
         comps = line.split(' ')
         if len(comps) < 2:
