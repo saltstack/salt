@@ -4,7 +4,7 @@ Linux File Access Control Lists
 
 Ensure a Linux ACL is present
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
      root:
        acl.present:
@@ -15,7 +15,7 @@ Ensure a Linux ACL is present
 
 Ensure a Linux ACL does not exist
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
      root:
        acl.absent:

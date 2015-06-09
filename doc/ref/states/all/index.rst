@@ -158,6 +158,7 @@ Full list of builtin state modules
     sysrc
     test
     timezone
+    tls
     tomcat
     tuned
     uptime
