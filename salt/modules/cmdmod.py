@@ -745,7 +745,9 @@ def shell(cmd,
 
     .. versionadded:: 2015.5.0
 
-    .. warning:: This passes the cmd argument directly to the shell
+    .. warning::
+
+        This passes the cmd argument directly to the shell
         without any further processing! Be absolutely sure that you
         have properly santized the command passed to this function
         and do not use untrusted inputs.

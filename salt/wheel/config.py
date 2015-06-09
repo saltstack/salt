@@ -52,10 +52,12 @@ def update_config(file_name, yaml_contents):
     specified by ``default_include``.
     This folder is named ``master.d`` by
     default. Please look at
-    http://docs.saltstack.com/en/latest/ref/configuration/master.html#include-configuration
+    :conf_master:`include-configuration`
     for more information.
 
-    Example low data::
+    Example low data:
+
+    .. code-block:: yaml
 
         data = {
             'username': 'salt',

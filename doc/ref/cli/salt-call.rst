@@ -15,6 +15,14 @@ Description
 The salt-call command is used to run module functions locally on a minion
 instead of executing them from the master.
 
+salt-call is used to run a :ref:`Standalone Minion <tutorial-standalone-minion>`,
+and was originally created for :ref:`troubleshooting <troubleshooting-minion-salt-call>`.
+Be aware that ``salt-call`` commands execute from the current user's shell
+context, while ``salt`` commands execute from the system's default context.
+
+By default, the Salt Master is contacted to retrieve state files and other resources
+during execution unless the ``--local`` option is specified.:w
+
 Options
 =======
 

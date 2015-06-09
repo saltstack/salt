@@ -1,6 +1,8 @@
-===================
+.. _external-pillars:
+
+================
 External Pillars
-===================
+================
 
 Salt provides a mechanism for generating pillar data by calling external
 pillar interfaces. This document will describe an outline of an ext_pillar

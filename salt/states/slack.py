@@ -69,7 +69,6 @@ def post_message(name,
     api_key
         The api key for Slack to use for authentication,
         if not specified in the configuration options of master or minion.
-
     '''
     ret = {'name': name,
            'changes': {},

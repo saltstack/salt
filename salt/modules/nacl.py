@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-:requires: libnacl
-https://github.com/saltstack/libnacl
-
 This module helps include encrypted passwords in pillars, grains and salt state files.
-This is often usefull if you wish to store your pillars in source control or
-share your pillar data with others that you trust. I dont advise making your pillars public
+
+:depends: libnacl, https://github.com/saltstack/libnacl
+
+This is often useful if you wish to store your pillars in source control or
+share your pillar data with others that you trust. I don't advise making your pillars public
 regardless if they are encrypted or not.
 
 When generating keys and encrypting passwords use --local when using salt-call for extra
@@ -14,20 +14,28 @@ security. Also consider using just the salt runner nacl when encrypting pillar p
 The nacl lib uses 32byte keys, these keys are base64 encoded to make your life more simple.
 To generate your `key` or `keyfile` you can use:
 
+.. code-block:: bash
+
     salt-call --local nacl.keygen keyfile=/root/.nacl
 
-Now with your key, you can encrypt some data
+Now with your key, you can encrypt some data:
+
+.. code-block:: bash
 
     salt-call --local nacl.enc mypass keyfile=/root/.nacl
     DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=
 
-To decrypt the data
+To decrypt the data:
+
+.. code-block:: bash
 
     salt-call --local nacl.dec data='DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=' keyfile=/root/.nacl
     mypass
 
 The following optional configurations can be defined in the
-minion or master config. Avoide storeing the config in pillars!
+minion or master config. Avoid storing the config in pillars!
+
+.. code-block:: yaml
 
     cat /etc/salt/master.d/nacl.conf
     nacl.config:
@@ -36,15 +44,21 @@ minion or master config. Avoide storeing the config in pillars!
 
 When the key is defined in the master config you can use it from the nacl runner:
 
+.. code-block:: bash
+
     salt-run nacl.enc 'myotherpass'
 
 Now you can create a pillar with protected data like:
+
+.. code-block:: yaml
 
     pillarexample:
         user: root
         password: {{ salt.nacl.dec('DRB7Q6/X5gGSRCTpZyxS6hXO5LnlJIIJ4ivbmUlbWj0llUA+uaVyvou3vJ4=') }}
 
-Or do somthing interesting with grains like:
+Or do something interesting with grains like:
+
+.. code-block:: yaml
 
     salt-call nacl.enc minionname:dbrole
     AL24Z2C5OlkReer3DuQTFdrNLchLuz3NGIhGjZkLtKRYry/b/CksWM8O9yskLwH2AGVLoEXI5jAa

@@ -128,10 +128,7 @@ def list_upgrades(refresh=False):
     if refresh:
         options.append('-y')
 
-    cmd = (
-        'pacman {0} | egrep -v '
-        r'"^\s|^:"'
-    ).format(' '.join(options))
+    cmd = ('pacman {0}').format(' '.join(options))
 
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
@@ -147,7 +144,9 @@ def list_upgrades(refresh=False):
     else:
         out = call['stdout']
 
-    for line in out.splitlines():
+    output = iter(out.splitlines())
+    output.next()  # Skip informational output line
+    for line in output:
         comps = line.split(' ')
         if len(comps) < 2:
             continue

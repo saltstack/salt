@@ -349,7 +349,7 @@ def lock(backend=None, remote=None):
     .. note::
 
         This will only operate on enabled backends (those configured in
-        :master_conf:`fileserver_backend`).
+        :conf_master:`fileserver_backend`).
 
     backend
         Only set the update lock for the specified backend(s).
