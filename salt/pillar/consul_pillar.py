@@ -58,6 +58,7 @@ import logging
 import re
 
 from salt.exceptions import CommandExecutionError
+from salt.utils.dictupdate import update as dict_merge
 
 # Import third party libs
 try:
@@ -149,8 +150,11 @@ def pillar_format(ret, keys, value):
     '''
     if value is None:
         return ret
-    array_data = value.split('\n')
-    pillar_value = array_data[0] if len(array_data) == 1 else array_data
+    if value[0] == value[-1] == '"':
+        pillar_value = value[1:-1]
+    else:
+        array_data = value.split('\n')
+        pillar_value = array_data[0] if len(array_data) == 1 else array_data
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}
     keys.reverse()
@@ -158,19 +162,6 @@ def pillar_format(ret, keys, value):
         pil = {k: pil}
 
     return dict_merge(ret, pil)
-
-
-def dict_merge(d1, d2):
-    '''
-    Take 2 dictionaries and deep merge them
-    '''
-    master = d1.copy()
-    for (k, v) in d2.iteritems():
-        if k in master and isinstance(master[k], dict):
-            master[k] = dict_merge(master[k], v)
-        else:
-            master[k] = v
-    return master
 
 
 def get_conn(opts, profile):
