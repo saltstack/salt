@@ -50,20 +50,8 @@ def wol(mac, bcast='255.255.255.255', destport=9):
         salt-run network.wol 080027136977 255.255.255.255 7
         salt-run network.wol 08:00:27:13:69:77 255.255.255.255 7
     '''
-    if len(mac) == 12:
-        pass
-    elif len(mac) == 17:
-        sep = mac[2]
-        mac = mac.replace(sep, '')
-    else:
-        raise ValueError('Invalid MAC address')
+    dest = salt.utils.mac_str_to_bytes(mac)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    dest = ('\\x' + mac[0:2]).decode('string_escape') + \
-           ('\\x' + mac[2:4]).decode('string_escape') + \
-           ('\\x' + mac[4:6]).decode('string_escape') + \
-           ('\\x' + mac[6:8]).decode('string_escape') + \
-           ('\\x' + mac[8:10]).decode('string_escape') + \
-           ('\\x' + mac[10:12]).decode('string_escape')
-    sock.sendto('\xff' * 6 + dest * 16, (bcast, int(destport)))
+    sock.sendto(b'\xff' * 6 + dest * 16, (bcast, int(destport)))
     return True
