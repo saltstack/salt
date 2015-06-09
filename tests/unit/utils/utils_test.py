@@ -752,14 +752,14 @@ class UtilsTestCase(TestCase):
             self.assertRaises(TypeError, utils.to_str, x)
         if six.PY3:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
-            self.assertEqual(utils.to_str('áéíóúý'), 'áéíóúý')
+            self.assertEqual(utils.to_str('áéíóúý', 'utf-8'), 'áéíóúý')
             un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
             ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
             self.assertEqual(utils.to_str(ut, 'utf-8'), un)
             self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
         else:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
-            self.assertEqual(utils.to_str(u'áéíóúý'), 'áéíóúý')
+            self.assertEqual(utils.to_str(u'áéíóúý', 'utf-8'), 'áéíóúý')
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             self.assertEqual(utils.to_str(un, 'utf-8'), ut)
