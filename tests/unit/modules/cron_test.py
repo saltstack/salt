@@ -15,7 +15,6 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import cron
-import salt.ext.six as six
 from salt.ext.six.moves import StringIO
 
 STUB_USER = 'root'
