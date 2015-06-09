@@ -130,8 +130,8 @@ class TLSAddTestCase(TestCase):
         Test for retrieving cert base path
         '''
         ca_path = '/etc/tls'
-        mock = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        mock_opt = MagicMock(return_value=ca_path)
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             self.assertEqual(tls.cert_base_path(), ca_path)
 
     def test_set_ca_cert_path(self):
@@ -139,11 +139,11 @@ class TLSAddTestCase(TestCase):
         Test for setting the cert base path
         '''
         ca_path = '/tmp/ca_cert_test_path'
-        mock = MagicMock(return_value='/etc/tls')
+        mock_opt = MagicMock(return_value='/etc/tls')
         ret = {'ca.contextual_cert_base_path': '/tmp/ca_cert_test_path'}
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             tls.set_ca_path(ca_path)
-            self.assertDictEqual(tls.__opts__, ret)
+            self.assertEqual(tls.__context__, ret)
 
     @patch('os.path.exists', MagicMock(return_value=False))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
@@ -154,8 +154,8 @@ class TLSAddTestCase(TestCase):
         '''
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
-        mock = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        mock_opt = MagicMock(return_value=ca_path)
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             self.assertFalse(tls.ca_exists(ca_name))
 
     @patch('os.path.exists', MagicMock(return_value=True))
@@ -167,8 +167,8 @@ class TLSAddTestCase(TestCase):
         '''
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
-        mock = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        mock_opt = MagicMock(return_value=ca_path)
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             self.assertTrue(tls.ca_exists(ca_name))
 
     @patch('os.path.exists', MagicMock(return_value=False))
@@ -180,8 +180,8 @@ class TLSAddTestCase(TestCase):
         '''
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
-        mock = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        mock_opt = MagicMock(return_value=ca_path)
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             self.assertRaises(ValueError, tls.get_ca, ca_name)
 
     @patch('os.path.exists', MagicMock(return_value=True))
@@ -194,8 +194,8 @@ class TLSAddTestCase(TestCase):
         '''
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
-        mock = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        mock_opt = MagicMock(return_value=ca_path)
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             self.assertEqual(tls.get_ca(ca_name, as_text=True),
                              _TLS_TEST_DATA['ca_cert'])
 
@@ -212,8 +212,8 @@ class TLSAddTestCase(TestCase):
             ca_path,
             ca_name,
             ca_name)
-        mock = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock}):
+        mock_opt = MagicMock(return_value=ca_path)
+        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             self.assertEqual(tls.get_ca(ca_name), certp)
 
     @patch('os.path.exists', MagicMock(return_value=True))
@@ -294,8 +294,9 @@ class TLSAddTestCase(TestCase):
                 ca_name)
             ret = 'Created Private Key: "{0}." Created CA "{1}": "{2}."'.format(
                 certk, ca_name, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     self.assertEqual(
@@ -329,8 +330,9 @@ class TLSAddTestCase(TestCase):
                 ca_name)
             ret = 'Created Private Key: "{0}." Created CA "{1}": "{2}."'.format(
                 certk, ca_name, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     with patch.dict(_TLS_TEST_DATA['create_ca'],
@@ -367,9 +369,11 @@ class TLSAddTestCase(TestCase):
                 _TLS_TEST_DATA['create_ca']['CN'])
             ret = ('Created Private Key: "{0}." '
                    'Created CSR for "{1}": "{2}."').format(
-                       certk, ca_name, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+                       certk, _TLS_TEST_DATA['create_ca']['CN'], certp)
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            mock_pgt = MagicMock(return_value=False)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     tls.create_ca(ca_name)
@@ -402,9 +406,11 @@ class TLSAddTestCase(TestCase):
                 _TLS_TEST_DATA['create_ca']['CN'])
             ret = ('Created Private Key: "{0}." '
                    'Created CSR for "{1}": "{2}."').format(
-                       certk, ca_name, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+                       certk, _TLS_TEST_DATA['create_ca']['CN'], certp)
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            mock_pgt = MagicMock(return_value=False)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     with patch.dict(_TLS_TEST_DATA['create_ca'],
@@ -441,8 +447,8 @@ class TLSAddTestCase(TestCase):
             ret = ('Created Private Key: "{0}." '
                    'Created Certificate: "{1}."').format(
                        certk, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+            mock_opt = MagicMock(return_value=ca_path)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     self.assertEqual(
@@ -476,8 +482,8 @@ class TLSAddTestCase(TestCase):
             ret = ('Created Private Key: "{0}." '
                    'Created Certificate: "{1}."').format(
                        certk, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+            mock_opt = MagicMock(return_value=ca_path)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     self.assertEqual(
@@ -505,9 +511,11 @@ class TLSAddTestCase(TestCase):
                 ca_name,
                 _TLS_TEST_DATA['create_ca']['CN'])
             ret = 'Created Certificate for "{0}": "{1}"'.format(
-                ca_name, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+                _TLS_TEST_DATA['create_ca']['CN'], certp)
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            mock_pgt = MagicMock(return_value=False)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     tls.create_ca(ca_name)
@@ -515,7 +523,7 @@ class TLSAddTestCase(TestCase):
                     self.assertEqual(
                         tls.create_ca_signed_cert(
                             ca_name,
-                            **_TLS_TEST_DATA['create_ca']),
+                            _TLS_TEST_DATA['create_ca']['CN']),
                         ret)
         finally:
             if os.path.isdir(ca_path):
@@ -536,22 +544,23 @@ class TLSAddTestCase(TestCase):
                 ca_name,
                 _TLS_TEST_DATA['create_ca']['CN'])
             ret = 'Created Certificate for "{0}": "{1}"'.format(
-                ca_name, certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+                _TLS_TEST_DATA['create_ca']['CN'], certp)
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            mock_pgt = MagicMock(return_value=False)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
-                    with patch.dict(_TLS_TEST_DATA['create_ca'],
-                                    {'replace': True}):
-                        tls.create_ca(ca_name)
-                        tls.create_csr(ca_name)
-                        tls.create_ca_signed_cert(ca_name,
-                                                  **_TLS_TEST_DATA['create_ca'])
-                        self.assertEqual(
-                            tls.create_ca_signed_cert(
-                                ca_name,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+                    tls.create_ca(ca_name)
+                    tls.create_csr(ca_name)
+                    tls.create_ca_signed_cert(ca_name,
+                                              _TLS_TEST_DATA['create_ca']['CN'])
+                    self.assertEqual(
+                        tls.create_ca_signed_cert(
+                            ca_name,
+                            _TLS_TEST_DATA['create_ca']['CN'],
+                            replace=True),
+                        ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)
@@ -572,14 +581,16 @@ class TLSAddTestCase(TestCase):
                 _TLS_TEST_DATA['create_ca']['CN'])
             ret = 'Created PKCS#12 Certificate for "{0}": "{1}"'.format(
                 _TLS_TEST_DATA['create_ca']['CN'], certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            mock_pgt = MagicMock(return_value=False)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     tls.create_ca(ca_name)
                     tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
                     tls.create_ca_signed_cert(ca_name,
-                                              **_TLS_TEST_DATA['create_ca'])
+                                              _TLS_TEST_DATA['create_ca']['CN'])
                     self.assertEqual(
                         tls.create_pkcs12(ca_name,
                                           _TLS_TEST_DATA['create_ca']['CN'],
@@ -605,8 +616,10 @@ class TLSAddTestCase(TestCase):
                 _TLS_TEST_DATA['create_ca']['CN'])
             ret = 'Created PKCS#12 Certificate for "{0}": "{1}"'.format(
                 _TLS_TEST_DATA['create_ca']['CN'], certp)
-            mock = MagicMock(return_value=ca_path)
-            with patch.dict(tls.__salt__, {'config.option': mock}):
+            mock_opt = MagicMock(return_value=ca_path)
+            mock_ret = MagicMock(return_value=0)
+            mock_pgt = MagicMock(return_value=False)
+            with patch.dict(tls.__salt__, {'config.option': mock_opt, 'cmd.retcode': mock_ret, 'pillar.get': mock_pgt}):
                 with patch.dict(tls.__opts__, {'hash_type': 'sha256',
                                                'cachedir': ca_path}):
                     with patch.dict(_TLS_TEST_DATA['create_ca'],
@@ -614,7 +627,7 @@ class TLSAddTestCase(TestCase):
                         tls.create_ca(ca_name)
                         tls.create_csr(ca_name)
                         tls.create_ca_signed_cert(ca_name,
-                                                  **_TLS_TEST_DATA['create_ca'])
+                                                  _TLS_TEST_DATA['create_ca']['CN'])
                         tls.create_pkcs12(ca_name,
                                           _TLS_TEST_DATA['create_ca']['CN'],
                                           'password')
