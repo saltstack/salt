@@ -279,8 +279,11 @@ def get_channel_access(channel=14, read_mode='non_volatile', **kwargs):
         - api_port=623
         - api_kg=None
 
-    :return: A Python dict with the following keys/values:
+    return
+        A Python dict with the following keys/values:
+
         .. code-block:: python
+
             {
                 alerting:
                 per_msg_auth:
@@ -322,14 +325,17 @@ def get_channel_info(channel=14, **kwargs):
         - api_port=623
         - api_kg=None
 
-    :return:
-    session_support:
-        no_session: channel is session-less
-        single: channel is single-session
-        multi: channel is multi-session
-        auto: channel is session-based (channel could alternate between
-            single- and multi-session operation, as can occur with a
-            serial/modem channel that supports connection mode auto-detect)
+    return
+        channel session supports:
+
+        .. code-block:: none
+
+                - no_session: channel is session-less
+                - single: channel is single-session
+                - multi: channel is multi-session
+                - auto: channel is session-based (channel could alternate between
+                    single- and multi-session operation, as can occur with a
+                    serial/modem channel that supports connection mode auto-detect)
 
     CLI Examples:
 
@@ -419,19 +425,20 @@ def get_user_access(uid, channel=14, **kwargs):
         - api_port=623
         - api_kg=None
 
-    :return:
-        channel_info:
-            - max_user_count = maximum number of user IDs on this channel
-            - enabled_users = count of User ID slots presently in use
-            - users_with_fixed_names = count of user IDs with fixed names
-        access:
-            - callback
-            - link_auth
-            - ipmi_msg
-            - privilege_level: [reserved, callback, user, operator
-                               administrator, proprietary, no_access]
+    return
 
+        .. code-block:: none
 
+            channel_info:
+                - max_user_count = maximum number of user IDs on this channel
+                - enabled_users = count of User ID slots presently in use
+                - users_with_fixed_names = count of user IDs with fixed names
+            access:
+                - callback
+                - link_auth
+                - ipmi_msg
+                - privilege_level: [reserved, callback, user, operator
+                                   administrator, proprietary, no_access]
 
     CLI Examples:
 
@@ -770,16 +777,20 @@ def get_user(uid, channel=14, **kwargs):
         - api_port=623
         - api_kg=None
 
-    :return:
-        name: (str)
-        uid: (int)
-        channel: (int)
-        access:
-            - callback (bool)
-            - link_auth (bool)
-            - ipmi_msg (bool)
-            - privilege_level: (str)[callback, user, operatorm administrator,
-                                    proprietary, no_access]
+    return
+
+        .. code-block:: none
+
+            name: (str)
+            uid: (int)
+            channel: (int)
+            access:
+                - callback (bool)
+                - link_auth (bool)
+                - ipmi_msg (bool)
+                - privilege_level: (str)[callback, user, operatorm administrator,
+                                        proprietary, no_access]
+
     CLI Examples:
 
     .. code-block:: bash
