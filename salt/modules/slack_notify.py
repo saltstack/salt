@@ -19,7 +19,6 @@ Module for sending messages to Slack
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import urllib
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
