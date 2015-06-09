@@ -27,6 +27,9 @@ import json
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 import salt.ext.six.moves.http_client
 
+# Import salt libs
+import salt.utils.http
+
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
