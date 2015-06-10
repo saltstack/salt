@@ -11,12 +11,14 @@ from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 # salt libs
 ensure_in_syspath('../../')
 import salt.ext.six as six
+from salt.ext.six.moves import reload_module
 from salt.utils import locales
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestLocales(TestCase):
     def test_get_encodings(self):
+        reload_module(locales)  # defeat memoization of get_encodings()
         with patch('sys.getdefaultencoding', return_value='xyzzy'):
             encodings = locales.get_encodings()
             for enc in (__salt_system_encoding__, 'xyzzy', 'utf-8', 'latin-1'):
