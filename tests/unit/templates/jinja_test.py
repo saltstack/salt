@@ -681,7 +681,8 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        render = salt.loader.render(self.minion_opts, functions)
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
+        render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 
     def render(self, tmpl_str, context=None):
