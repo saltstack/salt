@@ -1,0 +1,4 @@
+#!/bin/bash
+source /opt/salt/bin/activate
+export PYTHONPATH=/opt/salt/lib/python2.7:/opt/salt/lib/python2.7/site-packages
+exec /opt/salt/bin/python /opt/salt/bin/$0.py "$@"
