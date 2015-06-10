@@ -90,6 +90,7 @@ def jid_to_time(jid):
                                                 micro)
     return ret
 
+
 def format_job_instance(job):
     '''
     Format the job instance correctly
