@@ -277,7 +277,7 @@ def get_jid(jid):
 
 def get_jids():
     '''
-    Return a list of all job ids
+    Return a dict mapping all job ids to job information
     '''
     ret = {}
     for jid, job, _, _ in _walk_through(_job_dir()):
