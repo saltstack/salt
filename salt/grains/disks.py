@@ -121,7 +121,3 @@ def _linux_ssds():
                 log.trace('Unable to identify device {0} as an SSD or not.'
                           ' It does not report 0 or 1'.format(device))
     return ssd_devices
-
-
-if __name__ == '__main__':
-    print disks()
