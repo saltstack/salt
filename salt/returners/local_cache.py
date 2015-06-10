@@ -69,35 +69,6 @@ def _walk_through(job_dir):
             yield jid, job, t_path, final
 
 
-def _format_job_instance(job):
-    '''
-    Format the job instance correctly
-    '''
-    ret = {'Function': job.get('fun', 'unknown-function'),
-           'Arguments': list(job.get('arg', [])),
-           # unlikely but safeguard from invalid returns
-           'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
-           'User': job.get('user', 'root')}
-
-    if 'metadata' in job:
-        ret['Metadata'] = job.get('metadata', {})
-    else:
-        if 'kwargs' in job:
-            if 'metadata' in job['kwargs']:
-                ret['Metadata'] = job['kwargs'].get('metadata', {})
-    return ret
-
-
-def _format_jid_instance(jid, job):
-    '''
-    Format the jid correctly
-    '''
-    ret = _format_job_instance(job)
-    ret.update({'StartTime': salt.utils.jid.jid_to_time(jid)})
-    return ret
-
-
 #TODO: add to returner docs-- this is a new one
 def prep_jid(nocache=False, passed_jid=None):
     '''
@@ -281,7 +252,7 @@ def get_jids():
     '''
     ret = {}
     for jid, job, _, _ in _walk_through(_job_dir()):
-        ret[jid] = _format_jid_instance(jid, job)
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, job)
     return ret
 
 
