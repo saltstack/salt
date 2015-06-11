@@ -935,13 +935,14 @@ ARGS = {9}\n'''.format(self.minion_config,
     def cmd_block(self, is_retry=False):
         '''
         Prepare the pre-check command to send to the subsystem
+
+        1. execute SHIM + command
+        2. check if SHIM returns a master request or if it completed
+        3. handle any master request
+        4. re-execute SHIM + command
+        5. split SHIM results from command results
+        6. return command results
         '''
-        # 1. execute SHIM + command
-        # 2. check if SHIM returns a master request or if it completed
-        # 3. handle any master request
-        # 4. re-execute SHIM + command
-        # 5. split SHIM results from command results
-        # 6. return command results
         self.argv = _convert_args(self.argv)
         log.debug('Performing shimmed, blocking command as follows:\n{0}'.format(' '.join(self.argv)))
         cmd_str = self._cmd_str()
