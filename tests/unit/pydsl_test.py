@@ -237,7 +237,6 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             '''))
 
     def test_load_highstate(self):
-        import pdb; pdb.set_trace()
         result = self.render_sls(textwrap.dedent('''
             import yaml
             __pydsl__.load_highstate(yaml.load("""
