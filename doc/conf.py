@@ -155,7 +155,7 @@ project = 'Salt'
 copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.5.1'  # latest release
+latest_release = '2015.5.2'  # latest release
 previous_release = '2014.7.6'  # latest release from previous branch
 previous_release_dir = '2014.7'  # path on web server for previous branch
 build_type = 'latest'  # latest, previous, develop
@@ -217,7 +217,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-""".format(release=latest_release)
+""".format(release=release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
