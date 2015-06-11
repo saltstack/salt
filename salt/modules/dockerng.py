@@ -623,7 +623,7 @@ def _clear_context():
         'docker.client', 'docker.exec_driver', 'dockerng._pull_status',
         'docker.docker_version', 'docker.docker_py_version'
     )
-    for key in __context__.keys():
+    for key in list(__context__):
         try:
             if key.startswith('docker.') and key not in keep_context:
                 __context__.pop(key)
