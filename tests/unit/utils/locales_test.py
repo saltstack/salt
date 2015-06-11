@@ -18,11 +18,14 @@ from salt.utils import locales
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestLocales(TestCase):
     def test_get_encodings(self):
-        reload_module(locales)  # defeat memoization of get_encodings()
+        # reload locales modules before and after to defeat memoization of
+        # get_encodings()
+        reload_module(locales)
         with patch('sys.getdefaultencoding', return_value='xyzzy'):
             encodings = locales.get_encodings()
             for enc in (__salt_system_encoding__, 'xyzzy', 'utf-8', 'latin-1'):
                 self.assertIn(enc, encodings)
+        reload_module(locales)
 
     def test_sdecode(self):
         b = '\xe7\xb9\x81\xe4\xbd\x93' if six.PY2 else bytes((0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93))
