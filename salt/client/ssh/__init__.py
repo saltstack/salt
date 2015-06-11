@@ -946,14 +946,15 @@ ARGS = {9}\n'''.format(self.minion_config,
     def cmd_block(self, is_retry=False):
         '''
         Prepare the pre-check command to send to the subsystem
-        '''
-        # 1. execute SHIM + command
-        # 2. check if SHIM returns a master request or if it completed
-        # 3. handle any master request
-        # 4. re-execute SHIM + command
-        # 5. split SHIM results from command results
-        # 6. return command results
 
+        1. execute SHIM + command
+        2. check if SHIM returns a master request or if it completed
+        3. handle any master request
+        4. re-execute SHIM + command
+        5. split SHIM results from command results
+        6. return command results
+        '''
+        self.argv = _convert_args(self.argv)
         log.debug('Performing shimmed, blocking command as follows:\n{0}'.format(' '.join(self.argv)))
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
@@ -1218,3 +1219,18 @@ def ssh_version():
         return ret[1].split(b',')[0].split(b'_')[1]
     except IndexError:
         return '2.0'
+
+
+def _convert_args(args):
+    '''
+    Take a list of args, and convert any dicts inside the list to keyword
+    args in the form of `key=value`, ready to be passed to salt-ssh
+    '''
+    converted = []
+    for arg in args:
+        if isinstance(arg, dict):
+            for key in list(arg.keys()):
+                converted.append('{0}={1}'.format(key, arg[key]))
+        else:
+            converted.append(arg)
+    return converted

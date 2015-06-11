@@ -122,6 +122,7 @@ class VTTestCase(TestCase):
                 # We're pushing the system resources, let's keep going
                 continue
 
+    @skipIf(True, 'Disabled until we can figure out how to make this more reliable.')
     def test_isalive_while_theres_data_to_read(self):
         expected_data = 'Alive!\n'
         term = vt.Terminal('echo "Alive!"', shell=True, stream_stdout=False, stream_stderr=False)

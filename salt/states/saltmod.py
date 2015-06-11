@@ -404,6 +404,8 @@ def function(
         if mdata.get('failed', False):
             m_func = False
         else:
+            if 'return' in mdata and 'ret' not in mdata:
+                mdata['ret'] = mdata.pop('return')
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
 
