@@ -58,7 +58,6 @@ class PkgModuleTest(integration.ModuleCase,
             self.assertNotEqual(ret, {})
             if os_release.startswith('12.'):
                 self.assertIn(repo, ret)
-                self.assertTrue(ret[repo]['result'])
             else:
                 self.assertIn(uri, ret.keys()[0])
 
@@ -88,6 +87,13 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         pkg = 'htop'
         version = self.run_function('pkg.version', [pkg])
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
+
+        if os_grain == 'Ubuntu':
+            if os_release.startswith('12.'):
+                self.skipTest('pkg.install and pkg.remove do not work on ubuntu '
+                              '12 when run from the test suite')
 
         def test_install():
             install_ret = self.run_function('pkg.install', [pkg])
