@@ -454,7 +454,7 @@ def sync_all(saltenv=None, refresh=True):
 
         If this function is executed using a :py:func:`module.run
         <salt.states.module.run>` state, the SLS file will not have access to
-        newly synced execution modules unless a ``reload_modules`` argument is
+        newly synced execution modules unless a ``refresh`` argument is
         added to the state, like so:
 
         .. code-block:: yaml
@@ -463,7 +463,6 @@ def sync_all(saltenv=None, refresh=True):
               module.run:
                 - name: saltutil.sync_all
                 - refresh: True
-                - reload_modules: True
 
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
