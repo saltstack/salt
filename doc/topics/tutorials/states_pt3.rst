@@ -46,6 +46,13 @@ Here's a more complex example:
 
 .. code-blocK:: jinja
 
+    # Comments in yaml start with a hash symbol.
+    # If you want to include jinja in the comments
+    # you may need to escape them using 'jinja' comments to prevent
+    # jinja from trying to rendering something which is not well-defined jinja.
+    # e.g.
+    # {# iterate over the Three Stooges using a {% for %}..{% endfor %} loop 
+    # with the iterator variable {{ usr }} becoming the state ID. #}
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
       group:
