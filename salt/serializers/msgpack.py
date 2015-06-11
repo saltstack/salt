@@ -69,6 +69,7 @@ elif msgpack.version >= (0, 2, 0):
     def _deserialize(stream_or_string, **options):
         try:
             options.setdefault('use_list', True)
+            options.setdefault('encoding', 'utf-8')
             return msgpack.loads(stream_or_string, **options)
         except Exception as error:
             raise DeserializationError(error)
