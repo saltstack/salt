@@ -118,13 +118,15 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         pkg = 'htop'
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
+        os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
 
         if available:
             if os_family == 'RedHat':
-                versionlock = self.run_function('pkg.version', ['yum-plugin-versionlock'])
+                lock_pkg = 'yum-versionlock' if os_major_release == '5' else 'yum-plugin-versionlock'
+                versionlock = self.run_function('pkg.version', [lock_pkg])
                 if not versionlock:
-                    self.run_function('pkg.install', ['yum-plugin-versionlock'])
+                    self.run_function('pkg.install', [lock_pkg])
 
             hold_ret = self.run_function('pkg.hold', [pkg])
             self.assertIn(pkg, hold_ret)
@@ -136,7 +138,7 @@ class PkgModuleTest(integration.ModuleCase,
 
             if os_family == 'RedHat':
                 if not versionlock:
-                    self.run_function('pkg.remove', ['yum-plugin-versionlock'])
+                    self.run_function('pkg.remove', [lock_pkg])
 
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
