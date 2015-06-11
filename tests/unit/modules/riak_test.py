@@ -103,6 +103,24 @@ class RiakTestCase(TestCase):
                 riak.status(), {'vnode_map_update_time_95': '0', 'vnode_map_update_time_99': '0'}
             )
 
+    def test_test(self):
+        '''
+        Test the Riak test
+        '''
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.test(), {'success': True, 'comment': 'success'}
+            )
+
+    def test_services(self):
+        '''
+        Test Riak Service List
+        '''
+        with patch.object(riak, '__execute_cmd', return_value={'stdout': '[a,b,c]'}):
+            self.assertEqual(
+                riak.services(), ['a','b','c']
+            )
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(RiakTestCase, needs_daemon=False)
