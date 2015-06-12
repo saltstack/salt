@@ -145,9 +145,16 @@ def purge(**kwargs):
             ret['result'] = True
             ret['comment'].append('Job: {0} would be deleted from schedule.'.format(name))
         else:
+
+            persist = True
+            if 'persist' in kwargs:
+                persist = kwargs['persist']
+
             try:
                 eventer = salt.utils.event.get_event('minion', opts=__opts__)
-                res = __salt__['event.fire']({'name': name, 'func': 'delete'}, 'manage_schedule')
+                res = __salt__['event.fire']({'name': name,
+                                              'func': 'delete',
+                                              'persist': persist}, 'manage_schedule')
                 if res:
                     event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_delete_complete', wait=30)
                     if event_ret and event_ret['complete']:
@@ -194,6 +201,11 @@ def delete(name, **kwargs):
         else:
             ret['comment'] = 'Job {0} does not exist.'.format(name)
             return ret
+
+        event_data['persist'] = True
+        if 'persist' in kwargs:
+            event_data['persist'] = kwargs['persist']
+
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire'](event_data, 'manage_schedule')
@@ -340,6 +352,10 @@ def add(name, **kwargs):
         ret['comment'] = 'Unable to use "when" and "cron" options together.  Ignoring.'
         return ret
 
+    persist = True
+    if 'persist' in kwargs:
+        persist = kwargs['persist']
+
     _new = build_schedule_item(name, **kwargs)
 
     schedule_data = {}
@@ -351,7 +367,10 @@ def add(name, **kwargs):
     else:
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
-            res = __salt__['event.fire']({'name': name, 'schedule': schedule_data, 'func': 'add'}, 'manage_schedule')
+            res = __salt__['event.fire']({'name': name,
+                                          'schedule': schedule_data,
+                                          'func': 'add',
+                                          'persist': persist}, 'manage_schedule')
             if res:
                 event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_add_complete', wait=30)
                 if event_ret and event_ret['complete']:
@@ -431,6 +450,11 @@ def modify(name, **kwargs):
             event_data = {'name': name, 'schedule': _new, 'func': 'modify'}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
             event_data = {'name': name, 'schedule': _new, 'where': 'pillar', 'func': 'modify'}
+
+        event_data['persist'] = True
+        if 'persist' in kwargs:
+            event_data['persist'] = kwargs['persist']
+
         out = __salt__['event.fire'](event_data, 'manage_schedule')
         if out:
             ret['comment'] = 'Modified job: {0} in schedule.'.format(name)
@@ -508,6 +532,11 @@ def enable_job(name, **kwargs):
             ret['comment'] = 'Job {0} does not exist.'.format(name)
             ret['result'] = False
             return ret
+
+        event_data['persist'] = True
+        if 'persist' in kwargs:
+            event_data['persist'] = kwargs['persist']
+
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire'](event_data, 'manage_schedule')
@@ -558,6 +587,11 @@ def disable_job(name, **kwargs):
             ret['comment'] = 'Job {0} does not exist.'.format(name)
             ret['result'] = False
             return ret
+
+        event_data['persist'] = True
+        if 'persist' in kwargs:
+            event_data['persist'] = kwargs['persist']
+
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire'](event_data, 'manage_schedule')
@@ -579,7 +613,7 @@ def disable_job(name, **kwargs):
     return ret
 
 
-def save():
+def save(**kwargs):
     '''
     Save all scheduled jobs on the minion
 
@@ -593,23 +627,23 @@ def save():
     ret = {'comment': [],
            'result': True}
 
-    schedule = list_(return_yaml=False)
-
-    # move this file into an configurable opt
-    sfn = '{0}/{1}/schedule.conf'.format(__opts__['config_dir'], os.path.dirname(__opts__['default_include']))
-    if schedule:
-        tmp = {'schedule': schedule}
-        yaml_out = yaml.safe_dump(tmp, default_flow_style=False)
+    if 'test' in kwargs and kwargs['test']:
+        ret['comment'] = 'Schedule would be saved.'
     else:
-        yaml_out = ''
-
-    try:
-        with salt.utils.fopen(sfn, 'w+') as fp_:
-            fp_.write(yaml_out)
-        ret['comment'] = 'Schedule (non-pillar items) saved to {0}.'.format(sfn)
-    except (IOError, OSError):
-        ret['comment'] = 'Unable to write to schedule file at {0}. Check permissions.'.format(sfn)
-        ret['result'] = False
+        try:
+            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            res = __salt__['event.fire']({'func': 'save_schedule'}, 'manage_schedule')
+            if res:
+                event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_saved', wait=30)
+                if event_ret and event_ret['complete']:
+                    ret['result'] = True
+                    ret['comment'] = 'Schedule has be saved.'
+                else:
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to save schedule'
+        except KeyError:
+            # Effectively a no-op, since we can't really return without an event system
+            ret['comment'] = 'Event module not available. Schedule enable job failed.'
     return ret
 
 
