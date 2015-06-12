@@ -5,6 +5,7 @@
     <domains enable_localSystem="true"/>
     <options rootVolumeOnly="true" />
     <!-- Define documents displayed at various steps -->
+    <background file="saltstack.png"   mime-type="image/png" scaling="tofit"/>
     <welcome    file="welcome.html"    mime-type="text/html" />
     <license    file="license.html"    mime-type="text/html" />
     <conclusion file="conclusion.html" mime-type="text/html" />
