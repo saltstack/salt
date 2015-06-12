@@ -3308,6 +3308,9 @@ def manage_file(name,
         This file is then grabbed and if it has template set, it renders the file to be placed
         into the correct place on the system using salt.files.utils.copyfile()
 
+    ret
+        The initial state return data structure. Pass in ``None`` to use the default structure.
+
     source
         file reference on the master
 
