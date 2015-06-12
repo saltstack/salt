@@ -49,6 +49,7 @@ except ImportError:
     HAS_PWD = False
 
 log = logging.getLogger(__name__)
+SINGLETON_MINION = None
 
 # Things to do in lower layers:
 # only accept valid minion ids
@@ -165,12 +166,15 @@ def clean_old_jobs(opts):
     '''
     Clean out the old jobs from the job cache
     '''
-    # TODO: better way to not require creating the masterminion every time?
-    mminion = salt.minion.MasterMinion(
-                opts,
-                states=False,
-                rend=False,
-                )
+    # TODO: better way ?
+    global SINGLETON_MINION
+    if SINGLETON_MINION is None:
+        SINGLETON_MINION = salt.minion.MasterMinion(
+                    opts,
+                    states=False,
+                    rend=False,
+                    )
+    mminion = SINGLETON_MINION
     # If the master job cache has a clean_old_jobs, call it
     fstr = '{0}.clean_old_jobs'.format(opts['master_job_cache'])
     if fstr in mminion.returners:
