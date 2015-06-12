@@ -61,7 +61,7 @@ def unpackage(package_):
     '''
     Unpackages a payload
     '''
-    return msgpack.loads(package_, use_list=True, encoding='utf-8')
+    return msgpack.loads(package_, use_list=True)
 
 
 def format_payload(enc, **kwargs):
@@ -96,7 +96,7 @@ class Serial(object):
         '''
         try:
             gc.disable()  # performance optimization for msgpack
-            return msgpack.loads(msg, use_list=True, encoding='utf-8')
+            return msgpack.loads(msg, use_list=True)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
                          'This often happens when trying to read a file not in binary mode.'
