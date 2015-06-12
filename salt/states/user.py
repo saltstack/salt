@@ -109,7 +109,7 @@ def _changes(name,
             change['home'] = home
     if createhome:
         newhome = home if home else lusr['home']
-        if not os.path.isdir(newhome):
+        if newhome is not None and not os.path.isdir(newhome):
             change['homeDoesNotExist'] = newhome
 
     if shell:
