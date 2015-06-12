@@ -347,7 +347,7 @@ class Schedule(object):
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule')
 
-    def delete_job(self, name, persist, where=None):
+    def delete_job(self, name, persist=True, where=None):
         '''
         Deletes a job from the scheduler.
         '''
@@ -375,7 +375,7 @@ class Schedule(object):
         if persist:
             self.persist()
 
-    def add_job(self, data, persist):
+    def add_job(self, data, persist=True):
         '''
         Adds a new job to the scheduler. The format is the same as required in
         the configuration file. See the docs on how YAML is interpreted into
@@ -407,7 +407,7 @@ class Schedule(object):
         if persist:
             self.persist()
 
-    def enable_job(self, name, persist, where=None):
+    def enable_job(self, name, persist=True, where=None):
         '''
         Enable a job in the scheduler.
         '''
@@ -428,7 +428,7 @@ class Schedule(object):
         if persist:
             self.persist()
 
-    def disable_job(self, name, persist, where=None):
+    def disable_job(self, name, persist=True, where=None):
         '''
         Disable a job in the scheduler.
         '''
@@ -449,7 +449,7 @@ class Schedule(object):
         if persist:
             self.persist()
 
-    def modify_job(self, name, schedule, persist, where=None):
+    def modify_job(self, name, schedule, persist=True, where=None):
         '''
         Modify a job in the scheduler.
         '''
