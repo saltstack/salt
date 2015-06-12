@@ -54,7 +54,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, HASHES)
+        lstat, path_exists_glob, HASHES, comment, uncomment)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -80,7 +80,7 @@ def __virtual__():
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global path_exists_glob
+            global path_exists_glob, comment, uncomment
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -130,6 +130,8 @@ def __virtual__():
             rename = _namespaced_function(rename, globals())
             lstat = _namespaced_function(lstat, globals())
             path_exists_glob = _namespaced_function(path_exists_glob, globals())
+            comment = _namespaced_function(comment, globals())
+            uncomment = _namespaced_function(uncomment, globals())
 
             return __virtualname__
     return False
