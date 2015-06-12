@@ -146,6 +146,9 @@ def __virtual__():
         list_nodes_select, globals(), (conn,)
     )
 
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
+
     return 'aws'
 
 
