@@ -18,7 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       apikey: asdff7896asdh789
       # The apikey's shared secret
       sharedsecret: saltybacon
-      provider: gogrid_rest
+      provider: gogrid
 
 '''
 from __future__ import absolute_import
@@ -38,7 +38,7 @@ from salt.exceptions import SaltCloudSystemExit, SaltCloudException
 # Get logging started
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'gogrid_rest'
+__virtualname__ = 'gogrid'
 
 
 # Only load in this module if the GoGrid configurations are in place
