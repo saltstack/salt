@@ -43,7 +43,15 @@ the execution module function being executed:
 
 Due to how the state system works, if a module function accepts an
 argument called, ``name``, then ``m_name`` must be used to specify that
-argument, to avoid a collision with the ``name`` argument. For example:
+argument, to avoid a collision with the ``name`` argument.
+
+Here is a list of keywords hidden by the state system, which must be prefixed
+with ``m_``:
+* fun
+* name
+* names
+
+For example:
 
 .. code-block:: yaml
 
