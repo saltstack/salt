@@ -28,7 +28,6 @@ under the "SSH Keys" section.
 # Import Python Libs
 from __future__ import absolute_import
 import os
-import copy
 import time
 import json
 import pprint
