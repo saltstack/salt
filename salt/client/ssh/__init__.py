@@ -1230,6 +1230,8 @@ def _convert_args(args):
     for arg in args:
         if isinstance(arg, dict):
             for key in list(arg.keys()):
+                if key == '__kwarg__':
+                    continue
                 converted.append('{0}={1}'.format(key, arg[key]))
         else:
             converted.append(arg)
