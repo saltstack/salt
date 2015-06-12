@@ -78,7 +78,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the AZURE configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for Azure configurations.
+    Check for Azure configurations.
     '''
     if not HAS_LIBS:
         return False

@@ -104,7 +104,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the vSphere configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for vSphere configurations.
+    Check for vSphere configurations.
     '''
     if not HAS_LIBS:
         return False
@@ -262,7 +262,7 @@ def create(vm_):
     except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on vSphere\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], str(exc)
             ),

@@ -160,7 +160,7 @@ script = namespaced_function(script, globals())
 reboot = namespaced_function(reboot, globals())
 
 
-# Only load in this module is the OPENSTACK configurations are in place
+# Only load in this module if the Nova configurations are in place
 def __virtual__():
     '''
     Check for Nova configurations

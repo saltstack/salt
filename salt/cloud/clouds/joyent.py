@@ -64,9 +64,6 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-
 # Import salt libs
 import salt.ext.six as six
 import salt.utils.http
@@ -86,9 +83,6 @@ from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-na
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
 JOYENT_API_VERSION = '~7.2'
@@ -114,10 +108,10 @@ VALID_RESPONSE_CODES = [
 ]
 
 
-# Only load in this module is the JOYENT configurations are in place
+# Only load in this module if the Joyent configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for JOYENT configs
+    Check for Joyent configs
     '''
     if get_configured_provider() is False:
         return False
@@ -643,7 +637,7 @@ def joyent_node_state(id_):
     values for consistency
 
     :param id_: joyent state value
-    :return: libcloudfuncs state value
+    :return: state value
     '''
     states = {'running': 0,
               'stopped': 2,
