@@ -982,13 +982,12 @@ def uncomment(path,
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
     '''
-    # Largely inspired by Fabric's contrib.files.uncomment()
-
-    return sed(path,
-               before=r'^([[:space:]]*){0}'.format(char),
-               after=r'\1',
-               limit=regex.lstrip('^'),
-               backup=backup)
+    pattern = '^{0}{1}'.format(char, regex.lstrip('^').rstrip('$'))
+    repl = "{0}".format(regex.lstrip('^').rstrip('$'))
+    return replace(path=path,
+                   pattern=pattern,
+                   repl=repl,
+                   backup=backup)
 
 
 def comment(path,
@@ -1026,17 +1025,11 @@ def comment(path,
 
         salt '*' file.comment /etc/modules pcspkr
     '''
-    # Largely inspired by Fabric's contrib.files.comment()
-
-    regex = '{0}({1}){2}'.format(
-            '^' if regex.startswith('^') else '',
-            regex.lstrip('^').rstrip('$'),
-            '$' if regex.endswith('$') else '')
-
-    return sed(path,
-               before=regex,
-               after=r'{0}\1'.format(char),
-               backup=backup)
+    repl = "{0}{1}".format(char, regex.lstrip('^').rstrip('$'))
+    return replace(path=path,
+                   pattern=regex,
+                   repl=repl,
+                   backup=backup)
 
 
 def _get_flags(flags):
