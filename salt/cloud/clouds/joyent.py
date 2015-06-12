@@ -71,10 +71,12 @@ import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.utils.cloud import is_public_ip
+from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
-    SaltCloudExecutionTimeout
+    SaltCloudExecutionTimeout,
+    SaltCloudNotFound,
 )
 
 # Import 3rd-party libs
@@ -116,7 +118,6 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    global script
     conn = None
     script = namespaced_function(script, globals(), (conn,))
     return True
