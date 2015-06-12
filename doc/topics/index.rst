@@ -118,6 +118,12 @@ https://groups.google.com/forum/#!forum/salt-users
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
+There is also a low-traffic list used to announce new releases
+called `salt-announce`_
+
+https://groups.google.com/forum/#!forum/salt-announce
+
+.. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 
 IRC
 ===
