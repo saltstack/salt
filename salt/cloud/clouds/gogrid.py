@@ -24,7 +24,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 from __future__ import absolute_import
 
 # Import python libs
-import copy
 import pprint
 import logging
 import time
@@ -129,8 +128,7 @@ def create(vm_):
         try:
             passwords = list_passwords()
             return passwords[vm_['name']][0]['password']
-        except Exception as exc:
-            log.debug(str(exc))
+        except KeyError:
             pass
         time.sleep(5)
         return False
@@ -351,14 +349,6 @@ def list_common_lookups(kwargs=None, call=None):
     response = _query('common', 'lookup/list', args=args)
 
     return response
-    ret = {}
-    for item in response['list']:
-        if item.get('public', False) is False:
-            continue 
-        name = item['ip']
-        ret[name] = item
-
-    return ret
 
 
 def destroy(name, call=None):
@@ -502,7 +492,7 @@ def _query(action=None,
 
     epoch = str(int(time.time()))
     hashtext = ''.join((apikey, sharedsecret, epoch))
-    args['sig'] = hashlib.md5(hashtext).hexdigest()   
+    args['sig'] = hashlib.md5(hashtext).hexdigest()
     args['format'] = 'json'
     args['v'] = '1.0'
     args['api_key'] = apikey
