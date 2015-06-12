@@ -69,7 +69,6 @@ import salt.ext.six as six
 import salt.utils.http
 import salt.utils.cloud
 import salt.config as config
-from salt.utils import namespaced_function
 from salt.utils.cloud import is_public_ip
 from salt.cloud.libcloudfuncs import node_state
 from salt.exceptions import (
