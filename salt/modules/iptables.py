@@ -10,7 +10,6 @@ import re
 import sys
 import uuid
 import shlex
-import string
 
 # Import salt libs
 import salt.utils
@@ -345,10 +344,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
             value = kwargs[after_jump_argument]
-            if any(ws_char in str(value) for ws_char in string.whitespace):
-                after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
-            else:
-                after_jump.append('--{0} {1}'.format(after_jump_argument, value))
+            after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
     if 'log' in kwargs:
