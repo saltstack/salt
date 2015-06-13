@@ -194,17 +194,17 @@ def delete(name, **kwargs):
         ret['comment'] = 'Job: {0} would be deleted from schedule.'.format(name)
         ret['result'] = True
     else:
+        persist = True
+        if 'persist' in kwargs:
+            persist = kwargs['persist']
+
         if name in list_(show_all=True, where='opts', return_yaml=False):
-            event_data = {'name': name, 'func': 'delete'}
+            event_data = {'name': name, 'func': 'delete', 'persist': persist}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
-            event_data = {'name': name, 'where': 'pillar', 'func': 'delete'}
+            event_data = {'name': name, 'where': 'pillar', 'func': 'delete', 'persist': False}
         else:
             ret['comment'] = 'Job {0} does not exist.'.format(name)
             return ret
-
-        event_data['persist'] = True
-        if 'persist' in kwargs:
-            event_data['persist'] = kwargs['persist']
 
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
@@ -446,14 +446,20 @@ def modify(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Job: {0} would be modified in schedule.'.format(name)
     else:
-        if name in list_(show_all=True, where='opts', return_yaml=False):
-            event_data = {'name': name, 'schedule': _new, 'func': 'modify'}
-        elif name in list_(show_all=True, where='pillar', return_yaml=False):
-            event_data = {'name': name, 'schedule': _new, 'where': 'pillar', 'func': 'modify'}
-
-        event_data['persist'] = True
+        persist = True
         if 'persist' in kwargs:
-            event_data['persist'] = kwargs['persist']
+            persist = kwargs['persist']
+        if name in list_(show_all=True, where='opts', return_yaml=False):
+            event_data = {'name': name,
+                          'schedule': _new,
+                          'func': 'modify',
+                          'persist': persist}
+        elif name in list_(show_all=True, where='pillar', return_yaml=False):
+            event_data = {'name': name,
+                          'schedule': _new,
+                          'where': 'pillar',
+                          'func': 'modify',
+                          'persist': False}
 
         out = __salt__['event.fire'](event_data, 'manage_schedule')
         if out:
@@ -524,18 +530,18 @@ def enable_job(name, **kwargs):
     if 'test' in __opts__ and __opts__['test']:
         ret['comment'] = 'Job: {0} would be enabled in schedule.'.format(name)
     else:
+        persist = True
+        if 'persist' in kwargs:
+            persist = kwargs['persist']
+
         if name in list_(show_all=True, where='opts', return_yaml=False):
-            event_data = {'name': name, 'func': 'enable_job'}
+            event_data = {'name': name, 'func': 'enable_job', 'persist': persist}
         elif name in list_(show_all=True, where='pillar', return_yaml=False):
-            event_data = {'name': name, 'where': 'pillar', 'func': 'enable_job'}
+            event_data = {'name': name, 'where': 'pillar', 'func': 'enable_job', 'persist': False}
         else:
             ret['comment'] = 'Job {0} does not exist.'.format(name)
             ret['result'] = False
             return ret
-
-        event_data['persist'] = True
-        if 'persist' in kwargs:
-            event_data['persist'] = kwargs['persist']
 
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
@@ -579,18 +585,18 @@ def disable_job(name, **kwargs):
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Job: {0} would be disabled in schedule.'.format(name)
     else:
+        persist = True
+        if 'persist' in kwargs:
+            persist = kwargs['persist']
+
         if name in list_(show_all=True, where='opts', return_yaml=False):
-            event_data = {'name': name, 'func': 'disable_job'}
+            event_data = {'name': name, 'func': 'disable_job', 'persist': persist}
         elif name in list_(show_all=True, where='pillar'):
-            event_data = {'name': name, 'where': 'pillar', 'func': 'disable_job'}
+            event_data = {'name': name, 'where': 'pillar', 'func': 'disable_job', 'persist': False}
         else:
             ret['comment'] = 'Job {0} does not exist.'.format(name)
             ret['result'] = False
             return ret
-
-        event_data['persist'] = True
-        if 'persist' in kwargs:
-            event_data['persist'] = kwargs['persist']
 
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
