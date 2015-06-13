@@ -12,7 +12,6 @@ import logging
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 import salt.ext.six.moves.http_client
 from salt.exceptions import CommandExecutionError
 
@@ -86,9 +85,9 @@ def _status_query(query, hostname, enumerate=None, service=None):
             opts=__opts__,
         )
     except ValueError:
-            ret['error'] = 'Please ensure Nagios is running.'
-            ret['result'] = False
-            return ret
+        ret['error'] = 'Please ensure Nagios is running.'
+        ret['result'] = False
+        return ret
 
     if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         try:
