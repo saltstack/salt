@@ -281,7 +281,9 @@ def avail_images():
 
 def list_passwords(kwargs=None, call=None):
     '''
-    Available images
+    List all password on the account
+
+    .. versionadded:: Beryllium
     '''
     response = _query('support', 'password/list')
 
@@ -310,6 +312,8 @@ def list_public_ips(kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider> state=assigned
+
+    .. versionadded:: Beryllium
     '''
     if kwargs is None:
         kwargs = {}
@@ -338,6 +342,8 @@ def list_public_ips(kwargs=None, call=None):
 def list_common_lookups(kwargs=None, call=None):
     '''
     List common lookups for a particular type of item
+
+    .. versionadded:: Beryllium
     '''
     if kwargs is None:
         kwargs = {}
@@ -360,7 +366,6 @@ def destroy(name, call=None):
     .. code-block:: bash
 
         salt-cloud -d vm_name
-
     '''
     if call == 'function':
         raise SaltCloudSystemExit(
@@ -401,6 +406,8 @@ def reboot(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a reboot vm_name
+
+    .. versionadded:: Beryllium
     '''
     return _query('grid', 'server/power', args={'name': name, 'power': 'restart'})
 
@@ -414,6 +421,8 @@ def stop(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a stop vm_name
+
+    .. versionadded:: Beryllium
     '''
     return _query('grid', 'server/power', args={'name': name, 'power': 'stop'})
 
@@ -427,6 +436,8 @@ def start(name, call=None):
     .. code-block:: bash
 
         salt-cloud -a start vm_name
+
+    .. versionadded:: Beryllium
     '''
     return _query('grid', 'server/power', args={'name': name, 'power': 'start'})
 
@@ -439,7 +450,9 @@ def show_instance(name, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a start vm_name
+        salt-cloud -a show_instance vm_name
+
+    .. versionadded:: Beryllium
     '''
     response = _query('grid', 'server/get', args={'name': name})
     ret = {}
