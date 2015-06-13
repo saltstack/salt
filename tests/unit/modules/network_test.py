@@ -23,9 +23,12 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils
 from salt.modules import network
 from salt.exceptions import CommandExecutionError
+if six.PY2:
+    import salt.ext.ipaddress
 
 # Globals
 network.__grains__ = {}
@@ -268,6 +271,7 @@ class NetworkTestCase(TestCase):
                 self.assertDictEqual(network.connect('host', 'port'),
                                      {'comment': ret, 'result': True})
 
+    @skipIf(not six.PY2, 'test applies only to python 2')
     def test_is_private(self):
         '''
         Test for Check if the given IP address is a private address
@@ -279,6 +283,7 @@ class NetworkTestCase(TestCase):
                           return_value=True):
             self.assertTrue(network.is_private('::1'))
 
+    @skipIf(not six.PY2, 'test applies only to python 2')
     def test_is_loopback(self):
         '''
         Test for Check if the given IP address is a loopback address

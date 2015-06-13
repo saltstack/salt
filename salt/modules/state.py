@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Control the state system on the minion
+Control the state system on the minion.
+
+State Caching
+-------------
+
+When a highstate is called, the minion automatically caches a copy of the last high data.
+If you then run a highstate with cache=True it will use that cached highdata and won't hit the fileserver
+except for ``salt://`` links in the states themselves.
 '''
 
 # Import python libs
@@ -467,6 +474,7 @@ def highstate(test=None,
         salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if _disabled(['highstate']):
+        log.debug('Salt highstate run is disabled. To re-enable, run state.enable highstate')
         ret = {
             'name': 'Salt highstate run is disabled. To re-enable, run state.enable highstate',
             'result': 'False',
@@ -628,6 +636,8 @@ def sls(mods,
         disabled = _disabled([mods])
 
     if disabled:
+        for state in disabled:
+            log.debug('Salt state {0} run is disabled. To re-enable, run state.enable {0}'.format(state))
         __context__['retcode'] = 1
         return disabled
 

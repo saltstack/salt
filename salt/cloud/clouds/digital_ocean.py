@@ -33,6 +33,7 @@ import time
 import json
 import pprint
 import logging
+import decimal
 
 # Import Salt Cloud Libs
 import salt.utils.cloud
@@ -885,3 +886,42 @@ def delete_dns_record(hostname):
                 )
 
     return False
+
+
+def show_pricing(kwargs=None, call=None):
+    '''
+    Show pricing for a particular profile. This is only an estimate, based on
+    unofficial pricing sources.
+
+    .. versionadded:: Beryllium
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_pricing my-digitalocean-config my-profile
+    '''
+    profile = __opts__['profiles'].get(kwargs['profile'], {})
+    if not profile:
+        return {'Error': 'The requested profile was not found'}
+
+    # Make sure the profile belongs to Digital Ocean
+    provider = profile.get('provider', '0:0')
+    comps = provider.split(':')
+    if len(comps) < 2 or comps[1] != 'digital_ocean':
+        return {'Error': 'The requested profile does not belong to Digital Ocean'}
+
+    raw = {}
+    ret = {}
+    sizes = avail_sizes()
+    ret['per_hour'] = decimal.Decimal(sizes[profile['size']]['price_hourly'])
+
+    ret['per_day'] = ret['per_hour'] * 24
+    ret['per_week'] = ret['per_day'] * 7
+    ret['per_month'] = decimal.Decimal(sizes[profile['size']]['price_monthly'])
+    ret['per_year'] = ret['per_week'] * 52
+
+    if kwargs.get('raw', False):
+        ret['_raw'] = raw
+
+    return {profile['profile']: ret}

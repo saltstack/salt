@@ -15,7 +15,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import cron
-from salt.ext.six.moves import StringIO
+from salt.ext.six.moves import builtins, StringIO
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'
@@ -138,11 +138,14 @@ class CronTestCase(TestCase):
         )
 
     def test__unicode_match(self):
+        encoding = builtins.__salt_system_encoding__
+        builtins.__salt_system_encoding__ = 'utf-8'
         self.assertTrue(cron._cron_matched({'identifier': '1'}, 'foo', 1))
         self.assertTrue(cron._cron_matched({'identifier': 'é'}, 'foo', 'é'))
         self.assertTrue(cron._cron_matched({'identifier': u'é'}, 'foo', 'é'))
         self.assertTrue(cron._cron_matched({'identifier': 'é'}, 'foo', u'é'))
         self.assertTrue(cron._cron_matched({'identifier': u'é'}, 'foo', u'é'))
+        builtins.__salt_system_encoding__ = encoding
 
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))

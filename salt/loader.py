@@ -868,7 +868,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         mod_name = function_name.split('.')[0]
         if mod_name in self.loaded_modules:
-            return '{0!r} is not available.'.format(function_name)
+            return '\'{0}\' is not available.'.format(function_name)
         else:
             try:
                 reason = self.missing_modules[mod_name]
@@ -983,7 +983,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         mod_opts = {}
         for key, val in list(opts.items()):
-            if key in ('logger', 'grains'):
+            if key == 'logger':
                 continue
             mod_opts[key] = val
         return mod_opts

@@ -212,7 +212,7 @@ To configure an LDAP group, append a ``%`` to the ID:
 .. code-block:: yaml
 
     external_auth:
-        ldap:
-            test_ldap_group%:
-                - '*':
-                    - test.echo
+      ldap:
+        test_ldap_group%:
+          - '*':
+            - test.echo

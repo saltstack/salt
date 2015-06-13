@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 import os.path
 import os
-import StringIO
 
 # Import third party libs
 import jinja2
@@ -19,6 +18,7 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
 import salt.ext.six as six
+from salt.ext.six.moves import StringIO
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -841,7 +841,7 @@ def _write_file_network(data, filename):
 
 
 def _read_temp(data):
-    tout = StringIO.StringIO()
+    tout = StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.read().splitlines()  # Discard newlines
@@ -957,7 +957,7 @@ def build_routes(iface, **settings):
     '''
 
     template = 'rh6_route_eth.jinja'
-    if __grains__['osrelease'][:1] < 6:
+    if float(__grains__['osrelease']) < 6:
         template = 'route_eth.jinja'
     log.debug('Template name: ' + template)
 

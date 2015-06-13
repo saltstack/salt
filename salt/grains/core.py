@@ -512,9 +512,16 @@ def _virtual(osdata):
 
         cmd = '{0} {1}'.format(cmd, ' '.join(args))
 
-        ret = __salt__['cmd.run_all'](cmd)
+        try:
+            ret = __salt__['cmd.run_all'](cmd)
 
-        if ret['retcode'] > 0:
+            if ret['retcode'] > 0:
+                if salt.log.is_logging_configured():
+                    if salt.utils.is_windows():
+                        continue
+                    failed_commands.add(command)
+                continue
+        except salt.exceptions.CommandExecutionError:
             if salt.log.is_logging_configured():
                 if salt.utils.is_windows():
                     continue
@@ -1104,7 +1111,7 @@ def os_data():
                 #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
                 regex = re.compile((
                     '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
-                    '([\\w\\s\\.-_]+)(?:\'|")?'
+                    '([\\w\\s\\.\\-_]+)(?:\'|")?'
                 ))
                 with salt.utils.fopen('/etc/lsb-release') as ifile:
                     for line in ifile:
@@ -1131,7 +1138,7 @@ def os_data():
                             # BUG_REPORT_URL=
                             #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
                             regex = re.compile(
-                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?'
+                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.\\-_]+)(?:\'|")?'
                             )
                             match = regex.match(line.rstrip('\n'))
                             if match:

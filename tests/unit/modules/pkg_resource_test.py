@@ -19,6 +19,7 @@ from salttesting.mock import (
 # Import Salt Libs
 import salt.utils
 from salt.modules import pkg_resource
+import salt.ext.six as six
 
 # Globals
 pkg_resource.__grains__ = {}
@@ -108,7 +109,7 @@ class PkgresTestCase(TestCase):
 
             mock = MagicMock(return_value={})
             with patch.dict(pkg_resource.__salt__, {'pkg.list_pkgs': mock}):
-                with patch('__builtin__.next') as mock_next:
+                with patch('builtins.next' if six.PY3 else '__builtin__.next') as mock_next:
                     mock_next.side_effect = StopIteration()
                     self.assertEqual(pkg_resource.version('A'), '')
 

@@ -58,7 +58,7 @@ class PostgresTestCase(TestCase):
         self.assertEqual('postgres', cmd.call_args[1]['runas'])
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     def test_db_alter(self):
         postgres.db_alter('dbname',
                           user='testuser',
@@ -104,7 +104,7 @@ class PostgresTestCase(TestCase):
                                                   runas='foo')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     def test_db_create(self):
         postgres.db_create(
             'dbname',
@@ -117,16 +117,18 @@ class PostgresTestCase(TestCase):
             owner='otheruser',
             runas='foo'
         )
+
+        qstr = (
+            '/usr/bin/pgsql --no-align --no-readline --no-password '
+            '--username testuser --host testhost --port testport --dbname maint_db '
+            '-c \'CREATE DATABASE "dbname" WITH TABLESPACE = testspace OWNER = "otheruser"\'')
         postgres._run_psql.assert_called_once_with(
-            '/usr/bin/pgsql --no-align --no-readline --no-password --username testuser '
-            '--host testhost --port testport --dbname maint_db -c '
-            '\'CREATE DATABASE "dbname" '
-            'WITH TABLESPACE = testspace OWNER = "otheruser"\'',
+            qstr,
             host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None,
+           Mock(return_value={'retcode': 0,
                               'stdout': test_list_db_csv}))
     def test_db_exists(self):
         ret = postgres.db_exists(
@@ -141,7 +143,7 @@ class PostgresTestCase(TestCase):
         self.assertTrue(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None,
+           Mock(return_value={'retcode': 0,
                               'stdout': test_list_db_csv}))
     def test_db_list(self):
         ret = postgres.db_list(
@@ -173,7 +175,7 @@ class PostgresTestCase(TestCase):
                          'Owner': 'postgres', 'Access privileges': ''}})
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     def test_db_remove(self):
         postgres.db_remove(
             'test_db',
@@ -192,7 +194,7 @@ class PostgresTestCase(TestCase):
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=False))
     def test_group_create(self):
         postgres.group_create(
@@ -218,7 +220,7 @@ class PostgresTestCase(TestCase):
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
     def test_group_remove(self):
         postgres.group_remove(
@@ -238,7 +240,7 @@ class PostgresTestCase(TestCase):
             password='foo', runas='foo', port='testport')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_group_update(self):
@@ -263,7 +265,7 @@ class PostgresTestCase(TestCase):
             postgres._run_psql.call_args[0][0]))
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.user_exists',
            Mock(return_value=False))
     def test_user_create(self):
@@ -300,7 +302,7 @@ class PostgresTestCase(TestCase):
             self.assertTrue(i in call, '{0} not in {1}'.format(i, call))
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.version',
            Mock(return_value='9.1'))
     @patch('salt.modules.postgres.psql_query',
@@ -331,7 +333,7 @@ class PostgresTestCase(TestCase):
         self.assertTrue(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.version',
            Mock(return_value='9.1'))
     @patch('salt.modules.postgres.psql_query',
@@ -372,7 +374,7 @@ class PostgresTestCase(TestCase):
                           'inherits privileges': True}})
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.version', Mock(return_value='9.1'))
     @patch('salt.modules.postgres.user_exists', Mock(return_value=True))
     def test_user_remove(self):
@@ -394,7 +396,7 @@ class PostgresTestCase(TestCase):
             password='test_password', runas='foo')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update(self):
@@ -430,7 +432,7 @@ class PostgresTestCase(TestCase):
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update2(self):
@@ -463,7 +465,7 @@ class PostgresTestCase(TestCase):
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update3(self):
@@ -498,7 +500,7 @@ class PostgresTestCase(TestCase):
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.role_get',
            Mock(return_value={'superuser': False}))
     def test_user_update_encrypted_passwd(self):
@@ -535,7 +537,7 @@ class PostgresTestCase(TestCase):
         )
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None, 'stdout': '9.1.9'}))
+           Mock(return_value={'retcode': 0, 'stdout': '9.1.9'}))
     def test_version(self):
         postgres.version(
             user='test_user',
@@ -713,7 +715,7 @@ class PostgresTestCase(TestCase):
             'md596948aad3fcae80c08a35c9b5958cd89')
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None,
+           Mock(return_value={'retcode': 0,
                               'stdout': test_list_schema_csv}))
     def test_schema_list(self):
         ret = postgres.schema_list(
@@ -730,7 +732,7 @@ class PostgresTestCase(TestCase):
             })
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.psql_query',
            Mock(return_value=[
                {
@@ -746,7 +748,7 @@ class PostgresTestCase(TestCase):
         self.assertTrue(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.psql_query',
            Mock(return_value=[
                {
@@ -762,7 +764,7 @@ class PostgresTestCase(TestCase):
         self.assertTrue(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.psql_query',
            Mock(return_value=[
                {
@@ -778,7 +780,7 @@ class PostgresTestCase(TestCase):
         self.assertFalse(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.schema_exists', Mock(return_value=False))
     def test_schema_create(self):
         postgres.schema_create(
@@ -811,7 +813,7 @@ class PostgresTestCase(TestCase):
         self.assertFalse(ret)
 
     @patch('salt.modules.postgres._run_psql',
-           Mock(return_value={'retcode': None}))
+           Mock(return_value={'retcode': 0}))
     @patch('salt.modules.postgres.schema_exists', Mock(return_value=True))
     def test_schema_remove(self):
         postgres.schema_remove(

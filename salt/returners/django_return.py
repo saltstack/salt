@@ -16,7 +16,7 @@ them.
 An example Django module that registers a function called
 'returner_callback' with this module's 'returner' function:
 
-    .. code-block:: python
+.. code-block:: python
 
     import salt.returners.django_return
     from django.dispatch import receiver

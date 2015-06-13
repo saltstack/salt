@@ -78,6 +78,14 @@ class UtilsTestCase(TestCase):
         expected_mac = '00:16:3E:01:01:01'
         self.assertEqual(ret, expected_mac)
 
+    def test_mac_str_to_bytes(self):
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '31337')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '0001020304056')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '00:01:02:03:04:056')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
+        self.assertEqual(b'\x10\x08\x06\x04\x02\x00', utils.mac_str_to_bytes('100806040200'))
+        self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', utils.mac_str_to_bytes('f8e7d6c5b4a3'))
+
     def test_ip_bracket(self):
         test_ipv4 = '127.0.0.1'
         test_ipv6 = '::1'
@@ -744,14 +752,14 @@ class UtilsTestCase(TestCase):
             self.assertRaises(TypeError, utils.to_str, x)
         if six.PY3:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
-            self.assertEqual(utils.to_str('áéíóúý'), 'áéíóúý')
+            self.assertEqual(utils.to_str('áéíóúý', 'utf-8'), 'áéíóúý')
             un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
             ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
             self.assertEqual(utils.to_str(ut, 'utf-8'), un)
             self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
         else:
             self.assertEqual(utils.to_str('plugh'), 'plugh')
-            self.assertEqual(utils.to_str(u'áéíóúý'), 'áéíóúý')
+            self.assertEqual(utils.to_str(u'áéíóúý', 'utf-8'), 'áéíóúý')
             un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
             ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
             self.assertEqual(utils.to_str(un, 'utf-8'), ut)

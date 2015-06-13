@@ -2,8 +2,8 @@
 
 # Import python libs
 from __future__ import absolute_import
-import new
 import sys
+import types
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -11,10 +11,10 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # wmi and pythoncom modules are platform specific...
-wmi = new.module('wmi')
+wmi = types.ModuleType('wmi')
 sys.modules['wmi'] = wmi
 
-pythoncom = new.module('pythoncom')
+pythoncom = types.ModuleType('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY

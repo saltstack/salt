@@ -50,6 +50,12 @@ except ImportError:
     HAS_APT = False
 
 try:
+    import apt_pkg
+    HAS_APTPKG = True
+except ImportError:
+    HAS_APTPKG = False
+
+try:
     import softwareproperties.ppa
     HAS_SOFTWAREPROPERTIES = True
 except ImportError:
@@ -607,7 +613,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
         return ret['installed']
 
 
-def autoremove(list_only=False):
+def autoremove(list_only=False, purge=False):
     '''
     .. versionadded:: 2015.5.0
 
@@ -618,6 +624,10 @@ def autoremove(list_only=False):
         Only retrieve the list of packages to be auto-removed, do not actually
         perform the auto-removal.
 
+    purge : False
+        Also remove package config data when autoremoving packages.
+
+        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -625,14 +635,15 @@ def autoremove(list_only=False):
 
         salt '*' pkg.autoremove
         salt '*' pkg.autoremove list_only=True
+        salt '*' pkg.autoremove purge=True
     '''
     if list_only:
         ret = []
-        out = __salt__['cmd.run'](
-            ['apt-get', '--assume-no', 'autoremove'],
-            python_shell=False,
-            ignore_retcode=True
-        )
+        cmd = ['apt-get', '--assume-no']
+        if purge:
+            cmd.append('--purge')
+        cmd.append('autoremove')
+        out = __salt__['cmd.run'](cmd, python_shell=False, ignore_retcode=True)
         found = False
         for line in out.splitlines():
             if found is True:
@@ -646,10 +657,11 @@ def autoremove(list_only=False):
         return ret
     else:
         old = list_pkgs()
-        __salt__['cmd.run'](
-            ['apt-get', '--assume-yes', 'autoremove'],
-            python_shell=False
-        )
+        cmd = ['apt-get', '--assume-yes']
+        if purge:
+            cmd.append('--purge')
+        cmd.append('autoremove')
+        __salt__['cmd.run'](cmd, python_shell=False)
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
         return salt.utils.compare_dicts(old, new)
@@ -1149,10 +1161,19 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
+    # if we have apt_pkg, this will be quickier this way
+    # and also do not rely on shell.
+    if HAS_APTPKG:
+        try:
+            return apt_pkg.version_compare(pkg1, pkg2)
+        except (TypeError, ValueError):
+            # try to use shell version in case of errors via
+            # the python binding
+            pass
     try:
         for oper, ret in (('lt', -1), ('eq', 0), ('gt', 1)):
-            cmd = 'dpkg --compare-versions {0!r} {1} ' \
-                  '{2!r}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
+            cmd = 'dpkg --compare-versions {0} {1} ' \
+                  '{2}'.format(_cmd_quote(pkg1), oper, _cmd_quote(pkg2))
             retcode = __salt__['cmd.retcode'](
                 cmd, output_loglevel='trace', ignore_retcode=True
             )
@@ -1266,13 +1287,18 @@ def get_repo(repo, **kwargs):
                                             ppa_name, dist)
         else:
             if HAS_SOFTWAREPROPERTIES:
-                if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
-                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
-                        __grains__['lsb_distrib_codename'])[0]
-                else:
-                    repo = softwareproperties.ppa.expand_ppa_line(
-                        repo,
-                        __grains__['lsb_distrib_codename'])[0]
+                try:
+                    if hasattr(softwareproperties.ppa, 'PPAShortcutHandler'):
+                        repo = softwareproperties.ppa.PPAShortcutHandler(
+                            repo).expand(dist)[0]
+                    else:
+                        repo = softwareproperties.ppa.expand_ppa_line(
+                            repo,
+                            dist)[0]
+                except NameError as name_error:
+                    raise CommandExecutionError(
+                        'Could not find ppa {0}: {1}'.format(repo, name_error)
+                    )
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 

@@ -306,9 +306,9 @@ def getsid(name):
     for line in lines:
         if 'SERVICE SID:' in line:
             comps = line.split(':', 1)
-            if comps[1] > 1:
+            try:
                 return comps[1].strip()
-            else:
+            except (AttributeError, IndexError):
                 return None
 
 

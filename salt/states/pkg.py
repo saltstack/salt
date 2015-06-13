@@ -1367,7 +1367,7 @@ def latest(
 
     targets = {}
     problems = []
-    cmp_func = __salt__.get('version_cmp')
+    cmp_func = __salt__.get('pkg.version_cmp', __salt__.get('version_cmp'))
     for pkg in desired_pkgs:
         if not avail[pkg]:
             if not cur[pkg]:
@@ -1679,7 +1679,7 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
     '''
     try:
         return _uninstall(action='purge', name=name, version=version,
-                          pkgs=pkgs, normalize=normalize **kwargs)
+                          pkgs=pkgs, normalize=normalize, **kwargs)
     except CommandExecutionError as exc:
         return {'name': name,
                 'changes': {},

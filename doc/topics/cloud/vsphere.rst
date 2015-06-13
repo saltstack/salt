@@ -104,7 +104,7 @@ added to the folder the original VM belongs to.
 
 host
 ----
-The MOR of the host where the vm should be registered. 
+The MOR of the host where the vm should be registered.
 
   If not specified:
     * if resourcepool is not specified, the current host is used.

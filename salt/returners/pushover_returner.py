@@ -73,10 +73,9 @@ from __future__ import absolute_import
 # Import Python libs
 import pprint
 import logging
+import urllib
 
 # Import 3rd-party libs
-import requests
-from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
@@ -84,6 +83,8 @@ import salt.ext.six.moves.http_client
 
 # Import Salt Libs
 import salt.returners
+import salt.utils.http
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -146,6 +147,7 @@ def _query(function,
            token=None,
            api_version='1',
            method='POST',
+           header_dict=None,
            data=None,
            query_params=None):
     '''
@@ -158,13 +160,8 @@ def _query(function,
     :param data:        The data to be sent for POST method.
     :return:            The json response from the API call or False.
     '''
-    headers = {}
-
     if query_params is None:
         query_params = {}
-
-    if data is None:
-        data = {}
 
     ret = {'message': '',
            'res': True}
@@ -184,38 +181,34 @@ def _query(function,
         },
     }
 
-    if not token:
-        try:
-            options = __salt__['config.option']('pushover')
-            if not token:
-                token = options.get('token')
-        except (NameError, KeyError, AttributeError):
-            log.error('No PushOver token found.')
-            ret['message'] = 'No PushOver token found.'
-            ret['res'] = False
-            return ret
-
     api_url = 'https://api.pushover.net'
     base_url = _urljoin(api_url, api_version + '/')
     path = pushover_functions.get(function).get('request')
     url = _urljoin(base_url, path, False)
 
-    try:
-        result = requests.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=query_params,
-            data=data,
-            verify=True,
-        )
-    except ConnectionError as e:
-        ret['message'] = e
-        ret['res'] = False
-        return ret
+    if not query_params:
+        query_params = {}
 
-    if result.status_code == salt.ext.six.moves.http_client.OK:
-        result = result.json()
+    decode = True
+    if method == 'DELETE':
+        decode = False
+
+    result = salt.utils.http.query(
+        url,
+        method,
+        params=query_params,
+        data=data,
+        header_dict=header_dict,
+        decode=decode,
+        decode_type='json',
+        text=True,
+        status=True,
+        cookies=True,
+        persist_session=True,
+        opts=__opts__,
+    )
+
+    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         response = pushover_functions.get(function).get('response')
         if response in result and result[response] == 0:
             ret['res'] = False
@@ -223,8 +216,7 @@ def _query(function,
         return ret
     else:
         try:
-            result = result.json()
-            if response in result and result[response] == 0:
+            if 'response' in result and result[response] == 0:
                 ret['res'] = False
             ret['message'] = result
             return ret
@@ -241,6 +233,10 @@ def _validate_sound(sound,
     :param sound:       The sound that we want to verify
     :param token:       The PushOver token.
     '''
+    res = {
+            'message': 'Sound is invalid',
+            'result': False
+           }
     parameters = dict()
     parameters['token'] = token
 
@@ -249,19 +245,18 @@ def _validate_sound(sound,
                       query_params=parameters)
 
     if response['res']:
+        log.debug('response {0}'.format(response))
         if 'message' in response:
             _message = response.get('message', '')
             if 'status' in _message:
-                if _message.get('status', '') == 1:
-                    sounds = _message.get('sounds', '')
+                if _message.get('dict', {}).get('status', '') == 1:
+                    sounds = _message.get('dict', {}).get('sounds', '')
                     if sound in sounds:
-                        return True
-                    else:
-                        log.info('Warning: {0} not a valid sound.'.format(sound))
-                        return False
+                        res['result'] = True
+                        res['message'] = 'Sound is valid.'
                 else:
-                    log.info('Error: {0}'.format(''.join(_message.get('errors', ''))))
-    return False
+                    res['message'] = ''.join(_message.get('dict', {}).get('errors'))
+    return res
 
 
 def _validate_user(user,
@@ -273,6 +268,11 @@ def _validate_user(user,
     :param device:      The device for the user.
     :param token:       The PushOver token.
     '''
+    ret = {
+            'message': 'User key is invalid',
+            'res': False
+           }
+
     parameters = dict()
     parameters['user'] = user
     parameters['token'] = token
@@ -280,17 +280,20 @@ def _validate_user(user,
 
     response = _query(function='validate_user',
                       method='POST',
-                      data=parameters)
+                      header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                      data=urllib.urlencode(parameters))
 
     if response['res']:
         if 'message' in response:
             _message = response.get('message', '')
             if 'status' in _message:
-                if _message.get('status', '') == 1:
-                    return True
+                if _message.get('dict', {}).get('status', None) == 1:
+                    ret['res'] = True
+                    ret['message'] = 'User key is valid.'
                 else:
-                    log.info('Error: {0}'.format(''.join(_message.get('errors', ''))))
-    return False
+                    ret['res'] = False
+                    ret['message'] = ''.join(_message.get('dict', {}).get('errors'))
+    return ret
 
 
 def _post_message(user,
@@ -315,8 +318,9 @@ def _post_message(user,
     :return:            Boolean if message was sent successfully.
     '''
 
-    if not _validate_user(user, device, token):
-        return
+    user_validate = _validate_user(user, device, token)
+    if not user_validate['res']:
+        return user_validate
 
     parameters = dict()
     parameters['user'] = user
@@ -328,12 +332,14 @@ def _post_message(user,
     parameters['retry'] = retry
     parameters['message'] = message
 
-    if sound and _validate_sound(sound, token):
-        parameters['sound'] = sound
+    if sound:
+        if _validate_sound(sound, token)['result']:
+            parameters['sound'] = sound
 
     result = _query(function='message',
                     method='POST',
-                    data=parameters)
+                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                    data=urllib.urlencode(parameters))
 
     return result
 
@@ -354,18 +360,15 @@ def returner(ret):
     retry = _options.get('retry')
     sound = _options.get('sound')
 
-    if not user:
-        log.error('pushover.user not defined in salt config.')
-        return
-
     if not token:
-        log.error('pushover.token not defined in salt config.')
-        return
+        raise SaltInvocationError('Pushover token is unavailable.')
+
+    if not user:
+        raise SaltInvocationError('Pushover user key is unavailable.')
 
     if priority and priority == 2:
         if not expire and not retry:
-            log.error('Priority 2 requires pushover.expire and pushover.retry options.')
-            return
+            raise SaltInvocationError('Priority 2 requires pushover.expire and pushover.retry options.')
 
     message = ('id: {0}\r\n'
                'function: {1}\r\n'
@@ -387,6 +390,7 @@ def returner(ret):
                            retry=retry,
                            sound=sound,
                            token=token)
+
     if not result['res']:
         log.info('Error: {0}'.format(result['message']))
     return

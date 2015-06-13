@@ -80,11 +80,14 @@ def shutdown(at_time=None):
     '''
     Shutdown a running system
 
+    at_time
+        The wait time in minutes before the system will be shutdown.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.shutdown
+        salt '*' system.shutdown 5
     '''
 
     if at_time:

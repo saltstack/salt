@@ -487,6 +487,12 @@ def create(vm_):
         'role_size': vm_['size'],
         'network_config': network_config,
     }
+
+    if 'virtual_network_name' in vm_:
+        vm_kwargs['virtual_network_name'] = vm_['virtual_network_name']
+        if 'subnet_name' in vm_:
+            network_config.subnet_names.append(vm_['subnet_name'])
+
     log.debug('vm_kwargs: {0}'.format(vm_kwargs))
 
     event_kwargs = {'service_kwargs': service_kwargs.copy(),

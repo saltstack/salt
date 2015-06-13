@@ -152,6 +152,9 @@ def __virtual__():
     )
     show_instance = namespaced_function(show_instance, globals())
 
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
+
     return __virtualname__
 
 

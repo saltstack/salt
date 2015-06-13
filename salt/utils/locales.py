@@ -6,9 +6,8 @@ the locale utils used by salt
 from __future__ import absolute_import
 
 import sys
-import locale
 
-from salt.ext.six import string_types
+import salt.utils
 from salt.utils.decorators import memoize as real_memoize
 
 
@@ -17,20 +16,13 @@ def get_encodings():
     '''
     return a list of string encodings to try
     '''
-    encodings = []
-
-    try:
-        loc_enc = locale.getdefaultlocale()[-1]
-    except (ValueError, IndexError):  # system locale is nonstandard or malformed
-        loc_enc = None
-    if loc_enc:
-        encodings.append(loc_enc)
+    encodings = [__salt_system_encoding__]
 
     try:
         sys_enc = sys.getdefaultencoding()
     except ValueError:  # system encoding is nonstandard or malformed
         sys_enc = None
-    if sys_enc:
+    if sys_enc and sys_enc not in encodings:
         encodings.append(sys_enc)
 
     for enc in ['utf-8', 'latin-1']:
@@ -46,12 +38,10 @@ def sdecode(string_):
     need to be safely decoded, this function will attempt to decode the string
     until if has a working string that does not stack trace
     '''
-    if not isinstance(string_, string_types):
-        return string_
     encodings = get_encodings()
     for encoding in encodings:
         try:
-            decoded = string_.decode(encoding)
+            decoded = salt.utils.to_unicode(string_, encoding)
             # Make sure unicode string ops work
             u' ' + decoded  # pylint: disable=W0104
             return decoded

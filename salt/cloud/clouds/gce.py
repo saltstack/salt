@@ -73,6 +73,7 @@ import copy
 import stat
 import pprint
 import logging
+import msgpack
 from ast import literal_eval
 
 # Import 3rd-party libs
@@ -99,6 +100,8 @@ from salt.utils import namespaced_function
 # Import saltcloud libs
 import salt.utils.cloud
 import salt.config as config
+from salt.utils import http
+from salt import syspaths
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
     SaltCloudException,
@@ -2218,3 +2221,89 @@ def create(vm_=None, call=None):
     )
 
     return node_dict
+
+
+def update_pricing(kwargs=None, call=None):
+    '''
+    Download most recent pricing information from GCE and save locally
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f update_pricing my-gce-config
+
+    .. versionadded:: Beryllium
+    '''
+    url = 'https://cloudpricingcalculator.appspot.com/static/data/pricelist.json'
+    price_json = http.query(url, decode=True, decode_type='json')
+
+    outfile = os.path.join(
+        syspaths.CACHE_DIR, 'cloud', 'gce-pricing.p'
+    )
+    with salt.utils.fopen(outfile, 'w') as fho:
+        msgpack.dump(price_json['dict'], fho)
+
+    return True
+
+
+def show_pricing(kwargs=None, call=None):
+    '''
+    Show pricing for a particular profile. This is only an estimate, based on
+    unofficial pricing sources.
+
+    .. versionadded:: Beryllium
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_pricing my-gce-config profile=my-profile
+    '''
+    profile = __opts__['profiles'].get(kwargs['profile'], {})
+    if not profile:
+        return {'Error': 'The requested profile was not found'}
+
+    # Make sure the profile belongs to Digital Ocean
+    provider = profile.get('provider', '0:0')
+    comps = provider.split(':')
+    if len(comps) < 2 or comps[1] != 'gce':
+        return {'Error': 'The requested profile does not belong to GCE'}
+
+    comps = profile.get('location', 'us').split('-')
+    region = comps[0]
+
+    size = 'CP-COMPUTEENGINE-VMIMAGE-{0}'.format(profile['size'].upper())
+    pricefile = os.path.join(
+        syspaths.CACHE_DIR, 'cloud', 'gce-pricing.p'
+    )
+    if not os.path.exists(pricefile):
+        update_pricing()
+
+    with salt.utils.fopen(pricefile, 'r') as fho:
+        sizes = msgpack.load(fho)
+
+    per_hour = float(sizes['gcp_price_list'][size][region])
+
+    week1_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['0.25'])
+    week2_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['0.50'])
+    week3_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['0.75'])
+    week4_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['1.0'])
+    week1 = per_hour * (730/4) * week1_discount
+    week2 = per_hour * (730/4) * week2_discount
+    week3 = per_hour * (730/4) * week3_discount
+    week4 = per_hour * (730/4) * week4_discount
+
+    raw = sizes
+    ret = {}
+
+    ret['per_hour'] = per_hour
+    ret['per_day'] = ret['per_hour'] * 24
+    ret['per_week'] = ret['per_day'] * 7
+    ret['per_month'] = week1 + week2 + week3 + week4
+    ret['per_year'] = ret['per_month'] * 12
+
+    if kwargs.get('raw', False):
+        ret['_raw'] = raw
+
+    return {profile['profile']: ret}
