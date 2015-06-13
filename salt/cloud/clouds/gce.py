@@ -2252,6 +2252,8 @@ def show_pricing(kwargs=None, call=None):
     Show pricing for a particular profile. This is only an estimate, based on
     unofficial pricing sources.
 
+    .. versionadded:: Beryllium
+
     CLI Examples:
 
     .. code-block:: bash
