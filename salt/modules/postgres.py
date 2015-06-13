@@ -29,7 +29,6 @@ from __future__ import absolute_import
 import datetime
 import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
-import StringIO
 import hashlib
 import os
 import tempfile
@@ -46,6 +45,7 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import StringIO
 
 
 log = logging.getLogger(__name__)
@@ -275,7 +275,7 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     if cmdret['retcode'] > 0:
         return ret
 
-    csv_file = StringIO.StringIO(cmdret['stdout'])
+    csv_file = StringIO(cmdret['stdout'])
     header = {}
     for row in csv.reader(csv_file, delimiter=',', quotechar='"'):
         if not row:
@@ -372,7 +372,7 @@ def db_create(name,
     query = 'CREATE DATABASE "{0}"'.format(name)
 
     # "With"-options to create a database
-    with_args = {
+    with_args = salt.utils.odict.OrderedDict({
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
         'OWNER': owner and '"{0}"'.format(owner),
@@ -381,9 +381,9 @@ def db_create(name,
         'LC_COLLATE': lc_collate and '{0!r}'.format(lc_collate),
         'LC_CTYPE': lc_ctype and '{0!r}'.format(lc_ctype),
         'TABLESPACE': tablespace,
-    }
+    })
     with_chunks = []
-    for key, value in six.iteritems(with_args):
+    for key, value in with_args.items():
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -814,7 +814,7 @@ def _maybe_encrypt_password(role,
     '''
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
-            hashlib.md5('{0}{1}'.format(password, role)).hexdigest())
+            hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
     return password
 
 
