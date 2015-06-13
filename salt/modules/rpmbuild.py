@@ -29,7 +29,7 @@ def __virtual__():
     '''
     if salt.utils.which('mock'):
         return __virtualname__
-
+    return False
 
 def _mk_tree():
     '''
