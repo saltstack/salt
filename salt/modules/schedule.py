@@ -637,13 +637,13 @@ def save(**kwargs):
                 event_ret = eventer.get_event(tag='/salt/minion/minion_schedule_saved', wait=30)
                 if event_ret and event_ret['complete']:
                     ret['result'] = True
-                    ret['comment'] = 'Schedule has be saved.'
+                    ret['comment'] = 'Schedule (non-pillar items) saved.'
                 else:
                     ret['result'] = False
-                    ret['comment'] = 'Failed to save schedule'
+                    ret['comment'] = 'Failed to save schedule.'
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
-            ret['comment'] = 'Event module not available. Schedule enable job failed.'
+            ret['comment'] = 'Event module not available. Schedule save failed.'
     return ret
 
 
