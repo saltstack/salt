@@ -2283,10 +2283,10 @@ def show_pricing(kwargs=None, call=None):
 
     per_hour = float(sizes['gcp_price_list'][size][region])
 
-    week1_discount =  float(sizes['gcp_price_list']['sustained_use_tiers']['0.25'])
-    week2_discount =  float(sizes['gcp_price_list']['sustained_use_tiers']['0.50'])
-    week3_discount =  float(sizes['gcp_price_list']['sustained_use_tiers']['0.75'])
-    week4_discount =  float(sizes['gcp_price_list']['sustained_use_tiers']['1.0'])
+    week1_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['0.25'])
+    week2_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['0.50'])
+    week3_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['0.75'])
+    week4_discount = float(sizes['gcp_price_list']['sustained_use_tiers']['1.0'])
     week1 = per_hour * (730/4) * week1_discount
     week2 = per_hour * (730/4) * week2_discount
     week3 = per_hour * (730/4) * week3_discount
