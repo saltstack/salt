@@ -31,6 +31,7 @@ def __virtual__():
         return __virtualname__
     return False
 
+
 def _mk_tree():
     '''
     Create the rpm build tree
