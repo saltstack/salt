@@ -295,6 +295,8 @@ def get_conn():
                     )
                 else:
                     actual_password = provider_password
+            else:
+                actual_password = driver_password
         else:
             actual_password = password
         return driver(
