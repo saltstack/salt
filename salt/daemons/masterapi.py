@@ -475,6 +475,7 @@ class RemoteFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
+        mopts['env_order'] = self.opts['env_order']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']
