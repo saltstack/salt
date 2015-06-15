@@ -340,13 +340,14 @@ class Schedule(object):
                 salt.syspaths.CONFIG_DIR,
                 'minion.d',
                 '_schedule.conf')
+        log.debug('Persisting schedule')
         try:
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule')
 
-    def delete_job(self, name, where=None):
+    def delete_job(self, name, persist=True, where=None):
         '''
         Deletes a job from the scheduler.
         '''
@@ -371,7 +372,10 @@ class Schedule(object):
         if name in self.intervals:
             del self.intervals[name]
 
-    def add_job(self, data):
+        if persist:
+            self.persist()
+
+    def add_job(self, data, persist=True):
         '''
         Adds a new job to the scheduler. The format is the same as required in
         the configuration file. See the docs on how YAML is interpreted into
@@ -400,9 +404,10 @@ class Schedule(object):
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_add_complete')
 
-        self.persist()
+        if persist:
+            self.persist()
 
-    def enable_job(self, name, where=None):
+    def enable_job(self, name, persist=True, where=None):
         '''
         Enable a job in the scheduler.
         '''
@@ -420,7 +425,10 @@ class Schedule(object):
 
         log.info('Enabling job {0} in scheduler'.format(name))
 
-    def disable_job(self, name, where=None):
+        if persist:
+            self.persist()
+
+    def disable_job(self, name, persist=True, where=None):
         '''
         Disable a job in the scheduler.
         '''
@@ -438,18 +446,24 @@ class Schedule(object):
 
         log.info('Disabling job {0} in scheduler'.format(name))
 
-    def modify_job(self, name, schedule, where=None):
+        if persist:
+            self.persist()
+
+    def modify_job(self, name, schedule, persist=True, where=None):
         '''
         Modify a job in the scheduler.
         '''
         if where == 'pillar':
             if name in self.opts['pillar']['schedule']:
-                self.delete_job(name, where=where)
+                self.delete_job(name, persist, where=where)
             self.opts['pillar']['schedule'][name] = schedule
         else:
             if name in self.opts['schedule']:
-                self.delete_job(name, where=where)
+                self.delete_job(name, persist, where=where)
             self.opts['schedule'][name] = schedule
+
+        if persist:
+            self.persist()
 
     def run_job(self, name):
         '''
@@ -546,6 +560,17 @@ class Schedule(object):
         evt = salt.utils.event.get_event('minion', opts=self.opts)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_list_complete')
+
+    def save_schedule(self):
+        '''
+        Save the current schedule
+        '''
+        self.persist()
+
+        # Fire the complete event back along with the list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True},
+                       tag='/salt/minion/minion_schedule_saved')
 
     def handle_func(self, func, data):
         '''
