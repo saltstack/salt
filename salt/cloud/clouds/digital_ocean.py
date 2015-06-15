@@ -28,7 +28,6 @@ under the "SSH Keys" section.
 # Import Python Libs
 from __future__ import absolute_import
 import os
-import copy
 import time
 import json
 import pprint
@@ -438,127 +437,12 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    )
-
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        for network in data['networks']['v4']:
-            if network['type'] == 'public':
-                ip_address = network['ip_address']
-
-        create_record = config.get_cloud_config_value(
-            'create_dns_record', vm_, __opts__, search_global=False, default=None,
-        )
-        if create_record is not None:
-            if not isinstance(create_record, bool):
-                raise SaltCloudConfigError("'create_dns_record' should be a boolean value.")
-
-        if create_record:
-            create_dns_record(vm_['name'], ip_address)
-
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': ip_address,
-            'username': ssh_username,
-            'key_filename': key_filename,
-            'script': deploy_script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-
+    for network in data['networks']['v4']:
+        if network['type'] == 'public':
+            ip_address = network['ip_address']
+    vm_['key_filename'] = key_filename
+    vm_['ssh_host'] = ip_address
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
