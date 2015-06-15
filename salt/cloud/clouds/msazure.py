@@ -214,8 +214,7 @@ def list_nodes(conn=None, call=None):
     nodes = list_nodes_full(conn, call)
     for node in nodes:
         ret[node] = {}
-        for prop in ('id', 'image', 'size', 'state', 'private_ips',
-                     'public_ips'):
+        for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node][prop]
     return ret
 
@@ -778,6 +777,9 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             '-a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
@@ -868,6 +870,9 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             'The create_attach_volumes action must be called with '
             '-a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -1130,6 +1135,9 @@ def get_operation_status(kwargs=None, conn=None, call=None):
             'The show_instance function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'id' not in kwargs:
         raise SaltCloudSystemExit('A request ID must be specified as "id"')
 
@@ -1199,6 +1207,9 @@ def show_storage(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1231,6 +1242,9 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1268,6 +1282,9 @@ def create_storage(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_storage function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if not conn:
         conn = get_conn()
@@ -1321,6 +1338,9 @@ def update_storage(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1356,6 +1376,9 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1388,6 +1411,9 @@ def delete_storage(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_storage function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1450,6 +1476,9 @@ def show_service(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1480,6 +1509,9 @@ def create_service(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1521,6 +1553,9 @@ def delete_service(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_service function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1582,6 +1617,9 @@ def show_disk(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1613,6 +1651,9 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
             'The delete_disk function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     disks = list_disks(kwargs=kwargs, conn=conn, call='function')
     for disk in disks:
         if disks[disk]['attached_to'] is None:
@@ -1642,6 +1683,9 @@ def delete_disk(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_disk function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1677,6 +1721,9 @@ def update_disk(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1708,6 +1755,9 @@ def list_service_certificates(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The list_service_certificates function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "name"')
@@ -1742,6 +1792,9 @@ def show_service_certificate(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "name"')
@@ -1785,6 +1838,9 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1826,6 +1882,9 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_service_certificate function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1898,6 +1957,9 @@ def show_management_certificate(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'thumbprint' not in kwargs:
         raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
 
@@ -1929,6 +1991,9 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'public_key' not in kwargs:
         raise SaltCloudSystemExit('A public_key must be specified as "public_key"')
@@ -1967,6 +2032,9 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_management_certificate function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'thumbprint' not in kwargs:
         raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
@@ -2020,6 +2088,9 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
             'The list_input_endpoints function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'service' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "service"')
 
@@ -2062,6 +2133,9 @@ def show_input_endpoint(kwargs=None, conn=None, call=None):
             'The show_input_endpoint function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An endpoint name must be specified as "name"')
 
@@ -2093,6 +2167,9 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
         raise SaltCloudSystemExit(
             'The update_input_endpoint function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'service' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "service"')
@@ -2250,6 +2327,9 @@ def show_deployment(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'service_name' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "service_name"')
 
@@ -2315,6 +2395,9 @@ def show_affinity_group(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An affinity group name must be specified as "name"')
 
@@ -2345,6 +2428,9 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -2387,6 +2473,9 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -2417,6 +2506,9 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_affinity_group function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -2485,6 +2577,9 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The make_blob_url function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('A container name must be specified as "container"')
@@ -2597,6 +2692,9 @@ def show_storage_container(kwargs=None, storage_conn=None, call=None):
             'The show_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2636,6 +2734,9 @@ def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_storage_container function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
@@ -2681,6 +2782,9 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
             'The create_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2724,6 +2828,9 @@ def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_storage_container function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
@@ -2809,6 +2916,9 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
             'The delete_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2865,6 +2975,9 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The lease_storage_container function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
@@ -2960,6 +3073,9 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
             'The list_blobs function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "container"')
 
@@ -3024,6 +3140,9 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
             'The set_blob_service_properties function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'properties' not in kwargs:
         raise SaltCloudSystemExit('The blob service properties name must be specified as "properties"')
 
@@ -3061,6 +3180,9 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_blob_properties function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The container name must be specified as "container"')
@@ -3128,6 +3250,9 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The set_blob_properties function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
@@ -3207,6 +3332,9 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
             'The put_blob function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
 
@@ -3273,6 +3401,9 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The get_blob function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
