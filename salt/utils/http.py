@@ -214,10 +214,11 @@ def query(url,
             continue
         header_dict[comps[0].strip()] = comps[1].strip()
 
-    if username and password:
-        auth = (username, password)
-    else:
-        auth = None
+    if not auth:
+        if username and password:
+            auth = (username, password)
+        else:
+            auth = None
 
     if agent == USERAGENT:
         agent = '{0} http.query()'.format(agent)
