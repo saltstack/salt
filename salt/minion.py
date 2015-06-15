@@ -834,7 +834,7 @@ class Minion(MinionBase):
                     is_msgpacked=True,
                 )
                 log.debug('Sending event - data = {0}'.format(beacon['data']))
-                event = salt.utils.to_bytes(tag, 'utf-8') + salt.utils.event.TAGEND + serialized_data
+                event = salt.utils.to_bytes(beacon['tag'], 'utf-8') + salt.utils.event.TAGEND + serialized_data
                 self.event_publisher.handle_publish([event])
 
     def _load_modules(self, force_refresh=False, notify=False):
@@ -2310,7 +2310,7 @@ class Matcher(object):
                 return salt.utils.network.in_subnet(tgt, self.opts['grains'][proto])
         except:  # pylint: disable=bare-except
             try:
-               # Target should be an address
+                # Target should be an address
                 proto = 'ipv{0}'.format(ipaddress.ip_address(tgt).version)
                 if proto not in self.opts['grains']:
                     return False
