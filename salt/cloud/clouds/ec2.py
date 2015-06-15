@@ -4116,7 +4116,7 @@ def show_pricing(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_pricing my-ec2-config my-profile
+        salt-cloud -f show_pricing my-ec2-config profile=my-profile
 
     If pricing sources have not been cached, they will be downloaded. Once they
     have been cached, they will not be updated automatically. To manually update
