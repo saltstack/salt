@@ -53,6 +53,9 @@ LIBCLOUD_MINIMAL_VERSION = (0, 14, 0)
 
 
 def node_state(id_):
+    '''
+    Libcloud supported node states
+    '''
     states = {0: 'RUNNING',
               1: 'REBOOTING',
               2: 'TERMINATED',
