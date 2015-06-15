@@ -484,9 +484,21 @@ VALID_OPTS = {
     # Whether or not a copy of the master opts dict should be rendered into minion pillars
     'pillar_opts': bool,
 
-
     'pillar_safe_render_error': bool,
+
+    # When creating a pillar, there are several stratigies to choose from when
+    # encountering duplicate values
     'pillar_source_merging_strategy': str,
+
+    # The ordering for environment merging
+    'env_order': list,
+
+    'default_top': str,
+
+    # Can be 'merge', 'same', 'preferred'
+    'top_file_merging_strategy': str,
+    'top_file_base': str,
+
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
@@ -750,6 +762,9 @@ DEFAULT_MINION_OPTS = {
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
+    'default_top': 'base',
+    'env_order': [],
+    'top_file_merging_strategy': 'merge',
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -909,6 +924,9 @@ DEFAULT_MASTER_OPTS = {
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
+    'default_top': 'base',
+    'env_order': [],
+    'top_file_merging_strategy': 'merge',
     'file_client': 'local',
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
@@ -1177,9 +1195,12 @@ def _expand_glob_path(file_roots):
     '''
     unglobbed_path = []
     for path in file_roots:
-        if glob.has_magic(path):
-            unglobbed_path.extend(glob.glob(path))
-        else:
+        try:
+            if glob.has_magic(path):
+                unglobbed_path.extend(glob.glob(path))
+            else:
+                unglobbed_path.append(path)
+        except Exception:
             unglobbed_path.append(path)
     return unglobbed_path
 

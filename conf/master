@@ -418,6 +418,18 @@
 #file_roots:
 #  base:
 #    - /srv/salt
+#
+
+# When using multiple environments, each with their own top file, the
+# default behaviour is an unordered merge. To prevent top files from
+# being merged together and instead to only use the top file from the
+# requested environment, set this value to False
+# top_file_merge: True
+
+# To specify the order in which environments are merged, set the ordering
+# in the env_order option. Given a conflict, the last matching value will
+# win.
+# env_order: ['base', 'dev', 'prod']
 
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
