@@ -21,8 +21,7 @@ try:
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import (
         MultiStepDeployment,
-        ScriptDeployment,
-        SSHKeyDeployment
+        ScriptDeployment
     )
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple([
@@ -110,21 +109,6 @@ def get_node(conn, name):
         if node.name == name:
             salt.utils.cloud.cache_node(salt.utils.cloud.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
             return node
-
-
-def ssh_pub(vm_):
-    '''
-    Deploy the primary ssh authentication key
-    '''
-    ssh = config.get_cloud_config_value('ssh_auth', vm_, __opts__)
-    if not ssh:
-        return None
-
-    ssh = os.path.expanduser(ssh)
-    if os.path.isfile(ssh):
-        return None
-    with salt.utils.fopen(ssh) as fhr:
-        return SSHKeyDeployment(fhr.read())
 
 
 def avail_locations(conn=None, call=None):
