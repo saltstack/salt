@@ -114,7 +114,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt import syspaths
-from salt.utils import namespaced_function
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
