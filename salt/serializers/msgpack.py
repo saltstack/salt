@@ -59,10 +59,8 @@ if not available:
 elif msgpack.version >= (0, 2, 0):
 
     def _serialize(obj, **options):
-        if options:
-            log.warning('options are currently unusued')
         try:
-            return msgpack.dumps(obj)
+            return msgpack.dumps(obj, **options)
         except Exception as error:
             raise SerializationError(error)
 
@@ -94,11 +92,9 @@ else:  # msgpack.version < 0.2.0
         return obj
 
     def _serialize(obj, **options):
-        if options:
-            log.warning('options are currently unusued')
         try:
             obj = _encoder(obj)
-            return msgpack.dumps(obj)
+            return msgpack.dumps(obj, **options)
         except Exception as error:
             raise SerializationError(error)
 
