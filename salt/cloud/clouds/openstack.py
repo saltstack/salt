@@ -204,6 +204,12 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
+    salt.utils.warn_until(
+        'Carbon',
+        'This driver has been deprecated and will be removed in the '
+        'Carbon release of Salt. Please use the nova driver instead.'
+    )
+
     return True
 
 
