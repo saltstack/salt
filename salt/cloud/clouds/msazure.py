@@ -598,8 +598,6 @@ def create(vm_):
         log.error('Failed to get a value for the hostname.')
         return False
 
-
-
     vm_['ssh_host'] = hostname.replace('http://', '').replace('/', '')
     vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
