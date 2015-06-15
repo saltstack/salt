@@ -48,7 +48,8 @@
 
 # The number of worker threads to start. These threads are used to manage
 # return calls made from minions to the master. If the master seems to be
-# running slowly, increase the number of threads.
+# running slowly, increase the number of threads. This setting can not be
+# set lower than 3.
 #worker_threads: 5
 
 # The port used by the communication interface. The ret (return) port is the
