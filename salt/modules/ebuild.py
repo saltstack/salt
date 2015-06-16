@@ -206,9 +206,6 @@ def latest_version(*names, **kwargs):
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
-
     CLI Example:
 
     .. code-block:: bash
@@ -232,12 +229,7 @@ def latest_version(*names, **kwargs):
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
         if avail:
-            if not installed \
-                    or salt.utils.compare_versions(ver1=installed,
-                                                   oper='<',
-                                                   ver2=avail,
-                                                   cmp_func=version_cmp):
-                ret[name] = avail
+            ret[name] = avail
 
     # Return a string if only one package name passed
     if len(names) == 1:
