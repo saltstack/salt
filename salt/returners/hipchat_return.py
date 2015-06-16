@@ -83,6 +83,7 @@ except ImportError:
 from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error
 
@@ -141,7 +142,12 @@ def __virtual__():
     return __virtualname__
 
 
-def _query(function, api_key=None, api_version=None, method='GET', data=None):
+def _query(function,
+           api_key=None,
+           api_version=None,
+           room_id=None,
+           method='GET',
+           data=None):
     '''
     HipChat object method function to construct and execute on the API URL.
 
@@ -155,13 +161,10 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
     headers = {}
     query_params = {}
 
-    if data is None:
-        data = {}
-
-    if data.get('room_id'):
-        room_id = str(data.get('room_id'))
+    if room_id:
+        room_id = 'room/{0}/notification'.format(str(room_id))
     else:
-        room_id = '0'
+        room_id = 'room/0/notification'
 
     hipchat_functions = {
         'v1': {
@@ -188,7 +191,7 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
                 'response': 'items',
             },
             'message': {
-                'request': 'room/' + room_id + '/notification',
+                'request': room_id,
                 'response': None,
             },
         },
@@ -206,43 +209,43 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
         if method == 'POST':
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
 
-        if data.get('notify'):
-            data['notify'] = 1
-        else:
-            data['notify'] = 0
+        if data:
+            if data.get('notify'):
+                data['notify'] = 1
+            else:
+                data['notify'] = 0
+            data = _urlencode(data)
     elif api_version == 'v2':
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
-        data = json.dumps(data)
+        if data:
+            data = json.dumps(data)
     else:
         log.error('Unsupported HipChat API version')
         return False
 
-    try:
-        result = requests.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=query_params,
-            data=data,
-            verify=True,
-        )
-    except ConnectionError as e:
-        log.error(e)
-        return False
+    result = salt.utils.http.query(
+        url,
+        method,
+        params=query_params,
+        data=data,
+        decode=True,
+        status=True,
+        header_dict=headers,
+        opts=__opts__,
+    )
 
-    if result.status_code == salt.ext.six.moves.http_client.OK:
-        result = result.json()
+    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
         response = hipchat_functions.get(api_version).get(function).get('response')
-        return result.get(response)
-    elif result.status_code == salt.ext.six.moves.http_client.NO_CONTENT:
-        return True
+        return result.get('dict', {}).get(response, None)
+    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
+        return False
     else:
         log.debug(url)
         log.debug(query_params)
         log.debug(data)
         log.debug(result)
-        if result.json().get('error'):
-            log.error(result.json())
+        if result.get('error'):
+            log.error(result)
         return False
 
 
@@ -276,6 +279,7 @@ def _send_message(room_id,
     result = _query(function='message',
                     api_key=api_key,
                     api_version=api_version,
+                    room_id=room_id,
                     method='POST',
                     data=parameters)
 
