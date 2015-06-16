@@ -97,6 +97,9 @@ command:
 
 Assigning IPs
 =============
+
+.. versionadded:: Beryllium
+
 The GoGrid API allows IP addresses to be manually assigned. Salt Cloud supports
 this functionality by allowing an IP address to be specified using the
 ``assign_public_ip`` argument. This likely makes the most sense inside a map
