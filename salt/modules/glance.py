@@ -126,6 +126,8 @@ def _auth(profile=None, **connection_args):
         try:
             return client.Client(endpoint, **kwargs)
         except exc.HTTPUnauthorized:
+            kwargs.pop('token')
+            kwargs['password'] = password
             log.warn('Supplied token is invalid, trying to ' + \
                 'get a new one using username and password.')
 
