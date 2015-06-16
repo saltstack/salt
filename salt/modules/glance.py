@@ -6,30 +6,27 @@ Module for handling openstack glance calls.
 :configuration: This module is not usable until the following are specified
     either in a pillar or in the minion's config file::
 
-        keystone.user: admin
-        keystone.password: verybadpass
-        keystone.tenant: admin
-        keystone.tenant_id: f80919baedab48ec8931f200c65a50df
-        keystone.insecure: False   #(optional)
-        keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        glance.user: admin
+        glance.password: verybadpass
+        glance.tenant: admin
+        glance.insecure: False   #(optional)
+        glance.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
     If configuration for multiple openstack accounts is required, they can be
     set up as different configuration profiles:
     For example::
 
         openstack1:
-          keystone.user: admin
-          keystone.password: verybadpass
-          keystone.tenant: admin
-          keystone.tenant_id: f80919baedab48ec8931f200c65a50df
-          keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+          glance.user: admin
+          glance.password: verybadpass
+          glance.tenant: admin
+          glance.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
         openstack2:
-          keystone.user: admin
-          keystone.password: verybadpass
-          keystone.tenant: admin
-          keystone.tenant_id: f80919baedab48ec8931f200c65a50df
-          keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+          glance.user: admin
+          glance.password: verybadpass
+          glance.tenant: admin
+          glance.auth_url: 'http://127.0.0.2:5000/v2.0/'
 
     With this configuration in place, any of the keystone functions can make use
     of a configuration profile by declaring it explicitly.
@@ -41,12 +38,25 @@ Module for handling openstack glance calls.
 # Import third party libs
 HAS_GLANCE = False
 try:
-    from glanceclient import client
-    import glanceclient.v1.images
+    from glanceclient.v2 import client
+    import glanceclient.v2.images
+    from glanceclient import exc
     HAS_GLANCE = True
+    #import pprint
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    log = logging.getLogger(__name__)
 except ImportError:
     pass
 
+# Workaround, as the Glance API v2 requires you to
+# already have a keystone token
+HAS_KEYSTONE = False
+try:
+    from keystoneclient.v2_0 import client as kstone
+    HAS_KEYSTONE = True
+except ImportError:
+    pass
 
 def __virtual__():
     '''
@@ -60,19 +70,78 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None):
+def _auth(profile=None, **connection_args):
     '''
-    Set up keystone credentials
+    Set up glance credentials
+
+    Only intended to be used within glance-enabled modules
     '''
-    kstone = __salt__['keystone.auth'](profile)
-    token = kstone.auth_token
-    endpoint = kstone.service_catalog.url_for(
-        service_type='image',
-        endpoint_type='publicURL',
-        )
 
-    return client.Client('1', endpoint, token=token)
+    if profile:
+        prefix = profile + ":glance."
+    else:
+        prefix = "glance."
 
+    # look in connection_args first, then default to config file
+    def get(key, default=None):
+        '''
+        TODO
+        '''
+        return connection_args.get('connection_' + key,
+            __salt__['config.get'](prefix + key, default))
+
+    user = get('user', 'admin')
+    password = get('password', 'ADMIN')
+    tenant = get('tenant', 'admin')
+    tenant_id = get('tenant_id')
+    auth_url = get('auth_url', 'http://127.0.0.1:35357/v2.0/')
+    insecure = get('insecure', False)
+    token = get('token')
+    region = get('region')
+    endpoint = get('endpoint', 'http://127.0.0.1:9292/')
+
+    if token:
+        kwargs = {'token': token,
+                  'username': user,
+                  'endpoint_url': endpoint,
+                  'auth_url': auth_url,
+                  'region_name': region,
+                  'tenant_name': tenant}
+    else:
+        kwargs = {'username': user,
+                  'password': password,
+                  'tenant_id': tenant_id,
+                  'auth_url': auth_url,
+                  'region_name': region,
+                  'tenant_name': tenant}
+        # 'insecure' keyword not supported by all v2.0 keystone clients
+        #   this ensures it's only passed in when defined
+        if insecure:
+            kwargs['insecure'] = True
+
+    if token:
+        log.debug('Calling glanceclient.v2.client.Client(' + \
+            '{0}, **{1})'.format(endpoint, kwargs))
+        try:
+            return client.Client(endpoint, **kwargs)
+        except exc.HTTPUnauthorized:
+            log.warn('Supplied token is invalid, trying to ' + \
+                'get a new one using username and password.')
+
+    if HAS_KEYSTONE:
+        # TODO: redact kwargs['password']
+        log.debug('Calling keystoneclient.v2_0.client.Client(' + \
+            '{0}, **{1})'.format(endpoint, kwargs))
+        keystone = kstone.Client(**kwargs)
+        log.debug(help(keystone.get_token))
+        kwargs['token'] = keystone.get_token(keystone.session)
+        kwargs.pop('password')
+        log.debug('Calling glanceclient.v2.client.Client(' + \
+            '{0}, **{1})'.format(endpoint, kwargs))
+        return client.Client(endpoint, **kwargs)
+    else:
+        raise NotImplementedError, \
+            "Can't retrieve a auth_token without keystone"
 
 def image_create(profile=None, **kwargs):
     '''
