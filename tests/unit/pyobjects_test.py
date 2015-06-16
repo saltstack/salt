@@ -328,7 +328,11 @@ class RendererTests(RendererMixin, StateTests):
 
     def test_requisite_implicit_list(self):
         '''Ensure that the implicit list characteristic works as expected'''
-        ret = self.render(requisite_implicit_list_template)
+        ret = self.render(requisite_implicit_list_template,
+                          {'grains': {
+                              'os_family': 'Debian',
+                              'os': 'Debian'
+                          }})
 
         self.assertEqual(ret, OrderedDict([
             ('pkg', OrderedDict([
