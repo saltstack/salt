@@ -30,6 +30,7 @@ grainsmod.__salt__ = grains.__salt__ = {
     'grains.delval': grainsmod.delval,
     'grains.append': grainsmod.append,
     'grains.remove': grainsmod.remove,
+    'saltutil.sync_grains': MagicMock(),
 }
 
 
