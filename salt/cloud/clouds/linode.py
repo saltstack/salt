@@ -36,6 +36,7 @@ import time
 
 # Import Salt Libs
 import salt.config as config
+from salt.ext.six.moves import range
 from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
@@ -62,7 +63,7 @@ LINODE_STATUS = {
 __virtualname__ = 'linode'
 
 
-# Only load in this module is the Linode configurations are in place
+# Only load in this module if the Linode configurations are in place
 def __virtual__():
     '''
     Check for Linode configs.
@@ -516,7 +517,7 @@ def get_distribution_id(vm_):
             'The DistributionID for the {0} profile could not be found.\n'
             'The {1} instance could not be provisioned.'.format(
                 vm_image_name,
-                vm['name']
+                vm_['name']
             )
         )
 
@@ -550,6 +551,7 @@ def get_ips(linode_id=None):
     # If linode_id was specified, only return the ips, and not the
     # dictionary based on the linode ID as a key.
     if linode_id:
+        val = ''
         for item in all_ips:
             key, val = item.popitem()
         all_ips = val
@@ -745,7 +747,7 @@ def show_instance(name=None, linode_id=None, call=None):
         due to a limitation of the Linode API.
     '''
     if call == 'function':
-        raise SaltCloudSystemExit(
+        raise SaltCloudException(
             'The show_instance action must be called with -a or --action.'
         )
 
