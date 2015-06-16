@@ -929,7 +929,8 @@ _OS_NAME_MAP = {
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
     'scientific': 'ScientificLinux',
-    'synology': 'Synology'
+    'synology': 'Synology',
+    'nilrt': 'NILinuxRT'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -974,7 +975,8 @@ _OS_FAMILY_MAP = {
     'elementary OS': 'Debian',
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',
-    'Devuan': 'Debian'
+    'Devuan': 'Debian',
+    'NILinuxRT' : 'NILinuxRT'
 }
 
 
@@ -1310,6 +1312,15 @@ def os_data():
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
     elif grains.get('os') == 'Fedora':
         osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
+    elif grains.get('os_family') == 'NILinuxRT':
+        archinfo = {}
+        for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
+            if line.startswith('arch'):
+                _, arch, priority = line.split()
+                archinfo[arch.strip()] = int(priority.strip())
+
+        # Return osarch in priority order (higher to lower)
+        osarch = sorted(archinfo, key=archinfo.get, reverse=True)
     else:
         osarch = grains['cpuarch']
     grains['osarch'] = osarch
