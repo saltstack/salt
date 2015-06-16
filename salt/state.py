@@ -831,6 +831,9 @@ class State(object):
                         data['__sls__']
                         )
                     )
+                reason = self.states.missing_fun_string(full)
+                if reason:
+                    errors.append('Reason: {0}'.format(reason))
             else:
                 errors.append(
                         'Specified state \'{0}\' was not found'.format(

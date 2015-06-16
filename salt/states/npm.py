@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Only load if the npm module is available in __salt__
     '''
-    return 'npm' if 'npm.list' in __salt__ else False
+    return 'npm' if 'npm.list' in __salt__ else False, '\'npm\' binary not found on system'
 
 
 def installed(name,
