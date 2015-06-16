@@ -84,7 +84,7 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     image_id = avail_images()[vm_['image']]['id']
     if 'assign_public_ip' in vm_:
-        host_ip = vm['assign_public_ip']
+        host_ip = vm_['assign_public_ip']
     else:
         public_ips = list_public_ips()
         if len(public_ips.keys()) < 1:
