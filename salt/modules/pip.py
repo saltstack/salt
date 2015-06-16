@@ -737,7 +737,9 @@ def uninstall(pkgs=None,
         The user under which to run pip
     no_chown
         When user is given, do not attempt to copy and chown
-        a requirements file
+        a requirements file (needed if the requirements file refers to other
+        files via relative paths, as the copy-and-chown procedure does not
+        account for such files)
     cwd
         Current working directory to run pip from
     use_vt
