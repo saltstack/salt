@@ -26,6 +26,8 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
             - packaging: Packaging
             - classifier: Classifier
             - version: Version
+            - username: Artifactory username
+            - password: Artifactory password
     target_dir:
         Directory where the artifact should be downloaded. By default it is downloaded to /tmp directory.
     target_file:
@@ -94,27 +96,33 @@ def __fetch_from_artifactory(artifact, target_dir, target_file):
                                                                    group_id=artifact['group_id'],
                                                                    artifact_id=artifact['artifact_id'],
                                                                    packaging=artifact['packaging'],
-                                                                   classifier=artifact['classifier'],
+                                                                   classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                                    target_dir=target_dir,
-                                                                   target_file=target_file)
+                                                                   target_file=target_file,
+                                                                   username=artifact['username'] if 'username' in artifact else None,
+                                                                   password=artifact['password'] if 'password' in artifact else None)
     elif artifact['version'].endswith('SNAPSHOT'):
         fetch_result = __salt__['artifactory.get_snapshot'](artifactory_url=artifact['artifactory_url'],
                                                             repository=artifact['repository'],
                                                             group_id=artifact['group_id'],
                                                             artifact_id=artifact['artifact_id'],
                                                             packaging=artifact['packaging'],
-                                                            classifier=artifact['classifier'],
+                                                            classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                             version=artifact['version'],
                                                             target_dir=target_dir,
-                                                            target_file=target_file)
+                                                            target_file=target_file,
+                                                            username=artifact['username'] if 'username' in artifact else None,
+                                                            password=artifact['password'] if 'password' in artifact else None)
     else:
         fetch_result = __salt__['artifactory.get_release'](artifactory_url=artifact['artifactory_url'],
                                                            repository=artifact['repository'],
                                                            group_id=artifact['group_id'],
                                                            artifact_id=artifact['artifact_id'],
                                                            packaging=artifact['packaging'],
-                                                           classifier=artifact['classifier'],
+                                                           classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                            version=artifact['version'],
                                                            target_dir=target_dir,
-                                                           target_file=target_file)
+                                                           target_file=target_file,
+                                                           username=artifact['username'] if 'username' in artifact else None,
+                                                           password=artifact['password'] if 'password' in artifact else None)
     return fetch_result
