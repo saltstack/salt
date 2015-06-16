@@ -56,11 +56,11 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
     context
         A file path, prefixed by ``/files``. Should resolve to an actual file
-        (not an arbitrary augeus path). This is used to avoid duplicating the
+        (not an arbitrary augeas path). This is used to avoid duplicating the
         file name for each item in the changes list (for example, ``set bind 0.0.0.0``
         in the example below operates on the file specified by ``context``). If
         ``context`` is not specified, a file path prefixed by ``/files`` should be
-        icluded with the ``set`` command.
+        included with the ``set`` command.
 
         The file path is examined to determine if the
         specified changes are already present.
