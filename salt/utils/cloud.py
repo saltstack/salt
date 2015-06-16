@@ -2905,3 +2905,22 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None,
         time.sleep(5)
 
     return True
+
+
+def get_salt_interface(vm_, opts):
+    '''
+    Return the salt_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    salt_host = salt.config.get_cloud_config_value(
+        'salt_interface', vm_, opts, default=False,
+        search_global=False
+    )
+
+    if salt_host is False:
+        salt_host = salt.config.get_cloud_config_value(
+            'ssh_interface', vm_, opts, default='public_ips',
+            search_global=False
+        )
+
+    return salt_host

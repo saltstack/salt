@@ -114,8 +114,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt import syspaths
-from salt.utils import namespaced_function
-from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -133,9 +131,6 @@ from salt.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 SIZE_MAP = {
     'Micro Instance': 't1.micro',
@@ -2250,7 +2245,7 @@ def create(vm_=None, call=None):
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = instance['privateIpAddress']
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
@@ -4116,7 +4111,7 @@ def show_pricing(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_pricing my-ec2-config my-profile
+        salt-cloud -f show_pricing my-ec2-config profile=my-profile
 
     If pricing sources have not been cached, they will be downloaded. Once they
     have been cached, they will not be updated automatically. To manually update
