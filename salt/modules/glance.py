@@ -208,7 +208,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
 
     .. code-block:: bash
 
-        salt '*' glance.image_get
+        salt '*' glance.image_show
     '''
     nt_ks = _auth(profile)
     ret = {}
@@ -220,22 +220,23 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     if not id:
         return {'Error': 'Unable to resolve image id'}
     image = nt_ks.images.get(id)
+    # TODO: Get rid of the wrapping dict, see #24568
     ret[image.name] = {
             'id': image.id,
             'name': image.name,
-            'checksum': image.checksum,
             'container_format': image.container_format,
             'created_at': image.created_at,
-            'deleted': image.deleted,
             'disk_format': image.disk_format,
-            'is_public': image.is_public,
+            'file': image.file,
             'min_disk': image.min_disk,
             'min_ram': image.min_ram,
             'owner': image.owner,
             'protected': image.protected,
             'size': image.size,
             'status': image.status,
+            'tags': image.tags,
             'updated_at': image.updated_at,
+            'visibility': image.visibility,
             }
     return ret
 
