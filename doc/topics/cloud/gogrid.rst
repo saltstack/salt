@@ -5,11 +5,6 @@ Getting Started With GoGrid
 GoGrid is a public cloud provider supporting Linux and Windows.
 
 
-Dependencies
-============
-* Libcloud >= 0.13.2
-
-
 Configuration
 =============
 To use Salt Cloud with GoGrid log into the GoGrid web interface and create an
@@ -98,3 +93,22 @@ command:
                 uuid:
                     bfd4055389919e01aa6261828a96cf54c8dcc2c4
     ...SNIP...
+
+
+Assigning IPs
+=============
+
+.. versionadded:: Beryllium
+
+The GoGrid API allows IP addresses to be manually assigned. Salt Cloud supports
+this functionality by allowing an IP address to be specified using the
+``assign_public_ip`` argument. This likely makes the most sense inside a map
+file, but it may also be used inside a profile.
+
+.. code-block:: yaml
+
+    gogrid_512:
+      provider: my-gogrid-config
+      size: 512MB
+      image: CentOS 6.2 (64-bit) w/ None
+      assign_public_ip: 11.38.257.42
