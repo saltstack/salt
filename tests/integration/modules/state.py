@@ -926,7 +926,31 @@ class StateModuleTest(integration.ModuleCase,
 
         # Then, test the result of the state run when changes are not expected to happen
         test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']['comment']
-        expected_result = 'State was not run because onchanges req did not change'
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_requisite_multiple(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls',
+                mods='requisites.onchanges_multiple')
+
+        # First, test the result of the state run when two changes are expected to happen
+        test_data = state_run['cmd_|-test_two_changing_states_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when two changes are not expected to happen
+        test_data = state_run['cmd_|-test_two_non_changing_states_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+        # Finally, test the result of the state run when only one of the onchanges requisites changes.
+        test_data = state_run['cmd_|-test_one_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
         self.assertIn(expected_result, test_data)
 
     def test_onchanges_in_requisite(self):
@@ -944,7 +968,7 @@ class StateModuleTest(integration.ModuleCase,
 
         # Then, test the result of the state run when changes are not expected to happen
         test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
-        expected_result = 'State was not run because onchanges req did not change'
+        expected_result = 'State was not run because none of the onchanges reqs changed'
         self.assertIn(expected_result, test_data)
 
     # onfail tests

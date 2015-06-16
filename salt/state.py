@@ -1746,7 +1746,9 @@ class State(object):
                 if r_state == 'onchanges':
                     if not run_dict[tag]['changes']:
                         fun_stats.add('onchanges')
-                        continue
+                    else:
+                        fun_stats.add('onchangesmet')
+                    continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
                     continue
@@ -1768,7 +1770,7 @@ class State(object):
                 status = 'pre'
         elif 'onfail' in fun_stats:
             status = 'onfail'
-        elif 'onchanges' in fun_stats:
+        elif 'onchanges' in fun_stats and not 'onchangesmet' in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
             status = 'change'
@@ -1992,7 +1994,7 @@ class State(object):
         elif status == 'onchanges':
             running[tag] = {'changes': {},
                             'result': True,
-                            'comment': 'State was not run because onchanges req did not change',
+                            'comment': 'State was not run because none of the onchanges reqs changed',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1

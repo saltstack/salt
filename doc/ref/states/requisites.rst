@@ -326,6 +326,9 @@ The ``onchanges`` requisite makes a state only apply if the required states
 generate changes, and if the watched state's "result" is ``True``. This can be
 a useful way to execute a post hook after changing aspects of a system.
 
+If a state has multiple ``onchanges`` requisites then the state will trigger
+if any of the watched states changes.
+
 use
 ~~~
 
