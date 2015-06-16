@@ -83,10 +83,13 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     image_id = avail_images()[vm_['image']]['id']
-    public_ips = list_public_ips()
-    if len(public_ips.keys()) < 1:
-        raise SaltCloudException('No more IPs available')
-    host_ip = public_ips.keys()[0]
+    if 'assign_public_ip' in vm_:
+        host_ip = vm_['assign_public_ip']
+    else:
+        public_ips = list_public_ips()
+        if len(public_ips.keys()) < 1:
+            raise SaltCloudException('No more IPs available')
+        host_ip = public_ips.keys()[0]
 
     create_kwargs = {
         'name': vm_['name'],
