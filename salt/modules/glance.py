@@ -46,6 +46,7 @@ try:
     import logging
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger(__name__)
+    #import pprint
 except ImportError:
     pass
 
@@ -140,8 +141,8 @@ def _auth(profile=None, **connection_args):
             '{0}, **{1})'.format(endpoint, kwargs))
         return client.Client(endpoint, **kwargs)
     else:
-        raise NotImplementedError, \
-            "Can't retrieve a auth_token without keystone"
+        raise NotImplementedError(
+            "Can't retrieve a auth_token without keystone")
 
 def image_create(profile=None, **kwargs):
     '''
@@ -248,24 +249,35 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_list
     '''
     nt_ks = _auth(profile)
+    #pformat = pprint.PrettyPrinter(indent=4).pformat
     ret = {}
     for image in nt_ks.images.list():
+        #log.debug('Details for image "{0}":'.format(image.name) + \
+        #    '\n{0}'.format(pformat(image)))
+        #
+        # Changes from v1 API:
+        # * +file
+        # * +tags
+        # * -checksum
+        # * -deleted
+        # * is_public=True -> visibility='public'
+        #
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
-                'checksum': image.checksum,
                 'container_format': image.container_format,
                 'created_at': image.created_at,
-                'deleted': image.deleted,
                 'disk_format': image.disk_format,
-                'is_public': image.is_public,
+                'file': image.file,
                 'min_disk': image.min_disk,
                 'min_ram': image.min_ram,
                 'owner': image.owner,
                 'protected': image.protected,
                 'size': image.size,
                 'status': image.status,
+                'tags': image.tags,
                 'updated_at': image.updated_at,
+                'visibility': image.visibility,
             }
         if id == image.id:
             return ret[image.name]
