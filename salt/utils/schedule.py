@@ -263,7 +263,6 @@ import datetime
 import itertools
 import multiprocessing
 import threading
-import sys
 import logging
 import errno
 import random
@@ -321,7 +320,7 @@ class Schedule(object):
         self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
-        self.loop_interval = sys.maxint
+        self.loop_interval = six.MAXSIZE
         clean_proc_dir(opts)
 
     def option(self, opt):

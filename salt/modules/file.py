@@ -357,7 +357,7 @@ def set_mode(path, mode):
     '''
     path = os.path.expanduser(path)
 
-    mode = str(mode).lstrip('0')
+    mode = str(mode).lstrip('0Oo')
     if not mode:
         mode = '0'
     if not os.path.exists(path):
@@ -4211,7 +4211,7 @@ def mknod_chrdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFCHR,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFCHR,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4286,7 +4286,7 @@ def mknod_blkdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFBLK,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFBLK,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4357,7 +4357,7 @@ def mknod_fifo(name,
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
-            if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
+            if os.mkfifo(name, int(str(mode).lstrip('0Oo'), 8)) is None:
                 ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:

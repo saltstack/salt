@@ -247,7 +247,8 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        match = cls.git_describe_regex.match(version_string.decode())
+        s = version_string.decode() if isinstance(version_string, bytes) else version_string
+        match = cls.git_describe_regex.match(s)
         if not match:
             raise ValueError(
                 'Unable to parse version string: {0!r}'.format(version_string)

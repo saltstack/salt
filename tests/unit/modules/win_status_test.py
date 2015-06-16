@@ -5,6 +5,9 @@ from __future__ import absolute_import
 import sys
 import types
 
+# Import Salt libs
+import salt.ext.six as six
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -102,7 +105,7 @@ class TestProcsAttributes(TestProcsBase):
 class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
         unicode_str = u'\xc1'
-        self.utf8str = unicode_str.encode('utf8')
+        self.ustr = unicode_str.encode('utf8') if six.PY2 else unicode_str
         pid = 100
         self.add_process(
             pid=pid,
@@ -114,16 +117,16 @@ class TestProcsUnicodeAttributes(TestProcsBase):
         self.proc = self.result[pid]
 
     def test_process_cmd_is_utf8(self):
-        self.assertEqual(self.proc['cmd'], self.utf8str)
+        self.assertEqual(self.proc['cmd'], self.ustr)
 
     def test_process_name_is_utf8(self):
-        self.assertEqual(self.proc['name'], self.utf8str)
+        self.assertEqual(self.proc['name'], self.ustr)
 
     def test_process_user_is_utf8(self):
-        self.assertEqual(self.proc['user'], self.utf8str)
+        self.assertEqual(self.proc['user'], self.ustr)
 
     def test_process_user_domain_is_utf8(self):
-        self.assertEqual(self.proc['user_domain'], self.utf8str)
+        self.assertEqual(self.proc['user_domain'], self.ustr)
 
 
 class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):
