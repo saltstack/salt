@@ -783,7 +783,7 @@ def show_pricing(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_pricing my-digitalocean-config my-profile
+        salt-cloud -f show_pricing my-digitalocean-config profile=my-profile
     '''
     profile = __opts__['profiles'].get(kwargs['profile'], {})
     if not profile:
