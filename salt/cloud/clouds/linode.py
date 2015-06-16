@@ -5,7 +5,8 @@ Linode Cloud Module using Linode's REST API
 
 The Linode cloud module is used to control access to the Linode VPS system.
 
-Use of this module only requires the ``apikey`` parameter.
+Use of this module only requires the ``apikey`` parameter. However, the default root password for new instances
+also needs to be set. The password needs to be 8 characters and contain lowercase, uppercase, and numbers.
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/linode.conf``:
 
@@ -14,6 +15,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
     my-linode-config:
       # Linode account api key
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+      password: F00barbaz
       provider: linode
 
 When used with linode-python, this provider supports cloning existing Linodes. To clone, add a profile with a
