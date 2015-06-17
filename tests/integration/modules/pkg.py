@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import (
     destructiveTest,
@@ -120,6 +122,10 @@ class PkgModuleTest(integration.ModuleCase,
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
         os_major_release = self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease']
         available = self.run_function('sys.doc', ['pkg.hold'])
+
+        if os_family == 'RedHat':
+            if os_major_release == '5':
+                self.skipTest('`yum versionlock` does not seem to work on RHEL/CentOS 5')
 
         if available:
             if os_family == 'RedHat':
