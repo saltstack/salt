@@ -24,4 +24,3 @@ def file(suffix='', prefix='tmp', dir=None):
     see tempfile.mkstemp function
     '''
     return tempfile.mkstemp(suffix, prefix, dir)[1]
-
