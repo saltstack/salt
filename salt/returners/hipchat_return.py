@@ -73,7 +73,6 @@ import json
 import pprint
 import logging
 
-from requests.exceptions import ConnectionError
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
