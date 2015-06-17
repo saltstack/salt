@@ -105,7 +105,6 @@ SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
-SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'cloud.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 
 # Salt SSH Packaging Detection
@@ -740,8 +739,7 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_extras_require(self):
         if self.ssh_packaging:
             return {}
-        return {'RAET': _parse_requirements_file(SALT_RAET_REQS),
-                'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)}
+        return {'RAET': _parse_requirements_file(SALT_RAET_REQS)}
 
     @property
     def _property_scripts(self):
