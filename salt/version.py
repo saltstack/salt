@@ -542,6 +542,7 @@ def versions_information(include_salt_cloud=False):
         ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
+        ('Tornado', 'tornado', 'version'),
     ]
 
     if include_salt_cloud:
