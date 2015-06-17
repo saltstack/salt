@@ -387,8 +387,14 @@ class CloudClient(object):
         ret = {}
         for name in names:
             vm_ = kwargs.copy()
+
+            # Since using "provider: <provider-engine>" is deprecated, alias provider
+            # to use driver: "driver: <provider-engine>"
+            if 'provider' in vm_:
+                vm_['driver'] = vm_.pop('provider')
+
             vm_['name'] = name
-            vm_['provider'] = provider
+            vm_['driver'] = provider
             vm_['profile'] = None
             ret[name] = salt.utils.cloud.simple_types_filter(
                 mapper.create(vm_))
