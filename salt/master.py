@@ -1893,11 +1893,17 @@ class ClearFuncs(object):
 
         check_fun = getattr(self.ckminions,
                             '{auth}_check'.format(auth=auth_type))
-        good = check_fun(
-            self.opts['external_auth'][token['eauth']][token['name']]
-            if token['name'] in self.opts['external_auth'][token['eauth']]
-            else self.opts['external_auth'][token['eauth']]['*'],
-            fun)
+        if token['name'] in self.opts['external_auth'][token['eauth']]:
+            good = check_fun(self.opts['external_auth'][token['eauth']][token['name']], fun)
+        elif any(key.endswith('%') for key in self.opts['external_auth'][token['eauth']]):
+            for group in self.opts['external_auth'][token['eauth']]:
+                if group.endswith('%'):
+                    for group in self.opts['external_auth'][token['eauth']]:
+                        good = check_fun(self.opts['external_auth'][token['eauth']][group], fun)
+                        if good:
+                            break
+        else:
+            good = check_fun(self.opts['external_auth'][token['eauth']]['*'], fun)
         if not good:
             msg = ('Authentication failure of type "token" occurred for '
                    'user {0}.').format(token['name'])
@@ -1941,13 +1947,19 @@ class ClearFuncs(object):
             log.warning(msg)
             return dict(error=dict(name='EauthAuthenticationError',
                                    message=msg))
+
         check_fun = getattr(self.ckminions,
                             '{auth}_check'.format(auth=auth_type))
-        good = check_fun(
-            self.opts['external_auth'][clear_load['eauth']][name]
-            if name in self.opts['external_auth'][clear_load['eauth']]
-            else self.opts['external_auth'][clear_load['eauth']]['*'],
-            clear_load['fun'])
+        if name in self.opts['external_auth'][clear_load['eauth']]:
+            good = check_fun(self.opts['external_auth'][clear_load['eauth']][name], clear_load['fun'])
+        elif any(key.endswith('%') for key in self.opts['external_auth'][clear_load['eauth']]):
+            for group in self.opts['external_auth'][clear_load['eauth']]:
+                if group.endswith('%'):
+                    good = check_fun(self.opts['external_auth'][clear_load['eauth']][group], clear_load['fun'])
+                    if good:
+                        break
+        else:
+            good = check_fun(self.opts['external_auth'][clear_load['eauth']]['*'], clear_load['fun'])
         if not good:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
