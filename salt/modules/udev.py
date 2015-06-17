@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage and query udev info
+
+.. versionadded:: 2015.5.0
+
 '''
 from __future__ import absolute_import
 
@@ -26,7 +29,13 @@ def __virtual__():
 def info(dev):
     '''
     Extract all info delivered by udevadm
-    Get it all into a semi-nice dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' udev.info /dev/sda
+        salt '*' udev.info /sys/class/net/eth0
     '''
     if 'sys' in dev:
         qtype = 'path'
@@ -74,27 +83,55 @@ def info(dev):
 
 def env(dev):
     '''
-    Return the environment variables available to udev for dev
+    Return all environment variables udev has for dev
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' udev.env /dev/sda
+        salt '*' udev.env /sys/class/net/eth0
     '''
     return info(dev).get('E', None)
 
 
 def name(dev):
     '''
-    Return the name(s?) according to udev for dev
+    Return the actual dev name(s?) according to udev for dev
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' udev.dev /dev/sda
+        salt '*' udev.dev /sys/class/net/eth0
     '''
     return info(dev).get('N', None)
 
 
 def path(dev):
     '''
-    Return the physical path(s?) according to udev for dev
+    Return the physical device path(s?) according to udev for dev
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' udev.path /dev/sda
+        salt '*' udev.path /sys/class/net/eth0
     '''
     return info(dev).get('P', None)
 
 
 def links(dev):
     '''
-    Return all udev-created symlinks
+    Return all udev-created device symlinks
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' udev.links /dev/sda
+        salt '*' udev.links /sys/class/net/eth0
     '''
     return info(dev).get('S', None)
