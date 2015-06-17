@@ -291,16 +291,10 @@ def load_states():
     states = {}
 
     # the loader expects to find pillar & grain data
-    __opts__['grains'] = __grains__
+    __opts__['grains'] = salt.loader.grains(__opts__)
     __opts__['pillar'] = __pillar__
-
-    lazy_states = salt.loader.LazyLoader(
-        salt.loader._module_dirs(__opts__, 'states', 'states'),
-        __opts__,
-        tag='states',
-        pack={'__salt__': __salt__},
-        virtual_enable=True,
-    )
+    lazy_funcs = salt.loader.minion_mods(__opts__)
+    lazy_states = salt.loader.states(__opts__, lazy_funcs)
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
     for key, func in six.iteritems(lazy_states):
