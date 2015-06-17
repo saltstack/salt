@@ -114,20 +114,23 @@ class FunctionWrapper(object):
                     minion_opts=self.minion_opts,
                     **self.kwargs
             )
-            stdout, stderr, _ = single.cmd_block()
+            stdout, stderr, retcode = single.cmd_block()
             if stderr.count('Permission Denied'):
                 return {'_error': 'Permission Denied',
                         'stdout': stdout,
-                        'stderr': stderr}
+                        'stderr': stderr
+                        'retcode': retcode}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
+                ret.update({'retcode': retcode})
             except ValueError:
                 ret = {'_error': 'Failed to return clean data',
                        'stderr': stderr,
-                       'stdout': stdout}
+                       'stdout': stdout,
+                       'retcode': retcode}
             return ret
         return caller
 
