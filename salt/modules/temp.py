@@ -41,3 +41,4 @@ def file(suffix='', prefix='tmp', parent=None):
         salt '*' temp.file prefix='mytemp-' parent='/var/run/'
     '''
     return tempfile.mkstemp(suffix, prefix, parent)[1]
+
