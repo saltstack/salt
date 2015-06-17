@@ -117,9 +117,7 @@ class RiakTestCase(TestCase):
         Test Riak Service List
         '''
         with patch.object(riak, '__execute_cmd', return_value={'stdout': '[a,b,c]'}):
-            self.assertEqual(
-                riak.services(), ['a','b','c']
-            )
+            self.assertEqual(riak.services(), ['a', 'b', 'c'])
 
 if __name__ == '__main__':
     from integration import run_tests
