@@ -43,6 +43,7 @@ from __future__ import absolute_import
 # Import python libs
 import glob
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -170,8 +171,12 @@ def _upstart_is_disabled(name):
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    return os.access('/etc/init/{0}.override'.format(name), os.R_OK)
-
+    files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
+    for file_name in filter(os.path.isfile, files):
+        with salt.utils.fopen(file_name) as fp_:
+            if re.search('^\s*manual', fp_.read(), re.MULTILINE):
+                return True
+    return False
 
 def _upstart_is_enabled(name):
     '''
@@ -436,9 +441,11 @@ def _upstart_disable(name):
     '''
     Disable an Upstart service.
     '''
+    if _upstart_is_disabled(name):
+        return _upstart_is_disabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    with salt.utils.fopen(override, 'w') as ofile:
-        ofile.write('manual')
+    with salt.utils.fopen(override, 'a') as ofile:
+        ofile.write('manual\n')
     return _upstart_is_disabled(name)
 
 
@@ -446,8 +453,17 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
+    if _upstart_is_enabled(name):
+        return _upstart_is_enabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    if os.access(override, os.R_OK):
+    files = ['/etc/init/{0}.conf'.format(name), override]
+    for file_name in filter(os.path.isfile, files):
+        with salt.utils.fopen(file_name, 'r+') as fp_:
+            new_text = re.sub('^\s*manual\n?', '', fp_.read(), 0, re.MULTILINE)
+            fp_.seek(0)
+            fp_.write(new_text)
+            fp_.truncate()
+    if os.access(override, os.R_OK) and os.path.getsize(override) == 0:
         os.unlink(override)
     return _upstart_is_enabled(name)
 
