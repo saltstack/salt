@@ -1133,4 +1133,3 @@ def get_route(ip):
         return ret
     else:
         raise CommandExecutionError('Not yet supported on this platform')
-
