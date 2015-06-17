@@ -172,11 +172,12 @@ def _upstart_is_disabled(name):
     in /etc/init/[name].conf.
     '''
     files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
-    for file_name in filter(os.path.isfile, files):
+    for file_name in itertools.ifilter(os.path.isfile, files):
         with salt.utils.fopen(file_name) as fp_:
-            if re.search('^\s*manual', fp_.read(), re.MULTILINE):
+            if re.search(r'^\s*manual', fp_.read(), re.MULTILINE):
                 return True
     return False
+
 
 def _upstart_is_enabled(name):
     '''
@@ -457,9 +458,9 @@ def _upstart_enable(name):
         return _upstart_is_enabled(name)
     override = '/etc/init/{0}.override'.format(name)
     files = ['/etc/init/{0}.conf'.format(name), override]
-    for file_name in filter(os.path.isfile, files):
+    for file_name in itertools.ifilter(os.path.isfile, files):
         with salt.utils.fopen(file_name, 'r+') as fp_:
-            new_text = re.sub('^\s*manual\n?', '', fp_.read(), 0, re.MULTILINE)
+            new_text = re.sub(r'^\s*manual\n?', '', fp_.read(), 0, re.MULTILINE)
             fp_.seek(0)
             fp_.write(new_text)
             fp_.truncate()
