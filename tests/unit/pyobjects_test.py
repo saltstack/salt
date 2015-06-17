@@ -22,7 +22,6 @@ from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
                                   SaltObject, InvalidFunction, DuplicateState)
-
 File = StateFactory('file')
 Service = StateFactory('service')
 
