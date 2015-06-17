@@ -245,3 +245,45 @@ def status():
             ret[name.strip()] = val.strip()
 
     return ret
+
+
+def test():
+    '''
+    Runs a test of a few standard Riak operations
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' riak.test
+    '''
+    ret = {'comment': '', 'success': False}
+
+    cmd = __execute_cmd('riak-admin', 'test')
+
+    if cmd['retcode'] != 0:
+        ret['comment'] = cmd['stdout']
+    else:
+        ret['comment'] = cmd['stdout']
+        ret['success'] = True
+
+    return ret
+
+
+def services():
+    '''
+    List available services on a node
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' riak.services
+    '''
+    cmd = __execute_cmd('riak-admin', 'services')
+
+    return cmd['stdout'][1:-1].split(',')
