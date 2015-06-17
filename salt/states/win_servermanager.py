@@ -38,7 +38,7 @@ def installed(name, recurse=False, force=False):
     if name not in __salt__['win_servermanager.list_installed']():
         ret['changes'] = {'feature': '{0} will be installed recurse={1}'.format(name, recurse)}
     elif force and recurse:
-        ret['changes'] = {'feature': 'already installed but might install sub-features'.format(name)}
+        ret['changes'] = {'feature': '{0} already installed but might install sub-features'.format(name)}
     else:
         ret['comment'] = 'The feature {0} is already installed'.format(name)
         return ret
@@ -49,8 +49,16 @@ def installed(name, recurse=False, force=False):
 
     # Install the features
     ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse)}
-    ret['result'] = ret['changes']['feature']['Success'] == 'True'
-    if not ret['result']:
-        ret['comment'] = 'failed to install the feature: {0}'.format(ret['changes']['feature']['ExitCode'])
+
+    if 'Success' in ret['changes']['feature']:
+        ret['result'] = ret['changes']['feature']['Success'] == 'True'
+        if not ret['result']:
+            ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
+        else:
+            ret['comment'] = 'Installed {0}'.format(name)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Failed to install {0}.\nError Message:\n{1}'.format(name, ret['changes']['feature']['message'])
+        ret['changes'] = {}
 
     return ret

@@ -36,6 +36,8 @@ def _srvmgr(func):
 def _parse_powershell_list(lst):
     '''
     Parse command output when piped to format-list
+    Need to look at splitting with ':' so you can get the full value
+    Need to check for error codes and return false if it's trying to parse
     '''
     ret = {}
     for line in lst.splitlines():
@@ -46,6 +48,7 @@ def _parse_powershell_list(lst):
             #                    baz}
             if len(splt) > 2:
                 ret[splt[0]] = splt[2]
+    ret['message'] = lst
     return ret
 
 
