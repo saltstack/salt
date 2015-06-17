@@ -24,11 +24,11 @@ send the provisioning commands up to the freshly created virtual machine.
     # /etc/salt/cloud.providers.d/ directory.
 
     my-joyent-config:
-        provider: joyent
-        user: fred
-        password: saltybacon
-        private_key: /root/mykey.pem
-        keyname: mykey
+      driver: joyent
+      user: fred
+      password: saltybacon
+      private_key: /root/mykey.pem
+      keyname: mykey
 
 
 Profiles

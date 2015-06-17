@@ -16,7 +16,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser
       password: mypassword
       url: https://api.cloud.xmission.com:4465/paci/v1.0/
-      provider: parallels
+      driver: parallels
 
 '''
 

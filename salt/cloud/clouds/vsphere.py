@@ -34,7 +34,7 @@ configuration at:
 .. code-block:: yaml
 
     my-vsphere-config:
-      provider: vsphere
+      driver: vsphere
       user: myuser
       password: verybadpass
       url: 'https://10.1.1.1:443'

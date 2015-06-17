@@ -18,7 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       apikey: asdff7896asdh789
       # The apikey's shared secret
       sharedsecret: saltybacon
-      provider: gogrid
+      driver: gogrid
 
 '''
 from __future__ import absolute_import

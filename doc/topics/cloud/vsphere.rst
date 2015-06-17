@@ -39,7 +39,7 @@ Set up the cloud config at ``/etc/salt/cloud.providers`` or in the
 .. code-block:: yaml
 
     my-vsphere-config:
-      provider: vsphere
+      driver: vsphere
       # Set the vSphere access credentials
       user: marco
       password: polo

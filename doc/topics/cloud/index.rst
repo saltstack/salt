@@ -30,7 +30,7 @@ provider to this file. Here is an example for Amazon EC2:
 .. code-block:: yaml
 
     my-ec2:
-      provider: ec2
+      driver: ec2
       # Set the EC2 access credentials (see below)
       #
       id: 'HJGRYCILJLKJYG'

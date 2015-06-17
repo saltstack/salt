@@ -45,7 +45,7 @@ examples could be set up in the cloud configuration at
 
       ssh_key_name: mykey
 
-      provider: nova
+      driver: nova
       userdata_file: /tmp/userdata.txt
 
 For local installations that only use private IP address ranges, the
@@ -67,7 +67,7 @@ accept them
       user: myusername
       password: mypassword
       tenant: <userid>
-      provider: nova
+      driver: nova
 
     my-api:
       identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
@@ -76,7 +76,7 @@ accept them
       api_key: <api_key>
       os_auth_plugin: rackspace
       tenant: <userid>
-      provider: nova
+      driver: nova
       networks:
         - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
         - net-id: 00000000-0000-0000-0000-000000000000

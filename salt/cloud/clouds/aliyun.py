@@ -20,7 +20,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # aliyun Access Key Secret
       key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
-      provider: aliyun
+      driver: aliyun
 
 :depends: requests
 '''

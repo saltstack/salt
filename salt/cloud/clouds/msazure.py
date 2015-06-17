@@ -31,7 +31,7 @@ Example ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-azure-config:
-      provider: azure
+      driver: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net

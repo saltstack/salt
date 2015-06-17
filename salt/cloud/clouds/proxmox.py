@@ -18,7 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
-      provider: proxmox
+      driver: proxmox
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
 :maturity: new
