@@ -23,7 +23,7 @@ Assigned codenames:
 
 - Hydrogen: ``2014.1.0``
 - Helium: ``2014.7.0``
-- Lithium: ``2015.5``
+- Lithium: ``2015.5.0``
 - Beryllium: ``TBD``
 - Boron: ``TBD``
 
