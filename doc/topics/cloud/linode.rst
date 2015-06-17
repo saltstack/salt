@@ -61,6 +61,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
       provider: my-linode-config
       size: Linode 1024
       image: Arch Linux 2013.06
+      location: london
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -118,6 +119,31 @@ command:
                     Arch Linux 2013.06
                 uuid:
                     8457f92eaffc92b7666b6734a96ad7abe1a8a6dd
+    ...SNIP...
+
+
+Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
+command:
+
+.. code-block:: bash
+
+    # salt-cloud --list-locations my-linode-config
+    my-linode-config:
+        ----------
+        linode:
+            ----------
+            Atlanta, GA, USA:
+                ----------
+                abbreviation:
+                    atlanta
+                id:
+                    4
+            Dallas, TX, USA:
+                ----------
+                abbreviation:
+                    dallas
+                id:
+                    2
     ...SNIP...
 
 
