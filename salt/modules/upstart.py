@@ -44,6 +44,7 @@ from __future__ import absolute_import
 import glob
 import os
 import re
+import itertools
 
 # Import salt libs
 import salt.utils
