@@ -66,7 +66,6 @@ Example output:
 from __future__ import absolute_import
 import pprint
 import textwrap
-import collections
 
 # Import salt libs
 import salt.utils
@@ -249,7 +248,7 @@ def _format_host(host, data):
                         u'\n' + u' ' * 14)
             # If there is a data attribute, append it to the comment
             if 'data' in ret:
-                if isinstance(ret['data'], list): 
+                if isinstance(ret['data'], list):
                     for item in ret['data']:
                         comment = '{0} {1}'.format(comment, item)
                 elif isinstance(ret['data'], dict):
