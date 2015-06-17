@@ -33,14 +33,19 @@ def _config():
     '''
     Get configuration items for URL, Username and Password
     '''
-    status_url = __salt__['config.get']('nagios:status_url', '')
+    status_url = __salt__['config.get']('nagios.status_url') or \
+        __salt__['config.get']('nagios:status_url')
     if not status_url:
         raise CommandExecutionError('Missing Nagios URL in the configuration.')
 
+    username = __salt__['config.get']('nagios.username') or \
+        __salt__['config.get']('nagios:username')
+    password = __salt__['config.get']('nagios.password') or \
+        __salt__['config.get']('nagios:password')
     return {
         'url': status_url,
-        'username': __salt__['config.get']('nagios:username', ''),
-        'password': __salt__['config.get']('nagios:password', ''),
+        'username': username,
+        'password': password
     }
 
 
