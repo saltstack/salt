@@ -631,9 +631,12 @@ class MultiMinion(MinionBase):
                 if package:
                     try:
                         for master in masters:
-                            minions[master].handle_event(package)
+                            if 'minion' in minions[master]:
+                                minions[master]['minion'].handle_event(package)
                     except Exception:
-                        pass
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+                        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+                        log.debug(lines)
                     finally:
                         package = None
 
