@@ -61,7 +61,7 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Password defaults to None
       ssh_gateway_password: ExamplePasswordHere
 
-      provider: ec2
+      driver: ec2
 
 :depends: requests
 '''

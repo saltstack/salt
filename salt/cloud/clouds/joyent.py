@@ -11,7 +11,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-joyent-config:
-      provider: joyent
+      driver: joyent
       # The Joyent login user
       user: fred
       # The Joyent user's password

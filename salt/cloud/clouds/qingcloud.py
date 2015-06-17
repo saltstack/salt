@@ -17,7 +17,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-qingcloud:
-      provider: qingcloud
+      driver: qingcloud
       access_key_id: AKIDMRTGYONNLTFFRBQJ
       secret_access_key: clYwH21U5UOmcov4aNV2V2XocaHCG3JZGcxEczFu
       zone: pek2

@@ -17,7 +17,7 @@ at ``/etc/salt/cloud.providers`` or
       xml_rpc: http://localhost:2633/RPC2
       user: oneadmin
       password: JHGhgsayu32jsa
-      provider: opennebula
+      driver: opennebula
 
 '''
 from __future__ import absolute_import
