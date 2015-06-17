@@ -470,14 +470,6 @@ class CloudClient(object):
                 'Either an instance or a provider must be specified.'
             )
 
-        return salt.utils.cloud.simple_types_filter(
-            mapper.run_profile(fun, names)
-        )
-
-    # map
-    # create
-    # destroy
-
 
 class Cloud(object):
     '''
@@ -530,8 +522,6 @@ class Cloud(object):
                         lookup, ', '.join(self.get_configured_providers())
                     )
                 )
-
-            return set((alias, driver))
 
         providers = set()
         for alias, drivers in six.iteritems(self.opts['providers']):
