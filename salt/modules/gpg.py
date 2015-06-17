@@ -647,14 +647,14 @@ def import_key(user=None,
     log.debug('imported_data {0}'.format(list(import_result.__dict__.keys())))
     log.debug('imported_data {0}'.format(counts))
 
-    if counts['imported'] or counts['imported_rsa']:
+    if counts.get('imported') or counts.get('imported_rsa'):
         ret['message'] = 'Successfully imported key(s).'
-    elif counts['unchanged']:
+    elif counts.get('unchanged'):
         ret['message'] = 'Key(s) already exist in keychain.'
-    elif counts['not_imported']:
+    elif counts.get('not_imported'):
         ret['res'] = False
         ret['message'] = 'Unable to import key.'
-    elif not counts['count']:
+    elif not counts.get('count'):
         ret['res'] = False
         ret['message'] = 'Unable to import key.'
 
