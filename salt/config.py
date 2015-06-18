@@ -2229,11 +2229,11 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
                 else:
                     value = deepcopy(opts['profiles'][vm_['profile']][name])
 
-        # Since using "provider: <provider-engine>" is deprecated, alias provider 
+        # Since using "provider: <provider-engine>" is deprecated, alias provider
         # to use driver: "driver: <provider-engine>"
         if 'provider' in vm_:
             vm_['driver'] = vm_.pop('provider')
-            
+
         # Let's get the value from the provider, if present.
         if ':' in vm_['driver']:
             # The provider is defined as <provider-alias>:<driver-name>

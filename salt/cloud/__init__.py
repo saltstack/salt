@@ -1153,7 +1153,7 @@ class Cloud(object):
             'minion', vm_, self.opts, default={}
         )
 
-        # Since using "provider: <provider-engine>" is deprecated, alias provider 
+        # Since using "provider: <provider-engine>" is deprecated, alias provider
         # to use driver: "driver: <provider-engine>"
         if 'provider' in vm_:
             vm_['driver'] = vm_.pop('provider')
