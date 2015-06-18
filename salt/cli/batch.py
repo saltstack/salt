@@ -170,7 +170,8 @@ class Batch(object):
                                 parts[minion]['ret'] = {}
 
             for minion, data in parts.items():
-                active.remove(minion)
+                if minion in active:
+                    active.remove(minion)
                 if self.opts.get('raw'):
                     yield data
                 else:
