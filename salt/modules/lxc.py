@@ -293,7 +293,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         Use snapshot when cloning the container source
     vgname
         if using LVM: vgname
-    lgname
+    lvname
         if using LVM: lvname
     ip
         ip for the primary nic
@@ -1890,7 +1890,7 @@ def create(name,
         cmd += ' -B {0}'.format(backing)
         if backing in ('lvm',):
             if lvname:
-                cmd += ' --lvname {0}'.format(vgname)
+                cmd += ' --lvname {0}'.format(lvname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
         if backing not in ('dir', 'overlayfs'):
