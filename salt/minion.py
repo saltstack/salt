@@ -770,7 +770,7 @@ class Minion(MinionBase):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'str':
+        if opts['master_type'] != 'standard':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
@@ -788,17 +788,20 @@ class Minion(MinionBase):
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
                 log.info('Evaluated master from module: {0}'.format(master_mod))
 
-            # if failover is set, master has to be of type list
+            # if failover is set, the first time through, opts['master'] is a list.
             elif opts['master_type'] == 'failover':
                 if isinstance(opts['master'], list):
                     log.info('Got list of available master addresses:'
                              ' {0}'.format(opts['master']))
+                    opts['master_list'] = opts['master']
+                    opts['master_active_list'] = opts['master']
                     if opts['master_shuffle']:
-                        shuffle(opts['master'])
-                elif isinstance(opts['master'], str):
+                        shuffle(opts['master_list'])
+                elif isinstance(opts['master_list'], str):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
-                    opts['master'] = list(opts['master'])
+                    opts['master_list'] = list(opts['master'])
+                    opts['master_active_list'] = list(opts['master'])
                 elif opts['__role'] == 'syndic':
                     log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
 
@@ -810,7 +813,7 @@ class Minion(MinionBase):
                     log.info('Removing possibly failed master {0} from list of'
                              ' masters'.format(opts['master']))
                     # create new list of master with the possibly failed one removed
-                    opts['master'] = [x for x in opts['master_list'] if opts['master'] != x]
+                    opts['master_active_list'] = [x for x in opts['master_active_list'] if opts['master'] != x]
 
                 else:
                     msg = ('master_type set to \'failover\' but \'master\' '
@@ -824,12 +827,17 @@ class Minion(MinionBase):
                 log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
+        # if the master_active_list is empty, reset with the original list
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
-        if isinstance(opts['master'], list):
+        if not opts['master_active_list']:
+            log.info('List of active masters is empty, try all masters from the top.')
+            opts['master_active_list'] = opts['master_list']
+
+        if isinstance(opts['master_active_list'], list):
             conn = False
             # shuffle the masters and then loop through them
-            local_masters = copy.copy(opts['master'])
+            local_masters = opts['master_active_list']
 
             for master in local_masters:
                 opts['master'] = master
@@ -838,8 +846,10 @@ class Minion(MinionBase):
 
                 # on first run, update self.opts with the whole master list
                 # to enable a minion to re-use old masters if they get fixed
-                if 'master_list' not in self.opts:
-                    self.opts['master_list'] = local_masters
+                # if 'master_list' not in self.opts:
+                #    self.opts['master_list'] = local_masters
+                # cro: I don't think we need this because we are getting master_list
+                # from above.
 
                 try:
                     if self.authenticate(timeout, safe) != 'full':
@@ -1690,9 +1700,10 @@ class Minion(MinionBase):
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif package.startswith('__master_disconnected'):
             tag, data = salt.utils.event.MinionEvent.unpack(package)
-            # if the master disconnect event is for a different master, raise an exception
+            # if the master disconnect event is for a different master, ignore
             if data['master'] != self.opts['master']:
-                raise Exception()
+                return self.opts['master']
+            #    raise Exception()
             if self.connected:
                 # we are not connected anymore
                 self.connected = False
