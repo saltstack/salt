@@ -32,7 +32,8 @@ if NO_MOCK is False:
 import salt.modules.win_status as status
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+
+@skipIf(NO_MOCK or sys.stdin.encoding != 'UTF8', 'Mock is not installed or encoding not supported')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
