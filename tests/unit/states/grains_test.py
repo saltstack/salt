@@ -16,7 +16,7 @@ from salt.states import grains as grains
 
 grainsmod.__opts__ = grains.__opts__ = {
     'test': False,
-    'conf_file': '/tmp/__salt_test_state_grains',
+    'conf_file': '/tmp/__salt_test_state_grains_config/minion',
     'cachedir':  '/tmp/__salt_test_state_grains_cache_dir',
 }
 
