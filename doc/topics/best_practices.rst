@@ -320,7 +320,7 @@ modification of static values:
         'Debian': {
             'server': 'apache2',
             'service': 'apache2',
-             'conf': '/etc/apache2/apache.conf',
+            'conf': '/etc/apache2/apache.conf',
         },
         'RedHat': {
             'server': 'httpd',
@@ -376,7 +376,7 @@ to be broken into two states.
         'Debian': {
             'server': 'apache2',
             'service': 'apache2',
-             'conf': '/etc/apache2/apache.conf',
+            'conf': '/etc/apache2/apache.conf',
         },
         'RedHat': {
             'server': 'httpd',
