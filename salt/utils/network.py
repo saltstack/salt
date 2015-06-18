@@ -992,9 +992,9 @@ def mac2eui64(mac, prefix=None):
     or, with prefix provided, a full IPv6 address
     '''
     # http://tools.ietf.org/html/rfc4291#section-2.5.1
-    eui64 = mac.split(':')
-    eui64 = eui64[0:3] + ['ff', 'fe'] + eui64[3:]
-    eui64[0] = hex(int(eui64[0], 16) | 2)[2:]
+    eui64 = re.sub(r'[.:-]', '', mac).lower()
+    eui64 = eui64[0:6] + 'fffe' + eui64[6:]
+    eui64 = hex(int(eui64[0:2], 16) | 2)[2:] + eui64[2:]
 
     if prefix is None:
         return '{0}{1}:{2}{3}:{4}{5}:{6}{7}'.format(*eui64)
