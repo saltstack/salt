@@ -455,21 +455,6 @@ behavior is to have time-frame within all minions try to reconnect.
 
     recon_randomize: True
 
-.. conf_minion:: dns_check
-
-``dns_check``
--------------
-
-Default: ``True``
-
-When healing, a dns_check is run. This is to make sure that the originally
-resolved dns has not changed. If this is something that does not happen in your
-environment, set this value to ``False``.
-
-.. code-block:: yaml
-
-    dns_check: True
-
 .. conf_minion:: cache_sreqs
 
 ``cache_sreqs``

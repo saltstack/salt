@@ -339,11 +339,11 @@ communication.
 ``enable_gpu_grains``
 ---------------------
 
-Default: ``False``
+Default: ``True``
 
-The master can take a while to start up when lspci and/or dmidecode is used
-to populate the grains for the master. Enable if you want to see GPU hardware
-data for your master.
+Enable GPU hardware data for your master. Be aware that the master can
+take a while to start up when lspci and/or dmidecode is used to populate the
+grains for the master.
 
 .. conf_master:: job_cache
 

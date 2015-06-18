@@ -731,7 +731,7 @@ class MWorker(multiprocessing.Process):
         if 'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
             return {}
-        log.info('AES payload received with command {0}'.format(data['cmd']))
+        log.trace('AES payload received with command {0}'.format(data['cmd']))
         if data['cmd'].startswith('__'):
             return False
         return self.aes_funcs.run_func(data['cmd'], data)
