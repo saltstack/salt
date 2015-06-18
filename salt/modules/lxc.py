@@ -1890,7 +1890,7 @@ def create(name,
         cmd += ' -B {0}'.format(backing)
         if backing in ('lvm',):
             if lvname:
-                cmd += ' --lvname {0}'.format(vgname)
+                cmd += ' --lvname {0}'.format(lvname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
         if backing not in ('dir', 'overlayfs'):
