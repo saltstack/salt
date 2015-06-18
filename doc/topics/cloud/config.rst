@@ -94,7 +94,7 @@ For example:
         keyname: test
         securitygroup: quick-start
         private_key: /root/test.pem
-        driver: aws
+        driver: ec2
 
       - user: example_user
         apikey: 123984bjjas87034
@@ -107,12 +107,12 @@ The provider alias needs to have the provider key value appended as in the follo
 .. code-block:: yaml
 
     rhel_aws_dev:
-      provider: production-config:aws
+      provider: production-config:ec2
       image: ami-e565ba8c
       size: t1.micro
 
     rhel_aws_prod:
-      provider: production-config:aws
+      provider: production-config:ec2
       image: ami-e565ba8c
       size: High-CPU Extra Large Instance
 
