@@ -803,7 +803,8 @@ class Minion(MinionBase):
                 elif isinstance(opts['master_list'], str):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
-                    opts['master'] = [opts['master']]
+                    opts['master_list'] = list(opts['master'])
+                    opts['master_active_list'] = list(opts['master'])
                 elif opts['__role'] == 'syndic':
                     log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
 
