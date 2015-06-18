@@ -58,7 +58,7 @@ Cloud provider configuration syntax can live in several places. The first is in
         keyname: test
         securitygroup: quick-start
         private_key: /root/test.pem
-        driver: aws
+        driver: ec2
 
 Cloud provider configuration data can also be housed in ``/etc/salt/cloud.providers``
 or any file matching ``/etc/salt/cloud.providers.d/*.conf``. All files in any of these
@@ -76,7 +76,7 @@ Using the example configuration above:
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      driver: aws
+      driver: ec2
 
 .. note::
 
@@ -122,7 +122,7 @@ The provider alias needs to have the provider key value appended as in the follo
       size: 256 server
 
 Notice that because of the multiple entries, one has to be explicit about the provider alias and
-name, from the above example, ``production-config: aws``.
+name, from the above example, ``production-config: ec2``.
 
 This data interactions with the ``salt-cloud`` binary regarding its ``--list-location``,
 ``--list-images``, and ``--list-sizes`` which needs a cloud provider as an argument. The argument
@@ -239,7 +239,7 @@ A number of configuration options are required for Amazon AWS including ``id``,
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      driver: aws
+      driver: ec2
 
     my-aws-default:
       id: HJGRYCILJLKJYG
@@ -247,7 +247,7 @@ A number of configuration options are required for Amazon AWS including ``id``,
       keyname: test
       securitygroup: default
       private_key: /root/test.pem
-      driver: aws
+      driver: ec2
 
 .. note::
 
@@ -637,7 +637,7 @@ configuration.  Consider ``/etc/salt/salt/cloud.providers`` containing:
         private_key: /root/test.pem
         location: ap-southeast-1
         availability_zone: ap-southeast-1b
-        driver: aws
+        driver: ec2
 
       - user: myuser@mycorp.com
         password: mypass
