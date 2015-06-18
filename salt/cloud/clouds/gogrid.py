@@ -23,6 +23,14 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
       provider: gogrid
 
+.. note::
+
+    A Note about using Map files with GoGrid:
+
+    Due to limitations in the GoGrid API, instances cannot be provisioned in parallel
+    with the GoGrid driver. Map files will work with GoGrid, but the ``-P``
+    argument should not be used on maps referencing GoGrid instances.
+
 '''
 from __future__ import absolute_import
 
