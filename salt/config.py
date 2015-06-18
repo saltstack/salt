@@ -46,6 +46,16 @@ _DFLT_LOG_FMT_LOGFILE = (
     '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
+if salt.utils.is_windows():
+    # Since an 'ipc_mode' of 'ipc' will never work on Windows due to lack of
+    # support in ZeroMQ, we want the default to be something that has a
+    # chance of working.
+    _DFLT_IPC_MODE = 'tcp'
+    _DFLT_MULTIPROCESSING_MODE = False
+else:
+    _DFLT_IPC_MODE = 'ipc'
+    _DFLT_MULTIPROCESSING_MODE = True
+
 FLO_DIR = os.path.join(
         os.path.dirname(__file__),
         'daemons', 'flo')
@@ -359,7 +369,7 @@ DEFAULT_MINION_OPTS = {
     'open_mode': False,
     'auto_accept': True,
     'autosign_timeout': 120,
-    'multiprocessing': True,
+    'multiprocessing': _DFLT_MULTIPROCESSING_MODE,
     'mine_interval': 60,
     'ipc_mode': 'ipc',
     'ipv6': False,
