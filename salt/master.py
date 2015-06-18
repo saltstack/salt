@@ -43,7 +43,6 @@ import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.utils.atomicfile
 import salt.utils.event
-import salt.utils.job
 import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
@@ -1269,8 +1268,34 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        salt.utils.job.store_job(
-            self.opts, load, event=self.event, mminion=self.mminion)
+        # If the return data is invalid, just ignore it
+        if any(key not in load for key in ('return', 'jid', 'id')):
+            return False
+        if not salt.utils.verify.valid_id(self.opts, load['id']):
+            return False
+        if load['jid'] == 'req':
+            # The minion is returning a standalone job, request a jobid
+            load['arg'] = load.get('arg', load.get('fun_args', []))
+            load['tgt_type'] = 'glob'
+            load['tgt'] = load['id']
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            load['jid'] = self.mminion.returners[prep_fstr](nocache=load.get('nocache', False))
+
+            # save the load, since we don't have it
+            saveload_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+            self.mminion.returners[saveload_fstr](load['jid'], load)
+        log.info('Got return from {id} for job {jid}'.format(**load))
+        self.event.fire_event(
+            load, tagify([load['jid'], 'ret', load['id']], 'job'))
+        self.event.fire_ret_load(load)
+
+        # if you have a job_cache, or an ext_job_cache, don't write to the regular master cache
+        if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
+            return
+
+        # otherwise, write to the master cache
+        fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[fstr](load)
 
     def _syndic_return(self, load):
         '''

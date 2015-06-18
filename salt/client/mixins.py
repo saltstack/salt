@@ -15,7 +15,6 @@ import salt.minion
 import salt.utils
 import salt.utils.event
 import salt.utils.jid
-import salt.utils.job
 import salt.transport
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
@@ -325,16 +324,19 @@ class SyncClientMixin(object):
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
-        salt.utils.job.store_job(
-            self.opts,
-            {'id': self.opts['id'],
-             'tgt': self.opts['id'],
-             'jid': data['jid'],
-             'return': data,
-             },
-            event=None,
-            mminion=self.mminion,
-            )
+        load = {
+            'id': self.opts['id'],
+            'tgt': self.opts['id'],
+            'jid': data['jid'],
+            'return': data,
+        }
+        # save load
+        save_fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+        self.mminion.returners[save_fstr](load['jid'], load)
+        # returner
+        returner_fstr = '{0}.returner'.format(self.opts['master_job_cache'])
+        self.mminion.returners[returner_fstr](load)
+
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         log.info('Runner completed: {0}'.format(data['jid']))
@@ -402,7 +404,9 @@ class AsyncClientMixin(object):
 
     def _gen_async_pub(self, jid=None):
         if jid is None:
-            jid = salt.utils.jid.gen_jid()
+            # since we will store this, lets call prep_jid to get a unique one
+            prep_fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
+            jid = self.mminion.returners[prep_fstr]()
         tag = tagify(jid, prefix=self.tag_prefix)
         return {'tag': tag, 'jid': jid}
 

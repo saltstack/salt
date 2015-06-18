@@ -464,14 +464,19 @@ class TestJobsSaltAPIHandler(SaltnadoTestCase):
                                request_timeout=10,  # wait up to 10s for this response-- jenkins seems to be slow
                                )
         response = self.wait(timeout=10)
-        response_obj = json.loads(response.body)['return'][0]
-        self.assertIn('Function', response_obj)
-        self.assertIn('Target', response_obj)
-        self.assertIn('Target-type', response_obj)
-        self.assertIn('User', response_obj)
-        self.assertIn('StartTime', response_obj)
-        self.assertIn('Arguments', response_obj)
-        self.assertIn('Result', response_obj)
+        response_obj = json.loads(response.body)
+        self.assertIn('Function', response_obj['info'][0])
+        self.assertIn('Target', response_obj['info'][0])
+        self.assertIn('Target-type', response_obj['info'][0])
+        self.assertIn('User', response_obj['info'][0])
+        self.assertIn('StartTime', response_obj['info'][0])
+        self.assertIn('Arguments', response_obj['info'][0])
+        self.assertIn('Result', response_obj['info'][0])
+
+        self.assertIn('minion', response_obj['return'][0])
+        self.assertEqual(response_obj['return'][0]['minion'], response_obj['info'][0]['Result']['minion']['return'])
+        self.assertIn('sub_minion', response_obj['return'][0])
+        self.assertEqual(response_obj['return'][0]['sub_minion'], response_obj['info'][0]['Result']['sub_minion']['return'])
 
 
 # TODO: run all the same tests from the root handler, but for now since they are
