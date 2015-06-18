@@ -848,11 +848,9 @@ class StateModuleTest(integration.ModuleCase,
             + '                       foobar: C\n'
         )
 
-        # issue #8211, chaining complex prereq & prereq_in
-        # TODO: Actually this test fails
-        #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
-        #result = self.normalize_ret(ret)
-        #self.assertEqual(expected_result_complex, result)
+        ret = self.run_function('state.sls', mods='requisites.prereq_complex')
+        result = self.normalize_ret(ret)
+        self.assertEqual(expected_result_complex, result)
 
         # issue #8210 : prereq recursion undetected
         # TODO: this test fails
