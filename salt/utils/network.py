@@ -986,6 +986,27 @@ def hex2ip(hex_ip, invert=False):
                                     hip & 255)
 
 
+def mac2eui64(mac, prefix=None):
+    '''
+    Convert a MAC address to a EUI64 identifier
+    or, with prefix provided, a full IPv6 address
+    '''
+    # http://tools.ietf.org/html/rfc4291#section-2.5.1
+    eui64 = mac.split(':')
+    eui64 = eui64[0:3] + ['ff', 'fe'] + eui64[3:]
+    eui64[0] = hex(int(eui64[0], 16) | 2)[2:]
+
+    if prefix is None:
+        return '{0}{1}:{2}{3}:{4}{5}:{6}{7}'.format(*eui64)
+    else:
+        try:
+            net = ipaddress.ip_network(prefix, strict=False)
+            euil = long('0x{0}'.format(''.join(eui64)), 16)
+            return '{0}/{1}'.format(net[euil], net.prefixlen)
+        except:  # pylint: disable=bare-except
+            return
+
+
 def active_tcp():
     '''
     Return a dict describing all active tcp connections as quickly as possible
