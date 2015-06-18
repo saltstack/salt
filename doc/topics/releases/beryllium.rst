@@ -49,9 +49,27 @@ seconds by specifying ``in_seconds=True``.
 Deprecations
 ============
 
-The ``digital_ocean.py`` Salt Cloud driver was removed in favor of the
+- The ``digital_ocean.py`` Salt Cloud driver was removed in favor of the
 ``digital_ocean_v2.py`` driver as DigitalOcean has removed support for APIv1.
 The ``digital_ocean_v2.py`` was renamed to ``digital_ocean.py`` and supports
 DigitalOcean's APIv2.
-The ``vsphere.py`` Salt Cloud driver has been deprecated in favor of the
+
+- The ``vsphere.py`` Salt Cloud driver has been deprecated in favor of the
 ``vmware.py`` driver.
+
+- The ``openstack.py`` Salt Cloud driver has been deprecated in favor of the
+``nova.py`` driver.
+
+- The use of ``provider`` in Salt Cloud provider files to define cloud drivers
+has been deprecated in favor of useing ``driver``. Both terms will work until
+the Nitrogen release of Salt. Example provider file:
+
+.. code-block:: yaml
+
+    my-ec2-cloud-config:
+      id: 'HJGRYCILJLKJYG'
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      private_key: /etc/salt/my_test_key.pem
+      keyname: my_test_key
+      securitygroup: default
+      driver: ec2
