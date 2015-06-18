@@ -293,7 +293,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         Use snapshot when cloning the container source
     vgname
         if using LVM: vgname
-    lgname
+    lvname
         if using LVM: lvname
     ip
         ip for the primary nic
