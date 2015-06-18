@@ -1001,7 +1001,7 @@ def mac2eui64(mac, prefix=None):
     else:
         try:
             net = ipaddress.ip_network(prefix, strict=False)
-            euil = long('0x{0}'.format(''.join(eui64)), 16)
+            euil = int('0x{0}'.format(''.join(eui64)), 16)
             return '{0}/{1}'.format(net[euil], net.prefixlen)
         except:  # pylint: disable=bare-except
             return
