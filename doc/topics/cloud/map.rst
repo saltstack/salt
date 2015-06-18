@@ -39,6 +39,12 @@ to create the virtual machines in parallel:
 
     $ salt-cloud -m /path/to/mapfile -P
 
+.. note::
+
+    Due to limitations in the GoGrid API, instances cannot be provisioned in parallel
+    with the GoGrid driver. Map files will work with GoGrid, but the ``-P``
+    argument should not be used on maps referencing GoGrid instances.
+
 A map file can also be enforced to represent the total state of a cloud
 deployment by using the ``--hard`` option. When using the hard option any vms
 that exist but are not specified in the map file will be destroyed:
