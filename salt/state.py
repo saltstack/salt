@@ -1765,7 +1765,7 @@ class State(object):
                 status = 'pre'
         elif 'onfail' in fun_stats:
             status = 'onfail'
-        elif 'onchanges' in fun_stats and not 'onchangesmet' in fun_stats:
+        elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
             status = 'change'
