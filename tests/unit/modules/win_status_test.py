@@ -20,7 +20,7 @@ sys.modules['wmi'] = wmi
 pythoncom = types.ModuleType('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
+from salttesting.mock import NO_MOCK, Mock, patch, ANY
 
 if NO_MOCK is False:
     WMI = Mock()
@@ -30,7 +30,6 @@ if NO_MOCK is False:
 
 # This is imported late so mock can do its job
 import salt.modules.win_status as status
-
 
 
 @skipIf(NO_MOCK or sys.stdin.encoding != 'UTF8', 'Mock is not installed or encoding not supported')
