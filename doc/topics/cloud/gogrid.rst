@@ -29,6 +29,14 @@ in the configuration file to enable interfacing with GoGrid:
       apikey: asdff7896asdh789
       sharedsecret: saltybacon
 
+.. note::
+
+    A Note about using Map files with GoGrid:
+
+    Due to limitations in the GoGrid API, instances cannot be provisioned in parallel
+    with the GoGrid driver. Map files will work with GoGrid, but the ``-P``
+    argument should not be used on maps referencing GoGrid instances.
+
 
 Profiles
 ========
