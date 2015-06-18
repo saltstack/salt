@@ -1069,18 +1069,21 @@ class Jobs(LowDataAdapter):
                 - 2
                 - 6.9141387939453125e-06
         '''
-        lowstate = [{
-            'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
-            'jid': jid,
-        }]
-
         if jid:
-            lowstate.append({
+            lowstate = [{
+                'client': 'runner',
+                'fun': 'jobs.lookup_jid',
+                'args': (jid,),
+            }, {
                 'client': 'runner',
                 'fun': 'jobs.list_job',
-                'jid': jid,
-            })
+                'args': (jid,),
+            }]
+        else:
+            lowstate = [{
+                'client': 'runner',
+                'fun': 'jobs.list_jobs',
+            }]
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
