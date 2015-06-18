@@ -191,6 +191,9 @@ The following links explore various Salt topics in depth.
     Salt can easily and quickly transfer files (in fact, that's how Salt
     states work). Even under heavy load, files are chunked and served.
 
+:doc:`High Availability Features in Salt <topics/highavailability/index>`
+    Salt can be configured to be highly available.
+
 :doc:`Syndic <topics/topology/syndic>`
     Syndic is a tool to allow one master host to manage many masters, which
     in turn manage many minions. Scale Salt to tens of thousands of hosts or
