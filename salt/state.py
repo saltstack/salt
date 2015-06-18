@@ -1188,32 +1188,24 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if (isinstance(arg, string_types) and
-                            isinstance(high[name][state][hind], string_types)):
+                            if isinstance(arg, string_types) and isinstance(high[name][state][hind], string_types):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
                                 continue
-                            if (isinstance(arg, dict) and
-                                    isinstance(high[name][state][hind], dict)):
+                            if isinstance(arg, dict) and isinstance(high[name][state][hind], dict):
                                 # It is an option, make sure the options match
                                 argfirst = next(iter(arg))
-                                if (argfirst ==
-                                    next(iter(high[name][state][hind]))):
-                                    # They match, check if the option is a
-                                    # watch or require, append, otherwise
-                                    # replace
-                                    if (argfirst == 'require' or
-                                        argfirst == 'watch'):
-                                        # Extend the list
-                                        (high[name][state][hind][argfirst]
-                                         .extend(arg[argfirst]))
-                                        update = True
+                                if argfirst == next(iter(high[name][state][hind])):
+                                    # If argfirst is a requisite then we must merge
+                                    # our requisite with that of the target state
+                                    if argfirst in STATE_REQUISITE_KEYWORDS:
+                                        high[name][state][hind][argfirst].extend(arg[argfirst])
+                                    # otherwise, its not a requisite and we are just extending (replacing)
                                     else:
-                                        # Replace the value
                                         high[name][state][hind] = arg
-                                        update = True
+                                    update = True
                                 if (argfirst == 'name' and
                                     next(iter(high[name][state][hind])) == 'names'):
                                     # If names are overwritten by name use the name
