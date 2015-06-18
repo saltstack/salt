@@ -17,12 +17,6 @@ from __future__ import absolute_import, print_function
 import json
 import logging
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
-import salt.ext.six.moves.http_client
-# pylint: enable=import-error,no-name-in-module
-
 # Import salt libs
 import salt.utils.http
 
@@ -35,8 +29,8 @@ def __virtual__():
     '''
     if not __salt__['config.get']('ifttt.secret_key') and \
        not __salt__['config.get']('ifttt:secret_key'):
-            log.error('IFTTT Secret Key Unavailable, not loading.')
-            return False
+        log.error('IFTTT Secret Key Unavailable, not loading.')
+        return False
     return True
 
 
