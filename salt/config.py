@@ -1757,16 +1757,16 @@ def apply_cloud_config(overrides, defaults=None):
                             alias
                         )
                     )
-                elif 'provider' in detail:
+                elif 'provider' in details:
                     salt.utils.warn_until(
                         'Nitrogen',
                         'The term \'provider\' is being deprecated in favor of \'driver\' and support for '
                         '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider'
                         'configuration files to use \'driver\'.'
                     )
-                    driver = detail['provider']
-                elif 'driver' in detail:
-                    driver = detail['driver']
+                    driver = details['provider']
+                elif 'driver' in details:
+                    driver = details['driver']
                 if ':' in driver:
                     # Weird, but...
                     alias, driver = driver.split(':')
@@ -1809,6 +1809,11 @@ def old_to_new(opts):
 
         lprovider = provider.lower()
         if provider_config:
+            # Since using "provider: <provider-engine>" is deprecated, alias provider
+            # to use driver: "driver: <provider-engine>"
+            if 'provider' in provider_config:
+                provider_config['driver'] = provider_config.pop('provider')
+
             provider_config['provider'] = lprovider
             opts.setdefault('providers', {})
             # provider alias
@@ -2033,7 +2038,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             'definition referenced.'
                         )
                     continue
-                if details['driver'] in handled_providers or details['provider'] in handled_providers:
+
+                # Since using "provider: <provider-engine>" is deprecated, alias provider
+                # to use driver: "driver: <provider-engine>"
+                if 'provider' in details:
+                    details['driver'] = details.pop('provider')
+
+                if details['driver'] in handled_providers:
                     log.error(
                         'You can only have one entry per cloud provider. For '
                         'example, if you have a cloud provider configuration '
@@ -2043,9 +2054,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     )
                     raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias {0!r} has multiple entries '
-                        'for the {1[provider]!r} driver.'.format(key, details)
+                        'for the {1[driver]!r} driver.'.format(key, details)
                     )
-                handled_providers.add(details['provider'])
+                handled_providers.add(details['driver'])
 
         for entry in val:
             # Since using "provider: <provider-engine>" is deprecated, alias provider
@@ -2074,8 +2085,12 @@ def apply_cloud_providers_config(overrides, defaults=None):
     while True:
         keep_looping = False
         for provider_alias, entries in six.iteritems(providers.copy()):
-
             for driver, details in six.iteritems(entries):
+                # Since using "provider: <provider-engine>" is deprecated, alias provider
+                # to use driver: "driver: <provider-engine>"
+                if 'provider' in details:
+                    details['driver'] = details.pop('provider')
+
                 # Set a holder for the defined profiles
                 providers[provider_alias][driver]['profiles'] = {}
 
@@ -2092,7 +2107,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             'trying to extend data from {2!r} though {2!r} '
                             'is not defined in the salt cloud providers '
                             'loaded data.'.format(
-                                details['provider'],
+                                details['driver'],
                                 provider_alias,
                                 alias
                             )
@@ -2103,7 +2118,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             'The {0!r} cloud provider entry in {1!r} is '
                             'trying to extend data from \'{2}:{3}\' though '
                             '{3!r} is not defined in {1!r}'.format(
-                                details['provider'],
+                                details['driver'],
                                 provider_alias,
                                 alias,
                                 provider
@@ -2111,13 +2126,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
                     # change provider details '-only-extendable-' to extended provider name
-                    details['provider'] = provider
+                    details['driver'] = provider
                 elif providers.get(extends):
                     raise salt.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend from {2!r} and no provider was specified. '
                         'Not extending!'.format(
-                            details['provider'], provider_alias, extends
+                            details['driver'], provider_alias, extends
                         )
                     )
                 elif extends not in providers:
@@ -2126,7 +2141,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'to extend data from {2!r} though {2!r} is not '
                         'defined in the salt cloud providers loaded '
                         'data.'.format(
-                            details['provider'], provider_alias, extends
+                            details['driver'], provider_alias, extends
                         )
                     )
                 else:
@@ -2229,11 +2244,11 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
                 else:
                     value = deepcopy(opts['profiles'][vm_['profile']][name])
 
-        # Since using "provider: <provider-engine>" is deprecated, alias provider
+        # Since using "provider: <provider-engine>" is deprecated, alias provider 
         # to use driver: "driver: <provider-engine>"
         if 'provider' in vm_:
             vm_['driver'] = vm_.pop('provider')
-
+            
         # Let's get the value from the provider, if present.
         if ':' in vm_['driver']:
             # The provider is defined as <provider-alias>:<driver-name>
