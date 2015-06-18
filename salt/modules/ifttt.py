@@ -16,6 +16,7 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
 from __future__ import absolute_import, print_function
 import json
 import logging
+import time
 
 # Import salt libs
 import salt.utils.http
@@ -89,15 +90,14 @@ def trigger_event(event=None, **kwargs):
     res = {'result': False, 'message': 'Something went wrong'}
 
     data = {}
-    for kwarg in kwargs:
-        if kwarg.startswith('__'):
-            continue
-        data[kwarg.lower()] = kwargs[kwarg]
-    foo = json.dumps(data)
-    log.debug('foo {0}'.format(foo))
+    for value in ('value1', 'value2', 'value3',
+                  'Value1', 'Value2', 'Value3'):
+                    if value in kwargs:
+                        data[value.lower()] = kwargs[value]
+    data['occurredat'] = time.strftime("%B %d, %Y %I:%M%p", time.localtime())
     result = _query(event=event,
                     method='POST',
-                    data=foo
+                    data=json.dumps(data)
                     )
     if 'status' in result:
         if result['status'] == 200:
