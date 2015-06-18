@@ -92,8 +92,8 @@ def trigger_event(event=None, **kwargs):
     data = {}
     for value in ('value1', 'value2', 'value3',
                   'Value1', 'Value2', 'Value3'):
-                    if value in kwargs:
-                        data[value.lower()] = kwargs[value]
+        if value in kwargs:
+            data[value.lower()] = kwargs[value]
     data['occurredat'] = time.strftime("%B %d, %Y %I:%M%p", time.localtime())
     result = _query(event=event,
                     method='POST',
