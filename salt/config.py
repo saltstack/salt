@@ -1072,6 +1072,18 @@ DEFAULT_API_OPTS = {
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
 
+DEFAULT_SPM_OPTS = {
+    # ----- Salt master settings overridden by SPM --------------------->
+    'reactor_roots': '/srv/reactor',
+    'spm_logfile': '/var/log/salt/spm',
+    # spm_repos_config also includes a .d/ directory
+    'spm_repos_config': '/etc/salt/spm.repos',
+    'spm_build_dir': '/srv/spm',
+    'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
+    'spm_build_exclude': ['.git'],
+    # <---- Salt master settings overridden by SPM ----------------------
+}
+
 VM_CONFIG_DEFAULTS = {
     'default_include': 'cloud.profiles.d/*.conf',
 }
@@ -2728,5 +2740,18 @@ def api_config(path):
     defaults = DEFAULT_MASTER_OPTS
     # Let's override them with salt-api's required defaults
     defaults.update(DEFAULT_API_OPTS)
+
+    return client_config(path, defaults=defaults)
+
+
+def spm_config(path):
+    '''
+    Read in the salt master config file and add additional configs that
+    need to be stubbed out for spm
+    '''
+    # Let's grab a copy of salt's master default opts
+    defaults = DEFAULT_MASTER_OPTS
+    # Let's override them with spm's required defaults
+    defaults.update(DEFAULT_SPM_OPTS)
 
     return client_config(path, defaults=defaults)
