@@ -4,9 +4,9 @@ Getting Started With Linode
 
 Linode is a public cloud provider with a focus on Linux instances.
 
-Starting in the Beryllium release of Salt, the Linode driver uses Linode's
-native REST API, so there are not external dependencies required to use the
-linode driver.
+Starting with the Beryllium release of Salt, the Linode driver uses Linode's
+native REST API. There are no external dependencies required to use the
+Linode driver.
 
 Configuration
 =============
