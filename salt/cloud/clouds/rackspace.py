@@ -25,7 +25,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-rackspace-config:
-      provider: rackspace
+      driver: rackspace
       # The Rackspace login user
       user: fred
       # The Rackspace user's apikey

@@ -109,7 +109,7 @@ related to the profile or provider config, and any default values that could
 have been changed in the profile or provider, but weren't.
 
 salt/cloud/<minion_id>/created
--------------------------------
+------------------------------
 
 The deploy sequence has completed, and the instance is now available, Salted,
 and ready for use. This event is the final task for Salt Cloud, before returning

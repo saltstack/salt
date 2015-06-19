@@ -30,7 +30,7 @@ Set up the provider config at ``/etc/salt/cloud.providers.d/azure.conf``:
     # Note: This example is for /etc/salt/cloud.providers.d/azure.conf
 
     my-azure-config:
-      provider: azure
+      driver: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
 

@@ -20,7 +20,7 @@ in the configuration file to enable interfacing with GoGrid:
     # /etc/salt/cloud.providers.d/ directory.
 
     my-gogrid-config:
-      provider: gogrid
+      driver: gogrid
       apikey: asdff7896asdh789
       sharedsecret: saltybacon
 

@@ -19,7 +19,7 @@ If you do not have API token you can create one by clicking the "Create New Toke
     my-scaleway-config:
       access_key: 15cf404d-4560-41b1-9a0c-21c3d5c4ff1f
       token: a7347ec8-5de1-4024-a5e3-24b77d1ba91d
-      provider: scaleway
+      driver: scaleway
 
 Profiles
 ========
@@ -32,8 +32,8 @@ Set up an initial profile at /etc/salt/cloud.profiles or in the /etc/salt/cloud.
 .. code-block:: yaml
 
     scalewa-ubuntu:
-        provider: my-scaleway-config
-        image: Ubuntu Trusty (14.04 LTS)
+      provider: my-scaleway-config
+      image: Ubuntu Trusty (14.04 LTS)
 
 
 Images can be obtained using the ``--list-images`` option for the ``salt-cloud`` command:

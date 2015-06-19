@@ -18,7 +18,7 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       secretkey: <your secret key >
       host: localhost
       path: /client/api
-      provider: cloudstack
+      driver: cloudstack
 
 '''
 # pylint: disable=invalid-name,function-redefined

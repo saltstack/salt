@@ -99,7 +99,7 @@ Set up the cloud config at ``/etc/salt/cloud``:
           node_type: broker
           release: 1.0.1
 
-        provider: gce
+        driver: gce
 
 .. note::
 

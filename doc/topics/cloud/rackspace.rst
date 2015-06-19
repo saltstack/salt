@@ -47,7 +47,7 @@ To use the `openstack` driver (recommended), set up the cloud configuration at
       tenant: 123456
       apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-      provider: openstack
+      driver: openstack
 
 
 To use the `rackspace` driver, set up the cloud configuration at
@@ -57,7 +57,7 @@ To use the `rackspace` driver, set up the cloud configuration at
 .. code-block:: yaml
 
     my-rackspace-config:
-      provider: rackspace
+      driver: rackspace
       # The Rackspace login user
       user: fred
       # The Rackspace user's apikey
@@ -119,7 +119,7 @@ it can be verified with Salt:
     # salt myinstance test.ping
 
 RackConnect Environments
---------------------------------
+------------------------
 
 Rackspace offers a hybrid hosting configuration option called RackConnect that
 allows you to use a physical firewall appliance with your cloud servers. When
@@ -137,7 +137,7 @@ capability by adding this to your profiles:
         rackconnect: True
 
 Managed Cloud Environments
---------------------------------
+--------------------------
 
 Rackspace offers a managed service level of hosting. As part of the managed
 service level you have the ability to choose from base of lamp installations on

@@ -42,7 +42,7 @@ instances also needs to be set:
       password: F00barbaz
       ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
       ssh_key_file: ~/.ssh/id_ed25519
-      provider: linode
+      driver: linode
 
 The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
@@ -164,7 +164,7 @@ cloud profile that looks like this:
 .. code-block:: yaml
 
     li-clone:
-      provider: linode
+      provider: my-linode-config
       clonefrom: machine_to_clone
       script_args: -C
 

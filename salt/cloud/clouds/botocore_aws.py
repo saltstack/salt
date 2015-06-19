@@ -25,7 +25,7 @@ If this driver is still needed, set up the cloud configuration at
       securitygroup: ssh_open
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
-      provider: aws
+      driver: aws
 
 '''
 from __future__ import absolute_import
