@@ -64,33 +64,20 @@ def list_(show_all=False, return_yaml=True):
 
         salt '*' schedule.list show_all=True
     '''
+    event = salt.utils.event.get_event(
+        'minion',  # was __opts__['id']
+        sock_dir=__opts__['sock_dir'],
+        transport=__opts__['transport'],
+        opts=__opts__,
+    )
+    out = __salt__['event.fire']({'func': 'list_jobs'}, 'manage_schedule')
+    schedule = event.get_event(tag='schedule_jobs_list')
 
-    schedule = __opts__['schedule'].copy()
-    if 'schedule' in __pillar__:
-        schedule.update(__pillar__['schedule'])
-
-    for job in schedule.keys():  # iterate over a copy since we will mutate it
-        if job == 'enabled':
-            continue
-
-        # Default jobs added by salt begin with __
-        # by default hide them unless show_all is True.
-        if job.startswith('__') and not show_all:
-            del schedule[job]
-            continue
-
-        for item in pycopy.copy(schedule[job]):
-            if item not in SCHEDULE_CONF:
-                del schedule[job][item]
-                continue
-            if schedule[job][item] == 'true':
-                schedule[job][item] = True
-            if schedule[job][item] == 'false':
-                schedule[job][item] = False
-
-        if '_seconds' in schedule[job]:
-            schedule[job]['seconds'] = schedule[job]['_seconds']
-            del schedule[job]['_seconds']
+    # if we weren't asked for *all* we'll exclude internal (__) salt jobs
+    if not show_all:
+        for job_name in schedule.keys():
+            if job_name.startswith('__'):
+                del schedule[job_name]
 
     if schedule:
         if return_yaml:
