@@ -713,10 +713,13 @@ def _virtual(osdata):
             if maker.startswith('OpenStack'):
                 grains['virtual'] = 'OpenStack'
         if sysctl:
+            hv_vendor = __salt__['cmd.run']('{0} hw.hv_vendor'.format(sysctl))
             model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](
                 '{0} -n security.jail.jailed'.format(sysctl)
             )
+            if 'bhyve' in hv_vendor:
+                grains['virtual'] = 'bhyve'
             if jail == '1':
                 grains['virtual_subtype'] = 'jail'
             if 'QEMU Virtual CPU' in model:
