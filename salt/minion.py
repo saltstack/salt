@@ -833,7 +833,7 @@ class Minion(MinionBase):
         # if the master_active_list is empty, reset with the original list
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
-        if not opts['master_active_list']:
+        if not opts.get('master_active_list'):
             log.info('List of active masters is empty, try all masters from the top.')
             opts['master_active_list'] = opts['master_list']
 
