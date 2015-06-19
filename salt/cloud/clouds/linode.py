@@ -727,6 +727,51 @@ def list_nodes_full():
     return _list_linodes(full=True)
 
 
+def reboot(name=None, linode_id=None, call=None):
+    '''
+    Reboot a linode. Either a name or a linode_id must be provided.
+
+    .. versionadded:: Beryllium
+
+    name
+        The name of the VM to reboot.
+
+    linode_id
+        The Linode ID of the VM to reboot. Can be provided instead of a name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot vm_name
+        salt-cloud -a reboot linode_id
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    if not name and not linode_id:
+        raise SaltCloudException(
+            'Either a name or a linode_id must be specified.'
+        )
+
+    node_id = _check_and_set_node_id(name, linode_id)
+    response = _query('linode', 'reboot', args={'LinodeID': node_id})
+    data = _clean_data(response)
+
+    reboot_jid = data['JobID']
+
+    if not name:
+        name = get_linode(linode_id)['LABEL']
+
+    if not _wait_for_job(node_id, reboot_jid):
+        log.error('Reboot failed for {0}.'.format(name))
+        return False
+
+    return data
+
+
 def show_instance(name=None, linode_id=None, call=None):
     '''
     Displays details about a particular Linode VM. Either a name or a linode_id must
