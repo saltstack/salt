@@ -1065,7 +1065,7 @@ def set_wu_settings(level=None,
         if msupdate:
             # msupdate is true, so add it to the services
             try:
-                obj_sm.AddService2('7971f918-a847-4430-9279-4a52d1efe18d',7,'')
+                obj_sm.AddService2('7971f918-a847-4430-9279-4a52d1efe18d', 7, '')
                 ret['msupdate'] = msupdate
             except Exception as error:
                 hr, msg, exc, arg = error.args  # pylint: disable=W0633
