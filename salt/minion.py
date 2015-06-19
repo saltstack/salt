@@ -830,48 +830,51 @@ class Minion(MinionBase):
                 log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-        # if the master_active_list is empty, reset with the original list
-        # if we have a list of masters, loop through them and be
-        # happy with the first one that allows us to connect
-        if not opts.get('master_active_list'):
-            log.info('List of active masters is empty, try all masters from the top.')
-            opts['master_active_list'] = opts['master_list']
+            # if the master_active_list is empty, reset with the original list
+            # if we have a list of masters, loop through them and be
+            # happy with the first one that allows us to connect
+            # If there is no 'master_list' then this is a single-master scenario, so fall through this
+            # conditional without warning.
+            if not opts.get('master_active_list'):
+                if opts.get('master_list'):
+                    log.info('List of active masters is empty, try all masters from the top.')
+                    opts['master_active_list'] = opts['master_list']
 
-        if isinstance(opts['master_active_list'], list):
-            conn = False
-            # shuffle the masters and then loop through them
-            local_masters = opts['master_active_list']
+            if isinstance(opts['master_active_list'], list):
+                conn = False
+                # shuffle the masters and then loop through them
+                local_masters = opts['master_active_list']
 
-            for master in local_masters:
-                opts['master'] = master
-                opts.update(resolve_dns(opts))
-                super(Minion, self).__init__(opts)
+                for master in local_masters:
+                    opts['master'] = master
+                    opts.update(resolve_dns(opts))
+                    super(Minion, self).__init__(opts)
 
-                # on first run, update self.opts with the whole master list
-                # to enable a minion to re-use old masters if they get fixed
-                # if 'master_list' not in self.opts:
-                #    self.opts['master_list'] = local_masters
-                # cro: I don't think we need this because we are getting master_list
-                # from above.
+                    # on first run, update self.opts with the whole master list
+                    # to enable a minion to re-use old masters if they get fixed
+                    # if 'master_list' not in self.opts:
+                    #    self.opts['master_list'] = local_masters
+                    # cro: I don't think we need this because we are getting master_list
+                    # from above.
 
-                try:
-                    if self.authenticate(timeout, safe) != 'full':
-                        conn = True
-                        break
-                except SaltClientError:
-                    msg = ('Master {0} could not be reached, trying '
-                           'next master (if any)'.format(opts['master']))
-                    log.info(msg)
-                    continue
+                    try:
+                        if self.authenticate(timeout, safe) != 'full':
+                            conn = True
+                            break
+                    except SaltClientError:
+                        msg = ('Master {0} could not be reached, trying '
+                               'next master (if any)'.format(opts['master']))
+                        log.info(msg)
+                        continue
 
-            if not conn:
-                self.connected = False
-                msg = ('No master could be reached or all masters denied '
-                       'the minions connection attempt.')
-                log.error(msg)
-            else:
-                self.connected = True
-                return opts['master']
+                if not conn:
+                    self.connected = False
+                    msg = ('No master could be reached or all masters denied '
+                           'the minions connection attempt.')
+                    log.error(msg)
+                else:
+                    self.connected = True
+                    return opts['master']
 
         # single master sign in
         else:
