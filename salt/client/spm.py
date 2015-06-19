@@ -12,6 +12,9 @@ import tarfile
 import tempfile
 import shutil
 import msgpack
+import sqlite3
+import datetime
+import hashlib
 
 # Import Salt libs
 import salt.config
@@ -56,20 +59,60 @@ class SPMClient(object):
         '''
         Install a package from a file
         '''
+        self._init_db()
         out_path = self.opts['file_roots']['base'][0]
-        print('Locally installing package {0} to {1}'.format(package_file, out_path))
+        comps = package_file.split('-')
+        comps = '-'.join(comps[:-2]).split('/')
+        name = comps[-1]
+        log.debug('Locally installing package {0} to {1}'.format(package_file, out_path))
 
         if not os.path.exists(package_file):
-            print('File not found')
+            log.debug('File not found')
             return False
 
         if not os.path.exists(out_path):
             os.mkdir(out_path)
 
+        sqlite3.enable_callback_tracebacks(True)
+        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
+        cur = conn.cursor()
         formula_tar = tarfile.open(package_file, 'r:bz2')
-        formula_tar.extractall(out_path)
+        formula_ref = formula_tar.extractfile('{0}/FORMULA.yml'.format(name))
+        formula_def = yaml.safe_load(formula_ref)
+        conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)', (
+            name,
+            formula_def['version'],
+            formula_def['release'],
+            datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'),
+            formula_def['summary'],
+            formula_def['description'],
+        ))
+        pkg_files = formula_tar.getmembers()
+        for member in pkg_files:
+            file_ref = formula_tar.extractfile(member)
+            if member.isdir():
+                digest = ''
+            else:
+                file_hash = hashlib.sha1()
+                file_hash.update(file_ref.read())
+                digest = file_hash.hexdigest()
+            formula_tar.extract(member, out_path)
+            conn.execute('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+                name,
+                '{0}/{1}'.format(out_path, member.path),
+                member.size,
+                member.mode,
+                digest,
+                member.devmajor,
+                member.devminor,
+                member.linkname,
+                member.linkpath,
+                member.uname,
+                member.gname,
+                member.mtime
+            ))
         formula_tar.close()
-        # Save file list and checksums in local repo index (msgpack)
+        conn.close()
 
     def _traverse_repos(self, callback):
         '''
@@ -173,13 +216,13 @@ class SPMClient(object):
         with salt.utils.fopen(metadata_filename, 'w') as mfh:
             yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
 
-        print('Wrote {0}'.format(metadata_filename))
+        log.debug('Wrote {0}'.format(metadata_filename))
 
     def _install(self, package):
         '''
         Install a package from a repo
         '''
-        print('Installing package {0}'.format(package))
+        log.debug('Installing package {0}'.format(package))
         repo_metadata = self._get_repo_metadata()
         for repo in repo_metadata:
             repo_info = repo_metadata[repo]
@@ -207,7 +250,7 @@ class SPMClient(object):
         Remove a package
         '''
         package = args[1]
-        print('Removing package {0}'.format(package))
+        log.debug('Removing package {0}'.format(package))
         # Look at local repo index
         # Find files that have not changed and remove them
         # Leave directories in place that still have files in them
@@ -226,7 +269,7 @@ class SPMClient(object):
             with salt.utils.fopen(formula_path) as fp_:
                 formula_conf = yaml.safe_load(fp_)
         else:
-            print('File not found')
+            log.debug('File not found')
             return False
 
         out_path = '{0}/{1}-{2}-{3}.spm'.format(
@@ -243,7 +286,7 @@ class SPMClient(object):
         formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
-        print(formula_path)
+        log.debug(formula_path)
         return formula_path
 
     def _exclude(self, name):
@@ -255,3 +298,35 @@ class SPMClient(object):
             if name.startswith(exclude_name):
                 return True
         return False
+
+    def _init_db(self):
+        '''
+        Initialize the package database
+        '''
+        if not os.path.exists(self.opts['spm_db']):
+            log.debug('Creating new package database at {0}'.format(self.opts['spm_db']))
+            conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
+            cur = conn.cursor()
+            conn.execute('''CREATE TABLE packages (
+                package text,
+                version text,
+                release text,
+                installed text,
+                summary text,
+                description text
+            )''')
+            conn.execute('''CREATE TABLE files (
+                package text,
+                path text,
+                size real,
+                mode text,
+                sum text,
+                major text,
+                minor text,
+                linkname text,
+                linkpath text,
+                uname text,
+                gname text,
+                mtime text
+            )''')
+            conn.close()
