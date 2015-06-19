@@ -127,7 +127,7 @@ def _get_conn(ret):
     password = _options.get('password')
     indexes = _options.get('indexes', False)
 
-    conn = pymongo.Connection(host, port)
+    conn = pymongo.MongoClient(host, port)
     mdb = conn[db_]
 
     if user and password:
