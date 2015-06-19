@@ -2748,6 +2748,8 @@ def spm_config(path):
     '''
     Read in the salt master config file and add additional configs that
     need to be stubbed out for spm
+
+    .. versionadded:: Beryllium
     '''
     # Let's grab a copy of salt's master default opts
     defaults = DEFAULT_MASTER_OPTS

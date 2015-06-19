@@ -5,6 +5,7 @@
 
     Salt's spm cli parser.
 
+.. versionadded:: Beryllium
 '''
 
 # Import Python libs

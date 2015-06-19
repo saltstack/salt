@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 This module provides the point of entry to SPM, the Salt Package Manager
+
+.. versionadded:: Beryllium
 '''
 from __future__ import absolute_import
 # Import Python libs
