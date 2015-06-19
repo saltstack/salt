@@ -14,6 +14,12 @@ Core Changes
   in ``log_fmt_console`` in the config file for any of ``salt-master``,
   ``salt-minion``, and ``salt-cloud``.
 
+Salt Cloud Changes
+==================
+
+- Modified the Linode Salt Cloud driver to use Linode's native API instead of
+  depending on apache-libcloud or linode-python.
+
 JBoss 7 State
 =============
 
