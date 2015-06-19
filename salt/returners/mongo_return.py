@@ -56,6 +56,7 @@ import salt.ext.six as six
 # Import third party libs
 try:
     import pymongo
+    version = pymongo.version
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -116,7 +117,10 @@ def _get_conn(ret):
     user = _options.get('user')
     password = _options.get('password')
 
-    conn = pymongo.MongoClient(host, port)
+    if float(version) > 2.3:
+        conn = pymongo.MongoClient(host, port)
+    else:
+        conn = pymongo.Connection(host, port)
     mdb = conn[db_]
 
     if user and password:
