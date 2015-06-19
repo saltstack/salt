@@ -16,7 +16,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
       # Linode account api key
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
       password: F00barbaz
-      provider: linode
+      driver: linode
 
 When used with linode-python, this provider supports cloning existing Linodes. To clone, add a profile with a
 ``clonefrom`` key, and a ``script_args: -C``.
@@ -171,6 +171,12 @@ def create(vm_):
     '''
     Create a single Linode VM.
     '''
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -178,7 +184,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -312,7 +318,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

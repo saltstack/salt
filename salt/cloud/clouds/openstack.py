@@ -53,7 +53,7 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
               /local/path/to/src.txt
       # Skips the service catalog API endpoint, and uses the following
       base_url: http://192.168.1.101:3000/v2/12345
-      provider: openstack
+      driver: openstack
       userdata_file: /tmp/userdata.txt
       # config_drive is required for userdata at rackspace
       config_drive: True

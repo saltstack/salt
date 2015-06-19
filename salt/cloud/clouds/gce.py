@@ -51,7 +51,7 @@ Setting up Service Account Authentication:
       service_account_email_address: 1234567890@developer.gserviceaccount.com
       # The location of the private key (PEM format)
       service_account_private_key: /home/erjohnso/PRIVKEY.pem
-      provider: gce
+      driver: gce
       # Specify whether to use public or private IP for deploy script.
       # Valid options are:
       #     private_ips - The salt-master is also hosted with GCE
