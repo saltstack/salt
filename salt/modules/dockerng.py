@@ -124,7 +124,7 @@ Functions
     - :py:func:`dockerng.logs <salt.modules.dockerng.logs>`
     - :py:func:`dockerng.pid <salt.modules.dockerng.pid>`
     - :py:func:`dockerng.port <salt.modules.dockerng.port>`
-    - :py:func:`dockerng.ps <salt.modules.dockerng.ps_>`
+    - :py:func:`dockerng.ps <salt.modules.dockerng.ps>`
     - :py:func:`dockerng.state <salt.modules.dockerng.state>`
     - :py:func:`dockerng.search <salt.modules.dockerng.search>`
     - :py:func:`dockerng.top <salt.modules.dockerng.top>`
@@ -134,7 +134,7 @@ Functions
     - :py:func:`dockerng.copy_from <salt.modules.dockerng.copy_from>`
     - :py:func:`dockerng.copy_to <salt.modules.dockerng.copy_to>`
     - :py:func:`dockerng.export <salt.modules.dockerng.export>`
-    - :py:func:`dockerng.rm <salt.modules.dockerng.rm_>`
+    - :py:func:`dockerng.rm <salt.modules.dockerng.rm>`
 - Management of Container State
     - :py:func:`dockerng.kill <salt.modules.dockerng.kill>`
     - :py:func:`dockerng.pause <salt.modules.dockerng.pause>`
@@ -147,7 +147,7 @@ Functions
     - :py:func:`dockerng.build <salt.modules.dockerng.build>`
     - :py:func:`dockerng.commit <salt.modules.dockerng.commit>`
     - :py:func:`dockerng.dangling <salt.modules.dockerng.dangling>`
-    - :py:func:`dockerng.import <salt.modules.dockerng.import_>`
+    - :py:func:`dockerng.import <salt.modules.dockerng.import>`
     - :py:func:`dockerng.load <salt.modules.dockerng.load>`
     - :py:func:`dockerng.pull <salt.modules.dockerng.pull>`
     - :py:func:`dockerng.push <salt.modules.dockerng.push>`
