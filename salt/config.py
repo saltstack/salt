@@ -676,6 +676,9 @@ VALID_OPTS = {
 
     # Used strictly for performance testing in RAET.
     'dummy_publisher': bool,
+
+    # Used by salt-api for master requests timeout
+    'rest_timeout': int,
 }
 
 # default configurations
@@ -1065,6 +1068,7 @@ DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
     'pidfile': '/var/run/salt-api.pid',
     'logfile': '/var/log/salt/api',
+    'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
 }
 

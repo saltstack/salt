@@ -101,7 +101,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low)
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
 
 
 class Runner(RunnerClient):
