@@ -58,6 +58,13 @@ def managed(name,
         the file will be transferred from the master file server.
     cwd
         Path to the working directory where "pip install" is executed.
+    user
+        The user under which to run virtualenv and pip
+    no_chown: False
+        When user is given, do not attempt to copy and chown
+        a requirements file (needed if the requirements file refers to other
+        files via relative paths, as the copy-and-chown procedure does not
+        account for such files)
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
     no_deps: False
