@@ -70,8 +70,11 @@ def list_(show_all=False, return_yaml=True):
         transport=__opts__['transport'],
         opts=__opts__,
     )
-    out = __salt__['event.fire']({'func': 'list_jobs'}, 'manage_schedule')
+    if not __salt__['event.fire']({'func': 'list_jobs'}, 'manage_schedule'):
+        raise Exception('Unable to communicate with minion process, is it running?')
     schedule = event.get_event(tag='schedule_jobs_list')
+    if not isinstance(schedule, dict):
+        raise Exception('Unable to communicate with minion process, is it running?')
 
     # if we weren't asked for *all* we'll exclude internal (__) salt jobs
     if not show_all:
