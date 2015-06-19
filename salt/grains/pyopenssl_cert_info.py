@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import OpenSSL
 import socket
@@ -11,8 +12,8 @@ def get_cert_info():
     context = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
-    connection = OpenSSL.SSL.Connection(context,s)
-    connection.connect(("localhost",443))
+    connection = OpenSSL.SSL.Connection(context, s)
+    connection.connect(("localhost", 443))
 
     connection.setblocking(1)
 
@@ -42,6 +43,6 @@ def get_cert_info():
     grains['cert']['subject'] = subject
     grains['cert']['cn'] = cn
     grains['cert']['expired'] = expired
-    grains['cert']['fingerprint'] =fingerprint
+    grains['cert']['fingerprint'] = fingerprint
     grains['cert']['serial'] = serial
     return grains
