@@ -1852,7 +1852,7 @@ def load(imagepath):
     if os.path.isfile(imagepath):
         try:
             dockercmd = ['docker', 'load', '-i', imagepath]
-            ret = __salt__['cmd.run'](dockercmd)
+            ret = __salt__['cmd.run'](dockercmd, python_shell=False)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
