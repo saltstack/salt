@@ -1487,9 +1487,9 @@ def get_locked_packages(pattern=None, full=True):
             _pat = r'\d\:({0}\-\S+)'.format(pattern)
     else:
         if full:
-            _pat = r'(\d\:\w+\-\S+)'
+            _pat = r'(\d\:\w+(?:[\.\-][^\-]+)*-\S+)'
         else:
-            _pat = r'\d\:(\w+\-\S+)'
+            _pat = r'\d\:(\w+(?:[\.\-][^\-]+)*-\S+)'
     pat = re.compile(_pat)
 
     current_locks = []
