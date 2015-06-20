@@ -1926,7 +1926,7 @@ def create(name,
     lvname = select('lvname')
     fstype = select('fstype')
     size = select('size', '1G')
-    if backing in ('dir', 'overlayfs', 'btrfs'):
+    if backing in ('dir', 'overlayfs', 'btrfs', 'zfs'):
         fstype = None
         size = None
     # some backends wont support some parameters
