@@ -1656,6 +1656,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
+        is_not_checked = True
         while proc.has_unread_data:
             stdout, stderr = proc.recv()
             if stdout and is_not_checked:
