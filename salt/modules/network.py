@@ -80,9 +80,13 @@ def ping(host, timeout=False, return_boolean=False):
 
     Return a True or False instead of ping output.
 
+    .. code-block:: bash
+
         salt '*' network.ping archlinux.org return_boolean=True
 
     Set the time to wait for a response in seconds.
+
+    .. code-block:: bash
 
         salt '*' network.ping archlinux.org timeout=3
     '''
@@ -925,7 +929,9 @@ def is_private(ip_addr):
 
     .. versionadded:: 2014.7.0
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.is_private 10.0.0.3
     '''
@@ -938,7 +944,9 @@ def is_loopback(ip_addr):
 
     .. versionadded:: 2014.7.0
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.is_loopback 127.0.0.1
     '''
@@ -990,7 +998,9 @@ def get_bufsize(iface):
     '''
     Return network buffer sizes as a dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.getbufsize
     '''
@@ -1034,7 +1044,9 @@ def mod_bufsize(iface, *args, **kwargs):
     '''
     Modify network interface buffers (currently linux only)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.getBuffers
     '''
@@ -1049,7 +1061,9 @@ def routes(family=None):
     '''
     Return currently configured routes from routing table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.routes
     '''
@@ -1078,7 +1092,9 @@ def default_route(family=None):
     '''
     Return default route(s) from routing table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.default_route
     '''
