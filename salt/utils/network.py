@@ -855,7 +855,10 @@ def _subnets(proto='inet', interfaces_=None):
     if interfaces_ is None:
         ifaces = interfaces()
     elif isinstance(interfaces_, list):
-        ifaces = {x: y for x, y in interfaces().iteritems if x in interfaces_}
+        ifaces = {}
+        for key, value in six.iteritems(interfaces()):
+            if key in interfaces_:
+                ifaces[key] = value
     else:
         ifaces = {interfaces_: interfaces().get(interfaces_, {})}
 
