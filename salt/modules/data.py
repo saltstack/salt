@@ -188,6 +188,8 @@ def get(key, default=None):
     '''
     store = load()
 
+    if not store:
+        return default
     if isinstance(key, six.string_types):
         return store.get(key, default)
     elif default is None:
