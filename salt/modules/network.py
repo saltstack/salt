@@ -676,6 +676,7 @@ def subnets(interfaces=None):
     .. code-block:: bash
 
         salt '*' network.subnets
+        salt '*' network.subnets interfaces=eth1
     '''
     return salt.utils.network.subnets(interfaces)
 
