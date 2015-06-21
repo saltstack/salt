@@ -667,7 +667,7 @@ def interface_ip(iface):
     return salt.utils.network.interface_ip(iface)
 
 
-def subnets():
+def subnets(interfaces=None):
     '''
     Returns a list of IPv4 subnets to which the host belongs
 
@@ -677,7 +677,7 @@ def subnets():
 
         salt '*' network.subnets
     '''
-    return salt.utils.network.subnets()
+    return salt.utils.network.subnets(interfaces)
 
 
 def subnets6():

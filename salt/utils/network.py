@@ -848,11 +848,17 @@ def interface_ip(iface):
         return error
 
 
-def _subnets(proto='inet'):
+def _subnets(proto='inet', interfaces_=None):
     '''
     Returns a list of subnets to which the host belongs
     '''
-    ifaces = interfaces()
+    if interfaces_ is None:
+        ifaces = interfaces()
+    elif isinstance(interfaces_, list):
+        ifaces = {x: y for x, y in interfaces().iteritems if x in interfaces_}
+    else:
+        ifaces = {interfaces_: interfaces().get(interfaces_, {})}
+
     ret = set()
 
     if proto == 'inet':
@@ -874,11 +880,11 @@ def _subnets(proto='inet'):
     return [str(net) for net in sorted(ret)]
 
 
-def subnets():
+def subnets(interfaces=None):
     '''
     Returns a list of IPv4 subnets to which the host belongs
     '''
-    return _subnets('inet')
+    return _subnets('inet', interfaces_=interfaces)
 
 
 def subnets6():
