@@ -15,9 +15,11 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import re
 
 
-def present(name, value):
+def present(name, value, delimiter=':', force=False):
     '''
     Ensure that a grain is set
+
+    .. versionchanged:: FIXME
 
     name
         The grain name
@@ -25,8 +27,22 @@ def present(name, value):
     value
         The value to set on the grain
 
-    If the grain with the given name exists, its value is updated to the new value.
-    If the grain does not yet exist, a new grain is set to the given value.
+    :param force: If force is True, the existing grain will be overwritten
+        regardless of its existing or provided value type. Defaults to False
+        .. versionadded:: FIXME
+
+    :param delimiter: A delimiter different from the default can be provided.
+        .. versionadded:: FIXME
+
+    It is now capable to set a grain to a dict and supports nested grains.
+
+    If the grain does not yet exist, a new grain is set to the given value. For
+    the grain is nested, the necessary keys are created if they don't exist. If
+    a given is an existing value, it will be converted, but an existing value
+    different from the given key will fail the state.
+    If the grain with the given name exists, its value is updated to the new
+    value unless its existing or provided type is a list or a dict. Use
+    `force: True` to overwrite.
 
     .. code-block:: yaml
 
@@ -34,34 +50,28 @@ def present(name, value):
         grains.present:
           - value: edam
     '''
+    name = re.sub(delimiter, ':', name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
-    if isinstance(value, dict):
-        ret['result'] = False
-        ret['comment'] = 'Grain value cannot be dict'
-        return ret
-    if __grains__.get(name) == value:
+    existing = __salt__['grains.get'](name, 'nonexistingzniQSDpWy3ywmgFn66lL4PLG9oBrDi')
+    if existing == value:
         ret['comment'] = 'Grain is already set'
         return ret
     if __opts__['test']:
         ret['result'] = None
-        if name not in __grains__:
+        if existing == 'nonexistingzniQSDpWy3ywmgFn66lL4PLG9oBrDi':
             ret['comment'] = 'Grain {0} is set to be added'.format(name)
             ret['changes'] = {'new': name}
         else:
             ret['comment'] = 'Grain {0} is set to be changed'.format(name)
             ret['changes'] = {'new': name}
         return ret
-    grain = __salt__['grains.setval'](name, value)
-    if grain != {name: value}:
-        ret['result'] = False
-        ret['comment'] = 'Failed to set grain {0}'.format(name)
-        return ret
-    ret['result'] = True
-    ret['changes'] = grain
-    ret['comment'] = 'Set grain {0} to {1}'.format(name, value)
+    ret = __salt__['grains.set'](name, value, force=force)
+    if ret['result'] is True and ret['changes'] != {}:
+        ret['comment'] = 'Set grain {0} to {1}'.format(name, value)
+    ret['name'] = name
     return ret
 
 
