@@ -1463,7 +1463,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
                 # if authenticating with an SSH key and 'sudo' is found
                 # in the password prompt
-                if ('key_filename' in kwargs and kwargs['key']
+                if ('key_filename' in kwargs and kwargs['key_filename']
                     and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
                 ):
                     # do nothing, as command already has adjustments to
