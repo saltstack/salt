@@ -305,7 +305,14 @@ def bootstrap(vm_, opts):
         if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
             has_ssh_agent = True
 
-    if key_filename is None and ('password' not in vm_ or not vm_['password']) and has_ssh_agent is False:
+    if (key_filename is None and
+            salt.config.get_cloud_config_value(
+                'password', vm_, opts, default=None
+            ) is None and
+            salt.config.get_cloud_config_value(
+                'win_password', vm_, opts, default=None
+            ) is None and
+            has_ssh_agent is False):
         raise SaltCloudSystemExit(
             'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
             'is not set and there is no password set for the vm. '
