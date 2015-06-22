@@ -269,7 +269,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             __env__=None,
             saltenv='base',
             env_vars=None,
-            use_vt=False):
+            use_vt=False,
+            trusted_host=None):
     '''
     Install packages with pip
 
@@ -387,6 +388,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
         pick up a header file while compiling.
+    trusted_host
+        Mark this host as trusted, even though it does not have valid or any
+        HTTPS.
 
 
     CLI Example:
@@ -662,6 +666,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if env_vars:
         os.environ.update(env_vars)
+
+    if trusted_host:
+        cmd.append('--trusted-host {0}'.format(trusted_host))
 
     try:
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
