@@ -60,7 +60,7 @@ def present(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     result = {}
 
-    policies = __salt__['rabbitmq.list_policies'](runas=runas)
+    policies = __salt__['rabbitmq.list_policies'](runas=runas, vhost=vhost)
     policy = policies.get(vhost, {}).get(name)
     updates = []
     if policy:
