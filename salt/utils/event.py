@@ -276,6 +276,17 @@ class SaltEvent(object):
         data = serial.loads(mdata)
         return mtag, data
 
+    @classmethod
+    def pack(cls, data, tag, max_event_size=1048576, serial=None):
+        if serial is None:
+            serial = salt.payload.Serial({'serial': 'msgpack'})
+        tagend = TAGEND
+        serialized_data = salt.utils.dicttrim.trim_dict(serial.dumps(data),
+                max_event_size,
+                is_msgpacked=True
+                )
+        return '{0}{1}{2}'.format(tag, tagend, serialized_data)
+
     def _check_pending(self, tag, pending_tags):
         """Check the pending_events list for events that match the tag
 
@@ -412,12 +423,13 @@ class SaltEvent(object):
         data['_stamp'] = datetime.datetime.utcnow().isoformat()
 
         tagend = TAGEND
-        serialized_data = salt.utils.dicttrim.trim_dict(self.serial.dumps(data),
-                self.opts.get('max_event_size', 1048576),
-                is_msgpacked=True
-                )
+        event = self.pack(
+            data,
+            tag,
+            serial=self.serial,
+            max_event_size=self.opts.get('max_event_size', 1048576),
+        )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
             self.push.send(event)
         except Exception as ex:

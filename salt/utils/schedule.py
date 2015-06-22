@@ -280,6 +280,20 @@ class Schedule(object):
         self.loop_interval = sys.maxint
         clean_proc_dir(opts)
 
+    def list_jobs(self):
+        '''
+        Return the current list of jobs the scheduler is maintaining
+        '''
+        ret = {}
+        for name, job in self.opts['schedule'].items():
+            job.setdefault('enabled', True)  # jobs default to *enabled*
+            ret[name] = job
+        if 'schedule' in self.opts['pillar']:
+            for name, job in self.opts['pillar']['schedule'].items():
+                job.setdefault('enabled', True)  # jobs default to *enabled*
+                ret[name] = job
+        return ret
+
     def option(self, opt):
         '''
         Return the schedule data structure

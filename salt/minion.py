@@ -1599,6 +1599,13 @@ class Minion(MinionBase):
             self.schedule.disable_job(name, where)
         elif func == 'reload':
             self.schedule.reload(schedule)
+        elif func == 'list_jobs':
+            self.epub_sock.send(salt.utils.event.MinionEvent.pack(
+                    self.schedule.list_jobs(),
+                    'schedule_jobs_list',
+                    serial=self.serial,
+                    max_event_size=self.opts.get('max_event_size'),
+            ))
 
     def environ_setenv(self, package):
         '''
