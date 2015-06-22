@@ -29,8 +29,7 @@ def __virtual__():
     '''
     if not __salt__['config.get']('ifttt.secret_key') and \
        not __salt__['config.get']('ifttt:secret_key'):
-        log.error('IFTTT Secret Key Unavailable, not loading.')
-        return False
+        return (False, 'IFTTT Secret Key Unavailable, not loading.')
     return True
 
 
