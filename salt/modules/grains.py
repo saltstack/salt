@@ -612,7 +612,7 @@ def set(key,
         _existing_value_type = 'complex'
 
     if _existing_value_type is not None and _existing_value == val:
-        ret['comment'] = 'The value \'{0}\' was already set for key \'{1}\''.format(val, key)
+        ret['comment'] = 'Grain is already set'
         return ret
 
     if _existing_value is not None and not force:
