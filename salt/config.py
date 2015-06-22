@@ -2358,6 +2358,35 @@ def is_provider_configured(opts, provider, required_keys=()):
 
     # If we reached this point, the provider is not configured.
     return False
+
+
+def is_profile_configured(opts, provider, profile_name):
+    '''
+    Check if the requested profile contains the minimum required parameters for
+    a profile.
+
+    Required parameters include image, provider, and size keys.
+
+    .. versionadded:: Beryllium
+    '''
+    required_keys = ['image', 'provider', 'size']
+
+    alias, driver = provider.split(':')
+    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
+
+    for item in required_keys:
+        if profile_key.get(item, None) is None:
+            # There's at least one required configuration item which is not set.
+            log.error(
+                'The required {0!r} configuration setting is missing from the '
+                '{1!r} profile, which is configured '
+                'under the {2!r} alias.'.format(
+                    item, profile_name, alias
+                )
+            )
+            return False
+
+    return True
 # <---- Salt Cloud Configuration Functions -----------------------------------
 
 

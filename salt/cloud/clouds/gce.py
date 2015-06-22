@@ -561,6 +561,12 @@ def create_network(kwargs=None, call=None):
         log.error(
             'A network CIDR range must be specified when creating a network.'
         )
+        return
+
+    # Check for required profile parameters before sending any API calls.
+    if config.is_profile_configured(__opts__,
+                                    __active_provider_name__ or 'gce',
+                                    vm_['profile']) is False:
         return False
 
     name = kwargs['name']
