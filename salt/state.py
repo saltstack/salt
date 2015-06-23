@@ -2320,8 +2320,12 @@ class BaseHighState(object):
         if 'file_roots' in self.opts:
             envs.extend(list(self.opts['file_roots']))
         client_envs = self.client.envs()
-        if self.opts.get('env_order', []):
-            return self.opts['env_order']
+        env_order = self.opts.get('env_order', [])
+        client_envs = self.client.envs()
+        if env_order and client_envs:
+            return set(env_order).intersection(self.client.envs())
+        elif env_order:
+            return env_order
         else:
             for cenv in client_envs:
                 if cenv not in envs:
