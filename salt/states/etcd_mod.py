@@ -4,6 +4,8 @@
 Manage etcd Keys
 ================
 
+.. versionadded:: Beryllium
+
 :depends:  - python-etcd
 
 This state module supports setting and removing keys from etcd.
