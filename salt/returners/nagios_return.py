@@ -45,8 +45,6 @@ from __future__ import absolute_import
 import cgi
 import logging
 
-from xml.dom.minidom import parseString
-
 import salt.returners
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six.moves.http_client
