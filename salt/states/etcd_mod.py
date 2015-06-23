@@ -84,7 +84,6 @@ Available Functions
           - profile: my_etcd_config
           - watch:
             - file: /some/file.txt
-
 '''
 
 # Define the module's virtual name
@@ -93,6 +92,7 @@ __virtualname__ = 'etcd'
 # Function aliases
 __func_alias__ = {
     'set_': 'set',
+    'rm_': 'rm'
 }
 
 
@@ -176,15 +176,14 @@ def wait_set(name, value, profile=None):
     }
 
 
-def rm(name, recurse=False, profile=None):
+def rm_(name, recurse=False, profile=None):
     '''
     Deletes a key from etcd. This function is also aliased as ``rm``.
 
     name
         The etcd key name to remove, for example ``/foo/bar/baz``.
     recurse
-        Optional, defaults to ``False``. If ``True`` performs a recursive
-        delete, see the `python-etcd documentation<https://python-etcd.readthedocs.org/en/latest/#delete-a-key>`_
+        Optional, defaults to ``False``. If ``True`` performs a recursive delete.
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
@@ -250,7 +249,7 @@ def mod_watch(name, **kwargs):
 
     # Watch to rm etcd key
     if kwargs.get('sfun') in ['wait_rm_key', 'wait_rm']:
-        return rm(
+        return rm_(
             name,
             kwargs.get('profile'))
 
