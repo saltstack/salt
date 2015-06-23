@@ -88,6 +88,12 @@ class SPMClient(object):
         formula_tar = tarfile.open(package_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA.yml'.format(name))
         formula_def = yaml.safe_load(formula_ref)
+
+        for field in ('version', 'release', 'summary', 'description'):
+            if field not in formula_def:
+                log.error('Invalid package: the {0} was not found'.format(field))
+                return False
+
         conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)', (
             name,
             formula_def['version'],
