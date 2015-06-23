@@ -37,12 +37,25 @@ def _get_current_scheme():
     return matches.groups()[0].strip()
 
 
-def _get_powercfg_minute_values(scheme, guid, subguid):
+def _get_powercfg_minute_values(scheme, guid, subguid, safe_name):
     '''
     Returns the AC/DC values in an array for a guid and subguid for a the given scheme
     '''
-    cmd = "powercfg /q {0} {1} {2}".format(scheme, guid, subguid)
+    if __grains__['osrelease'] == '7':
+        cmd = "powercfg /q {0} {1}".format(scheme, guid)
+    else:
+        cmd = "powercfg /q {0} {1} {2}".format(scheme, guid, subguid)
     out = __salt__['cmd.run'](cmd, python_shell=False)
+
+    split = out.split("\r\n\r\n")
+    if len(split) > 1:
+        for s in split:
+            if safe_name in s or subguid in s:
+                out = s
+                break
+    else:
+        out = split[0]
+
     raw_settings = re.findall(r"Power Setting Index: ([0-9a-fx]+)", out)
     return {"ac": int(raw_settings[0], 0) / 60, "dc": int(raw_settings[1], 0) / 60}
 
@@ -86,7 +99,7 @@ def get_monitor_timeout():
 
         salt '*' powercfg.get_monitor_timeout
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_VIDEO", "VIDEOIDLE")
+    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_VIDEO", "VIDEOIDLE", "Turn off display after")
 
 
 def set_disk_timeout(timeout, power="ac"):
@@ -119,7 +132,7 @@ def get_disk_timeout():
 
         salt '*' powercfg.get_disk_timeout
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_DISK", "DISKIDLE")
+    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_DISK", "DISKIDLE", "Turn off hard disk after")
 
 
 def set_standby_timeout(timeout, power="ac"):
@@ -152,7 +165,7 @@ def get_standby_timeout():
 
         salt '*' powercfg.get_standby_timeout
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "STANDBYIDLE")
+    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "STANDBYIDLE", "Sleep after")
 
 
 def set_hibernate_timeout(timeout, power="ac"):
@@ -185,4 +198,4 @@ def get_hibernate_timeout():
 
         salt '*' powercfg.get_hibernate_timeout
     '''
-    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "HIBERNATEIDLE")
+    return _get_powercfg_minute_values(_get_current_scheme(), "SUB_SLEEP", "HIBERNATEIDLE", "Hibernate after")
