@@ -44,7 +44,7 @@ REQUIRED to use failover.
 Multimaster with PKI and Failover is discussed in 
 :doc:`this tutorial </topics/tutorials/multimaster_pki>`
 
-``master_type: failover`` can be combined with ``shuffle_masters: True``
+``master_type: failover`` can be combined with ``master_shuffle: True``
 to spread minion connections across all masters (one master per
 minion, not each minion connecting to all masters).  Adding Salt Syndics
 into the mix makes it possible to create a load-balanced Salt infrastructure.

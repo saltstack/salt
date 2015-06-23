@@ -82,10 +82,24 @@ The option can can also be set to a list of masters, enabling
 
 .. versionadded:: 2014.7.0
 
-Default: ``str``
+Default: ``standard``
 
-The type of the :conf_minion:`master` variable. Can be either ``func`` or
-``failover``.
+The type of the :conf_minion:`master` variable. Can be ``standard``, ``failover`` or
+``func``.
+
+.. code-block:: yaml
+
+    master_type: failover
+
+If this option is set to ``failover``, :conf_minion:`master` must be a list of
+master addresses. The minion will then try each master in the order specified
+in the list until it successfully connects.  :conf_minion:`master_alive_interval`
+must also be set, this determines how often the minion will verify the presence
+of the master.
+
+.. code-block:: yaml
+
+    master_type: func
 
 If the master needs to be dynamically assigned by executing a function instead
 of reading in the static master value, set this to ``func``. This can be used
@@ -93,19 +107,16 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+``master_alive_interval``
+-------------------------
 
 .. code-block:: yaml
 
-    master_type: func
+    master_alive_interval: 30
 
-If this option is set to ``failover``, :conf_minion:`master` must be a list of
-master addresses. The minion will then try each master in the order specified
-in the list until it successfully connects.
-
-
-.. code-block:: yaml
-
-    master_type: failover
+Configures how often, in seconds, the minion will verify that the current
+master is alive and responding.  The minion will try to establish a connection
+to the next master in the list if it finds the existing one is dead.
 
 ``master_shuffle``
 ------------------
