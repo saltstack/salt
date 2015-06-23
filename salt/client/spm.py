@@ -46,9 +46,9 @@ class SPMClient(object):
         '''
         command = args[0]
         if command == 'install':
-            self._install(args[1])
+            self._install(args)
         elif command == 'local_install':
-            self._local_install(args[1])
+            self._local_install(args)
         elif command == 'remove':
             self._remove(args)
         elif command == 'build':
@@ -58,10 +58,16 @@ class SPMClient(object):
         elif command == 'create_repo':
             self._create_repo(args)
 
-    def _local_install(self, package_file):
+    def _local_install(self, args):
         '''
         Install a package from a file
         '''
+        if len(args) < 2:
+            log.error('A package file must be specified')
+            return False
+
+        package_file = args[1]
+
         self._init_db()
         out_path = self.opts['file_roots']['base'][0]
         comps = package_file.split('-')
@@ -70,7 +76,7 @@ class SPMClient(object):
         log.debug('Locally installing package {0} to {1}'.format(package_file, out_path))
 
         if not os.path.exists(package_file):
-            log.debug('File not found')
+            log.error('File {0} not found'.format(package_file))
             return False
 
         if not os.path.exists(out_path):
@@ -195,6 +201,10 @@ class SPMClient(object):
         Scan a directory and create an SPM-METADATA.yml file which describes
         all of the SPM files in that directory.
         '''
+        if len(args) < 2:
+            log.error('A path to a directory must be specified')
+            return False
+
         if args[1] == '.':
             repo_path = os.environ['PWD']
         else:
@@ -222,10 +232,16 @@ class SPMClient(object):
 
         log.debug('Wrote {0}'.format(metadata_filename))
 
-    def _install(self, package):
+    def _install(self, args):
         '''
         Install a package from a repo
         '''
+        if len(args) < 2:
+            log.error('A package must be specified')
+            return False
+
+        package = args[1]
+
         log.debug('Installing package {0}'.format(package))
         repo_metadata = self._get_repo_metadata()
         for repo in repo_metadata:
@@ -253,6 +269,10 @@ class SPMClient(object):
         '''
         Remove a package
         '''
+        if len(args) < 2:
+            log.error('A package must be specified')
+            return False
+
         package = args[1]
         log.debug('Removing package {0}'.format(package))
 
@@ -305,6 +325,10 @@ class SPMClient(object):
         '''
         Build a package
         '''
+        if len(args) < 2:
+            log.error('A path to a formula must be specified')
+            return False
+
         self.abspath = args[1]
         comps = self.abspath.split('/')
         self.relpath = comps[-1]
