@@ -81,7 +81,6 @@ def output(data):
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
-    pprint.pprint(data)  # FIXME
     for host, hostdata in six.iteritems(data):
         return _format_host(host, hostdata)[0]
 
