@@ -46,15 +46,11 @@ def __virtual__():
     return False
 
 
-
-
-
 def _get_portage():
     '''
     portage module must be reloaded or it can't catch the changes
     in portage.* which had been added after when the module was loaded
     '''
-    import portage
     return reload(portage)
 
 
@@ -543,7 +539,7 @@ def get_installed_use(cpv, use="USE"):
     @returns [] or the list of IUSE flags
     """
     portage = _get_portage()
-    return portage.db[portage.root]["vartree"].dbapi.aux_get(cpv,[use])[0].split()
+    return portage.db[portage.root]["vartree"].dbapi.aux_get(cpv, [use])[0].split()
 
 
 def filter_flags(use, use_expand_hidden, usemasked, useforced):
@@ -608,7 +604,7 @@ def get_all_cpv_use(cpv):
     _porttree().dbapi.settings.lock()
     return use, use_expand_hidden, usemask, useforce
 
-#compare_flags(cpv)
+
 def get_cleared_flags(cpv):
     '''
     Uses portage for compare use flags which is used for installing package
@@ -620,7 +616,7 @@ def get_cleared_flags(cpv):
     '''
     final_use, use_expand_hidden, usemasked, useforced = get_all_cpv_use(cpv)
     inst_flags = filter_flags(get_installed_use(cpv), use_expand_hidden, usemasked, useforced)
-    final_flags = filter_flags(final_use,  use_expand_hidden, usemasked, useforced)
+    final_flags = filter_flags(final_use, use_expand_hidden, usemasked, useforced)
     return inst_flags, final_flags
 
 
