@@ -559,7 +559,7 @@ def smart_attributes(dev, attributes=None, values=None):
 
         data = dict(zip(fields, line[1:]))
         try:
-            del(data['_'])
+            del data['_']
         except:  # pylint: disable=bare-except
             pass
 
