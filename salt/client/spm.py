@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import os
 import yaml
 import tarfile
-import tempfile
 import shutil
 import msgpack
 import sqlite3
@@ -175,6 +174,7 @@ class SPMClient(object):
         Return cached repo metadata
         '''
         metadata = {}
+
         def _read_metadata(repo, repo_info):
             cache_path = '{0}/{1}.p'.format(
                 self.opts['spm_cache_dir'],
