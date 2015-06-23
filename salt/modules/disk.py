@@ -20,6 +20,7 @@ from salt.ext.six.moves import zip
 log = logging.getLogger(__name__)
 
 HAS_HDPARM = salt.utils.which_bin(['hdparm']) is not None
+HAS_SMARTCTL = salt.utils.which_bin(['smartctl']) is not None
 
 
 def __virtual__():
@@ -504,3 +505,75 @@ def hpa(disks, size=None):
             size = data['total']
 
         _hdparm('--yes-i-know-what-i-am-doing -Np{0} {1}'.format(size, disk))
+
+
+def smart_attributes(dev, attributes=None, values=None):
+    '''
+    Fetch SMART attributes
+    Providing attributes will deliver only requested attributes
+    Providing values will deliver only requested values for attributes
+
+    Default is the Backblaze recommended
+    set (https://www.backblaze.com/blog/hard-drive-smart-stats/):
+    (5,187,188,197,198)
+
+    .. versionadded:: Beryllium
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' disk.smart_attributes /dev/sda
+        salt '*' disk.smart_attributes /dev/sda attributes=(5,187,188,197,198)
+    '''
+
+    if not dev.startswith('/dev/'):
+        dev = '/dev/' + dev
+
+    cmd = 'smartctl --attributes {0}'.format(dev)
+    smart_result = __salt__['cmd.run_all'](cmd, output_loglevel='quiet')
+    if smart_result['retcode'] != 0:
+        raise CommandExecutionError(smart_result['stderr'])
+
+    smart_result = iter(smart_result['stdout'].splitlines())
+
+    fields = []
+    for line in smart_result:
+        if line.startswith('ID#'):
+            fields = re.split(r'\s+', line.strip())
+            fields = [key.lower() for key in fields[1:]]
+            break
+
+    if values is not None:
+        fields = [field if field in values else '_' for field in fields]
+
+    smart_attr = {}
+    for line in smart_result:
+        if not re.match(r'[\s]*\d', line):
+            break
+
+        line = re.split(r'\s+', line.strip(), maxsplit=len(fields))
+        attr = int(line[0])
+
+        if attributes is not None and attr not in attributes:
+            continue
+
+        data = dict(zip(fields, line[1:]))
+        try:
+            del(data['_'])
+        except:  # pylint: disable=bare-except
+            pass
+
+        for field in data.keys():
+            val = data[field]
+            try:
+                val = int(val)
+            except:  # pylint: disable=bare-except
+                try:
+                    val = [int(value) for value in val.split(' ')]
+                except:  # pylint: disable=bare-except
+                    pass
+            data[field] = val
+
+        smart_attr[attr] = data
+
+    return smart_attr
