@@ -793,6 +793,10 @@ class Minion(MinionBase):
 
             # if failover is set, the first time through, opts['master'] is a list.
             elif opts['master_type'] == 'failover':
+                # if failed=True, the minion was previously connected
+                # we're probably called from the minions main-event-loop
+                # because a master connection loss was detected. remove
+                # the possibly failed master from the list of masters.
                 if failed:
                     log.info('Removing possibly failed master {0} from list of'
                              ' masters'.format(opts['master']))
@@ -811,10 +815,6 @@ class Minion(MinionBase):
                     opts['master'] = [opts['master']]
                     opts['master_list'] = opts['master']
                     opts['master_active_list'] = opts['master']
-                # if failed=True, the minion was previously connected
-                # we're probably called from the minions main-event-loop
-                # because a master connection loss was detected. remove
-                # the possibly failed master from the list of masters.
                 else:
                     msg = ('master_type set to \'failover\' but \'master\' '
                            'is not of type list but of type '
