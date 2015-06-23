@@ -46,6 +46,18 @@ def __virtual__():
     return False
 
 
+
+
+
+def _get_portage():
+    '''
+    portage module must be reloaded or it can't catch the changes
+    in portage.* which had been added after when the module was loaded
+    '''
+    import portage
+    return reload(portage)
+
+
 def _porttree():
     return portage.db[portage.root]['porttree']
 
@@ -502,3 +514,128 @@ def is_present(conf, atom):
                 if match_list.issubset(line_list):
                     return True
             return False
+
+
+def get_iuse(cpv):
+    """Gets the current IUSE flags from the tree
+
+    @type: cpv: string
+    @param cpv: cat/pkg-ver
+    @rtype list
+    @returns [] or the list of IUSE flags
+    """
+    try:
+        # aux_get might return dupes, so run them through set() to remove them
+        dirty_flags = _porttree().dbapi.aux_get(cpv, ["IUSE"])[0].split()
+        return list(set(dirty_flags))
+    except:
+        return []
+
+
+def get_installed_use(cpv, use="USE"):
+    """Gets the installed USE flags from the VARDB
+
+    @type: cpv: string
+    @param cpv: cat/pkg-ver
+    @type use: string
+    @param use: 1 of ["USE", "PKGUSE"]
+    @rtype list
+    @returns [] or the list of IUSE flags
+    """
+    portage = _get_portage()
+    return portage.db[portage.root]["vartree"].dbapi.aux_get(cpv,[use])[0].split()
+
+
+def filter_flags(use, use_expand_hidden, usemasked, useforced):
+    """Filter function to remove hidden or otherwise not normally
+    visible USE flags from a list.
+
+    @type use: list
+    @param use: the USE flag list to be filtered.
+    @type use_expand_hidden: list
+    @param  use_expand_hidden: list of flags hidden.
+    @type usemasked: list
+    @param usemasked: list of masked USE flags.
+    @type useforced: list
+    @param useforced: the forced USE flags.
+    @rtype: list
+    @return the filtered USE flags.
+    """
+    portage = _get_portage()
+    # clean out some environment flags, since they will most probably
+    # be confusing for the user
+    for f in use_expand_hidden:
+        f=f.lower() + "_"
+        for x in use:
+            if f in x:
+                use.remove(x)
+    # clean out any arch's
+    archlist = portage.settings["PORTAGE_ARCHLIST"].split()
+    for a in use[:]:
+        if a in archlist:
+            use.remove(a)
+    # dbl check if any from usemasked  or useforced are still there
+    masked = usemasked + useforced
+    for a in use[:]:
+        if a in masked:
+            use.remove(a)
+    return use
+
+
+def get_all_cpv_use(cpv):
+    """Uses portage to determine final USE flags and settings for an emerge
+
+    @type cpv: string
+    @param cpv: eg cat/pkg-ver
+    @rtype: lists
+    @return  use, use_expand_hidden, usemask, useforce
+    """
+    portage = _get_portage()
+    use = None
+    _porttree().dbapi.settings.unlock()
+    try:
+        _porttree().dbapi.settings.setcpv(cpv, mydb=portage.portdb)
+        use = portage.settings['PORTAGE_USE'].split()
+        use_expand_hidden = portage.settings["USE_EXPAND_HIDDEN"].split()
+        usemask = list(_porttree().dbapi.settings.usemask)
+        useforce =  list(_porttree().dbapi.settings.useforce)
+    except KeyError:
+        _porttree().dbapi.settings.reset()
+        _porttree().dbapi.settings.lock()
+        return [], [], [], []
+    # reset cpv filter
+    _porttree().dbapi.settings.reset()
+    _porttree().dbapi.settings.lock()
+    return use, use_expand_hidden, usemask, useforce
+
+#compare_flags(cpv)
+def get_cleared_flags(cpv):
+    '''
+    Uses portage for compare use flags which is used for installing package
+    and use flags which now exist int /etc/portage/package.use/
+    @type cpv: string
+    @param cpv: eg cat/pkg-ver
+    @rtype: list
+    returned list of used flags and list of flags which will be used
+    '''
+    final_use, use_expand_hidden, usemasked, useforced = get_all_cpv_use(cpv)
+    inst_flags = filter_flags(get_installed_use(cpv), use_expand_hidden, usemasked, useforced)
+    final_flags = filter_flags(final_use,  use_expand_hidden, usemasked, useforced)
+    return inst_flags, final_flags
+
+
+def is_changed_uses(cpv):
+    '''
+    Uses portage for determine if the use flags of installed package 
+    is compatible with use flags in portage configs
+    @type cpv: string
+    @param cpv: eg cat/pkg-ver
+    '''
+    i_flags, conf_flags = get_cleared_flags(cpv)
+    for i in i_flags:
+        try:
+            conf_flags.remove(i)
+        except ValueError:
+            return True
+    return True if conf_flags else False
+
