@@ -773,7 +773,7 @@ class Minion(MinionBase):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'standard':
+        if opts['master_type'] != 'standard' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
@@ -793,31 +793,28 @@ class Minion(MinionBase):
 
             # if failover is set, the first time through, opts['master'] is a list.
             elif opts['master_type'] == 'failover':
-                if isinstance(opts['master'], list):
-                    log.info('Got list of available master addresses:'
-                             ' {0}'.format(opts['master']))
-                    opts['master_list'] = opts['master']
-                    opts['master_active_list'] = opts['master']
-                    if opts['master_shuffle']:
-                        shuffle(opts['master_list'])
-                elif isinstance(opts['master_list'], str):
-                    # We have a string, but a list was what was intended. Convert.
-                    # See issue 23611 for details
-                    opts['master_list'] = list(opts['master'])
-                    opts['master_active_list'] = list(opts['master'])
-                elif opts['__role'] == 'syndic':
-                    log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
-
-                # if failed=True, the minion was previously connected
-                # we're probably called from the minions main-event-loop
-                # because a master connection loss was detected. remove
-                # the possibly failed master from the list of masters.
-                elif failed:
+                if failed:
                     log.info('Removing possibly failed master {0} from list of'
                              ' masters'.format(opts['master']))
                     # create new list of master with the possibly failed one removed
                     opts['master_active_list'] = [x for x in opts['master_active_list'] if opts['master'] != x]
-
+                elif isinstance(opts['master'], list):
+                    log.info('Got list of available master addresses:'
+                             ' {0}'.format(opts['master']))
+                    opts['master_list'] = opts['master']
+                    opts['master_active_list'] = opts['master']
+                    if opts.get('master_shuffle'):
+                        shuffle(opts['master_list'])
+                elif isinstance(opts['master'], str):
+                    # We have a string, but a list was what was intended. Convert.
+                    # See issue 23611 for details
+                    opts['master'] = [opts['master']]
+                    opts['master_list'] = opts['master']
+                    opts['master_active_list'] = opts['master']
+                # if failed=True, the minion was previously connected
+                # we're probably called from the minions main-event-loop
+                # because a master connection loss was detected. remove
+                # the possibly failed master from the list of masters.
                 else:
                     msg = ('master_type set to \'failover\' but \'master\' '
                            'is not of type list but of type '
@@ -876,8 +873,10 @@ class Minion(MinionBase):
                     self.connected = True
                     return opts['master']
 
-        # single master sign in
+        # single master sign in or syndic
         else:
+            if opts['__role'] == 'syndic':
+                log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
             if self.authenticate(timeout, safe) == 'full':
