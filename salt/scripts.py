@@ -355,3 +355,14 @@ def salt_main():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
+
+
+def salt_spm():
+    '''
+    The main function for spm, the Salt Package Manager
+
+    .. versionadded:: Beryllium
+    '''
+    import salt.cli.spm
+    spm = salt.cli.spm.SPM()  # pylint: disable=E1120
+    spm.run()
