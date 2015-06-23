@@ -524,7 +524,7 @@ def get_iuse(cpv):
         # aux_get might return dupes, so run them through set() to remove them
         dirty_flags = _porttree().dbapi.aux_get(cpv, ["IUSE"])[0].split()
         return list(set(dirty_flags))
-    except:
+    except Exception as e: 
         return []
 
 
@@ -561,7 +561,7 @@ def filter_flags(use, use_expand_hidden, usemasked, useforced):
     # clean out some environment flags, since they will most probably
     # be confusing for the user
     for f in use_expand_hidden:
-        f=f.lower() + "_"
+        f=f.lower()+ "_"
         for x in use:
             if f in x:
                 use.remove(x)
@@ -594,7 +594,7 @@ def get_all_cpv_use(cpv):
         use = portage.settings['PORTAGE_USE'].split()
         use_expand_hidden = portage.settings["USE_EXPAND_HIDDEN"].split()
         usemask = list(_porttree().dbapi.settings.usemask)
-        useforce =  list(_porttree().dbapi.settings.useforce)
+        useforce = list(_porttree().dbapi.settings.useforce)
     except KeyError:
         _porttree().dbapi.settings.reset()
         _porttree().dbapi.settings.lock()
@@ -634,4 +634,3 @@ def is_changed_uses(cpv):
         except ValueError:
             return True
     return True if conf_flags else False
-
