@@ -15,12 +15,16 @@ import msgpack
 import sqlite3
 import datetime
 import hashlib
+import logging
 
 # Import Salt libs
 import salt.config
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 class SPMClient(object):
@@ -251,9 +255,51 @@ class SPMClient(object):
         '''
         package = args[1]
         log.debug('Removing package {0}'.format(package))
+
+        if not os.path.exists(self.opts['spm_db']):
+            log.error('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
+            return
+
         # Look at local repo index
+        sqlite3.enable_callback_tracebacks(True)
+        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
+        cur = conn.cursor()
+
+        data = conn.execute('SELECT * FROM packages WHERE package=?', (package, ))
+        if not data.fetchone():
+            log.error('Package {0} not installed'.format(package))
+            return
+
         # Find files that have not changed and remove them
-        # Leave directories in place that still have files in them
+        data = conn.execute('SELECT path, sum FROM files WHERE package=?', (package, ))
+        import pprint
+        dirs = []
+        for filerow in data.fetchall():
+            if os.path.isdir(filerow[0]):
+                dirs.append(filerow[0])
+                continue
+            with salt.utils.fopen(filerow[0], 'r') as fh_:
+                file_hash = hashlib.sha1()
+                file_hash.update(fh_.read())
+                digest = file_hash.hexdigest()
+                if filerow[1] == digest:
+                    log.trace('Removing file {0}'.format(filerow[0]))
+                    os.remove(filerow[0])
+                else:
+                    log.trace('Not removing file {0}'.format(filerow[0]))
+                conn.execute('DELETE FROM files WHERE path=?', (filerow[0], ))
+
+        # Clean up directories
+        for dir_ in sorted(dirs, reverse=True):
+            conn.execute('DELETE FROM files WHERE path=?', (dir_, ))
+            try:
+                log.trace('Removing directory {0}'.format(dir_))
+                os.rmdir(dir_)
+            except OSError:
+                # Leave directories in place that still have files in them
+                log.trace('Cannot remove directory {0}, probably not empty'.format(dir_))
+
+        conn.execute('DELETE FROM packages WHERE package=?', (package, ))
 
     def _build(self, args):
         '''

@@ -1078,9 +1078,10 @@ DEFAULT_SPM_OPTS = {
     'spm_logfile': '/var/log/salt/spm',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
-    'spm_build_dir': '/srv/spm',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
+    'spm_build_dir': '/srv/spm',
     'spm_build_exclude': ['.git'],
+    'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     # <---- Salt master settings overridden by SPM ----------------------
 }
 
