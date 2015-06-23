@@ -120,7 +120,7 @@ def present(
                 hash_hostname=hash_hostname)
     if result['status'] == 'exists':
         return dict(ret,
-                    Gcomment='{0} already exists in {1}'.format(name, config))
+                    comment='{0} already exists in {1}'.format(name, config))
     elif result['status'] == 'error':
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
