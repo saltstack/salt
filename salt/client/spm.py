@@ -348,6 +348,11 @@ class SPMClient(object):
             log.debug('File not found')
             return False
 
+        for field in ('version', 'release', 'summary', 'description'):
+            if field not in formula_conf:
+                log.error('Invalid package: a {0} must be defined'.format(field))
+                return False
+
         out_path = '{0}/{1}-{2}-{3}.spm'.format(
             self.opts['spm_build_dir'],
             formula_conf['name'],
