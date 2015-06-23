@@ -147,26 +147,26 @@ def rand_int(start=1, end=10):
 
 
 def seed(range=10, hash=None):
-     '''
-     Returns a random number within a range. Optional hash argument can
-     be any hashable object. If hash is omitted or None, the id of the minion is used.
+    '''
+    Returns a random number within a range. Optional hash argument can
+    be any hashable object. If hash is omitted or None, the id of the minion is used.
 
-     .. versionadded: 2015.5.3
+    .. versionadded: 2015.5.3
 
-     hash: None
-         Any hashable object.
+    hash: None
+        Any hashable object.
 
-     range: 10
-         Any valid integer number
+    range: 10
+        Any valid integer number
 
-     CLI Example:
+    CLI Example:
 
-     .. code-block:: bash
+    .. code-block:: bash
 
-         salt '*' random.rand_seed 'none' '10'
-     '''
-     if hash is None:
-         hash = __grains__['id']
+        salt '*' random.rand_seed 'none' '10'
+    '''
+    if hash is None:
+        hash = __grains__['id']
 
-     random.seed(hash)
-     return random.randrange(range)
+    random.seed(hash)
+    return random.randrange(range)
