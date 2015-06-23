@@ -20,6 +20,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 powercfg.__salt__ = {}
+powercfg.__grains__ = {'osrelease': 8}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -142,6 +143,22 @@ class PowerCfgTestCase(TestCase):
 
             self.assertEqual({'ac': 30, 'dc': 15}, ret)
 
+    def test_windows_7(self):
+        '''
+            Test to make sure we can get the hibernate timeout value on windows 7
+        '''
+        mock = MagicMock()
+        mock.side_effect = ["Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)", self.query_ouput]
+
+        with patch.dict(powercfg.__salt__, {'cmd.run': mock}), patch.dict(powercfg.__grains__, {'osrelease': '7'}):
+            ret = powercfg.get_hibernate_timeout()
+            calls = [
+                call('powercfg /getactivescheme', python_shell=False),
+                call('powercfg /q 381b4222-f694-41f0-9685-ff5bb260df2e SUB_SLEEP', python_shell=False)
+            ]
+            mock.assert_has_calls(calls)
+
+            self.assertEqual({'ac': 30, 'dc': 15}, ret)
 
 if __name__ == '__main__':
     from integration import run_tests
