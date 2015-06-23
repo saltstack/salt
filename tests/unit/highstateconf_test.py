@@ -5,7 +5,6 @@ from __future__ import absolute_import
 import os
 import os.path
 import tempfile
-import copy
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -18,7 +17,7 @@ import integration
 import salt.config
 from salt.state import HighState
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch
+
 
 class HighStateTestCase(TestCase):
     def setUp(self):
@@ -68,6 +67,7 @@ class HighStateTestCase(TestCase):
                                                    'state2,state3')
         self.assertEqual(matches, {'env': ['state2', 'state3']})
 
+
 class TopFileMergeTestCase(TestCase):
     '''
     Test various merge strategies for multiple tops files collected from
@@ -101,7 +101,6 @@ class TopFileMergeTestCase(TestCase):
         config['test'] = False
         return config
 
-
     def _get_tops(self):
         '''
         A test helper to emulate HighState.get_tops() but just to construct
@@ -113,7 +112,7 @@ class TopFileMergeTestCase(TestCase):
         tops['b'].append(self.env2)
         tops['c'].append(self.env3)
         return tops
-        
+
     def test_basic_merge(self):
         '''
         This is the default approach for Salt. Merge the top files with the
@@ -138,7 +137,7 @@ class TopFileMergeTestCase(TestCase):
         config['environment'] = 'b'
         highstate = HighState(config)
         ret = highstate.get_tops()
-        self.assertEqual(ret, OrderedDict([('b', [{}])]) )
+        self.assertEqual(ret, OrderedDict([('b', [{}])]))
 
     def test_ordered_merge(self):
         '''
