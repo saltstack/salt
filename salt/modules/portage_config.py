@@ -69,6 +69,19 @@ def _p_to_cp(p):
     return None
 
 
+def _get_cpv(cp, installed=True):
+    '''
+    add version to category/package
+    @cp - name of package in format category/name
+    @installed - boolean value, if False, function returns cpv
+    for latest available package
+    '''
+    if installed:
+        return _get_portage().db[portage.root]['vartree'].dep_bestmatch(cp)
+    else:
+        return _porttree().dep_bestmatch(cp)
+
+
 def enforce_nice_config():
     '''
     Enforce a nice tree structure for /etc/portage/package.* configuration
@@ -512,33 +525,35 @@ def is_present(conf, atom):
             return False
 
 
-def get_iuse(cpv):
+def get_iuse(cp):
     """Gets the current IUSE flags from the tree
 
     @type: cpv: string
-    @param cpv: cat/pkg-ver
+    @param cpv: cat/pkg
     @rtype list
     @returns [] or the list of IUSE flags
     """
+    cpv = _get_cpv(cp)
     try:
         # aux_get might return dupes, so run them through set() to remove them
         dirty_flags = _porttree().dbapi.aux_get(cpv, ["IUSE"])[0].split()
         return list(set(dirty_flags))
-    except Exception as e: 
+    except Exception as e:
         return []
 
 
-def get_installed_use(cpv, use="USE"):
+def get_installed_use(cp, use="USE"):
     """Gets the installed USE flags from the VARDB
 
-    @type: cpv: string
-    @param cpv: cat/pkg-ver
+    @type: cp: string
+    @param cp: cat/pkg
     @type use: string
     @param use: 1 of ["USE", "PKGUSE"]
     @rtype list
     @returns [] or the list of IUSE flags
     """
     portage = _get_portage()
+    cpv = _get_cpv(cp)
     return portage.db[portage.root]["vartree"].dbapi.aux_get(cpv, [use])[0].split()
 
 
@@ -561,7 +576,7 @@ def filter_flags(use, use_expand_hidden, usemasked, useforced):
     # clean out some environment flags, since they will most probably
     # be confusing for the user
     for f in use_expand_hidden:
-        f=f.lower()+ "_"
+        f = f.lower()+ "_"
         for x in use:
             if f in x:
                 use.remove(x)
@@ -578,14 +593,15 @@ def filter_flags(use, use_expand_hidden, usemasked, useforced):
     return use
 
 
-def get_all_cpv_use(cpv):
+def get_all_cpv_use(cp):
     """Uses portage to determine final USE flags and settings for an emerge
 
-    @type cpv: string
-    @param cpv: eg cat/pkg-ver
+    @type cp: string
+    @param cp: eg cat/pkg
     @rtype: lists
     @return  use, use_expand_hidden, usemask, useforce
     """
+    cpv = _get_cpv(cp)
     portage = _get_portage()
     use = None
     _porttree().dbapi.settings.unlock()
@@ -605,28 +621,30 @@ def get_all_cpv_use(cpv):
     return use, use_expand_hidden, usemask, useforce
 
 
-def get_cleared_flags(cpv):
+def get_cleared_flags(cp):
     '''
     Uses portage for compare use flags which is used for installing package
     and use flags which now exist int /etc/portage/package.use/
-    @type cpv: string
-    @param cpv: eg cat/pkg-ver
+    @type cp: string
+    @param cp: eg cat/pkg
     @rtype: list
     returned list of used flags and list of flags which will be used
     '''
+    cpv = _get_cpv(cp)
     final_use, use_expand_hidden, usemasked, useforced = get_all_cpv_use(cpv)
     inst_flags = filter_flags(get_installed_use(cpv), use_expand_hidden, usemasked, useforced)
     final_flags = filter_flags(final_use, use_expand_hidden, usemasked, useforced)
     return inst_flags, final_flags
 
 
-def is_changed_uses(cpv):
+def is_changed_uses(cp):
     '''
-    Uses portage for determine if the use flags of installed package 
+    Uses portage for determine if the use flags of installed package
     is compatible with use flags in portage configs
-    @type cpv: string
-    @param cpv: eg cat/pkg-ver
+    @type cp: string
+    @param cp: eg cat/pkg
     '''
+    cpv = _get_cpv(cp)
     i_flags, conf_flags = get_cleared_flags(cpv)
     for i in i_flags:
         try:
