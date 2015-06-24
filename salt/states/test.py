@@ -210,8 +210,8 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         ret['changes'] = {}
     else:
         err = ('You have specified the state option \'Changes\' with'
-            ' invalid arguments. It must be either '
-            ' \'True\', \'False\', or \'Random\'')
+               ' invalid arguments. It must be either '
+               ' \'True\', \'False\', or \'Random\'')
         raise SaltInvocationError(err)
 
     if result == 'Random':
@@ -340,13 +340,13 @@ def _if_str_then_list(listing):
 
 
 def check_pillar(name,
-        present=None,
-        boolean=None,
-        integer=None,
-        string=None,
-        listing=None,
-        dictionary=None,
-        verbose=False):
+                 present=None,
+                 boolean=None,
+                 integer=None,
+                 string=None,
+                 listing=None,
+                 dictionary=None,
+                 verbose=False):
     '''
     Checks the presence and, optionally, the type of
     given keys in Pillar.
@@ -434,5 +434,51 @@ def check_pillar(name,
         for key, key_type in fine.items():
             comment += '- {0} ({1})\n'.format(key, key_type)
         ret['comment'] += comment
+
+    return ret
+
+
+def file(name, **kwargs):
+    '''
+    Check a file exists and ensure the attributes are what are expected.
+
+    .. versionadded:: Beryllium
+
+    name
+        The filename to check exists
+
+    .. code-block:: yaml
+
+        check_passwd_file
+          test.file:
+            - name: /etc/passwd
+            - mode: '0644'
+            - gid: 0
+            - type: file
+    '''
+    ret = {
+        'name': name,
+        'result': True,
+        'comment': 'No difference',
+        'changes': ''
+    }
+
+    if not __salt__['file.file_exists'](name):
+        ret['result'] = False
+        ret['comment'] = 'file does not exist'
+
+        return ret
+
+    _perms = __salt__['file.stats'](name)
+
+    diff = set(kwargs.items()) - set(_perms.items())
+
+    if diff:
+        ret['result'] = False
+        ret['comment'] = 'File mismatch'
+        ret['changes'] = {
+            'actual': {i: _perms[i] for i in dict(diff).keys()},
+            'expected': dict(diff),
+        }
 
     return ret
