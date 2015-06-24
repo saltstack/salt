@@ -2329,17 +2329,16 @@ def is_provider_configured(opts, provider, required_keys=()):
             return False
         for key in required_keys:
             if opts['providers'][alias][driver].get(key, None) is None:
-                # There's at least one require configuration key which is not
-                # set.
-                log.trace(
-                    'The required {0!r} configuration setting is missing on '
-                    'the {1!r} driver(under the {2!r} alias)'.format(
+                # There's at least one require configuration key which is not set.
+                log.warning(
+                    'The required {0!r} configuration setting is missing from '
+                    'the {1!r} driver, which is configured under the {2!r} '
+                    'alias.'.format(
                         key, provider, alias
                     )
                 )
                 return False
-        # If we reached this far, there's a properly configured provider,
-        # return it!
+        # If we reached this far, there's a properly configured provider. Return it!
         return opts['providers'][alias][driver]
 
     for alias, drivers in six.iteritems(opts['providers']):
@@ -2348,15 +2347,16 @@ def is_provider_configured(opts, provider, required_keys=()):
                 continue
 
             # If we reached this far, we have a matching provider, let's see if
-            # all required configuration keys are present and not None
+            # all required configuration keys are present and not None.
             skip_provider = False
             for key in required_keys:
                 if provider_details.get(key, None) is None:
                     # This provider does not include all necessary keys,
-                    # continue to next one
-                    log.trace(
+                    # continue to next one.
+                    log.warning(
                         'The required {0!r} configuration setting is missing '
-                        'on the {1!r} driver(under the {2!r} alias)'.format(
+                        'from the {1!r} driver, which is configured under the '
+                        '{2!r} alias.'.format(
                             key, provider, alias
                         )
                     )
@@ -2371,6 +2371,42 @@ def is_provider_configured(opts, provider, required_keys=()):
 
     # If we reached this point, the provider is not configured.
     return False
+
+
+def is_profile_configured(opts, provider, profile_name):
+    '''
+    Check if the requested profile contains the minimum required parameters for
+    a profile.
+
+    Required parameters include image, provider, and size keys.
+
+    .. versionadded:: Beryllium
+    '''
+    required_keys = ['image', 'provider', 'size']
+    alias, driver = provider.split(':')
+    provider_key = opts['providers'][alias][driver]
+    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
+
+    # Check if image and/or size are supplied in the provider config. If either
+    # one is present, remove it from the required_keys list.
+    for item in required_keys:
+        if item in provider_key:
+            required_keys.remove(item)
+
+    # Check for remaining required parameters in the profile config.
+    for item in required_keys:
+        if profile_key.get(item, None) is None:
+            # There's at least one required configuration item which is not set.
+            log.error(
+                'The required {0!r} configuration setting is missing from the '
+                '{1!r} profile, which is configured '
+                'under the {2!r} alias.'.format(
+                    item, profile_name, alias
+                )
+            )
+            return False
+
+    return True
 # <---- Salt Cloud Configuration Functions -----------------------------------
 
 
