@@ -813,7 +813,7 @@ def _read_file(path):
             # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
             return contents.read().splitlines()
     except Exception:
-        return ''
+        return []  # Return empty list for type consistency
 
 
 def _write_file_iface(iface, data, folder, pattern):

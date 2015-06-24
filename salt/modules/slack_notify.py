@@ -19,16 +19,17 @@ Module for sending messages to Slack
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import urllib
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext.six.moves import range
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
+
 __virtualname__ = 'slack'
 
 
@@ -276,7 +277,7 @@ def post_message(channel,
                     api_key=api_key,
                     method='POST',
                     header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                    data=urllib.urlencode(parameters))
+                    data=_urlencode(parameters))
 
     if result['res']:
         return True
