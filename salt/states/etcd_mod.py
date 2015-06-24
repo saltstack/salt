@@ -88,6 +88,10 @@ Available Functions
             - file: /some/file.txt
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
+
 # Define the module's virtual name
 __virtualname__ = 'etcd'
 
@@ -96,7 +100,6 @@ __func_alias__ = {
     'set_': 'set',
     'rm_': 'rm'
 }
-
 
 # Import third party libs
 try:
