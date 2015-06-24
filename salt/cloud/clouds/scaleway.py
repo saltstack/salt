@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Scaleway Cloud Module
-==========================
+=====================
 
 .. versionadded:: Beryllium
 
@@ -17,7 +17,7 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
       # Scaleway organization and token
       access_key: 0e604a2c-aea6-4081-acb2-e1d1258ef95c
       token: be8fd96b-04eb-4d39-b6ba-a9edbcf17f12
-      provider: scaleway
+      driver: scaleway
 
 :depends: requests
 '''

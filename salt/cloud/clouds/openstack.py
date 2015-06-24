@@ -53,7 +53,7 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
               /local/path/to/src.txt
       # Skips the service catalog API endpoint, and uses the following
       base_url: http://192.168.1.101:3000/v2/12345
-      provider: openstack
+      driver: openstack
       userdata_file: /tmp/userdata.txt
       # config_drive is required for userdata at rackspace
       config_drive: True
@@ -190,7 +190,6 @@ list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
 get_node = namespaced_function(get_node, globals())
-get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the OPENSTACK configurations are in place
@@ -203,6 +202,12 @@ def __virtual__():
 
     if get_configured_provider() is False:
         return False
+
+    salt.utils.warn_until(
+        'Carbon',
+        'This driver has been deprecated and will be removed in the '
+        'Carbon release of Salt. Please use the nova driver instead.'
+    )
 
     return True
 
@@ -295,6 +300,8 @@ def get_conn():
                     )
                 else:
                     actual_password = provider_password
+            else:
+                actual_password = driver_password
         else:
             actual_password = password
         return driver(
@@ -586,6 +593,12 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
@@ -608,7 +621,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -779,7 +792,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
@@ -811,7 +824,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

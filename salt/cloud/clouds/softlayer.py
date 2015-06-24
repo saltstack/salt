@@ -17,7 +17,7 @@ configuration at:
       # SoftLayer account api key
       user: MYLOGIN
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-      provider: softlayer
+      driver: softlayer
 
 The SoftLayer Python Library needs to be installed in order to use the
 SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
@@ -53,7 +53,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the SoftLayer configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for SoftLayer configurations.
+    Check for SoftLayer configurations.
     '''
     if not HAS_SLLIBS:
         return False
@@ -319,7 +319,7 @@ def create(vm_):
     except Exception as exc:
         log.error(
             'Error creating {0} on SoftLayer\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], str(exc)
             ),
