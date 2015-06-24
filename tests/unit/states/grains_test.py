@@ -4,6 +4,10 @@ unit tests for the grains state
 '''
 
 from __future__ import absolute_import
+
+# Import Python libs
+import os
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -14,10 +18,13 @@ ensure_in_syspath('../../')
 from salt.modules import grains as grainsmod
 from salt.states import grains as grains
 
+import integration
+
+grains_test_dir = '__salt_test_state_grains'
 grainsmod.__opts__ = grains.__opts__ = {
     'test': False,
-    'conf_file': '/tmp/__salt_test_state_grains_config/minion',
-    'cachedir':  '/tmp/__salt_test_state_grains_cache_dir',
+    'conf_file': os.path.join(integration.TMP, grains_test_dir, 'minion'),
+    'cachedir':  os.path.join(integration.TMP, grains_test_dir),
 }
 
 grainsmod.__salt__ = grains.__salt__ = {
