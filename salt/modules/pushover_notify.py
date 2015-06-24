@@ -232,12 +232,14 @@ def post_message(user=None,
     '''
 
     if not token:
-        token = __salt__['config.option']('pushover.token')
+        token = __salt__['config.get']('pushover.token') or \
+                __salt__['config.get']('pushover:token')
         if not token:
             raise SaltInvocationError('Pushover token is unavailable.')
 
     if not user:
-        user = __salt__['config.option']('pushover.user')
+        user = __salt__['config.get']('pushover.user') or \
+               __salt__['config.get']('pushover:user')
         if not user:
             raise SaltInvocationError('Pushover user key is unavailable.')
 
