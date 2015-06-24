@@ -2038,6 +2038,11 @@ def create(vm_):
 
         salt-cloud -p vmware-centos6.5 vmname
     '''
+    # Check for required profile parameters before sending any API calls.
+    if config.is_profile_configured(__opts__,
+                                    __active_provider_name__ or 'vmware',
+                                    vm_['profile']) is False:
+        return False
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"

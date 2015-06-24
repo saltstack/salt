@@ -2100,6 +2100,12 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    # Check for required profile parameters before sending any API calls.
+    if config.is_profile_configured(__opts__,
+                                    __active_provider_name__ or 'ec2',
+                                    vm_['profile']) is False:
+        return False
+
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
     if 'provider' in vm_:
