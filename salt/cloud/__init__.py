@@ -1290,6 +1290,9 @@ class Cloud(object):
         except IOError:
             main_cloud_config = {}
 
+        if main_cloud_config is None:
+            main_cloud_config = {}
+
         profile_details = self.opts['profiles'][profile]
         alias, driver = profile_details['provider'].split(':')
         mapped_providers = self.map_providers_parallel()
