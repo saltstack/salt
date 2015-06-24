@@ -2758,9 +2758,9 @@ def get_managed(
     # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
-    urlparsed_source = _urlparse(source)
     # if we have a source defined, lets figure out what the hash is
     if source:
+        urlparsed_source = _urlparse(source)
         if urlparsed_source.scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
