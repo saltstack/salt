@@ -25,12 +25,16 @@ import salt.utils.http
 
 log = logging.getLogger(__name__)
 
+_api_key_missing_error = 'No VictorOps api key found.'
+
 
 def __virtual__():
     '''
     Only load the module if apache is installed
     '''
-    if not __opts__.get('victorops', {}).get('api_key', None):
+    if not __salt__['config.get']('victorops.api_key') and \
+            not __salt__['config.get']('victorops:api_key'):
+        log.error(_api_key_missing_error)
         return False
     return True
 
@@ -46,7 +50,9 @@ def _query(action=None,
 
     .. versionadded:: Beryllium
     '''
-    api_key = __opts__.get('victorops', {}).get('api_key', None)
+    api_key = __salt__['config.get']('victorops.api_key') or \
+        __salt__['config.get']('victorops:api_key')
+
     path = 'https://alert.victorops.com/integrations/generic/20131114/'
 
     if action:
