@@ -96,7 +96,7 @@ class Serial(object):
         '''
         try:
             gc.disable()  # performance optimization for msgpack
-            return msgpack.loads(msg, use_list=True)
+            return msgpack.loads(msg, use_list=True, encoding='utf-8')
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
                          'This often happens when trying to read a file not in binary mode.'

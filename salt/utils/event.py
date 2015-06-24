@@ -35,7 +35,7 @@ In the new style, when the tag is longer than 20 characters, an end of tag
 string is appended to the tag given by the string constant TAGEND, that is, two
 line feeds '\n\n'.  When the tag is less than 20 characters then the tag is
 padded with pipes "|" out to 20 characters as before.  When the tag is exactly
-20 characters no padded is done.
+20 characters no padding is done.
 
 The get_event method intelligently figures out if the tag is longer than 20
 characters.
@@ -94,7 +94,7 @@ SUB_EVENT = set([
     'state.sls',
 ])
 
-TAGEND = '\n\n'  # long tag delimiter
+TAGEND = b'\n\n'  # long tag delimiter
 TAGPARTER = '/'  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
@@ -300,7 +300,7 @@ class SaltEvent(object):
         mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
 
         data = serial.loads(mdata)
-        return mtag, data
+        return salt.utils.to_str(mtag, 'utf-8'), data
 
     def _get_match_func(self, match_type=None):
         if match_type is None:
@@ -500,7 +500,7 @@ class SaltEvent(object):
             is_msgpacked=True,
         )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        event = salt.utils.to_bytes(tag, 'utf-8') + tagend + serialized_data
         try:
             self.push.send(salt.utils.to_bytes(event, 'utf-8'))
         except Exception as ex:

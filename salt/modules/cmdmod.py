@@ -371,7 +371,7 @@ def _run(cmd,
               'with_communicate': with_communicate}
 
     if umask is not None:
-        _umask = str(umask).lstrip('0')
+        _umask = str(umask).lstrip('0Oo')
 
         if _umask == '':
             msg = 'Zero umask is not allowed.'
