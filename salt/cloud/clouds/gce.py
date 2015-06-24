@@ -563,12 +563,6 @@ def create_network(kwargs=None, call=None):
         )
         return
 
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'gce',
-                                    vm_['profile']) is False:
-        return False
-
     name = kwargs['name']
     cidr = kwargs['cidr']
     conn = get_conn()
@@ -2033,6 +2027,12 @@ def create(vm_=None, call=None):
                 GCE_VM_NAME_REGEX.pattern
             )
         )
+
+    # Check for required profile parameters before sending any API calls.
+    if config.is_profile_configured(__opts__,
+                                    __active_provider_name__ or 'gce',
+                                    vm_['profile']) is False:
+        return False
 
     conn = get_conn()
 
