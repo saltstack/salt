@@ -28,6 +28,7 @@ from salt.utils.jinja import (
 )
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
+from integration import TMP_CONF_DIR
 
 # Import 3rd party libs
 import yaml
@@ -681,7 +682,8 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        render = salt.loader.render(self.minion_opts, functions)
+        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 
     def render(self, tmpl_str, context=None):

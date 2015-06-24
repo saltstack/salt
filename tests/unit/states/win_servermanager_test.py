@@ -56,7 +56,7 @@ class WinServermanagerTestCase(TestCase):
 
                 with patch.dict(win_servermanager.__opts__, {"test": False}):
                     ret.update({'changes': {'feature': {'Success': 'True'}},
-                                'result': True})
+                                'result': True, 'comment': 'Installed salt'})
                     self.assertDictEqual(win_servermanager.installed('salt'),
                                          ret)
 

@@ -685,12 +685,12 @@ def create_container(image,
             'info': _get_container_infos(container),
             'out': container_info
         }
-        __salt__['mine.send']('docker.get_containers', host=True)
+        __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
         return callback(status, id_=container, comment=comment, out=out)
     except Exception as e:
         _invalid(status, id_=image, out=traceback.format_exc())
         raise e
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -804,7 +804,7 @@ def stop(container, timeout=10):
                  comment=(
                      'An exception occurred while stopping '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -859,7 +859,7 @@ def kill(container, signal=None):
                  comment=(
                      'An exception occurred while killing '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -895,7 +895,7 @@ def restart(container, timeout=10):
                  comment=(
                      'An exception occurred while restarting '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -975,7 +975,7 @@ def start(container,
                  comment=(
                      'An exception occurred while starting '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -1013,7 +1013,7 @@ def wait(container):
                  comment=(
                      'An exception occurred while waiting '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -1093,7 +1093,7 @@ def remove_container(container, force=False, v=False):
                          comment=(
                              'Container {0} is running, '
                              'won\'t remove it').format(container))
-                __salt__['mine.send']('docker.get_containers', host=True)
+                __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
                 return status
             else:
                 kill(dcontainer)
@@ -1107,7 +1107,7 @@ def remove_container(container, force=False, v=False):
             status['comment'] = 'Container {0} was removed'.format(container)
     except Exception:
         _invalid(status, id_=container, out=traceback.format_exc())
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -1874,7 +1874,7 @@ def load(imagepath):
     if os.path.isfile(imagepath):
         try:
             dockercmd = ['docker', 'load', '-i', imagepath]
-            ret = __salt__['cmd.run'](dockercmd)
+            ret = __salt__['cmd.run'](dockercmd, python_shell=False)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):

@@ -232,7 +232,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_response_minions = []
         not_connected_minions = []
         for each_minion in ret:
-            minion_ret = ret[each_minion].get('ret')
+            minion_ret = ret[each_minion]
             if (
                     isinstance(minion_ret, string_types)
                     and minion_ret.startswith("Minion did not return")

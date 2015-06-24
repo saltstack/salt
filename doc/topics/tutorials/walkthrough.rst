@@ -33,11 +33,9 @@ configuration management system called ``Salt States``.
 Installing Salt
 ---------------
 
-SaltStack has been made to be very easy to install and get started. Setting up
-Salt should be as easy as installing Salt via distribution packages on Linux or
-via the Windows installer. The :doc:`installation documents
-</topics/installation/index>` cover platform-specific installation in depth.
-
+SaltStack has been made to be very easy to install and get started. The
+:doc:`installation documents </topics/installation/index>` contain instructions
+for all supported platforms.
 
 Starting Salt
 -------------
@@ -636,9 +634,8 @@ Getting Deeper Into States
 Two more in-depth States tutorials exist, which delve much more deeply into States
 functionality.
 
-1. Thomas' original states tutorial, :doc:`How Do I Use Salt
-   States?</topics/tutorials/starting_states>`, covers much more to get off the
-   ground with States.
+1. :doc:`How Do I Use Salt States? </topics/tutorials/starting_states>`, covers much
+   more to get off the ground with States.
 
 2. The :doc:`States Tutorial</topics/tutorials/states_pt1>` also provides a
    fantastic introduction.

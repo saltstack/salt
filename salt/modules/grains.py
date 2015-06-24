@@ -231,8 +231,8 @@ def setvals(grains, destructive=False):
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
-                if key in __grains__:
-                    del __grains__[key]
+            if key in __grains__:
+                del __grains__[key]
         else:
             grains[key] = val
             __grains__[key] = val

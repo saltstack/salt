@@ -61,7 +61,7 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Password defaults to None
       ssh_gateway_password: ExamplePasswordHere
 
-      provider: ec2
+      driver: ec2
 
 :depends: requests
 '''
@@ -114,8 +114,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 from salt import syspaths
-from salt.utils import namespaced_function
-from salt.cloud.libcloudfuncs import get_salt_interface
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
@@ -133,9 +131,6 @@ from salt.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 SIZE_MAP = {
     'Micro Instance': 't1.micro',
@@ -2105,6 +2100,11 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -2112,12 +2112,12 @@ def create(vm_=None, call=None):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(
-        vm_['name'], vm_['profile'], 'ec2', vm_['provider']
+        vm_['name'], vm_['profile'], 'ec2', vm_['driver']
     )
 
     key_filename = config.get_cloud_config_value(
@@ -2250,7 +2250,7 @@ def create(vm_=None, call=None):
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
     vm_['ssh_host'] = ip_address
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = instance['privateIpAddress']
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
@@ -2311,7 +2311,7 @@ def create(vm_=None, call=None):
     event_data = {
         'name': vm_['name'],
         'profile': vm_['profile'],
-        'provider': vm_['provider'],
+        'provider': vm_['driver'],
         'instance_id': vm_['instance_id'],
     }
     if volumes:
@@ -2947,7 +2947,12 @@ def list_nodes_full(location=None, call=None):
 
 
 def _vm_provider_driver(vm_):
-    alias, driver = vm_['provider'].split(':')
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
+    alias, driver = vm_['driver'].split(':')
     if alias not in __opts__['providers']:
         return None
 
@@ -4116,7 +4121,7 @@ def show_pricing(kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_pricing my-ec2-config my-profile
+        salt-cloud -f show_pricing my-ec2-config profile=my-profile
 
     If pricing sources have not been cached, they will be downloaded. Once they
     have been cached, they will not be updated automatically. To manually update

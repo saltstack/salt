@@ -93,7 +93,7 @@ NSTATES = {
     3: 'pending',
 }
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:\ *$', re.M)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -1656,17 +1656,20 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
+        is_not_checked = True
         while proc.has_unread_data:
             stdout, stderr = proc.recv()
-            if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
-                if (
-                            kwargs.get('password', None)
-                        and (sent_password < password_retries)
-                ):
-                    sent_password += 1
-                    proc.sendline(kwargs['password'])
-                else:
-                    raise SaltCloudPasswordError(error_msg)
+            if stdout and is_not_checked:
+                if SSH_PASSWORD_PROMP_RE.search(stdout.split('\n')[0]):
+                    if (
+                                kwargs.get('password', None)
+                            and (sent_password < password_retries)
+                    ):
+                        sent_password += 1
+                        proc.sendline(kwargs['password'])
+                    else:
+                        raise SaltCloudPasswordError(error_msg)
+                is_not_checked = False
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:
@@ -2905,3 +2908,22 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None,
         time.sleep(5)
 
     return True
+
+
+def get_salt_interface(vm_, opts):
+    '''
+    Return the salt_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    salt_host = salt.config.get_cloud_config_value(
+        'salt_interface', vm_, opts, default=False,
+        search_global=False
+    )
+
+    if salt_host is False:
+        salt_host = salt.config.get_cloud_config_value(
+            'ssh_interface', vm_, opts, default='public_ips',
+            search_global=False
+        )
+
+    return salt_host

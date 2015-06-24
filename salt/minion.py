@@ -637,7 +637,7 @@ class Minion(MinionBase):
                     'jid_include': True,
                     'maxrunning': 2
                 }
-            })
+            }, persist=True)
 
         # add master_alive job if enabled
         if self.opts['master_alive_interval'] > 0:
@@ -651,7 +651,7 @@ class Minion(MinionBase):
                     'kwargs': {'master': self.opts['master'],
                                'connected': True}
                 }
-            })
+            }, persist=True)
 
         self.grains_cache = self.opts['grains']
 
@@ -724,7 +724,7 @@ class Minion(MinionBase):
                 elif isinstance(opts['master'], str) and ('master_list' not in opts):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
-                    opts['master'] = list(opts['master'])
+                    opts['master'] = [opts['master']]
                 elif opts['__role'] == 'syndic':
                     log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
 
@@ -1339,27 +1339,30 @@ class Minion(MinionBase):
         name = data.get('name', None)
         schedule = data.get('schedule', None)
         where = data.get('where', None)
+        persist = data.get('persist', None)
 
         if func == 'delete':
-            self.schedule.delete_job(name)
+            self.schedule.delete_job(name, persist)
         elif func == 'add':
-            self.schedule.add_job(schedule)
+            self.schedule.add_job(schedule, persist)
         elif func == 'modify':
-            self.schedule.modify_job(name, schedule, where)
+            self.schedule.modify_job(name, schedule, persist, where)
         elif func == 'enable':
             self.schedule.enable_schedule()
         elif func == 'disable':
             self.schedule.disable_schedule()
         elif func == 'enable_job':
-            self.schedule.enable_job(name, where)
+            self.schedule.enable_job(name, persist, where)
         elif func == 'run_job':
             self.schedule.run_job(name)
         elif func == 'disable_job':
-            self.schedule.disable_job(name, where)
+            self.schedule.disable_job(name, persist, where)
         elif func == 'reload':
             self.schedule.reload(schedule)
         elif func == 'list':
             self.schedule.list(where)
+        elif func == 'save_schedule':
+            self.schedule.save_schedule()
 
     def manage_beacons(self, package):
         '''

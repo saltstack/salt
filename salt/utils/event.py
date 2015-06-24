@@ -502,7 +502,7 @@ class SaltEvent(object):
         log.debug('Sending event - data = {0}'.format(data))
         event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
-            self.push.send(event)
+            self.push.send(salt.utils.to_bytes(event, 'utf-8'))
         except Exception as ex:
             log.debug(ex)
             raise

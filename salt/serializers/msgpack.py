@@ -59,16 +59,15 @@ if not available:
 elif msgpack.version >= (0, 2, 0):
 
     def _serialize(obj, **options):
-        if options:
-            log.warning('options are currently unusued')
         try:
-            return msgpack.dumps(obj)
+            return msgpack.dumps(obj, **options)
         except Exception as error:
             raise SerializationError(error)
 
     def _deserialize(stream_or_string, **options):
         try:
             options.setdefault('use_list', True)
+            options.setdefault('encoding', 'utf-8')
             return msgpack.loads(stream_or_string, **options)
         except Exception as error:
             raise DeserializationError(error)
@@ -94,11 +93,9 @@ else:  # msgpack.version < 0.2.0
         return obj
 
     def _serialize(obj, **options):
-        if options:
-            log.warning('options are currently unusued')
         try:
             obj = _encoder(obj)
-            return msgpack.dumps(obj)
+            return msgpack.dumps(obj, **options)
         except Exception as error:
             raise SerializationError(error)
 

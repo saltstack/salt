@@ -34,9 +34,11 @@ configuration at:
 .. code-block:: yaml
 
     my-vsphere-config:
-      provider: vsphere
+      driver: vsphere
       user: myuser
       password: verybadpass
+      template_user: root
+      template_password: mybadVMpassword
       url: 'https://10.1.1.1:443'
 
 Note: Your URL may or may not look like any of the following, depending on how
@@ -51,17 +53,22 @@ your VMWare installation is configured:
     10.1.1.1:443/sdk
 
 
-folder: Name of the folder that will contain the new VM. If not set, the VM will
-        be added to the folder the original VM belongs to.
+folder
+    Name of the folder that will contain the new VM. If not set, the VM will be added to
+    the folder the original VM belongs to.
 
-resourcepool: MOR of the resourcepool to be used for the new vm. If not set, it
-              uses the same resourcepool than the original vm.
+resourcepool
+    MOR of the resourcepool to be used for the new vm. If not set, it uses the same
+    resourcepool than the original vm.
 
-datastore: MOR of the datastore where the virtual machine should be located. If
-           not specified, the current datastore is used.
+datastore
+    MOR of the datastore where the virtual machine should be located. If not specified,
+    the current datastore is used.
 
-host: MOR of the host where the virtual machine should be registered.
-    IF not specified:
+host
+    MOR of the host where the virtual machine should be registered.
+
+    Id not specified:
         * if resourcepool is not specified, current host is used.
         * if resourcepool is specified, and the target pool represents a
           stand-alone host, the host is used.
@@ -70,8 +77,25 @@ host: MOR of the host where the virtual machine should be registered.
         * if resourcepool is specified and the target pool represents a cluster
           without DRS enabled, an InvalidArgument exception will be thrown.
 
-template: Specifies whether or not the new virtual machine should be marked as a
-          template. Default is False.
+template
+    Specifies whether or not the new virtual machine should be marked as a template.
+    Default is False.
+
+template_user
+    Specifies the user to access the VM. Should be
+
+template_password
+    The password with which to access the VM.
+
+sudo
+    The user to access the VM with sudo privileges.
+
+    .. versionadded:: 2015.5.2
+
+sudo_password
+    The password corresponding to the sudo user to access the VM with sudo privileges.
+
+    .. versionadded:: 2015.5.2
 '''
 from __future__ import absolute_import
 
@@ -104,7 +128,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the vSphere configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for vSphere configurations.
+    Check for vSphere configurations.
     '''
     if not HAS_LIBS:
         return False
@@ -204,6 +228,12 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -211,7 +241,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -262,7 +292,7 @@ def create(vm_):
     except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on vSphere\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], str(exc)
             ),
@@ -296,7 +326,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

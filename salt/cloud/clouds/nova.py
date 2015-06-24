@@ -3,11 +3,6 @@
 OpenStack Nova Cloud Module
 ===========================
 
-PLEASE NOTE: This module is currently in early development, and considered to
-be experimental and unstable. It is not recommended for production use. Unless
-you are actively developing code in this module, you should use the OpenStack
-module instead.
-
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
@@ -50,7 +45,7 @@ examples could be set up in the cloud configuration at
 
       ssh_key_name: mykey
 
-      provider: nova
+      driver: nova
       userdata_file: /tmp/userdata.txt
 
 For local installations that only use private IP address ranges, the
@@ -72,7 +67,7 @@ accept them
       user: myusername
       password: mypassword
       tenant: <userid>
-      provider: nova
+      driver: nova
 
     my-api:
       identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
@@ -81,7 +76,7 @@ accept them
       api_key: <api_key>
       os_auth_plugin: rackspace
       tenant: <userid>
-      provider: nova
+      driver: nova
       networks:
         - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
         - net-id: 00000000-0000-0000-0000-000000000000
@@ -149,10 +144,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
 
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
-
-
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
 # this module namespace
@@ -160,7 +151,7 @@ script = namespaced_function(script, globals())
 reboot = namespaced_function(reboot, globals())
 
 
-# Only load in this module is the OPENSTACK configurations are in place
+# Only load in this module if the Nova configurations are in place
 def __virtual__():
     '''
     Check for Nova configurations
@@ -552,6 +543,11 @@ def create(vm_):
 
     vm_['key_filename'] = key_filename
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -559,7 +555,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -723,10 +719,10 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    elif rackconnect(vm_) is True and get_salt_interface(vm_) != 'private_ips':
+    elif rackconnect(vm_) is True and salt.utils.cloud.get_salt_interface(vm_, __opts__) != 'private_ips':
         salt_ip_address = data.public_ips
     else:
         salt_ip_address = preferred_ip(vm_, data.public_ips)
@@ -759,7 +755,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

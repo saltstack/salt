@@ -151,7 +151,7 @@ class SyncClientMixin(object):
         ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 
         if timeout is None:
-            timeout = 300
+            timeout = self.opts.get('rest_timeout', 300)
         ret = event.get_event(tag=ret_tag, full=True, wait=timeout)
         if ret is None:
             raise salt.exceptions.SaltClientTimeout(

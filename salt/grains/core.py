@@ -1111,7 +1111,7 @@ def os_data():
                 #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
                 regex = re.compile((
                     '^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:\'|")?'
-                    '([\\w\\s\\.-_]+)(?:\'|")?'
+                    '([\\w\\s\\.\\-_]+)(?:\'|")?'
                 ))
                 with salt.utils.fopen('/etc/lsb-release') as ifile:
                     for line in ifile:
@@ -1138,7 +1138,7 @@ def os_data():
                             # BUG_REPORT_URL=
                             #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
                             regex = re.compile(
-                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.-_]+)(?:\'|")?'
+                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.\\-_]+)(?:\'|")?'
                             )
                             match = regex.match(line.rstrip('\n'))
                             if match:

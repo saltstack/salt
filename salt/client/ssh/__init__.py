@@ -20,6 +20,7 @@ import yaml
 import uuid
 import tempfile
 import binascii
+import sys
 
 # Import salt libs
 import salt.client.ssh.shell
@@ -529,8 +530,13 @@ class SSH(object):
             print('')
         sret = {}
         outputter = self.opts.get('output', 'nested')
+        final_exit = 0
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
+            host_ret = ret[host].get('retcode', 0)
+            if host_ret != 0:
+                final_exit = 1
+
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
             if not isinstance(ret[host], dict):
@@ -558,6 +564,8 @@ class SSH(object):
                     sret,
                     outputter,
                     self.opts)
+        if final_exit:
+            sys.exit(salt.defaults.exitcodes.EX_AGGREGATE)
 
 
 class Single(object):
@@ -711,7 +719,7 @@ class Single(object):
             stdout, stderr, retcode = self.shell.exec_cmd(cmd_str)
 
         elif self.fun in self.wfuncs or self.mine:
-            stdout = self.run_wfunc()
+            stdout, retcode = self.run_wfunc()
 
         else:
             stdout, stderr, retcode = self.cmd_block()
@@ -770,11 +778,12 @@ class Single(object):
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
+            retcode = opts_pkg['retcode']
 
             if '_error' in opts_pkg:
                 # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
-                return ret
+                return ret, retcode
 
             pillar = salt.pillar.Pillar(
                     opts_pkg,
@@ -852,7 +861,7 @@ class Single(object):
             ret = json.dumps({'local': result['local']})
         else:
             ret = json.dumps({'local': {'return': result}})
-        return ret
+        return ret, retcode
 
     def _cmd_str(self):
         '''
@@ -946,14 +955,15 @@ ARGS = {9}\n'''.format(self.minion_config,
     def cmd_block(self, is_retry=False):
         '''
         Prepare the pre-check command to send to the subsystem
-        '''
-        # 1. execute SHIM + command
-        # 2. check if SHIM returns a master request or if it completed
-        # 3. handle any master request
-        # 4. re-execute SHIM + command
-        # 5. split SHIM results from command results
-        # 6. return command results
 
+        1. execute SHIM + command
+        2. check if SHIM returns a master request or if it completed
+        3. handle any master request
+        4. re-execute SHIM + command
+        5. split SHIM results from command results
+        6. return command results
+        '''
+        self.argv = _convert_args(self.argv)
         log.debug('Performing shimmed, blocking command as follows:\n{0}'.format(' '.join(self.argv)))
         cmd_str = self._cmd_str()
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
@@ -1218,3 +1228,20 @@ def ssh_version():
         return ret[1].split(b',')[0].split(b'_')[1]
     except IndexError:
         return '2.0'
+
+
+def _convert_args(args):
+    '''
+    Take a list of args, and convert any dicts inside the list to keyword
+    args in the form of `key=value`, ready to be passed to salt-ssh
+    '''
+    converted = []
+    for arg in args:
+        if isinstance(arg, dict):
+            for key in list(arg.keys()):
+                if key == '__kwarg__':
+                    continue
+                converted.append('{0}={1}'.format(key, arg[key]))
+        else:
+            converted.append(arg)
+    return converted

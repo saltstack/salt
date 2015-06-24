@@ -124,7 +124,7 @@ Functions
     - :py:func:`dockerng.logs <salt.modules.dockerng.logs>`
     - :py:func:`dockerng.pid <salt.modules.dockerng.pid>`
     - :py:func:`dockerng.port <salt.modules.dockerng.port>`
-    - :py:func:`dockerng.ps <salt.modules.dockerng.ps_>`
+    - :py:func:`dockerng.ps <salt.modules.dockerng.ps>`
     - :py:func:`dockerng.state <salt.modules.dockerng.state>`
     - :py:func:`dockerng.search <salt.modules.dockerng.search>`
     - :py:func:`dockerng.top <salt.modules.dockerng.top>`
@@ -134,7 +134,7 @@ Functions
     - :py:func:`dockerng.copy_from <salt.modules.dockerng.copy_from>`
     - :py:func:`dockerng.copy_to <salt.modules.dockerng.copy_to>`
     - :py:func:`dockerng.export <salt.modules.dockerng.export>`
-    - :py:func:`dockerng.rm <salt.modules.dockerng.rm_>`
+    - :py:func:`dockerng.rm <salt.modules.dockerng.rm>`
 - Management of Container State
     - :py:func:`dockerng.kill <salt.modules.dockerng.kill>`
     - :py:func:`dockerng.pause <salt.modules.dockerng.pause>`
@@ -147,7 +147,7 @@ Functions
     - :py:func:`dockerng.build <salt.modules.dockerng.build>`
     - :py:func:`dockerng.commit <salt.modules.dockerng.commit>`
     - :py:func:`dockerng.dangling <salt.modules.dockerng.dangling>`
-    - :py:func:`dockerng.import <salt.modules.dockerng.import_>`
+    - :py:func:`dockerng.import <salt.modules.dockerng.import>`
     - :py:func:`dockerng.load <salt.modules.dockerng.load>`
     - :py:func:`dockerng.pull <salt.modules.dockerng.pull>`
     - :py:func:`dockerng.push <salt.modules.dockerng.push>`
@@ -572,6 +572,21 @@ def _ensure_exists(wrapped):
     return wrapper
 
 
+def _refresh_mine_cache(wrapped):
+    '''
+    Decorator to trig a refresh of salt mine data.
+    '''
+    @functools.wraps(wrapped)
+    def wrapper(*args, **kwargs):
+        '''
+        refresh salt mine on exit.
+        '''
+        returned = wrapped(*args, **salt.utils.clean_kwargs(**kwargs))
+        __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
+        return returned
+    return wrapper
+
+
 # Helper functions
 def _change_state(name, action, expected, *args, **kwargs):
     '''
@@ -608,7 +623,7 @@ def _clear_context():
         'docker.client', 'docker.exec_driver', 'dockerng._pull_status',
         'docker.docker_version', 'docker.docker_py_version'
     )
-    for key in __context__.keys():
+    for key in list(__context__):
         try:
             if key.startswith('docker.') and key not in keep_context:
                 __context__.pop(key)
@@ -2228,6 +2243,9 @@ def ps_(**kwargs):
     all : False
         If ``True``, stopped containers will also be returned
 
+    host: False
+        If ``True``, local host's network topology will be included
+
     verbose : False
         If ``True``, a ``docker inspect`` will be run on each container
         returned.
@@ -2280,6 +2298,10 @@ def ps_(**kwargs):
         for c_id in ret:
             ret[c_id]['Info'] = inspect_container(c_id)
 
+    if kwargs.get('host', False):
+        ret.setdefault(
+            'host', {}).setdefault(
+                'interfaces', {}).update(__salt__['network.interfaces']())
     return ret
 
 
@@ -2457,6 +2479,7 @@ def version():
 
 
 # Functions to manage containers
+@_refresh_mine_cache
 def create(image,
            name=None,
            client_timeout=CLIENT_TIMEOUT,
@@ -2995,6 +3018,7 @@ def export(name,
     return ret
 
 
+@_refresh_mine_cache
 @_ensure_exists
 def rm_(name, force=False, volumes=False):
     '''
@@ -3974,6 +3998,7 @@ def tag_(name, image, force=False):
 
 
 # Functions to manage container state
+@_refresh_mine_cache
 @_ensure_exists
 def kill(name):
     '''
@@ -4002,6 +4027,7 @@ def kill(name):
     return _change_state(name, 'kill', 'stopped')
 
 
+@_refresh_mine_cache
 @_api_version(1.12)
 @_ensure_exists
 def pause(name):
@@ -4076,6 +4102,7 @@ def restart(name, timeout=10):
     return ret
 
 
+@_refresh_mine_cache
 @_ensure_exists
 def signal_(name, signal):
     '''
@@ -4104,6 +4131,7 @@ def signal_(name, signal):
     return True
 
 
+@_refresh_mine_cache
 @_ensure_exists
 def start(name, validate_ip_addrs=True, **kwargs):
     '''
@@ -4318,6 +4346,7 @@ def start(name, validate_ip_addrs=True, **kwargs):
     return _change_state(name, 'start', 'running', **runtime_kwargs)
 
 
+@_refresh_mine_cache
 @_ensure_exists
 def stop(name, timeout=STOP_TIMEOUT, **kwargs):
     '''
@@ -4373,6 +4402,7 @@ def stop(name, timeout=STOP_TIMEOUT, **kwargs):
     return ret
 
 
+@_refresh_mine_cache
 @_api_version(1.12)
 @_ensure_exists
 def unpause(name):
@@ -4443,6 +4473,7 @@ def wait(name):
 
 
 # Functions to run commands inside containers
+@_refresh_mine_cache
 @_ensure_exists
 def _run(name,
          cmd,
@@ -4478,6 +4509,7 @@ def _run(name,
         return ret[output]
 
 
+@_refresh_mine_cache
 def _script(name,
             source,
             saltenv='base',

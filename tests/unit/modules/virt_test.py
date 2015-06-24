@@ -191,7 +191,7 @@ class VirtTestCase(TestCase):
             system = ret[0]['system']
             self.assertEqual(system['format'], 'vmdk')
             self.assertEqual(system['model'], 'scsi')
-            self.assertTrue(system['size'] >= 1)
+            self.assertTrue(int(system['size']) >= 1)
 
     def test_default_disk_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
@@ -202,7 +202,7 @@ class VirtTestCase(TestCase):
             system = ret[0]['system']
             self.assertEqual(system['format'], 'qcow2')
             self.assertEqual(system['model'], 'virtio')
-            self.assertTrue(system['size'] >= 1)
+            self.assertTrue(int(system['size']) >= 1)
 
     def test_default_nic_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
@@ -535,7 +535,7 @@ class VirtTestCase(TestCase):
             </domain>
         ''')
         nics = virt.get_nics('test-vm')
-        nic = nics[nics.keys()[0]]
+        nic = nics[list(nics)[0]]
         self.assertEqual('bridge', nic['type'])
         self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 

@@ -27,34 +27,41 @@ def parse():
     '''
     parser = optparse.OptionParser()
 
-    parser.add_option('-s',
-            '--sock-dir',
-            dest='sock_dir',
-            default='/var/run/salt',
-            help=('Statically define the directory holding the salt unix '
-                  'sockets for communication'))
-    parser.add_option('-n',
-            '--node',
-            dest='node',
-            default='master',
-            help=('State if this listener will attach to a master or a '
-                  'minion daemon, pass "master" or "minion"'))
-
-    parser.add_option('-f',
-            '--func_count',
-            default='',
-            help=('Return a count of the number of minions which have '
-                 'replied to a job with a given func.'))
-
-    parser.add_option('-i',
-            '--id',
-            default='',
-            help=('If connecting to a live master or minion, pass in the id'))
-
-    parser.add_option('-t',
-            '--transport',
-            default='zeromq',
-            help=('Transport to use. (Default: \'zeromq\''))
+    parser.add_option(
+        '-s',
+        '--sock-dir',
+        dest='sock_dir',
+        default='/var/run/salt',
+        help=('Statically define the directory holding the salt unix '
+              'sockets for communication')
+    )
+    parser.add_option(
+        '-n',
+        '--node',
+        dest='node',
+        default='master',
+        help=('State if this listener will attach to a master or a '
+              'minion daemon, pass "master" or "minion"')
+    )
+    parser.add_option(
+        '-f',
+        '--func_count',
+        default='',
+        help=('Return a count of the number of minions which have '
+              'replied to a job with a given func.')
+    )
+    parser.add_option(
+        '-i',
+        '--id',
+        default='',
+        help=('If connecting to a live master or minion, pass in the id')
+    )
+    parser.add_option(
+        '-t',
+        '--transport',
+        default='zeromq',
+        help=('Transport to use. (Default: \'zeromq\'')
+    )
 
     options, args = parser.parse_args()
 
@@ -92,17 +99,16 @@ def check_access_and_print_warning(sock_dir):
               ' (not able to access {0})'.format(sock_dir))
 
 
-#def listen(sock_dir, node):
 def listen(opts):
     '''
     Attach to the pub socket and grab messages
     '''
     event = salt.utils.event.get_event(
-            opts['node'],
-            sock_dir=opts['sock_dir'],
-            transport=opts['transport'],
-            opts=opts
-            )
+        opts['node'],
+        sock_dir=opts['sock_dir'],
+        transport=opts['transport'],
+        opts=opts
+    )
     check_access_and_print_warning(opts['sock_dir'])
     print(event.puburi)
     jid_counter = 0

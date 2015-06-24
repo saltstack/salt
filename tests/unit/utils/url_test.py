@@ -51,7 +51,7 @@ class UrlTestCase(TestCase):
         '''
         env = 'milieu'
         path = '?funny/path&with {interesting|chars}'
-        url = 'salt://' + path + '?env=' + env
+        url = 'salt://' + path + '?saltenv=' + env
 
         self.assertEqual(salt.utils.url.parse(url), (path, env))
 

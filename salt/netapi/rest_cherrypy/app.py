@@ -988,7 +988,7 @@ class Jobs(LowDataAdapter):
         'tools.salt_auth.on': True,
     })
 
-    def GET(self, jid=None):
+    def GET(self, jid=None, timeout=''):
         '''
         A convenience URL for getting lists of previously run jobs or getting
         the return from a single job
@@ -1069,18 +1069,25 @@ class Jobs(LowDataAdapter):
                 - 2
                 - 6.9141387939453125e-06
         '''
-        lowstate = [{
-            'client': 'runner',
-            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
-            'jid': jid,
-        }]
-
+        timeout = int(timeout) if timeout.isdigit() else None
         if jid:
-            lowstate.append({
+            lowstate = [{
+                'client': 'runner',
+                'fun': 'jobs.lookup_jid',
+                'args': (jid,),
+                'timeout': timeout,
+            }, {
                 'client': 'runner',
                 'fun': 'jobs.list_job',
-                'jid': jid,
-            })
+                'args': (jid,),
+                'timeout': timeout,
+            }]
+        else:
+            lowstate = [{
+                'client': 'runner',
+                'fun': 'jobs.list_jobs',
+                'timeout': timeout,
+            }]
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(

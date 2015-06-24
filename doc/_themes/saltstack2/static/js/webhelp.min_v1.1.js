@@ -158,6 +158,20 @@ $( document ).ready(function() {
         $( '#wrapper' ).toggleClass( 'toggled' );
     });
 
+    $( 'div.versions' ).on('click', 'a', function (e) {
+        e.preventDefault();
+        var clickedVer = $(this).attr("href");
+        var $currentVer = $( 'a.selected-version' );
+        if (window.location.href.indexOf(clickedVer) == -1) {
+            window.location.href = window.location.href.replace($currentVer.attr("href"), clickedVer);
+        }
+        else {
+            if ($currentVer.text().indexOf("develop") == -1) {
+                window.location.href = clickedVer + "topics/releases/" + $currentVer.text().trim() + ".html";
+            }
+            else window.location.href = clickedVer + "topics/releases/";
+        }
+    });
 }); // $.document.ready
 
 //refresh on window resize

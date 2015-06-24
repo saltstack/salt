@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Execute overstate functions
+Execute orchestration functions
 '''
 # Import pytohn libs
 from __future__ import absolute_import, print_function
@@ -10,68 +10,11 @@ import logging
 import sys
 
 # Import salt libs
-import salt.overstate
 import salt.syspaths
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 LOGGER = logging.getLogger(__name__)
-
-
-def over(saltenv='base', os_fn=None):
-    '''
-    .. versionadded:: 0.11.0
-
-    .. warning::
-
-        ``state.over`` is deprecated in favor of ``state.orchestrate``, and
-        will be removed in the Salt feature release codenamed Boron.
-        (Three feature releases after the 2014.7.0 release, which is codenamed
-        Helium)
-
-    Execute an overstate sequence to orchestrate the executing of states
-    over a group of systems
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt-run state.over base /path/to/myoverstate.sls
-    '''
-    salt.utils.warn_until(
-            'Boron',
-            'The state.over runner is on a deprecation path and will be '
-            'removed in Salt Boron. Please migrate to state.orchestrate.'
-            )
-
-    stage_num = 0
-    try:
-        overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    except IOError as exc:
-        raise SaltInvocationError(
-            '{0}: {1!r}'.format(exc.strerror, exc.filename)
-        )
-    for stage in overstate.stages_iter():
-        if isinstance(stage, dict):
-            # This is highstate data
-            __jid_event__.fire_event({'message': 'Stage execution results:'}, 'progress')
-            for key, val in six.iteritems(stage):
-                if '_|-' in key:
-                    __jid_event__.fire_event({'data': {'error': {key: val}}, 'outputter': 'highstate'}, 'progress')
-                else:
-                    __jid_event__.fire_event({'data': {key: val}, 'outputter': 'highstate'}, 'progress')
-        elif isinstance(stage, list):
-            # This is a stage
-            if stage_num == 0:
-                __jid_event__.fire_event({'message': 'Executing the following Over State:'}, 'progress')
-            else:
-                __jid_event__.fire_event({'message': 'Executed Stage:'}, 'progress')
-            __jid_event__.fire_event({'data': stage, 'outputter': 'overstatestage'}, 'progress')
-            stage_num += 1
-    return overstate.over_run
 
 
 def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
@@ -185,24 +128,6 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     ret = {minion.opts['id']: running}
     __jid_event__.fire_event({'data': ret, 'outputter': 'highstate'}, 'progress')
     return ret
-
-
-def show_stages(saltenv='base', os_fn=None):
-    '''
-    .. versionadded:: 0.11.0
-
-    Display the OverState's stage data
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt-run state.show_stages
-        salt-run state.show_stages saltenv=dev /root/overstate.sls
-    '''
-    overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    __jid_event__.fire_event({'data': overstate.over, 'outputter': 'overstatestage'}, 'progress')
-    return overstate.over
 
 
 def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):

@@ -480,7 +480,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
-            log.error('payload and load must be a dict')
+            log.error('payload and load must be a dict. Payload was: {0} and load was {1}'.format(payload, payload.get('load')))
             stream.send(self.serial.dumps('payload and load must be a dict'))
             raise tornado.gen.Return()
 
@@ -702,8 +702,10 @@ class AsyncReqMessageClient(object):
     def destroy(self):
         if hasattr(self, 'stream'):
             # TODO: Optionally call stream.close() on newer pyzmq? It is broken on some.
-            self.stream.io_loop.remove_handler(self.stream.socket)
             self.stream.socket.close()
+            self.stream.io_loop.remove_handler(self.stream.socket)
+            # set this to None, more hacks for messed up pyzmq
+            self.stream.socket = None
             self.socket.close()
         self.context.term()
 

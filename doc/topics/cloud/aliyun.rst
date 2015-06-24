@@ -1,6 +1,6 @@
-==================================
+===============================
 Getting Started With Aliyun ECS
-==================================
+===============================
 
 The Aliyun ECS (Elastic Computer Service) is one of the most popular public
 cloud providers in China. This cloud provider can be used to manage aliyun
@@ -32,7 +32,7 @@ under "My Service" tab.
       # aliyun Access Key Secret
       key: GDd45t43RDBTrkkkg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
-      provider: aliyun
+      driver: aliyun
 
 
 Profiles
@@ -46,7 +46,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 .. code-block:: yaml
 
     aliyun_centos:
-        provider: my-aliyun-config
+        driver: my-aliyun-config
         size: ecs.t1.small
         location: cn-qingdao
         securitygroup: G1989096784427999

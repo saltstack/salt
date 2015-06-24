@@ -142,56 +142,12 @@ Function updateMinionConfig
 
 FunctionEnd
 
-Function MsiQueryProductState
-
-  !define INSTALLSTATE_DEFAULT "5"
-  Var /GLOBAL NeedVcRedist                       ; used as a return value
-
-  Pop $R0
-  StrCpy $NeedVcRedist "False"
-  System::Call "msi::MsiQueryProductStateA(t '$R0') i.r0"
-  StrCmp $0 ${INSTALLSTATE_DEFAULT} +2 0
-  StrCpy $NeedVcRedist "True"
-
-FunctionEnd
-
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
-
-; Check and install Visual C++ 2008 SP1 MFC Security Update redist packages
-; See http://blogs.msdn.com/b/astebner/archive/2009/01/29/9384143.aspx for more info
-Section -Prerequisites
-
-;  !define VC_REDIST_X64_GUID "{5FCE6D76-F5DC-37AB-B2B8-22AB8CEDB1D4}"
-;  !define VC_REDIST_X86_GUID "{9BE518E6-ECC6-35A9-88E4-87755C07200F}"
-;  !define VC_REDIST_X64_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe"
-;  !define VC_REDIST_X86_URI "http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
-
-;  Var /GLOBAL VcRedistGuid
-;  Var /GLOBAL VcRedistUri
-;  ${If} ${RunningX64}
-;    StrCpy $VcRedistGuid ${VC_REDIST_X64_GUID}
-;    StrCpy $VcRedistUri  ${VC_REDIST_X64_URI}
-;  ${Else}
-;    StrCpy $VcRedistGuid ${VC_REDIST_X86_GUID}
-;    StrCpy $VcRedistUri  ${VC_REDIST_X86_URI}
-;  ${EndIf}
-
-;  Push $VcRedistGuid
-  Call MsiQueryProductState
-;  ${If} $NeedVcRedist == "True"
-;    NSISdl::download /TIMEOUT=30000 $VcRedistUri $TEMP\vcredist.exe
-;    Pop $R0
-;    StrCmp $R0 "success" +2
-;      MessageBox MB_OK "VC redist package download failed: $R0" /SD IDOK    ; just report, do not break installation
-;    Execwait '"$TEMP\vcredist.exe" /q'
-;  ${EndIf}
-
-SectionEnd
 
 Section "MainSection" SEC01
 
@@ -254,6 +210,12 @@ Section -Post
 
   Call updateMinionConfig
 SectionEnd
+
+Function .onInstSuccess
+; If the installer is running Silently, start the service
+  IfSilent 0 +2
+  Exec 'net start salt-minion'
+FunctionEnd
 
 Function un.onUninstSuccess
   HideWindow
@@ -367,8 +329,6 @@ Section Uninstall
   Delete "$INSTDIR\salt*"
   Delete "$INSTDIR\bin"
 
-  #Delete "$SMPROGRAMS\Salt Minion\Uninstall.lnk"
-  #RMDir /r "$SMPROGRAMS\Salt Minion"
   ${If} $INSTDIR != 'Program Files'
   ${AndIf} $INSTDIR != 'Program Files (x86)'
     RMDir /r "$INSTDIR"

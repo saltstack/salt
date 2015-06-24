@@ -5,7 +5,6 @@ from __future__ import absolute_import
 import os
 import os.path
 import tempfile
-from cStringIO import StringIO
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -17,6 +16,7 @@ ensure_in_syspath('../')
 import salt.loader
 import salt.config
 import integration
+from salt.ext.six.moves import StringIO
 
 # Import 3rd-party libs
 import salt.ext.six as six
