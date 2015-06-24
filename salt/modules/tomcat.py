@@ -572,7 +572,7 @@ def deploy_war(war,
     else:
         tfile = war
 
-    version_extract = re.findall("\\d+.\\d+.\\d+?", os.path.basename(war).replace('.war', ''))
+    version_extract = re.findall("-([\\d.-]+)$", os.path.basename(war).replace('.war', ''))
     if len(version_extract) == 1:
         version_string = version_extract[0]
     else:

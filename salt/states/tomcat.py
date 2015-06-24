@@ -40,6 +40,7 @@ Notes:
       Apache Tomcat/7.0.37
 '''
 
+import re
 
 # Private
 def __virtual__():
@@ -96,7 +97,13 @@ def war_deployed(name,
        'changes': {},
        'comment': ''}
     basename = war.split('/')[-1]
-    version = basename.replace('.war', '')
+
+    version_extract = re.findall("-([\\d.-]+)$", basename.replace('.war', ''))
+    if len(version_extract) == 1:
+        version = version_extract[0]
+    else:
+        version = None
+
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
     undeploy = False
