@@ -88,13 +88,13 @@ can be called:
 
 .. code-block:: yaml
 
-    {% if data['data']['overstate'] == 'refresh' %}
-    overstate_run:
-      runner.state.over
+    {% if data['data']['orchestrate'] == 'refresh' %}
+    orchestrate_run:
+      runner.state.orchestrate
     {% endif %}
 
-This example will execute the state.overstate runner and initiate an overstate
-execution.
+This example will execute the state.orchestrate runner and initiate an
+orchestrate execution.
 
 Fire an event
 =============
@@ -103,10 +103,10 @@ To fire an event from a minion call ``event.send``
 
 .. code-block:: bash
 
-    salt-call event.send 'foo' '{overstate: refresh}'
+    salt-call event.send 'foo' '{orchestrate: refresh}'
 
 After this is called, any reactor sls files matching event tag ``foo`` will
-execute with ``{{ data['data']['overstate'] }}`` equal to ``'refresh'``.
+execute with ``{{ data['data']['orchestrate'] }}`` equal to ``'refresh'``.
 
 See :py:mod:`salt.modules.event` for more information.
 

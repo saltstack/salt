@@ -1174,9 +1174,12 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.hold <package name>
         salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
-    if 'yum-plugin-versionlock' not in list_pkgs():
+
+    on_redhat_5 = __grains__.get('osmajorrelease', None) == '5'
+    lock_pkg = 'yum-versionlock' if on_redhat_5 else 'yum-plugin-versionlock'
+    if lock_pkg not in list_pkgs():
         raise SaltInvocationError(
-            'Packages cannot be held, yum-plugin-versionlock is not installed.'
+            'Packages cannot be held, {0} is not installed.'.format(lock_pkg)
         )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
@@ -1267,9 +1270,12 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         salt '*' pkg.unhold <package name>
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
-    if 'yum-plugin-versionlock' not in list_pkgs():
+
+    on_redhat_5 = __grains__.get('osmajorrelease', None) == '5'
+    lock_pkg = 'yum-versionlock' if on_redhat_5 else 'yum-plugin-versionlock'
+    if lock_pkg not in list_pkgs():
         raise SaltInvocationError(
-            'Packages cannot be unheld, yum-plugin-versionlock is not installed.'
+            'Packages cannot be unheld, {0} is not installed.'.format(lock_pkg)
         )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(

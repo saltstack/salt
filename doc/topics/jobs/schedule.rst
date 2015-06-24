@@ -184,13 +184,13 @@ configuration file:
 .. code-block:: yaml
 
     schedule:
-      overstate:
-        function: state.over
+      orchestrate:
+        function: state.orchestrate
         seconds: 35
         minutes: 30
         hours: 3
 
-The above configuration will execute the state.over runner every 3 hours,
+The above configuration will execute the state.orchestrate runner every 3 hours,
 30 minutes and 35 seconds, or every 12,635 seconds.
 
 Scheduler With Returner

@@ -107,7 +107,7 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}},
                               'sock_dir': SOCK_DIR}
-        Schedule.enable_job(self.schedule, 'name', where='pillar')
+        Schedule.enable_job(self.schedule, 'name', persist=False, where='pillar')
         del self.schedule.opts['sock_dir']
         self.assertTrue(self.schedule.opts['pillar']['schedule']['name']['enabled'])
 
@@ -129,7 +129,7 @@ class ScheduleTestCase(TestCase):
         '''
         self.schedule.opts = {'pillar': {'schedule': {'name': {'enabled': 'foo'}}},
                               'sock_dir': SOCK_DIR}
-        Schedule.disable_job(self.schedule, 'name', where='pillar')
+        Schedule.disable_job(self.schedule, 'name', persist=False, where='pillar')
         del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['pillar']['schedule']['name']['enabled'])
 
@@ -153,7 +153,7 @@ class ScheduleTestCase(TestCase):
         ret = {'pillar': {'schedule': {'name': {'foo': 'bar'}}}}
         self.schedule.opts = {'pillar': {'schedule': {'name': {'foo': 'bar'}}},
                               'sock_dir': SOCK_DIR}
-        Schedule.modify_job(self.schedule, 'name', schedule, where='pillar')
+        Schedule.modify_job(self.schedule, 'name', schedule, persist=False, where='pillar')
         del self.schedule.opts['sock_dir']
         self.assertEqual(self.schedule.opts, ret)
 

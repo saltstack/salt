@@ -114,7 +114,7 @@ Or even on the VM's profile settings:
 .. code-block:: yaml
 
     ubuntu_aws:
-      provider: aws
+      provider: ec2
       image: ami-7e2da54e
       size: t1.micro
       deploy: False
@@ -174,12 +174,12 @@ to pass arguments to the deploy script:
 .. code-block:: yaml
 
     aws-amazon:
-        provider: aws
-        image: ami-1624987f
-        size: t1.micro
-        ssh_username: ec2-user
-        script: bootstrap-salt
-        script_args: -c /tmp/
+      provider: ec2
+      image: ami-1624987f
+      size: t1.micro
+      ssh_username: ec2-user
+      script: bootstrap-salt
+      script_args: -c /tmp/
 
 
 This has also been tested to work with pipes, if needed:

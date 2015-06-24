@@ -387,8 +387,14 @@ class CloudClient(object):
         ret = {}
         for name in names:
             vm_ = kwargs.copy()
+
+            # Since using "provider: <provider-engine>" is deprecated, alias provider
+            # to use driver: "driver: <provider-engine>"
+            if 'provider' in vm_:
+                vm_['driver'] = vm_.pop('provider')
+
             vm_['name'] = name
-            vm_['provider'] = provider
+            vm_['driver'] = provider
             vm_['profile'] = None
             ret[name] = salt.utils.cloud.simple_types_filter(
                 mapper.create(vm_))
@@ -464,14 +470,6 @@ class CloudClient(object):
                 'Either an instance or a provider must be specified.'
             )
 
-        return salt.utils.cloud.simple_types_filter(
-            mapper.run_profile(fun, names)
-        )
-
-    # map
-    # create
-    # destroy
-
 
 class Cloud(object):
     '''
@@ -524,8 +522,6 @@ class Cloud(object):
                         lookup, ', '.join(self.get_configured_providers())
                     )
                 )
-
-            return set((alias, driver))
 
         providers = set()
         for alias, drivers in six.iteritems(self.opts['providers']):
@@ -1157,7 +1153,12 @@ class Cloud(object):
             'minion', vm_, self.opts, default={}
         )
 
-        alias, driver = vm_['provider'].split(':')
+        # Since using "provider: <provider-engine>" is deprecated, alias provider
+        # to use driver: "driver: <provider-engine>"
+        if 'provider' in vm_:
+            vm_['driver'] = vm_.pop('provider')
+
+        alias, driver = vm_['driver'].split(':')
         fun = '{0}.create'.format(driver)
         if fun not in self.clouds:
             log.error(
@@ -1246,7 +1247,7 @@ class Cloud(object):
             pass
 
         try:
-            alias, driver = vm_['provider'].split(':')
+            alias, driver = vm_['driver'].split(':')
             func = '{0}.create'.format(driver)
             with context.func_globals_inject(
                 self.clouds[fun],

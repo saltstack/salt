@@ -36,7 +36,7 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-      provider: softlayer
+      driver: softlayer
 
 
     my-softlayer-hw:
@@ -48,7 +48,7 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-      provider: softlayer_hw
+      driver: softlayer_hw
 
 
 Access Credentials

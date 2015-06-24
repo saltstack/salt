@@ -359,14 +359,15 @@ def get_jids():
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT jid
+        sql = '''SELECT DISTINCT `jid`, `load`
                 FROM `jids`'''
 
         cur.execute(sql)
         data = cur.fetchall()
-        ret = []
+        ret = {}
         for jid in data:
-            ret.append(jid[0])
+            ret[jid[0]] = salt.utils.jid.format_jid_instance(jid[0],
+                                                             json.loads(jid[1]))
         return ret
 
 

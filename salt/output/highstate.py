@@ -246,6 +246,16 @@ def _format_host(host, data):
                     comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
+            # If there is a data attribute, append it to the comment
+            if 'data' in ret:
+                if isinstance(ret['data'], list):
+                    for item in ret['data']:
+                        comment = '{0} {1}'.format(comment, item)
+                elif isinstance(ret['data'], dict):
+                    for key, value in ret['data'].items():
+                        comment = '{0}\n\t\t{1}: {2}'.format(comment, key, value)
+                else:
+                    comment = '{0} {1}'.format(comment, ret['data'])
             for detail in ['start_time', 'duration']:
                 ret.setdefault(detail, u'')
             if ret['duration'] != '':

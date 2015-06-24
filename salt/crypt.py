@@ -56,7 +56,7 @@ def dropfile(cachedir, user=None):
     try:
         log.info('Rotating AES key')
 
-        with salt.utils.fopen(dfn, 'w+') as fp_:
+        with salt.utils.fopen(dfn, 'wb+') as fp_:
             fp_.write('')
         if user:
             try:
@@ -91,10 +91,10 @@ def gen_keys(keydir, keyname, keysize, user=None):
         # a key! Use the winner's key
         return priv
     cumask = os.umask(191)
-    with salt.utils.fopen(priv, 'w+') as f:
+    with salt.utils.fopen(priv, 'wb+') as f:
         f.write(gen.exportKey('PEM'))
     os.umask(cumask)
-    with salt.utils.fopen(pub, 'w+') as f:
+    with salt.utils.fopen(pub, 'wb+') as f:
         f.write(gen.publickey().exportKey('PEM'))
     os.chmod(priv, 256)
     if user:
@@ -156,7 +156,7 @@ def gen_signature(priv_path, pub_path, sign_path):
         log.trace('Signature file {0} already exists, please '
                   'remove it first and try again'.format(sign_path))
     else:
-        with salt.utils.fopen(sign_path, 'w+') as sig_f:
+        with salt.utils.fopen(sign_path, 'wb+') as sig_f:
             sig_f.write(mpub_sig_64)
         log.trace('Wrote signature to {0}'.format(sign_path))
     return True
@@ -274,9 +274,9 @@ class MasterKeys(dict):
                             name + '.pub')
         if not os.path.isfile(path):
             key = self.__get_keys()
-            with salt.utils.fopen(path, 'w+') as f:
+            with salt.utils.fopen(path, 'wb+') as f:
                 f.write(key.publickey().exportKey('PEM'))
-        return salt.utils.fopen(path, 'r').read()
+        return salt.utils.fopen(path).read()
 
     def get_mkey_paths(self):
         return self.pub_path, self.rsa_path
@@ -619,7 +619,7 @@ class AsyncAuth(object):
             payload['token'] = cipher.encrypt(self.token)
         except Exception:
             pass
-        with salt.utils.fopen(self.pub_path, 'r') as f:
+        with salt.utils.fopen(self.pub_path) as f:
             payload['pub'] = f.read()
         return payload
 
@@ -661,7 +661,7 @@ class AsyncAuth(object):
             m_path = os.path.join(self.opts['pki_dir'], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    with salt.utils.fopen(m_path, 'r') as f:
+                    with salt.utils.fopen(m_path) as f:
                         mkey = RSA.importKey(f.read())
                 except Exception:
                     return '', ''
@@ -724,7 +724,7 @@ class AsyncAuth(object):
                          'from master {0}'.format(self.opts['master']))
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
                 uid = salt.utils.get_uid(self.opts.get('user', None))
-                with salt.utils.fpopen(m_pub_fn, 'w+', uid=uid) as wfh:
+                with salt.utils.fpopen(m_pub_fn, 'wb+', uid=uid) as wfh:
                     wfh.write(payload['pub_key'])
                 return True
             else:
@@ -867,7 +867,7 @@ class AsyncAuth(object):
             # the minion has not received any masters pubkey yet, write
             # the newly received pubkey to minion_master.pub
             else:
-                salt.utils.fopen(m_pub_fn, 'w+').write(payload['pub_key'])
+                salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
                 return self.extract_aes(payload, master_pub=False)
 
 

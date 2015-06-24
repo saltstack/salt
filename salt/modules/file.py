@@ -357,7 +357,7 @@ def set_mode(path, mode):
     '''
     path = os.path.expanduser(path)
 
-    mode = str(mode).lstrip('0')
+    mode = str(mode).lstrip('0Oo')
     if not mode:
         mode = '0'
     if not os.path.exists(path):
@@ -984,13 +984,12 @@ def uncomment(path,
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
     '''
-    # Largely inspired by Fabric's contrib.files.uncomment()
-
-    return sed(path,
-               before=r'^([[:space:]]*){0}'.format(char),
-               after=r'\1',
-               limit=regex.lstrip('^'),
-               backup=backup)
+    pattern = '^{0}{1}'.format(char, regex.lstrip('^').rstrip('$'))
+    repl = "{0}".format(regex.lstrip('^').rstrip('$'))
+    return replace(path=path,
+                   pattern=pattern,
+                   repl=repl,
+                   backup=backup)
 
 
 def comment(path,
@@ -1028,17 +1027,11 @@ def comment(path,
 
         salt '*' file.comment /etc/modules pcspkr
     '''
-    # Largely inspired by Fabric's contrib.files.comment()
-
-    regex = '{0}({1}){2}'.format(
-            '^' if regex.startswith('^') else '',
-            regex.lstrip('^').rstrip('$'),
-            '$' if regex.endswith('$') else '')
-
-    return sed(path,
-               before=regex,
-               after=r'{0}\1'.format(char),
-               backup=backup)
+    repl = "{0}{1}".format(char, regex.lstrip('^').rstrip('$'))
+    return replace(path=path,
+                   pattern=regex,
+                   repl=repl,
+                   backup=backup)
 
 
 def _get_flags(flags):
@@ -3694,6 +3687,9 @@ def manage_file(name,
         This file is then grabbed and if it has template set, it renders the file to be placed
         into the correct place on the system using salt.files.utils.copyfile()
 
+    ret
+        The initial state return data structure. Pass in ``None`` to use the default structure.
+
     source
         file reference on the master
 
@@ -4211,7 +4207,7 @@ def mknod_chrdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFCHR,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFCHR,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4286,7 +4282,7 @@ def mknod_blkdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFBLK,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFBLK,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4357,7 +4353,7 @@ def mknod_fifo(name,
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
-            if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
+            if os.mkfifo(name, int(str(mode).lstrip('0Oo'), 8)) is None:
                 ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:

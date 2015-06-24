@@ -158,15 +158,16 @@ def removegroup(name, group):
     return ret['retcode'] == 0
 
 
-def chhome(name, home):
+def chhome(name, home, persist=False):
     '''
-    Change the home directory of the user
+    Change the home directory of the user, pass True for persist to move files
+    to the new home directory if the old home directory exist.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.chhome foo \\\\fileserver\\home\\foo
+        salt '*' user.chhome foo \\\\fileserver\\home\\foo True
     '''
     pre_info = info(name)
 
@@ -179,6 +180,11 @@ def chhome(name, home):
     if __salt__['cmd.retcode']('net user {0} /homedir:{1}'.format(
             name, home)) != 0:
         return False
+
+    if persist and home is not None and pre_info['home'] is not None:
+        cmd = 'move /Y {0} {1}'.format(pre_info['home'], home)
+        if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
+            log.debug('Failed to move the contents of the Home Directory')
 
     post_info = info(name)
     if post_info['home'] != pre_info['home']:

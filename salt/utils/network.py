@@ -848,11 +848,20 @@ def interface_ip(iface):
         return error
 
 
-def _subnets(proto='inet'):
+def _subnets(proto='inet', interfaces_=None):
     '''
     Returns a list of subnets to which the host belongs
     '''
-    ifaces = interfaces()
+    if interfaces_ is None:
+        ifaces = interfaces()
+    elif isinstance(interfaces_, list):
+        ifaces = {}
+        for key, value in six.iteritems(interfaces()):
+            if key in interfaces_:
+                ifaces[key] = value
+    else:
+        ifaces = {interfaces_: interfaces().get(interfaces_, {})}
+
     ret = set()
 
     if proto == 'inet':
@@ -874,11 +883,11 @@ def _subnets(proto='inet'):
     return [str(net) for net in sorted(ret)]
 
 
-def subnets():
+def subnets(interfaces=None):
     '''
     Returns a list of IPv4 subnets to which the host belongs
     '''
-    return _subnets('inet')
+    return _subnets('inet', interfaces_=interfaces)
 
 
 def subnets6():
@@ -984,6 +993,27 @@ def hex2ip(hex_ip, invert=False):
                                     hip >> 16 & 255,
                                     hip >> 8 & 255,
                                     hip & 255)
+
+
+def mac2eui64(mac, prefix=None):
+    '''
+    Convert a MAC address to a EUI64 identifier
+    or, with prefix provided, a full IPv6 address
+    '''
+    # http://tools.ietf.org/html/rfc4291#section-2.5.1
+    eui64 = re.sub(r'[.:-]', '', mac).lower()
+    eui64 = eui64[0:6] + 'fffe' + eui64[6:]
+    eui64 = hex(int(eui64[0:2], 16) | 2)[2:].zfill(2) + eui64[2:]
+
+    if prefix is None:
+        return ':'.join(re.findall(r'.{4}', eui64))
+    else:
+        try:
+            net = ipaddress.ip_network(prefix, strict=False)
+            euil = int('0x{0}'.format(eui64), 16)
+            return '{0}/{1}'.format(net[euil], net.prefixlen)
+        except:  # pylint: disable=bare-except
+            return
 
 
 def active_tcp():

@@ -320,26 +320,27 @@ def get_docker(interfaces=None, cidrs=None):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'docker.get_containers'
+    cmd = 'dockerng.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}
 
     # Process docker info
     for containers in six.itervalues(docker_hosts):
+        host = containers.pop('host')
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for info in six.itervalues(containers['host']['interfaces']):
+            for info in six.itervalues(host['interfaces']):
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
         else:
             for interface in interfaces:
-                if interface in containers['host']['interfaces']:
-                    if 'inet' in containers['host']['interfaces'][interface]:
-                        for item in containers['host']['interfaces'][interface]['inet']:
+                if interface in host['interfaces']:
+                    if 'inet' in host['interfaces'][interface]:
+                        for item in host['interfaces'][interface]['inet']:
                             host_ips.append(item['address'])
         host_ips = list(set(host_ips))
 
@@ -353,22 +354,21 @@ def get_docker(interfaces=None, cidrs=None):
             host_ips = list(set(good_ips))
 
         # Process each container
-        if containers['out']:
-            for container in containers['out']:
-                if container['Image'] not in proxy_lists:
-                    proxy_lists[container['Image']] = {}
-                for dock_port in container['Ports']:
-                    # IP exists only if port is exposed
-                    ip_address = dock_port.get('IP')
-                    # If port is 0.0.0.0, then we must get the docker host IP
-                    if ip_address == '0.0.0.0':
-                        for ip_ in host_ips:
-                            proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
-                                '{0}:{1}'.format(ip_, dock_port['PublicPort']))
-                            proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
-                    elif ip_address:
+        for container in six.itervalues(containers):
+            if container['Image'] not in proxy_lists:
+                proxy_lists[container['Image']] = {}
+            for dock_port in container['Ports']:
+                # IP exists only if port is exposed
+                ip_address = dock_port.get('IP')
+                # If port is 0.0.0.0, then we must get the docker host IP
+                if ip_address == '0.0.0.0':
+                    for ip_ in host_ips:
                         proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
-                            '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
+                            '{0}:{1}'.format(ip_, dock_port['PublicPort']))
                         proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
+                elif ip_address:
+                    proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
+                        '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
+                    proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
 
     return proxy_lists

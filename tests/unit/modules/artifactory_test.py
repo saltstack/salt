@@ -55,7 +55,8 @@ class ArtifactoryTestCase(TestCase):
         metadata = artifactory._get_artifact_metadata(artifactory_url='http://artifactory.company.com/artifactory',
                                             repository='libs-releases',
                                             group_id='com.company.sampleapp.web-module',
-                                            artifact_id='web')
+                                            artifact_id='web',
+                                            headers={})
         self.assertEqual(metadata['latest_version'], '1.1_RC11')
 
     def test_snapshot_version_get_metadata(self):
@@ -89,7 +90,8 @@ class ArtifactoryTestCase(TestCase):
                                                              repository='libs-releases',
                                                              group_id='com.company.sampleapp.web-module',
                                                              artifact_id='web',
-                                                             version='1.1_RC8-SNAPSHOT')
+                                                             version='1.1_RC8-SNAPSHOT',
+                                                             headers={})
         self.assertEqual(metadata['snapshot_versions']['war'], '1.1_RC8-20140418.150212-1')
 
     def test_artifact_metadata_url(self):
@@ -129,7 +131,8 @@ class ArtifactoryTestCase(TestCase):
                                                group_id='com.company.sampleapp.web-module',
                                                artifact_id='web',
                                                version='1.0_RC10-SNAPSHOT',
-                                               packaging='war')
+                                               packaging='war',
+                                               headers={})
 
         self.assertEqual(artifact_url, "http://artifactory.company.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/web-1.0_RC10-20131127.105838-2.war")
         self.assertEqual(file_name, "web-1.0_RC10-20131127.105838-2.war")

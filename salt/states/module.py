@@ -43,7 +43,16 @@ the execution module function being executed:
 
 Due to how the state system works, if a module function accepts an
 argument called, ``name``, then ``m_name`` must be used to specify that
-argument, to avoid a collision with the ``name`` argument. For example:
+argument, to avoid a collision with the ``name`` argument.
+
+Here is a list of keywords hidden by the state system, which must be prefixed
+with ``m_``:
+* fun
+* name
+* names
+* state
+
+For example:
 
 .. code-block:: yaml
 
@@ -170,6 +179,9 @@ def run(name, **kwargs):
         elif arg == 'fun':
             if 'm_fun' in kwargs:
                 defaults[arg] = kwargs.pop('m_fun')
+        elif arg == 'state':
+            if 'm_state' in kwargs:
+                defaults[arg] = kwargs.pop('m_state')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
@@ -180,6 +192,8 @@ def run(name, **kwargs):
             rarg = 'm_fun'
         elif arg == 'names':
             rarg = 'm_names'
+        elif arg == 'state':
+            rarg = 'm_state'
         else:
             rarg = arg
         if rarg not in kwargs and arg not in defaults:
