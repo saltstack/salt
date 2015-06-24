@@ -1071,7 +1071,12 @@ def get_provider(vm_=None):
     if vm_ is None:
         provider = __active_provider_name__ or 'ec2'
     else:
-        provider = vm_.get('provider', 'ec2')
+        # Since using "provider: <provider-engine>" is deprecated, alias provider
+        # to use driver: "driver: <provider-engine>"
+        if 'provider' in vm_:
+            vm_['driver'] = vm_.pop('provider')
+
+        provider = vm_.get('driver', 'ec2')
 
     if ':' in provider:
         prov_comps = provider.split(':')
