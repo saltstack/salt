@@ -526,8 +526,9 @@ def is_present(conf, atom):
 
 
 def get_iuse(cp):
-    """Gets the current IUSE flags from the tree
-
+    """
+    .. versionadded:: Beryllium
+    Gets the current IUSE flags from the tree
     @type: cpv: string
     @param cpv: cat/pkg
     @rtype list
@@ -543,8 +544,9 @@ def get_iuse(cp):
 
 
 def get_installed_use(cp, use="USE"):
-    """Gets the installed USE flags from the VARDB
-
+    """
+    .. versionadded:: Beryllium
+    Gets the installed USE flags from the VARDB
     @type: cp: string
     @param cp: cat/pkg
     @type use: string
@@ -558,7 +560,9 @@ def get_installed_use(cp, use="USE"):
 
 
 def filter_flags(use, use_expand_hidden, usemasked, useforced):
-    """Filter function to remove hidden or otherwise not normally
+    """
+    .. versionadded:: Beryllium
+    Filter function to remove hidden or otherwise not normally
     visible USE flags from a list.
 
     @type use: list
@@ -594,7 +598,9 @@ def filter_flags(use, use_expand_hidden, usemasked, useforced):
 
 
 def get_all_cpv_use(cp):
-    """Uses portage to determine final USE flags and settings for an emerge
+    """
+    .. versionadded:: Beryllium
+    Uses portage to determine final USE flags and settings for an emerge
 
     @type cp: string
     @param cp: eg cat/pkg
@@ -623,22 +629,27 @@ def get_all_cpv_use(cp):
 
 def get_cleared_flags(cp):
     '''
+    .. versionadded:: Beryllium
     Uses portage for compare use flags which is used for installing package
     and use flags which now exist int /etc/portage/package.use/
     @type cp: string
     @param cp: eg cat/pkg
-    @rtype: list
-    returned list of used flags and list of flags which will be used
+    @rtype: tuple
+    @rparam: tuple with two lists - list of used flags and
+    list of flags which will be used
     '''
     cpv = _get_cpv(cp)
     final_use, use_expand_hidden, usemasked, useforced = get_all_cpv_use(cpv)
-    inst_flags = filter_flags(get_installed_use(cpv), use_expand_hidden, usemasked, useforced)
-    final_flags = filter_flags(final_use, use_expand_hidden, usemasked, useforced)
+    inst_flags = filter_flags(get_installed_use(cpv), use_expand_hidden,
+                                usemasked, useforced)
+    final_flags = filter_flags(final_use, use_expand_hidden,
+                                usemasked, useforced)
     return inst_flags, final_flags
 
 
 def is_changed_uses(cp):
     '''
+    .. versionadded:: Beryllium
     Uses portage for determine if the use flags of installed package
     is compatible with use flags in portage configs
     @type cp: string
