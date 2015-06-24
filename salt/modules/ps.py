@@ -125,7 +125,7 @@ def top(num_processes=5, interval=3):
     '''
     result = []
     start_usage = {}
-    for pid in psutil.get_pid_list():
+    for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
             user, system = process.get_cpu_times()
@@ -177,7 +177,7 @@ def get_pid_list():
 
         salt '*' ps.get_pid_list
     '''
-    return psutil.get_pid_list()
+    return psutil.pids()
 
 
 def kill_pid(pid, signal=15):
@@ -535,9 +535,9 @@ def network_io_counters(interface=None):
         salt '*' ps.network_io_counters interface=eth0
     '''
     if not interface:
-        return dict(psutil.network_io_counters()._asdict())
+        return dict(psutil.net_io_counters()._asdict())
     else:
-        stats = psutil.network_io_counters(pernic=True)
+        stats = psutil.net_io_counters(pernic=True)
         if interface in stats:
             return dict(stats[interface]._asdict())
         else:
@@ -577,7 +577,7 @@ def get_users():
         salt '*' ps.get_users
     '''
     try:
-        recs = psutil.get_users()
+        recs = psutil.users()
         return [dict(x._asdict()) for x in recs]
     except AttributeError:
         # get_users is only present in psutil > v0.5.0
