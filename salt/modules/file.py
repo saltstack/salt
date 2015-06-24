@@ -2758,14 +2758,20 @@ def get_managed(
     # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
+    urlparsed_source = _urlparse(source)
     # if we have a source defined, lets figure out what the hash is
     if source:
-        if _urlparse(source).scheme == 'salt':
+        if urlparsed_source.scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
+        # if its a local file
+        elif urlparsed_source.scheme == 'file':
+            source_sum = get_hash(urlparsed_source.path)
+        elif source.startswith('/'):
+            source_sum = get_hash(source)
         elif source_hash:
-            protos = ['salt', 'http', 'https', 'ftp', 'swift']
+            protos = ('salt', 'http', 'https', 'ftp', 'swift')
             if _urlparse(source_hash).scheme in protos:
                 # The source_hash is a file on a server
                 hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
