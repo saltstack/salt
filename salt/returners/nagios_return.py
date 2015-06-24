@@ -44,9 +44,6 @@ from __future__ import absolute_import
 # Import python libs
 import cgi
 import logging
-import requests
-
-from xml.dom.minidom import parseString
 
 import salt.returners
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -74,6 +71,7 @@ def _get_options(ret=None):
                                                    __salt__=__salt__,
                                                    __opts__=__opts__)
 
+    log.debug('attrs {0}'.format(attrs))
     if 'checktype' not in _options or _options['checktype'] == '':
         # default to passive check type
         _options['checktype'] = '1'
@@ -139,19 +137,22 @@ def _post_data(options=None, xml=None):
     Post data to Nagios NRDP
     '''
     params = {'token': options['token'].strip(), 'cmd': 'submitcheck', 'XMLDATA': xml}
-    res = requests.request(
-        method='POST',
+
+    res = salt.utils.http.query(
         url=options['url'],
-        headers='',
+        method='POST',
         params=params,
         data='',
-        verify=True,
+        decode=True,
+        status=True,
+        header_dict={},
+        opts=__opts__,
     )
 
-    if hasattr(res, 'status_code') and res.status_code == salt.ext.six.moves.http_client.OK:
-        if hasattr(res, '_content'):
-            result = parseString(res._content)
-            if _getText(result.getElementsByTagName("status")[0].childNodes) == "0":
+    if res.get('status', None) == salt.ext.six.moves.http_client.OK:
+        if res.get('dict', None) and isinstance(res['dict'], list):
+            _content = res['dict'][0]
+            if _content.get('status', None):
                 return True
             else:
                 return False
@@ -176,6 +177,7 @@ def returner(ret):
     '''
 
     _options = _get_options(ret)
+    log.debug('_options {0}'.format(_options))
     _options['hostname'] = ret.get('id')
 
     if 'url' not in _options or _options['url'] == '':
