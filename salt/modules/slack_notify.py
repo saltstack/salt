@@ -78,11 +78,10 @@ def _query(function,
     }
 
     if not api_key:
-        try:
-            options = __salt__['config.option']('slack')
-            if not api_key:
-                api_key = options.get('api_key')
-        except (NameError, KeyError, AttributeError):
+        api_key = __salt__['config.get']('slack.api_key') or \
+            __salt__['config.get']('slack:api_key')
+
+        if not api_key:
             log.error('No Slack api key found.')
             ret['message'] = 'No Slack api key found.'
             ret['res'] = False
