@@ -696,7 +696,6 @@ class Client(object):
         )
 
 
-
 class LocalClient(Client):
     '''
     Use the local_roots option to parse a local file root
