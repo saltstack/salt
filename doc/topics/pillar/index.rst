@@ -88,7 +88,7 @@ by their ``os`` grain:
 The above pillar sets two key/value pairs. If a minion is running RedHat, then
 the ``apache`` key is set to ``httpd`` and the ``git`` key is set to the value
 of ``git``. If the minion is running Debian, those values are changed to
-``apache2`` and ``git-core`` respctively. All minions that have this pillar
+``apache2`` and ``git-core`` respectively. All minions that have this pillar
 targeting to them via a top file will have the key of ``company`` with a value
 of ``Foo Industries``.
 
