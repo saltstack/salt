@@ -496,4 +496,4 @@ Where To Go From Here
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:
-http://docs.saltstack.com/index.html#configuration-management
+http://docs.saltstack.com/en/latest/index.html#configuration-management
