@@ -977,7 +977,7 @@ def encrypt(user=None,
             output=None,
             sign=None,
             use_passphrase=False,
-            gnupghome=None
+            gnupghome=None,
             bare=False):
     '''
     Encrypt a message or file
@@ -1079,7 +1079,7 @@ def decrypt(user=None,
             filename=None,
             output=None,
             use_passphrase=False,
-            gnupghome=None
+            gnupghome=None,
             bare=False):
     '''
     Decrypt a message or file
