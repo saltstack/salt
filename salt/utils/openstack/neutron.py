@@ -276,8 +276,11 @@ class SaltNeutron(NeutronShell):
         '''
         Creates a new network
         '''
-        body = {'name': name,
-                'admin_state_up': admin_state_up}
+        # body = {'name': name,
+        #        'admin_state_up': admin_state_up}
+        body = {}
+        body['name'] = name
+        body['admin_state_up'] = admin_state_up
         if router_ext:
             body['router:external'] = router_ext
         if network_type:
