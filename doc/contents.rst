@@ -21,6 +21,7 @@ Salt Table of Contents
     topics/event/index
     topics/beacons/index
     topics/ext_processes/index
+    topics/highavailability/index
     topics/topology/index
     topics/transports/raet/index
     topics/windows/index
