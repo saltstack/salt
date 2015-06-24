@@ -109,7 +109,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
             log.debug('Found VPC: {0}'.format(stack.stack_id))
             keys = ('stack_id', 'description', 'stack_status', 'stack_status_reason')
 
-            ret = dict([(k, getattr(stack, k)) for k in keys])
+            ret = dict([(k, getattr(stack, k)) for k in keys if hasattr(stack, k)])
             o = getattr(stack, 'outputs')
             outputs = {}
             for i in o:
