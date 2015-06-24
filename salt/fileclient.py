@@ -356,11 +356,14 @@ class Client(object):
             self.opts['cachedir'], 'localfiles', path.lstrip('/'))
         filesdest = os.path.join(
             self.opts['cachedir'], 'files', saltenv, path.lstrip('salt://'))
+        extrndest = self._extrn_path(path, saltenv)
 
         if os.path.exists(filesdest):
             return filesdest
         elif os.path.exists(localsfilesdest):
             return localsfilesdest
+        elif os.path.exists(extrndest):
+            return extrndest
 
         return ''
 
@@ -537,13 +540,7 @@ class Client(object):
                 netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
             else:
                 netloc = url_data.netloc
-            dest = salt.utils.path_join(
-                self.opts['cachedir'],
-                'extrn_files',
-                saltenv,
-                netloc,
-                url_data.path
-            )
+            dest = self._extrn_path(url, saltenv)
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
@@ -670,13 +667,7 @@ class Client(object):
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache
-            dest = salt.utils.path_join(
-                self.opts['cachedir'],
-                'extrn_files',
-                saltenv,
-                url_data.netloc,
-                url_data.path
-            )
+            dest = self._extrn_path(url, saltenv)
             # If Salt generated the dest name, create any required dirs
             makedirs = True
 
@@ -689,6 +680,20 @@ class Client(object):
                 return ''
         shutil.move(data['data'], dest)
         return dest
+
+    def _extrn_path(self, url, saltenv):
+        '''
+        Return the extn_filepath for a given url
+        '''
+        url_data = urlparse(url)
+
+        return salt.utils.path_join(
+            self.opts['cachedir'],
+            'extrn_files',
+            saltenv,
+            url_data.netloc,
+            url_data.path
+        )
 
 
 class LocalClient(Client):
