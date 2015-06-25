@@ -48,7 +48,7 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
         import salt.client.netapi
         self.parse_args()
         self.setup_logfile_logger()
-        client = salt.client.netapi.NetapiClient(self.config)
         self.daemonize_if_required()
+        client = salt.client.netapi.NetapiClient(self.config)
         self.set_pidfile()
         client.run()
