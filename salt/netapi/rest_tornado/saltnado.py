@@ -267,7 +267,8 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
-        self.timeout_map = {}  # map of future -> timeout_callback
+        # map of future -> timeout_callback
+        self.timeout_map = {}
 
         self.stream = zmqstream.ZMQStream(self.event.sub,
                                           io_loop=tornado.ioloop.IOLoop.current())
@@ -280,7 +281,14 @@ class EventListener(object):
         if request not in self.request_map:
             return
         for tag, future in self.request_map[request]:
+            # timeout the future
             self._timeout_future(tag, future)
+            # remove the timeout
+            if future in self.timeout_map:
+                tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                del self.timeout_map[future]
+
+        del self.request_map[request]
 
     def get_event(self,
                   request,
@@ -291,6 +299,13 @@ class EventListener(object):
         '''
         Get an event (async of course) return a future that will get it later
         '''
+        # if the request finished, no reason to allow event fetching, since we
+        # can't send back to the client
+        if request._finished:
+            future = Future()
+            future.set_exception(TimeoutException())
+            return future
+
         future = Future()
         if callback is not None:
             def handle_future(future):
