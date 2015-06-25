@@ -1251,6 +1251,7 @@ def latest(
         fromrepo=None,
         skip_verify=False,
         pkgs=None,
+        watch_flags=True,
         **kwargs):
     '''
     Ensure that the named package is installed and the latest available

@@ -638,18 +638,20 @@ def install(name=None,
                     target = target[:target.rfind('[')] + '"'
 
                 if keyword is not None:
-                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
+                    __salt__['portage_config.append_to_package_conf']('accept_keywords',
+                                                                        target[1:-1],
+                                                                        ['~ARCH'])
                     changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 
                 if not changes:
                     inst_v = version(param)
-                    
+
                     if latest_version(param) == inst_v:
                         all_uses = __salt__['portage_config.get_cleared_flags'](param)
                         if _flags_changed(*all_uses):
                             changes[param] = {'version': inst_v,
-                                            'old':{'use':all_uses[0]},
-                                            'new':{'use':all_uses[1]}}
+                                                'old': {'use': all_uses[0]},
+                                                'new': {'use': all_uses[1]}}
                 targets.append(target)
     else:
         targets = pkg_params
