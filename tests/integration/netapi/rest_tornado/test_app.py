@@ -581,6 +581,7 @@ class TestWebhookSaltAPIHandler(SaltnadoTestCase):
             self.assertIn('headers', event['data'])
             self.assertEqual(event['data']['post'], {'foo': 'bar'})
         # get an event future
+        self._finished = False  # TODO: remove after some cleanup of the event listener
         event = self.application.event_listener.get_event(self,
                                                           tag='salt/netapi/hook',
                                                           callback=verify_event,
