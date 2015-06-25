@@ -271,7 +271,7 @@ def save_config():
         salt '*' raid.save_config
 
     '''
-    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).split()
+    scan = __salt__['cmd.run']('mdadm --detail --scan', python_shell=False).splitlines()
     # Issue with mdadm and ubuntu
     # REF: http://askubuntu.com/questions/209702/why-is-my-raid-dev-md1-showing-up-as-dev-md126-is-mdadm-conf-being-ignored
     if __grains__['os'] == 'Ubuntu':
