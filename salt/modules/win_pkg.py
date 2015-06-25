@@ -675,15 +675,12 @@ def get_repo_data(saltenv='base'):
     '''
     #if 'winrepo.data' in __context__:
     #    return __context__['winrepo.data']
-    repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
-    if not cached_repo:
-        __salt__['pkg.refresh_db']()
+    repocache_dir = _get_local_repo_dir(saltenv=saltenv)
+    winrepo = 'winrepo.p'
     try:
-        with salt.utils.fopen(cached_repo, 'rb') as repofile:
+        with salt.utils.fopen(os.path.join(repocache_dir, winrepo), 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
-                #__context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:
                 log.exception(exc)
