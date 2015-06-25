@@ -189,6 +189,7 @@ def _absent_test(user, name, enc, comment, options, source, config):
         comment = ('Key {0} for user {1} is set for removal').format(name, user)
     else:
         comment = ('Key is already absent')
+        result = True
 
     return result, comment
 
