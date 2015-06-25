@@ -288,5 +288,5 @@ Issue and Pull Request Labeling System
 --------------------------------------
 
 SaltStack uses several labeling schemes to help facilitate code contributions
-and bug resolution. See the :doc:`<labels-and-milestones>` documentation for
-more information.
+and bug resolution. See the :ref:`Labels and Milestones
+<labels-and-milestones>` documentation for more information.
