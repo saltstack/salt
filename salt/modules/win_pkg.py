@@ -405,10 +405,16 @@ def genrepo(saltenv='base'):
     for root, _, files in os.walk(repo):
         for name in files:
             if name.endswith('.sls'):
-                config = salt.template.compile_template(
-                        os.path.join(root, name),
-                        renderers,
-                        __opts__['renderer'])
+                try:
+                    config = salt.template.compile_template(
+                            os.path.join(root, name),
+                            renderers,
+                            __opts__['renderer'])
+                except SaltRenderError as exc:
+                    log.debug('Failed to compile {0}.'
+                              'Error: {1}.'.format(os.path.join(root, name), exc))
+                    continue
+
                 if config:
                     revmap = {}
                     for pkgname, versions in six.iteritems(config):
@@ -419,7 +425,6 @@ def genrepo(saltenv='base'):
                             if not isinstance(repodata, dict):
                                 log.debug('Failed to compile'
                                           '{0}.'.format(os.path.join(root, name)))
-                                __jid_event__.fire_event({'error': 'Failed to compile {0}.'.format(os.path.join(root, name))}, 'progress')
                                 continue
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
