@@ -31,6 +31,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
+from salt.exceptions import SaltRenderError
 import salt.utils
 import salt.syspaths
 
