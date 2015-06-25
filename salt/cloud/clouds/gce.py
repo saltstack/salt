@@ -2039,7 +2039,6 @@ def create(vm_=None, call=None):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-
     conn = get_conn()
 
     kwargs = {
