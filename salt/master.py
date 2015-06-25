@@ -2096,6 +2096,9 @@ class ClearFuncs(object):
                                    args=exc.args,
                                    message=str(exc)))
 
+    def mk_unauth_token(self, clear_load):
+        return self.loadauth.mk_unauth_token(clear_load)
+
     def mk_token(self, clear_load):
         '''
         Create and return an authentication token, the clear load needs to
