@@ -412,7 +412,8 @@ def genrepo(saltenv='base'):
                             renderers,
                             __opts__['renderer'])
                 except SaltRenderError as exc:
-                    log.debug('Failed to compile {0}. Error: {1}.'.format(os.path.join(root, name), exc))
+                    log.debug('Failed to compile {0}.'.format(os.path.join(root, name)))
+                    log.debug('Error: {0}.'.format(exc))
                     continue
 
                 if config:
