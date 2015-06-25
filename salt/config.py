@@ -685,7 +685,7 @@ VALID_OPTS = {
 DEFAULT_MINION_OPTS = {
     'interface': '0.0.0.0',
     'master': 'salt',
-    'master_type': 'str',
+    'master_type': 'standard',
     'master_port': '4506',
     'master_finger': '',
     'master_shuffle': False,
