@@ -32,6 +32,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.syspaths
 
 log = logging.getLogger(__name__)
 
@@ -385,7 +386,8 @@ def genrepo():
         salt-run winrepo.genrepo
     '''
     ret = {}
-    repo = __opts__['win_repo']
+    repo = salt.syspaths.CACHE_DIR
+    return repo
     if not os.path.exists(repo):
         os.makedirs(repo)
     winrepo = __opts__['win_repo_mastercachefile']
