@@ -370,7 +370,7 @@ def refresh_db(saltenv='base'):
     '''
     __context__.pop('winrepo.data', None)
     repo = __opts__['win_repo_source_dir']
-    cached_files = __salt__['cp.cache_dir'](repo, saltenv, include_path='*.sls')
+    cached_files = __salt__['cp.cache_dir'](repo, saltenv, include_pat='*.sls')
     return cached_files
 
 
