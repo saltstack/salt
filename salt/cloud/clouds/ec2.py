@@ -1148,10 +1148,17 @@ def _create_eni(interface):
 
     for subnet_query_result in subnet_query:
         if 'item' in subnet_query_result:
-            for subnet in subnet_query_result['item']:
-                if subnet['subnetId'] == interface['SubnetId']:
-                    found = True
-                    break
+            if type(subnet_query_result['item']) is dict:
+                for key, value in subnet_query_result['item'].iteritems():
+                    if key == "subnetId":
+                        if value == interface['SubnetId']:
+                            found = True
+                            break
+            else:
+                for subnet in subnet_query_result['item']:
+                    if subnet['subnetId'] == interface['SubnetId']:
+                        found = True
+                        break
 
     if not found:
         raise SaltCloudConfigError(
