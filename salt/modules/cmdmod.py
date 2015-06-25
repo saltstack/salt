@@ -615,6 +615,98 @@ def run(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    cmd:
+        The command to run. ex: 'ls -lart /home'
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
+
     .. warning::
 
         This function does not process commands through a shell
@@ -745,6 +837,93 @@ def shell(cmd,
 
     .. versionadded:: 2015.5.0
 
+    cmd:
+        The command to run. ex: 'ls -lart /home'
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
     .. warning::
 
         This passes the cmd argument directly to the shell
@@ -838,6 +1017,98 @@ def run_stdout(cmd,
     '''
     Execute a command, and only return the standard out
 
+    cmd:
+        The command to run. ex: 'ls -lart /home'
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
+
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
@@ -923,6 +1194,97 @@ def run_stderr(cmd,
                **kwargs):
     '''
     Execute a command and only return the standard error
+
+    cmd:
+        The command to run. ex: 'ls -lart /home'
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
@@ -1010,6 +1372,97 @@ def run_all(cmd,
     '''
     Execute the passed command and return a dict of return data
 
+    cmd:
+        The command to run. ex: 'ls -lart /home'
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
@@ -1094,6 +1547,97 @@ def retcode(cmd,
             **kwargs):
     '''
     Execute a shell command and return the command's return code.
+
+    cmd:
+        The command to run. ex: 'ls -lart /home'
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
 
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
@@ -1223,8 +1767,105 @@ def script(source,
     The script will be executed directly, so it can be written in any available
     programming language.
 
-    The script can also be formatted as a template, the default is jinja.
-    Arguments for the script can be specified as well.
+    source
+        The location of the script to download. If the file is located on the
+        master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs
+
+    args
+        String of command line args to pass to the script.  Only used if no
+        args are specified as part of the `name` argument. To pass a string
+        containing spaces in YAML, you will need to doubly-quote it:  "arg1
+        'arg two' arg3"
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    quiet
+        The command will be executed quietly, meaning no log entries of the
+        actual command or its return data. This is deprecated as of the
+        **2014.1.0** release, and is being replaced with
+        ``output_loglevel: quiet``.
+
+    timeout
+        If the command has not terminated after timeout seconds, send the
+        subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
 
     CLI Example:
 
@@ -1234,9 +1875,6 @@ def script(source,
         salt '*' cmd.script salt://scripts/runme.sh 'arg1 arg2 "arg 3"'
         salt '*' cmd.script salt://scripts/windows_task.ps1 args=' -Input c:\\tmp\\infile.txt' shell='powershell'
 
-    A string of standard input can be specified for the command to be run using
-    the ``stdin`` parameter. This can be useful in cases where sensitive
-    information must be read from standard input.:
 
     .. code-block:: bash
 
@@ -1339,6 +1977,106 @@ def script_retcode(source,
     The script can also be formatted as a template, the default is jinja.
 
     Only evaluate the script return code and do not block for terminal output
+
+    source
+        The location of the script to download. If the file is located on the
+        master in the directory named spam, and is called eggs, the source
+        string is salt://spam/eggs
+
+    args
+        String of command line args to pass to the script.  Only used if no
+        args are specified as part of the `name` argument. To pass a string
+        containing spaces in YAML, you will need to doubly-quote it:  "arg1
+        'arg two' arg3"
+
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
+
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    quiet
+        The command will be executed quietly, meaning no log entries of the
+        actual command or its return data. This is deprecated as of the
+        **2014.1.0** release, and is being replaced with
+        ``output_loglevel: quiet``.
+
+    timeout
+        If the command has not terminated after timeout seconds, send the
+        subprocess sigterm, and if sigterm is ignored, follow up with sigkill
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
 
     CLI Example:
 
@@ -1506,16 +2244,100 @@ def run_chroot(root,
     This function runs :mod:`cmd.run_all <salt.modules.cmdmod.run_all>` wrapped
     within a chroot, with dev and proc mounted in the chroot
 
-    stdin : None
-        Standard input to be used for the command
+    root:
+        Path to the root of the jail to use.
 
-        .. versionadded:: 2014.7.1
+    cmd:
+        The command to run. ex: 'ls -lart /home'
 
-    output_loglevel : debug
-        Level at which to log the output from the command. Set to ``quiet`` to
-        suppress logging.
+    cwd
+        The current working directory to execute the command in, defaults to
+        /root
 
-        .. versionadded:: 2014.7.1
+    stdin
+        A string of standard input can be specified for the command to be run using
+        the ``stdin`` parameter. This can be useful in cases where sensitive
+        information must be read from standard input.:
+
+    runas
+        User to run script as.
+
+    shell
+        Shell to execute under. Defaults to the system default shell.
+
+    python_shell
+        If True, let python handle the positional arguments. Set to False
+        to use shell features, such as pipes or redirection
+
+    env
+        A list of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+     clean_env:
+        Attempt to clean out all other shell environment variables and set
+        only those provided in the 'env' argument to this function.
+
+    template
+        If this setting is applied then the named templating engine will be
+        used to render the downloaded file. Currently jinja, mako, and wempy
+        are supported
+
+    rstrip
+        Strip all whitespace off the end of output before it is returned.
+
+    umask
+         The umask (in octal) to use when running the command.
+
+    output_loglevel
+        Control the loglevel at which the output from the command is logged.
+        Note that the command being run will still be logged (loglevel: DEBUG)
+        regardless, unless ``quiet`` is used for this value.
+
+    timeout
+        A timeout in seconds for the executed process to return.
+
+    use_vt
+        Use VT utils (saltstack) to stream the command output more
+        interactively to the console and the logs.
+        This is experimental.
+
 
     CLI Example:
 
