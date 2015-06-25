@@ -10,6 +10,7 @@ Salt Table of Contents
     topics/event/index
     topics/highavailability/index
     topics/topology/index
+    topics/highavailability/index
     topics/windows/index
     topics/cloud/index
     topics/netapi/index

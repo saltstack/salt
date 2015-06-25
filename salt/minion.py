@@ -773,7 +773,7 @@ class Minion(MinionBase):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'standard':
+        if opts['master_type'] != 'standard' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
@@ -793,31 +793,28 @@ class Minion(MinionBase):
 
             # if failover is set, the first time through, opts['master'] is a list.
             elif opts['master_type'] == 'failover':
-                if isinstance(opts['master'], list):
-                    log.info('Got list of available master addresses:'
-                             ' {0}'.format(opts['master']))
-                    opts['master_list'] = opts['master']
-                    opts['master_active_list'] = opts['master']
-                    if opts['master_shuffle']:
-                        shuffle(opts['master_list'])
-                elif isinstance(opts['master_list'], str):
-                    # We have a string, but a list was what was intended. Convert.
-                    # See issue 23611 for details
-                    opts['master_list'] = list(opts['master'])
-                    opts['master_active_list'] = list(opts['master'])
-                elif opts['__role'] == 'syndic':
-                    log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
-
                 # if failed=True, the minion was previously connected
                 # we're probably called from the minions main-event-loop
                 # because a master connection loss was detected. remove
                 # the possibly failed master from the list of masters.
-                elif failed:
+                if failed:
                     log.info('Removing possibly failed master {0} from list of'
                              ' masters'.format(opts['master']))
                     # create new list of master with the possibly failed one removed
                     opts['master_active_list'] = [x for x in opts['master_active_list'] if opts['master'] != x]
-
+                elif isinstance(opts['master'], list):
+                    log.info('Got list of available master addresses:'
+                             ' {0}'.format(opts['master']))
+                    opts['master_list'] = opts['master']
+                    opts['master_active_list'] = opts['master']
+                    if opts.get('master_shuffle'):
+                        shuffle(opts['master_list'])
+                elif isinstance(opts['master'], str):
+                    # We have a string, but a list was what was intended. Convert.
+                    # See issue 23611 for details
+                    opts['master'] = [opts['master']]
+                    opts['master_list'] = opts['master']
+                    opts['master_active_list'] = opts['master']
                 else:
                     msg = ('master_type set to \'failover\' but \'master\' '
                            'is not of type list but of type '
@@ -830,51 +827,56 @@ class Minion(MinionBase):
                 log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-        # if the master_active_list is empty, reset with the original list
-        # if we have a list of masters, loop through them and be
-        # happy with the first one that allows us to connect
-        if not opts.get('master_active_list'):
-            log.info('List of active masters is empty, try all masters from the top.')
-            opts['master_active_list'] = opts['master_list']
+            # if the master_active_list is empty, reset with the original list
+            # if we have a list of masters, loop through them and be
+            # happy with the first one that allows us to connect
+            # If there is no 'master_list' then this is a single-master scenario, so fall through this
+            # conditional without warning.
+            if not opts.get('master_active_list'):
+                if opts.get('master_list'):
+                    log.info('List of active masters is empty, try all masters from the top.')
+                    opts['master_active_list'] = opts['master_list']
 
-        if isinstance(opts['master_active_list'], list):
-            conn = False
-            # shuffle the masters and then loop through them
-            local_masters = opts['master_active_list']
+            if isinstance(opts['master_active_list'], list):
+                conn = False
+                # shuffle the masters and then loop through them
+                local_masters = opts['master_active_list']
 
-            for master in local_masters:
-                opts['master'] = master
-                opts.update(resolve_dns(opts))
-                super(Minion, self).__init__(opts)
+                for master in local_masters:
+                    opts['master'] = master
+                    opts.update(resolve_dns(opts))
+                    super(Minion, self).__init__(opts)
 
-                # on first run, update self.opts with the whole master list
-                # to enable a minion to re-use old masters if they get fixed
-                # if 'master_list' not in self.opts:
-                #    self.opts['master_list'] = local_masters
-                # cro: I don't think we need this because we are getting master_list
-                # from above.
+                    # on first run, update self.opts with the whole master list
+                    # to enable a minion to re-use old masters if they get fixed
+                    # if 'master_list' not in self.opts:
+                    #    self.opts['master_list'] = local_masters
+                    # cro: I don't think we need this because we are getting master_list
+                    # from above.
 
-                try:
-                    if self.authenticate(timeout, safe) != 'full':
-                        conn = True
-                        break
-                except SaltClientError:
-                    msg = ('Master {0} could not be reached, trying '
-                           'next master (if any)'.format(opts['master']))
-                    log.info(msg)
-                    continue
+                    try:
+                        if self.authenticate(timeout, safe) != 'full':
+                            conn = True
+                            break
+                    except SaltClientError:
+                        msg = ('Master {0} could not be reached, trying '
+                               'next master (if any)'.format(opts['master']))
+                        log.info(msg)
+                        continue
 
-            if not conn:
-                self.connected = False
-                msg = ('No master could be reached or all masters denied '
-                       'the minions connection attempt.')
-                log.error(msg)
-            else:
-                self.connected = True
-                return opts['master']
+                if not conn:
+                    self.connected = False
+                    msg = ('No master could be reached or all masters denied '
+                           'the minions connection attempt.')
+                    log.error(msg)
+                else:
+                    self.connected = True
+                    return opts['master']
 
-        # single master sign in
+        # single master sign in or syndic
         else:
+            if opts['__role'] == 'syndic':
+                log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
             opts.update(resolve_dns(opts))
             super(Minion, self).__init__(opts)
             if self.authenticate(timeout, safe) == 'full':
