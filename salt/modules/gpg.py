@@ -210,7 +210,6 @@ def list_keys(user=None):
         salt '*' gpg.list_keys
 
     '''
-    log.debug('GPG_1_3_1 {0}'.format(GPG_1_3_1))
     _keys = []
     for _key in _list_keys(user):
         tmp = {}
@@ -611,6 +610,12 @@ def import_key(user=None,
             raise SaltInvocationError('filename does not exist.')
 
     imported_data = gpg.import_keys(text)
+
+    # include another check for Salt unit tests
+    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+    if gnupg_version >= '1.3.1':
+        GPG_1_3_1 = True
+
     if GPG_1_3_1:
         counts = imported_data.counts
         if counts.get('imported') or counts.get('imported_rsa'):

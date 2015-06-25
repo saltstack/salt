@@ -37,7 +37,7 @@ RET = [{'created': '2014-07-25',
 
 class Mockgnupg(object):
     '''
-    Mock smtplib class
+    Mock gnupg class
     '''
     __version__ = '1.3.1'
     fingerprint = u'F321F'
@@ -50,7 +50,7 @@ class Mockgnupg(object):
 
     class GPG(object):
         '''
-        Mock smtplib class
+        Mock gnupg class
         '''
         def __init__(self, gnupghome='/tmp/salt/.gnupg',
                      homedir='/tmp/salt/.gnupg'):
