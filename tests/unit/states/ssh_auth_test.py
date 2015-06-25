@@ -83,6 +83,8 @@ class SshAuthTestCase(TestCase):
                'comment': ''}
 
         mock = MagicMock(side_effect=['User authorized keys file not present',
+                                      'User authorized keys file not present',
+                                      'User authorized keys file not present',
                                       'Key removed'])
         mock_up = MagicMock(side_effect=['update', 'updated'])
         with patch.dict(ssh_auth.__salt__, {'ssh.rm_auth_key': mock,
