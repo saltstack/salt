@@ -119,6 +119,9 @@ def install(pkg=None,
     elif pkgs:
         cmd += ' "{0}"'.format('" "'.join(pkgs))
 
+    if env is None:
+        env = {}
+
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
@@ -188,6 +191,9 @@ def uninstall(pkg,
 
     '''
 
+    if env is None:
+        env = {}
+
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
@@ -244,6 +250,9 @@ def list_(pkg=None,
         salt '*' npm.list
 
     '''
+
+    if env is None:
+        env = {}
 
     if runas:
         uid = salt.utils.get_uid(runas)
