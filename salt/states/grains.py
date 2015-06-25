@@ -15,7 +15,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import re
 
 
-def present(name, value, delimiter=':', force=False):
+def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set
 
@@ -50,7 +50,7 @@ def present(name, value, delimiter=':', force=False):
         grains.present:
           - value: edam
     '''
-    name = re.sub(delimiter, ':', name)
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -75,7 +75,7 @@ def present(name, value, delimiter=':', force=False):
     return ret
 
 
-def list_present(name, value):
+def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 2014.1.0
 
@@ -86,6 +86,9 @@ def list_present(name, value):
 
     value
         The value is present in the list type grain.
+
+    :param delimiter: A delimiter different from the default can be provided.
+        .. versionadded:: FIXME
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -105,6 +108,8 @@ def list_present(name, value):
               - web
               - dev
     '''
+
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -143,7 +148,7 @@ def list_present(name, value):
             ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
             return ret
     else:
-        if value not in __grains__.get(name):
+        if value not in __salt__['grains.get'](name, delimiter=DEFAULT_TARGET_DELIM):
             ret['result'] = False
             ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
             return ret
@@ -152,7 +157,7 @@ def list_present(name, value):
     return ret
 
 
-def list_absent(name, value):
+def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
     '''
     Delete a value from a grain formed as a list.
 
@@ -163,6 +168,9 @@ def list_absent(name, value):
 
     value
        The value to delete from the grain list.
+
+    :param delimiter: A delimiter different from the default can be provided.
+        .. versionadded:: FIXME
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -182,6 +190,8 @@ def list_absent(name, value):
               - web
               - dev
     '''
+
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
