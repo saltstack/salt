@@ -290,7 +290,6 @@ class EventListener(object):
 
         del self.request_map[request]
 
-
     def get_event(self,
                   request,
                   tag='',
