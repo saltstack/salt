@@ -81,18 +81,21 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    warn_until(
-        'Beryllium',
-        'The digital_ocean driver is deprecated and will be removed in Salt Beryllium. '
-        'Please convert your digital ocean provider configs to use the digital_ocean_v2 '
-        'driver.'
-    )
-
-    return config.is_provider_configured(
+    configuration = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'digital_ocean',
         ('api_key',)
     )
+
+    if configuration:
+        warn_until(
+            'Beryllium',
+            'The digital_ocean driver is deprecated and will be removed in Salt Beryllium. '
+            'Please convert your digital ocean provider configs to use the digital_ocean_v2 '
+            'driver.'
+        )
+
+    return configuration
 
 
 def avail_locations(call=None):
