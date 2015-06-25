@@ -25,6 +25,7 @@ grainsmod.__opts__ = grains.__opts__ = {
     'test': False,
     'conf_file': os.path.join(integration.TMP, grains_test_dir, 'minion'),
     'cachedir':  os.path.join(integration.TMP, grains_test_dir),
+    'local': True,
 }
 
 grainsmod.__salt__ = grains.__salt__ = {
