@@ -369,16 +369,52 @@ def refresh_db(saltenv='base'):
         salt '*' pkg.refresh_db
     '''
     __context__.pop('winrepo.data', None)
-    repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
-    if not cached_repo:
-        # It's not cached. Cache it, mate.
-        cached_repo = __salt__['cp.cache_file'](repocache, saltenv)
-        return True
-    # Check if the master's cache file has changed
-    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo, saltenv):
-        cached_repo = __salt__['cp.cache_file'](repocache, saltenv)
-    return True
+    repo = __opts__['win_repo_source_dir']
+    cached_files = __salt__['cp.cache_dir'](repo, saltenv, include_path='*.sls')
+    return cached_files
+
+
+def genrepo():
+    '''
+    Generate win_repo_cachefile based on sls files in the win_repo
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run winrepo.genrepo
+    '''
+    ret = {}
+    repo = __opts__['win_repo']
+    if not os.path.exists(repo):
+        os.makedirs(repo)
+    winrepo = __opts__['win_repo_mastercachefile']
+    renderers = salt.loader.render(__opts__, __salt__)
+    for root, _, files in os.walk(repo):
+        for name in files:
+            if name.endswith('.sls'):
+                config = salt.template.compile_template(
+                        os.path.join(root, name),
+                        renderers,
+                        __opts__['renderer'])
+                if config:
+                    revmap = {}
+                    for pkgname, versions in six.iteritems(config):
+                        for version, repodata in six.iteritems(versions):
+                            if not isinstance(version, six.string_types):
+                                config[pkgname][str(version)] = \
+                                    config[pkgname].pop(version)
+                            if not isinstance(repodata, dict):
+                                log.debug('Failed to compile'
+                                          '{0}.'.format(os.path.join(root, name)))
+                                __jid_event__.fire_event({'error': 'Failed to compile {0}.'.format(os.path.join(root, name))}, 'progress')
+                                continue
+                            revmap[repodata['full_name']] = pkgname
+                    ret.setdefault('repo', {}).update(config)
+                    ret.setdefault('name_map', {}).update(revmap)
+    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo:
+        repo.write(msgpack.dumps(ret))
+    return ret
 
 
 def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
