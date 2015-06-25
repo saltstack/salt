@@ -705,7 +705,7 @@ def run(cmd,
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
-    
+
 
     .. warning::
 
