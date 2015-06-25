@@ -137,13 +137,24 @@ class LoadAuth(object):
         except Exception:
             return None
 
-    def mk_token(self, load):
+    def mk_unauth_token(self, load):
+        '''
+        Get an unauthenticated token (for example when authentication is
+        taken care of by a frontal sur as nginx or apache that proxies
+        to salt-api). Use with caution.
+        '''
+        # TODO check config allows this 
+        return self.mk_token(load, auth=False)
+
+
+    def mk_token(self, load, auth=True):
         '''
         Run time_auth and create a token. Return False or the token
         '''
-        ret = self.time_auth(load)
-        if ret is False:
-            return {}
+        if auth: # and config.get (allow token with no auth, or pick from rest_cherrypy:trust_remote_user = True
+            ret = self.time_auth(load)
+            if ret is False:
+                return {}
         fstr = '{0}.auth'.format(load['eauth'])
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         tok = str(hash_type(os.urandom(512)).hexdigest())
@@ -405,11 +416,17 @@ class Resolver(object):
             os.umask(oldmask)
         return tdata
 
-    def mk_token(self, load):
+    def mk_unauth_token(self, load):
+        return self.mk_token(load, auth=False)
+
+    def mk_token(self, load, auth=True):
         '''
         Request a token from the master
         '''
-        load['cmd'] = 'mk_token'
+        if auth: # TODO more checks
+            load['cmd'] = 'mk_token'
+        else:
+            load['cmd'] = 'mk_unauth_token'
         tdata = self._send_token_request(load)
         return tdata
 

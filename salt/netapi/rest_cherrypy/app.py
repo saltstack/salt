@@ -101,6 +101,18 @@ A REST API for Salt
     root_prefix : ``/``
         A URL path to the main entry point for the application. This is useful
         for serving multiple applications from the same URL.
+    authorized_ips
+        A list of IPs to restrict the authorized IPs that can connect to your 
+        salt-api
+    trust_remote_user: ``False``
+        Puts the salt-api in "trust" mode, where it will trust the remote header 
+        set by the frontal which handles the authentication. This is a common
+        pattern in web applications, see 
+        `django documentation <https://docs.djangoproject.com/en/1.8/howto/auth-remote-user/>`_
+        about this. USE WITH CAUTION. This requires to make sure the frontal
+        is doing the authentication and that you are only listenning to localhost
+        and that no users ca request salt-api directly (for example from the 
+        server it is running on). Also set authorized_ips to 127.0.0.1. 
 
 .. _rest_cherrypy-auth:
 
@@ -1427,7 +1439,13 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
-        token = self.auth.mk_token(creds)
+        auth=True
+        logger.debug('HEADER {0}'.format(cherrypy.serving.request.headers))
+        if cherrypy.config.get('saltopts', {}).get('rest_cherrypy', {}).get('trust_remote_user', False):
+            if cherrypy.serving.request.headers.get('X-Remote-User', '') == creds['username']:
+                logger.debug('X-Remote-User is {0}, trusting frontal'.format(creds['username']))
+                auth = False
+        token = self.auth.mk_token(creds, auth=auth)
         if 'token' not in token:
             raise cherrypy.HTTPError(401,
                     'Could not authenticate using provided credentials')
