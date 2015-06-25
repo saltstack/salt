@@ -1368,18 +1368,36 @@ def latest(
     targets = {}
     problems = []
     cmp_func = __salt__.get('pkg.version_cmp', __salt__.get('version_cmp'))
-    for pkg in desired_pkgs:
-        if not avail[pkg]:
-            if not cur[pkg]:
-                msg = 'No information found for \'{0}\'.'.format(pkg)
+    minion_os = __salt__['grains.item']('os')['os']
+
+    if minion_os == 'Gentoo' and watch_flags:
+        for pkg in desired_pkgs:
+            if not avail[pkg] and not cur[pkg]:
+                msg = 'No information found for {0!r}.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-        elif not cur[pkg] \
-                or salt.utils.compare_versions(ver1=cur[pkg],
-                                               oper='<',
-                                               ver2=avail[pkg],
-                                               cmp_func=cmp_func):
-            targets[pkg] = avail[pkg]
+            else:
+                if salt.utils.compare_versions(ver1=cur[pkg],
+                    oper='!=',
+                    ver2=avail[pkg],
+                    cmp_func=cmp_func):
+                    targets[pkg] = avail[pkg]
+                else:
+                    if __salt__['portage_config.is_changed_uses'](pkg):
+                        targets[pkg] = avail[pkg]
+    else:
+        for pkg in desired_pkgs:
+            if not avail[pkg]:
+                if not cur[pkg]:
+                    msg = 'No information found for \'{0}\'.'.format(pkg)
+                    log.error(msg)
+                    problems.append(msg)
+            elif not cur[pkg] \
+                    or salt.utils.compare_versions(ver1=cur[pkg],
+                                                   oper='<',
+                                                   ver2=avail[pkg],
+                                                   cmp_func=cmp_func):
+                targets[pkg] = avail[pkg]
 
     if problems:
         return {'name': name,
