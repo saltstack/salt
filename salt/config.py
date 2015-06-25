@@ -370,8 +370,8 @@ VALID_OPTS = {
     # Events matching a tag in this list should never be sent to an event returner.
     'event_return_blacklist': list,
 
-    # The file cache for the win_pkg module
-    'win_repo_cachefile': str,
+    # The source location for the winrepo sls files
+    'win_repo_source_dir': str,
 
     # This pidfile to write out to when a deamon starts
     'pidfile': str,
@@ -800,7 +800,7 @@ DEFAULT_MINION_OPTS = {
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
-    'win_repo_cachefile': 'salt://win/repo/winrepo.p',
+    'win_repo_source_dir': 'salt://win/repo/',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
