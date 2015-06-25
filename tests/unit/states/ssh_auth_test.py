@@ -88,7 +88,7 @@ class SshAuthTestCase(TestCase):
         with patch.dict(ssh_auth.__salt__, {'ssh.rm_auth_key': mock,
                                             'ssh.check_key': mock_up}):
             with patch.dict(ssh_auth.__opts__, {'test': True}):
-                comt = ('Key sshkeys is set for removal')
+                comt = ('Key sshkeys for user root is set for removal')
                 ret.update({'comment': comt})
                 self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
 
