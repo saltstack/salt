@@ -375,7 +375,7 @@ def refresh_db(saltenv='base'):
     return cached_files
 
 
-def genrepo():
+def genrepo(saltenv='base'):
     '''
     Generate win_repo_cachefile based on sls files in the win_repo
 
@@ -386,11 +386,16 @@ def genrepo():
         salt-run winrepo.genrepo
     '''
     ret = {}
-    repo = salt.syspaths.CACHE_DIR
-    return repo
+    master_repo_src = __opts__['win_repo_source_dir']
+    dirs = []
+    dirs.append(salt.syspaths.CACHE_DIR)
+    dirs.extend(['minion', 'files'])
+    dirs.append(saltenv)
+    dirs.extend(master_repo_src[7:].strip('/').split('/'))
+    repo = os.sep.join(dirs)
     if not os.path.exists(repo):
         os.makedirs(repo)
-    winrepo = __opts__['win_repo_mastercachefile']
+    winrepo = 'winrepo.p'
     renderers = salt.loader.render(__opts__, __salt__)
     for root, _, files in os.walk(repo):
         for name in files:
@@ -414,8 +419,8 @@ def genrepo():
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
                     ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo:
-        repo.write(msgpack.dumps(ret))
+    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo_cache:
+        repo_cache.write(msgpack.dumps(ret))
     return ret
 
 
