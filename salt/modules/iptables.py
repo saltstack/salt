@@ -766,6 +766,8 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    if check(table, chain, rule, family):
+        return True
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
