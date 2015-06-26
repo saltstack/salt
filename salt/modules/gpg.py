@@ -614,9 +614,6 @@ def import_key(user=None,
     # include another check for Salt unit tests
     gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
     if gnupg_version >= '1.3.1':
-        GPG_1_3_1 = True
-
-    if GPG_1_3_1:
         counts = imported_data.counts
         if counts.get('imported') or counts.get('imported_rsa'):
             ret['message'] = 'Successfully imported key(s).'
