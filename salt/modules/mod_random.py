@@ -163,7 +163,7 @@ def seed(range=10, hash=None):
 
     .. code-block:: bash
 
-        salt '*' random.rand_seed 'none' '10'
+        salt '*' random.seed 10 hash=None
     '''
     if hash is None:
         hash = __grains__['id']
