@@ -59,6 +59,9 @@ States - Configuration Management with Salt:
 Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
 
+Running Salt without root access in userland:
+    :doc:`Salt Usermode <topics/tutorials/rooted>`
+
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`
 
@@ -68,8 +71,6 @@ Salt in depth
 While setting up, and using, Salt is a simple task, its capabilities run much
 deeper. These documents provide a greater understanding of how Salt
 empowers infrastructure management.
-
-
 
 Remote execution
 ----------------
@@ -132,8 +133,6 @@ additional information about targeting and matching minions.
 :ref:`Batching execution <targeting-batch>`
     Loop through all matching minions so that only a subset are executing a
     command at one time.
-
-.. _configuration-management-overview:
 
 Configuration management
 ------------------------
