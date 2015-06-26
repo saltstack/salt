@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-CALL" "1" "May 06, 2015" "2015.5.0" "Salt"
+.TH "SALT-CALL" "1" "June 26, 2015" "2015.5.2" "Salt"
 .SH NAME
 salt-call \- salt-call Documentation
 .
@@ -44,7 +44,20 @@ salt\-call [options]
 .SH DESCRIPTION
 .sp
 The salt\-call command is used to run module functions locally on a minion
-instead of executing them from the master.
+instead of executing them from the master. Salt\-call is used to run a
+\fIStandalone Minion\fP, and was originally
+created for \fItroubleshooting\fP\&.
+.sp
+The Salt Master is contacted to retrieve state files and other resources
+during execution unless the \fB\-\-local\fP option is specified.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+\fBsalt\-call\fP commands execute from the current user\(aqs shell
+context, while \fBsalt\fP commands execute from the system\(aqs default context.
+.UNINDENT
+.UNINDENT
 .SH OPTIONS
 .INDENT 0.0
 .TP
