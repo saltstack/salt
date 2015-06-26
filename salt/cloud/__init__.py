@@ -1514,8 +1514,12 @@ class Cloud(object):
                     # Mis-configured provider that got removed?
                     log.warn(
                         'The cloud driver, {0!r}, configured under the '
-                        '{1!r} cloud provider alias was not loaded since '
-                        '\'{2}()\' could not be found. Removing it from '
+                        '{1!r} cloud provider alias, could not be loaded. '
+                        'Please check your provider configuration files and '
+                        'ensure you have all required dependencies installed '
+                        'for the {0!r} driver.\n'
+                        'In rare cases, this could indicate the \'{2}()\' '
+                        'function could not be found.\nRemoving {0!r} from '
                         'the available providers list'.format(
                             driver, alias, fun
                         )
