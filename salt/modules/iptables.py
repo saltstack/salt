@@ -818,6 +818,8 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
             position = 1
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    if check(table, chain, rule, family):
+        return True
     cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
             _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
