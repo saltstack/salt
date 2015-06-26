@@ -126,8 +126,9 @@ def update(clear=False):
                 data[func] = __salt__[func]()
         except Exception:
             trace = traceback.format_exc()
-            log.error('Function {0} in mine_functions failed to execute. Error: {1}'
-                      .format(func, trace))
+            log.error('Function {0} in mine_functions failed to execute'
+                      .format(func))
+            log.debug('Error: {0}'.format(trace))
             continue
     if __opts__['file_client'] == 'local':
         if not clear:
