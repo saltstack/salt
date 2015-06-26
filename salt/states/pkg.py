@@ -1038,14 +1038,15 @@ def installed(
 
     if modified_hold:
         for i in modified_hold:
-            comment.append(i['comment'])
             change_name = i['name']
-            if len(changes[change_name]['new']) > 0:
-                changes[change_name]['new'] += '\n'
-            changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
-            if len(changes[change_name]['old']) > 0:
-                changes[change_name]['old'] += '\n'
-            changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
+            if change_name in changes:
+                comment.append(i['comment'])
+                if len(changes[change_name]['new']) > 0:
+                    changes[change_name]['new'] += '\n'
+                changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
+                if len(changes[change_name]['old']) > 0:
+                    changes[change_name]['old'] += '\n'
+                changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
     # Any requested packages that were not targeted for install or reinstall
     if not_modified:
