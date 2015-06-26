@@ -46,18 +46,22 @@ def present(
     user
         The user who owns the ssh authorized keys file to modify
 
-    enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
-
     fingerprint
         The fingerprint of the key which must be presented in the known_hosts
-        file
+        file (optional if key specified)
+
+    key
+        The public key which must be presented in the known_hosts file
+        (optional if fingerprint specified)
 
     port
         optional parameter, denoting the port of the remote host, which will be
         used in case, if the public key will be requested from it. By default
         the port 22 is used.
+
+    enc
+        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
+        or ssh-dss
 
     config
         The location of the authorized keys file relative to the user's home
