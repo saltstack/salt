@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import time
+import traceback
 
 # Import salt libs
 import salt.crypt
@@ -124,8 +125,9 @@ def update(clear=False):
                     continue
                 data[func] = __salt__[func]()
         except Exception:
-            log.error('Function {0} in mine_functions failed to execute'
-                      .format(func))
+            trace = traceback.format_exc()
+            log.error('Function {0} in mine_functions failed to execute. Error: {1}'
+                      .format(func, trace))
             continue
     if __opts__['file_client'] == 'local':
         if not clear:
