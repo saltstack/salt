@@ -73,7 +73,7 @@ def execution():
         print exc
         return []
 
-    i = itertools.chain.from_iterable([i.items() for i in six.itervalues(docs)])
+    i = itertools.chain.from_iterable([six.iteritems(docs['ret'])])
     ret = dict(list(i))
 
     return ret
