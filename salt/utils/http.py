@@ -156,6 +156,10 @@ def query(url,
         requests_log = logging.getLogger('requests')
         requests_log.setLevel(logging.WARNING)
 
+    # Some libraries don't support separation of url and GET parameters
+    # Don't need a try/except block, since Salt depends on tornado
+    url_full = tornado.httputil.url_concat(url, params)
+
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
 
@@ -170,9 +174,9 @@ def query(url,
             data_file, data_render, data_renderer, template_dict, opts
         )
 
-    log.debug('Using {0} Method'.format(method))
+    log.debug('Requesting URL {0} using {1} method'.format(url_full, method))
     if method == 'POST':
-        log.trace('POST Data: {0}'.format(pprint.pformat(data)))
+        log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
 
     if header_file is not None:
         header_tpl = _render(
@@ -281,15 +285,14 @@ def query(url,
         if stream is True or handle is True:
             return {'handle': result}
 
-        log.debug(result.url)
-        log.trace(data)
+        log.debug('Final URL location of Response: {0}'.format(result.url))
 
         result_status_code = result.status_code
         result_headers = result.headers
         result_text = result.text
         result_cookies = result.cookies
     elif backend == 'urllib2':
-        request = urllib_request.Request(url, data)
+        request = urllib_request.Request(url_full, data)
         handlers = [
             urllib_request.HTTPHandler,
             urllib_request.HTTPCookieProcessor(sess_cookies)
@@ -384,7 +387,7 @@ def query(url,
 
         try:
             result = HTTPClient().fetch(
-                tornado.httputil.url_concat(url, params),
+                url_full,
                 method=method,
                 headers=header_dict,
                 auth_username=username,
