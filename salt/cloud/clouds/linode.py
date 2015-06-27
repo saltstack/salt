@@ -1051,7 +1051,8 @@ def _query(action=None,
            args=None,
            method='GET',
            header_dict=None,
-           data=None):
+           data=None,
+           url='https://api.linode.com/'):
     '''
     Make a web call to the Linode API.
     '''
@@ -1061,16 +1062,16 @@ def _query(action=None,
         'apikey', vm_, __opts__, search_global=False
     )
 
-    path = 'https://api.linode.com/?api_key={0}'.format(apikey)
-
-    if action:
-        path += '&api_action={0}'.format(action)
-
-    if command:
-        path += '.{0}'.format(command)
 
     if not isinstance(args, dict):
         args = {}
+
+    if 'api_key' not in args.keys():
+        args['api_key'] = apikey
+
+    if action:
+        if 'api_action' not in args.keys():
+            args['api_action'] = '{0}.{1}'.format(action, command)
 
     if header_dict is None:
         header_dict = {}
@@ -1083,7 +1084,7 @@ def _query(action=None,
         decode = False
 
     result = salt.utils.http.query(
-        path,
+        url,
         method,
         params=args,
         data=data,
