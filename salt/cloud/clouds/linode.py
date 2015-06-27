@@ -12,22 +12,27 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
 
 .. code-block:: yaml
 
-    my-linode-config:
-      # Linode account api key
-      apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+    my-linode-provider:
+      apikey: f4ZsmwtB1c7f85Jdu43RgXVDFlNjuJaeIYV8QMftTqKScEB2vSosFSr...
       password: F00barbaz
       driver: linode
+      ssh_key_file: /tmp/salt-cloud_pubkey
+      ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EA...
 
-When used with linode-python, this provider supports cloning existing Linodes. To clone, add a profile with a
-``clonefrom`` key, and a ``script_args: -C``.
+    linode-profile:
+      provider: my-linode-provider
+      size: Linode 1024
+      image: CentOS 7
+      location: London, England, UK
+      private_ip: true
 
-``Clonefrom`` should be the name of the that is the source for the clone. ``script_args: -C`` passes a -C to the
+To clone, add a profile with a ``clonefrom`` key, and a ``script_args: -C``. ``clonefrom`` should be the name of
+the VM (*linode*) that is the source for the clone. ``script_args: -C`` passes a -C to the
 bootstrap script, which only configures the minion and doesn't try to install a new copy of salt-minion. This way the
 minion gets new keys and the keys get pre-seeded on the master, and the /etc/salt/minion file has the right
 'id:' declaration.
 
 Cloning requires a post 2015-02-01 salt-bootstrap.
-
 '''
 
 # Import Python Libs
@@ -298,7 +303,7 @@ def create(vm_):
 
     # Add private IP address if requested
     if get_private_ip(vm_):
-       create_private_ip(vm_, node_id)
+        create_private_ip(vm_, node_id)
 
     # Create a ConfigID using disk ids
     config_id = create_config(vm_,
@@ -1100,7 +1105,6 @@ def _query(action=None,
     apikey = config.get_cloud_config_value(
         'apikey', vm_, __opts__, search_global=False
     )
-
 
     if not isinstance(args, dict):
         args = {}
