@@ -158,7 +158,7 @@ States
           - 'logger -t salt < /proc/loadavg'
         kwargs:
           stateful: False
-          shell: \bin\sh
+          shell: /bin/sh
 
 Highstates
 ==========
