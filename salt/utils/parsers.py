@@ -2608,6 +2608,9 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     '''
     The cli parser object used to fire up the salt spm system.
     '''
+    description = 'SPM is used to manage 3rd party formulas and other Salt components'
+
+    usage = '%prog [options] <function> [arguments]'
 
     # ConfigDirMixIn config filename attribute
     _config_filename_ = 'spm'
@@ -2627,6 +2630,12 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help='Default yes in answer to all confirmation questions.'
         )
+
+    def _mixin_after_parsed(self):
+        # spm needs arguments
+        if len(self.args) <= 1:
+            self.print_help()
+            self.exit(salt.defaults.exitcodes.EX_USAGE)
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())
