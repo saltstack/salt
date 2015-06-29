@@ -23,12 +23,13 @@ import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
 from salt.utils import parsers
+from salt.ext.six.moves import input
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 
-class SPMClient(parsers.SPMParser):
+class SPMClient(parsers.SPMParser):  # pylint: disable=W0231
     '''
     Provide an SPM Client
     '''
@@ -99,7 +100,7 @@ class SPMClient(parsers.SPMParser):
             print('Installing package {0}'.format(pkg_name))
 
         if not self.opts['assume_yes']:
-            res = raw_input('Proceed? [N/y] ')
+            res = input('Proceed? [N/y] ')
             if not res.lower().startswith('y'):
                 print('... canceled')
                 return False
@@ -369,7 +370,7 @@ class SPMClient(parsers.SPMParser):
             log.error('A path to a formula must be specified')
             return False
 
-        self.abspath = args[1]
+        self.abspath = args[1].rstrip('/')
         comps = self.abspath.split('/')
         self.relpath = comps[-1]
 
