@@ -19,6 +19,7 @@ from salt.modules import grains as grainsmod
 from salt.states import grains as grains
 
 import integration
+reload(integration)  # Force reset module attrs, like integration.TMP
 
 grains_test_dir = '__salt_test_state_grains'
 grainsmod.__opts__ = grains.__opts__ = {
@@ -46,6 +47,10 @@ grainsmod.__salt__ = grains.__salt__ = {
 class GrainsTestCase(TestCase):
 
     # 'present' function tests: 4
+
+    def setUp(self):
+        if not os.path.exists(os.path.join(integration.TMP, grains_test_dir)):
+            os.mkdir(os.path.join(integration.TMP, grains_test_dir))
 
     def test_present_add(self):
         # Set a non existing grain
