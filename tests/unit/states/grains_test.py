@@ -19,28 +19,7 @@ from salt.modules import grains as grainsmod
 from salt.states import grains as grains
 
 import integration
-reload(integration)  # Force reset module attrs, like integration.TMP
 
-grains_test_dir = '__salt_test_state_grains'
-grainsmod.__opts__ = grains.__opts__ = {
-    'test': False,
-    'conf_file': os.path.join(integration.TMP, grains_test_dir, 'minion'),
-    'cachedir':  os.path.join(integration.TMP, grains_test_dir),
-    'local': True,
-}
-
-grainsmod.__salt__ = grains.__salt__ = {
-    'cmd.run_all': MagicMock(return_value={
-        'pid': 5,
-        'retcode': 0,
-        'stderr': '',
-        'stdout': ''}),
-    'grains.setval': grainsmod.setval,
-    'grains.delval': grainsmod.delval,
-    'grains.append': grainsmod.append,
-    'grains.remove': grainsmod.remove,
-    'saltutil.sync_grains': MagicMock()
-}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -49,6 +28,26 @@ class GrainsTestCase(TestCase):
     # 'present' function tests: 4
 
     def setUp(self):
+        grains_test_dir = '__salt_test_state_grains'
+        grainsmod.__opts__ = grains.__opts__ = {
+            'test': False,
+            'conf_file': os.path.join(integration.TMP, grains_test_dir, 'minion'),
+            'cachedir':  os.path.join(integration.TMP, grains_test_dir),
+            'local': True,
+        }
+
+        grainsmod.__salt__ = grains.__salt__ = {
+            'cmd.run_all': MagicMock(return_value={
+                'pid': 5,
+                'retcode': 0,
+                'stderr': '',
+                'stdout': ''}),
+            'grains.setval': grainsmod.setval,
+            'grains.delval': grainsmod.delval,
+            'grains.append': grainsmod.append,
+            'grains.remove': grainsmod.remove,
+            'saltutil.sync_grains': MagicMock()
+        }
         if not os.path.exists(os.path.join(integration.TMP, grains_test_dir)):
             os.mkdir(os.path.join(integration.TMP, grains_test_dir))
 
