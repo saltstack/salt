@@ -2799,4 +2799,4 @@ def spm_config(path):
     # Let's override them with spm's required defaults
     defaults.update(DEFAULT_SPM_OPTS)
 
-    return client_config(path, defaults=defaults)
+    return client_config(path, env_var='SPM_CONFIG', defaults=defaults)

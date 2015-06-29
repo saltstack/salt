@@ -21,22 +21,20 @@ import salt.config
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
+from salt.utils import parsers
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 
-class SPMClient(object):
+class SPMClient(parsers.SPMParser):
     '''
     Provide an SPM Client
     '''
     def __init__(self, opts=None):
         if not opts:
-            opts = salt.config.client_config(
-                os.environ.get(
-                    'SALT_MASTER_CONFIG',
-                    os.path.join(syspaths.CONFIG_DIR, 'master')
-                )
+            opts = salt.config.spm_config(
+                os.path.join(syspaths.CONFIG_DIR, 'spm')
             )
         self.opts = opts
 
@@ -58,7 +56,7 @@ class SPMClient(object):
         elif command == 'create_repo':
             self._create_repo(args)
 
-    def _local_install(self, args):
+    def _local_install(self, args, pkg_name=None):
         '''
         Install a package from a file
         '''
@@ -66,17 +64,30 @@ class SPMClient(object):
             log.error('A package file must be specified')
             return False
 
-        package_file = args[1]
+        pkg_file = args[1]
+
+        if pkg_name is None:
+            print('Installing package from file {0}'.format(pkg_file))
+        else:
+            print('Installing package {0}'.format(pkg_name))
+
+        if not self.opts['assume_yes']:
+            res = raw_input('Proceed? [N/y] ')
+            if not res.lower().startswith('y'):
+                print('... canceled')
+                return False
+
+        print('... proceeding')
 
         self._init_db()
         out_path = self.opts['file_roots']['base'][0]
-        comps = package_file.split('-')
+        comps = pkg_file.split('-')
         comps = '-'.join(comps[:-2]).split('/')
         name = comps[-1]
-        log.debug('Locally installing package {0} to {1}'.format(package_file, out_path))
+        log.debug('Locally installing package {0} to {1}'.format(pkg_file, out_path))
 
-        if not os.path.exists(package_file):
-            log.error('File {0} not found'.format(package_file))
+        if not os.path.exists(pkg_file):
+            log.error('File {0} not found'.format(pkg_file))
             return False
 
         if not os.path.exists(out_path):
@@ -85,7 +96,7 @@ class SPMClient(object):
         sqlite3.enable_callback_tracebacks(True)
         conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
         cur = conn.cursor()
-        formula_tar = tarfile.open(package_file, 'r:bz2')
+        formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = yaml.safe_load(formula_ref)
 
@@ -268,7 +279,7 @@ class SPMClient(object):
                 else:
                     http.query(dl_path, text_out=out_file)
 
-                self._local_install(out_file)
+                self._local_install((None, out_file), package)
                 return
 
     def _remove(self, args):
