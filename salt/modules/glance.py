@@ -261,7 +261,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
             'visibility': image.visibility,
             }
     if image.has_key('disk_format'):
-        ret['disk_format'] = image.disk_format
+        ret[image.name]['disk_format'] = image.disk_format
     return ret
 
 
