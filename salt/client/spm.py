@@ -16,7 +16,6 @@ import sqlite3
 import datetime
 import hashlib
 import logging
-import pprint
 
 # Import Salt libs
 import salt.config
@@ -26,6 +25,7 @@ import salt.syspaths as syspaths
 from salt.utils import parsers
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
+from salt.ext.six.moves import zip
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -124,8 +124,8 @@ class SPMClient(parsers.SPMParser):
                 if data.fetchone():
                     continue
                 needs.append(dep)
-            print('deps needed')
-            pprint.pprint(needs)
+            print('Cannot install {0}, the following dependencies are needed: '
+                  '\n\n{1}'.format(formula_def['name'], '\n'.join(needs)))
             return
 
         if pkg_name is None:
@@ -164,11 +164,16 @@ class SPMClient(parsers.SPMParser):
             return
 
         # We've decided to install
-        conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)', (
+        conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
             name,
             formula_def['version'],
             formula_def['release'],
             datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'),
+            formula_def.get('os', None),
+            formula_def.get('os_family', None),
+            formula_def.get('dependencies', None),
+            formula_def.get('os_dependencies', None),
+            formula_def.get('os_family_dependencies', None),
             formula_def['summary'],
             formula_def['description'],
         ))
@@ -437,7 +442,19 @@ class SPMClient(parsers.SPMParser):
         conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
         cur = conn.cursor()
 
-        fields = ('package', 'version', 'release', 'installed', 'summary', 'description')
+        fields = (
+            'package',
+            'version',
+            'release',
+            'installed',
+            'os',
+            'os_family',
+            'dependencies',
+            'os_dependencies',
+            'os_family_dependencies',
+            'summary',
+            'description',
+        )
         data = conn.execute(
             'SELECT {0} FROM packages WHERE package=?'.format(','.join(fields)),
             (package, )
@@ -447,7 +464,8 @@ class SPMClient(parsers.SPMParser):
             print('Package {0} not installed'.format(package))
             return
 
-        formula_def = dict(zip(fields, row))
+        formula_def = dict(list(zip(fields, row)))
+        formula_def['name'] = formula_def['package']
 
         self._print_info(formula_def)
 
@@ -456,16 +474,16 @@ class SPMClient(parsers.SPMParser):
         Print package info
         '''
         fields = (
-            'description',
             'name',
             'os',
             'os_family',
             'release',
-            'summary',
             'version',
             'dependencies',
             'os_dependencies',
             'os_family_dependencies',
+            'summary',
+            'description',
         )
         for item in fields:
             if item not in formula_def:
@@ -591,6 +609,11 @@ Description:
                 version text,
                 release text,
                 installed text,
+                os text,
+                os_family text,
+                dependencies text,
+                os_dependencies text,
+                os_family_dependencies text,
                 summary text,
                 description text
             )''')
