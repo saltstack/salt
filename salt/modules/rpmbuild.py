@@ -50,7 +50,7 @@ def _get_spec(tree_base, spec, template, saltenv='base'):
     '''
     spec_tgt = os.path.basename(spec)
     dest = os.path.join(tree_base, 'SPECS', spec_tgt)
-    return __salt__['cp.get_file'](
+    return __salt__['cp.get_url'](
             spec,
             dest,
             saltenv=saltenv,
@@ -65,7 +65,7 @@ def _get_src(tree_base, source, saltenv='base'):
     sbase = os.path.basename(source)
     dest = os.path.join(tree_base, 'SOURCES', sbase)
     if parsed.scheme:
-        lsrc = __salt__['cp.get_file'](source, dest, saltenv=saltenv)
+        lsrc = __salt__['cp.get_url'](source, dest, saltenv=saltenv)
     else:
         shutil.copy(source, dest)
 
