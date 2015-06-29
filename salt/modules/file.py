@@ -2799,8 +2799,9 @@ def get_managed(
                             ' source file {0}').format(source)
 
     # if the file is a template we need to actually template the file to get
-    # a checksum, but we can cache the template itselt
-    if template:
+    # a checksum, but we can cache the template itself, but only if there is
+    # a template source (it could be a templated contents)
+    if template and source:
         # check if we have the template cached
         template_dest = __salt__['cp.is_cached'](source, saltenv)
         if template_dest:
