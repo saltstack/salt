@@ -167,17 +167,22 @@ def image_create(name, location, profile=None, visibility='public',
 
     For all possible values, run ``glance help image-create`` on the minion.
     '''
+    # valid options for "visibility":
     v_list = ['public', 'private']
+    # valid options for "container_format":
     cf_list = ['ami', 'ari', 'aki', 'bare', 'ovf']
+    # valid options for "disk_format":
     df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk', 
                'raw', 'qcow2', 'vdi', 'iso']
     if not visibility in v_list:
-        raise SaltInvocationError(
-            '"visibility" needs to be "public" or "private"')
+        raise SaltInvocationError('"visibility" needs to be one ' +\
+            'of the following: {0}'.format(', '.join(v_list)))
     if not container_format in cf_list:
-        raise SaltInvocationError('"container_format" needs to be on of ...')
+        raise SaltInvocationError('"container_format" needs to be ' +\
+            'one of the following: {0}'.format(', '.join(cf_list)))
     if not disk_format in df_list:
-        raise SaltInvocationError('"disk_format" needs to be on of ...')
+        raise SaltInvocationError('"disk_format" needs to be one ' +\
+            'of the following: {0}'.format(', '.join(df_list)))
     g_client = _auth(profile)
     
     image = g_client.images.create(name=name, location=location)
