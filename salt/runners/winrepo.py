@@ -15,6 +15,7 @@ except ImportError:
     import msgpack_pure as msgpack  # pylint: disable=import-error
 
 # Import salt libs
+from salt.exceptions import SaltRenderError
 import salt.utils
 import logging
 import salt.minion
@@ -43,10 +44,15 @@ def genrepo():
     for root, _, files in os.walk(repo):
         for name in files:
             if name.endswith('.sls'):
-                config = salt.template.compile_template(
-                        os.path.join(root, name),
-                        renderers,
-                        __opts__['renderer'])
+                try:
+                    config = salt.template.compile_template(
+                            os.path.join(root, name),
+                            renderers,
+                            __opts__['renderer'])
+                except SaltRenderError as exc:
+                    log.debug('Failed to render {0}.'.format(os.path.join(root, name)))
+                    log.debug('Error: {0}.'.format(exc))
+                    continue
                 if config:
                     revmap = {}
                     for pkgname, versions in six.iteritems(config):
