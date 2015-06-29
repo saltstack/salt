@@ -248,7 +248,7 @@ def setvals(grains, destructive=False):
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.fopen(fn_, 'w+') as fp_:
+        with salt.utils.flopen(fn_, 'w+') as fp_:
             fp_.write('')
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
