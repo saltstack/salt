@@ -4,9 +4,9 @@ This module provides the point of entry to SPM, the Salt Package Manager
 
 .. versionadded:: Beryllium
 '''
-from __future__ import absolute_import, print_function
 
 # Import Python libs
+from __future__ import absolute_import, print_function
 import os
 import yaml
 import tarfile
@@ -31,7 +31,7 @@ from salt.ext.six.moves import zip
 log = logging.getLogger(__name__)
 
 
-class SPMClient(parsers.SPMParser):
+class SPMClient(object):
     '''
     Provide an SPM Client
     '''
