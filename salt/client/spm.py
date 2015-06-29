@@ -112,6 +112,22 @@ class SPMClient(parsers.SPMParser):
                 log.error('Invalid package: the {0} was not found'.format(field))
                 return False
 
+        pkg_files = formula_tar.getmembers()
+        # First pass: check for files that already exist
+        existing_files = []
+        for member in pkg_files:
+            if member.isdir():
+                continue
+            out_file = os.path.join(out_path, member.name)
+            if os.path.exists(out_file):
+                existing_files.append(out_file)
+                if not self.opts['force']:
+                    log.error('{0} already exists, not installing'.format(out_file))
+
+        if existing_files and not self.opts['force']:
+            return
+
+        # We've decided to install
         conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)', (
             name,
             formula_def['version'],
@@ -120,7 +136,7 @@ class SPMClient(parsers.SPMParser):
             formula_def['summary'],
             formula_def['description'],
         ))
-        pkg_files = formula_tar.getmembers()
+        # Second pass: install the files
         for member in pkg_files:
             file_ref = formula_tar.extractfile(member)
             if member.isdir():
