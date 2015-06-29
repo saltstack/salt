@@ -306,7 +306,7 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
         # Those cause AttributeErrors in Icehouse' glanceclient
         for attr in ['container_format', 'disk_format', 'size']:
             if image.has_key(attr): 
-                ret[attr] = image[attr]
+                ret[image.name][attr] = image[attr]
         if id == image.id:
             return ret[image.name]
     return ret
