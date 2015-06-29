@@ -36,10 +36,15 @@ Module for handling openstack glance calls.
 '''
 
 # Import third party libs
+import salt.ext.six as six
+from salt.exceptions import (
+    CommandExecutionError, SaltInvocationError
+    )
+# pylint: disable=import-error
 HAS_GLANCE = False
 try:
-    from glanceclient.v2 import client
-    import glanceclient.v2.images
+    from glanceclient.v2 import client as glance_client
+    #import glanceclient.v2.images
     from glanceclient import exc
     HAS_GLANCE = True
     #import pprint
@@ -73,7 +78,8 @@ __opts__ = {}
 
 def _auth(profile=None, **connection_args):
     '''
-    Set up glance credentials
+    Set up glance credentials, returns
+    glanceclient.v2.client.Client.
 
     Only intended to be used within glance-enabled modules
     '''
@@ -124,7 +130,7 @@ def _auth(profile=None, **connection_args):
         log.debug('Calling glanceclient.v2.client.Client(' + \
             '{0}, **{1})'.format(endpoint, kwargs))
         try:
-            return client.Client(endpoint, **kwargs)
+            return glance_client.Client(endpoint, **kwargs)
         except exc.HTTPUnauthorized:
             kwargs.pop('token')
             kwargs['password'] = password
@@ -141,12 +147,13 @@ def _auth(profile=None, **connection_args):
         kwargs.pop('password')
         log.debug('Calling glanceclient.v2.client.Client(' + \
             '{0}, **{1})'.format(endpoint, kwargs))
-        return client.Client(endpoint, **kwargs)
+        return glance_client.Client(endpoint, **kwargs)
     else:
         raise NotImplementedError(
             "Can't retrieve a auth_token without keystone")
 
-def image_create(profile=None, **kwargs):
+def image_create(name, location, profile=None, visibility='public',
+            container_format='bare', disk_format='raw'):
     '''
     Create an image (glance image-create)
 
@@ -154,23 +161,34 @@ def image_create(profile=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' glance.image_create name=f16-jeos is_public=true \\
+        salt '*' glance.image_create name=f16-jeos visibility=public \\
                  disk_format=qcow2 container_format=ovf \\
                  copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
     For all possible values, run ``glance help image-create`` on the minion.
     '''
-    nt_ks = _auth(profile)
-    fields = dict(
-        filter(
-            lambda x: x[0] in glanceclient.v1.images.CREATE_PARAMS,
-            kwargs.items()
-        )
-    )
-
-    image = nt_ks.images.create(**fields)
-    newimage = image_list(str(image.id), profile)
-    return {newimage['name']: newimage}
+    v_list = ['public', 'private']
+    cf_list = ['ami', 'ari', 'aki', 'bare', 'ovf']
+    df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk', 
+               'raw', 'qcow2', 'vdi', 'iso']
+    if not visibility in v_list:
+        raise SaltInvocationError(
+            '"visibility" needs to be "public" or "private"')
+    if not container_format in cf_list:
+        raise SaltInvocationError('"container_format" needs to be on of ...')
+    if not disk_format in df_list:
+        raise SaltInvocationError('"disk_format" needs to be on of ...')
+    g_client = _auth(profile)
+    
+    image = g_client.images.create(name=name, location=location)
+    # Icehouse glanceclient doesn't have add_location()
+    #if 'add_location' in dir(g_client.images):
+    #    g_client.images.add_location(image.id, location)
+    #else:
+    #    g_client.images.update(image.id, location=location)
+    #newimage = image_list(str(image.id), profile)
+    #return {newimage['name']: newimage}
+    return {image['name']: image}
 
 
 def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
@@ -226,7 +244,6 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
             'name': image.name,
             'container_format': image.container_format,
             'created_at': image.created_at,
-            'disk_format': image.disk_format,
             'file': image.file,
             'min_disk': image.min_disk,
             'min_ram': image.min_ram,
@@ -238,6 +255,8 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
             'updated_at': image.updated_at,
             'visibility': image.visibility,
             }
+    if image.has_key('disk_format'):
+        ret['disk_format'] = image.disk_format
     return ret
 
 
@@ -268,20 +287,21 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
-                'container_format': image.container_format,
                 'created_at': image.created_at,
-                'disk_format': image.disk_format,
                 'file': image.file,
                 'min_disk': image.min_disk,
                 'min_ram': image.min_ram,
                 'owner': image.owner,
                 'protected': image.protected,
-                'size': image.size,
                 'status': image.status,
                 'tags': image.tags,
                 'updated_at': image.updated_at,
                 'visibility': image.visibility,
             }
+        # Those cause AttributeErrors in Icehouse' glanceclient
+        for attr in ['container_format', 'disk_format', 'size']:
+            if image.has_key(attr): 
+                ret[attr] = image[attr]
         if id == image.id:
             return ret[image.name]
     return ret
