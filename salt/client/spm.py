@@ -66,6 +66,32 @@ class SPMClient(parsers.SPMParser):
 
         pkg_file = args[1]
 
+        self._init_db()
+        out_path = self.opts['file_roots']['base'][0]
+        comps = pkg_file.split('-')
+        comps = '-'.join(comps[:-2]).split('/')
+        name = comps[-1]
+
+        if not os.path.exists(pkg_file):
+            log.error('File {0} not found'.format(pkg_file))
+            return False
+
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+
+        sqlite3.enable_callback_tracebacks(True)
+        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
+        cur = conn.cursor()
+
+        formula_tar = tarfile.open(pkg_file, 'r:bz2')
+        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
+        formula_def = yaml.safe_load(formula_ref)
+
+        data = conn.execute('SELECT * FROM packages WHERE package=?', (formula_def['name'], ))
+        if data.fetchone() and not self.opts['force']:
+            print('Package {0} already installed, not installing again'.format(formula_def['name']))
+            return
+
         if pkg_name is None:
             print('Installing package from file {0}'.format(pkg_file))
         else:
@@ -77,28 +103,9 @@ class SPMClient(parsers.SPMParser):
                 print('... canceled')
                 return False
 
-        print('... proceeding')
+        print('... installing')
 
-        self._init_db()
-        out_path = self.opts['file_roots']['base'][0]
-        comps = pkg_file.split('-')
-        comps = '-'.join(comps[:-2]).split('/')
-        name = comps[-1]
-        log.debug('Locally installing package {0} to {1}'.format(pkg_file, out_path))
-
-        if not os.path.exists(pkg_file):
-            log.error('File {0} not found'.format(pkg_file))
-            return False
-
-        if not os.path.exists(out_path):
-            os.mkdir(out_path)
-
-        sqlite3.enable_callback_tracebacks(True)
-        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
-        cur = conn.cursor()
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
-        formula_def = yaml.safe_load(formula_ref)
+        log.debug('Locally installing package file {0} to {1}'.format(pkg_file, out_path))
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:

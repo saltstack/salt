@@ -2621,6 +2621,12 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help='Default yes in answer to all confirmation questions.'
         )
+        self.add_option(
+            '-f', '--force',
+            default=False,
+            action='store_true',
+            help='Default yes in answer to all confirmation questions.'
+        )
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())
