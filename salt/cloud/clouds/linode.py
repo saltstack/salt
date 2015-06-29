@@ -12,22 +12,27 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/c
 
 .. code-block:: yaml
 
-    my-linode-config:
-      # Linode account api key
-      apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
+    my-linode-provider:
+      apikey: f4ZsmwtB1c7f85Jdu43RgXVDFlNjuJaeIYV8QMftTqKScEB2vSosFSr...
       password: F00barbaz
       driver: linode
+      ssh_key_file: /tmp/salt-cloud_pubkey
+      ssh_pubkey: ssh-rsa AAAAB3NzaC1yc2EA...
 
-When used with linode-python, this provider supports cloning existing Linodes. To clone, add a profile with a
-``clonefrom`` key, and a ``script_args: -C``.
+    linode-profile:
+      provider: my-linode-provider
+      size: Linode 1024
+      image: CentOS 7
+      location: London, England, UK
+      private_ip: true
 
-``Clonefrom`` should be the name of the that is the source for the clone. ``script_args: -C`` passes a -C to the
+To clone, add a profile with a ``clonefrom`` key, and a ``script_args: -C``. ``clonefrom`` should be the name of
+the VM (*linode*) that is the source for the clone. ``script_args: -C`` passes a -C to the
 bootstrap script, which only configures the minion and doesn't try to install a new copy of salt-minion. This way the
 minion gets new keys and the keys get pre-seeded on the master, and the /etc/salt/minion file has the right
 'id:' declaration.
 
 Cloning requires a post 2015-02-01 salt-bootstrap.
-
 '''
 
 # Import Python Libs
@@ -51,15 +56,36 @@ import salt.utils.cloud
 # Get logging started
 log = logging.getLogger(__name__)
 
-# Human-readable status fields
+# Human-readable status fields (documentation: https://www.linode.com/api/linode/linode.list)
 LINODE_STATUS = {
-    '-2': 'Boot Failed (not in use)',
-    '-1': 'Being Created',
-    '0': 'Brand New',
-    '1': 'Running',
-    '2': 'Powered Off',
-    '3': 'Shutting Down (not in use)',
-    '4': 'Saved to Disk (not in use)',
+    'boot_failed': {
+        'code': -2,
+        'descr': 'Boot Failed (not in use)',
+    },
+    'beeing_created': {
+        'code': -1,
+        'descr': 'Being Created',
+    },
+    'brand_new': {
+        'code': 0,
+        'descr': 'Brand New',
+    },
+    'running': {
+        'code': 1,
+        'descr': 'Running',
+    },
+    'poweroff': {
+        'code': 2,
+        'descr': 'Powered Off',
+    },
+    'shutdown': {
+        'code': 3,
+        'descr': 'Shutting Down (not in use)',
+    },
+    'save_to_disk': {
+        'code': 4,
+        'descr': 'Saved to Disk (not in use)',
+    },
 }
 
 __virtualname__ = 'linode'
@@ -259,7 +285,7 @@ def create(vm_):
     node_id = _clean_data(result)['LinodeID']
     data['id'] = node_id
 
-    if not _wait_for_status(node_id, status=(-1)):
+    if not _wait_for_status(node_id, status=(_get_status_id_by_name('brand_new'))):
         log.error(
             'Error creating {0} on LINODE\n\n'
             'while waiting for initial ready status'.format(vm_['name']),
@@ -274,6 +300,10 @@ def create(vm_):
     log.debug('Creating disks for {0}'.format(vm_['name']))
     root_disk_id = create_disk_from_distro(vm_, node_id)['DiskID']
     swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
+
+    # Add private IP address if requested
+    if get_private_ip(vm_):
+        create_private_ip(vm_, node_id)
 
     # Create a ConfigID using disk ids
     config_id = create_config(vm_,
@@ -290,12 +320,12 @@ def create(vm_):
 
     node_data = get_linode(node_id)
     ips = get_ips(node_id)
-    state = str(node_data['STATUS'])
+    state = int(node_data['STATUS'])
 
     data['image'] = vm_['image']
     data['name'] = node_data['LABEL']
     data['size'] = node_data['TOTALRAM']
-    data['state'] = LINODE_STATUS[state]
+    data['state'] = _get_status_descr_by_id(state)
     data['private_ips'] = ips['private_ips']
     data['public_ips'] = ips['public_ips']
 
@@ -339,13 +369,13 @@ def create_config(vm_, linode_id, root_disk_id, swap_disk_id, kernel_id=None):
         The VM profile to create the config for.
 
     linode_id
-        The ID of the Linode to create the configuration for. Required.
+        The ID of the Linode to create the configuration for.
 
     root_disk_id
-        The Root Disk ID to be used for this config. Required.
+        The Root Disk ID to be used for this config.
 
     swap_disk_id
-        The Swap Disk ID to be used for this config. Required.
+        The Swap Disk ID to be used for this config.
 
     kernel_id
         The ID of the kernel to use for this configuration profile.
@@ -417,7 +447,7 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
         The VM profile to create the swap disk for.
 
     linode_id
-        The ID of the Linode to create the swap disk for. Required.
+        The ID of the Linode to create the swap disk for.
 
     swap_size
         The size of the disk, in MB.
@@ -434,6 +464,22 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
                    })
 
     result = _query('linode', 'disk.create', args=kwargs)
+
+    return _clean_data(result)
+
+
+def create_private_ip(vm_, linode_id):
+    '''
+    Creates a private IP for the specified Linode.
+
+    vm_
+        The VM profile to create the swap disk for.
+
+    linode_id
+        The ID of the Linode to create the IP address for.
+    '''
+    kwargs = {'LinodeID': linode_id}
+    result = _query('linode', 'ip.addprivate', args=kwargs)
 
     return _clean_data(result)
 
@@ -564,10 +610,11 @@ def get_ips(linode_id=None):
     # If linode_id was specified, only return the ips, and not the
     # dictionary based on the linode ID as a key.
     if linode_id:
-        val = ''
+        _all_ips = {'public_ips': [], 'private_ips': []}
         for item in all_ips:
-            key, val = item.popitem()
-        all_ips = val
+            for addr_type, addr_list in item.popitem()[1].items():
+                _all_ips[addr_type].extend(addr_list)
+        all_ips = _all_ips
 
     return all_ips
 
@@ -591,7 +638,6 @@ def get_linode_id_from_name(name):
     name
         The name of the Linode from which to get the Linode ID. Required.
     '''
-
     nodes = _query('linode', 'list')['DATA']
 
     linode_id = ''
@@ -630,7 +676,6 @@ def get_plan_id(label):
     label
         The label, or name, of the plan to get the ID from.
     '''
-
     return avail_sizes()[label]['PLANID']
 
 
@@ -817,14 +862,14 @@ def show_instance(name=None, linode_id=None, call=None):
     node_id = _check_and_set_node_id(name, linode_id)
     node_data = get_linode(node_id)
     ips = get_ips(node_id)
-    state = str(node_data['STATUS'])
+    state = int(node_data['STATUS'])
 
     ret = {}
     ret['id'] = node_data['LINODEID']
     ret['image'] = node_data['DISTRIBUTIONVENDOR']
     ret['name'] = node_data['LABEL']
     ret['size'] = node_data['TOTALRAM']
-    ret['state'] = LINODE_STATUS[state]
+    ret['state'] = _get_status_descr_by_id(state)
     ret['private_ips'] = ips['private_ips']
     ret['public_ips'] = ips['public_ips']
 
@@ -926,7 +971,6 @@ def stop(name=None, linode_id=None, call=None):
         salt-cloud -a stop vm_name
         salt-cloud -a stop linode_id
     '''
-
     if not name and not linode_id:
         raise SaltCloudException(
             'Either a name or a linode_id must be specified.'
@@ -1005,8 +1049,8 @@ def _list_linodes(full=False):
         this_node['name'] = node['LABEL']
         this_node['size'] = node['TOTALRAM']
 
-        state = str(node['STATUS'])
-        this_node['state'] = LINODE_STATUS[state]
+        state = int(node['STATUS'])
+        this_node['state'] = _get_status_descr_by_id(state)
 
         key = ''
         for item in ips:
@@ -1051,7 +1095,8 @@ def _query(action=None,
            args=None,
            method='GET',
            header_dict=None,
-           data=None):
+           data=None,
+           url='https://api.linode.com/'):
     '''
     Make a web call to the Linode API.
     '''
@@ -1061,16 +1106,15 @@ def _query(action=None,
         'apikey', vm_, __opts__, search_global=False
     )
 
-    path = 'https://api.linode.com/?api_key={0}'.format(apikey)
-
-    if action:
-        path += '&api_action={0}'.format(action)
-
-    if command:
-        path += '.{0}'.format(command)
-
     if not isinstance(args, dict):
         args = {}
+
+    if 'api_key' not in args.keys():
+        args['api_key'] = apikey
+
+    if action:
+        if 'api_action' not in args.keys():
+            args['api_action'] = '{0}.{1}'.format(action, command)
 
     if header_dict is None:
         header_dict = {}
@@ -1083,7 +1127,7 @@ def _query(action=None,
         decode = False
 
     result = salt.utils.http.query(
-        path,
+        url,
         method,
         params=args,
         data=data,
@@ -1154,11 +1198,10 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
         The amount of time to wait for a status to update.
 
     quiet
-        Log status updates to debug logs when True. Otherwise, logs to info.
+        Log status updates to debug logs when False. Otherwise, logs to info.
     '''
-    # 'Brand New' status on the Linode Web Interface evaluates to -1
     if status is None:
-        status = -1
+        status = _get_status_id_by_name('brand_new')
 
     interval = 5
     iterations = int(timeout / interval)
@@ -1170,9 +1213,32 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
             return True
 
         time.sleep(interval)
-        if not quiet:
-            log.info('Status for {0} is {1}'.format(linode_id, result['STATUS']))
+        if quiet:
+            log.info('Status for {0} is {1}, waiting for {2}'.format(linode_id, result['STATUS'], status))
         else:
-            log.debug('Status for {0} is {1}'.format(linode_id, result))
+            log.debug('Status for {0} is {1}, waiting for {2}'.format(linode_id, result, status))
 
     return False
+
+
+def _get_status_descr_by_id(status_id):
+    '''
+    Return linode status by ID
+
+    status_id
+        linode VM status ID
+    '''
+    for status_name, status_data in LINODE_STATUS.iteritems():
+        if status_data['code'] == int(status_id):
+            return status_data['descr']
+    return LINODE_STATUS.get(status_id, None)
+
+
+def _get_status_id_by_name(status_name):
+    '''
+    Return linode status description by internalstatus name
+
+    status_name
+        internal linode VM status name
+    '''
+    return LINODE_STATUS.get(status_name, {}).get('code', None)
