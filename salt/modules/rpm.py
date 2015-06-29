@@ -73,7 +73,7 @@ def bin_pkg_info(path, saltenv='base'):
         newpath = __salt__['cp.cache_file'](path, saltenv)
         if not newpath:
             raise CommandExecutionError(
-                'Unable to retrieve {0} from saltenv \'{1}'
+                'Unable to retrieve {0} from saltenv \'{1}\''
                 .format(path, saltenv)
             )
         path = newpath
