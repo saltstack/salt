@@ -298,8 +298,7 @@ def delete(name,
 
     # Remove the User Profile directory
     if purge:
-        # Make sure the profile directory exists
-        # If the profile is not defined, get the profile
+        # If the profile is not defined, get the profile from the registry
         if user_info['profile'] == '':
             profiles_dir = __salt__['reg.read_key'](hkey='HKEY_LOCAL_MACHINE',
                                                     path='SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList',
@@ -555,7 +554,7 @@ def info(name):
         if not ret['home']:
             ret['home'] = ret['profile']
         ret['groups'] = groups
-        ret['gid'] = items['primary_group_id']
+        ret['gid'] = ''
 
     return ret
 
