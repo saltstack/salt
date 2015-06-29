@@ -65,7 +65,7 @@ def _get_src(tree_base, source, saltenv='base'):
     sbase = os.path.basename(source)
     dest = os.path.join(tree_base, 'SOURCES', sbase)
     if parsed.scheme:
-        lsrc = __salt__['cp.get_file'](source, dest, saltenv=saltenv)
+        lsrc = __salt__['cp.get_url'](source, dest, saltenv=saltenv)
     else:
         shutil.copy(source, dest)
 
