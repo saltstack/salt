@@ -4,8 +4,8 @@ This module provides the point of entry to SPM, the Salt Package Manager
 
 .. versionadded:: Beryllium
 '''
-from __future__ import absolute_import
 # Import Python libs
+from __future__ import absolute_import
 import os
 import yaml
 import tarfile
@@ -298,7 +298,6 @@ class SPMClient(object):
 
         # Find files that have not changed and remove them
         data = conn.execute('SELECT path, sum FROM files WHERE package=?', (package, ))
-        import pprint
         dirs = []
         for filerow in data.fetchall():
             if os.path.isdir(filerow[0]):
