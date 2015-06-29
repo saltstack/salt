@@ -50,9 +50,10 @@ Usage
 
 By default, the Windows software repository is found at ``/srv/salt/win/repo``
 This can be changed in the master config file (default location is
-``/etc/salt/master``) by modifying the  ``win_repo`` variable.  Each piece of
-software should have its own directory which contains the installers and a
-package definition file. This package definition file is a YAML file named
+``/etc/salt/master``) by modifying the  ``win_repo`` variable, but this must
+reside somewhere inside the master's `file_roots`.  Each piece of software
+should have its own directory which contains the installers and a package
+definition file. This package definition file is a YAML file named
 ``init.sls``.
 
 The package definition file should look similar to this example for Firefox:
@@ -178,7 +179,7 @@ Only applies to salt: installer URLs.
         reboot: False
         install_flags: ' /ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
         cache_dir: True
-       
+
 Generate Repo Cache File
 ========================
 
@@ -188,7 +189,15 @@ Once the sls file has been created, generate the repository cache file with the 
 
     salt-run winrepo.genrepo
 
-Then update the repository cache file on your minions, exactly how it's done for the Linux package managers:
+Beginning with the Beryllium Salt release the repository cache is compiled on
+the Salt Minion. This allows for easy templating on the minion which allows for
+pillar, grains and other things to be available during compilation time. From
+Beryllium forward the above `salt-run winrepo.genrepo` is only required for
+older minions. New minions should execute `salt \* pkg.refresh_db` to update
+from the latest from the master's repo.
+
+Then update the repository cache file on your minions, exactly how it's done
+for the Linux package managers:
 
 .. code-block:: bash
 

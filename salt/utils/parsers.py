@@ -2598,3 +2598,29 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
             return config.cloud_config(self.get_config_file_path())
         except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
+
+
+class SPMParser(six.with_metaclass(OptionParserMeta,
+                                   OptionParser,
+                                   ConfigDirMixIn,
+                                   LogLevelMixIn,
+                                   MergeConfigMixIn)):
+    '''
+    The cli parser object used to fire up the salt spm system.
+    '''
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'spm'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'spm')
+
+    def _mixin_setup(self):
+        self.add_option(
+            '-y', '--assume-yes',
+            default=False,
+            action='store_true',
+            help='Default yes in answer to all confirmation questions.'
+        )
+
+    def setup_config(self):
+        return salt.config.spm_config(self.get_config_file_path())

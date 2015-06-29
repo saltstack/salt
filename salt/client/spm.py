@@ -86,7 +86,7 @@ class SPMClient(object):
         conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
         cur = conn.cursor()
         formula_tar = tarfile.open(package_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA.yml'.format(name))
+        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = yaml.safe_load(formula_ref)
 
         for field in ('version', 'release', 'summary', 'description'):
@@ -161,14 +161,14 @@ class SPMClient(object):
         Connect to all repos and download metadata
         '''
         def _update_metadata(repo, repo_info):
-            dl_path = '{0}/SPM-METADATA.yml'.format(repo_info['url'])
+            dl_path = '{0}/SPM-METADATA'.format(repo_info['url'])
             if dl_path.startswith('file://'):
                 dl_path = dl_path.replace('file://', '')
                 with salt.utils.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
                 response = http.query(
-                    '{0}/SPM-MANIFEST.yml'.format(dl_path),
+                    '{0}/SPM-METADATA'.format(dl_path),
                 )
                 metadata = response.get('dict', {})
             cache_path = '{0}/{1}.p'.format(
@@ -204,7 +204,7 @@ class SPMClient(object):
 
     def _create_repo(self, args):
         '''
-        Scan a directory and create an SPM-METADATA.yml file which describes
+        Scan a directory and create an SPM-METADATA file which describes
         all of the SPM files in that directory.
         '''
         if len(args) < 2:
@@ -227,12 +227,12 @@ class SPMClient(object):
                 comps = spm_file.split('-')
                 spm_name = '-'.join(comps[:-2])
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
-                formula_handle = spm_fh.extractfile('{0}/FORMULA.yml'.format(spm_name))
+                formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
                 formula_conf = yaml.safe_load(formula_handle.read())
                 repo_metadata[spm_name] = formula_conf.copy()
                 repo_metadata[spm_name]['filename'] = spm_file
 
-        metadata_filename = '{0}/SPM-METADATA.yml'.format(repo_path)
+        metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
         with salt.utils.fopen(metadata_filename, 'w') as mfh:
             yaml.dump(repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False)
 
@@ -339,7 +339,7 @@ class SPMClient(object):
         comps = self.abspath.split('/')
         self.relpath = comps[-1]
 
-        formula_path = '{0}/FORMULA.yml'.format(self.abspath)
+        formula_path = '{0}/FORMULA'.format(self.abspath)
         formula_conf = {}
         if os.path.exists(formula_path):
             with salt.utils.fopen(formula_path) as fp_:

@@ -178,6 +178,24 @@ def resolve_dns(opts):
     return ret
 
 
+def prep_ip_port(opts):
+    ret = {}
+    if opts['master_uri_format'] == 'ip_only':
+        ret['master'] = opts['master']
+    else:
+        ip_port = opts['master'].rsplit(":", 1)
+        if len(ip_port) == 1:
+            # e.g. master: mysaltmaster
+            ret['master'] = ip_port[0]
+        else:
+            # e.g. master: localhost:1234
+            # e.g. master: 127.0.0.1:1234
+            # e.g. master: ::1:1234
+            ret['master'] = ip_port[0]
+            ret['master_port'] = ip_port[1]
+    return ret
+
+
 def get_proc_dir(cachedir, **kwargs):
     '''
     Given the cache directory, return the directory that process data is
@@ -759,6 +777,7 @@ class Minion(MinionBase):
 
             for master in local_masters:
                 opts['master'] = master
+                opts.update(prep_ip_port(opts))
                 opts.update(resolve_dns(opts))
                 super(Minion, self).__init__(opts)  # TODO: only run init once?? This will run once per attempt
 
@@ -793,6 +812,7 @@ class Minion(MinionBase):
 
         # single master sign in
         else:
+            opts.update(prep_ip_port(opts))
             opts.update(resolve_dns(opts))
             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts,
                                                                         timeout=timeout,

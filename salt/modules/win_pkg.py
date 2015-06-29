@@ -31,7 +31,9 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
+from salt.exceptions import SaltRenderError
 import salt.utils
+import salt.syspaths
 
 log = logging.getLogger(__name__)
 
@@ -369,16 +371,68 @@ def refresh_db(saltenv='base'):
         salt '*' pkg.refresh_db
     '''
     __context__.pop('winrepo.data', None)
-    repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
-    if not cached_repo:
-        # It's not cached. Cache it, mate.
-        cached_repo = __salt__['cp.cache_file'](repocache, saltenv)
-        return True
-    # Check if the master's cache file has changed
-    if __salt__['cp.hash_file'](repocache) != __salt__['cp.hash_file'](cached_repo, saltenv):
-        cached_repo = __salt__['cp.cache_file'](repocache, saltenv)
-    return True
+    repo = __opts__['win_repo_source_dir']
+    cached_files = __salt__['cp.cache_dir'](repo, saltenv, include_pat='*.sls')
+    genrepo(saltenv=saltenv)
+    return cached_files
+
+
+def _get_local_repo_dir(saltenv='base'):
+    master_repo_src = __opts__['win_repo_source_dir']
+    dirs = []
+    dirs.append(salt.syspaths.CACHE_DIR)
+    dirs.extend(['minion', 'files'])
+    dirs.append(saltenv)
+    dirs.extend(master_repo_src[7:].strip('/').split('/'))
+    return os.sep.join(dirs)
+
+
+def genrepo(saltenv='base'):
+    '''
+    Generate win_repo_cachefile based on sls files in the win_repo
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run winrepo.genrepo
+    '''
+    ret = {}
+    repo = _get_local_repo_dir(saltenv)
+    if not os.path.exists(repo):
+        os.makedirs(repo)
+    winrepo = 'winrepo.p'
+    renderers = salt.loader.render(__opts__, __salt__)
+    for root, _, files in os.walk(repo):
+        for name in files:
+            if name.endswith('.sls'):
+                try:
+                    config = salt.template.compile_template(
+                            os.path.join(root, name),
+                            renderers,
+                            __opts__['renderer'])
+                except SaltRenderError as exc:
+                    log.debug('Failed to compile {0}.'.format(os.path.join(root, name)))
+                    log.debug('Error: {0}.'.format(exc))
+                    continue
+
+                if config:
+                    revmap = {}
+                    for pkgname, versions in six.iteritems(config):
+                        for version, repodata in six.iteritems(versions):
+                            if not isinstance(version, six.string_types):
+                                config[pkgname][str(version)] = \
+                                    config[pkgname].pop(version)
+                            if not isinstance(repodata, dict):
+                                log.debug('Failed to compile'
+                                          '{0}.'.format(os.path.join(root, name)))
+                                continue
+                            revmap[repodata['full_name']] = pkgname
+                    ret.setdefault('repo', {}).update(config)
+                    ret.setdefault('name_map', {}).update(revmap)
+    with salt.utils.fopen(os.path.join(repo, winrepo), 'w+b') as repo_cache:
+        repo_cache.write(msgpack.dumps(ret))
+    return ret
 
 
 def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
@@ -627,15 +681,12 @@ def get_repo_data(saltenv='base'):
     '''
     #if 'winrepo.data' in __context__:
     #    return __context__['winrepo.data']
-    repocache = __opts__['win_repo_cachefile']
-    cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
-    if not cached_repo:
-        __salt__['pkg.refresh_db']()
+    repocache_dir = _get_local_repo_dir(saltenv=saltenv)
+    winrepo = 'winrepo.p'
     try:
-        with salt.utils.fopen(cached_repo, 'rb') as repofile:
+        with salt.utils.fopen(os.path.join(repocache_dir, winrepo), 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
-                #__context__['winrepo.data'] = repodata
                 return repodata
             except Exception as exc:
                 log.exception(exc)

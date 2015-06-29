@@ -12,19 +12,6 @@ and fast enough to communicate with those servers in *seconds*.
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
-.. seealso:: Other Documentation
-
-    Download an offline copy of the latest Salt documentation:
-
-    * `PDF`_ builds of the docs for each Salt release can usually be found on
-      the corresponding release page on GitHub.
-
-    Watch announcements, demonstrations, and video tutorials on the `SaltStack
-    YouTube channel`_.
-
-.. _`PDF`: https://github.com/saltstack/salt/releases/latest
-.. _`SaltStack YouTube channel`: http://www.youtube.com/saltstack
-
 Download
 ========
 
@@ -73,7 +60,7 @@ Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
 
 Running Salt without root access in userland:
-    - :doc:`Salt Usermode <topics/tutorials/rooted>`
+    :doc:`Salt Usermode <topics/tutorials/rooted>`
 
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`
