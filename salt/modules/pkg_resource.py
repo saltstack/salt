@@ -136,16 +136,12 @@ def parse_targets(name=None,
         for pkg_name, pkg_src in six.iteritems(sources):
             if __salt__['config.valid_fileproto'](pkg_src):
                 # Cache package from remote source (salt master, HTTP, FTP) and
-                # append a tuple containing the cached path along with the
-                # specified version.
-                srcinfo.append((
-                    __salt__['cp.cache_file'](pkg_src[0], saltenv),
-                    pkg_src[1]
-                ))
+                # append the cached path.
+                srcinfo.append(__salt__['cp.cache_file'](pkg_src, saltenv))
             else:
                 # Package file local to the minion, just append the tuple from
                 # the pack_sources() return data.
-                if not os.path.isabs(pkg_src[0]):
+                if not os.path.isabs(pkg_src):
                     raise SaltInvocationError(
                         'Path {0} for package {1} is either not absolute or '
                         'an invalid protocol'.format(pkg_src[0], pkg_name)
@@ -164,7 +160,7 @@ def parse_targets(name=None,
         return packed, 'repository'
 
     else:
-        log.error('No package sources passed to pkg.install.')
+        log.error('No package sources provided')
         return None, None
 
 
