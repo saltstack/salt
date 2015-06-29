@@ -4,8 +4,9 @@ This module provides the point of entry to SPM, the Salt Package Manager
 
 .. versionadded:: Beryllium
 '''
+
 # Import Python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import yaml
 import tarfile
@@ -21,6 +22,10 @@ import salt.config
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
+from salt.utils import parsers
+from salt.ext.six import string_types
+from salt.ext.six.moves import input
+from salt.ext.six.moves import zip
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -30,13 +35,10 @@ class SPMClient(object):
     '''
     Provide an SPM Client
     '''
-    def __init__(self, opts=None):
+    def __init__(self, opts=None):  # pylint: disable=W0231
         if not opts:
-            opts = salt.config.client_config(
-                os.environ.get(
-                    'SALT_MASTER_CONFIG',
-                    os.path.join(syspaths.CONFIG_DIR, 'master')
-                )
+            opts = salt.config.spm_config(
+                os.path.join(syspaths.CONFIG_DIR, 'spm')
             )
         self.opts = opts
 
@@ -47,8 +49,8 @@ class SPMClient(object):
         command = args[0]
         if command == 'install':
             self._install(args)
-        elif command == 'local_install':
-            self._local_install(args)
+        elif command == 'local':
+            self._local(args)
         elif command == 'remove':
             self._remove(args)
         elif command == 'build':
@@ -57,8 +59,25 @@ class SPMClient(object):
             self._download_repo_metadata()
         elif command == 'create_repo':
             self._create_repo(args)
+        elif command == 'files':
+            self._list_files(args)
+        elif command == 'info':
+            self._info(args)
 
-    def _local_install(self, args):
+    def _local(self, args):
+        '''
+        Process local commands
+        '''
+        args.pop(0)
+        command = args[0]
+        if command == 'install':
+            self._local_install(args)
+        elif command == 'files':
+            self._local_list_files(args)
+        elif command == 'info':
+            self._local_info(args)
+
+    def _local_install(self, args, pkg_name=None):
         '''
         Install a package from a file
         '''
@@ -66,43 +85,99 @@ class SPMClient(object):
             log.error('A package file must be specified')
             return False
 
-        package_file = args[1]
+        pkg_file = args[1]
 
         self._init_db()
         out_path = self.opts['file_roots']['base'][0]
-        comps = package_file.split('-')
+        comps = pkg_file.split('-')
         comps = '-'.join(comps[:-2]).split('/')
         name = comps[-1]
-        log.debug('Locally installing package {0} to {1}'.format(package_file, out_path))
 
-        if not os.path.exists(package_file):
-            log.error('File {0} not found'.format(package_file))
+        if not os.path.exists(pkg_file):
+            log.error('File {0} not found'.format(pkg_file))
             return False
 
         if not os.path.exists(out_path):
-            os.mkdir(out_path)
+            os.makedirs(out_path)
 
         sqlite3.enable_callback_tracebacks(True)
         conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
         cur = conn.cursor()
-        formula_tar = tarfile.open(package_file, 'r:bz2')
+
+        formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = yaml.safe_load(formula_ref)
+
+        data = conn.execute('SELECT package FROM packages WHERE package=?', (formula_def['name'], ))
+        if data.fetchone() and not self.opts['force']:
+            print('Package {0} already installed, not installing again'.format(formula_def['name']))
+            return
+
+        if 'dependencies' in formula_def:
+            if not isinstance(formula_def['dependencies'], list):
+                formula_def['dependencies'] = [formula_def['dependencies']]
+            needs = []
+            for dep in formula_def['dependencies']:
+                if not isinstance(dep, string_types):
+                    continue
+                data = conn.execute('SELECT package FROM packages WHERE package=?', (dep, ))
+                if data.fetchone():
+                    continue
+                needs.append(dep)
+            print('Cannot install {0}, the following dependencies are needed: '
+                  '\n\n{1}'.format(formula_def['name'], '\n'.join(needs)))
+            return
+
+        if pkg_name is None:
+            print('Installing package from file {0}'.format(pkg_file))
+        else:
+            print('Installing package {0}'.format(pkg_name))
+
+        if not self.opts['assume_yes']:
+            res = input('Proceed? [N/y] ')
+            if not res.lower().startswith('y'):
+                print('... canceled')
+                return False
+
+        print('... installing')
+
+        log.debug('Locally installing package file {0} to {1}'.format(pkg_file, out_path))
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
                 log.error('Invalid package: the {0} was not found'.format(field))
                 return False
 
-        conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?)', (
+        pkg_files = formula_tar.getmembers()
+        # First pass: check for files that already exist
+        existing_files = []
+        for member in pkg_files:
+            if member.isdir():
+                continue
+            out_file = os.path.join(out_path, member.name)
+            if os.path.exists(out_file):
+                existing_files.append(out_file)
+                if not self.opts['force']:
+                    log.error('{0} already exists, not installing'.format(out_file))
+
+        if existing_files and not self.opts['force']:
+            return
+
+        # We've decided to install
+        conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
             name,
             formula_def['version'],
             formula_def['release'],
             datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'),
+            formula_def.get('os', None),
+            formula_def.get('os_family', None),
+            formula_def.get('dependencies', None),
+            formula_def.get('os_dependencies', None),
+            formula_def.get('os_family_dependencies', None),
             formula_def['summary'],
             formula_def['description'],
         ))
-        pkg_files = formula_tar.getmembers()
+        # Second pass: install the files
         for member in pkg_files:
             file_ref = formula_tar.extractfile(member)
             if member.isdir():
@@ -268,7 +343,7 @@ class SPMClient(object):
                 else:
                     http.query(dl_path, text_out=out_file)
 
-                self._local_install(out_file)
+                self._local_install((None, out_file), package)
                 return
 
     def _remove(self, args):
@@ -280,7 +355,15 @@ class SPMClient(object):
             return False
 
         package = args[1]
-        log.debug('Removing package {0}'.format(package))
+        print('Removing package {0}'.format(package))
+
+        if not self.opts['assume_yes']:
+            res = input('Proceed? [N/y] ')
+            if not res.lower().startswith('y'):
+                print('... canceled')
+                return False
+
+        print('... removing')
 
         if not os.path.exists(self.opts['spm_db']):
             log.error('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
@@ -326,6 +409,140 @@ class SPMClient(object):
 
         conn.execute('DELETE FROM packages WHERE package=?', (package, ))
 
+    def _local_info(self, args):
+        '''
+        List info for a package file
+        '''
+        if len(args) < 2:
+            log.error('A package filename must be specified')
+            return False
+
+        pkg_file = args[1]
+
+        comps = pkg_file.split('-')
+        comps = '-'.join(comps[:-2]).split('/')
+        name = comps[-1]
+
+        formula_tar = tarfile.open(pkg_file, 'r:bz2')
+        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
+        formula_def = yaml.safe_load(formula_ref)
+
+        self._print_info(formula_def)
+
+    def _info(self, args):
+        '''
+        List info for a package
+        '''
+        if len(args) < 2:
+            log.error('A package must be specified')
+            return False
+
+        package = args[1]
+
+        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
+        cur = conn.cursor()
+
+        fields = (
+            'package',
+            'version',
+            'release',
+            'installed',
+            'os',
+            'os_family',
+            'dependencies',
+            'os_dependencies',
+            'os_family_dependencies',
+            'summary',
+            'description',
+        )
+        data = conn.execute(
+            'SELECT {0} FROM packages WHERE package=?'.format(','.join(fields)),
+            (package, )
+        )
+        row = data.fetchone()
+        if not row:
+            print('Package {0} not installed'.format(package))
+            return
+
+        formula_def = dict(list(zip(fields, row)))
+        formula_def['name'] = formula_def['package']
+
+        self._print_info(formula_def)
+
+    def _print_info(self, formula_def):
+        '''
+        Print package info
+        '''
+        fields = (
+            'name',
+            'os',
+            'os_family',
+            'release',
+            'version',
+            'dependencies',
+            'os_dependencies',
+            'os_family_dependencies',
+            'summary',
+            'description',
+        )
+        for item in fields:
+            if item not in formula_def:
+                formula_def[item] = 'None'
+
+        if 'installed' not in formula_def:
+            formula_def['installed'] = 'Not installed'
+
+        print('''Name: {name}
+Version: {version}
+Release: {release}
+Install Date: {installed}
+Supported OSes: {os}
+Supported OS families: {os_family}
+Dependencies: {dependencies}
+OS Dependencies: {os_dependencies}
+OS Family Dependencies: {os_family_dependencies}
+Summary: {summary}
+Description:
+{description}
+'''.format(**formula_def))
+
+    def _local_list_files(self, args):
+        '''
+        List files for a package file
+        '''
+        if len(args) < 2:
+            log.error('A package filename must be specified')
+            return False
+
+        pkg_file = args[1]
+        formula_tar = tarfile.open(pkg_file, 'r:bz2')
+        pkg_files = formula_tar.getmembers()
+
+        for member in pkg_files:
+            print(member.name)
+
+    def _list_files(self, args):
+        '''
+        List files for an installed package
+        '''
+        if len(args) < 2:
+            log.error('A package name must be specified')
+            return False
+
+        package = args[1]
+
+        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
+        cur = conn.cursor()
+
+        data = conn.execute('SELECT package FROM packages WHERE package=?', (package, ))
+        if not data.fetchone():
+            print('Package {0} not installed'.format(package))
+            return
+
+        data = conn.execute('SELECT path FROM files WHERE package=?', (package, ))
+        for file_ in data.fetchall():
+            print(file_[0])
+
     def _build(self, args):
         '''
         Build a package
@@ -334,7 +551,7 @@ class SPMClient(object):
             log.error('A path to a formula must be specified')
             return False
 
-        self.abspath = args[1]
+        self.abspath = args[1].rstrip('/')
         comps = self.abspath.split('/')
         self.relpath = comps[-1]
 
@@ -392,6 +609,11 @@ class SPMClient(object):
                 version text,
                 release text,
                 installed text,
+                os text,
+                os_family text,
+                dependencies text,
+                os_dependencies text,
+                os_family_dependencies text,
                 summary text,
                 description text
             )''')
