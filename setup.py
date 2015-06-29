@@ -769,7 +769,8 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-run',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
-                        'scripts/salt-unity'])
+                        'scripts/salt-unity',
+                        'scripts/spm'])
         return scripts
 
     @property
@@ -801,7 +802,8 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-run = salt.scripts:salt_run',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
-                        'salt-unity = salt.scripts:salt_unity'])
+                        'salt-unity = salt.scripts:salt_unity',
+                        'spm = salt.scripts:salt_spm'])
         return {'console_scripts': scripts}
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 
