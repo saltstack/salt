@@ -693,9 +693,7 @@ def absent(name, purge=False, force=False):
             ret['comment'] = 'User {0} set for removal'.format(name)
             return ret
         beforegroups = set(salt.utils.get_group_list(name))
-        ret['result'] = __salt__['user.delete'](name=name,
-                                                purge=purge,
-                                                force=force)
+        ret['result'] = __salt__['user.delete'](name, purge, force)
         aftergroups = set([g for g in beforegroups if __salt__['group.info'](g)])
         if ret['result']:
             ret['changes'] = {}
