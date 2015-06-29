@@ -1130,6 +1130,8 @@ def get_route(ip):
     '''
     Return routing information for given destination ip
 
+    .. versionadded:: 2015.5.3
+
     CLI Example::
 
         salt '*' network.get_route 10.10.10.10
