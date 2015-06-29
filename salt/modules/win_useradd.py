@@ -114,7 +114,8 @@ def add(name,
 
     try:
         win32net.NetUserAdd(None, 1, user_info)
-    except win32net.error, (number, context, message):
+    except win32net.error as exc:
+        (number, context, message) = exc
         log.error('Failed to create user {0}'.format(name))
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -140,7 +141,7 @@ def update(name,
            homedrive=None,
            logonscript=None,
            profile=None):
-    '''
+    r'''
     Updates settings for the windows user. Name is the only required parameter.
     Settings will only be changed if the parameter is passed a value.
 
@@ -186,7 +187,12 @@ def update(name,
     # Return an object containing current settings for the user
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
-    except win32net.error, (number, context, message):
+    except win32net.error as exc:
+        (number, context, message) = exc
+        log.error('Failed to update user {0}'.format(name))
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
         return False
 
     # Check parameters to update
@@ -209,7 +215,8 @@ def update(name,
     # Apply new settings
     try:
         win32net.NetUserSetInfo(None, name, 4, user_info)
-    except win32net.error, (number, context, message):
+    except win32net.error as exc:
+        (number, context, message) = exc
         log.error('Failed to update user {0}'.format(name))
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -245,7 +252,8 @@ def delete(name,
     # Check if the user exists
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
-    except win32net.error, (number, context, message):
+    except win32net.error as exc:
+        (number, context, message) = exc
         log.error('User not found: {0}'.format(name))
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -256,7 +264,8 @@ def delete(name,
     # Return a list of logged in users
     try:
         sess_list = win32ts.WTSEnumerateSessions()
-    except win32ts.error, (number, context, message):
+    except win32ts.error as exc:
+        (number, context, message) = exc
         log.error('No logged in users found')
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
@@ -276,7 +285,8 @@ def delete(name,
         if force:
             try:
                 win32ts.WTSLogoffSession(win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True)
-            except win32net.error, (number, context, message):
+            except win32ts.error as exc:
+                (number, context, message) = exc
                 log.error('User not found: {0}'.format(name))
                 log.error('nbr: {0}'.format(number))
                 log.error('ctx: {0}'.format(context))
@@ -291,11 +301,11 @@ def delete(name,
         # Make sure the profile directory exists
         # If the profile is not defined, get the profile
         if user_info['profile'] == '':
-            profiles_dir = __salt__['reg.read_key'](hkey = 'HKEY_LOCAL_MACHINE',
-                                                    path = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList',
-                                                    key = 'ProfilesDirectory')
+            profiles_dir = __salt__['reg.read_key'](hkey='HKEY_LOCAL_MACHINE',
+                                                    path='SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList',
+                                                    key='ProfilesDirectory')
             profiles_dir = profiles_dir.replace('%SystemDrive%', os.environ['SystemDrive'])
-            user_info['profile'] = '{0}\{1}'.format(profiles_dir, name)
+            user_info['profile'] = r'{0}\{1}'.format(profiles_dir, name)
 
         # Make sure the profile exists before deleting it
         # Otherwise this will throw an error
@@ -303,7 +313,8 @@ def delete(name,
             sid = getUserSid(name)
             try:
                 win32profile.DeleteProfile(sid)
-            except pywintypes.error, (number, context, message):
+            except pywintypes.error as exc:
+                (number, context, message) = exc
                 log.error('Failed to remove profile for {0}'.format(name))
                 log.error('nbr: {0}'.format(number))
                 log.error('ctx: {0}'.format(context))
@@ -313,7 +324,8 @@ def delete(name,
     # And finally remove the user account
     try:
         win32net.NetUserDel(None, name)
-    except win32net.error, (number, context, message):
+    except win32net.error as exc:
+        (number, context, message) = exc
         log.error('Failed to delete user {0}'.format(name))
         log.error('nbr: {0}'.format(number))
         log.error('ctx: {0}'.format(context))
