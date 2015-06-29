@@ -21,7 +21,6 @@ from salt.states import grains as grains
 import integration
 
 
-
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class GrainsTestCase(TestCase):
 
