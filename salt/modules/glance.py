@@ -208,15 +208,15 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_delete id=c2eb2eb0-53e1-4a80-b990-8ec887eae7df
         salt '*' glance.image_delete name=f16-jeos
     '''
-    nt_ks = _auth(profile)
+    g_client = _auth(profile)
     if name:
-        for image in nt_ks.images.list():
+        for image in g_client.images.list():
             if image.name == name:
                 id = image.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
-    nt_ks.images.delete(id)
+    g_client.images.delete(id)
     ret = 'Deleted image with ID {0}'.format(id)
     if name:
         ret += ' ({0})'.format(name)
@@ -233,16 +233,16 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_show
     '''
-    nt_ks = _auth(profile)
+    g_client = _auth(profile)
     ret = {}
     if name:
-        for image in nt_ks.images.list():
+        for image in g_client.images.list():
             if image.name == name:
                 id = image.id  # pylint: disable=C0103
                 continue
     if not id:
         return {'Error': 'Unable to resolve image id'}
-    image = nt_ks.images.get(id)
+    image = g_client.images.get(id)
     # TODO: Get rid of the wrapping dict, see #24568
     ret[image.name] = {
             'id': image.id,
@@ -275,10 +275,10 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
-    nt_ks = _auth(profile)
+    g_client = _auth(profile)
     #pformat = pprint.PrettyPrinter(indent=4).pformat
     ret = {}
-    for image in nt_ks.images.list():
+    for image in g_client.images.list():
         #log.debug('Details for image "{0}":'.format(image.name) + \
         #    '\n{0}'.format(pformat(image)))
         #
@@ -323,9 +323,9 @@ def _item_list(profile=None):
 
         salt '*' glance.item_list
     '''
-    nt_ks = _auth(profile)
+    g_client = _auth(profile)
     ret = []
-    for item in nt_ks.items.list():
+    for item in g_client.items.list():
         ret.append(item.__dict__)
         #ret[item.name] = {
         #        'name': item.name,
