@@ -666,7 +666,7 @@ def install(name=None,
     env.update(DPKG_ENV_VARS.copy())
 
     for cmd in cmds:
-        __salt__['cmd.run'](cmd, output_loglevel='trace')
+        __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
