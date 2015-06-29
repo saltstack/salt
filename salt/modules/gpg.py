@@ -218,7 +218,6 @@ def list_keys(user=None, gnupghome=None):
         salt '*' gpg.list_keys
 
     '''
-    log.debug('GPG_1_3_1 {0}'.format(GPG_1_3_1))
     _keys = []
     for _key in _list_keys(user, gnupghome):
         tmp = {}
@@ -641,22 +640,36 @@ def import_key(user=None,
         except IOError:
             raise SaltInvocationError('filename does not exist.')
 
-    import_result = gpg.import_keys(text)
-    counts = import_result.counts
-    log.debug('imported_data {0}'.format(list(import_result.__dict__.keys())))
-    log.debug('imported_data {0}'.format(counts))
+    imported_data = gpg.import_keys(text)
 
-    if counts.get('imported') or counts.get('imported_rsa'):
-        ret['message'] = 'Successfully imported key(s).'
-    elif counts.get('unchanged'):
-        ret['message'] = 'Key(s) already exist in keychain.'
-    elif counts.get('not_imported'):
-        ret['res'] = False
-        ret['message'] = 'Unable to import key.'
-    elif not counts.get('count'):
-        ret['res'] = False
-        ret['message'] = 'Unable to import key.'
+    # include another check for Salt unit tests
+    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
+    if gnupg_version >= '1.3.1':
+        GPG_1_3_1 = True
 
+    if GPG_1_3_1:
+        counts = imported_data.counts
+        if counts.get('imported') or counts.get('imported_rsa'):
+            ret['message'] = 'Successfully imported key(s).'
+        elif counts.get('unchanged'):
+            ret['message'] = 'Key(s) already exist in keychain.'
+        elif counts.get('not_imported'):
+            ret['res'] = False
+            ret['message'] = 'Unable to import key.'
+        elif not counts.get('count'):
+            ret['res'] = False
+            ret['message'] = 'Unable to import key.'
+    else:
+        if imported_data.imported or imported_data.imported_rsa:
+            ret['message'] = 'Successfully imported key(s).'
+        elif imported_data.unchanged:
+            ret['message'] = 'Key(s) already exist in keychain.'
+        elif imported_data.not_imported:
+            ret['res'] = False
+            ret['message'] = 'Unable to import key.'
+        elif not imported_data.count:
+            ret['res'] = False
+            ret['message'] = 'Unable to import key.'
     return ret
 
 

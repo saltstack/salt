@@ -1365,6 +1365,9 @@ class Cloud(object):
         except IOError:
             main_cloud_config = {}
 
+        if main_cloud_config is None:
+            main_cloud_config = {}
+
         profile_details = self.opts['profiles'][profile]
         alias, driver = profile_details['provider'].split(':')
         mapped_providers = self.map_providers_parallel()
@@ -1540,9 +1543,13 @@ class Cloud(object):
                     # Mis-configured provider that got removed?
                     log.warn(
                         'The cloud driver, {0!r}, configured under the '
-                        '{1!r} cloud provider alias was not loaded since '
-                        '\'{2}()\' could not be found. Removing it from '
-                        'the available providers list.'.format(
+                        '{1!r} cloud provider alias, could not be loaded. '
+                        'Please check your provider configuration files and '
+                        'ensure all required dependencies are installed '
+                        'for the {0!r} driver.\n'
+                        'In rare cases, this could indicate the \'{2}()\' '
+                        'function could not be found.\nRemoving {0!r} from '
+                        'the available providers list'.format(
                             driver, alias, fun
                         )
                     )
