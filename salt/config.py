@@ -73,6 +73,11 @@ VALID_OPTS = {
     # module function to run to determine the master hostname.
     'master_type': str,
 
+    # Specify the format in which the master address will be specified. Can
+    # specify 'default' or 'ip_only'. If 'ip_only' is specified, then the
+    # master address will not be split into IP and PORT.
+    'master_uri_format': str,
+
     # The fingerprint of the master key may be specified to increase security. Generate
     # a master fingerprint with `salt-key -F master`
     'master_finger': str,
@@ -686,6 +691,7 @@ DEFAULT_MINION_OPTS = {
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
+    'master_uri_format': 'default',
     'master_port': '4506',
     'master_finger': '',
     'master_shuffle': False,
