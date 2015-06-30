@@ -406,6 +406,8 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
+        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
+                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -442,6 +444,7 @@ class Install(install):
         self.salt_logs_dir = LOGS_DIR
         self.salt_pidfile_dir = PIDFILE_DIR
         # pylint: enable=undefined-variable
+        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
