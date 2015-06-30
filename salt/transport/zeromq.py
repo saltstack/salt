@@ -10,7 +10,6 @@ import os
 import errno
 import hashlib
 import weakref
-import gc
 from random import randint
 
 # Import Salt Libs
@@ -91,7 +90,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             new_obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = new_obj
             return loop_instance_map[key]
-
 
     @classmethod
     def __key(cls, opts, **kwargs):
