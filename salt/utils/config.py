@@ -845,5 +845,5 @@ class NumberConfig(BaseConfigItem):
         super(NumberConfig, self).__init__(**kwargs)
 
 
-class IntConfig(NumberConfig):
+class IntegerConfig(NumberConfig):
     __type__ = 'integer'
