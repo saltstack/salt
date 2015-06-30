@@ -63,7 +63,7 @@ def _dscl(cmd, ctype='create'):
 
 def _first_avail_uid():
     uids = set(x.pw_uid for x in pwd.getpwall())
-    for idx in range(501, 2 ** 32):
+    for idx in range(501, 2 ** 24):
         if idx not in uids:
             return idx
 
