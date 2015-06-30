@@ -308,6 +308,9 @@
             "additionalProperties": false
         }
 '''
+# TODO: Remove the following PyLint disable as soon as we support YAML and RST
+# rendering
+# pylint: disable=abstract-method
 
 # Import python libs
 from __future__ import absolute_import, print_function
@@ -350,7 +353,7 @@ class Prepareable(type):
                 defining_frame = sys._getframe(1)
                 for constant in reversed(defining_frame.f_code.co_consts):
                     if inspect.iscode(constant) and constant.co_name == name:
-                        def get_index(attribute_name, _names=constant.co_names):
+                        def get_index(attribute_name, _names=constant.co_names):  # pylint: disable=cell-var-from-loop
                             try:
                                 return _names.index(attribute_name)
                             except ValueError:
@@ -698,7 +701,12 @@ class StringConfig(BaseConfigItem):
         'max_length': 'maxLength'
     }
 
-    def __init__(self, format=None, pattern=None, min_length=None, max_length=None, **kwargs):
+    def __init__(self,
+                 format=None,  # pylint: disable=redefined-builtin
+                 pattern=None,
+                 min_length=None,
+                 max_length=None,
+                 **kwargs):
         '''
         :param title:
             A short explanation about the purpose of the data described by this item.
