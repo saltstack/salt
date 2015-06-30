@@ -637,29 +637,29 @@ class Finder(object):
             depth = dirpath[len(path) + len(os.path.sep):].count(os.path.sep)
             if depth == self.maxdepth:
                 dirs[:] = []
-            else:
-                if depth >= self.mindepth:
-                    for name in dirs + files:
-                        fstat = None
-                        matches = True
-                        fullpath = None
-                        for criterion in self.criteria:
-                            if fstat is None and criterion.requires() & _REQUIRES_STAT:
-                                fullpath = os.path.join(dirpath, name)
-                                fstat = os.stat(fullpath)
-                            if not criterion.match(dirpath, name, fstat):
-                                matches = False
-                                break
-                        if matches:
-                            if fullpath is None:
-                                fullpath = os.path.join(dirpath, name)
-                            for action in self.actions:
-                                if (fstat is None and
+
+            if depth >= self.mindepth:
+                for name in dirs + files:
+                    fstat = None
+                    matches = True
+                    fullpath = None
+                    for criterion in self.criteria:
+                        if fstat is None and criterion.requires() & _REQUIRES_STAT:
+                            fullpath = os.path.join(dirpath, name)
+                            fstat = os.stat(fullpath)
+                        if not criterion.match(dirpath, name, fstat):
+                            matches = False
+                            break
+                    if matches:
+                        if fullpath is None:
+                            fullpath = os.path.join(dirpath, name)
+                        for action in self.actions:
+                            if (fstat is None and
                                     action.requires() & _REQUIRES_STAT):
-                                    fstat = os.stat(fullpath)
-                                result = action.execute(fullpath, fstat, test=self.test)
-                                if result is not None:
-                                    yield result
+                                fstat = os.stat(fullpath)
+                            result = action.execute(fullpath, fstat, test=self.test)
+                            if result is not None:
+                                yield result
 
 
 def find(path, options):
