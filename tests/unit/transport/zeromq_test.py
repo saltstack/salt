@@ -187,7 +187,7 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     Tests around the publish system
     '''
     def get_new_ioloop(self):
-        return zmq.eventloop.ioloop.ZMQIOLoop()
+        return zmq.eventloop.ioloop.ZMQIOLoop().instance()
 
 
 if __name__ == '__main__':
