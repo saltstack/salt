@@ -765,6 +765,13 @@ class UriConfig(StringConfig):
     __format__ = 'uri'
 
 
+class SecretConfig(StringConfig):
+    '''
+    A string configuration field containing a secret, for example, passwords, API keys, etc
+    '''
+    __format__ = 'secret'
+
+
 class NumberConfig(BaseConfigItem):
 
     __type__ = 'number'
