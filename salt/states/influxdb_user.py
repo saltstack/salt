@@ -10,6 +10,15 @@ Management of InfluxDB users
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the influxdb module is available
+    '''
+    if 'influxdb.db_exists' in __salt__:
+        return 'influxdb_user'
+    return False
+
+
 def present(name, passwd, database=None, user=None, password=None, host=None,
             port=None):
     '''
