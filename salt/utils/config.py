@@ -462,21 +462,31 @@ class BaseConfigItemMeta(six.with_metaclass(Prepareable, type)):
         # Register the class as an item class
         attrs['__item__'] = True
         # Instantiate an empty list to store the config item attribute names
-        attrs['_attributes'] = []
+        attributes = []
+        for base in reversed(bases):
+            try:
+                # Extend the attributes with the base argspec argument names
+                # but skip "self"
+                for argname in inspect.getargspec(base.__init__).args:
+                    if argname == 'self' or argname in attributes:
+                        continue
+                    attributes.append(argname)
+            except TypeError:
+                # On the base object type, __init__ is just a wrapper which
+                # triggers a TypeError when we're trying to find out it's
+                # argspec
+                continue
+        attrs['_attributes'] = attributes
         return type.__new__(mcs, name, bases, attrs)
 
     def __call__(cls, *args, **kwargs):
         # Create the instance class
         instance = object.__new__(cls)
-        args = list(args)
         if args:
-            # We were passed un-named keyword arguments. Let's map them to
-            # keyword arguments since no configuration item shall support
-            # unnamed arguments
-            argspec = inspect.getargspec(instance.__init__)
-            for idx, argvalue in enumerate(args[:]):
-                args.remove(argvalue)
-                kwargs[argspec.args[idx+1]] = argvalue
+            raise RuntimeError(
+                'Please pass all arguments as named arguments. Un-named '
+                'arguments are not supported'
+            )
         for key in kwargs.keys():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
@@ -821,7 +831,7 @@ class NumberConfig(BaseConfigItem):
         '''
         self.multiple_of = multiple_of
         self.minimum = minimum
-        self.exclusive_minimum = exclusive_minimum,
+        self.exclusive_minimum = exclusive_minimum
         self.maximum = maximum
         self.exclusive_maximum = exclusive_maximum
         super(NumberConfig, self).__init__(**kwargs)
