@@ -93,7 +93,7 @@ def list_(show_all=False, return_yaml=True):
         return {'schedule': {}}
 
 
-def list_enabled(name):
+def is_enabled(name):
     '''
     List a Job only if its enabled
     
@@ -101,7 +101,7 @@ def list_enabled(name):
     
     .. code-block:: bash
     
-        salt '*' schedule.enabled name=job_name
+        salt '*' schedule.is_enabled name=job_name
     '''
     
     current_schedule = __salt__['schedule.list'](show_all=False, return_yaml=False)
