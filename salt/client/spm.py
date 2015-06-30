@@ -162,7 +162,7 @@ class SPMClient(object):
                 out_file = os.path.join(roots_path, new_name)
             elif member.name == '{0}/pillar.example'.format(name):
                 # Pillars are automatically put in the pillar_roots
-                new_name = '{0}.sls'.format(name)
+                new_name = '{0}.sls.orig'.format(name)
                 out_file = os.path.join(pillar_path, new_name)
             else:
                 out_file = os.path.join(roots_path, member.name)
@@ -215,7 +215,7 @@ class SPMClient(object):
                 member.name = member.name.replace('{0}/'.format(name), '')
             elif member.name == '{0}/pillar.example'.format(name):
                 # Pillars are automatically put in the pillar_roots
-                member.name = '{0}.sls'.format(name)
+                member.name = '{0}.sls.orig'.format(name)
                 out_path = pillar_path
             formula_tar.extract(member, out_path)
             conn.execute('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
