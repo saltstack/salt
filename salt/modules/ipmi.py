@@ -604,10 +604,13 @@ def get_sensor_data(**kwargs):
 
         salt-call ipmi.get_sensor_data api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
+    import ast
     with _IpmiCommand(**kwargs) as s:
         data = {}
         for reading in s.get_sensor_data():
-            data[reading['name']] = reading
+            if reading:
+                r = ast.literal_eval(repr(reading))
+                data[r.pop('name')] = r
     return data
 
 
