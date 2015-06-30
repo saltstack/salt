@@ -162,6 +162,24 @@ Currently, SPM does not check to see if files are already in place before
 installing them. That means that existing files will be overwritten without
 warning.
 
+Pillars
+=======
+Formula packages include a pillar.example file. Rather than being placed in the
+formula directory, this file is renamed to ``<formula name>.sls`` and placed
+in the ``pillar_roots``, where it can be easily updated to meet the user's
+needs.
+
+Loader Modules
+==============
+When an execution module is placed in ``<file_roots>/_modules/`` on the master,
+it will automatically be synced to minions, the next time a sync operation takes
+place. Other modules are also propagated this way: state modules can be placed
+in ``_states/``, and so on.
+
+When SPM detects a file in a package which resides in one of these directories,
+that directory will be placed in ``<file_roots>`` instead of in the formula
+directory with the rest of the files.
+
 Removing Packages
 =================
 Packages may be removed once they are installed using the ``spm remove``

@@ -89,7 +89,8 @@ class SPMClient(object):
         pkg_file = args[1]
 
         self._init_db()
-        out_path = self.opts['file_roots']['base'][0]
+        roots_path = self.opts['file_roots']['base'][0]
+        pillar_path = self.opts['pillar_roots']['base'][0]
         comps = pkg_file.split('-')
         comps = '-'.join(comps[:-2]).split('/')
         name = comps[-1]
@@ -98,8 +99,8 @@ class SPMClient(object):
             log.error('File {0} not found'.format(pkg_file))
             return False
 
-        if not os.path.exists(out_path):
-            os.makedirs(out_path)
+        if not os.path.exists(roots_path):
+            os.makedirs(roots_path)
 
         sqlite3.enable_callback_tracebacks(True)
         conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
@@ -142,7 +143,7 @@ class SPMClient(object):
 
         print('... installing')
 
-        log.debug('Locally installing package file {0} to {1}'.format(pkg_file, out_path))
+        log.debug('Locally installing package file {0} to {1}'.format(pkg_file, roots_path))
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
@@ -155,7 +156,16 @@ class SPMClient(object):
         for member in pkg_files:
             if member.isdir():
                 continue
-            out_file = os.path.join(out_path, member.name)
+            if member.name.startswith('{0}/_'.format(name)):
+                # Module files are distributed via _modules, _states, etc
+                new_name = member.name.replace('{0}/'.format(name), '')
+                out_file = os.path.join(roots_path, new_name)
+            elif member.name == '{0}/pillar.example'.format(name):
+                # Pillars are automatically put in the pillar_roots
+                new_name = '{0}.sls'.format(name)
+                out_file = os.path.join(pillar_path, new_name)
+            else:
+                out_file = os.path.join(roots_path, member.name)
             if os.path.exists(out_file):
                 existing_files.append(out_file)
                 if not self.opts['force']:
@@ -188,6 +198,7 @@ class SPMClient(object):
 
         # Second pass: install the files
         for member in pkg_files:
+            out_path = roots_path
             file_ref = formula_tar.extractfile(member)
             member.uid = uid
             member.gid = gid
@@ -199,6 +210,13 @@ class SPMClient(object):
                 file_hash = hashlib.sha1()
                 file_hash.update(file_ref.read())
                 digest = file_hash.hexdigest()
+            if member.name.startswith('{0}/_'.format(name)):
+                # Module files are distributed via _modules, _states, etc
+                member.name = member.name.replace('{0}/'.format(name), '')
+            elif member.name == '{0}/pillar.example'.format(name):
+                # Pillars are automatically put in the pillar_roots
+                member.name = '{0}.sls'.format(name)
+                out_path = pillar_path
             formula_tar.extract(member, out_path)
             conn.execute('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
                 name,
