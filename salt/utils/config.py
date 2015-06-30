@@ -335,18 +335,18 @@ class Prepareable(type):
     # https://github.com/aromanovich/jsl/blob/master/jsl/_compat/prepareable.py
     # which in turn was taken from https://gist.github.com/DasIch/5562625 with minor fixes
     if not six.PY3:
-        def __new__(cls, name, bases, attributes):
+        def __new__(mcs, name, bases, attributes):
             try:
                 constructor = attributes["__new__"]
             except KeyError:
-                return type.__new__(cls, name, bases, attributes)
+                return type.__new__(mcs, name, bases, attributes)
 
-            def preparing_constructor(cls, name, bases, attributes):
+            def preparing_constructor(mcs, name, bases, attributes):
                 try:
-                    cls.__prepare__
+                    mcs.__prepare__
                 except AttributeError:
-                    return constructor(cls, name, bases, attributes)
-                namespace = cls.__prepare__(name, bases)
+                    return constructor(mcs, name, bases, attributes)
+                namespace = mcs.__prepare__(name, bases)
                 defining_frame = sys._getframe(1)
                 for constant in reversed(defining_frame.f_code.co_consts):
                     if inspect.iscode(constant) and constant.co_name == name:
@@ -357,16 +357,16 @@ class Prepareable(type):
                                 return 0
                         break
                 else:
-                    return constructor(cls, name, bases, attributes)
+                    return constructor(mcs, name, bases, attributes)
 
                 by_appearance = sorted(
                     attributes.items(), key=lambda item: get_index(item[0])
                 )
                 for key, value in by_appearance:
                     namespace[key] = value
-                return constructor(cls, name, bases, namespace)
+                return constructor(mcs, name, bases, namespace)
             attributes["__new__"] = functools.wraps(constructor)(preparing_constructor)
-            return type.__new__(cls, name, bases, attributes)
+            return type.__new__(mcs, name, bases, attributes)
 
 
 class NullSentinel(object):
