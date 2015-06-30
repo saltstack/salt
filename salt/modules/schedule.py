@@ -97,6 +97,8 @@ def is_enabled(name):
     '''
     List a Job only if its enabled
 
+    .. versionadded:: 2015.5.3
+
     CLI Example:
 
     .. code-block:: bash
