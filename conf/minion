@@ -621,7 +621,7 @@
 #tcp_keepalive_intvl: -1
 
 
-######      Windows Software settings ######
+######   Windows Software settings    ######
 ############################################
 # Location of the repository cache file on the master:
 #win_repo_cachefile: 'salt://win/repo/winrepo.p'
