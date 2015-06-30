@@ -44,8 +44,7 @@ from salt.exceptions import (
 # pylint: disable=import-error
 HAS_GLANCE = False
 try:
-    from glanceclient.v2 import client as glance_client
-    #import glanceclient.v2.images
+    from glanceclient import client
     from glanceclient import exc
     HAS_GLANCE = True
     import logging
@@ -76,10 +75,11 @@ def __virtual__():
 __opts__ = {}
 
 
-def _auth(profile=None, **connection_args):
+def _auth(profile=None, api_version=2, **connection_args):
     '''
     Set up glance credentials, returns
-    glanceclient.v2.client.Client.
+    `glanceclient.client.Client`. Optional parameter
+    "api_version" defaults to 2.
 
     Only intended to be used within glance-enabled modules
     '''
@@ -127,10 +127,10 @@ def _auth(profile=None, **connection_args):
             kwargs['insecure'] = True
 
     if token:
-        log.debug('Calling glanceclient.v2.client.Client(' + \
-            '{0}, **{1})'.format(endpoint, kwargs))
+        log.debug('Calling glanceclient.client.Client(' + \
+            '{0}, **{1})'.format(api_version, endpoint, kwargs))
         try:
-            return glance_client.Client(endpoint, **kwargs)
+            return client.Client(api_version, endpoint, **kwargs)
         except exc.HTTPUnauthorized:
             kwargs.pop('token')
             kwargs['password'] = password
@@ -145,9 +145,9 @@ def _auth(profile=None, **connection_args):
         log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
         kwargs.pop('password')
-        log.debug('Calling glanceclient.v2.client.Client(' + \
-            '{0}, **{1})'.format(endpoint, kwargs))
-        return glance_client.Client(endpoint, **kwargs)
+        log.debug('Calling glanceclient.client.Client(' + \
+            '{0}, **{1})'.format(api_version, endpoint, kwargs))
+        return client.Client(api_version, endpoint, **kwargs)
     else:
         raise NotImplementedError(
             "Can't retrieve a auth_token without keystone")
@@ -163,7 +163,8 @@ def image_create(name, location, profile=None, visibility='public',
 
         salt '*' glance.image_create name=f16-jeos visibility=public \\
                  disk_format=qcow2 container_format=ovf \\
-                 copy_from=http://berrange.fedorapeople.org/images/2012-02-29/f16-x86_64-openstack-sda.qcow2
+                 copy_from=http://berrange.fedorapeople.org/\
+                    images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
     For all possible values, run ``glance help image-create`` on the minion.
     '''
@@ -183,18 +184,12 @@ def image_create(name, location, profile=None, visibility='public',
     if not disk_format in df_list:
         raise SaltInvocationError('"disk_format" needs to be one ' +\
             'of the following: {0}'.format(', '.join(df_list)))
-    g_client = _auth(profile)
-
-    image = g_client.images.create(name=name, location=location)
-    # Icehouse glanceclient doesn't have add_location()
-    #if 'add_location' in dir(g_client.images):
-    #    g_client.images.add_location(image.id, location)
-    #else:
-    #    g_client.images.update(image.id, location=location)
-    #newimage = image_list(str(image.id), profile)
-    #return {newimage['name']: newimage}
-    return {image['name']: image}
-
+    # Icehouse's glanceclient doesn't have add_location() and
+    # glanceclient.v2 doesn't implement Client.images.create()
+    # in a usable fashion. Thus we have to use v1 for now.
+    g_client = _auth(profile, api_version=1)
+    image = g_client.images.create(name=name, copy_from=location)
+    return image_show(image.id)
 
 def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     '''
@@ -268,19 +263,9 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_list
     '''
     g_client = _auth(profile)
-    #pformat = pprint.PrettyPrinter(indent=4).pformat
     ret = {}
+    # TODO: Get rid of the wrapping dict, see #24568
     for image in g_client.images.list():
-        #log.debug('Details for image "{0}":'.format(image.name) + \
-        #    '\n{0}'.format(pformat(image)))
-        #
-        # Changes from v1 API:
-        # * +file
-        # * +tags
-        # * -checksum
-        # * -deleted
-        # * is_public=True -> visibility='public'
-        #
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
