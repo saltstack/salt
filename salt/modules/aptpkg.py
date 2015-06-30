@@ -371,6 +371,7 @@ def install(name=None,
             debconf=None,
             pkgs=None,
             sources=None,
+            reinstall=False,
             **kwargs):
     '''
     Install the passed package, add refresh=True to update the dpkg database.
@@ -410,6 +411,17 @@ def install(name=None,
     version
         Install a specific version of the package, e.g. 1.2.3~0ubuntu0. Ignored
         if "pkgs" or "sources" is passed.
+
+    reinstall : False
+        Specifying reinstall=True will use ``apt-get install --reinstall``
+        rather than simply ``apt-get install`` for requested packages that are
+        already installed.
+
+        If a version is specified with the requested package, then ``apt-get
+        install --reinstall`` will only be used if the installed version
+        matches the requested version.
+
+        .. versionadded:: Beryllium
 
 
     Multiple Package Installation Options:
@@ -469,30 +481,36 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    refreshdb = False
+    _refresh_db = False
     if salt.utils.is_true(refresh):
-        refreshdb = True
+        _refresh_db = True
         if 'version' in kwargs and kwargs['version']:
-            refreshdb = False
-            _latest_version = latest_version(name, refresh=False, show_installed=True)
+            _refresh_db = False
+            _latest_version = latest_version(name,
+                                             refresh=False,
+                                             show_installed=True)
             _version = kwargs.get('version')
-            # If the versions don't match, refresh is True, otherwise no need to refresh
+            # If the versions don't match, refresh is True, otherwise no need
+            # to refresh
             if not _latest_version == _version:
-                refreshdb = True
+                _refresh_db = True
 
         if pkgs:
-            refreshdb = False
+            _refresh_db = False
             for pkg in pkgs:
                 if isinstance(pkg, dict):
                     _name = next(six.iterkeys(pkg))
-                    _latest_version = latest_version(_name, refresh=False, show_installed=True)
+                    _latest_version = latest_version(_name,
+                                                     refresh=False,
+                                                     show_installed=True)
                     _version = pkg[_name]
-                    # If the versions don't match, refresh is True, otherwise no need to refresh
+                    # If the versions don't match, refresh is True, otherwise
+                    # no need to refresh
                     if not _latest_version == _version:
-                        refreshdb = True
+                        _refresh_db = True
                 else:
                     # No version specified, so refresh should be True
-                    refreshdb = True
+                    _refresh_db = True
 
     if debconf:
         __salt__['debconf.set_file'](debconf)
@@ -509,69 +527,157 @@ def install(name=None,
     if not fromrepo and repo:
         fromrepo = repo
 
-    old = list_pkgs()
-
-    downgrade = False
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-    elif pkg_type == 'file':
+
+    old = list_pkgs()
+    targets = []
+    downgrade = []
+    to_reinstall = {}
+    cmd_prefix = []
+    if pkg_type == 'repository':
+        pkg_params_items = six.iteritems(pkg_params)
+        # Build command prefix
+        cmd_prefix.extend(['apt-get', '-q', '-y'])
+        if kwargs.get('force_yes', False):
+            cmd_prefix.append('--force-yes')
         if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
-            cmd = ['dpkg', '-i', '--force-confnew']
+            cmd_prefix += ['-o', 'DPkg::Options::=--force-confnew']
         else:
-            cmd = ['dpkg', '-i', '--force-confold']
+            cmd_prefix += ['-o', 'DPkg::Options::=--force-confold']
+        cmd_prefix += ['-o', 'DPkg::Options::=--force-confdef']
+        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
+            cmd_prefix.append('--no-install-recommends')
+        if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
+            cmd_prefix.append('--only-upgrade')
         if skip_verify:
-            cmd.append('--force-bad-verify')
+            cmd_prefix.append('--allow-unauthenticated')
+        if fromrepo:
+            cmd_prefix.extend(['-t', fromrepo])
+        cmd_prefix.append('install')
+    else:
+        pkg_params_items = []
+        for pkg_source in pkg_params:
+            if 'lowpkg.bin_pkg_info' in __salt__:
+                deb_info = __salt__['lowpkg.bin_pkg_info'](pkg_source)
+            else:
+                deb_info = None
+            if deb_info is None:
+                log.error(
+                    'pkg.install: Unable to get deb information for {0}. '
+                    'Version comparisons will be unavailable.'
+                    .format(pkg_source)
+                )
+                pkg_params_items.append([pkg_source])
+            else:
+                pkg_params_items.append(
+                    [deb_info['name'], pkg_source, deb_info['version']]
+                )
+        # Build command prefix
+        if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
+            cmd_prefix.extend(['dpkg', '-i', '--force-confnew'])
+        else:
+            cmd_prefix.extend(['dpkg', '-i', '--force-confold'])
+        if skip_verify:
+            cmd_prefix.append('--force-bad-verify')
         if HAS_APT:
             _resolve_deps(name, pkg_params, **kwargs)
-        cmd.extend(pkg_params)
-    elif pkg_type == 'repository':
-        if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
-            # Only use the 'version' param if 'name' was not specified as a
-            # comma-separated list
-            pkg_params = {name: str(kwargs.get('version'))}
-        targets = []
-        for param, version_num in six.iteritems(pkg_params):
-            if version_num is None:
-                targets.append(param)
-            else:
-                cver = old.get(param)
-                if cver is not None \
-                        and salt.utils.compare_versions(ver1=version_num,
-                                                        oper='<',
-                                                        ver2=cver,
-                                                        cmp_func=version_cmp):
-                    downgrade = True
-                targets.append('{0}={1}'.format(param, str(version_num).lstrip('=')))
-        if fromrepo:
-            log.info('Targeting repo {0!r}'.format(fromrepo))
-        cmd = ['apt-get', '-q', '-y']
-        if downgrade or kwargs.get('force_yes', False):
-            cmd.append('--force-yes')
-        if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
-            cmd = cmd + ['-o', 'DPkg::Options::=--force-confnew']
-        else:
-            cmd = cmd + ['-o', 'DPkg::Options::=--force-confold']
-        cmd = cmd + ['-o', 'DPkg::Options::=--force-confdef']
-        if 'install_recommends' in kwargs and not kwargs['install_recommends']:
-            cmd.append('--no-install-recommends')
-        if 'only_upgrade' in kwargs and kwargs['only_upgrade']:
-            cmd.append('--only-upgrade')
-        if skip_verify:
-            cmd.append('--allow-unauthenticated')
-        if fromrepo:
-            cmd.extend(['-t', fromrepo])
-        cmd.append('install')
-        cmd.extend(targets)
 
-    if refreshdb:
+    for pkg_item_list in pkg_params_items:
+        if pkg_type == 'repository':
+            pkgname, version_num = pkg_item_list
+            if name \
+                    and pkgs is None \
+                    and kwargs.get('version') \
+                    and len(pkg_params) == 1:
+                # Only use the 'version' param if 'name' was not specified as a
+                # comma-separated list
+                version_num = kwargs['version']
+        else:
+            try:
+                pkgname, pkgpath, version_num = pkg_item_list
+            except ValueError:
+                pkgname = None
+                pkgpath = pkg_item_list[0]
+                version_num = None
+
+        if version_num is None:
+            if pkg_type == 'repository':
+                if reinstall and pkgname in old:
+                    to_reinstall[pkgname] = pkgname
+                else:
+                    targets.append(pkgname)
+            else:
+                targets.append(pkgpath)
+        else:
+            # If we are installing a package file and not one from the repo,
+            # and version_num is not None, then we can assume that pkgname is
+            # not None, since the only way version_num is not None is if DEB
+            # metadata parsing was successful.
+            if pkg_type == 'repository':
+                pkgstr = '{0}={1}'.format(pkgname, version_num)
+            else:
+                pkgstr = pkgpath
+
+            cver = old.get(pkgname, '')
+            if reinstall and cver \
+                    and salt.utils.compare_versions(ver1=version_num,
+                                                    oper='==',
+                                                    ver2=cver):
+                to_reinstall[pkgname] = pkgstr
+            elif not cver or salt.utils.compare_versions(ver1=version_num,
+                                                         oper='>=',
+                                                         ver2=cver):
+                targets.append(pkgstr)
+            else:
+                downgrade.append(pkgstr)
+
+    if fromrepo and not sources:
+        log.info('Targeting repo \'{0}\''.format(fromrepo))
+
+    cmds = []
+    if targets:
+        cmd = copy.deepcopy(cmd_prefix)
+        cmd.extend(targets)
+        cmds.append(cmd)
+
+    if downgrade:
+        cmd = copy.deepcopy(cmd_prefix)
+        if pkg_type == 'repository' and '--force-yes' not in cmd:
+            # Downgrading requires --force-yes. Insert this before 'install'
+            cmd.insert(-1, '--force-yes')
+        cmd.extend(downgrade)
+        cmds.append(cmd)
+
+    if to_reinstall:
+        cmd = copy.deepcopy(cmd_prefix)
+        if not sources:
+            cmd.append('--reinstall')
+        cmd.extend([x for x in six.itervalues(to_reinstall)])
+        cmds.append(cmd)
+
+    if not cmds:
+        return {}
+
+    if _refresh_db:
         refresh_db()
 
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
-    __salt__['cmd.run'](cmd, python_shell=False, env=env)
+
+    for cmd in cmds:
+        __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    for pkgname in to_reinstall:
+        if pkgname not in ret or pkgname in old:
+            ret.update({pkgname: {'old': old.get(pkgname, ''),
+                                  'new': new.get(pkgname, '')}})
+
+    return ret
 
 
 def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
@@ -2044,7 +2150,7 @@ def _resolve_deps(name, pkgs, **kwargs):
 
         if ret != 0:
             raise CommandExecutionError(
-                    'Error: unable to resolve dependencies for: {0}'.format(name)
+                'Error: unable to resolve dependencies for: {0}'.format(name)
             )
         else:
             try:

@@ -785,7 +785,7 @@ def install(name=None,
         ``yum reinstall`` will only be used if the installed version
         matches the requested version.
 
-        Works with sources when the package header of the source can be
+        Works with ``sources`` when the package header of the source can be
         matched to the name and version of an installed package.
 
         .. versionadded:: 2014.7.0
@@ -845,11 +845,11 @@ def install(name=None,
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
-    normalize
-        Normalize the package name by removing the architecture.  Default is True.
-        This is useful for poorly created packages which might include the
-        architecture as an actual part of the name such as kernel modules
-        which match a specific kernel version.
+    normalize : True
+        Normalize the package name by removing the architecture. This is useful
+        for poorly created packages which might include the architecture as an
+        actual part of the name such as kernel modules which match a specific
+        kernel version.
 
         .. code-block:: bash
 
