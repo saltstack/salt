@@ -24,7 +24,6 @@ import salt.config
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
-from salt.utils import parsers
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
