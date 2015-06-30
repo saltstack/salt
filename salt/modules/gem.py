@@ -54,7 +54,8 @@ def install(gems,           # pylint: disable=C0103
             rdoc=False,
             ri=False,
             pre_releases=False,
-            proxy=None):      # pylint: disable=C0103
+            proxy=None,
+            source=None):      # pylint: disable=C0103
     '''
     Installs one or several gems.
 
@@ -79,6 +80,9 @@ def install(gems,           # pylint: disable=C0103
     proxy : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
+    source : None
+        Use the specified HTTP gem source server to download gem.
+        Format: http://hostname[:port]
 
     CLI Example:
 
@@ -99,6 +103,8 @@ def install(gems,           # pylint: disable=C0103
         options.append('--pre')
     if proxy:
         options.append('-p {0}'.format(proxy))
+    if source:
+        options.append('--source {0}'.format(source))
 
     cmdline_args = ' '.join(options)
     return _gem('install {gems} {options}'.format(gems=gems,
