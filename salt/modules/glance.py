@@ -47,11 +47,10 @@ try:
     #import glanceclient.v2.images
     from glanceclient import exc
     HAS_GLANCE = True
-    #import pprint
     import logging
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger(__name__)
-    #import pprint
+    import pprint
 except ImportError:
     pass
 
@@ -185,7 +184,7 @@ def image_create(name, location, profile=None, visibility='public',
             'of the following: {0}'.format(', '.join(df_list)))
     g_client = _auth(profile)
     
-    image = g_client.images.create(name=name, location=location)
+    image = g_client.images.create(name=name, Location=location)
     # Icehouse glanceclient doesn't have add_location()
     #if 'add_location' in dir(g_client.images):
     #    g_client.images.add_location(image.id, location)
@@ -243,25 +242,27 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     if not id:
         return {'Error': 'Unable to resolve image id'}
     image = g_client.images.get(id)
+    pformat = pprint.PrettyPrinter(indent=4).pformat
+    log.debug('Properties of image {0}:\n{1}'.format(
+        image.name, pformat(image)))
     # TODO: Get rid of the wrapping dict, see #24568
     ret[image.name] = {
             'id': image.id,
             'name': image.name,
-            'container_format': image.container_format,
             'created_at': image.created_at,
             'file': image.file,
             'min_disk': image.min_disk,
             'min_ram': image.min_ram,
             'owner': image.owner,
             'protected': image.protected,
-            'size': image.size,
             'status': image.status,
             'tags': image.tags,
             'updated_at': image.updated_at,
             'visibility': image.visibility,
             }
-    if image.has_key('disk_format'):
-        ret[image.name]['disk_format'] = image.disk_format
+    for key in ['container_format', 'location', 'disk_format', 'size']:
+        if image.has_key(key):
+            ret[image.name][key] = image[key]
     return ret
 
 
