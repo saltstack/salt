@@ -16,6 +16,8 @@ import sqlite3
 import datetime
 import hashlib
 import logging
+import pwd
+import grp
 
 # Import Salt libs
 import salt.config
@@ -176,9 +178,21 @@ class SPMClient(object):
             formula_def['summary'],
             formula_def['description'],
         ))
+
+        # No defaults for this in config.py; default to the current running
+        # user and group
+        uid = self.opts.get('spm_uid', os.getuid())
+        gid = self.opts.get('spm_gid', os.getgid())
+        uname = pwd.getpwuid(uid)[0]
+        gname = grp.getgrgid(gid)[0]
+
         # Second pass: install the files
         for member in pkg_files:
             file_ref = formula_tar.extractfile(member)
+            member.uid = uid
+            member.gid = gid
+            member.uname = uname
+            member.gname = gname
             if member.isdir():
                 digest = ''
             else:
