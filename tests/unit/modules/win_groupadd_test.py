@@ -21,129 +21,23 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import win_groupadd
 
+# Import Other Libs
+# pylint: disable=W0611
+try:
+    import win32com
+    import pythoncom
+    import pywintypes
+    HAS_WIN_LIBS = True
+except ImportError:
+    HAS_WIN_LIBS = False
+# pylint: enable=W0611
+
+
 win_groupadd.__context__ = {}
 win_groupadd.__opts__ = {'test': False}
 
 
-class Mockpythoncom(object):
-    '''
-    Mock pythoncom class
-    '''
-    @staticmethod
-    def CoInitialize():
-        '''
-        Mock CoInitialize method
-        '''
-        return Mockpythoncom()
-
-
-class MockClient(object):
-    '''
-    Mock MockClient class
-    '''
-    objectSID = True
-    flag = None
-    cn = 'salt'
-
-    def __init__(self):
-        self.name_space = None
-        self.nul = None
-        self.Name = None
-        self.passwd = None
-        self.ADSPath = 'WinNT://dc=\\user1'
-
-    def Dispatch(self, name_space):
-        """
-        Mock of Dispatch method
-        """
-        self.name_space = name_space
-        return MockClient()
-
-    def GetObject(self, nul, name):
-        """
-        Mock of GetObject method
-        """
-        obj = MockClient()
-        obj.nul = nul
-        obj.Name = name
-        if self.flag == 1:
-            obj.Name = None
-            return obj
-        elif self.flag == 2:
-            raise MockComError
-        elif self.flag == 3:
-            return [obj]
-        return obj
-
-    @staticmethod
-    def members():
-        """
-        Mock of members method
-        """
-        return [MockClient()]
-
-    @staticmethod
-    def Delete(group, groupName):
-        """
-        Mock of Delete method
-        """
-        return (group, groupName)
-
-    def Add(self, username):
-        """
-        Mock of Delete method
-        """
-        if self.flag == 1:
-            raise MockComError
-        return username
-
-    def Remove(self, username):
-        """
-        Mock of Delete method
-        """
-        if self.flag == 1:
-            raise MockComError
-        return username
-
-
-class Mockwin32com(object):
-    '''
-    Mock Win32com class
-    '''
-    def __init__(self):
-        self.client = MockClient()
-
-
-class MockComError(Exception):
-    """
-    Mock of com_error
-    """
-    def __init__(self):
-        super(MockComError, self).__init__('error')
-        self.message = 'error'
-        self.excepinfo = ['A', 'B', 'C']
-
-
-class Mockpywintypes(object):
-    '''
-    Mock pywintypes class
-    '''
-    def __init__(self):
-        self.com_error = MockComError
-        self.obj = None
-
-    def SID(self, obj):
-        """
-        Mock of SID method
-        """
-        self.obj = obj
-        return True
-
-win_groupadd.win32com = Mockwin32com()
-win_groupadd.pythoncom = Mockpythoncom()
-win_groupadd.pywintypes = Mockpywintypes()
-
-
+@skipIf(not HAS_WIN_LIBS, 'win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinGroupTestCase(TestCase):
     '''
@@ -175,16 +69,18 @@ class WinGroupTestCase(TestCase):
         '''
         Test if it return information about a group.
         '''
-        MockClient.flag = None
-        self.assertDictEqual(win_groupadd.info('dc=salt'),
-                             {'gid': None, 'members': ['dc=\\user1'], 'passwd': None,
-                              'name': 'WinNT://./dc=salt,group'})
+        with patch(win_groupadd.win32.client, 'flag', None):
+            self.assertDictEqual(win_groupadd.info('dc=salt'),
+                                 {'gid': None,
+                                  'members': ['dc=\\user1'],
+                                  'passwd': None,
+                                  'name': 'WinNT://./dc=salt,group'})
 
-        MockClient.flag = 1
-        self.assertFalse(win_groupadd.info('dc=salt'))
+        with patch(win_groupadd.win32.client, 'flag', 1):
+            self.assertFalse(win_groupadd.info('dc=salt'))
 
-        MockClient.flag = 2
-        self.assertFalse(win_groupadd.info('dc=salt'))
+        with patch(win_groupadd.win32.client, 'flag', 2):
+            self.assertFalse(win_groupadd.info('dc=salt'))
 
     # 'getent' function tests: 1
 
@@ -201,16 +97,16 @@ class WinGroupTestCase(TestCase):
         '''
         Test if it add a user to a group
         '''
-        MockClient.flag = None
-        self.assertDictEqual(win_groupadd.adduser('dc=foo', 'dc=\\username'),
-                             {'changes': {'Users Added': ['dc=\\username']},
-                              'comment': '', 'name': 'dc=foo', 'result': True})
+        with patch(win_groupadd.win32.client, 'flag', None):
+            self.assertDictEqual(win_groupadd.adduser('dc=foo', 'dc=\\username'),
+                                 {'changes': {'Users Added': ['dc=\\username']},
+                                  'comment': '', 'name': 'dc=foo', 'result': True})
 
-        MockClient.flag = 1
-        comt = ('Failed to add dc=\\username to group dc=foo.  C')
-        self.assertDictEqual(win_groupadd.adduser('dc=foo', 'dc=\\username'),
-                             {'changes': {'Users Added': []}, 'name': 'dc=foo',
-                              'comment': comt, 'result': False})
+        with patch(win_groupadd.win32.client, 'flag', 1):
+            comt = ('Failed to add dc=\\username to group dc=foo.  C')
+            self.assertDictEqual(win_groupadd.adduser('dc=foo', 'dc=\\username'),
+                                 {'changes': {'Users Added': []}, 'name': 'dc=foo',
+                                  'comment': comt, 'result': False})
 
     # 'deluser' function tests: 1
 
@@ -234,21 +130,22 @@ class WinGroupTestCase(TestCase):
         comment = ['Failure accessing group dc=foo.  C']
         ret = {'name': 'dc=foo', 'result': False, 'comment': comment,
                'changes': {'Users Added': [], 'Users Removed': []}}
-        MockClient.flag = 2
-        self.assertDictEqual(win_groupadd.members
-                             ('dc=foo', 'dc=\\user1,dc=\\user2,dc=\\user3'),
-                             ret)
 
-        MockClient.flag = 1
-        comment = ['Failed to add dc=\\user2 to dc=foo.  C',
-                   'Failed to remove dc=\\user1 from dc=foo.  C']
-        ret.update({'comment': comment, 'result': False})
-        self.assertDictEqual(win_groupadd.members('dc=foo', 'dc=\\user2'), ret)
+        with patch(win_groupadd.win32.client, 'flag', 2):
+            self.assertDictEqual(win_groupadd.members
+                                 ('dc=foo', 'dc=\\user1,dc=\\user2,dc=\\user3'),
+                                 ret)
 
-        MockClient.flag = None
-        comment = ['dc=foo membership is correct']
-        ret.update({'comment': comment, 'result': None})
-        self.assertDictEqual(win_groupadd.members('dc=foo', 'dc=\\user1'), ret)
+        with patch(win_groupadd.win32.client, 'flag', 1):
+            comment = ['Failed to add dc=\\user2 to dc=foo.  C',
+                       'Failed to remove dc=\\user1 from dc=foo.  C']
+            ret.update({'comment': comment, 'result': False})
+            self.assertDictEqual(win_groupadd.members('dc=foo', 'dc=\\user2'), ret)
+
+        with patch(win_groupadd.win32.client, 'flag', None):
+            comment = ['dc=foo membership is correct']
+            ret.update({'comment': comment, 'result': None})
+            self.assertDictEqual(win_groupadd.members('dc=foo', 'dc=\\user1'), ret)
 
 
 if __name__ == '__main__':
