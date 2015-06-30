@@ -712,29 +712,57 @@ class StringConfig(BaseConfigItem):
 
 class EMailConfig(StringConfig):
     '''
-    An email configuration field
+    An internet email address, see `RFC 5322, section 3.4.1`__.
+
+    .. __: http://tools.ietf.org/html/rfc5322
     '''
     __format__ = 'email'
 
 
 class IPv4Config(StringConfig):
     '''
-    An IPv4 configuration field
+    An IPv4 address configuration field, according to dotted-quad ABNF syntax as defined in
+    `RFC 2673, section 3.2`__.
+
+    .. __: http://tools.ietf.org/html/rfc2673
     '''
     __format__ = 'ipv4'
 
 
+class IPv6Config(StringConfig):
+    '''
+    An IPv6 address configuration field, as defined in `RFC 2373, section 2.2`__.
+
+    .. __: http://tools.ietf.org/html/rfc2373
+    '''
+    __format__ = 'ipv6'
+
+
+class HostnameConfig(StringConfig):
+    '''
+    An Internet host name configuration field, see `RFC 1034, section 3.1`__.
+
+    .. __: http://tools.ietf.org/html/rfc1034
+    '''
+    __format__ = 'hostname'
+
+
 class DateTimeConfig(StringConfig):
     '''
-    An ISO 8601 formatted date-time configuration field
+    An ISO 8601 formatted date-time configuration field, as defined by `RFC 3339, section 5.6`__.
+
+    .. __: http://tools.ietf.org/html/rfc3339
     '''
     __format__ = 'date-time'
 
 
 class UriConfig(StringConfig):
     '''
-    An URI configuration field
+    A universal resource identifier (URI) configuration field, according to `RFC3986`__.
+
+    .. __: http://tools.ietf.org/html/rfc3986
     '''
+    __format__ = 'uri'
 
 
 class NumberConfig(BaseConfigItem):
