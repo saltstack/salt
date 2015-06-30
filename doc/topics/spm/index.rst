@@ -165,9 +165,9 @@ warning.
 Pillars
 =======
 Formula packages include a pillar.example file. Rather than being placed in the
-formula directory, this file is renamed to ``<formula name>.sls`` and placed
-in the ``pillar_roots``, where it can be easily updated to meet the user's
-needs.
+formula directory, this file is renamed to ``<formula name>.sls.orig`` and
+placed in the ``pillar_roots``, where it can be easily updated to meet the
+user's needs.
 
 Loader Modules
 ==============
