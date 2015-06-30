@@ -92,6 +92,7 @@ def list_(show_all=False, return_yaml=True):
     else:
         return {'schedule': {}}
 
+
 def list_enabled(name):
     '''
     List a Job only if its enabled
@@ -108,6 +109,7 @@ def list_enabled(name):
         return current_schedule[name]
     else:
         return {}
+
 
 def purge(**kwargs):
     '''
