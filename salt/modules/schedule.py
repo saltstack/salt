@@ -92,6 +92,22 @@ def list_(show_all=False, return_yaml=True):
     else:
         return {'schedule': {}}
 
+def list_enabled(name):
+    '''
+    List a Job only if its enabled
+    
+    CLI Example:
+    
+    .. code-block:: bash
+    
+        salt '*' schedule.enabled name=job_name
+    '''
+    
+    current_schedule = __salt__['schedule.list'](show_all=False, return_yaml=False)
+    if name in current_schedule:
+        return current_schedule[name]
+    else:
+        return {}
 
 def purge(**kwargs):
     '''
