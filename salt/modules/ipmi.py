@@ -605,7 +605,7 @@ def get_sensor_data(**kwargs):
         salt-call ipmi.get_sensor_data api_host=127.0.0.1 api_user=admin api_pass=pass
     '''
     import ast
-    with IpmiCommand(**kwargs) as s:
+    with _IpmiCommand(**kwargs) as s:
         data = {}
         for reading in s.get_sensor_data():
             if reading:
