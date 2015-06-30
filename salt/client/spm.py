@@ -317,7 +317,9 @@ class SPMClient(object):
                 spm_fh = tarfile.open(spm_path, 'r:bz2')
                 formula_handle = spm_fh.extractfile('{0}/FORMULA'.format(spm_name))
                 formula_conf = yaml.safe_load(formula_handle.read())
-                repo_metadata[spm_name] = formula_conf.copy()
+                repo_metadata[spm_name] = {
+                    'info': formula_conf.copy(),
+                }
                 repo_metadata[spm_name]['filename'] = spm_file
 
         metadata_filename = '{0}/SPM-METADATA'.format(repo_path)
