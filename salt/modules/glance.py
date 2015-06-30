@@ -36,9 +36,10 @@ Module for handling openstack glance calls.
 '''
 
 # Import third party libs
-import salt.ext.six as six
+#import salt.ext.six as six
 from salt.exceptions import (
-    CommandExecutionError, SaltInvocationError
+    #CommandExecutionError,
+    SaltInvocationError
     )
 # pylint: disable=import-error
 HAS_GLANCE = False
@@ -91,7 +92,7 @@ def _auth(profile=None, **connection_args):
     # look in connection_args first, then default to config file
     def get(key, default=None):
         '''
-        TODO
+        TODO: Add docstring.
         '''
         return connection_args.get('connection_' + key,
             __salt__['config.get'](prefix + key, default))
@@ -171,7 +172,7 @@ def image_create(name, location, profile=None, visibility='public',
     # valid options for "container_format":
     cf_list = ['ami', 'ari', 'aki', 'bare', 'ovf']
     # valid options for "disk_format":
-    df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk', 
+    df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk',
                'raw', 'qcow2', 'vdi', 'iso']
     if not visibility in v_list:
         raise SaltInvocationError('"visibility" needs to be one ' +\
@@ -183,7 +184,7 @@ def image_create(name, location, profile=None, visibility='public',
         raise SaltInvocationError('"disk_format" needs to be one ' +\
             'of the following: {0}'.format(', '.join(df_list)))
     g_client = _auth(profile)
-    
+
     image = g_client.images.create(name=name, location=location)
     # Icehouse glanceclient doesn't have add_location()
     #if 'add_location' in dir(g_client.images):
@@ -296,7 +297,7 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
             }
         # Those cause AttributeErrors in Icehouse' glanceclient
         for attr in ['container_format', 'disk_format', 'size']:
-            if image.has_key(attr): 
+            if image.has_key(attr):
                 ret[image.name][attr] = image[attr]
         if id == image.id:
             return ret[image.name]
