@@ -598,7 +598,14 @@ class BaseConfigItem(six.with_metaclass(BaseConfigItemMeta, object)):
         self.description = description or self.__doc__
         self.default = default
         self.required = required
-        self.enum = list(enum)
+        if enum is not None:
+            if not isinstance(enum, (list, tuple, set)):
+                raise RuntimeError(
+                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
+                    'to define \'enum\''
+                )
+            enum = list(enum)
+        self.enum = enum
         self.extra = extra
 
     def _get_argname_value(self, argname):
