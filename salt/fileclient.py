@@ -352,18 +352,23 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
+        if path.startswith('salt://'):
+            path, senv = salt.utils.url.parse(path)
+            if senv:
+                saltenv = senv
+
+        escaped = True if salt.utils.url.is_escaped(path) else False
+
+        # also strip escape character '|'
         localsfilesdest = os.path.join(
-            self.opts['cachedir'], 'localfiles', path.lstrip('/'))
+            self.opts['cachedir'], 'localfiles', path.lstrip('|/'))
         filesdest = os.path.join(
-            self.opts['cachedir'], 'files', saltenv, path.lstrip('salt://'))
-        extrndest = self._extrn_path(path, saltenv)
+            self.opts['cachedir'], 'files', saltenv, path.lstrip('|'))
 
         if os.path.exists(filesdest):
-            return filesdest
+            return salt.utils.url.escape(filesdest) if escaped else filesdest
         elif os.path.exists(localsfilesdest):
-            return localsfilesdest
-        elif os.path.exists(extrndest):
-            return extrndest
+            return salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
 
         return ''
 
