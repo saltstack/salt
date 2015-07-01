@@ -352,6 +352,42 @@ def image_schema(profile=None):
     '''
     return schema_get('image', profile)
 
+def image_update(id=None, name=None, profile=None, **kwargs):
+    '''
+    Update properties of given image.
+    Known to work for:
+      - min_ram (in MB)
+      - protected (bool)
+      - visibility ('public' or 'private')
+    '''
+    if id:
+        image = image_show(id=id)
+        if len(image.keys()) == 1:
+            image = image[image.keys()[0]]
+    elif name:
+        image = image_show(name=name)
+        if not image:
+            # TODO: Replace this untested PSEUDOCODE
+            image_ids = [ image[image.keys()[0]].id
+                    for image in image_list(name=name) ]
+            return {'result': False,
+                'comment': 'Found more than one image with name "{0}":\n'+
+                    '\n'.join(image_ids)}
+        if len(image.keys()) == 1:
+            image = image[image.keys()[0]]
+    else:
+        raise SaltInvocationError
+    log.debug('Found image:\n{0}'.format(image))
+    to_update = {}
+    for key, value in kwargs.items():
+        if key.startswith('_'):
+            continue
+        if not image.has_key(key) or image[key] != value:
+            log.debug('add <{0}={1}> to to_update'.format(key,value))
+            to_update[key] = value
+    g_client = _auth(profile)
+    updated = g_client.images.update(image['id'], **to_update)
+    return updated
 
 def schema_get(name, profile=None):
     '''
