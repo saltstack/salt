@@ -250,7 +250,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     if len(schema.keys()) == 1:
         schema = schema['image']
     for key in schema.keys():
-        if image.has_key(key):
+        if key in image:
             ret[image.name][key] = image[key]
     return ret
 
@@ -285,7 +285,7 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
             }
         # Those cause AttributeErrors in Icehouse' glanceclient
         for attr in ['container_format', 'disk_format', 'size']:
-            if image.has_key(attr):
+            if attr in image:
                 ret[image.name][attr] = image[attr]
         if id == image.id:
             return ret[image.name]
