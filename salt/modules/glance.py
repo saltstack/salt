@@ -144,7 +144,7 @@ def _auth(profile=None, api_version=2, **connection_args):
     if HAS_KEYSTONE:
         # TODO: redact kwargs['password']
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
-            '{0}, {1}, **{2})'.format(endpoint, kwargs))
+            '{0}, **{1})'.format(endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
         log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
