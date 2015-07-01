@@ -48,6 +48,12 @@
 # The user to run salt.
 #user: root
 
+# Setting sudo_user will cause salt to run all execution modules under an sudo
+# to the user given in sudo_user.  The user under which the salt minion process
+# itself runs will still be that provided in the user config above, but all
+# execution modules run by the minion will be rerouted through sudo.
+#sudo_user: saltdev
+
 # Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
 
@@ -615,7 +621,7 @@
 #tcp_keepalive_intvl: -1
 
 
-######      Windows Software settings ######
+######   Windows Software settings    ######
 ############################################
 # Location of the repository cache file on the master:
 #win_repo_cachefile: 'salt://win/repo/winrepo.p'
