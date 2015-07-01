@@ -1653,7 +1653,7 @@ def replace(path,
                               buffering=bufsize) as r_file:
             count_replaced = 0
             for line in r_file:
-                if count == 0 or count_replaced != count:
+                if count == 0 or count_replaced <= count:
                     result, nrepl = re.subn(cpattern, repl, line, count)
                     count_replaced += nrepl
                 else:
@@ -1709,7 +1709,7 @@ def replace(path,
                         for line in r_file:
                             result, nrepl = re.subn(cpattern, repl,
                                                     line, count)
-                            if count == 0 or count_replaced != count:
+                            if count == 0 or count_replaced <= count:
                                 result, nrepl = re.subn(cpattern, repl, line, count)
                                 count_replaced += nrepl
                             else:
