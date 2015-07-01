@@ -157,7 +157,7 @@ def _auth(profile=None, api_version=2, **connection_args):
             "Can't retrieve a auth_token without keystone")
 
 def image_create(name, location, profile=None, visibility='public',
-            container_format='bare', disk_format='raw'):
+            protected=False, container_format='bare', disk_format='raw'):
     '''
     Create an image (glance image-create)
 
@@ -192,7 +192,17 @@ def image_create(name, location, profile=None, visibility='public',
     # glanceclient.v2 doesn't implement Client.images.create()
     # in a usable fashion. Thus we have to use v1 for now.
     g_client = _auth(profile, api_version=1)
-    image = g_client.images.create(name=name, copy_from=location)
+    # Workaround for APIv1:
+    if visibility == 'public':
+        is_public = True
+    elif visibility == 'private':
+        is_public = False
+    else:
+        raise ValueError('"visibility" has to be eiter "public"' +
+            'or "private"')
+    image = g_client.images.create(name=name, copy_from=location,
+        container_format=container_format, disk_format=disk_format,
+        protected=protected, is_public=is_public)
     return image_show(image.id)
 
 
