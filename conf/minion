@@ -28,7 +28,7 @@
 # value to "standard".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
-# master_type: standard
+# master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
 # respected if master_type above is "failover".
