@@ -77,6 +77,7 @@ def __virtual__():
         return 'glance'
     return False
 
+
 __opts__ = {}
 
 
@@ -352,7 +353,8 @@ def image_schema(profile=None):
     '''
     return schema_get('image', profile)
 
-def image_update(id=None, name=None, profile=None, **kwargs):
+
+def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=C0103
     '''
     Update properties of given image.
     Known to work for:
@@ -368,8 +370,8 @@ def image_update(id=None, name=None, profile=None, **kwargs):
         image = image_show(name=name)
         if not image:
             # TODO: Replace this untested PSEUDOCODE
-            image_ids = [ image[image.keys()[0]].id
-                    for image in image_list(name=name) ]
+            image_ids = [image[image.keys()[0]].id
+                    for image in image_list(name=name)]
             return {'result': False,
                 'comment': 'Found more than one image with name "{0}":\n'+
                     '\n'.join(image_ids)}
@@ -383,11 +385,12 @@ def image_update(id=None, name=None, profile=None, **kwargs):
         if key.startswith('_'):
             continue
         if not image.has_key(key) or image[key] != value:
-            log.debug('add <{0}={1}> to to_update'.format(key,value))
+            log.debug('add <{0}={1}> to to_update'.format(key, value))
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
     return updated
+
 
 def schema_get(name, profile=None):
     '''
@@ -428,11 +431,10 @@ def _item_list(profile=None):
     return ret
 
 
-#The following is a list of functions that need to be incorporated in the
-#glance module. This list should be updated as functions are added.
+# The following is a list of functions that need to be incorporated in the
+# glance module. This list should be updated as functions are added.
 
 # image-download      Download a specific image.
-# image-update        Update a specific image.
 # member-create       Share a specific image with a tenant.
 # member-delete       Remove a shared image from a tenant.
 # member-list         Describe sharing permissions by image or tenant.
