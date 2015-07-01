@@ -75,6 +75,7 @@ def __virtual__():
         return 'glance'
     return False
 
+
 __opts__ = {}
 
 
@@ -130,26 +131,26 @@ def _auth(profile=None, api_version=2, **connection_args):
             kwargs['insecure'] = True
 
     if token:
-        log.debug('Calling glanceclient.client.Client(' + \
-            '{0}, **{1})'.format(api_version, endpoint, kwargs))
+        log.debug('Calling glanceclient.client.Client(' +
+            '{0}, {1}, **{2})'.format(api_version, endpoint, kwargs))
         try:
             return client.Client(api_version, endpoint, **kwargs)
         except exc.HTTPUnauthorized:
             kwargs.pop('token')
             kwargs['password'] = password
-            log.warn('Supplied token is invalid, trying to ' + \
+            log.warn('Supplied token is invalid, trying to ' +
                 'get a new one using username and password.')
 
     if HAS_KEYSTONE:
         # TODO: redact kwargs['password']
-        log.debug('Calling keystoneclient.v2_0.client.Client(' + \
-            '{0}, **{1})'.format(endpoint, kwargs))
+        log.debug('Calling keystoneclient.v2_0.client.Client(' +
+            '{0}, {1}, **{2})'.format(endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
         log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
         kwargs.pop('password')
-        log.debug('Calling glanceclient.client.Client(' + \
-            '{0}, **{1})'.format(api_version, endpoint, kwargs))
+        log.debug('Calling glanceclient.client.Client(' +
+            '{0}, {1}, **{2})'.format(api_version, endpoint, kwargs))
         return client.Client(api_version, endpoint, **kwargs)
     else:
         raise NotImplementedError(
@@ -179,13 +180,13 @@ def image_create(name, location, profile=None, visibility='public',
     df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk',
                'raw', 'qcow2', 'vdi', 'iso']
     if not visibility in v_list:
-        raise SaltInvocationError('"visibility" needs to be one ' +\
+        raise SaltInvocationError('"visibility" needs to be one ' +
             'of the following: {0}'.format(', '.join(v_list)))
     if not container_format in cf_list:
-        raise SaltInvocationError('"container_format" needs to be ' +\
+        raise SaltInvocationError('"container_format" needs to be ' +
             'one of the following: {0}'.format(', '.join(cf_list)))
     if not disk_format in df_list:
-        raise SaltInvocationError('"disk_format" needs to be one ' +\
+        raise SaltInvocationError('"disk_format" needs to be one ' +
             'of the following: {0}'.format(', '.join(df_list)))
     # Icehouse's glanceclient doesn't have add_location() and
     # glanceclient.v2 doesn't implement Client.images.create()
@@ -193,6 +194,7 @@ def image_create(name, location, profile=None, visibility='public',
     g_client = _auth(profile, api_version=1)
     image = g_client.images.create(name=name, copy_from=location)
     return image_show(image.id)
+
 
 def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     '''
@@ -284,6 +286,7 @@ def image_list(id=None, name=None, profile=None): # pylint: disable=C0103
             return ret[image.name]
     return ret
 
+
 def image_schema(profile=None):
     '''
     Returns names and descriptions of the schema "image"'s
@@ -291,7 +294,8 @@ def image_schema(profile=None):
     '''
     return schema_get('image', profile)
 
-def image_update(id=None, name=None, profile=None, **kwargs):
+
+def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=C0103
     '''
     Update properties of given image.
     Known to work for:
@@ -307,8 +311,8 @@ def image_update(id=None, name=None, profile=None, **kwargs):
         image = image_show(name=name)
         if not image:
             # TODO: Replace this untested PSEUDOCODE
-            image_ids = [ image[image.keys()[0]].id
-                    for image in image_list(name=name) ]
+            image_ids = [image[image.keys()[0]].id
+                    for image in image_list(name=name)]
             return {'result': False,
                 'comment': 'Found more than one image with name "{0}":\n'+
                     '\n'.join(image_ids)}
@@ -322,11 +326,12 @@ def image_update(id=None, name=None, profile=None, **kwargs):
         if key.startswith('_'):
             continue
         if not image.has_key(key) or image[key] != value:
-            log.debug('add <{0}={1}> to to_update'.format(key,value))
+            log.debug('add <{0}={1}> to to_update'.format(key, value))
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
     return updated
+
 
 def schema_get(name, profile=None):
     '''
@@ -344,6 +349,7 @@ def schema_get(name, profile=None):
     log.debug('Properties of schema {0}:\n{1}'.format(
         name, pformat(schema_props)))
     return {name: schema_props}
+
 
 def _item_list(profile=None):
     '''
@@ -364,6 +370,7 @@ def _item_list(profile=None):
         #        'name': item.name,
         #    }
     return ret
+
 
 # The following is a list of functions that need to be incorporated in the
 # glance module. This list should be updated as functions are added.
