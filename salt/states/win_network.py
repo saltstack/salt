@@ -175,9 +175,9 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
         else 'dhcp'
     )
     if cur_dns_proto == 'static':
-            cur_dns_servers = cur['Statically Configured DNS Servers']
-            if set(dns_servers or ['None']) != set(cur_dns_servers):
-                changes['dns_servers'] = dns_servers
+        cur_dns_servers = cur['Statically Configured DNS Servers']
+        if set(dns_servers or ['None']) != set(cur_dns_servers):
+            changes['dns_servers'] = dns_servers
     elif 'DNS servers configured through DHCP' in cur:
         cur_dns_servers = cur['DNS servers configured through DHCP']
     cur_ip_proto = 'static' if cur['DHCP enabled'] == 'No' else 'dhcp'
