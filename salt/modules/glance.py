@@ -247,6 +247,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     # TODO: Get rid of the wrapping dict, see #24568
     ret[image.name] = {}
     schema = image_schema(profile=profile)
+    # basicly another workaround for #24568
     if len(schema.keys()) == 1:
         schema = schema['image']
     for key in schema.keys():
@@ -266,27 +267,17 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_list
     '''
     g_client = _auth(profile)
-    ret = {}
+    schema = image_schema(profile=profile)
+    # basicly another workaround for #24568
+    if len(schema.keys()) == 1:
+        schema = schema['image']
     # TODO: Get rid of the wrapping dict, see #24568
+    ret = {}
     for image in g_client.images.list():
-        ret[image.name] = {
-                'id': image.id,
-                'name': image.name,
-                'created_at': image.created_at,
-                'file': image.file,
-                'min_disk': image.min_disk,
-                'min_ram': image.min_ram,
-                'owner': image.owner,
-                'protected': image.protected,
-                'status': image.status,
-                'tags': image.tags,
-                'updated_at': image.updated_at,
-                'visibility': image.visibility,
-            }
-        # Those cause AttributeErrors in Icehouse' glanceclient
-        for attr in ['container_format', 'disk_format', 'size']:
-            if image.has_key(attr):
-                ret[image.name][attr] = image[attr]
+        ret[image.name] = {}
+        for key in schema.keys():
+            if image.has_key(key):
+                ret[image.name][key] = image[key]
         if id == image.id:
             return ret[image.name]
     return ret
