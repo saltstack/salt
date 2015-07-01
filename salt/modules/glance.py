@@ -256,7 +256,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     return ret
 
 
-def image_list(id=None, profile=None):  # pylint: disable=C0103
+def image_list(id=None, name=None, profile=None): # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
@@ -274,6 +274,8 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
     # TODO: Get rid of the wrapping dict, see #24568
     ret = {}
     for image in g_client.images.list():
+        if name and image.name != name:
+            continue
         ret[image.name] = {}
         for key in schema.keys():
             if image.has_key(key):
