@@ -733,7 +733,7 @@ class FileTestCase(TestCase):
                 self.assertDictEqual(filestate.recurse(name, source), ret)
 
             with patch.object(os.path, 'isabs', mock_t):
-                comt = ("'source' parameter is not a string or list of strings")
+                comt = ("Invalid source '1' (must be a salt:// URI)")
                 ret.update({'comment': comt})
                 self.assertDictEqual(filestate.recurse(name, 1), ret)
 
@@ -994,10 +994,7 @@ class FileTestCase(TestCase):
                                          ret)
 
                     ret.pop('data', None)
-                    comt = ('Given text is not a string or a list of strings')
-                    ret.update({'comment': comt, 'name': name})
-                    self.assertDictEqual(filestate.append(name), ret)
-
+                    ret.update({'name': name})
                     with patch.object(salt.utils, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
                         comt = ('No text found to append. Nothing appended')
@@ -1077,10 +1074,7 @@ class FileTestCase(TestCase):
                                          ret)
 
                     ret.pop('data', None)
-                    comt = ('Given text is not a string or a list of strings')
-                    ret.update({'comment': comt, 'name': name})
-                    self.assertDictEqual(filestate.prepend(name), ret)
-
+                    ret.update({'name': name})
                     with patch.object(salt.utils, 'fopen',
                                       MagicMock(mock_open(read_data=''))):
                         with patch.object(salt.utils, 'istextfile', mock_f):
