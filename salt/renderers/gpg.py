@@ -95,6 +95,7 @@ from salt.exceptions import SaltRenderError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+
 # pylint: disable=import-error
 try:
     import gnupg
@@ -135,11 +136,11 @@ def decrypt_ciphertext(cypher, gpg, safe=False):
 
 def decrypt_object(obj, gpg):
     '''
-    Recursively try to decrypt any object. If the object is a basestring (string or unicode), and
+    Recursively try to decrypt any object. If the object is a six.string_types (string or unicode), and
     it contains a valid GPG header, decrypt it, otherwise keep going until
     a string is found.
     '''
-    if isinstance(obj, basestring):
+    if isinstance(obj, six.string_types):
         if GPG_HEADER.search(obj):
             return decrypt_ciphertext(obj, gpg)
         else:
