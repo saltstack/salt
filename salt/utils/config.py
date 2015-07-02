@@ -606,8 +606,13 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
         '''
         Return the argname value looking up on all possible attributes
         '''
-        # Let's see if the value is defined as a public class variable
-        argvalue = getattr(self, argname, None)
+        # Let's see if there's a private fuction to get the value
+        argvalue = getattr(self, '__get_{0}__'.format(argname), None)
+        if argvalue and callable(argvalue):
+            argvalue = argvalue()
+        if argvalue is None:
+            # Let's see if the value is defined as a public class variable
+            argvalue = getattr(self, argname, None)
         if argvalue is None:
             # Let's see if it's defined as a private class variable
             argvalue = getattr(self, '__{0}__'.format(argname), None)
@@ -657,7 +662,7 @@ class BaseConfigItem(BaseItem):
             A list(list, tuple, set) of valid choices.
         '''
         self.title = title
-        self.description = description or self.__doc__
+        self.description = description
         self.default = default
         if enum is not None:
             if not isinstance(enum, (list, tuple, set)):
@@ -863,3 +868,80 @@ class NumberConfig(BaseConfigItem):
 
 class IntegerConfig(NumberConfig):
     __type__ = 'integer'
+
+
+class ArrayConfig(BaseConfigItem):
+    __type__ = 'array'
+
+    __serialize_attr_aliases__ = {
+        'min_items': 'minItems',
+        'max_items': 'maxItems',
+        'unique_items': 'uniqueItems',
+        'additional_items': 'additionalItems'
+    }
+
+    def __init__(self,
+                 items=None,
+                 min_items=None,
+                 max_items=None,
+                 unique_items=None,
+                 additional_items=None,
+                 **kwargs):
+        '''
+        :param required:
+            If the configuration item is required. Defaults to ``False``.
+        :param title:
+            A short explanation about the purpose of the data described by this item.
+        :param description:
+            A detailed explanation about the purpose of the data described by this item.
+        :param default:
+            The default value for this configuration item. May be :data:`.Null` (a special value
+            to set the default value to null).
+        :param enum:
+            A list(list, tuple, set) of valid choices.
+        :param items:
+            Either of the following:
+                * :class:`BaseConfigItem` -- all items of the array must match the field schema;
+                * a list or a tuple of :class:`fields <.BaseConfigItem>` -- all items of the array must be
+                  valid according to the field schema at the corresponding index (tuple typing);
+        :param min_items:
+            Minimum length of the array
+        :param max_items:
+            Maximum length of the array
+        :param unique_items:
+            Whether all the values in the array must be distinct.
+        :param additional_items:
+            If the value of ``items`` is a list or a tuple, and the array length is larger than
+            the number of fields in ``items``, then the additional items are described
+            by the :class:`.BaseField` passed using this argument.
+        :type additional_items: bool or :class:`.BaseConfigItem`
+        '''
+        if items:
+            if isinstance(items, (list, tuple)):
+                for item in items:
+                    if not isinstance(item, BaseItem):
+                        raise RuntimeError(
+                            'All items passed in the item argument tuple/list must be '
+                            'a subclass of BaseItem/BaseConfigItem, not {0}'.format(type(item))
+                        )
+            elif not isinstance(items, BaseItem):
+                raise RuntimeError(
+                    'The items argument passed must be a subclass of '
+                    'BaseConfigItem, not {0}'.format(type(item))
+                )
+        self.items = items
+        self.min_items = min_items
+        self.max_items = max_items
+        self.unique_items = unique_items
+        self.additional_items = additional_items
+        super(ArrayConfig, self).__init__(**kwargs)
+
+    def __get_items__(self):
+        if isinstance(self.items, BaseItem):
+            # This is a BaseConfigItem, return it in it's serialized form
+            return self.items.serialize()
+        if isinstance(self.items, (tuple, list)):
+            items = []
+            for item in self.items:
+                items.append(item.serialize())
+            return items
