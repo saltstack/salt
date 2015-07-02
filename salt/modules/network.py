@@ -1164,3 +1164,30 @@ def default_route(family=None):
                 ret.append(route)
 
     return ret
+
+
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2015.5.3
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+
+    if __grains__['kernel'] == 'Linux':
+        cmd = 'ip route get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:]+)\s+.*src\s+(?P<source>[\w\.:]+)')
+        m = regexp.search(out.splitlines()[0])
+        ret = {
+            'destination': ip,
+            'gateway': m.group('gateway'),
+            'interface': m.group('interface'),
+            'source': m.group('source')}
+
+        return ret
+    else:
+        raise CommandExecutionError('Not yet supported on this platform')
