@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=function-redefined
+# TODO: Remove the following PyLint disable as soon as we support YAML and RST rendering
+# pylint: disable=abstract-method
 
 # Import python libs
 from __future__ import absolute_import
@@ -563,7 +565,6 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': 3}, TestConf.serialize())
         self.assertIn('is not one of', excinfo.exception.message)
 
-
     def test_integer_config(self):
         item = config.IntegerConfig(title='How many dogs', description='Question')
         self.assertDictEqual(
@@ -734,7 +735,6 @@ class ConfigTestCase(TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
         self.assertIn('is not one of', excinfo.exception.message)
-
 
 
 if __name__ == '__main__':
