@@ -921,15 +921,17 @@ class ArrayConfig(BaseConfigItem):
         if items:
             if isinstance(items, (list, tuple)):
                 for item in items:
-                    if not isinstance(item, BaseItem):
+                    if not isinstance(item, (Configuration, BaseItem)):
                         raise RuntimeError(
                             'All items passed in the item argument tuple/list must be '
-                            'a subclass of BaseItem/BaseConfigItem, not {0}'.format(type(item))
+                            'a subclass of Configuration, BaseItem or BaseConfigItem, '
+                            'not {0}'.format(type(item))
                         )
-            elif not isinstance(items, BaseItem):
+            elif not isinstance(items, (Configuration, BaseItem)):
                 raise RuntimeError(
                     'The items argument passed must be a subclass of '
-                    'BaseConfigItem, not {0}'.format(type(item))
+                    'Configuration, BaseItem or BaseConfigItem, not '
+                    '{0}'.format(type(items))
                 )
         self.items = items
         self.min_items = min_items
@@ -939,8 +941,9 @@ class ArrayConfig(BaseConfigItem):
         super(ArrayConfig, self).__init__(**kwargs)
 
     def __get_items__(self):
-        if isinstance(self.items, BaseItem):
-            # This is a BaseConfigItem, return it in it's serialized form
+        if isinstance(self.items, (Configuration, BaseItem)):
+            # This is either a Configuration or a Basetem, return it in it's
+            # serialized form
             return self.items.serialize()
         if isinstance(self.items, (tuple, list)):
             items = []

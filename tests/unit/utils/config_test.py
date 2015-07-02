@@ -832,6 +832,39 @@ class ConfigTestCase(TestCase):
             }
         )
 
+        class HowManyConfig(config.Configuration):
+            item = config.IntegerConfig(title='How many dogs', description='Question')
+
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=HowManyConfig())
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'items': HowManyConfig.serialize()
+            }
+        )
+
+        class AgesConfig(config.Configuration):
+            item = config.IntegerConfig()
+
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=(HowManyConfig(), AgesConfig()))
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'items': [
+                    HowManyConfig.serialize(),
+                    AgesConfig.serialize()
+                ]
+            }
+        )
+
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_array_config_validation(self):
         class TestConf(config.Configuration):
