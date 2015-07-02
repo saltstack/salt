@@ -37,18 +37,30 @@ def image_present(name, visibility=None, protected=None, checksum=None):
             image = images_dict[images_dict.keys()[0]]
         else:
             image = images_dict[0]
-        if visibility and image['visibility'] != visibility:
-            ret['result'] = False
-            ret['comment'] += '"visibility" is {0}, should be {1}'.format(
-                image['visibility'], visibility)
-        if protected is not None and image['protected'] ^ protected:
-            ret['result'] = False
-            ret['comment'] += '"protected" is {0}, should be {1}'.format(
-                image['protected'], protected)
-        if checksum and image['checksum'] != checksum:
-            ret['result'] = False
-            ret['comment'] += '"checksum" is {0}, should be {1}'.format(
-                image['checksum'], checksum)
+        if visibility:
+            if image['visibility'] != visibility:
+                ret['result'] = False
+                ret['comment'] += '"visibility" is {0}, should be {1}.\n'.format(
+                    image['visibility'], visibility)
+            else:
+                ret['comment'] += '"visibility" is correct ({0}).\n'.format(
+                    visibility)
+        if protected is not None:
+            if not isinstance(protected, bool) or image['protected'] ^ protected:
+                ret['result'] = False
+                ret['comment'] += '"protected" is {0}, should be {1}.\n'.format(
+                    image['protected'], protected)
+            else:
+                ret['comment'] += '"protected" is correct ({0}).\n'.format(
+                    protected)
+        if checksum:
+            if image['checksum'] != checksum:
+                ret['result'] = False
+                ret['comment'] += '"checksum" is {0}, should be {1}.\n'.format(
+                    image['checksum'], checksum)
+            else:
+                ret['comment'] += '"checksum" is correct ({0}).\n'.format(
+                    checksum)
     else:
         raise NotImplementedError
     return ret
