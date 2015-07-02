@@ -49,6 +49,7 @@ def beacon(config):
         except OSError:
             # Ensure a valid mount point
             log.error('{0} is not a valid mount point, skipping.'.format(mount))
+            continue
 
         current_usage = _current_usage.percent
         monitor_usage = diskusage[mount]
