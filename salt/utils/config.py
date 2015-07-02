@@ -497,6 +497,15 @@ class BaseConfigItemMeta(six.with_metaclass(Prepareable, type)):
                 instance._attributes.append(key)
         # Init the class
         instance.__init__(*args, **kwargs)
+        # Validate the instance after initialization
+        for base in reversed(inspect.getmro(cls)):
+            validate_attributes = getattr(base, '__validate_attributes__', None)
+            if validate_attributes:
+                if instance.__validate_attributes__.__func__ is not base.__validate_attributes__.__func__:
+                    # The method was overridden, run base.__validate_attributes__ function
+                    base.__validate_attributes__(instance)
+        # Finally, run the instance __validate_attributes__ function
+        instance.__validate_attributes__()
         # Return the initialized class
         return instance
 
@@ -595,12 +604,30 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
 
     __serialize_attr_aliases__ = None
 
-    def __init__(self, required=False, **extra):
+    required = False
+
+    def __init__(self, required=None, **extra):
         '''
         :param required: If the configuration item is required. Defaults to ``False``.
         '''
-        self.required = required
+        if required is not None:
+            self.required = required
         self.extra = extra
+
+    def __validate_attributes__(self):
+        '''
+        Run any validation check you need the instance attributes.
+
+        ATTENTION:
+
+        Don't call the parent class when overriding this
+        method because it will just duplicate the executions. This class'es
+        metaclass will take care of that.
+        '''
+        if self.required not in (True, False):
+            raise RuntimeError(
+                '\'required\' can only be True/False'
+            )
 
     def _get_argname_value(self, argname):
         '''
@@ -608,7 +635,7 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
         '''
         # Let's see if there's a private fuction to get the value
         argvalue = getattr(self, '__get_{0}__'.format(argname), None)
-        if argvalue and callable(argvalue):
+        if argvalue is not None and callable(argvalue):
             argvalue = argvalue()
         if argvalue is None:
             # Let's see if the value is defined as a public class variable
@@ -649,6 +676,20 @@ class BaseConfigItem(BaseItem):
     All configurations must subclass it
     '''
 
+    # Let's define description as a class attribute, this will allow a custom configuration
+    # item to do something like:
+    #   class MyCustomConfig(StringConfig):
+    #       '''
+    #       This is my custom config, blah, blah, blah
+    #       '''
+    #       description = __doc__
+    #
+    description = None
+    # The same for all other base arguments
+    title = None
+    default = None
+    enum = None
+
     def __init__(self, title=None, description=None, default=None, enum=None, **kwargs):
         '''
         :param required:
@@ -663,18 +704,25 @@ class BaseConfigItem(BaseItem):
         :param enum:
             A list(list, tuple, set) of valid choices.
         '''
-        self.title = title
-        self.description = description
-        self.default = default
+        if title is not None:
+            self.title = title
+        if description is not None:
+            self.description = description
+        if default is not None:
+            self.default = default
         if enum is not None:
-            if not isinstance(enum, (list, tuple, set)):
+            self.enum = enum
+        super(BaseConfigItem, self).__init__(**kwargs)
+
+    def __validate_attributes__(self):
+        if self.enum is not None:
+            if not isinstance(self.enum, (list, tuple, set)):
                 raise RuntimeError(
                     'Only the \'list\', \'tuple\' and \'set\' python types can be used '
                     'to define \'enum\''
                 )
-            enum = list(enum)
-        self.enum = enum
-        super(BaseConfigItem, self).__init__(**kwargs)
+            if not isinstance(self.enum, list):
+                self.enum = list(self.enum)
 
     def render_as_rst(self, name):
         '''
@@ -724,6 +772,11 @@ class StringConfig(BaseConfigItem):
         'max_length': 'maxLength'
     }
 
+    format = None
+    pattern = None
+    min_length = None
+    max_length = None
+
     def __init__(self,
                  format=None,  # pylint: disable=redefined-builtin
                  pattern=None,
@@ -751,11 +804,19 @@ class StringConfig(BaseConfigItem):
         :param max_length:
             The maximum length
         '''
-        self.format = format or self.__format__
-        self.pattern = pattern
-        self.min_length = min_length
-        self.max_length = max_length
+        if format is not None:  # pylint: disable=redefined-builtin
+            self.format = format
+        if pattern is not None:
+            self.pattern = pattern
+        if min_length is not None:
+            self.min_length = min_length
+        if max_length is not None:
+            self.max_length = max_length
         super(StringConfig, self).__init__(**kwargs)
+
+    def __validate_attributes__(self):
+        if self.format is None and self.__format__ is not None:
+            self.format = self.__format__
 
 
 class EMailConfig(StringConfig):
@@ -830,6 +891,12 @@ class NumberConfig(BaseConfigItem):
         'exclusive_maximum': 'exclusiveMaximum',
     }
 
+    multiple_of = None
+    minimum = None
+    exclusive_minimum = None
+    maximum = None
+    exclusive_maximum = None
+
     def __init__(self,
                  multiple_of=None,
                  minimum=None,
@@ -860,11 +927,16 @@ class NumberConfig(BaseConfigItem):
         :param exclusive_maximum:
             Wether a value is allowed to be exactly equal to the maximum
         '''
-        self.multiple_of = multiple_of
-        self.minimum = minimum
-        self.exclusive_minimum = exclusive_minimum
-        self.maximum = maximum
-        self.exclusive_maximum = exclusive_maximum
+        if multiple_of is not None:
+            self.multiple_of = multiple_of
+        if minimum is not None:
+            self.minimum = minimum
+        if exclusive_minimum is not None:
+            self.exclusive_minimum = exclusive_minimum
+        if maximum is not None:
+            self.maximum = maximum
+        if exclusive_maximum is not None:
+            self.exclusive_maximum = exclusive_maximum
         super(NumberConfig, self).__init__(**kwargs)
 
 
@@ -881,6 +953,12 @@ class ArrayConfig(BaseConfigItem):
         'unique_items': 'uniqueItems',
         'additional_items': 'additionalItems'
     }
+
+    items = None
+    min_items = None
+    max_items = None
+    unique_items = None
+    additional_items = None
 
     def __init__(self,
                  items=None,
@@ -918,27 +996,34 @@ class ArrayConfig(BaseConfigItem):
             by the :class:`.BaseField` passed using this argument.
         :type additional_items: bool or :class:`.BaseConfigItem`
         '''
-        if items:
-            if isinstance(items, (list, tuple)):
-                for item in items:
+        if items is not None:
+            self.items = items
+        if min_items is not None:
+            self.min_items = min_items
+        if max_items is not None:
+            self.max_items = max_items
+        if unique_items is not None:
+            self.unique_items = unique_items
+        if additional_items is not None:
+            self.additional_items = additional_items
+        super(ArrayConfig, self).__init__(**kwargs)
+
+    def __validate_attributes__(self):
+        if self.items is not None:
+            if isinstance(self.items, (list, tuple)):
+                for item in self.items:
                     if not isinstance(item, (Configuration, BaseItem)):
                         raise RuntimeError(
                             'All items passed in the item argument tuple/list must be '
                             'a subclass of Configuration, BaseItem or BaseConfigItem, '
                             'not {0}'.format(type(item))
                         )
-            elif not isinstance(items, (Configuration, BaseItem)):
+            elif not isinstance(self.items, (Configuration, BaseItem)):
                 raise RuntimeError(
                     'The items argument passed must be a subclass of '
                     'Configuration, BaseItem or BaseConfigItem, not '
-                    '{0}'.format(type(items))
+                    '{0}'.format(type(self.items))
                 )
-        self.items = items
-        self.min_items = min_items
-        self.max_items = max_items
-        self.unique_items = unique_items
-        self.additional_items = additional_items
-        super(ArrayConfig, self).__init__(**kwargs)
 
     def __get_items__(self):
         if isinstance(self.items, (Configuration, BaseItem)):
