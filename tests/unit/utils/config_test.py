@@ -72,6 +72,18 @@ class ConfigTestCase(TestCase):
             }
         )
 
+        item = config.BooleanConfig(title='Hungry',
+                                    description='Are you hungry?',
+                                    default=config.Null)
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'boolean',
+                'title': item.title,
+                'description': item.description,
+                'default': None
+            }
+        )
+
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_boolean_config_validation(self):
         class TestConf(config.Configuration):

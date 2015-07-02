@@ -632,6 +632,8 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
                 continue
             argvalue = self._get_argname_value(argname)
             if argvalue is not None:
+                if argvalue is Null:
+                    argvalue = None
                 # None values are not meant to be included in the
                 # serialization, since this is not None...
                 if self.__serialize_attr_aliases__ and argname in self.__serialize_attr_aliases__:
