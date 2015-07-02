@@ -137,6 +137,18 @@ class ConfigTestCase(TestCase):
             }
         )
 
+        item = config.StringConfig(title='Foo',
+                                   description='Foo Item',
+                                   pattern=r'^([\w_-]+)$')
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'string',
+                'title': item.title,
+                'description': item.description,
+                'pattern': item.pattern
+            }
+        )
+
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_string_config_validation(self):
         class TestConf(config.Configuration):
@@ -189,6 +201,21 @@ class ConfigTestCase(TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'bin'}, TestConf.serialize())
         self.assertIn('is not one of', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.StringConfig(title='Foo', description='Foo Item',
+                                       pattern=r'^([\w_-]+)$')
+
+        try:
+            jsonschema.validate({'item': 'the-item'}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 'the item'}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('does not match', excinfo.exception.message)
 
     def test_email_config(self):
         item = config.EMailConfig(title='Foo', description='Foo Item')
