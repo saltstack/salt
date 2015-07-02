@@ -8,7 +8,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def image_present(name, visibility=None, protected=None):
+def image_present(name, visibility=None, protected=None, checksum=None):
     '''
     Checks if given image is present with properties
     set as specified.
@@ -16,6 +16,7 @@ def image_present(name, visibility=None, protected=None):
     Supported properties:
       - visibility ('public' or 'private')
       - protected (bool)
+      - checksum (string, md5sum)
     '''
     ret = {'name': name,
             'changes': {},
@@ -44,6 +45,10 @@ def image_present(name, visibility=None, protected=None):
             ret['result'] = False
             ret['comment'] += '"protected" is {0}, should be {1}'.format(
                 image['protected'], protected)
+        if checksum and image['checksum'] != checksum:
+            ret['result'] = False
+            ret['comment'] += '"checksum" is {0}, should be {1}'.format(
+                image['checksum'], checksum)
     else:
         raise NotImplementedError
     return ret
