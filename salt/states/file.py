@@ -336,6 +336,17 @@ def _gen_keep_files(name, require):
 
         return not relative.startswith(os.pardir)
 
+    def _process(name):
+        ret = set()
+        if os.path.isdir(name):
+            for root, dirs, files in os.walk(name):
+                ret.add(name)
+                for name in files:
+                    ret.add(os.path.join(root, name))
+                for name in dirs:
+                    ret.add(os.path.join(root, name))
+        return ret
+
     keep = set()
     if isinstance(require, list):
         required_files = [comp for comp in require if 'file' in comp]
@@ -345,7 +356,7 @@ def _gen_keep_files(name, require):
                     fn = low['name']
                     if os.path.isdir(comp['file']):
                         if _is_child(comp['file'], name):
-                            keep.add(os.path.abspath(fn))
+                            keep.update(_process(fn))
                     else:
                         keep.add(fn)
     return list(keep)
@@ -469,8 +480,6 @@ def _check_directory(name,
                     return {path: {'removed': 'Removed due to clean'}}
 
         for root, dirs, files in os.walk(name):
-            dirs[:] = [d for d in dirs
-                       if os.path.abspath(os.path.join(root, d)) not in keep]
             for fname in files:
                 changes.update(_check_changes(fname))
             for name_ in dirs:
