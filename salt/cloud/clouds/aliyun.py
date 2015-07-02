@@ -70,6 +70,8 @@ DEFAULT_LOCATION = 'cn-hangzhou'
 
 DEFAULT_ALIYUN_API_VERSION = '2013-01-10'
 
+__virtualname__ = 'aliyun'
+
 
 # Only load in this module if the aliyun configurations are in place
 def __virtual__():
@@ -759,7 +761,6 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    #print content
 
     result = json.loads(content, object_hook=salt.utils.decode_dict)
     if 'Code' in result:

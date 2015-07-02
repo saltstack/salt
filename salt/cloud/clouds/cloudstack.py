@@ -59,6 +59,8 @@ list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
 
+__virtualname__ = 'cloudstack'
+
 
 # Only load in this module if the CLOUDSTACK configurations are in place
 def __virtual__():
@@ -77,7 +79,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'cloudstack',
+        __active_provider_name__ or __virtualname__,
         ('apikey', 'secretkey', 'host', 'path')
     )
 
