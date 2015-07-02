@@ -581,7 +581,7 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
         raise NotImplementedError
 
 
-class BaseConfigItem(six.with_metaclass(BaseConfigItemMeta, object)):
+class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
     '''
     Base configuration items class.
 
@@ -595,30 +595,11 @@ class BaseConfigItem(six.with_metaclass(BaseConfigItemMeta, object)):
 
     __serialize_attr_aliases__ = None
 
-    def __init__(self, title=None, description=None, default=None, required=False, enum=None, **extra):
+    def __init__(self, required=False, **extra):
         '''
-        :param title:
-            A short explanation about the purpose of the data described by this item.
-        :param description:
-            A detailed explanation about the purpose of the data described by this item.
-        :param default:
-            The default value for this configuration item. May be :data:`.Null` (a special value
-            to set the default value to null).
         :param required: If the configuration item is required. Defaults to ``False``.
-        :param enum: A list(list, tuple, set) of valid choices.
         '''
-        self.title = title
-        self.description = description or self.__doc__
-        self.default = default
         self.required = required
-        if enum is not None:
-            if not isinstance(enum, (list, tuple, set)):
-                raise RuntimeError(
-                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
-                    'to define \'enum\''
-                )
-            enum = list(enum)
-        self.enum = enum
         self.extra = extra
 
     def _get_argname_value(self, argname):
@@ -652,6 +633,41 @@ class BaseConfigItem(six.with_metaclass(BaseConfigItemMeta, object)):
                     argname = self.__serialize_attr_aliases__[argname]
                 serialized[argname] = argvalue
         return serialized
+
+
+class BaseConfigItem(BaseItem):
+    '''
+    Base configuration items class.
+
+    All configurations must subclass it
+    '''
+
+    def __init__(self, title=None, description=None, default=None, enum=None, **kwargs):
+        '''
+        :param required:
+            If the configuration item is required. Defaults to ``False``.
+        :param title:
+            A short explanation about the purpose of the data described by this item.
+        :param description:
+            A detailed explanation about the purpose of the data described by this item.
+        :param default:
+            The default value for this configuration item. May be :data:`.Null` (a special value
+            to set the default value to null).
+        :param enum:
+            A list(list, tuple, set) of valid choices.
+        '''
+        self.title = title
+        self.description = description or self.__doc__
+        self.default = default
+        if enum is not None:
+            if not isinstance(enum, (list, tuple, set)):
+                raise RuntimeError(
+                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
+                    'to define \'enum\''
+                )
+            enum = list(enum)
+        self.enum = enum
+        super(BaseConfigItem, self).__init__(**kwargs)
 
     def render_as_rst(self, name):
         '''
@@ -708,6 +724,8 @@ class StringConfig(BaseConfigItem):
                  max_length=None,
                  **kwargs):
         '''
+        :param required:
+            If the configuration item is required. Defaults to ``False``.
         :param title:
             A short explanation about the purpose of the data described by this item.
         :param description:
@@ -715,8 +733,6 @@ class StringConfig(BaseConfigItem):
         :param default:
             The default value for this configuration item. May be :data:`.Null` (a special value
             to set the default value to null).
-        :param required:
-            If the configuration item is required. Defaults to ``False``.
         :param enum:
             A list(list, tuple, set) of valid choices.
         :param format:
@@ -815,6 +831,8 @@ class NumberConfig(BaseConfigItem):
                  exclusive_maximum=None,
                  **kwargs):
         '''
+        :param required:
+            If the configuration item is required. Defaults to ``False``.
         :param title:
             A short explanation about the purpose of the data described by this item.
         :param description:
@@ -822,8 +840,6 @@ class NumberConfig(BaseConfigItem):
         :param default:
             The default value for this configuration item. May be :data:`.Null` (a special value
             to set the default value to null).
-        :param required:
-            If the configuration item is required. Defaults to ``False``.
         :param enum:
             A list(list, tuple, set) of valid choices.
         :param multiple_of:
