@@ -1579,6 +1579,9 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
 
+    if 'proto' not in settings:
+        settings['proto'] = 'static'
+
     if iface_type == 'slave':
         settings['slave'] = 'yes'
         if 'master' not in settings:
