@@ -1450,9 +1450,9 @@ class Login(LowDataAdapter):
 
         # Authorization header
         remote_user = cherrypy.request.headers.get('X-Remote-User')
-        sharedsecret =  cherrypy.request.headers.get('X-Shared-Secret')
+        sharedsecret = cherrypy.request.headers.get('X-Shared-Secret')
         if remote_user and sharedsecret:
-            creds['username'] = username
+            creds['username'] = remote_user
             creds['sharedsecret'] = sharedsecret
             creds['eauth'] = 'sharedsecret'
 
