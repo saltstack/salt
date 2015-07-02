@@ -684,6 +684,8 @@ VALID_OPTS = {
 
     # Used by salt-api for master requests timeout
     'rest_timeout': int,
+
+    'sudo_user': str,
 }
 
 # default configurations
@@ -846,6 +848,7 @@ DEFAULT_MINION_OPTS = {
     'zmq_monitor': False,
     'cache_sreqs': True,
     'cmd_safe': True,
+    'sudo_user': '',
 }
 
 DEFAULT_MASTER_OPTS = {

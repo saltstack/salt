@@ -13,6 +13,7 @@ import pwd
 import shutil
 import stat
 import tempfile
+import textwrap
 import filecmp
 import textwrap
 
@@ -26,8 +27,8 @@ from salttesting.helpers import (
     ensure_in_syspath,
     with_system_user_and_group
 )
-ensure_in_syspath('../../')
 
+ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
@@ -35,7 +36,6 @@ import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
-
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 
@@ -278,6 +278,65 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             os.remove(state_file)
             os.remove(funny_file)
             os.remove(funny_url_path)
+
+    def test_managed_contents(self):
+        '''
+        test file.managed with contents that is a boolean, string, integer,
+        float, list, and dictionary
+        '''
+        state_name = 'file-FileTest-test_managed_contents'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        managed_files = {}
+        state_keys = {}
+        for typ in ('bool', 'str', 'int', 'float', 'list', 'dict'):
+            managed_files[typ] = tempfile.mkstemp()[1]
+            state_keys[typ] = 'file_|-{0} file_|-{1}_|-managed'.format(typ, managed_files[typ])
+        try:
+            salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
+                bool file:
+                  file.managed:
+                    - name: {bool}
+                    - contents: True
+
+                str file:
+                  file.managed:
+                    - name: {str}
+                    - contents: Salt was here.
+
+                int file:
+                  file.managed:
+                    - name: {int}
+                    - contents: 340282366920938463463374607431768211456
+
+                float file:
+                  file.managed:
+                    - name: {float}
+                    - contents: 1.7518e-45  # gravitational coupling constant
+
+                list file:
+                  file.managed:
+                    - name: {list}
+                    - contents: [1, 1, 2, 3, 5, 8, 13]
+
+                dict file:
+                  file.managed:
+                    - name: {dict}
+                    - contents:
+                        C: charge
+                        P: parity
+                        T: time
+                '''.format(**managed_files)))
+
+            ret = self.run_function('state.sls', [state_name])
+            for typ in state_keys:
+                self.assertTrue(ret[state_keys[typ]]['result'])
+                self.assertIn('diff', ret[state_keys[typ]]['changes'])
+        finally:
+            os.remove(state_file)
+            for typ in managed_files:
+                os.remove(managed_files[typ])
 
     def test_directory(self):
         '''

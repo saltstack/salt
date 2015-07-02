@@ -72,6 +72,18 @@ class ConfigTestCase(TestCase):
             }
         )
 
+        item = config.BooleanConfig(title='Hungry',
+                                    description='Are you hungry?',
+                                    default=config.Null)
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'boolean',
+                'title': item.title,
+                'description': item.description,
+                'default': None
+            }
+        )
+
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_boolean_config_validation(self):
         class TestConf(config.Configuration):
@@ -734,6 +746,239 @@ class ConfigTestCase(TestCase):
                                         enum=(0, 2, 4, 6))
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
+        self.assertIn('is not one of', excinfo.exception.message)
+
+    def test_array_config(self):
+        item = config.ArrayConfig(title='Dog Names', description='Name your dogs')
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description
+            }
+        )
+
+        string_item = config.StringConfig(title='Dog Name',
+                                          description='The dog name')
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=string_item)
+
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'items': {
+                    'type': 'string',
+                    'title': string_item.title,
+                    'description': string_item.description
+                }
+            }
+        )
+
+        integer_item = config.IntegerConfig(title='Dog Age',
+                                            description='The dog age')
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=(string_item, integer_item))
+
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'items': [
+                    {
+                        'type': 'string',
+                        'title': string_item.title,
+                        'description': string_item.description
+                    },
+                    {
+                        'type': 'integer',
+                        'title': integer_item.title,
+                        'description': integer_item.description
+                    }
+                ]
+            }
+        )
+
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=(config.StringConfig(),
+                                         config.IntegerConfig()),
+                                  min_items=1,
+                                  max_items=3,
+                                  additional_items=False,
+                                  unique_items=True)
+
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'minItems': item.min_items,
+                'maxItems': item.max_items,
+                'uniqueItems': item.unique_items,
+                'additionalItems': item.additional_items,
+                'items': [
+                    {
+                        'type': 'string',
+                    },
+                    {
+                        'type': 'integer',
+                    }
+                ]
+            }
+        )
+
+        class HowManyConfig(config.Configuration):
+            item = config.IntegerConfig(title='How many dogs', description='Question')
+
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=HowManyConfig())
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'items': HowManyConfig.serialize()
+            }
+        )
+
+        class AgesConfig(config.Configuration):
+            item = config.IntegerConfig()
+
+        item = config.ArrayConfig(title='Dog Names',
+                                  description='Name your dogs',
+                                  items=(HowManyConfig(), AgesConfig()))
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'array',
+                'title': item.title,
+                'description': item.description,
+                'items': [
+                    HowManyConfig.serialize(),
+                    AgesConfig.serialize()
+                ]
+            }
+        )
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_array_config_validation(self):
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(title='Dog Names', description='Name your dogs')
+
+        try:
+            jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 1}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(title='Dog Names',
+                                      description='Name your dogs',
+                                      items=config.StringConfig())
+
+        try:
+            jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['Tobias', 'Óscar', 3]}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(title='Dog Names',
+                                      description='Name your dogs',
+                                      min_items=1,
+                                      max_items=2)
+
+        try:
+            jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['Tobias', 'Óscar', 'Pepe']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('is too long', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': []}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('is too short', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(title='Dog Names',
+                                      description='Name your dogs',
+                                      items=config.StringConfig(),
+                                      uniqueItems=True)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['Tobias', 'Tobias']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('has non-unique elements', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(items=(config.StringConfig(),
+                                             config.IntegerConfig()))
+        try:
+            jsonschema.validate({'item': ['Óscar', 4]}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(
+                items=config.ArrayConfig(
+                    items=(config.StringConfig(),
+                           config.IntegerConfig())
+                )
+            )
+
+        try:
+            jsonschema.validate({'item': [['Tobias', 8], ['Óscar', 4]]}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': [['Tobias', 8], ['Óscar', '4']]}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(items=config.StringConfig(enum=['Tobias', 'Óscar']))
+        try:
+            jsonschema.validate({'item': ['Óscar']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+        try:
+            jsonschema.validate({'item': ['Tobias']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['Pepe']}, TestConf.serialize(),
+                                format_checker=jsonschema.FormatChecker())
         self.assertIn('is not one of', excinfo.exception.message)
 
 
