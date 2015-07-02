@@ -1651,8 +1651,13 @@ def replace(path,
         with salt.utils.fopen(path,
                               mode='r',
                               buffering=bufsize) as r_file:
+            count_replaced = 0
             for line in r_file:
-                result, nrepl = re.subn(cpattern, repl, line, count)
+                if count == 0 or count_replaced <= count:
+                    result, nrepl = re.subn(cpattern, repl, line, count)
+                    count_replaced += nrepl
+                else:
+                    break
 
                 # found anything? (even if no change)
                 if nrepl > 0:
@@ -1700,9 +1705,15 @@ def replace(path,
                     with salt.utils.fopen(temp_file,
                                           mode='r',
                                           buffering=bufsize) as r_file:
+                        count_replaced = 0
                         for line in r_file:
                             result, nrepl = re.subn(cpattern, repl,
                                                     line, count)
+                            if count == 0 or count_replaced <= count:
+                                result, nrepl = re.subn(cpattern, repl, line, count)
+                                count_replaced += nrepl
+                            else:
+                                result = line
                             try:
                                 w_file.write(result)
                             except (OSError, IOError) as exc:
