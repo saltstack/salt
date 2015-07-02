@@ -83,7 +83,7 @@ class SaltStackVersion(object):
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
-        'Beryllium'     : (MAX_SIZE - 105, 0),
+        'Beryllium'     : (2015, 8),
         'Boron'         : (MAX_SIZE - 104, 0),
         'Carbon'        : (MAX_SIZE - 103, 0),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
