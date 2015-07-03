@@ -652,21 +652,7 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
         '''
         Return a serializable form of the config instance
         '''
-        serialized = {'type': self.__type__}
-        for argname in self._attributes:
-            if argname == 'required':
-                # This is handled elsewhere
-                continue
-            argvalue = self._get_argname_value(argname)
-            if argvalue is not None:
-                if argvalue is Null:
-                    argvalue = None
-                # None values are not meant to be included in the
-                # serialization, since this is not None...
-                if self.__serialize_attr_aliases__ and argname in self.__serialize_attr_aliases__:
-                    argname = self.__serialize_attr_aliases__[argname]
-                serialized[argname] = argvalue
-        return serialized
+        raise NotImplementedError
 
 
 class BaseConfigItem(BaseItem):
@@ -689,8 +675,9 @@ class BaseConfigItem(BaseItem):
     title = None
     default = None
     enum = None
+    enumNames = None
 
-    def __init__(self, title=None, description=None, default=None, enum=None, **kwargs):
+    def __init__(self, title=None, description=None, default=None, enum=None, enumNames=None, **kwargs):
         '''
         :param required:
             If the configuration item is required. Defaults to ``False``.
@@ -712,6 +699,8 @@ class BaseConfigItem(BaseItem):
             self.default = default
         if enum is not None:
             self.enum = enum
+        if enumNames is not None:
+            self.enumNames = enumNames
         super(BaseConfigItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
@@ -723,6 +712,38 @@ class BaseConfigItem(BaseItem):
                 )
             if not isinstance(self.enum, list):
                 self.enum = list(self.enum)
+        if self.enumNames is not None:
+            if not isinstance(self.enumNames, (list, tuple, set)):
+                raise RuntimeError(
+                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
+                    'to define \'enumNames\''
+                )
+            if len(self.enum) != len(self.enumNames):
+                raise RuntimeError(
+                    'The size of \'enumNames\' must match the size of \'enum\''
+                )
+            if not isinstance(self.enumNames, list):
+                self.enumNames = list(self.enumNames)
+
+    def serialize(self):
+        '''
+        Return a serializable form of the config instance
+        '''
+        serialized = {'type': self.__type__}
+        for argname in self._attributes:
+            if argname == 'required':
+                # This is handled elsewhere
+                continue
+            argvalue = self._get_argname_value(argname)
+            if argvalue is not None:
+                if argvalue is Null:
+                    argvalue = None
+                # None values are not meant to be included in the
+                # serialization, since this is not None...
+                if self.__serialize_attr_aliases__ and argname in self.__serialize_attr_aliases__:
+                    argname = self.__serialize_attr_aliases__[argname]
+                serialized[argname] = argvalue
+        return serialized
 
     def render_as_rst(self, name):
         '''
@@ -1035,3 +1056,74 @@ class ArrayConfig(BaseConfigItem):
             for item in self.items:
                 items.append(item.serialize())
             return items
+
+
+class OneOfConfig(BaseItem):
+
+    __type__ = 'oneOf'
+
+    items = None
+
+    def __init__(self, items=None):
+        if items is not None:
+            self.items = items
+        super(OneOfConfig, self).__init__()
+
+    def __validate_attributes__(self):
+        if not self.items:
+            raise RuntimeError(
+                'The passed items must not be empty'
+            )
+        if not isinstance(self.items, (list, tuple)):
+            raise RuntimeError(
+                'The passed items must be passed as a list/tuple not '
+                '\'{0}\''.format(type(self.items))
+            )
+        for idx, item in enumerate(self.items):
+            if not isinstance(item, (Configuration, BaseItem)):
+                raise RuntimeError(
+                    'The passed item at the {0} index must be of type '
+                    'Configuration, BaseItem or BaseConfigItem, not '
+                    '\'{1}\''.format(idx, type(item))
+                )
+        if not isinstance(self.items, list):
+            self.items = list(self.items)
+
+    def serialize(self):
+        return {self.__type__: [i.serialize() for i in self.items]}
+
+
+class AnyOfConfig(OneOfConfig):
+
+    __type__ = 'anyOf'
+
+
+class AllOfConfig(OneOfConfig):
+
+    __type__ = 'allOf'
+
+
+class NotConfig(BaseItem):
+
+    __type__ = 'not'
+
+    item = None
+
+    def __init__(self, item=None):
+        if item is not None:
+            self.item = item
+        super(NotConfig, self).__init__()
+
+    def __validate_attributes__(self):
+        if not self.item:
+            raise RuntimeError(
+                'An item must be passed'
+            )
+        if not isinstance(self.item, (Configuration, BaseItem)):
+            raise RuntimeError(
+                'The passed item be of type Configuration, BaseItem or '
+                'BaseConfigItem, not \'{1}\''.format(type(self.item))
+            )
+
+    def serialize(self):
+        return {self.__type__: self.item.serialize()}

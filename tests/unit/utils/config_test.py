@@ -153,6 +153,24 @@ class ConfigTestCase(TestCase):
 
         item = config.StringConfig(title='Foo',
                                    description='Foo Item',
+                                   min_length=1,
+                                   max_length=3,
+                                   enum=('foo', 'bar'),
+                                   enumNames=('Foo', 'Bar'))
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'string',
+                'title': item.title,
+                'description': item.description,
+                'minLength': item.min_length,
+                'maxLength': item.max_length,
+                'enum': ['foo', 'bar'],
+                'enumNames': ['Foo', 'Bar']
+            }
+        )
+
+        item = config.StringConfig(title='Foo',
+                                   description='Foo Item',
                                    pattern=r'^([\w_-]+)$')
         self.assertDictEqual(
             item.serialize(), {
@@ -980,6 +998,174 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': ['Pepe']}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
         self.assertIn('is not one of', excinfo.exception.message)
+
+    def test_oneof_config(self):
+        item = config.OneOfConfig(
+            items=(config.StringConfig(title='Yes', enum=['yes']),
+                   config.StringConfig(title='No', enum=['no']))
+        )
+        self.assertEqual(
+            item.serialize(), {
+                'oneOf': [i.serialize() for i in item.items]
+            }
+        )
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_oneof_config_validation(self):
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(
+                title='Hungry',
+                description='Are you hungry?',
+                items=config.OneOfConfig(
+                    items=(config.StringConfig(title='Yes', enum=['yes']),
+                           config.StringConfig(title='No', enum=['no']))
+                )
+            )
+
+        try:
+            jsonschema.validate({'item': ['no']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
+        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 2}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+    def test_anyof_config(self):
+        item = config.AnyOfConfig(
+            items=(config.StringConfig(title='Yes', enum=['yes']),
+                   config.StringConfig(title='No', enum=['no']))
+        )
+        self.assertEqual(
+            item.serialize(), {
+                'anyOf': [i.serialize() for i in item.items]
+            }
+        )
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_anyof_config_validation(self):
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(
+                title='Hungry',
+                description='Are you hungry?',
+                items=config.AnyOfConfig(
+                    items=(config.StringConfig(title='Yes', enum=['yes']),
+                           config.StringConfig(title='No', enum=['no']),
+                           config.BooleanConfig())
+                )
+            )
+
+        try:
+            jsonschema.validate({'item': ['no']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate({'item': ['yes']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate({'item': [True]}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate({'item': [False]}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
+        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 2}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+    def test_allof_config(self):
+        item = config.AllOfConfig(
+            items=(config.StringConfig(min_length=2),
+                   config.StringConfig(max_length=3))
+        )
+        self.assertEqual(
+            item.serialize(), {
+                'allOf': [i.serialize() for i in item.items]
+            }
+        )
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_allof_config_validation(self):
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(
+                title='Hungry',
+                description='Are you hungry?',
+                items=config.AllOfConfig(
+                    items=(config.StringConfig(min_length=2),
+                           config.StringConfig(max_length=3))
+                )
+            )
+
+        try:
+            jsonschema.validate({'item': ['no']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate({'item': ['yes']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
+        self.assertIn('is too long', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': ['hmmmm']}, TestConf.serialize())
+        self.assertIn('is too long', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 2}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+    def test_not_config(self):
+        item = config.NotConfig(item=config.BooleanConfig())
+        self.assertEqual(
+            item.serialize(), {
+                'not': item.item.serialize()
+            }
+        )
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_not_config_validation(self):
+        class TestConf(config.Configuration):
+            item = config.ArrayConfig(
+                title='Hungry',
+                description='Are you hungry?',
+                items=config.NotConfig(item=config.BooleanConfig())
+            )
+
+        try:
+            jsonschema.validate({'item': ['no']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate({'item': ['yes']}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': [True]}, TestConf.serialize())
+        self.assertIn('is not allowed for', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': [False]}, TestConf.serialize())
+        self.assertIn('is not allowed for', excinfo.exception.message)
 
 
 if __name__ == '__main__':
