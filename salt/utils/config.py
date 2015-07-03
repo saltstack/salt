@@ -501,7 +501,7 @@ class BaseConfigItemMeta(six.with_metaclass(Prepareable, type)):
         for base in reversed(inspect.getmro(cls)):
             validate_attributes = getattr(base, '__validate_attributes__', None)
             if validate_attributes:
-                if instance.__validate_attributes__.__func__.__code__ is not validate_attributes.__code__:
+                if instance.__validate_attributes__.__func__ is not base.__validate_attributes__.__func__:
                     # The method was overridden, run base.__validate_attributes__ function
                     base.__validate_attributes__(instance)
         # Finally, run the instance __validate_attributes__ function
