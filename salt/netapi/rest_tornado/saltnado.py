@@ -257,7 +257,8 @@ class EventListener(object):
             'master',
             opts['sock_dir'],
             opts['transport'],
-            opts=opts)
+            opts=opts,
+        )
 
         self.event.subscribe()  # start listening for events immediately
 
@@ -270,8 +271,10 @@ class EventListener(object):
         # map of future -> timeout_callback
         self.timeout_map = {}
 
-        self.stream = zmqstream.ZMQStream(self.event.sub,
-                                          io_loop=tornado.ioloop.IOLoop.current())
+        self.stream = zmqstream.ZMQStream(
+            self.event.sub,
+            io_loop=tornado.ioloop.IOLoop.current(),
+        )
         self.stream.on_recv(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
@@ -389,6 +392,17 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             self.set_status(400)
             self.write("We don't serve your kind here")
             self.finish()
+
+    def initialize(self):
+        '''
+        Initialize the handler before requests are called
+        '''
+        if not hasattr(self.application, 'event_listener'):
+            logger.critical('init a listener')
+            self.application.event_listener =  EventListener(
+                self.application.mod_opts,
+                self.application.opts,
+            )
 
     @property
     def token(self):
