@@ -1010,7 +1010,6 @@ class ConfigTestCase(TestCase):
             }
         )
 
-
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_oneof_config_validation(self):
         class TestConf(config.Configuration):
@@ -1046,7 +1045,6 @@ class ConfigTestCase(TestCase):
                 'anyOf': [i.serialize() for i in item.items]
             }
         )
-
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_anyof_config_validation(self):
