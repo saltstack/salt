@@ -675,8 +675,9 @@ class BaseConfigItem(BaseItem):
     title = None
     default = None
     enum = None
+    enumNames = None
 
-    def __init__(self, title=None, description=None, default=None, enum=None, **kwargs):
+    def __init__(self, title=None, description=None, default=None, enum=None, enumNames=None, **kwargs):
         '''
         :param required:
             If the configuration item is required. Defaults to ``False``.
@@ -698,6 +699,8 @@ class BaseConfigItem(BaseItem):
             self.default = default
         if enum is not None:
             self.enum = enum
+        if enumNames is not None:
+            self.enumNames = enumNames
         super(BaseConfigItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
@@ -709,6 +712,18 @@ class BaseConfigItem(BaseItem):
                 )
             if not isinstance(self.enum, list):
                 self.enum = list(self.enum)
+        if self.enumNames is not None:
+            if not isinstance(self.enumNames, (list, tuple, set)):
+                raise RuntimeError(
+                    'Only the \'list\', \'tuple\' and \'set\' python types can be used '
+                    'to define \'enumNames\''
+                )
+            if len(self.enum) != len(self.enumNames):
+                raise RuntimeError(
+                    'The size of \'enumNames\' must match the size of \'enum\''
+                )
+            if not isinstance(self.enumNames, list):
+                self.enumNames = list(self.enumNames)
 
     def serialize(self):
         '''

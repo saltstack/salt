@@ -153,6 +153,24 @@ class ConfigTestCase(TestCase):
 
         item = config.StringConfig(title='Foo',
                                    description='Foo Item',
+                                   min_length=1,
+                                   max_length=3,
+                                   enum=('foo', 'bar'),
+                                   enumNames=('Foo', 'Bar'))
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'string',
+                'title': item.title,
+                'description': item.description,
+                'minLength': item.min_length,
+                'maxLength': item.max_length,
+                'enum': ['foo', 'bar'],
+                'enumNames': ['Foo', 'Bar']
+            }
+        )
+
+        item = config.StringConfig(title='Foo',
+                                   description='Foo Item',
                                    pattern=r'^([\w_-]+)$')
         self.assertDictEqual(
             item.serialize(), {
