@@ -1116,48 +1116,6 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': 2}, TestConf.serialize())
         self.assertIn('is not of type', excinfo.exception.message)
 
-
-    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
-    def test_anyof_config_validation(self):
-        class TestConf(config.Configuration):
-            item = config.ArrayConfig(
-                title='Hungry',
-                description='Are you hungry?',
-                items=config.AnyOfConfig(
-                    items=(config.StringConfig(title='Yes', enum=['yes']),
-                           config.StringConfig(title='No', enum=['no']),
-                           config.BooleanConfig())
-                )
-            )
-
-        try:
-            jsonschema.validate({'item': ['no']}, TestConf.serialize())
-        except jsonschema.exceptions.ValidationError as exc:
-            self.fail('ValidationError raised: {0}'.format(exc))
-
-        try:
-            jsonschema.validate({'item': ['yes']}, TestConf.serialize())
-        except jsonschema.exceptions.ValidationError as exc:
-            self.fail('ValidationError raised: {0}'.format(exc))
-
-        try:
-            jsonschema.validate({'item': [True]}, TestConf.serialize())
-        except jsonschema.exceptions.ValidationError as exc:
-            self.fail('ValidationError raised: {0}'.format(exc))
-
-        try:
-            jsonschema.validate({'item': [False]}, TestConf.serialize())
-        except jsonschema.exceptions.ValidationError as exc:
-            self.fail('ValidationError raised: {0}'.format(exc))
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
-            jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
-        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
-            jsonschema.validate({'item': 2}, TestConf.serialize())
-        self.assertIn('is not of type', excinfo.exception.message)
-
     def test_not_config(self):
         item = config.NotConfig(item=config.BooleanConfig())
         self.assertEqual(
