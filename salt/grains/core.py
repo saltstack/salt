@@ -969,7 +969,8 @@ _OS_FAMILY_MAP = {
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
     'ScientificLinux': 'RedHat',
-    'Raspbian': 'Debian'
+    'Raspbian': 'Debian',
+    'Devuan': 'Debian'
 }
 
 
