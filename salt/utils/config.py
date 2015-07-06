@@ -573,21 +573,21 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
         serialized['additionalProperties'] = cls.__allow_additional_items__
         return serialized
 
-    @classmethod
-    def render_as_rst(cls):
-        '''
-        Render the configuration block as a restructured text string
-        '''
-        # TODO: Implement RST rendering
-        raise NotImplementedError
+    #@classmethod
+    #def render_as_rst(cls):
+    #    '''
+    #    Render the configuration block as a restructured text string
+    #    '''
+    #    # TODO: Implement RST rendering
+    #    raise NotImplementedError
 
-    @classmethod
-    def render_as_yaml(cls):
-        '''
-        Render the configuration block as a parseable YAML string including comments
-        '''
-        # TODO: Implement YAML rendering
-        raise NotImplementedError
+    #@classmethod
+    #def render_as_yaml(cls):
+    #    '''
+    #    Render the configuration block as a parseable YAML string including comments
+    #    '''
+    #    # TODO: Implement YAML rendering
+    #    raise NotImplementedError
 
 
 class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
@@ -745,36 +745,36 @@ class BaseConfigItem(BaseItem):
                 serialized[argname] = argvalue
         return serialized
 
-    def render_as_rst(self, name):
-        '''
-        Render the configuration item as a restructured text string
-        '''
-        # TODO: Implement YAML rendering
-        raise NotImplementedError
+    #def render_as_rst(self, name):
+    #    '''
+    #    Render the configuration item as a restructured text string
+    #    '''
+    #    # TODO: Implement YAML rendering
+    #    raise NotImplementedError
 
-    def render_as_yaml(self, name):
-        '''
-        Render the configuration item as a parseable YAML string including comments
-        '''
-        # TODO: Include the item rules in the output, minimum, maximum, etc...
-        output = '# ----- '
-        output += self.title
-        output += ' '
-        output += '-' * (RENDER_COMMENT_YAML_MAX_LINE_LENGTH - 7 - len(self.title) - 2)
-        output += '>\n'
-        if self.description:
-            output += '\n'.join(textwrap.wrap(self.description,
-                                              width=RENDER_COMMENT_YAML_MAX_LINE_LENGTH,
-                                              initial_indent='# '))
-            output += '\n'
-            yamled_default_value = yaml.dump(self.default, default_flow_style=False).split('\n...', 1)[0]
-            output += '# Default: {0}\n'.format(yamled_default_value)
-            output += '#{0}: {1}\n'.format(name, yamled_default_value)
-        output += '# <---- '
-        output += self.title
-        output += ' '
-        output += '-' * (RENDER_COMMENT_YAML_MAX_LINE_LENGTH - 7 - len(self.title) - 1)
-        return output + '\n'
+    #def render_as_yaml(self, name):
+    #    '''
+    #    Render the configuration item as a parseable YAML string including comments
+    #    '''
+    #    # TODO: Include the item rules in the output, minimum, maximum, etc...
+    #    output = '# ----- '
+    #    output += self.title
+    #    output += ' '
+    #    output += '-' * (RENDER_COMMENT_YAML_MAX_LINE_LENGTH - 7 - len(self.title) - 2)
+    #    output += '>\n'
+    #    if self.description:
+    #        output += '\n'.join(textwrap.wrap(self.description,
+    #                                          width=RENDER_COMMENT_YAML_MAX_LINE_LENGTH,
+    #                                          initial_indent='# '))
+    #        output += '\n'
+    #        yamled_default_value = yaml.dump(self.default, default_flow_style=False).split('\n...', 1)[0]
+    #        output += '# Default: {0}\n'.format(yamled_default_value)
+    #        output += '#{0}: {1}\n'.format(name, yamled_default_value)
+    #    output += '# <---- '
+    #    output += self.title
+    #    output += ' '
+    #    output += '-' * (RENDER_COMMENT_YAML_MAX_LINE_LENGTH - 7 - len(self.title) - 1)
+    #    return output + '\n'
 
 
 class BooleanConfig(BaseConfigItem):
