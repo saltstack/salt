@@ -46,6 +46,12 @@ def start():
     if 'num_processes' not in mod_opts:
         mod_opts['num_processes'] = 1
 
+    if mod_opts['num_processes'] > 1 and mod_opts.get('debug', False) is True:
+        raise Exception((
+            'Tornado\'s debug implementation is not compatible with multiprocess. '
+            'Either disable debug, or set num_processes to 1.'
+        ))
+
     paths = [
         (r"/", saltnado.SaltAPIHandler),
         (r"/login", saltnado.SaltAuthHandler),
@@ -81,7 +87,6 @@ def start():
     application.opts = __opts__
     application.mod_opts = mod_opts
     application.auth = salt.auth.LoadAuth(__opts__)
-    application.event_listener = saltnado.EventListener(mod_opts, __opts__)
 
     # the kwargs for the HTTPServer
     kwargs = {}
@@ -107,7 +112,7 @@ def start():
                          )
         http_server.start(mod_opts['num_processes'])
     except:
-        print('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']))
+        logger.error('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']), exc_info=True)
         raise SystemExit(1)
 
     try:
