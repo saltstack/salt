@@ -20,6 +20,7 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+from salt.exceptions import CommandExecutionError
 from salt.modules import dockerng as dockerng_mod
 from salt.states import dockerng as dockerng_state
 
@@ -271,6 +272,49 @@ class DockerngTestCase(TestCase):
                               "but there were no changes",
                               'name': 'image:latest',
                               })
+
+    def test_image_present_and_force(self):
+        '''
+        According following sls,
+
+        .. code-block:: yaml
+
+            image:latest:
+              dockerng.image_present:
+                - force: true
+
+        if ``image:latest`` is not downloaded and force is true
+        should pull a new image successfuly.
+        '''
+        dockerng_inspect_image = Mock(
+            side_effect=CommandExecutionError(
+                'Error 404: No such image/container: image:latest'))
+        dockerng_pull = Mock(
+            return_value={'Layers':
+                          {'Already_Pulled': ['abcdefghijk'],
+                           'Pulled': ['abcdefghijk']},
+                          'Status': "Image 'image:latest' was pulled",
+                          'Time_Elapsed': 1.1})
+        dockerng_list_tags = Mock(
+            side_effect=[[], ['image:latest']]
+        )
+        __salt__ = {'dockerng.list_tags': dockerng_list_tags,
+                    'dockerng.pull': dockerng_pull,
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.image_present('image:latest', force=True)
+        self.assertEqual(ret,
+                         {'changes': {
+                             'Layers': {'Already_Pulled': ['abcdefghijk'],
+                                        'Pulled': ['abcdefghijk']},
+                             'Status': "Image 'image:latest' was pulled",
+                             'Time_Elapsed': 1.1},
+                             'result': True,
+                             'comment': "Image 'image:latest' was pulled",
+                             'name': 'image:latest',
+                         })
 
     def test_check_start_false(self):
         '''

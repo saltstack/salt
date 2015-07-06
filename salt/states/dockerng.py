@@ -428,7 +428,7 @@ def image_present(name,
         ret['result'] = True
         ret['comment'] = 'Image \'{0}\' already present'.format(name)
         return ret
-    elif force:
+    elif image in all_tags and force:
         try:
             image_info = __salt__['dockerng.inspect_image'](name)
         except Exception as exc:
