@@ -234,6 +234,8 @@ def available(name):
         salt '*' service.available sshd
     '''
     name = _canonical_template_unit_name(name)
+    if name.endswith('.service'):
+        name = name[:-8]  # len('.service') is 8
     units = get_all()
     if name in units:
         return True
