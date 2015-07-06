@@ -316,14 +316,12 @@
 from __future__ import absolute_import, print_function
 import sys
 import inspect
-import textwrap
 import functools
 
 # Import salt libs
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
-import yaml
 import salt.ext.six as six
 
 BASE_SCHEMA_URL = 'https://non-existing.saltstack.com/schemas'
