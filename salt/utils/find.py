@@ -657,7 +657,7 @@ class Finder(object):
                             result = action.execute(fullpath, fstat, test=self.test)
                             if result is not None:
                                 yield result
-            
+
             if depth == self.maxdepth:
                 dirs[:] = []
 
