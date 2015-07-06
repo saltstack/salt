@@ -50,10 +50,6 @@ try:
     from glanceclient import client
     from glanceclient import exc
     HAS_GLANCE = True
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    log = logging.getLogger(__name__)
-    import pprint
 except ImportError:
     pass
 
@@ -65,6 +61,11 @@ try:
     HAS_KEYSTONE = True
 except ImportError:
     pass
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__name__)
+import pprint
 
 
 def __virtual__():
