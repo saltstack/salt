@@ -181,7 +181,7 @@ of the user is looked up with the following LDAP search:
     )
 
 This should return a distinguishedName that we can use to filter for group
-membership.  Then the following LDAP quey is executed:
+membership.  Then the following LDAP query is executed:
 
 .. code-block:: text
 
