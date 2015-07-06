@@ -46,9 +46,9 @@ def __virtual__():
 
 def auth(username, password, **kwargs):
     '''
-    Returns True if the given user cert (password is the cert contents) 
+    Returns True if the given user cert (password is the cert contents)
     was issued by the CA and if cert's Common Name is equal to username.
-    
+
     Returns False otherwise.
 
     ``username``: we need it to run the auth function from CLI/API;
