@@ -633,9 +633,6 @@ class Finder(object):
         '''
         for dirpath, dirs, files in os.walk(path):
             depth = dirpath[len(path) + len(os.path.sep):].count(os.path.sep)
-            if depth == self.maxdepth:
-                dirs[:] = []
-
             if depth >= self.mindepth:
                 for name in dirs + files:
                     fstat = None
@@ -658,6 +655,9 @@ class Finder(object):
                             result = action.execute(fullpath, fstat, test=self.test)
                             if result is not None:
                                 yield result
+
+            if depth == self.maxdepth:
+                dirs[:] = []
 
 
 def find(path, options):
