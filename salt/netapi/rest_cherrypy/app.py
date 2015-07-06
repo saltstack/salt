@@ -1142,25 +1142,18 @@ class Jobs(LowDataAdapter):
                 - 2
                 - 6.9141387939453125e-06
         '''
-        timeout = int(timeout) if timeout.isdigit() else None
+        lowstate = [{
+            'client': 'runner',
+            'fun': 'jobs.lookup_jid' if jid else 'jobs.list_jobs',
+            'jid': jid,
+        }]
+
         if jid:
-            lowstate = [{
-                'client': 'runner',
-                'fun': 'jobs.lookup_jid',
-                'args': (jid,),
-                'timeout': timeout,
-            }, {
+            lowstate.append({
                 'client': 'runner',
                 'fun': 'jobs.list_job',
-                'args': (jid,),
-                'timeout': timeout,
-            }]
-        else:
-            lowstate = [{
-                'client': 'runner',
-                'fun': 'jobs.list_jobs',
-                'timeout': timeout,
-            }]
+                'jid': jid,
+            })
 
         cherrypy.request.lowstate = lowstate
         job_ret_info = list(self.exec_lowstate(
