@@ -365,11 +365,14 @@ class Client(object):
             self.opts['cachedir'], 'localfiles', path.lstrip('|/'))
         filesdest = os.path.join(
             self.opts['cachedir'], 'files', saltenv, path.lstrip('|/'))
+        extrndest = self._extrn_path(path, saltenv)
 
         if os.path.exists(filesdest):
             return salt.utils.url.escape(filesdest) if escaped else filesdest
         elif os.path.exists(localsfilesdest):
             return salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
+        elif os.path.exists(extrndest):
+            return extrndest
 
         return ''
 
