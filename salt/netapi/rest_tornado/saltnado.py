@@ -399,7 +399,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         '''
         if not hasattr(self.application, 'event_listener'):
             logger.critical('init a listener')
-            self.application.event_listener =  EventListener(
+            self.application.event_listener = EventListener(
                 self.application.mod_opts,
                 self.application.opts,
             )
