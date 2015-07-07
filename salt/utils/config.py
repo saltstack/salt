@@ -1026,21 +1026,24 @@ class ArrayConfig(BaseConfigItem):
         super(ArrayConfig, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
-        if self.items is not None:
-            if isinstance(self.items, (list, tuple)):
-                for item in self.items:
-                    if not isinstance(item, (Configuration, BaseItem)):
-                        raise RuntimeError(
-                            'All items passed in the item argument tuple/list must be '
-                            'a subclass of Configuration, BaseItem or BaseConfigItem, '
-                            'not {0}'.format(type(item))
-                        )
-            elif not isinstance(self.items, (Configuration, BaseItem)):
-                raise RuntimeError(
-                    'The items argument passed must be a subclass of '
-                    'Configuration, BaseItem or BaseConfigItem, not '
-                    '{0}'.format(type(self.items))
-                )
+        if not self.items:
+            raise RuntimeError(
+                'The passed items must not be empty'
+            )
+        if isinstance(self.items, (list, tuple)):
+            for item in self.items:
+                if not isinstance(item, (Configuration, BaseItem)):
+                    raise RuntimeError(
+                        'All items passed in the item argument tuple/list must be '
+                        'a subclass of Configuration, BaseItem or BaseConfigItem, '
+                        'not {0}'.format(type(item))
+                    )
+        elif not isinstance(self.items, (Configuration, BaseItem)):
+            raise RuntimeError(
+                'The items argument passed must be a subclass of '
+                'Configuration, BaseItem or BaseConfigItem, not '
+                '{0}'.format(type(self.items))
+            )
 
     def __get_items__(self):
         if isinstance(self.items, (Configuration, BaseItem)):
@@ -1052,6 +1055,141 @@ class ArrayConfig(BaseConfigItem):
             for item in self.items:
                 items.append(item.serialize())
             return items
+
+
+class DictConfig(BaseConfigItem):
+
+    __type__ = 'object'
+
+    __serialize_attr_aliases__ = {
+        'min_properties': 'minProperties',
+        'max_properties': 'maxProperties',
+        'pattern_properties': 'patternProperties',
+        'additional_properties': 'additionalProperties'
+    }
+
+    properties = None
+    pattern_properties = None
+    additional_properties = None
+    min_properties = None
+    max_properties = None
+
+    def __init__(self,
+                 properties=None,
+                 pattern_properties=None,
+                 additional_properties=None,
+                 min_properties=None,
+                 max_properties=None,
+                 **kwargs):
+        '''
+        :param required:
+            If the configuration item is required. Defaults to ``False``.
+        :type required:
+            boolean
+        :param title:
+            A short explanation about the purpose of the data described by this item.
+        :type title:
+            str
+        :param description:
+            A detailed explanation about the purpose of the data described by this item.
+        :param default:
+            The default value for this configuration item. May be :data:`.Null` (a special value
+            to set the default value to null).
+        :param enum:
+            A list(list, tuple, set) of valid choices.
+        :param properties:
+            A dictionary containing fields
+        :param pattern_properties:
+            A dictionary whose keys are regular expressions (ECMA 262).
+            Properties match against these regular expressions, and for any that match,
+            the property is described by the corresponding field schema.
+        :type pattern_properties: dict[str -> :class:`.Configuration` or
+                                       :class:`.BaseItem` or :class:`.BaseItemConfig`]
+        :param additional_properties:
+            Describes properties that are not described by the ``properties`` or ``pattern_properties``.
+        :type additional_properties: bool or :class:`.Configuration` or :class:`.BaseItem`
+                                     or :class:`.BaseItemConfig`
+        :param min_properties:
+            A minimum number of properties.
+        :type min_properties: int
+        :param max_properties:
+            A maximum number of properties
+        :type max_properties: int
+        '''
+        if properties is not None:
+            self.properties = properties
+        if pattern_properties is not None:
+            self.pattern_properties = pattern_properties
+        if additional_properties is not None:
+            self.additional_properties = additional_properties
+        if min_properties is not None:
+            self.min_properties = min_properties
+        if max_properties is not None:
+            self.max_properties = max_properties
+        super(DictConfig, self).__init__(**kwargs)
+
+    def __validate_attributes__(self):
+        if not self.properties and not self.pattern_properties:
+            raise RuntimeError(
+                'One of properties or pattern properties must be passed'
+            )
+        if self.properties is not None:
+            if not isinstance(self.properties, dict):
+                raise RuntimeError(
+                    'The passed properties must be passed as a dict not '
+                    '\'{0}\''.format(type(self.properties))
+                )
+            for key, prop in self.properties.items():
+                if not isinstance(prop, (Configuration, BaseItem)):
+                    raise RuntimeError(
+                        'The passed property who\'s key is \'{0}\' must be of type '
+                        'Configuration, BaseItem or BaseConfigItem, not '
+                        '\'{1}\''.format(key, type(prop))
+                    )
+        if self.pattern_properties is not None:
+            if not isinstance(self.pattern_properties, dict):
+                raise RuntimeError(
+                    'The passed pattern_properties must be passed as a dict '
+                    'not \'{0}\''.format(type(self.pattern_properties))
+                )
+            for key, prop in self.pattern_properties.items():
+                if not isinstance(prop, (Configuration, BaseItem)):
+                    raise RuntimeError(
+                        'The passed pattern_property who\'s key is \'{0}\' must '
+                        'be of type Configuration, BaseItem or BaseConfigItem, '
+                        'not \'{1}\''.format(key, type(prop))
+                    )
+        if self.additional_properties is not None:
+            if not isinstance(self.additional_properties, (bool, Configuration, BaseItem)):
+                raise RuntimeError(
+                    'The passed additional_properties must be of type bool, '
+                    'Configuration, BaseItem or BaseConfigItem, not \'{0}\''.format(
+                        type(self.pattern_properties)
+                    )
+                )
+
+    def __get_properties__(self):
+        if self.properties is None:
+            return
+        properties = OrderedDict()
+        for key, prop in self.properties.items():
+            properties[key] = prop.serialize()
+        return properties
+
+    def __get_pattern_properties__(self):
+        if self.pattern_properties is None:
+            return
+        pattern_properties = OrderedDict()
+        for key, prop in self.pattern_properties.items():
+            pattern_properties[key] = prop.serialize()
+        return pattern_properties
+
+    def __get_additional_properties__(self):
+        if self.additional_properties is None:
+            return
+        if isinstance(self.additional_properties, bool):
+            return self.additional_properties
+        return self.additional_properties.serialize()
 
 
 class OneOfConfig(BaseItem):
