@@ -122,7 +122,7 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in'):
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
-def delete_rule(name, localport, protocol, dir):
+def delete_rule(name, localport, protocol='tcp', dir='in'):
     '''
     Delete an existing firewall rule
 
