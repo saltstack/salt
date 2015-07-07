@@ -50,6 +50,36 @@ class ConfigTestCase(TestCase):
     TestCase for salt.utils.config module
     '''
 
+    def test_configuration_subclass_inherits_items(self):
+        class BaseConfig(config.Configuration):
+            base = config.BooleanConfig(default=True, required=True)
+
+        class SubClassedConfig(BaseConfig):
+            hungry = config.BooleanConfig(title='Hungry', description='Are you hungry?', required=True)
+
+        self.assertDictEqual(
+            SubClassedConfig.serialize(),
+            {
+                '$schema': 'http://json-schema.org/draft-04/schema#',
+                'type': 'object',
+                'properties': {
+                    'base': {
+                      'default': True,
+                      'type': 'boolean',
+                      'title': 'base'
+                     },
+                     'hungry': {
+                        'type': 'boolean',
+                        'description': 'Are you hungry?',
+                        'title': 'Hungry'
+                    }
+                },
+                'required': ['base', 'hungry'],
+                'x-ordering': ['base', 'hungry'],
+                'additionalProperties': False,
+            }
+        )
+
     def test_boolean_config(self):
         item = config.BooleanConfig(title='Hungry', description='Are you hungry?')
         self.assertDictEqual(
