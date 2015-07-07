@@ -627,7 +627,7 @@ def offline(pool_name, *vdevs, **kwargs):
         if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
             # Not a block device or file vdev so error and return
             ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
-            ret['retcode] = 4
+            ret['retcode'] = 4
             return ret
         dlist.append(vdev)
 
