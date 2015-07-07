@@ -396,7 +396,7 @@ def pulled(name,
             name=name,
             comment='Image already pulled: {0}'.format(image_name))
 
-    if __opts__['test'] and force:
+    if __opts__['test']:
         comment = 'Image {0} will be pulled'.format(image_name)
         return _ret_status(name=name, comment=comment)
 
@@ -406,9 +406,11 @@ def pulled(name,
     if previous_id != returned['id']:
         changes = {name: {'old': previous_id,
                           'new': returned['id']}}
+        comment = 'Image {0} pulled'.format(image_name)
     else:
         changes = {}
-    return _ret_status(returned, name, changes=changes)
+        comment = ''
+    return _ret_status(returned, name, changes=changes, comment=comment)
 
 
 def pushed(name, tag='latest', insecure_registry=False):
@@ -499,6 +501,10 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
             name=name,
             comment='Image already loaded: {0}'.format(image_name))
 
+    if __opts__['test']:
+        comment = 'Image {0} will be loaded'.format(image_name)
+        return _ret_status(name=name, comment=comment)
+
     tmp_filename = salt.utils.mkstemp()
     __salt__['state.single']('file.managed',
                             name=tmp_filename,
@@ -561,7 +567,7 @@ def built(name,
             comment='Image already built: {0}, id: {1}'.format(
                 image_name, image_infos['out']['Id']))
 
-    if __opts__['test'] and force:
+    if __opts__['test']:
         comment = 'Image {0} will be built'.format(image_name)
         return {'name': name,
                 'changes': {},
@@ -581,11 +587,14 @@ def built(name,
     if previous_id != returned['id']:
         changes = {name: {'old': previous_id,
                           'new': returned['id']}}
+        comment = 'Image {0} built'.format(image_name)
     else:
         changes = {}
+        comment = ''
     return _ret_status(exec_status=returned,
                        name=name,
-                       changes=changes)
+                       changes=changes,
+                       comment=comment)
 
 
 def installed(name,
@@ -647,13 +656,18 @@ def installed(name,
     image_name = _get_image_name(image, tag)
     iinfos = ins_image(image_name)
     if not iinfos['status']:
-        return _invalid(comment='image "{0}" does not exist'.format(image_name))
+        return _invalid(comment='Image "{0}" does not exist'.format(image_name))
     cinfos = ins_container(name)
     already_exists = cinfos['status']
     # if container exists but is not started, try to start it
     if already_exists:
-        return _valid(comment='image {0!r} already exists'.format(name))
+        return _valid(comment='Container {0!r} already exists'.format(name))
     dports, denvironment = {}, {}
+
+    if __opts__['test']:
+        comment = 'Container {0!r} will be created'.format(name)
+        return _ret_status(name=name, comment=comment)
+
     if not ports:
         ports = []
     if not volumes:
@@ -725,6 +739,10 @@ def absent(name):
         cid = cinfos['id']
         changes[cid] = {}
         is_running = __salt__['docker.is_running'](cid)
+
+        if __opts__['test']:
+            comment = 'Container {0!r} will be stopped and destroyed'.format(cid)
+            return _ret_status(name=name, comment=comment)
 
         # Stop container gracefully, if running
         if is_running:
@@ -870,6 +888,11 @@ def run(name,
         elif isinstance(docked_unless, string_types):
             if retcode(cid, docked_unless) == 0:
                 return valid(comment='docked_unless execution succeeded')
+
+    if __opts__['test']:
+        comment = 'Command {0!r} will be executed on container {1}'.format(name, cid)
+        return _ret_status(name=name, comment=comment)
+
     result = drun_all(cid, name)
     if result['status']:
         return valid(comment=result['comment'])
@@ -1115,6 +1138,9 @@ def running(name,
         # Outdated container: It means it runs against an old image.
         # We're gonna have to stop and remove the old container, to let
         # the name available for the new one.
+        if __opts__['test']:
+            comment = 'Will replace outdated container {0!r}'.format(name)
+            return _ret_status(name=name, comment=comment)
         if is_running:
             stop_status = __salt__['docker.stop'](name)
             if not stop_status['status']:
@@ -1125,6 +1151,10 @@ def running(name,
             return _invalid(comment='Failed to remove outdated container {0!r}'.format(name))
         already_exists = False
         # now it's clear, the name is available for the new container
+
+    if __opts__['test']:
+        comment = 'Will create container {0!r}'.format(name)
+        return _ret_status(name=name, comment=comment)
 
     # parse input data
     exposeports, bindports, contvolumes, bindvolumes, denvironment, changes = [], {}, [], {}, {}, []
