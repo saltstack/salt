@@ -59,8 +59,8 @@ be overridden with the ``method`` argument:
 
     salt.utils.http.query('http://example.com/delete/url', 'DELETE')
 
-When using the ``POST`` method (and others, such ``PUT``), extra data is usually
-sent as well. This data can be either sent directly, in whatever format is
+When using the ``POST`` method (and others, such as ``PUT``), extra data is usually
+sent as well. This data can be sent directly, in whatever format is
 required by the remote server (XML, JSON, plain text, etc).
 
 .. code-block:: python
@@ -137,8 +137,8 @@ However, this can be changed to ``master`` if necessary.
     )
 
 Headers may also be passed through, either as a ``header_list``, a
-``header_dict`` or as a ``header_file``. As with the ``data_file``, the
-``header_file`` may also  be templated. Take note that because HTTP headers are
+``header_dict``, or as a ``header_file``. As with the ``data_file``, the
+``header_file`` may also be templated. Take note that because HTTP headers are
 normally syntactically-correct YAML, they will automatically be imported as an
 a Python dict.
 
