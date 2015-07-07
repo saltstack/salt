@@ -1,7 +1,21 @@
 # -*- coding: utf-8 -*-
 
-# import Third Party Libs
-from salttesting.mock import patch
+# Import Python Libs
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
+
+# Import Salt Testing Libs
+from salttesting import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
+
+# Import Salt Libs
+from salt.modules import boto_vpc
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
+
+# Import Third Party Libs
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto
@@ -30,25 +44,8 @@ except ImportError:
 
         return stub_function
 
-# Import Python libs
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
-# pylint: enable=import-error
+# pylint: enable=import-error,no-name-in-module
 
-# Import Salt Libs
-from salt.modules import boto_vpc
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
-
-# Import Salt Testing Libs
-from salttesting import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
-from salttesting.helpers import ensure_in_syspath
-
-ensure_in_syspath('../../')
-
-# the boto_vpc module relies on the connect_to_region() method
-# which was added in boto 2.8.0
-# https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto_version = '2.8.0'
 required_moto_version = '0.3.7'
 
@@ -1441,5 +1438,5 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoVpcTestCase, needs_daemon=False)
