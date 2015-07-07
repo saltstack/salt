@@ -167,7 +167,7 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     for rrset in answer.answer:
         if rdata in rrset.items:
             if ttl == rrset.ttl:
-                if (len(answer.answer) >= 1 or len(rrset.items) >= 1):
+                if len(answer.answer) >= 1 or len(rrset.items) >= 1:
                     is_exist = True
                     break
 
