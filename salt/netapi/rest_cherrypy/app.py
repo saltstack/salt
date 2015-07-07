@@ -223,6 +223,27 @@ command sent to minions as well as a runner function on the master::
       ``arg[]=two``. This is not supported; send JSON or YAML instead.
 
 
+Delegating the authentication to a frontal
+------------------------------------------
+
+With the sharedsecret auth mecanism you can delegate the authentication to
+a frontal web server. For this scenario, the frontal needs to set two
+HTTP headers :
+
+* X-Remote-User
+* X-Shared-Secret
+
+In apache, you can activate mod_headers and do ::
+
+  RequestHeader set X-Remote-User "%{REMOTE_USER}e"
+  RequestHeader set X-Shared-Secret "OIUHF_CHANGE_THIS_12h88"
+
+In nginx, you can configure the following ::
+
+  proxy_set_header X-Remote-User $remote_user;
+  proxy_set_header X-Shared-Secret "OIUHF_CHANGE_THIS_12h88";
+
+
 .. |req_token| replace:: a session token from :py:class:`~Login`.
 .. |req_accept| replace:: the desired response format.
 .. |req_ct| replace:: the format of the request body.
@@ -1426,6 +1447,14 @@ class Login(LowDataAdapter):
             creds = cherrypy.serving.request.lowstate[0]
         else:
             creds = cherrypy.serving.request.lowstate
+
+        # Authorization header
+        remote_user = cherrypy.request.headers.get('X-Remote-User')
+        sharedsecret = cherrypy.request.headers.get('X-Shared-Secret')
+        if remote_user and sharedsecret:
+            creds['username'] = remote_user
+            creds['sharedsecret'] = sharedsecret
+            creds['eauth'] = 'sharedsecret'
 
         token = self.auth.mk_token(creds)
         if 'token' not in token:
