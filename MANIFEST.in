@@ -4,7 +4,6 @@ include LICENSE
 include README.rst
 include requirements/base.txt
 include requirements/raet.txt
-include requirements/cloud.txt
 include requirements/zeromq.txt
 include tests/*.py
 recursive-include tests *
