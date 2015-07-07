@@ -312,7 +312,7 @@
 from __future__ import absolute_import, print_function
 import sys
 import inspect
-#import textwrap
+import textwrap
 import functools
 
 # Import salt libs
@@ -531,7 +531,10 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
         if cls.title is not None:
             serialized['title'] = cls.title
         if cls.description is not None:
-            serialized['description'] = cls.description
+            if cls.description == cls.__doc__:
+                serialized['description'] = textwrap.dedent(cls.description).strip()
+            else:
+                serialized['description'] = cls.description
 
         required = []
         ordering = []
@@ -740,6 +743,12 @@ class BaseConfigItem(BaseItem):
                     argname = self.__serialize_attr_aliases__[argname]
                 serialized[argname] = argvalue
         return serialized
+
+    def __get_description__(self):
+        if self.description is not None:
+            if self.description == self.__doc__:
+                return textwrap.dedent(self.description).strip()
+            return self.description
 
     #def render_as_rst(self, name):
     #    '''
