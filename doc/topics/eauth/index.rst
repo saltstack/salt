@@ -4,7 +4,7 @@
 External Authentication System
 ==============================
 
-Salt's External Authentication System (eAuth) allows for Salt to  pass through
+Salt's External Authentication System (eAuth) allows for Salt to pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
 Access Control System
@@ -170,8 +170,8 @@ the master config:
 
 To determine group membership in AD, the username and password that is entered
 when LDAP is requested as the eAuth mechanism on the command line is used to
-bind to AD's LDAP interface.  If this fails, then it doesn't matter what groups
-the user belongs to, he or she is denied access.  Next, the distinguishedName
+bind to AD's LDAP interface. If this fails, then it doesn't matter what groups
+the user belongs to, he or she is denied access. Next, the distinguishedName
 of the user is looked up with the following LDAP search:
 
 .. code-block:: text
@@ -181,7 +181,7 @@ of the user is looked up with the following LDAP search:
     )
 
 This should return a distinguishedName that we can use to filter for group
-membership.  Then the following LDAP quey is executed:
+membership. Then the following LDAP query is executed:
 
 .. code-block:: text
 
