@@ -70,7 +70,7 @@ class RhipTestCase(TestCase):
                 with patch.dict(rh_ip.__salt__, {'network.interfaces': lambda: {'eth': True}}):
                     self.assertRaises(AttributeError,
                                       rh_ip.build_interface,
-                                      'iface','eth', True, netmask='255.255.255.255', prefix=32,
+                                      'iface', 'eth', True, netmask='255.255.255.255', prefix=32,
                                       test=True)
 
                 with patch.object(rh_ip, '_parse_settings_bond', MagicMock()):

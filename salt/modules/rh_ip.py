@@ -633,7 +633,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['prefix'] = opts['prefix']
     elif 'netmask' in opts:
         result['netmask'] = opts['netmask']
-        
+
     for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
             result[opt] = opts[opt]
