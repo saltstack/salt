@@ -163,10 +163,18 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     keyname = _config('keyname', **kwargs)
     keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
+    is_exist = False
+    for rrset in answer.answer:
+        if rdata in rrset.items:
+            if ttl == rrset.ttl:
+                if (len(answer.answer) >= 1 or len(rrset.items) >= 1):
+                    is_exist = True
+                    break
+
     dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
     if replace:
         dns_update.replace(name, ttl, rdata)
-    else:
+    elif not is_exist:
         dns_update.add(name, ttl, rdata)
     answer = dns.query.udp(dns_update, nameserver)
     if answer.rcode() > 0:
