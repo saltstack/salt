@@ -1441,6 +1441,5 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests  # pylint: disable=import-error
+    from integration import run_tests
     run_tests(BotoVpcTestCase, needs_daemon=False)
-
