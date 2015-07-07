@@ -627,7 +627,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if 'prefix' in opts:
         if 'netmask' in opts:
-            msg = 'Cannot use prefix and netmask options in one configuration'
+            msg = 'Cannot use prefix and netmask together'
             log.error(msg)
             raise AttributeError(msg)
         result['prefix'] = opts['prefix']
