@@ -497,7 +497,7 @@ def import_(pool_name='', new_name='', **kwargs):
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
         if not res and import_all is False:
             ret['Error'] = 'No pools available for import'
-            ret['retcode] = 1
+            ret['retcode'] = 1
         elif import_all is False:
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
