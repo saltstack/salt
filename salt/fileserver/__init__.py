@@ -318,8 +318,11 @@ class Fileserver(object):
     def update_opts(self):
         # This fix func monkey patching by pillar
         for name, func in self.servers.items():
-            if '__opts__' in func.__globals__:
-                func.__globals__['__opts__'].update(self.opts)
+            try:
+                if '__opts__' in func.__globals__:
+                    func.__globals__['__opts__'].update(self.opts)
+            except AttributeError:
+                pass
 
     def clear_cache(self, back=None):
         '''
