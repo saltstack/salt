@@ -1176,11 +1176,15 @@ def _wait_for_job(linode_id, job_id, timeout=300, quiet=True):
 
         time.sleep(interval)
         if not quiet:
-            log.info('Still waiting on Job {0} for {1}'.format(job_id,
-                                                               linode_id))
+            log.info('Still waiting on Job {0} for Linode {1}.'.format(
+                job_id,
+                linode_id)
+            )
         else:
-            log.debug('Still waiting on Job {0} for {1}'.format(job_id,
-                                                                linode_id))
+            log.debug('Still waiting on Job {0} for Linode {1}.'.format(
+                job_id,
+                linode_id)
+            )
     return False
 
 
@@ -1203,6 +1207,8 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
     if status is None:
         status = _get_status_id_by_name('brand_new')
 
+    status_desc_waiting = _get_status_descr_by_id(status)
+
     interval = 5
     iterations = int(timeout / interval)
 
@@ -1212,11 +1218,21 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
         if result['STATUS'] == status:
             return True
 
+        status_desc_result = _get_status_descr_by_id(result['STATUS'])
+
         time.sleep(interval)
         if quiet:
-            log.info('Status for {0} is {1}, waiting for {2}'.format(linode_id, result['STATUS'], status))
+            log.info('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
+                linode_id,
+                status_desc_result,
+                status_desc_waiting)
+            )
         else:
-            log.debug('Status for {0} is {1}, waiting for {2}'.format(linode_id, result, status))
+            log.debug('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
+                linode_id,
+                status_desc_result,
+                status_desc_waiting)
+            )
 
     return False
 
