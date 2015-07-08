@@ -393,7 +393,7 @@ def create(name,
     '''
     Create the named service.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Required parameters:
     name: Specifies the service name returned by the getkeyname operation
