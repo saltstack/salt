@@ -282,7 +282,7 @@ class SyncClientMixin(object):
         try:
             verify_fun(self.functions, fun)
 
-            # Inject some useful globals to *all* the funciton's global
+            # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
             _functions = copy.deepcopy(self.functions)
