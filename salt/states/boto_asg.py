@@ -516,20 +516,29 @@ def present(
                 scaling_policies,
                 scaling_policies_from_pillar
             )
-            updated, msg = __salt__['boto_asg.update'](name, launch_config_name,
-                                                       availability_zones, min_size,
-                                                       max_size, desired_capacity,
-                                                       load_balancers,
-                                                       default_cooldown,
-                                                       health_check_type,
-                                                       health_check_period,
-                                                       placement_group,
-                                                       vpc_zone_identifier, tags,
-                                                       termination_policies,
-                                                       suspended_processes,
-                                                       scaling_policies, region,
-                                                       notification_arn, notification_types,
-                                                       key, keyid, profile)
+            updated, msg = __salt__['boto_asg.update'](
+                name,
+                launch_config_name,
+                availability_zones,
+                min_size,
+                max_size,
+                desired_capacity=desired_capacity,
+                load_balancers=load_balancers,
+                default_cooldown=default_cooldown,
+                health_check_type=health_check_type,
+                health_check_period=health_check_period,
+                placement_group=placement_group,
+                vpc_zone_identifier=vpc_zone_identifier,
+                tags=tags,
+                termination_policies=termination_policies,
+                suspended_processes=suspended_processes,
+                scaling_policies=scaling_policies,
+                notification_arn=notification_arn,
+                notification_types=notification_types,
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile)
             if asg['launch_config_name'] != launch_config_name:
                 # delete the old launch_config_name
                 deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)

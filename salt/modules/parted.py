@@ -97,7 +97,7 @@ def _validate_partition_boundary(boundary):
         )
 
 
-def probe(*devices, **kwargs):
+def probe(*devices):
     '''
     Ask the kernel to update its local partition data. When no args are
     specified all block devices are tried.
@@ -113,39 +113,12 @@ def probe(*devices, **kwargs):
         salt '*' partition.probe /dev/sda
         salt '*' partition.probe /dev/sda /dev/sdb
     '''
-    salt.utils.kwargs_warn_until(kwargs, 'Beryllium')
-    if 'device' in kwargs:
-        devices = tuple([kwargs['device']] + list(devices))
-        del kwargs['device']
-    if kwargs:
-        raise TypeError("probe() takes no keyword arguments")
-
     for device in devices:
         _validate_device(device)
 
     cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-
-
-def part_list(device, unit=None):
-    '''
-    Deprecated. Calls partition.list.
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' partition.part_list /dev/sda
-        salt '*' partition.part_list /dev/sda unit=s
-        salt '*' partition.part_list /dev/sda unit=kB
-    '''
-    salt.utils.warn_until(
-        'Beryllium',
-        '''The \'part_list\' function has been deprecated in favor of
-        \'list_\'. Please update your code and configs to reflect this.''')
-
-    return list_(device, unit)
 
 
 def list_(device, unit=None):
