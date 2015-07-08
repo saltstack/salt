@@ -17,17 +17,17 @@ Download
 
 Salt source releases are available for download via the following PyPI link:
 
-    https://pypi.python.org/pypi/salt
+* https://pypi.python.org/pypi/salt
 
 The installation document, found in the following link,  outlines where to
 obtain packages and installation specifics for platforms:
 
-    :doc:`Installation </topics/installation/index>`
+* :doc:`Installation </topics/installation/index>`
 
 The Salt Bootstrap project, found in the following repository, is a single
 shell script, which automates the install correctly on  multiple platforms:
 
-    https://github.com/saltstack/salt-bootstrap
+* https://github.com/saltstack/salt-bootstrap
 
 Get Started
 ===============
