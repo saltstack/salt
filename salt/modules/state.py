@@ -512,6 +512,9 @@ def highstate(test=None,
             'Pillar data must be formatted as a dictionary'
         )
 
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
+
     st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
     st_.push_active()
     try:
@@ -545,6 +548,7 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
+        pillarenv=None,
         **kwargs):
     '''
     Execute a set list of state files from an environment.
@@ -572,6 +576,9 @@ def sls(mods,
             Defaults to None. If no saltenv is specified, the minion config will
             be checked for a saltenv and if found, it will be used. If none is found,
             base will be used.
+    pillarenv : None
+        Specify a ``pillar_roots`` environment. By default all pillar environments
+        merged together will be used.
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
@@ -601,10 +608,18 @@ def sls(mods,
         # Backwards compatibility
         saltenv = env
     if not saltenv:
-        if __opts__.get('saltenv', None):
-            saltenv = __opts__['saltenv']
+        if __opts__.get('environment', None):
+            saltenv = __opts__['environment']
         else:
             saltenv = 'base'
+    else:
+        __opts__['environment'] = saltenv
+
+    if not pillarenv:
+        if __opts__.get('pillarenv', None):
+            pillarenv = __opts__['pillarenv']
+    else:
+        __opts__['pillarenv'] = pillarenv
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -849,6 +864,8 @@ def sls_id(
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         split_mods = mods.split(',')
@@ -911,6 +928,8 @@ def show_low_sls(mods,
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -971,6 +990,9 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary'
         )
+
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
 
     st_ = salt.state.HighState(opts, pillar)
     if isinstance(mods, string_types):

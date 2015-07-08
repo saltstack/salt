@@ -595,7 +595,8 @@ class State(object):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillar=self._pillar_override
+                pillar=self._pillar_override,
+                pillarenv=self.opts.get('pillarenv')
                 )
         ret = pillar.compile_pillar()
         if self._pillar_override and isinstance(self._pillar_override, dict):
