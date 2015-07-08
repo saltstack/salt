@@ -5,6 +5,7 @@ A collection of mixins useful for the various *Client interfaces
 from __future__ import print_function
 from __future__ import absolute_import
 import collections
+import copy
 import logging
 import traceback
 import multiprocessing
@@ -266,10 +267,12 @@ class SyncClientMixin(object):
         try:
             verify_fun(self.functions, fun)
 
-            # Inject some useful globals to *all* the funciton's global
+            # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            for mod_name in self.functions:
+            _functions = copy.deepcopy(self.functions)
+
+            for mod_name in _functions:
                 mod, _ = mod_name.split('.', 1)
                 if mod in completed_funcs:
                     continue
