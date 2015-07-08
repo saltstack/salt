@@ -29,9 +29,19 @@ def __virtual__():
     return salt.utils.which('rsync') and 'rsync' or False
 
 
+def _get_summary(rsync_out):
 def synchronized(name, source, delete=False, force=False, update=False,
                  passwordfile=None, exclude=None, excludefrom=None):
     '''
+    Get summary from the rsync successfull output.
+
+    :param rsync_out:
+    :return:
+    '''
+
+    return "- " + "\n- ".join([elm for elm in rsync_out.split("\n\n")[-1].replace("  ", "\n").split("\n") if elm])
+
+
     Synchronizing directories:
 
     .. code-block:: yaml
