@@ -1172,7 +1172,8 @@ def _create_eni_if_necessary(interface):
     params = {'SubnetId': interface['SubnetId']}
 
     for k in ('Description', 'PrivateIpAddress',
-              'SecondaryPrivateIpAddressCount'):
+              'SecondaryPrivateIpAddressCount',
+              'SourceDestCheck'):
         if k in interface:
             params[k] = interface[k]
 
