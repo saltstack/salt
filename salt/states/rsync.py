@@ -62,13 +62,36 @@ def _get_changes(rsync_out):
         'copied': os.linesep.join(sorted(copied)) or "N/A",
         'deleted': os.linesep.join(sorted(deleted)) or "N/A",
     }
-    Synchronizing directories:
+
+
+def synchronized(name, source,
+                 delete=False,
+                 force=False,
+                 update=False,
+                 passwordfile=None,
+                 exclude=None,
+                 excludefrom=None,
+                 prepare=False):
+    '''
+    Guarantees that the source directory is always copied to the target.
+
+    :param name: Name of the target directory.
+    :param source: Source directory.
+    :param prepare: Create destination directory if it does not exists.
+    :param delete: Delete extraneous files from the destination dirs (True or False)
+    :param force: Force deletion of dirs even if not empty
+    :param update: Skip files that are newer on the receiver (True or False)
+    :param passwordfile: Read daemon-access password from the file (path)
+    :param exclude: Exclude files, that matches pattern.
+    :param excludefrom: Read exclude patterns from the file (path)
+    :return:
 
     .. code-block:: yaml
 
         /opt/user-backups:
           rsync.synchronized:
             - source: /home
+            - force: True
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     result = __salt__['rsync.rsync'](source, name, delete=delete, force=force, update=update,
