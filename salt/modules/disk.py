@@ -383,7 +383,7 @@ def hdparms(disks, args=None):
     parse 'em into a nice dict
     (which, considering hdparms output, is quite a hassle)
 
-    .. versionadded:: Beryllium
+    .. versionadded:: Boron
 
     CLI Example:
     .. code-block:: bash
@@ -466,7 +466,7 @@ def hpa(disks, size=None):
 
     *WARNING* Setting the HPA might clobber your data, be very careful with this on active disks!
 
-    .. versionadded:: Beryllium
+    .. versionadded:: Boron
 
     CLI Example:
     .. code-block:: bash
@@ -517,7 +517,7 @@ def smart_attributes(dev, attributes=None, values=None):
     set (https://www.backblaze.com/blog/hard-drive-smart-stats/):
     (5,187,188,197,198)
 
-    .. versionadded:: Beryllium
+    .. versionadded:: Boron
 
     CLI Example:
     .. code-block:: bash
