@@ -180,7 +180,6 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Execute the reaction state
         '''
-        log.debug('=== running Reactor.call_reactions ===')
         for chunk in chunks:
             self.wrap.run(chunk)
 
