@@ -175,7 +175,7 @@ scheduler to skip this first run and wait until the next scheduled run.
 The scheduler also supports scheduling jobs using a cron like format.
 This requires the python-croniter library.
 
-    ... versionadded:: Beryllium
+    ... versionadded:: 2015.8.0
 
     schedule:
       job1:
@@ -193,7 +193,7 @@ will not run once the specified time has passed.  Time should be specified
 in a format support by the dateutil library.
 This requires the python-dateutil library.
 
-    ... versionadded:: Beryllium
+    ... versionadded:: 2015.8.0
 
     schedule:
       job1:

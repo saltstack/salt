@@ -1647,7 +1647,7 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
         part of the name, such as kernel modules which match a specific kernel
         version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     Multiple Package Options:
 
@@ -1688,7 +1688,7 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
         part of the name, such as kernel modules which match a specific kernel
         version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     Multiple Package Options:
 
@@ -1771,7 +1771,7 @@ def uptodate(name, refresh=False, **kwargs):
 
 def group_installed(name, skip=None, include=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Ensure that an entire package group is installed. This state is only
     supported for the :mod:`yum <salt.modules.yumpkg>` package manager.

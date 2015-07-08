@@ -238,7 +238,7 @@ def show_notification(name, text=None, **kwargs):
     '''
     Simple notification using text argument.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     name
         A unique string.
