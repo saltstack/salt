@@ -415,7 +415,8 @@ def _interfaces_ip(out):
                 brd = cols[cols.index('brd') + 1]
         elif type_ == 'inet6':
             mask = cidr
-            scope = cols[cols.index('scope') + 1]
+            if 'scope' in cols:
+                scope = cols[cols.index('scope') + 1]
         return (ip, mask, brd, scope)
 
     groups = re.compile('\r?\n\\d').split(out)
