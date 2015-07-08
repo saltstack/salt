@@ -627,13 +627,13 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if 'prefix' in opts:
         if 'netmask' in opts:
-            msg = 'Cannot use prefix and netmask options in one configuration'
+            msg = 'Cannot use prefix and netmask together'
             log.error(msg)
             raise AttributeError(msg)
         result['prefix'] = opts['prefix']
     elif 'netmask' in opts:
         result['netmask'] = opts['netmask']
-        
+
     for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway']:
         if opt in opts:
             result[opt] = opts[opt]
@@ -649,15 +649,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         except Exception:
             _raise_error_iface(iface, 'mtu', ['integer'])
 
-    if 'ipv6_autoconf' in opts:
-        result['ipv6_autoconf'] = opts['ipv6_autoconf']
-
     if 'enable_ipv6' in opts:
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for opt in ['onparent', 'peerdns', 'peerroutes', 'slave', 'vlan', 'defroute', 'stp', 'ipv6_peerdns',
-                'ipv6_defroute', 'ipv6_peerroutes']:
+                'ipv6_defroute', 'ipv6_peerroutes', 'ipv6_autoconf']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
