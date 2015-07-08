@@ -3,7 +3,7 @@
 Manage IAM roles.
 =================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 This module uses ``boto``, which can be installed via package, or pip.
 
@@ -138,9 +138,6 @@ def __virtual__():
 
 def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profile=None):
     '''
-
-    .. versionadded:: Beryllium
-
     Ensure the IAM user is absent. User cannot be deleted if it has keys.
 
     name (string)
@@ -198,9 +195,6 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
 def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
     '''
-
-    .. versionadded:: Beryllium
-
     Ensure the IAM access keys are present.
 
     name (string)
@@ -286,9 +280,6 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
 
 def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
     '''
-
-    .. versionadded:: Beryllium
-
     Ensure the IAM user access_key_id is absent.
 
     access_key_id (list)
@@ -351,9 +342,6 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
 def user_present(name, policies=None, policies_from_pillars=None, password=None, path=None, region=None, key=None,
                  keyid=None, profile=None):
     '''
-
-    .. versionadded:: Beryllium
-
     Ensure the IAM user is present
 
     name (string)
@@ -512,9 +500,6 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
 
 def group_present(name, policies=None, policies_from_pillars=None, users=None, region=None, key=None, keyid=None, profile=None):
     '''
-
-    .. versionadded:: Beryllium
-
     Ensure the IAM group is present
 
     name (string)
@@ -703,9 +688,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
                    region=None, key=None, keyid=None,
                    profile=None):
     '''
-    Change account policy
-
-    .. versionadded:: Beryllium
+    Change account policy.
 
     allow_users_to_change_password (bool)
         Allows all IAM users in your account to
@@ -792,9 +775,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
 
 def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Deletes a server certificate
-
-    .. versionadded:: Beryllium
+    Deletes a server certificate.
 
     name (string)
         The name for the server certificate. Do not include the path in this value.
@@ -834,8 +815,6 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
                         region=None, key=None, keyid=None, profile=None):
     '''
     Crete server certificate.
-
-    .. versionadded:: Beryllium
 
     name (string)
         The name for the server certificate. Do not include the path in this value.

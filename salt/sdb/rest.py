@@ -6,7 +6,7 @@ Generic REST API SDB Module
 :maturity:      New
 :platform:      all
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 This module allows access to a REST interface using an ``sdb://`` URI.
 
