@@ -189,10 +189,10 @@ Once the sls file has been created, generate the repository cache file with the 
 
     salt-run winrepo.genrepo
 
-Beginning with the Beryllium Salt release the repository cache is compiled on
+Beginning with the 2015.8.0 Salt release the repository cache is compiled on
 the Salt Minion. This allows for easy templating on the minion which allows for
 pillar, grains and other things to be available during compilation time. From
-Beryllium forward the above `salt-run winrepo.genrepo` is only required for
+2015.8.0 forward the above `salt-run winrepo.genrepo` is only required for
 older minions. New minions should execute `salt \* pkg.refresh_db` to update
 from the latest from the master's repo.
 
