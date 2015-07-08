@@ -18,6 +18,7 @@ Rsync state.
 '''
 
 import salt.utils
+import os
 
 
 def __virtual__():
@@ -30,8 +31,6 @@ def __virtual__():
 
 
 def _get_summary(rsync_out):
-def synchronized(name, source, delete=False, force=False, update=False,
-                 passwordfile=None, exclude=None, excludefrom=None):
     '''
     Get summary from the rsync successfull output.
 
@@ -94,7 +93,25 @@ def synchronized(name, source,
             - force: True
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-    result = __salt__['rsync.rsync'](source, name, delete=delete, force=force, update=update,
-                                     passwordfile=passwordfile, exclude=exclude, excludefrom=excludefrom)
+
+    if not os.path.exists(source):
+        ret['result'] = False
+        ret['comment'] = "Source directory {src} was not found.".format(src=source)
+    elif not os.path.exists(name) and not force and not prepare:
+        ret['result'] = False
+        ret['comment'] = "Destination directory {dest} was not found.".format(dest=name)
+    else:
+        if not os.path.exists(name) and prepare:
+            os.makedirs(name)
+
+        result = __salt__['rsync.rsync'](source, name, delete=delete, force=force, update=update,
+                                         passwordfile=passwordfile, exclude=exclude, excludefrom=excludefrom)
+        if result.get('retcode'):
+            ret['result'] = False
+            ret['comment'] = result['stderr']
+            ret['changes'] = result['stdout']
+        else:
+            ret['comment'] = _get_summary(result['stdout'])
+            ret['changes'] = _get_changes(result['stdout'])
 
     return ret
