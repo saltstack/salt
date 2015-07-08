@@ -382,6 +382,7 @@ man_pages = [
     ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
     ('ref/cli/salt-api', 'salt-api', 'salt-api Command', authors, 1),
     ('ref/cli/salt-unity', 'salt-unity', 'salt-unity Command', authors, 1),
+    ('ref/cli/spm', 'spm', 'Salt Package Manager Command', authors, 1),
 ]
 
 
