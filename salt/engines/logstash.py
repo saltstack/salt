@@ -3,7 +3,7 @@
 An engine that reads messages from the salt event bus and pushes
 them onto a logstash endpoint.
 
-.. versionadded: Beryllium
+.. versionadded: 2015.8.0
 
 :configuration:
 
