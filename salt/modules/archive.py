@@ -57,7 +57,7 @@ def tar(options, tarfile, sources=None, dest=None,
     options
         Options to pass to the tar command
 
-        .. versionchanged:: Beryllium
+        .. versionchanged:: 2015.8.0
 
             The mandatory `-` prefixing has been removed.  An options string
             beginning with a `--long-option`, would have uncharacteristically
@@ -420,7 +420,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
     options : None
         Additional command-line options to pass to the ``unzip`` binary.
 
-        .. versionchanged:: Beryllium
+        .. versionchanged:: 2015.8.0
 
             The mandatory `-` prefixing has been removed.  An options string
             beginning with a `--long-option`, would have uncharacteristically

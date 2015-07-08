@@ -2,7 +2,7 @@
 '''
 Support for RallyDev
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
 
@@ -68,9 +68,7 @@ def _query(action=None,
            header_dict=None,
            data=None):
     '''
-    Make a web call to Stormpath
-
-    .. versionadded:: Beryllium
+    Make a web call to RallyDev.
     '''
     token = _get_token()
     username = __opts__.get('rallydev', {}).get('username', None)

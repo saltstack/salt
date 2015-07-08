@@ -106,7 +106,7 @@ def getval(key):
     '''
     Get a value from the minion datastore
 
-    .. deprecated:: Beryllium
+    .. deprecated:: 2015.8.0
          Use ``get`` instead
 
     CLI Example:
@@ -122,7 +122,7 @@ def getvals(*keylist):
     '''
     Get values from the minion datastore
 
-    .. deprecated:: Beryllium
+    .. deprecated:: 2015.8.0
          Use ``get`` instead
 
     CLI Example:
@@ -178,7 +178,7 @@ def get(key, default=None):
     '''
     Get a (list of) value(s) from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -200,7 +200,7 @@ def keys():
     '''
     Get all keys from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -216,7 +216,7 @@ def values():
     '''
     Get values from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -232,7 +232,7 @@ def items():
     '''
     Get items from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -248,7 +248,7 @@ def has_key(key):
     '''
     Check if key is in the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
