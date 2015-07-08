@@ -4053,7 +4053,7 @@ def update_pricing(kwargs=None, call=None):
         salt-cloud -f update_pricing my-ec2-config
         salt-cloud -f update_pricing my-ec2-config type=linux
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     sources = {
         'linux': 'https://a0.awsstatic.com/pricing/1/ec2/linux-od.min.js',
@@ -4078,7 +4078,7 @@ def _parse_pricing(url, name):
     '''
     Download and parse an individual pricing file from AWS
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     price_js = http.query(url, text=True)
 
@@ -4149,7 +4149,7 @@ def show_pricing(kwargs=None, call=None):
 
         salt-cloud -f update_pricing <provider>
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     profile = __opts__['profiles'].get(kwargs['profile'], {})
     if not profile:

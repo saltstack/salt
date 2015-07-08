@@ -659,7 +659,7 @@ def show_pricing(kwargs=None, call=None):
 
         salt-cloud -f update_pricing <provider>
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     profile = __opts__['profiles'].get(kwargs['profile'], {})
     if not profile:
