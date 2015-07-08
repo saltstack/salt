@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''
-Operations with Rsync.
+Rsync state.
 '''
 
 import salt.utils
