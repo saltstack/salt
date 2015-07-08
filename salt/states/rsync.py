@@ -42,6 +42,26 @@ def synchronized(name, source, delete=False, force=False, update=False,
     return "- " + "\n- ".join([elm for elm in rsync_out.split("\n\n")[-1].replace("  ", "\n").split("\n") if elm])
 
 
+def _get_changes(rsync_out):
+    '''
+    Get changes from the rsync successfull output.
+
+    :param rsync_out:
+    :return:
+    '''
+    copied = list()
+    deleted = list()
+
+    for line in rsync_out.split("\n\n")[0].split("\n")[1:]:
+        if line.startswith("deleting "):
+            deleted.append(line.split(" ", 1)[-1])
+        else:
+            copied.append(line)
+
+    return {
+        'copied': os.linesep.join(sorted(copied)) or "N/A",
+        'deleted': os.linesep.join(sorted(deleted)) or "N/A",
+    }
     Synchronizing directories:
 
     .. code-block:: yaml
