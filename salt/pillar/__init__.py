@@ -246,7 +246,7 @@ class Pillar(object):
         opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = saltenv
-        if pillarenv not in opts:
+        if 'pillarenv' not in opts:
             opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
