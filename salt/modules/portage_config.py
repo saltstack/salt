@@ -526,14 +526,16 @@ def is_present(conf, atom):
 
 
 def get_iuse(cp):
-    """
-    .. versionadded:: Beryllium
-    Gets the current IUSE flags from the tree
+    '''
+    .. versionadded:: 2015.8.0
+
+    Gets the current IUSE flags from the tree.
+
     @type: cpv: string
     @param cpv: cat/pkg
     @rtype list
     @returns [] or the list of IUSE flags
-    """
+    '''
     cpv = _get_cpv(cp)
     try:
         # aux_get might return dupes, so run them through set() to remove them
@@ -544,24 +546,27 @@ def get_iuse(cp):
 
 
 def get_installed_use(cp, use="USE"):
-    """
-    .. versionadded:: Beryllium
-    Gets the installed USE flags from the VARDB
+    '''
+    .. versionadded:: 2015.8.0
+
+    Gets the installed USE flags from the VARDB.
+
     @type: cp: string
     @param cp: cat/pkg
     @type use: string
     @param use: 1 of ["USE", "PKGUSE"]
     @rtype list
     @returns [] or the list of IUSE flags
-    """
+    '''
     portage = _get_portage()
     cpv = _get_cpv(cp)
     return portage.db[portage.root]["vartree"].dbapi.aux_get(cpv, [use])[0].split()
 
 
 def filter_flags(use, use_expand_hidden, usemasked, useforced):
-    """
-    .. versionadded:: Beryllium
+    '''
+    .. versionadded:: 2015.8.0
+
     Filter function to remove hidden or otherwise not normally
     visible USE flags from a list.
 
@@ -575,7 +580,7 @@ def filter_flags(use, use_expand_hidden, usemasked, useforced):
     @param useforced: the forced USE flags.
     @rtype: list
     @return the filtered USE flags.
-    """
+    '''
     portage = _get_portage()
     # clean out some environment flags, since they will most probably
     # be confusing for the user
@@ -598,15 +603,16 @@ def filter_flags(use, use_expand_hidden, usemasked, useforced):
 
 
 def get_all_cpv_use(cp):
-    """
-    .. versionadded:: Beryllium
-    Uses portage to determine final USE flags and settings for an emerge
+    '''
+    .. versionadded:: 2015.8.0
+
+    Uses portage to determine final USE flags and settings for an emerge.
 
     @type cp: string
     @param cp: eg cat/pkg
     @rtype: lists
     @return  use, use_expand_hidden, usemask, useforce
-    """
+    '''
     cpv = _get_cpv(cp)
     portage = _get_portage()
     use = None
@@ -629,9 +635,11 @@ def get_all_cpv_use(cp):
 
 def get_cleared_flags(cp):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
+
     Uses portage for compare use flags which is used for installing package
     and use flags which now exist int /etc/portage/package.use/
+
     @type cp: string
     @param cp: eg cat/pkg
     @rtype: tuple
@@ -649,9 +657,11 @@ def get_cleared_flags(cp):
 
 def is_changed_uses(cp):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
+
     Uses portage for determine if the use flags of installed package
-    is compatible with use flags in portage configs
+    is compatible with use flags in portage configs.
+
     @type cp: string
     @param cp: eg cat/pkg
     '''

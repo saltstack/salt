@@ -205,7 +205,7 @@ def create_user(user_name, path=None, region=None, key=None, keyid=None,
     '''
     Create a user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -234,7 +234,7 @@ def get_all_access_keys(user_name, marker=None, max_items=None,
     '''
     Get all access keys from a user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -255,7 +255,7 @@ def create_access_key(user_name, region=None, key=None, keyid=None, profile=None
     '''
     Create access key id for a user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -277,7 +277,7 @@ def delete_access_key(access_key_id, user_name=None, region=None, key=None,
     '''
     Delete access key id from a user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -299,7 +299,7 @@ def delete_user(user_name, region=None, key=None, keyid=None,
     '''
     Delete a user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -324,7 +324,7 @@ def get_user(user_name=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get user information.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -350,7 +350,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     '''
     Create a group.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -379,7 +379,7 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
     '''
     Get group information.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -405,7 +405,7 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
     '''
     Add user to group.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -439,7 +439,7 @@ def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=Non
     '''
     Check if user exists in group.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -463,7 +463,7 @@ def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=N
     '''
     Remove user from group.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -497,7 +497,7 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
     '''
     Adds or updates the specified policy document for the specified group.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -563,7 +563,7 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
     '''
     Retrieves the specified policy document for the specified group.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -617,7 +617,7 @@ def create_login_profile(user_name, password, region=None, key=None,
     Creates a login profile for the specified user, give the user the
     ability to access AWS services and the AWS Management Console.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -657,7 +657,7 @@ def update_account_password_policy(allow_users_to_change_password=None,
     '''
     Update the password policy for the AWS account.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -687,7 +687,7 @@ def get_account_policy(region=None, key=None, keyid=None, profile=None):
     '''
     Get account policy for the AWS account.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -973,7 +973,7 @@ def update_assume_role_policy(role_name, policy_document, region=None,
     '''
     Update an assume role policy for a role.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1003,7 +1003,7 @@ def build_policy(region=None, key=None, keyid=None, profile=None):
     '''
     Build a default assume role policy.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1077,7 +1077,7 @@ def get_all_user_policies(user_name, marker=None, max_items=None, region=None, k
     '''
     Get all user policies.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1103,7 +1103,7 @@ def get_user_policy(user_name, policy_name, region=None, key=None, keyid=None, p
     '''
     Retrieves the specified policy document for the specified user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1132,7 +1132,7 @@ def put_user_policy(user_name, policy_name, policy_json, region=None, key=None, 
     '''
     Adds or updates the specified policy document for the specified user.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1197,7 +1197,7 @@ def upload_server_cert(cert_name, cert_body, private_key, cert_chain=None, path=
     '''
     Upload a certificate to Amazon.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1236,7 +1236,7 @@ def get_server_certificate(cert_name, region=None, key=None, keyid=None, profile
     '''
     Returns certificate information from Amazon
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1261,7 +1261,7 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
     '''
     Deletes a certificate from Amazon.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
