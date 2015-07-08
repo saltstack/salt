@@ -14,9 +14,9 @@ Before SPM can install packages, they must be built. The source for these
 packages is often a Git repository, such as those found at the
 ``saltstack-formulas`` organization on GitHub.
 
-FORMULA.yml
------------
-In addition to the formula itself, a ``FORMULA.yml`` file must exist which
+FORMULA
+-------
+In addition to the formula itself, a ``FORMULA`` file must exist which
 describes the package. An example of this file is:
 
 .. code-block:: yaml
@@ -83,7 +83,7 @@ A list of packages which must be installed before this package can function.
 
 Building a Package
 ------------------
-Once a ``FORMULA.yml`` file has been created, it is placed into the root of the
+Once a ``FORMULA`` file has been created, it is placed into the root of the
 formula that is to be turned into a package. The the ``spm build`` command is
 used to turn that formula into a package:
 

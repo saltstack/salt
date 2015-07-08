@@ -50,6 +50,36 @@ class ConfigTestCase(TestCase):
     TestCase for salt.utils.config module
     '''
 
+    def test_configuration_subclass_inherits_items(self):
+        class BaseConfig(config.Configuration):
+            base = config.BooleanConfig(default=True, required=True)
+
+        class SubClassedConfig(BaseConfig):
+            hungry = config.BooleanConfig(title='Hungry', description='Are you hungry?', required=True)
+
+        self.assertDictEqual(
+            SubClassedConfig.serialize(),
+            {
+                '$schema': 'http://json-schema.org/draft-04/schema#',
+                'type': 'object',
+                'properties': {
+                    'base': {
+                      'default': True,
+                      'type': 'boolean',
+                      'title': 'base'
+                     },
+                     'hungry': {
+                        'type': 'boolean',
+                        'description': 'Are you hungry?',
+                        'title': 'Hungry'
+                    }
+                },
+                'required': ['base', 'hungry'],
+                'x-ordering': ['base', 'hungry'],
+                'additionalProperties': False,
+            }
+        )
+
     def test_boolean_config(self):
         item = config.BooleanConfig(title='Hungry', description='Are you hungry?')
         self.assertDictEqual(
@@ -767,15 +797,6 @@ class ConfigTestCase(TestCase):
         self.assertIn('is not one of', excinfo.exception.message)
 
     def test_array_config(self):
-        item = config.ArrayConfig(title='Dog Names', description='Name your dogs')
-        self.assertDictEqual(
-            item.serialize(), {
-                'type': 'array',
-                'title': item.title,
-                'description': item.description
-            }
-        )
-
         string_item = config.StringConfig(title='Dog Name',
                                           description='The dog name')
         item = config.ArrayConfig(title='Dog Names',
@@ -886,20 +907,6 @@ class ConfigTestCase(TestCase):
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_array_config_validation(self):
         class TestConf(config.Configuration):
-            item = config.ArrayConfig(title='Dog Names', description='Name your dogs')
-
-        try:
-            jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
-                                format_checker=jsonschema.FormatChecker())
-        except jsonschema.exceptions.ValidationError as exc:
-            self.fail('ValidationError raised: {0}'.format(exc))
-
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
-            jsonschema.validate({'item': 1}, TestConf.serialize(),
-                                format_checker=jsonschema.FormatChecker())
-        self.assertIn('is not of type', excinfo.exception.message)
-
-        class TestConf(config.Configuration):
             item = config.ArrayConfig(title='Dog Names',
                                       description='Name your dogs',
                                       items=config.StringConfig())
@@ -918,6 +925,7 @@ class ConfigTestCase(TestCase):
         class TestConf(config.Configuration):
             item = config.ArrayConfig(title='Dog Names',
                                       description='Name your dogs',
+                                      items=config.StringConfig(),
                                       min_items=1,
                                       max_items=2)
 
@@ -998,6 +1006,286 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': ['Pepe']}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
         self.assertIn('is not one of', excinfo.exception.message)
+
+    def test_dict_config(self):
+        item = config.DictConfig(
+            title='Poligon',
+            description='Describe the Poligon',
+            properties={
+                'sides': config.IntegerConfig()
+            }
+        )
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'object',
+                'title': item.title,
+                'description': item.description,
+                'properties': {
+                    'sides': {'type': 'integer'}
+                }
+            }
+        )
+
+        item = config.DictConfig(
+            title='Poligon',
+            description='Describe the Poligon',
+            properties={
+                'sides': config.IntegerConfig()
+            },
+            min_properties=1,
+            max_properties=2
+        )
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'object',
+                'title': item.title,
+                'description': item.description,
+                'properties': {
+                    'sides': {'type': 'integer'}
+                },
+                'minProperties': 1,
+                'maxProperties': 2
+            }
+        )
+
+        item = config.DictConfig(
+            title='Poligon',
+            description='Describe the Poligon',
+            pattern_properties={
+                's*': config.IntegerConfig()
+            },
+            min_properties=1,
+            max_properties=2
+        )
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'object',
+                'title': item.title,
+                'description': item.description,
+                'patternProperties': {
+                    's*': {'type': 'integer'}
+                },
+                'minProperties': 1,
+                'maxProperties': 2
+            }
+        )
+
+        item = config.DictConfig(
+            title='Poligon',
+            description='Describe the Poligon',
+            properties={
+                'color': config.StringConfig(enum=['red', 'green', 'blue'])
+            },
+            pattern_properties={
+                's*': config.IntegerConfig()
+            },
+            min_properties=1,
+            max_properties=2
+        )
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'object',
+                'title': item.title,
+                'description': item.description,
+                'properties': {
+                    'color': {
+                        'type': 'string',
+                        'enum': ['red', 'green', 'blue']
+                    }
+                },
+                'patternProperties': {
+                    's*': {'type': 'integer'}
+                },
+                'minProperties': 1,
+                'maxProperties': 2
+            }
+        )
+
+        item = config.DictConfig(
+            title='Poligon',
+            description='Describe the Poligon',
+            properties={
+                'color': config.StringConfig(enum=['red', 'green', 'blue'])
+            },
+            pattern_properties={
+                's*': config.IntegerConfig()
+            },
+            additional_properties=True,
+            min_properties=1,
+            max_properties=2
+        )
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'object',
+                'title': item.title,
+                'description': item.description,
+                'properties': {
+                    'color': {
+                        'type': 'string',
+                        'enum': ['red', 'green', 'blue']
+                    }
+                },
+                'patternProperties': {
+                    's*': {'type': 'integer'}
+                },
+                'minProperties': 1,
+                'maxProperties': 2,
+                'additionalProperties': True
+            }
+        )
+        item = config.DictConfig(
+            title='Poligon',
+            description='Describe the Poligon',
+            properties={
+                'sides': config.IntegerConfig()
+            },
+            additional_properties=config.OneOfConfig(items=[config.BooleanConfig(),
+                                                            config.StringConfig()])
+        )
+        self.assertDictEqual(
+            item.serialize(), {
+                'type': 'object',
+                'title': item.title,
+                'description': item.description,
+                'properties': {
+                    'sides': {'type': 'integer'}
+                },
+                'additionalProperties': {
+                    'oneOf': [
+                        {'type': 'boolean'},
+                        {'type': 'string'}
+                    ]
+                }
+            }
+        )
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_dict_config_validation(self):
+        class TestConf(config.Configuration):
+            item = config.DictConfig(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties={
+                    'sides': config.IntegerConfig()
+                }
+            )
+
+        try:
+            jsonschema.validate({'item': {'sides': 1}}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'sides': '1'}}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 2}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.DictConfig(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties={
+                    'color': config.StringConfig(enum=['red', 'green', 'blue'])
+                },
+                pattern_properties={
+                    'si.*': config.IntegerConfig()
+                },
+            )
+
+        try:
+            jsonschema.validate({'item': {'sides': 1, 'color': 'red'}}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': 2}, TestConf.serialize())
+        self.assertIn('is not of type', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.DictConfig(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties={
+                    'color': config.StringConfig(enum=['red', 'green', 'blue'])
+                },
+                pattern_properties={
+                    'si.*': config.IntegerConfig()
+                },
+                additional_properties=False
+            )
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'color': 'green', 'sides': 4, 'surfaces': 4}}, TestConf.serialize())
+        self.assertIn('Additional properties are not allowed', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.DictConfig(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties={
+                    'color': config.StringConfig(enum=['red', 'green', 'blue'])
+                },
+                additional_properties=config.OneOfConfig(items=[
+                    config.BooleanConfig(),
+                    config.IntegerConfig()
+
+                ])
+            )
+
+        try:
+            jsonschema.validate({'item': {'sides': 1,
+                                          'color': 'red',
+                                          'rugged_surface': False}}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
+        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+
+        class TestConf(config.Configuration):
+            item = config.DictConfig(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties={
+                    'color': config.StringConfig(enum=['red', 'green', 'blue'])
+                },
+                additional_properties=config.OneOfConfig(items=[
+                    config.BooleanConfig(),
+                    config.IntegerConfig()
+
+                ]),
+                min_properties=2,
+                max_properties=3
+            )
+
+        try:
+            jsonschema.validate({'item': {'color': 'red', 'sides': 1}}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate({'item': {'sides': 1, 'color': 'red', 'rugged_surface': False}}, TestConf.serialize())
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'color': 'blue'}}, TestConf.serialize())
+        self.assertIn('does not have enough properties', excinfo.exception.message)
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'sides': 4,
+                                          'color': 'blue',
+                                          'rugged_surface': False,
+                                          'opaque': True}}, TestConf.serialize())
+        self.assertIn('has too many properties', excinfo.exception.message)
 
     def test_oneof_config(self):
         item = config.OneOfConfig(
