@@ -36,6 +36,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def auth(username, sharedsecret, **kwargs):
     '''
     Shared secret authentication
