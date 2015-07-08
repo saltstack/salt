@@ -285,7 +285,9 @@ class SyncClientMixin(object):
             # Inject some useful globals to *all* the funciton's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            for mod_name in six.iterkeys(self.functions):
+            _functions = copy.deepcopy(self.functions)
+
+            for mod_name in six.iterkeys(_functions):
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)
