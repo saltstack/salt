@@ -40,8 +40,10 @@ Notes:
       Apache Tomcat/7.0.37
 '''
 
+from __future__ import absolute_import
 
-import re
+# import salt libs
+from salt.modules.tomcat import _extract_version
 
 
 # Private
@@ -100,11 +102,7 @@ def war_deployed(name,
        'comment': ''}
     basename = war.split('/')[-1]
 
-    version_extract = re.findall("-([\\d.-]+)$", basename.replace('.war', ''))
-    if len(version_extract) == 1:
-        version = version_extract[0]
-    else:
-        version = None
+    version = _extract_version(basename)
 
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
@@ -113,7 +111,7 @@ def war_deployed(name,
 
     # Determine what to do
     try:
-        if (version != webapps[name]['version']) or force:
+        if not webapps[name]['version'].endswith(version) or force:
             deploy = True
             undeploy = True
             ret['changes']['undeploy'] = ('undeployed {0} in version {1}'.
