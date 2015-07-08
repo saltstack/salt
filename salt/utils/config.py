@@ -724,6 +724,12 @@ class BaseConfigItem(BaseItem):
             if not isinstance(self.enumNames, list):
                 self.enumNames = list(self.enumNames)
 
+    def __get_description__(self):
+        if self.description is not None:
+            if self.description == self.__doc__:
+                return textwrap.dedent(self.description).strip()
+            return self.description
+
     def serialize(self):
         '''
         Return a serializable form of the config instance
