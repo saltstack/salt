@@ -239,7 +239,7 @@ def enable(name, **kwargs):
         flags = _get_flags(**kwargs)
         cmd = cmd + ' && {0} set {1} flags {2}'.format(_cmd(), name, flags)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=True)
 
 
 def disable(name, **kwargs):
