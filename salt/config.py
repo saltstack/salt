@@ -2691,9 +2691,6 @@ def apply_master_config(overrides=None, defaults=None):
 
     opts.setdefault('pillar_source_merging_strategy', 'smart')
 
-    # if there is no reactors option yet, add an empty reactor list
-    if 'reactors' not in opts:
-        opts['reactors'] = []
     return opts
 
 
