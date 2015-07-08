@@ -634,7 +634,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     elif 'netmask' in opts:
         result['netmask'] = opts['netmask']
 
-    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway']:
+    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname']:
         if opt in opts:
             result[opt] = opts[opt]
 
@@ -654,7 +654,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     for opt in ['onparent', 'peerdns', 'peerroutes', 'slave', 'vlan', 'defroute', 'stp', 'ipv6_peerdns',
-                'ipv6_defroute', 'ipv6_peerroutes', 'ipv6_autoconf']:
+                'ipv6_defroute', 'ipv6_peerroutes', 'ipv6_autoconf', 'ipv4_failure_fatal', 'dhcpv6c']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
