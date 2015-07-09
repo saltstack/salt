@@ -132,7 +132,6 @@ class ConfigTestCase(TestCase):
             ssh_key_file = SSHKeyFileConfiguration(flatten=True)
             ssh_key_names = SSHKeyNamesConfiguration(flatten=True)
 
-        self.maxDiff = None
         expexcted = {
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "title": "Digital Ocean",
