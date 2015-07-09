@@ -127,8 +127,7 @@ def add(name,
            profile=profile,
            fullname=fullname)
 
-    if groups:
-        ret = chgroups(name, groups)
+    ret = chgroups(name, groups) if groups else True
 
     return ret
 
