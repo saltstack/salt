@@ -146,24 +146,24 @@ def present(
     ]
 
     for subscription in subscriptions:
-        # If the subscription contains inline digest auth AWS will * the
-        # password so we need to do the same with ours if we match the regex
-        # Exmaple: https://user:****@my.endpoiint.com/foo/bar
+        # If the subscription contains inline digest auth, AWS will *** the
+        # password. So we need to do the same with ours if the regex matches
+        # Example: https://user:****@my.endpoiint.com/foo/bar
         _endpoint = subscription['endpoint']
         matches = re.search(
             'https://(?P<user>\w+):(?P<pass>\w+)@',
             _endpoint)
 
-        # We are https and have auth creds, star out the pass so we can
-        # check if the sub exists since aws will star it out
+        # We are using https and have auth creds - the password will be starred out,
+        # so star out our password so we can still match it
         if matches is not None:
             subscription['endpoint'] = _endpoint.replace(
                 matches.groupdict()['pass'],
                 '****')
 
         if subscription not in _subscriptions:
-            # Just incase we stared out a password we always
-            # ensure the endpoint is the origional value
+            # Ensure the endpoint is set back to it's original value,
+            # incase we starred out a password
             subscription['endpoint'] = _endpoint
 
             if __opts__['test']:
