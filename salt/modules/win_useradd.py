@@ -303,7 +303,7 @@ def delete(name,
             win32profile.DeleteProfile(sid)
         except pywintypes.error as exc:
             (number, context, message) = exc
-            if number == 2: # Profile Folder Not Found
+            if number == 2:  # Profile Folder Not Found
                 pass
             else:
                 log.error('Failed to remove profile for {0}'.format(name))
