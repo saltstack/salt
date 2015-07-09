@@ -426,8 +426,12 @@ class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
                     value.title = key
                 items[key] = value
             if hasattr(value, '__config__'):
-                # the value is a configuration section
-                sections[key] = value
+                if value.__flatten__ is True:
+                    # Should not be considered as a section
+                    items[key] = value
+                else:
+                    # the value is a configuration section
+                    sections[key] = value
 
         attrs['_items'] = items
         attrs['_sections'] = sections
@@ -561,9 +565,11 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
                 after_items_update.update(config.serialize())
             else:
                 properties[name] = config.serialize()
-                # Store the order of the item
-                ordering.append(name)
-            if config.required:
+
+            # Store the order of the item
+            ordering.append(name)
+
+            if isinstance(config, BaseItem) and config.required:
                 # If it's a required item, add it to the required list
                 required.append(name)
         serialized['properties'] = properties
