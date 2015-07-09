@@ -1172,8 +1172,7 @@ def _create_eni_if_necessary(interface):
     params = {'SubnetId': interface['SubnetId']}
 
     for k in ('Description', 'PrivateIpAddress',
-              'SecondaryPrivateIpAddressCount',
-              'SourceDestCheck'):
+              'SecondaryPrivateIpAddressCount'):
         if k in interface:
             params[k] = interface[k]
 
@@ -1209,6 +1208,9 @@ def _create_eni_if_necessary(interface):
             eni_id, interface['DeviceIndex']
         )
     )
+
+    if 'SourceDestCheck' in interface:
+        _modify_interface_source_dest_check(eni_id, interface['SourceDestCheck'])
 
     if interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
@@ -1249,6 +1251,34 @@ def _list_interface_private_addresses(eni_desc):
             addresses.append(entry.get('privateIpAddress'))
 
     return addresses
+
+
+def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
+    '''
+    Change the state of SourceDestCheck Flag in the interface
+    with id eni_id to the value of source_dest_check
+    '''
+    params = {'Action': 'ModifyNetworkInterfaceAttribute',
+              'NetworkInterfaceId': eni_id,
+              'SourceDestCheck.Value': source_dest_check}
+
+    retries = 5
+    while retries > 0:
+        retries = retries - 1
+
+        result = query(params, return_root=True)
+        if isinstance(result, dict) and result.get('error'):
+            time.sleep(1)
+            continue
+
+        return None
+
+    raise SaltCloudException(
+        'Could not change SourceDestCheck attribute '
+        'interface=<{0}> SourceDestCheck=<{1}>'.format(
+            eni_id, source_dest_check
+        )
+    )
 
 
 def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
