@@ -80,6 +80,20 @@ class ConfigTestCase(TestCase):
             }
         )
 
+    def test_configuration_items_order(self):
+
+        class One(config.Configuration):
+            one = config.BooleanConfig()
+
+        class Three(config.Configuration):
+            three = config.BooleanConfig()
+
+        class Final(One):
+            two = config.BooleanConfig()
+            three = Three(flatten=True)
+
+        self.assertEqual(Final.serialize()['x-ordering'], ['one', 'two', 'three'])
+
     def test_boolean_config(self):
         item = config.BooleanConfig(title='Hungry', description='Are you hungry?')
         self.assertDictEqual(
