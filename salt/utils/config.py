@@ -555,14 +555,22 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
                 properties[name] = serialized_section
 
         # Handle the configuration items defined in the class instance
+        after_items_update = OrderedDict()
         for name, config in cls._items.items():
-            properties[name] = config.serialize()
-            # Store the order of the item
-            ordering.append(name)
+            if config.__flatten__ is True:
+                after_items_update.update(config.serialize())
+            else:
+                properties[name] = config.serialize()
+                # Store the order of the item
+                ordering.append(name)
             if config.required:
                 # If it's a required item, add it to the required list
                 required.append(name)
         serialized['properties'] = properties
+
+        # Update the serialized object with any items to include after properties
+        serialized.update(after_items_update)
+
         if required:
             # Only include required if not empty
             serialized['required'] = required
@@ -571,6 +579,10 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
             serialized['x-ordering'] = ordering
         serialized['additionalProperties'] = cls.__allow_additional_items__
         return serialized
+
+    @classmethod
+    def as_requirements_item(cls):
+        return RequirementsItem(requirements=cls())
 
     #@classmethod
     #def render_as_rst(cls):
@@ -600,6 +612,7 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
     __type__ = None
     __format__ = None
     _attributes = None
+    __flatten__ = False
 
     __serialize_attr_aliases__ = None
 
@@ -1201,6 +1214,51 @@ class DictConfig(BaseConfigItem):
         return self.additional_properties.serialize()
 
 
+class RequirementsItem(BaseItem):
+    __type__ = 'object'
+
+    requirements = None
+
+    def __init__(self, requirements=None):
+        if requirements is not None:
+            self.requirements = requirements
+        super(RequirementsItem, self).__init__()
+
+    def __validate_attributes__(self):
+        if self.requirements is None:
+            raise RuntimeError(
+                'The passed requirements must not be empty'
+            )
+        if not isinstance(self.requirements, (Configuration, list, tuple, set)):
+            raise RuntimeError(
+                'The passed requirements must be passed as a list, tuple, '
+                'set or Configuration, not \'{0}\''.format(self.requirements)
+            )
+
+        if not isinstance(self.requirements, Configuration):
+            if not isinstance(self.requirements, list):
+                self.requirements = list(self.requirements)
+
+            for idx, item in enumerate(self.requirements):
+                if not isinstance(item, (six.string_types, Configuration)):
+                    raise RuntimeError(
+                        'The passed requirement at the {0} index must be of type '
+                        'str or Configuration, not \'{1}\''.format(idx, type(item))
+                    )
+
+    def serialize(self):
+        if isinstance(self.requirements, Configuration):
+            requirements = self.requirements.serialize()['required']
+        else:
+            requirements = []
+            for requirement in self.requirements:
+                if isinstance(requirement, Configuration):
+                    requirements.extend(requirement.serialize()['required'])
+                    continue
+                requirements.append(requirement)
+        return {'required': requirements}
+
+
 class OneOfConfig(BaseItem):
 
     __type__ = 'oneOf'
@@ -1231,6 +1289,10 @@ class OneOfConfig(BaseItem):
                 )
         if not isinstance(self.items, list):
             self.items = list(self.items)
+
+    def __call__(self, flatten=False):
+        self.__flatten__ = flatten
+        return self
 
     def serialize(self):
         return {self.__type__: [i.serialize() for i in self.items]}
