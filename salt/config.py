@@ -2390,8 +2390,16 @@ def is_profile_configured(opts, provider, profile_name):
 
     .. versionadded:: Beryllium
     '''
-    required_keys = ['image', 'provider', 'size']
+    # Create a list of standard, required dict keys required by all drivers.
+    required_keys = ['image', 'provider']
     alias, driver = provider.split(':')
+
+    # Most drivers require a size to be set, but some do not.
+    driver_no_size = ['parallels', 'softlayer', 'softlayer_hw']
+
+    if driver not in driver_no_size:
+        required_keys.append('size')
+
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
