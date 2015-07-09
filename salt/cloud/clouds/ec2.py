@@ -1252,8 +1252,12 @@ def _list_interface_private_addresses(eni_desc):
 
     return addresses
 
-def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
 
+def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
+    '''
+    Change the state of SourceDestCheck Flag in the interface
+    with id eni_id to the value of source_dest_check
+    '''
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
               'NetworkInterfaceId': eni_id,
               'SourceDestCheck.Value': source_dest_check}
@@ -1275,6 +1279,7 @@ def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
             eni_id, source_dest_check
         )
     )
+
 
 def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
     '''
