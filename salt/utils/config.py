@@ -407,17 +407,22 @@ class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
         attrs['__flatten__'] = False
 
         # Let's record the configuration items/sections
-        items = OrderedDict()
-        sections = OrderedDict()
+        items = {}
+        sections = {}
+        order = []
         # items from parent classes
         for base in reversed(bases):
             if hasattr(base, '_items'):
                 items.update(base._items)
             if hasattr(base, '_sections'):
                 sections.update(base._sections)
+            if hasattr(base, '_order'):
+                order.extend(base._order)
 
         # Iterate through attrs to discover items/config sections
         for key, value in six.iteritems(attrs):
+            if not hasattr(value, '__item__') and not hasattr(value, '__config__'):
+                continue
             if hasattr(value, '__item__'):
                 # the value is an item instance
                 if hasattr(value, 'title') and value.title is None:
@@ -426,13 +431,10 @@ class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
                     value.title = key
                 items[key] = value
             if hasattr(value, '__config__'):
-                if value.__flatten__ is True:
-                    # Should not be considered as a section
-                    items[key] = value
-                else:
-                    # the value is a configuration section
-                    sections[key] = value
+                sections[key] = value
+            order.append(key)
 
+        attrs['_order'] = order
         attrs['_items'] = items
         attrs['_sections'] = sections
         return type.__new__(mcs, name, bases, attrs)
@@ -544,34 +546,42 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
         ordering = []
         serialized['type'] = 'object'
         properties = OrderedDict()
-        for name, section in cls._sections.items():
-            serialized_section = section.serialize(None if section.__flatten__ is True else name)
-            if section.__flatten__ is True:
-                # Flatten the configuration section into the parent
-                # configuration
-                properties.update(serialized_section['properties'])
-                if 'x-ordering' in serialized_section:
-                    ordering.extend(serialized_section['x-ordering'])
-                if 'required' in serialized:
-                    required.extend(serialized_section['required'])
-            else:
-                # Store it as a configuration section
-                properties[name] = serialized_section
-
-        # Handle the configuration items defined in the class instance
         after_items_update = OrderedDict()
-        for name, config in cls._items.items():
-            if config.__flatten__ is True:
-                after_items_update.update(config.serialize())
-            else:
-                properties[name] = config.serialize()
+        for name in cls._order:
+            skip_order = False
+            if name in cls._sections:
+                section = cls._sections[name]
+                serialized_section = section.serialize(None if section.__flatten__ is True else name)
+                if section.__flatten__ is True:
+                    # Flatten the configuration section into the parent
+                    # configuration
+                    properties.update(serialized_section['properties'])
+                    if 'x-ordering' in serialized_section:
+                        ordering.extend(serialized_section['x-ordering'])
+                    if 'required' in serialized:
+                        required.extend(serialized_section['required'])
+                else:
+                    # Store it as a configuration section
+                    properties[name] = serialized_section
 
-            # Store the order of the item
-            ordering.append(name)
+            if name in cls._items:
+                config = cls._items[name]
+                # Handle the configuration items defined in the class instance
+                if config.__flatten__ is True:
+                    after_items_update.update(config.serialize())
+                    skip_order = True
+                else:
+                    properties[name] = config.serialize()
 
-            if isinstance(config, BaseItem) and config.required:
-                # If it's a required item, add it to the required list
-                required.append(name)
+                if config.required:
+                    # If it's a required item, add it to the required list
+                    required.append(name)
+
+            if skip_order is False:
+                # Store the order of the item
+                if name not in ordering:
+                    ordering.append(name)
+
         serialized['properties'] = properties
 
         # Update the serialized object with any items to include after properties

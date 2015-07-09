@@ -94,6 +94,164 @@ class ConfigTestCase(TestCase):
 
         self.assertEqual(Final.serialize()['x-ordering'], ['one', 'two', 'three'])
 
+    def test_optional_requirements_config(self):
+        class BaseRequirements(config.Configuration):
+            driver = config.StringConfig(default='digital_ocean', format='hidden')
+
+        class SSHKeyFileConfiguration(config.Configuration):
+            ssh_key_file = config.StringConfig(
+                title='SSH Private Key',
+                description='The path to an SSH private key which will be used '
+                            'to authenticate on the deployed VMs',
+                required=True)
+
+        class SSHKeyNamesConfiguration(config.Configuration):
+            ssh_key_names = config.StringConfig(
+                title='SSH Key Names',
+                description='The names of an SSH key being managed on '
+                            'Digital Ocean account which will be used to '
+                            'authenticate on the deployed VMs',
+                required=True)
+
+        class Requirements(BaseRequirements):
+            title = 'Digital Ocean'
+            description = 'Digital Ocean Cloud VM configuration requirements.'
+
+            personal_access_token = config.StringConfig(
+                title='Personal Access Token',
+                description='This is the API access token which can be generated '
+                            'under the API/Application on your account',
+                required=True)
+
+            requirements_definition = config.AnyOfConfig(
+                items=(
+                    SSHKeyFileConfiguration.as_requirements_item(),
+                    SSHKeyNamesConfiguration.as_requirements_item()
+                ),
+            )(flatten=True)
+            ssh_key_file = SSHKeyFileConfiguration(flatten=True)
+            ssh_key_names = SSHKeyNamesConfiguration(flatten=True)
+
+        self.maxDiff = None
+        expexcted = {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "title": "Digital Ocean",
+                "description": "Digital Ocean Cloud VM configuration requirements.",
+                "type": "object",
+                "properties": {
+                    "driver": {
+                        "default": "digital_ocean",
+                        "format": "hidden",
+                        "type": "string",
+                        "title": "driver"
+                    },
+                    "personal_access_token": {
+                        "type": "string",
+                        "description": "This is the API access token which can be "
+                                       "generated under the API/Application on your account",
+                        "title": "Personal Access Token"
+                    },
+                    "ssh_key_file": {
+                        "type": "string",
+                        "description": "The path to an SSH private key which will "
+                                       "be used to authenticate on the deployed VMs",
+                        "title": "SSH Private Key"
+                    },
+                    "ssh_key_names": {
+                        "type": "string",
+                        "description": "The names of an SSH key being managed on Digital "
+                                       "Ocean account which will be used to authenticate "
+                                       "on the deployed VMs",
+                        "title": "SSH Key Names"
+                    }
+                },
+                "anyOf": [
+                    {"required": ["ssh_key_file"]},
+                    {"required": ["ssh_key_names"]}
+                ],
+                "required": [
+                    "personal_access_token"
+                ],
+                "x-ordering": [
+                    "driver",
+                    "personal_access_token",
+                    "ssh_key_file",
+                    "ssh_key_names",
+                ],
+                "additionalProperties": False
+            }
+        self.assertDictEqual(expexcted, Requirements.serialize())
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_optional_requirements_config_validation(self):
+        class BaseRequirements(config.Configuration):
+            driver = config.StringConfig(default='digital_ocean', format='hidden')
+
+        class SSHKeyFileConfiguration(config.Configuration):
+            ssh_key_file = config.StringConfig(
+                title='SSH Private Key',
+                description='The path to an SSH private key which will be used '
+                            'to authenticate on the deployed VMs',
+                required=True)
+
+        class SSHKeyNamesConfiguration(config.Configuration):
+            ssh_key_names = config.StringConfig(
+                title='SSH Key Names',
+                description='The names of an SSH key being managed on  '
+                            'Digial Ocean account which will be used to '
+                            'authenticate on the deployed VMs',
+                required=True)
+
+        class Requirements(BaseRequirements):
+            title = 'Digital Ocean'
+            description = 'Digital Ocean Cloud VM configuration requirements.'
+
+            personal_access_token = config.StringConfig(
+                title='Personal Access Token',
+                description='This is the API access token which can be generated '
+                            'under the API/Application on your account',
+                required=True)
+
+            requirements_definition = config.AnyOfConfig(
+                items=(
+                    SSHKeyFileConfiguration.as_requirements_item(),
+                    SSHKeyNamesConfiguration.as_requirements_item()
+                ),
+            )(flatten=True)
+            ssh_key_file = SSHKeyFileConfiguration(flatten=True)
+            ssh_key_names = SSHKeyNamesConfiguration(flatten=True)
+
+        try:
+            jsonschema.validate(
+                {"personal_access_token": "foo", "ssh_key_names": "bar", "ssh_key_file": "test"},
+                Requirements.serialize()
+            )
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate(
+                {"personal_access_token": "foo", "ssh_key_names": "bar"},
+                Requirements.serialize()
+            )
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        try:
+            jsonschema.validate(
+                {"personal_access_token": "foo", "ssh_key_file": "test"},
+                Requirements.serialize()
+            )
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate(
+                {"personal_access_token": "foo"},
+                Requirements.serialize()
+            )
+        self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
+
     def test_boolean_config(self):
         item = config.BooleanConfig(title='Hungry', description='Are you hungry?')
         self.assertDictEqual(
