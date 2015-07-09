@@ -15,6 +15,8 @@
 # limitations under the License.
 '''
 Rsync state.
+
+.. versionadded:: Boron
 '''
 
 import salt.utils
