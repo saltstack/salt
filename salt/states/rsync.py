@@ -19,6 +19,7 @@ Rsync state.
 .. versionadded:: Boron
 '''
 
+from __future__ import absolute_import
 import salt.utils
 import os
 
