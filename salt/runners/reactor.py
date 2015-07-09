@@ -18,7 +18,13 @@ __func_alias__ = {
 
 def list_(saltenv='base', test=None):
     '''
+    List currently configured reactors
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run reactor.list
     '''
     sevent = salt.utils.event.get_event(
             'master',
@@ -35,7 +41,13 @@ def list_(saltenv='base', test=None):
 
 def add(event, reactors, saltenv='base', test=None):
     '''
+    Add a new reactor
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run reactor.add 'salt/cloud/*/destroyed' reactors='/srv/reactor/destroy/*.sls'
     '''
     if isinstance(reactors, string_types):
         reactors = [reactors]
@@ -56,7 +68,13 @@ def add(event, reactors, saltenv='base', test=None):
 
 def delete(event, saltenv='base', test=None):
     '''
+    Delete a reactor
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run reactor.delete 'salt/cloud/*/destroyed'
     '''
     sevent = salt.utils.event.get_event(
             'master',
