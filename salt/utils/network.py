@@ -932,7 +932,7 @@ def ip_in_subnet(addr, cidr):
         'Support for \'ip_in_subnet\' has been deprecated and will be removed '
         'in Salt Boron. Please use \'in_subnet\' instead.'
     )
-    
+
     return in_subnet(cidr, addr)
 
 
