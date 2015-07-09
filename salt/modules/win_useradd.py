@@ -3,7 +3,6 @@
 Module for managing Windows Users
 
 :depends:
-        - os
         - pywintypes
         - win32api
         - win32net
@@ -25,7 +24,6 @@ import logging
 log = logging.getLogger(__name__)
 
 try:
-    import os
     import pywintypes
     import win32api
     import win32net
