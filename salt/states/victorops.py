@@ -3,7 +3,7 @@
 Create an Event in VictorOps
 ============================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 This state is useful for creating events on the
 VictorOps service during state runs.

@@ -56,7 +56,7 @@ def __virtual__():
 
 def cpuload():
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return the processor load as a percentage
 
@@ -83,7 +83,7 @@ def cpuload():
 
 def diskusage(human_readable=False, path=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return the disk usage for this minion
 
@@ -131,7 +131,7 @@ def procs(count=False):
     count : False
         If ``True``, this function will simply return the number of processes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -158,7 +158,7 @@ def procs(count=False):
 
 def saltmem(human_readable=False):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Returns the amount of memory that salt is using
 
@@ -186,7 +186,7 @@ def saltmem(human_readable=False):
 
 def uptime(human_readable=False):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return the system uptime for this machine in seconds
 

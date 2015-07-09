@@ -88,7 +88,7 @@ def get_root_path(path):
     '''
     Get the configured lxc root for containers
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -106,7 +106,7 @@ def version():
     '''
     Return the actual lxc client version
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -261,7 +261,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     path
         path to the container parent directory (default: /var/lib/lxc)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     profile
         :ref:`profile <tutorial-lxc-profiles-container>` selection
@@ -1261,7 +1261,7 @@ def init(name,
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     clone
         .. deprecated:: 2015.5.0
@@ -1878,7 +1878,7 @@ def create(name,
     path
         parent path for the container creation (default: /var/lib/lxc)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
     '''
     # Required params for 'download' template
     download_template_deps = ('dist', 'release', 'arch')
@@ -2012,7 +2012,7 @@ def clone(name,
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     **Container Cloning Arguments**
 
@@ -2029,12 +2029,12 @@ def clone(name,
     network_profile
         Network profile to use for container
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     nic_opts
         give extra opts overriding network profile values
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     CLI Examples:
@@ -2110,7 +2110,7 @@ def ls_(active=None, cache=True, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     active
         If ``True``, return only active (i.e. running) containers
@@ -2157,7 +2157,7 @@ def list_(extra=False, limit=None, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     limit
         Return output matching a specific state (**frozen**, **running**, or
@@ -2314,7 +2314,7 @@ def _ensure_running(name, no_start=False, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
     '''
     _ensure_exists(name, path=path)
     pre = state(name, path=path)
@@ -2350,14 +2350,14 @@ def restart(name, path=None, lxc_config=None, force=False):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     lxc_config
 
         path to a lxc config file
         config file will be guessed from container name otherwise
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     force : False
         If ``True``, the container will be force-stopped instead of gracefully
@@ -2394,19 +2394,19 @@ def start(name, **kwargs):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     lxc_config
 
         path to a lxc config file
         config file will be guessed from container name otherwise
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     use_vt
         run the command through VT
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2456,7 +2456,7 @@ def stop(name, kill=False, path=None, use_vt=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     kill: False
         Do not wait for the container to stop, kill all tasks in the container.
@@ -2469,7 +2469,7 @@ def stop(name, kill=False, path=None, use_vt=None):
     use_vt
         run the command through VT
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2500,7 +2500,7 @@ def freeze(name, **kwargs):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     start : False
         If ``True`` and the container is stopped, the container will be started
@@ -2511,7 +2511,7 @@ def freeze(name, **kwargs):
     use_vt
         run the command through VT
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2549,12 +2549,12 @@ def unfreeze(name, path=None, use_vt=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     use_vt
         run the command through VT
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2584,7 +2584,7 @@ def destroy(name, stop=False, path=None):
     path
         path to the container parent directory (default: /var/lib/lxc)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     stop : False
         If ``True``, the container will be destroyed even if it is
@@ -2621,7 +2621,7 @@ def exists(name, path=None):
     path
         path to the container parent directory (default: /var/lib/lxc)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     CLI Example:
@@ -2646,7 +2646,7 @@ def state(name, path=None):
     path
         path to the container parent directory (default: /var/lib/lxc)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2692,7 +2692,7 @@ def get_parameter(name, parameter, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2721,7 +2721,7 @@ def set_parameter(name, parameter, value, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2751,7 +2751,7 @@ def info(name, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2915,7 +2915,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         path to the container parent directory
         default: /var/lib/lxc (system)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2966,7 +2966,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -3074,7 +3074,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -3164,7 +3164,7 @@ def running_systemd(name, cache=True, path=None):
     path
         path to the container parent
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -3242,7 +3242,7 @@ def systemd_running_state(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -3270,7 +3270,7 @@ def test_sd_started_state(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     CLI Example:
@@ -3299,7 +3299,7 @@ def test_bare_started_state(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     CLI Example:
@@ -3330,7 +3330,7 @@ def wait_started(name, path=None, timeout=300):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -3419,7 +3419,7 @@ def bootstrap(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     pub_key
         Explicit public key to pressed the minion with (optional).
@@ -3598,7 +3598,7 @@ def attachable(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -3646,7 +3646,7 @@ def _run(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     '''
     orig_state = state(name, path=path)
@@ -3717,7 +3717,7 @@ def run_cmd(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. deprecated:: 2015.5.0
         Use :mod:`lxc.run <salt.modules.lxc.run>` instead
@@ -3763,7 +3763,7 @@ def run(name,
         chroot_fallback=False,
         keep_env='http_proxy,https_proxy,no_proxy'):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Run :mod:`cmd.run <salt.modules.cmdmod.run>` within a container
 
@@ -3791,7 +3791,7 @@ def run(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     no_start : False
         If the container is not running, don't start it
@@ -3880,7 +3880,7 @@ def run_stdout(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     no_start : False
         If the container is not running, don't start it
@@ -3967,7 +3967,7 @@ def run_stderr(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     no_start : False
         If the container is not running, don't start it
@@ -4062,7 +4062,7 @@ def retcode(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     stdin : None
         Standard input to be used for the command
@@ -4146,7 +4146,7 @@ def run_all(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     cmd
         Command to run
@@ -4213,7 +4213,7 @@ def _get_md5(name, path):
 
 def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
     '''
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Function renamed from ``lxc.cp`` to ``lxc.copy_to`` for consistency
         with other container types. ``lxc.cp`` will continue to work, however.
         For versions 2015.2.x and earlier, use ``lxc.cp``.
@@ -4230,7 +4230,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     dest
         Destination on the container. Must be an absolute path.
@@ -4243,7 +4243,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         Unless this option is set to ``True``, then if a file exists at the
         location specified by the ``dest`` argument, an error will be raised.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     makedirs : False
 
@@ -4503,7 +4503,7 @@ def reboot(name, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Examples:
 
@@ -4587,7 +4587,7 @@ def reconfigure(name,
     path
         path to the container parent
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -4666,7 +4666,7 @@ def apply_network_profile(name, network_profile, nic_opts=None, path=None):
     path
         path to the container parent
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Examples:
 

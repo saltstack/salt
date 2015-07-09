@@ -884,7 +884,7 @@ def snapshot_list(kwargs=None, call=None):
     '''
     List virtual machines with snapshots
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -940,7 +940,7 @@ def create_snapshot(kwargs=None, call=None):
     @description: Description of the snapshot (optional)
     @memory: Dump of the internal state of the virtual machine (optional)
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -994,7 +994,7 @@ def delete_snapshot(kwargs=None, call=None):
     '''
     Delete snapshot
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 

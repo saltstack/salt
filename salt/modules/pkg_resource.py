@@ -55,7 +55,7 @@ def pack_sources(sources, normalize=True):
         part of the name, such as kernel modules which match a specific kernel
         version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 

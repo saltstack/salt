@@ -2,7 +2,7 @@
 '''
 Management of Docker Containers
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 
 Why Make a Second Docker Module?

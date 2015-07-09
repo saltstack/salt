@@ -7,7 +7,7 @@ Requisites and Other Global State Arguments
 Fire Event Notifications
 ========================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The `fire_event` option in a state will cause the minion to send an event to
 the Salt Master upon completion of that individual state.

@@ -413,7 +413,7 @@ def add_masquerade(zone):
     '''
     Enable masquerade on a zone.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -428,7 +428,7 @@ def remove_masquerade(zone):
     '''
     Remove masquerade on a zone.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -443,7 +443,7 @@ def add_port(zone, port):
     '''
     Allow specific ports in a zone.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -461,7 +461,7 @@ def remove_port(zone, port):
     '''
     Remove a specific port from a zone.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -476,7 +476,7 @@ def list_ports(zone):
     '''
     List all ports in a zone.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -491,7 +491,7 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr=''):
     '''
     Add port forwarding.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -517,7 +517,7 @@ def remove_port_fwd(zone, src, dest, proto='tcp'):
     '''
     Remove Port Forwarding.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -539,7 +539,7 @@ def list_port_fwd(zone):
     '''
     List port forwarding
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -566,7 +566,7 @@ def block_icmp(zone, icmp):
     '''
     Block a specific ICMP type on a zone
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -589,7 +589,7 @@ def allow_icmp(zone, icmp):
     '''
     Allow a specific ICMP type on a zone
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -612,7 +612,7 @@ def list_icmp_block(zone):
     '''
     List ICMP blocks on a zone
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
