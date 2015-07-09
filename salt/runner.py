@@ -59,8 +59,24 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         auth_creds = dict([(i, low.pop(i)) for i in [
                 'username', 'password', 'eauth', 'token', 'client',
             ] if i in low])
-        reformatted_low = {'fun': low.pop('fun')}
+        fun = low.pop('fun')
+        reformatted_low = {'fun': fun}
         reformatted_low.update(auth_creds)
+        # Support old style calls where arguments could be specified in 'low' top level
+        if not low.get('args') and not low.get('kwargs'):  # not specified or empty
+            verify_fun(self.functions, fun)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.functions[fun],
+                salt.utils.args.condition_input([], low),
+                self.opts,
+                ignore_invalid=True
+            )
+            low['args'] = args
+            low['kwargs'] = kwargs
+        if 'kwargs' not in low:
+            low['kwargs'] = {}
+        if 'args' not in low:
+            low['args'] = []
         reformatted_low['kwarg'] = low
         return reformatted_low
 
