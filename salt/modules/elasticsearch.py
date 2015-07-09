@@ -38,6 +38,7 @@ Module to provide Elasticsearch compatibility to Salt
 '''
 
 from __future__ import absolute_import
+from salt.exceptions import CommandExecutionError
 
 # Import Python libs
 import logging
@@ -68,6 +69,7 @@ def _get_instance(hosts=None, profile=None):
     '''
     Return the elasticsearch instance
     '''
+    es = None
     if profile:
         if isinstance(profile, string_types):
             _profile = __salt__['config.option'](profile)
@@ -81,7 +83,14 @@ def _get_instance(hosts=None, profile=None):
         hosts = ['127.0.0.1:9200']
     if isinstance(hosts, string_types):
         hosts = [hosts]
-    return elasticsearch.Elasticsearch(hosts)
+    try:
+        es = elasticsearch.Elasticsearch(hosts)
+        if not es.ping():
+            raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
+        log.warn(es.ping())
+    except elasticsearch.exceptions.ConnectionError:
+        raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}'.format(hosts))
+    return es
 
 
 def alias_create(indices, alias, hosts=None, body=None, profile=None):
