@@ -15,6 +15,8 @@ import stat
 import os.path
 import logging
 import struct
+import operator
+from collections import Iterable, Mapping
 # pylint: disable=W0611
 import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
@@ -59,7 +61,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, comment,
-        uncomment)
+        uncomment, _add_flags)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -85,7 +87,7 @@ def __virtual__():
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global write, pardir, join
+            global write, pardir, join, _add_flags
             global path_exists_glob, comment, uncomment, _mkstemp_copy
 
             replace = _namespaced_function(replace, globals())
@@ -142,6 +144,7 @@ def __virtual__():
             comment = _namespaced_function(comment, globals())
             uncomment = _namespaced_function(uncomment, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
+            _add_flags = _namespaced_function(_add_flags, globals())
 
             return __virtualname__
     return False
