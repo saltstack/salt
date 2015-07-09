@@ -34,8 +34,7 @@ def __virtual__():
     '''
     if not __salt__['config.get']('victorops.api_key') and \
             not __salt__['config.get']('victorops:api_key'):
-        log.error(_api_key_missing_error)
-        return False
+        return (False, _api_key_missing_error)
     return True
 
 
