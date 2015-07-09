@@ -15,9 +15,9 @@ import stat
 import os.path
 import logging
 import struct
-import operator
-from collections import Iterable, Mapping
 # pylint: disable=W0611
+import operator  # do not remove
+from collections import Iterable, Mapping  # do not remove
 import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
