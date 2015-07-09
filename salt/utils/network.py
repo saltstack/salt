@@ -10,7 +10,6 @@ import re
 import shlex
 import socket
 import logging
-import subprocess
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
@@ -925,9 +924,15 @@ def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
 
-    .. deprecated:: Beryllium
+    .. deprecated:: Boron
        Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'ip_in_subnet\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'in_subnet\' instead.'
+    )
+    
     return in_subnet(cidr, addr)
 
 
