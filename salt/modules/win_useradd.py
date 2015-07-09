@@ -298,22 +298,14 @@ def delete(name,
 
     # Remove the User Profile directory
     if purge:
-        # If the profile is not defined, get the profile from the registry
-        if user_info['profile'] == '':
-            profiles_dir = __salt__['reg.read_key'](hkey='HKEY_LOCAL_MACHINE',
-                                                    path='SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList',
-                                                    key='ProfilesDirectory')
-            profiles_dir = profiles_dir.replace('%SystemDrive%', os.environ['SystemDrive'])
-            user_info['profile'] = r'{0}\{1}'.format(profiles_dir, name)
-
-        # Make sure the profile exists before deleting it
-        # Otherwise this will throw an error
-        if os.path.exists(user_info['profile']):
+        try:
             sid = getUserSid(name)
-            try:
-                win32profile.DeleteProfile(sid)
-            except pywintypes.error as exc:
-                (number, context, message) = exc
+            win32profile.DeleteProfile(sid)
+        except pywintypes.error as exc:
+            (number, context, message) = exc
+            if number == 2: # Profile Folder Not Found
+                pass
+            else:
                 log.error('Failed to remove profile for {0}'.format(name))
                 log.error('nbr: {0}'.format(number))
                 log.error('ctx: {0}'.format(context))
