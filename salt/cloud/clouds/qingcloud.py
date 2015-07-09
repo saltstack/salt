@@ -3,7 +3,7 @@
 QingCloud Cloud Module
 ======================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The QingCloud cloud module is used to control access to the QingCloud.
 http://www.qingcloud.com/

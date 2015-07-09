@@ -39,7 +39,7 @@ Connection module for Amazon VPC
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-.. versionchanged:: Beryllium
+.. versionchanged:: 2015.8.0
     All methods now return a dictionary. Create and delete methods return:
 
     .. code-block:: yaml
@@ -357,7 +357,7 @@ def get_resource_id(resource, name=None, resource_id=None, region=None,
     '''
     Get an AWS id for a VPC resource by type and name.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -381,7 +381,7 @@ def resource_exists(resource, name=None, resource_id=None, tags=None,
     {exists: false} if it does not exist, or {error: {message: error text}
     on error.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -616,7 +616,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
     Returns a dictionary of interesting properties.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added vpc_name argument
 
     CLI Example:
@@ -662,7 +662,7 @@ def describe_vpcs(vpc_id=None, name=None, cidr=None, tags=None,
 
     Returns a a list of dictionaries with interesting properties.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -754,7 +754,7 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
 
     Returns True if the VPC subnet was created and returns False if the VPC subnet was not created.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added vpc_name argument
 
     CLI Examples:
@@ -787,7 +787,7 @@ def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
 
     Returns True if the subnet was deleted and returns False if the subnet was not deleted.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added subnet_name argument
 
     CLI Example:
@@ -811,7 +811,7 @@ def subnet_exists(subnet_id=None, name=None, subnet_name=None, cidr=None,
 
     Returns True if the subnet exists, otherwise returns False.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added subnet_name argument
         Deprecated name argument
 
@@ -917,7 +917,7 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
 
     Returns a dictionary of interesting properties.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Examples:
 
@@ -949,7 +949,7 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
     If a subnet id or CIDR is provided, only its associated subnet details will be
     returned.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Examples:
 
@@ -1014,7 +1014,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
     Returns the internet gateway id if the internet gateway was created and
     returns False if the internet gateways was not created.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     CLI Example:
 
     .. code-block:: bash
@@ -1053,7 +1053,7 @@ def delete_internet_gateway(internet_gateway_id=None,
 
     Returns True if the internet gateway was deleted and otherwise False.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Examples:
 
@@ -1131,7 +1131,7 @@ def delete_customer_gateway(customer_gateway_id=None, customer_gateway_name=None
 
     Returns True if the customer gateway was deleted and returns False if the customer gateway was not deleted.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added customer_gateway_name argument
 
     CLI Example:
@@ -1180,7 +1180,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
 
     Returns True if the DHCP options record was created and returns False if the DHCP options record was not deleted.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added vpc_name and vpc_id arguments
 
     CLI Example:
@@ -1222,7 +1222,7 @@ def delete_dhcp_options(dhcp_options_id=None, dhcp_options_name=None,
     '''
     Delete dhcp options by id or name.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1333,7 +1333,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
 
     Returns the network acl id if successful, otherwise returns False.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added vpc_name, subnet_id, and subnet_name arguments
 
     CLI Example:
@@ -1703,7 +1703,7 @@ def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
     '''
     Creates a route table.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added vpc_name argument
 
     CLI Examples:
@@ -1771,7 +1771,7 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
     '''
     Checks if a route exists.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2073,7 +2073,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
     '''
     Given route table properties, return route table details if matching table(s) exist.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 

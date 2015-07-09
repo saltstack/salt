@@ -2,7 +2,7 @@
 '''
 Package helper functions using ``salt.modules.pkg``
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 # Import python libs
