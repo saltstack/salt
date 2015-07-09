@@ -237,9 +237,9 @@ def _run(cmd,
         # The last item in the list [-1] is the current method.
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
-            cmd = 'Powershell -executionpolicy bypass -File ' + cmd
+            cmd = 'Powershell -NonInteractive -ExecutionPolicy Bypass -File ' + cmd
         else:
-            cmd = 'Powershell "{0}"'.format(cmd.replace('"', '\\"'))
+            cmd = 'Powershell -NonInteractive "{0}"'.format(cmd.replace('"', '\\"'))
 
     # munge the cmd and cwd through the template
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv)
