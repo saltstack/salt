@@ -15,7 +15,7 @@ and others):
 * External Job Cache
 * Master Job Cache 
 
-The major different between these two
+The major difference between these two
 mechanism is from where results are returned (from the Salt Master or Salt
 Minion).
 
@@ -37,7 +37,7 @@ External Job Cache using a Salt returner module running on the Salt Minion.
 Master Job Cache - Master-Side Returner
 ---------------------------------------
 
-.. versionadded:: 2014.7
+.. versionadded:: 2014.7.0
 
 Instead of configuring an External Job Cache on each Salt Minion, you can
 configure the Master Job Cache to send job results from the Salt Master
