@@ -394,6 +394,7 @@ def query(url,
                 auth_password=password,
                 body=data,
                 validate_cert=verify_ssl,
+                allow_nonstandard_methods=True,
                 **req_kwargs
             )
         except tornado.httpclient.HTTPError as exc:
