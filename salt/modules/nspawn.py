@@ -2,7 +2,7 @@
 '''
 Manage nspawn containers
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 `systemd-nspawn(1)`__ is a tool used to manage lightweight namespace
 containers. This execution module provides several functions to help manage

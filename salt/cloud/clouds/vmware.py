@@ -3,7 +3,7 @@
 VMware Cloud Module
 ===================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 

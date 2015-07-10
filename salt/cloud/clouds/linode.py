@@ -781,7 +781,7 @@ def reboot(name=None, linode_id=None, call=None):
     '''
     Reboot a linode. Either a name or a linode_id must be provided.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     name
         The name of the VM to reboot.
@@ -827,7 +827,7 @@ def show_instance(name=None, linode_id=None, call=None):
     Displays details about a particular Linode VM. Either a name or a linode_id must
     be provided.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     name
         The name of the VM for which to display details.
@@ -881,7 +881,7 @@ def show_pricing(kwargs=None, call=None):
     Show pricing for a particular profile. This is only an estimate, based on
     unofficial pricing sources.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 

@@ -1172,8 +1172,7 @@ def _create_eni_if_necessary(interface):
     params = {'SubnetId': interface['SubnetId']}
 
     for k in ('Description', 'PrivateIpAddress',
-              'SecondaryPrivateIpAddressCount',
-              'SourceDestCheck'):
+              'SecondaryPrivateIpAddressCount'):
         if k in interface:
             params[k] = interface[k]
 
@@ -1209,6 +1208,9 @@ def _create_eni_if_necessary(interface):
             eni_id, interface['DeviceIndex']
         )
     )
+
+    if 'SourceDestCheck' in interface:
+        _modify_interface_source_dest_check(eni_id, interface['SourceDestCheck'])
 
     if interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
@@ -1249,6 +1251,34 @@ def _list_interface_private_addresses(eni_desc):
             addresses.append(entry.get('privateIpAddress'))
 
     return addresses
+
+
+def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
+    '''
+    Change the state of SourceDestCheck Flag in the interface
+    with id eni_id to the value of source_dest_check
+    '''
+    params = {'Action': 'ModifyNetworkInterfaceAttribute',
+              'NetworkInterfaceId': eni_id,
+              'SourceDestCheck.Value': source_dest_check}
+
+    retries = 5
+    while retries > 0:
+        retries = retries - 1
+
+        result = query(params, return_root=True)
+        if isinstance(result, dict) and result.get('error'):
+            time.sleep(1)
+            continue
+
+        return None
+
+    raise SaltCloudException(
+        'Could not change SourceDestCheck attribute '
+        'interface=<{0}> SourceDestCheck=<{1}>'.format(
+            eni_id, source_dest_check
+        )
+    )
 
 
 def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
@@ -4054,7 +4084,7 @@ def update_pricing(kwargs=None, call=None):
         salt-cloud -f update_pricing my-ec2-config
         salt-cloud -f update_pricing my-ec2-config type=linux
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     sources = {
         'linux': 'https://a0.awsstatic.com/pricing/1/ec2/linux-od.min.js',
@@ -4079,7 +4109,7 @@ def _parse_pricing(url, name):
     '''
     Download and parse an individual pricing file from AWS
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     price_js = http.query(url, text=True)
 
@@ -4150,7 +4180,7 @@ def show_pricing(kwargs=None, call=None):
 
         salt-cloud -f update_pricing <provider>
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     profile = __opts__['profiles'].get(kwargs['profile'], {})
     if not profile:

@@ -3,7 +3,7 @@
 Scaleway Cloud Module
 =====================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The Scaleway cloud module is used to interact with your Scaleway BareMetal
 Servers.
