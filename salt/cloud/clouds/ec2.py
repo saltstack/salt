@@ -1266,11 +1266,16 @@ def _list_interface_private_addresses(eni_desc):
     return addresses
 
 
-def _modify_eni_properties(eni_id, properties={}):
+def _modify_eni_properties(eni_id, properties=None):
     '''
     Change properties of the interface
     with id eni_id to the values in properties dict
     '''
+    if type(subnet_query_result['item']) is not dict:
+        raise SaltCloudException(
+            'ENI properties must be a dictionary'
+        )
+
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
               'NetworkInterfaceId': eni_id}
     for k, v in properties.iteritems():
