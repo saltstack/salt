@@ -630,7 +630,7 @@ class Minion(MinionBase):
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            self.opts.get('pillarenv')
+            pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
