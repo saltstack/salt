@@ -1237,7 +1237,7 @@ def _create_eni_if_necessary(interface):
                                  opts=__opts__,
                                  sigver='4')
         if 'error' in tag_response:
-            raise SaltCloudException('Failed to set name of interface {0}')
+            log.error('Failed to set name of interface {0}')
 
     return {'DeviceIndex': interface['DeviceIndex'],
             'NetworkInterfaceId': eni_id}
