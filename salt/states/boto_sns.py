@@ -151,7 +151,7 @@ def present(
         # Example: https://user:****@my.endpoiint.com/foo/bar
         _endpoint = subscription['endpoint']
         matches = re.search(
-            'https://(?P<user>\w+):(?P<pass>\w+)@',
+            r'https://(?P<user>\w+):(?P<pass>\w+)@',
             _endpoint)
 
         # We are using https and have auth creds - the password will be starred out,
