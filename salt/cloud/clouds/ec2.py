@@ -1204,9 +1204,6 @@ def _create_eni_if_necessary(interface):
         )
     )
 
-    if 'SourceDestCheck' in interface:
-        _modify_interface_source_dest_check(eni_id, interface['SourceDestCheck'])
-
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
     if type(associate_public_ip) is str:
         # Assume id of EIP as value
