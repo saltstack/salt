@@ -294,6 +294,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
+    jinja_env.tests['list'] = salt.utils.is_list
+
     decoded_context = {}
     for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
