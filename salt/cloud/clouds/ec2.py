@@ -1180,15 +1180,6 @@ def _create_eni_if_necessary(interface):
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
 
-    if 'AssociatePublicIpAddress' in interface:
-        # Associating a public address in a VPC only works when the interface is not
-        # created beforehand, but as a part of the machine creation request.
-        for k in ('DeviceIndex', 'AssociatePublicIpAddress', 'NetworkInterfaceId'):
-            if k in interface:
-                params[k] = interface[k]
-        params['DeleteOnTermination'] = interface.get('delete_interface_on_terminate', True)
-        return params
-
     params['Action'] = 'CreateNetworkInterface'
 
     result = aws.query(params,
@@ -1212,9 +1203,13 @@ def _create_eni_if_necessary(interface):
     if 'SourceDestCheck' in interface:
         _modify_interface_source_dest_check(eni_id, interface['SourceDestCheck'])
 
-    if interface.get('associate_eip'):
+    associate_public_ip = interface.get('AssociatePublicIpAddress', False)
+    if type(associate_public_ip) is str:
+        # Assume id of EIP as value
+        _associate_eip_with_interface(eni_id, associate_public_ip)
+    elif interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
-    elif interface.get('allocate_new_eip'):
+    elif interface.get('allocate_new_eip') or interface.get('AssociatePublicIpAddress'):
         _new_eip = _request_eip(interface)
         _associate_eip_with_interface(eni_id, _new_eip)
     elif interface.get('allocate_new_eips'):
