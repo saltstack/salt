@@ -29,6 +29,24 @@ def _auth():
     return __context__['auth']
 
 
+def _gather_pillar(pillarenv, pillar_override):
+    '''
+    Whenever a state run starts, gather the pillar data fresh
+    '''
+    pillar = salt.pillar.get_pillar(
+        __opts__,
+        __grains__,
+        __opts__['id'],
+        __opts__['environment'],
+        pillar=pillar_override,
+        pillarenv=pillarenv
+    )
+    ret = pillar.compile_pillar()
+    if pillar_override and isinstance(pillar_override, dict):
+        ret.update(pillar_override)
+    return ret
+
+
 def recv(files, dest):
     '''
     Used with salt-cp, pass the files dict, and the destination.
@@ -66,7 +84,7 @@ def _mk_client():
                 salt.fileclient.get_file_client(__opts__)
 
 
-def _render_filenames(path, dest, saltenv, template):
+def _render_filenames(path, dest, saltenv, template, **kw):
     '''
     Process markup in the :param:`path` and :param:`dest` variables (NOT the
     files under the paths they ultimately point to) according to the markup
@@ -84,7 +102,11 @@ def _render_filenames(path, dest, saltenv, template):
 
     kwargs = {}
     kwargs['salt'] = __salt__
-    kwargs['pillar'] = __pillar__
+    if 'pillarenv' in kw or 'pillar' in kw:
+        pillarenv = kw.get('pillarenv', __opts__.get('pillarenv'))
+        kwargs['pillar'] = _gather_pillar(pillarenv, kw.get('pillar'))
+    else:
+        kwargs['pillar'] = __pillar__
     kwargs['grains'] = __grains__
     kwargs['opts'] = __opts__
     kwargs['saltenv'] = saltenv
@@ -125,7 +147,8 @@ def get_file(path,
              makedirs=False,
              template=None,
              gzip=None,
-             env=None):
+             env=None,
+             **kwargs):
     '''
     Used to get a single file from the salt master
 
@@ -163,7 +186,7 @@ def get_file(path,
         # Backwards compatibility
         saltenv = env
 
-    (path, dest) = _render_filenames(path, dest, saltenv, template)
+    (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     if not hash_file(path, saltenv):
         return ''
@@ -222,7 +245,7 @@ def get_template(path,
             **kwargs)
 
 
-def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None):
+def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kwargs):
     '''
     Used to recursively copy a directory from the salt master
 
@@ -243,7 +266,7 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None):
         # Backwards compatibility
         saltenv = env
 
-    (path, dest) = _render_filenames(path, dest, saltenv, template)
+    (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
     _mk_client()
     return __context__['cp.fileclient'].get_dir(path, dest, saltenv, gzip)

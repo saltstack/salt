@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 
 def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
-               pillar=None):
+               pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
@@ -45,7 +45,7 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
         'local': Pillar
     }.get(opts['file_client'], Pillar)
     return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
-                 pillar=pillar)
+                 pillar=pillar, pillarenv=pillarenv)
 
 
 class RemotePillar(object):
@@ -53,13 +53,14 @@ class RemotePillar(object):
     Get the pillar from the master
     '''
     def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
-                 pillar=None):
+                 pillar=None, pillarenv=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
         self.grains = grains
         self.id_ = id_
         self.channel = salt.transport.Channel.factory(opts)
+        self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
@@ -74,6 +75,7 @@ class RemotePillar(object):
         load = {'id': self.id_,
                 'grains': self.grains,
                 'saltenv': self.opts['environment'],
+                'pillarenv': self.opts['pillarenv'],
                 'pillar_override': self.pillar_override,
                 'ver': '2',
                 'cmd': '_pillar'}
@@ -97,11 +99,11 @@ class Pillar(object):
     Read over the pillar top files and render the pillar data
     '''
     def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
-                 pillar=None):
+                 pillar=None, pillarenv=None):
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, id_, saltenv, ext)
+        self.opts = self.__gen_opts(opts, grains, id_, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
         self.client = salt.fileclient.get_file_client(self.opts, True)
 
         if opts.get('file_client', '') == 'local':
@@ -145,7 +147,7 @@ class Pillar(object):
             return {}
         return ext
 
-    def __gen_opts(self, opts_in, grains, id_, saltenv=None, ext=None, env=None):
+    def __gen_opts(self, opts_in, grains, id_, saltenv=None, ext=None, env=None, pillarenv=None):
         '''
         The options need to be altered to conform to the file client
         '''
@@ -168,6 +170,8 @@ class Pillar(object):
         opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = saltenv
+        if 'pillarenv' not in opts:
+            opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
@@ -200,16 +204,16 @@ class Pillar(object):
         errors = []
         # Gather initial top files
         try:
-            if self.opts['environment']:
-                tops[self.opts['environment']] = [
+            if self.opts['pillarenv']:
+                tops[self.opts['pillarenv']] = [
                         compile_template(
                             self.client.cache_file(
                                 self.opts['state_top'],
-                                self.opts['environment']
+                                self.opts['pillarenv']
                                 ),
                             self.rend,
                             self.opts['renderer'],
-                            self.opts['environment'],
+                            self.opts['pillarenv'],
                             _pillar_rend=True
                             )
                         ]
@@ -343,8 +347,8 @@ class Pillar(object):
         '''
         matches = {}
         for saltenv, body in top.items():
-            if self.opts['environment']:
-                if saltenv != self.opts['environment']:
+            if self.opts['pillarenv']:
+                if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in body.items():
                 if self.matcher.confirm_top(
