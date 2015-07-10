@@ -1350,10 +1350,16 @@ def _update_enis(interfaces, instance):
         instance_enis.append((query_enis['networkInterfaceId'], query_enis['attachment']))
 
     for eni_id, eni_data in instance_enis:
+        delete_on_terminate = True
+        if 'DeleteOnTermination' in config_enis[eni_data['deviceIndex']]:
+            delete_on_terminate = config_enis[eni_data['deviceIndex']]['DeleteOnTermination']
+        elif 'delete_interface_on_terminate' in config_enis[eni_data['deviceIndex']]:
+            delete_on_terminate = config_enis[eni_data['deviceIndex']]['delete_interface_on_terminate']
+
         params = {'Action': 'ModifyNetworkInterfaceAttribute',
                   'NetworkInterfaceId': eni_id,
                   'Attachment.AttachmentId': eni_data['attachmentId'],
-                  'Attachment.DeleteOnTermination': config_enis[eni_data['deviceIndex']].setdefault('delete_interface_on_terminate', True)}
+                  'Attachment.DeleteOnTermination': delete_on_terminate}
         set_eni_attributes = aws.query(params,
                                        return_root=True,
                                        location=get_location(),
