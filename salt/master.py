@@ -801,7 +801,7 @@ class MWorker(multiprocessing.Process):
         :return: The result of passing the load to a function in ClearFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         '''
-        log.info('Clear payload received with command {cmd}'.format(**load))
+        log.trace('Clear payload received with command {cmd}'.format(**load))
         if load['cmd'].startswith('__'):
             return False
         return getattr(self.clear_funcs, load['cmd'])(load)
