@@ -1141,6 +1141,10 @@ def _create_eni_if_necessary(interface):
     '''
     Create an Elastic Interface if necessary and return a Network Interface Specification
     '''
+    if 'NetworkInterfaceId' in interface and interface['NetworkInterfaceId'] is not None:
+        return {'DeviceIndex': interface['DeviceIndex'],
+                'NetworkInterfaceId': interface['NetworkInterfaceId']}
+
     params = {'Action': 'DescribeSubnets'}
     subnet_query = aws.query(params,
                              return_root=True,
