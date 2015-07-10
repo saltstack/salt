@@ -21,36 +21,19 @@ blockdev.__salt__ = {
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestBlockdevModule(TestCase):
     def test_dump(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
-            blockdev.dump('/dev/sda')
-            mock.assert_called_once_with(
-                'blockdev --getro --getsz --getss --getpbsz --getiomin '
-                '--getioopt --getalignoff  --getmaxsect --getsize '
-                '--getsize64 --getra --getfra /dev/sda',
-                python_shell=False
-            )
+        with patch.dict(blockdev.__salt__, {'disk.dump': MagicMock(return_value=True)}):
+            self.assertTrue(blockdev.dump('/dev/sda'))
 
     def test_wipe(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
-            blockdev.wipe('/dev/sda')
-            mock.assert_called_once_with(
-                'wipefs /dev/sda',
-                python_shell=False
-            )
+        with patch.dict(blockdev.__salt__, {'disk.wipe': MagicMock(return_value=True)}):
+            self.assertTrue(blockdev.wipe('/dev/sda'))
 
     def test_tune(self):
-        mock = MagicMock(return_value='712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512')
-        with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
-            mock_dump = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-            with patch('salt.modules.blockdev.dump', mock_dump):
-                kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
-                blockdev.tune('/dev/sda', **kwargs)
-                mock.assert_called_once_with(
-                    'blockdev --setra 512 --setfra 512 /dev/sda',
-                    python_shell=False
-                )
+        mock_run = MagicMock(return_value='712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512')
+        with patch.dict(blockdev.__salt__, {'disk.tune': MagicMock(return_value=True)}):
+            kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
+            ret = blockdev.tune('/dev/sda', **kwargs)
+            self.assertTrue(ret)
 
 
 if __name__ == '__main__':
