@@ -1266,14 +1266,15 @@ def _list_interface_private_addresses(eni_desc):
     return addresses
 
 
-def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
+def _modify_eni_properties(eni_id, properties={}):
     '''
-    Change the state of SourceDestCheck Flag in the interface
-    with id eni_id to the value of source_dest_check
+    Change properties of the interface
+    with id eni_id to the values in properties dict
     '''
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
-              'NetworkInterfaceId': eni_id,
-              'SourceDestCheck.Value': source_dest_check}
+              'NetworkInterfaceId': eni_id}
+    for k, v in properties.iteritems():
+        params[k] = v
 
     retries = 5
     while retries > 0:
@@ -1284,12 +1285,12 @@ def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
             time.sleep(1)
             continue
 
-        return None
+        return result
 
     raise SaltCloudException(
-        'Could not change SourceDestCheck attribute '
-        'interface=<{0}> SourceDestCheck=<{1}>'.format(
-            eni_id, source_dest_check
+        'Could not change interface <{0}> attributes '
+        '<{1!r}> after 5 retries'.format(
+            eni_id, properties
         )
     )
 
@@ -1363,16 +1364,19 @@ def _update_enis(interfaces, instance):
         instance_enis.append((query_enis['networkInterfaceId'], query_enis['attachment']))
 
     for eni_id, eni_data in instance_enis:
-        params = {'Action': 'ModifyNetworkInterfaceAttribute',
-                  'NetworkInterfaceId': eni_id,
-                  'Attachment.AttachmentId': eni_data['attachmentId'],
-                  'Attachment.DeleteOnTermination': config_enis[eni_data['deviceIndex']].setdefault('delete_interface_on_terminate', True)}
-        set_eni_attributes = aws.query(params,
-                                       return_root=True,
-                                       location=get_location(),
-                                       provider=get_provider(),
-                                       opts=__opts__,
-                                       sigver='4')
+        delete_on_terminate = True
+        if 'DeleteOnTermination' in config_enis[eni_data['deviceIndex']]:
+            delete_on_terminate = config_enis[eni_data['deviceIndex']]['DeleteOnTermination']
+        elif 'delete_interface_on_terminate' in config_enis[eni_data['deviceIndex']]:
+            delete_on_terminate = config_enis[eni_data['deviceIndex']]['delete_interface_on_terminate']
+
+        params_attachment = {'Attachment.AttachmentId': eni_data['attachmentId'],
+                             'Attachment.DeleteOnTermination': delete_on_terminate}
+        set_eni_attachment_attributes = _modify_eni_properties(eni_id, params_attachment)
+
+        if 'SourceDestCheck' in config_enis[eni_data['deviceIndex']]:
+            params_sourcedest = {'SourceDestCheck.Value': config_enis[eni_data['deviceIndex']]['SourceDestCheck']}
+            set_eni_sourcedest_property = _modify_eni_properties(eni_id, params_sourcedest)
 
     return None
 
