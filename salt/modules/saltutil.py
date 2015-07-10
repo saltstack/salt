@@ -423,7 +423,7 @@ def sync_utils(saltenv=None, refresh=True):
 
 def sync_log_handlers(saltenv=None, refresh=True):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Sync utility source files from the _log_handlers directory on the salt master file
     server. This function is environment aware, pass the desired environment

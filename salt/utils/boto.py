@@ -7,7 +7,7 @@ Note: This module depends on the dicts packed by the loader and,
 therefore, must be accessed via the loader or from the __utils__ dict.
 
 The __utils__ dict will not be automatically available to execution modules
-until Beryllium. The `salt.utils.compat.pack_dunder` helper function
+until 2015.8.0. The `salt.utils.compat.pack_dunder` helper function
 provides backwards compatibility.
 
 This module provides common functionality for the boto execution modules.
@@ -31,7 +31,7 @@ Example Usage:
             conn = _get_conn()
             vpc_id = _cache_id('test-vpc')
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 # Import Python libs

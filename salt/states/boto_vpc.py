@@ -3,7 +3,7 @@
 Manage VPCs
 =================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Create and destroy VPCs. Be aware that this interacts with Amazon's services,
 and so may incur charges.

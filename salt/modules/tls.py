@@ -741,7 +741,7 @@ def get_extensions(cert_type):
     Fetch X509 and CSR extension definitions from tls:extensions:
     (common|server|client) or set them to standard defaults.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type:
         The type of certificate such as ``server`` or ``client``.
@@ -882,7 +882,7 @@ def create_csr(ca_name,
                 requests to https://1.2.3.4 will fail from python's
                 requests library w/out the second entry in the above list
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type
         Specify the general certificate type. Can be either `server` or
@@ -1563,7 +1563,7 @@ def create_empty_crl(
     '''
     Create an empty Certificate Revocation List.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         name of the CA
@@ -1639,7 +1639,7 @@ def revoke_cert(
     '''
     Revoke a certificate.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         Name of the CA.

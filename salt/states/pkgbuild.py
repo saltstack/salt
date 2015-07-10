@@ -3,7 +3,7 @@
 The pkgbuild state is the front of Salt package building backend. It
 automatically
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 .. code-block:: yaml
 

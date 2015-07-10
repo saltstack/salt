@@ -1228,7 +1228,7 @@ def line(path, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Edit a line in the configuration file.
 
@@ -1547,14 +1547,14 @@ def replace(path,
             (the original version and the edited version) in order to generate the
             diff.
     ignore_if_missing
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
         When this parameter is ``True``, ``file.replace`` will return ``False`` if the
         file doesn't exist. When this parameter is ``False``, ``file.replace`` will
         throw an error if the file doesn't exist.
         Default is ``False`` (to maintain compatibility with prior behaviour).
     preserve_inode
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
         Preserve the inode of the file, so that any hard links continue to share the
         inode with the original filename. This works by *copying* the file, reading
@@ -2026,7 +2026,7 @@ def search(path,
         If true, inserts 'MULTILINE' into ``flags`` and sets ``bufsize`` to
         'file'.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 

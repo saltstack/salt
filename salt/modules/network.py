@@ -737,7 +737,7 @@ def calc_net(ip_addr, netmask=None):
         salt '*' network.calc_net 172.17.0.5 255.255.255.240
         salt '*' network.calc_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     return salt.utils.network.calc_net(ip_addr, netmask)
 
@@ -961,7 +961,7 @@ def is_private(ip_addr):
     Check if the given IP address is a private address
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         IPv6 support
 
     CLI Example:
@@ -978,7 +978,7 @@ def is_loopback(ip_addr):
     Check if the given IP address is a loopback address
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         IPv6 support
 
     CLI Example:
@@ -994,7 +994,7 @@ def reverse_ip(ip_addr):
     '''
     Returns the reversed IP address
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         IPv6 support
 
     CLI Example:

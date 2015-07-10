@@ -43,7 +43,7 @@ That same example expressed in a :term:`top file` looks like the following:
         - match: compound
         - webserver
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Excluding a minion based on its ID is also possible:
 
@@ -51,7 +51,7 @@ Excluding a minion based on its ID is also possible:
 
     salt -C 'not web-dc1-srv' test.ping
 
-Versions prior to Beryllium a leading ``not`` was not supported in compound
+Versions prior to 2015.8.0 a leading ``not`` was not supported in compound
 matches. Instead, something like the following was required:
 
 .. code-block:: bash
@@ -81,7 +81,7 @@ Matches can be grouped together with parentheses to explicitly declare precedenc
 Alternate Delimiters
 --------------------
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Some matchers allow an optional delimiter character specified between the
 leading matcher character and the ``@`` pattern separator character.  This

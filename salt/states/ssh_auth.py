@@ -381,7 +381,7 @@ def absent(name,
         in standard "authorized_keys" format. If this is set, comment, enc and
         options will be ignored.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     config
         The location of the authorized keys file relative to the user's home
