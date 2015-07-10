@@ -1255,7 +1255,7 @@ def _modify_eni_properties(eni_id, properties=None):
     Change properties of the interface
     with id eni_id to the values in properties dict
     '''
-    if type(subnet_query_result['item']) is not dict:
+    if type(properties) is not dict:
         raise SaltCloudException(
             'ENI properties must be a dictionary'
         )
