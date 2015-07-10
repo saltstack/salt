@@ -169,6 +169,14 @@ def _auth(uri):
     return _build_opener(basic, digest)
 
 
+def _extract_version(war):
+    '''
+    extract the version from the war name
+    '''
+    version = re.findall("-([\\d.-]+)$", os.path.basename(war).replace('.war', ''))
+    return version[0] if len(version) == 1 else None
+
+
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
     '''
     A private function used to issue the command to tomcat via the manager
@@ -572,11 +580,7 @@ def deploy_war(war,
     else:
         tfile = war
 
-    version_extract = re.findall("\\d+.\\d+.\\d+?", os.path.basename(war).replace('.war', ''))
-    if len(version_extract) == 1:
-        version_string = version_extract[0]
-    else:
-        version_string = None
+    version_string = _extract_version(war)
 
     # Prepare options
     opts = {
