@@ -293,7 +293,6 @@ Then you can specify the merging strategy to select using the ``__`` key:
 |                      |         uid: 1001     |                         |
 +----------------------+-----------------------+-------------------------+
 '''
-
 import os
 import logging
 from functools import partial
@@ -365,7 +364,7 @@ def _cleanup(obj):
             del obj[0]
     return obj
 
-    
+
 def _merge_dict(stack, obj):
     strategy = obj.pop('__', 'merge-last')
     if strategy not in strategies:
