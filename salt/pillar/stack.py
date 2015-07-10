@@ -293,6 +293,8 @@ Then you can specify the merging strategy to select using the ``__`` key:
 |                      |         uid: 1001     |                         |
 +----------------------+-----------------------+-------------------------+
 '''
+
+from __future__ import absolute_import
 import os
 import logging
 from functools import partial
