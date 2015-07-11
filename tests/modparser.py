@@ -1,9 +1,4 @@
 #!/usr/bin/env python2
-'''
-This script is used to list all python modules that are recursively imported
-by all python files in a directory. For Salt this is use to obtain a list of
-all non stdlib modules which are imported by all salt plugins
-'''
 
 import argparse
 import os
@@ -11,6 +6,8 @@ import sys
 import os
 import modulefinder
 import pprint
+import yaml
+import json
 
 
 def parse():
@@ -29,6 +26,11 @@ def parse():
             '--bif',
             dest='bif',
             default='site-packages')
+    parser.add_argument(
+            '-f',
+            '--format',
+            dest='format',
+            default='pprint')
     out = parser.parse_args()
     return out.__dict__
 
@@ -81,4 +83,10 @@ def scan(opts):
 
 if __name__ == '__main__':
     opts = parse()
-    pprint.pprint(scan(opts))
+    scand = scan(opts)
+    if opts['format'] == 'yaml':
+        print(yaml.dump(scand))
+    if opts['format'] == 'json':
+        print(json.dumps(scand))
+    else:
+        pprint.pprint(scand)
