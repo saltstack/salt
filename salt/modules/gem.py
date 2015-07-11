@@ -231,7 +231,7 @@ def list_upgrades(ruby=None,
                   runas=None,
                   gem_bin=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Check if an upgrade is available for installed gems
 

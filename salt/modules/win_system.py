@@ -50,7 +50,7 @@ def halt(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -91,7 +91,7 @@ def poweroff(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -112,7 +112,7 @@ def reboot(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -136,7 +136,7 @@ def shutdown(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 

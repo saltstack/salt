@@ -2,7 +2,7 @@
 Getting Started With VMware
 ===========================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 **Author**: Nitin Madhok <nmadhok@clemson.edu>
 

@@ -2,7 +2,7 @@
 '''
 Manage and query udev info
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 '''
 from __future__ import absolute_import

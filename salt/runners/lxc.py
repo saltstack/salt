@@ -39,7 +39,7 @@ def _do(name, fun, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
     '''
     host = find_guest(name, quiet=True, path=path)
     if not host:
@@ -67,7 +67,7 @@ def _do_names(names, fun, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
     '''
     ret = {}
     hosts = find_guests(names, path=path)
@@ -100,7 +100,7 @@ def find_guest(name, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     .. code-block:: bash
@@ -131,7 +131,7 @@ def find_guests(names, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     '''
     ret = {}
@@ -175,7 +175,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     saltcloud_mode
         init the container with the saltcloud opts format instead
@@ -416,7 +416,7 @@ def cloud_init(names, host=None, quiet=False, **kwargs):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     saltcloud_mode
         init the container with the saltcloud opts format instead
@@ -435,7 +435,7 @@ def _list_iter(host=None, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
     '''
     tgt = host or '*'
     client = salt.client.get_local_client(__opts__['conf_file'])
@@ -469,7 +469,7 @@ def list_(host=None, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -494,7 +494,7 @@ def purge(name, delete_key=True, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -525,7 +525,7 @@ def start(name, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -546,7 +546,7 @@ def stop(name, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -567,7 +567,7 @@ def freeze(name, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -588,7 +588,7 @@ def unfreeze(name, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -609,7 +609,7 @@ def info(name, quiet=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 

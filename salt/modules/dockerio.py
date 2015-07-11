@@ -817,7 +817,7 @@ def kill(container, signal=None):
     signal
         signal to send
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 

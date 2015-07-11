@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Management of the Salt beacons
-==============================================
+==============================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 .. code-block:: yaml
 

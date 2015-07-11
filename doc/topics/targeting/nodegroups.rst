@@ -28,7 +28,7 @@ nodegroups. Here's an example nodegroup configuration within
     group2 is matching specific grains. See the :doc:`compound matchers
     <compound>` documentation for more details.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 .. note::
 
@@ -36,7 +36,7 @@ nodegroups. Here's an example nodegroup configuration within
     that you do not have circular references.  Circular references will be
     detected and cause partial expansion with a logged error message.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Compound nodegroups can be either string values or lists of string values.
 When the nodegroup is A string value will be tokenized by splitting on

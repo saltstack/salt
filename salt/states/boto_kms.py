@@ -2,7 +2,7 @@
 '''
 Manage KMS keys, key policies and grants.
 
-.. versionadded:: beryllium
+.. versionadded:: 2015.8.0
 
 Be aware that this interacts with Amazon's services, and so may incur charges.
 

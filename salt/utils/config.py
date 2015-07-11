@@ -407,17 +407,22 @@ class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
         attrs['__flatten__'] = False
 
         # Let's record the configuration items/sections
-        items = OrderedDict()
-        sections = OrderedDict()
+        items = {}
+        sections = {}
+        order = []
         # items from parent classes
         for base in reversed(bases):
             if hasattr(base, '_items'):
                 items.update(base._items)
             if hasattr(base, '_sections'):
                 sections.update(base._sections)
+            if hasattr(base, '_order'):
+                order.extend(base._order)
 
         # Iterate through attrs to discover items/config sections
         for key, value in six.iteritems(attrs):
+            if not hasattr(value, '__item__') and not hasattr(value, '__config__'):
+                continue
             if hasattr(value, '__item__'):
                 # the value is an item instance
                 if hasattr(value, 'title') and value.title is None:
@@ -426,9 +431,10 @@ class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
                     value.title = key
                 items[key] = value
             if hasattr(value, '__config__'):
-                # the value is a configuration section
                 sections[key] = value
+            order.append(key)
 
+        attrs['_order'] = order
         attrs['_items'] = items
         attrs['_sections'] = sections
         return type.__new__(mcs, name, bases, attrs)
@@ -540,29 +546,47 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
         ordering = []
         serialized['type'] = 'object'
         properties = OrderedDict()
-        for name, section in cls._sections.items():
-            serialized_section = section.serialize(None if section.__flatten__ is True else name)
-            if section.__flatten__ is True:
-                # Flatten the configuration section into the parent
-                # configuration
-                properties.update(serialized_section['properties'])
-                if 'x-ordering' in serialized_section:
-                    ordering.extend(serialized_section['x-ordering'])
-                if 'required' in serialized:
-                    required.extend(serialized_section['required'])
-            else:
-                # Store it as a configuration section
-                properties[name] = serialized_section
+        after_items_update = OrderedDict()
+        for name in cls._order:
+            skip_order = False
+            if name in cls._sections:
+                section = cls._sections[name]
+                serialized_section = section.serialize(None if section.__flatten__ is True else name)
+                if section.__flatten__ is True:
+                    # Flatten the configuration section into the parent
+                    # configuration
+                    properties.update(serialized_section['properties'])
+                    if 'x-ordering' in serialized_section:
+                        ordering.extend(serialized_section['x-ordering'])
+                    if 'required' in serialized:
+                        required.extend(serialized_section['required'])
+                else:
+                    # Store it as a configuration section
+                    properties[name] = serialized_section
 
-        # Handle the configuration items defined in the class instance
-        for name, config in cls._items.items():
-            properties[name] = config.serialize()
-            # Store the order of the item
-            ordering.append(name)
-            if config.required:
-                # If it's a required item, add it to the required list
-                required.append(name)
+            if name in cls._items:
+                config = cls._items[name]
+                # Handle the configuration items defined in the class instance
+                if config.__flatten__ is True:
+                    after_items_update.update(config.serialize())
+                    skip_order = True
+                else:
+                    properties[name] = config.serialize()
+
+                if config.required:
+                    # If it's a required item, add it to the required list
+                    required.append(name)
+
+            if skip_order is False:
+                # Store the order of the item
+                if name not in ordering:
+                    ordering.append(name)
+
         serialized['properties'] = properties
+
+        # Update the serialized object with any items to include after properties
+        serialized.update(after_items_update)
+
         if required:
             # Only include required if not empty
             serialized['required'] = required
@@ -571,6 +595,10 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
             serialized['x-ordering'] = ordering
         serialized['additionalProperties'] = cls.__allow_additional_items__
         return serialized
+
+    @classmethod
+    def as_requirements_item(cls):
+        return RequirementsItem(requirements=cls())
 
     #@classmethod
     #def render_as_rst(cls):
@@ -600,6 +628,7 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
     __type__ = None
     __format__ = None
     _attributes = None
+    __flatten__ = False
 
     __serialize_attr_aliases__ = None
 
@@ -1201,6 +1230,51 @@ class DictConfig(BaseConfigItem):
         return self.additional_properties.serialize()
 
 
+class RequirementsItem(BaseItem):
+    __type__ = 'object'
+
+    requirements = None
+
+    def __init__(self, requirements=None):
+        if requirements is not None:
+            self.requirements = requirements
+        super(RequirementsItem, self).__init__()
+
+    def __validate_attributes__(self):
+        if self.requirements is None:
+            raise RuntimeError(
+                'The passed requirements must not be empty'
+            )
+        if not isinstance(self.requirements, (Configuration, list, tuple, set)):
+            raise RuntimeError(
+                'The passed requirements must be passed as a list, tuple, '
+                'set or Configuration, not \'{0}\''.format(self.requirements)
+            )
+
+        if not isinstance(self.requirements, Configuration):
+            if not isinstance(self.requirements, list):
+                self.requirements = list(self.requirements)
+
+            for idx, item in enumerate(self.requirements):
+                if not isinstance(item, (six.string_types, Configuration)):
+                    raise RuntimeError(
+                        'The passed requirement at the {0} index must be of type '
+                        'str or Configuration, not \'{1}\''.format(idx, type(item))
+                    )
+
+    def serialize(self):
+        if isinstance(self.requirements, Configuration):
+            requirements = self.requirements.serialize()['required']
+        else:
+            requirements = []
+            for requirement in self.requirements:
+                if isinstance(requirement, Configuration):
+                    requirements.extend(requirement.serialize()['required'])
+                    continue
+                requirements.append(requirement)
+        return {'required': requirements}
+
+
 class OneOfConfig(BaseItem):
 
     __type__ = 'oneOf'
@@ -1231,6 +1305,10 @@ class OneOfConfig(BaseItem):
                 )
         if not isinstance(self.items, list):
             self.items = list(self.items)
+
+    def __call__(self, flatten=False):
+        self.__flatten__ = flatten
+        return self
 
     def serialize(self):
         return {self.__type__: [i.serialize() for i in self.items]}

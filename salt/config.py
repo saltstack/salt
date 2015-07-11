@@ -2388,10 +2388,18 @@ def is_profile_configured(opts, provider, profile_name):
 
     Required parameters include image, provider, and size keys.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
-    required_keys = ['image', 'provider', 'size']
+    # Standard dict keys required by all drivers.
+    required_keys = ['image', 'provider']
     alias, driver = provider.split(':')
+
+    # Most drivers need a size, but some do not.
+    non_size_drivers = ['parallels', 'softlayer', 'softlayer_hw']
+
+    if driver not in non_size_drivers:
+        required_keys.append('size')
+
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
@@ -2794,7 +2802,7 @@ def spm_config(path):
     Read in the salt master config file and add additional configs that
     need to be stubbed out for spm
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     # Let's grab a copy of salt's master default opts
     defaults = DEFAULT_MASTER_OPTS

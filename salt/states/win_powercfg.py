@@ -4,7 +4,7 @@
 This module allows you to control the power settings of a windows minion via
 powercfg.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 .. code-block:: yaml
 

@@ -1578,7 +1578,7 @@ class Caller(object):
     ``Caller`` is the same interface used by the :command:`salt-call`
     command-line tool on the Salt Minion.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added the ``cmd`` method for consistency with the other Salt clients.
         The existing ``function`` and ``sminion.functions`` interfaces still
         exist but have been removed from the docs.
@@ -1623,7 +1623,7 @@ class Caller(object):
         '''
         Call an execution module with the given arguments and keword arguments
 
-        .. versionchanged:: Beryllium
+        .. versionchanged:: 2015.8.0
             Added the ``cmd`` method for consistency with the other Salt clients.
             The existing ``function`` and ``sminion.functions`` interfaces still
             exist but have been removed from the docs.

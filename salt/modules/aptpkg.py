@@ -421,7 +421,7 @@ def install(name=None,
         install --reinstall`` will only be used if the installed version
         matches the requested version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     Multiple Package Installation Options:
@@ -474,7 +474,7 @@ def install(name=None,
    force_conf_new
         Always install the new version of any configuration files.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     Returns a dict containing the new package names and versions::
 
@@ -733,7 +733,7 @@ def autoremove(list_only=False, purge=False):
     purge : False
         Also remove package config data when autoremoving packages.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -851,7 +851,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
    force_conf_new
         Always install the new version of any configuration files.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1550,7 +1550,7 @@ def del_repo(repo, **kwargs):
 
 def del_repo_key(name=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Remove a repo key using ``apt-key del``
 
