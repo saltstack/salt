@@ -10,9 +10,9 @@ Reference
     configuration/logging/*
     file_server/index
     internals/index
+    modules/index
     peer
     renderers/index
     returners/index
     runners/index
     states/index
-    modules/index
