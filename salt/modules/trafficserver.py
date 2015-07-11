@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Apache Traffic Server execution module
+Apache Traffic Server execution module.
+
+.. versionadded:: 2015.8.0
 
 ``traffic_line`` is used to execute individual Traffic Server commands and to
 script multiple commands in a shell.

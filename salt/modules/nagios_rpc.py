@@ -2,7 +2,7 @@
 '''
 Check Host & Service status from Nagios via JSON RPC.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 '''
 

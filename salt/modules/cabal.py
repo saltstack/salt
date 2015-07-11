@@ -3,7 +3,7 @@
 Manage and query Cabal packages
 ===============================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 '''
 from __future__ import absolute_import

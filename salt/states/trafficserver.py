@@ -2,7 +2,7 @@
 '''
 Control Apache Traffic Server
 =============================
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 

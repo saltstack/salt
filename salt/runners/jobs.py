@@ -103,7 +103,7 @@ def lookup_jid(jid,
         When set to `True`, adds the minions that did return from the command.
         Default: `True`.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     missing
         When set to `True`, adds the minions that did NOT return from the command.
@@ -365,7 +365,7 @@ def last_run(ext_source=None,
     '''
     List all detectable jobs and associated functions
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
