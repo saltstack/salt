@@ -91,7 +91,6 @@ def _get_instance(hosts=None, profile=None):
         es = elasticsearch.Elasticsearch(hosts)
         if not es.ping():
             raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}, is it unhealthy?'.format(hosts))
-        log.warn(es.ping())
     except elasticsearch.exceptions.ConnectionError:
         raise CommandExecutionError('Could not connect to Elasticsearch host/ cluster {0}'.format(hosts))
     return es
