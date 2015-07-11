@@ -1,6 +1,6 @@
-============
-Salt Runners
-============
+=======
+Runners
+=======
 
 Salt runners are convenience applications executed with the salt-run command.
 

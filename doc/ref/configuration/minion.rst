@@ -145,7 +145,7 @@ the master hostname if name resolution fails. Defaults to 30 seconds.
 Set to zero if the minion should shutdown and not retry.
 
 .. code-block:: yaml
-    
+
     retry_dns: 30
 
 .. conf_minion:: master_port
@@ -198,7 +198,7 @@ need to be changed to the ownership of the new user.
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------
+-------------
 
 Default: ``''``
 
