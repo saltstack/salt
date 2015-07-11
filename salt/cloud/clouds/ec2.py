@@ -994,7 +994,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = _list_availability_zones()
+    zones = _list_availability_zones(vm_)
 
     # Validate user-specified AZ
     if avz not in zones:
@@ -1084,7 +1084,7 @@ def get_provider(vm_=None):
     return provider
 
 
-def _list_availability_zones():
+def _list_availability_zones(vm_=None):
     '''
     List all availability zones in the current region
     '''
@@ -1092,9 +1092,9 @@ def _list_availability_zones():
 
     params = {'Action': 'DescribeAvailabilityZones',
               'Filter.0.Name': 'region-name',
-              'Filter.0.Value.0': get_location()}
+              'Filter.0.Value.0': get_location(vm_)}
     result = aws.query(params,
-                       location=get_location(),
+                       location=get_location(vm_),
                        provider=get_provider(),
                        opts=__opts__,
                        sigver='4')
