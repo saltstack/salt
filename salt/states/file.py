@@ -2525,8 +2525,8 @@ def blockreplace(
         the content
 
     content
-        The content to be used between the two lines identified by marker_start
-        and marker_stop
+        The content to be used between the two lines identified by
+        ``marker_start`` and ``marker_end``
 
     append_if_not_found
         If markers are not found and set to True then the markers and content
