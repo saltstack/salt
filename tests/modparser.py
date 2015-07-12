@@ -49,8 +49,8 @@ def mod_data(opts, full):
     finder = modulefinder.ModuleFinder()
     try:
         finder.load_file(full)
-    except ImportError:
-        print('ImportError - {0}'.format(full), file=sys.stderr)
+    except ImportError as exc:
+        print('ImportError - {0} (Reason: {1})'.format(full, exc), file=sys.stderr)
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split('.')[0]
