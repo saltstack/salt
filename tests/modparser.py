@@ -36,6 +36,7 @@ def parse():
             '-f',
             '--format',
             dest='format',
+            choices=('pprint', 'yaml'),
             default='pprint')
     out = parser.parse_args()
     return out.__dict__
@@ -49,7 +50,7 @@ def mod_data(opts, full):
     try:
         finder.load_file(full)
     except ImportError:
-        sys.stderr.write('ImportError - {0}\n'.format(full))
+        print('ImportError - {0}'.format(full), file=sys.stderr)
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split('.')[0]
