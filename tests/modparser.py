@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python2
 
-import argparse
+from __future__ import absolute_import, print_function
+try:
+    import argparse  # pylint: disable=minimum-python-version
+    HAS_ARGPARSE = True
+except ImportError:
+    HAS_ARGPARSE = False
 import os
 import sys
 import os
@@ -43,7 +49,7 @@ def mod_data(opts, full):
     try:
         finder.load_file(full)
     except ImportError:
-        sys.stderr.write('ImportError - {}\n'.format(full))
+        sys.stderr.write('ImportError - {0}\n'.format(full))
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split('.')[0]
@@ -82,6 +88,8 @@ def scan(opts):
 
 
 if __name__ == '__main__':
+    if not HAS_ARGPARSE:
+        print('The argparse python module is required')
     opts = parse()
     scand = scan(opts)
     if opts['format'] == 'yaml':
