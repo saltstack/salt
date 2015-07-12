@@ -1239,9 +1239,16 @@ def ssh_version():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()
     try:
-        return ret[1].split(b',')[0].split(b'_')[1]
+        version_parts = ret[1].split(b',')[0].split(b'_')[1]
+        parts = []
+        for part in version_parts:
+            try:
+                parts.append(int(part))
+            except ValueError:
+                return tuple(parts)
+        return tuple(parts)
     except IndexError:
-        return '2.0'
+        return (2, 0)
 
 
 def _convert_args(args):
