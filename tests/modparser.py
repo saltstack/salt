@@ -78,6 +78,7 @@ def mod_data(opts, full):
 
 def scan(opts):
     '''
+    Scan the provided root for python source files
     '''
     ret = {}
     for root, dirs, files in os.walk(opts['root']):
@@ -92,10 +93,15 @@ if __name__ == '__main__':
     if not HAS_ARGPARSE:
         print('The argparse python module is required')
     opts = parse()
-    scand = scan(opts)
-    if opts['format'] == 'yaml':
-        print(yaml.dump(scand))
-    if opts['format'] == 'json':
-        print(json.dumps(scand))
-    else:
-        pprint.pprint(scand)
+    try:
+        scand = scan(opts)
+        if opts['format'] == 'yaml':
+            print(yaml.dump(scand))
+        if opts['format'] == 'json':
+            print(json.dumps(scand))
+        else:
+            pprint.pprint(scand)
+        exit(0)
+    except KeyboardInterrupt:
+        print('\nInterrupted on user request', file=sys.stderr)
+        exit(1)
