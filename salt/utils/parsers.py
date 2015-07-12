@@ -2446,6 +2446,16 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help=('Select a random temp dir to deploy on the remote system. '
                   'The dir will be cleaned after the execution.'))
+        self.add_option(
+            '--python2-bin',
+            default='python2',
+            help='Path to a python2 binary which has salt installed'
+        )
+        self.add_option(
+            '--python3-bin',
+            default='python3',
+            help='Path to a python3 binary which has salt installed'
+        )
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',

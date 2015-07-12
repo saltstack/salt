@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import absolute_import, print_function
+import base64
 import copy
 import getpass
 import json
@@ -126,9 +127,9 @@ if [ -n "{{SUDO}}" ]
 then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
-PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
+PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info[0] == {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
+do if "$py_cmd" -c "import sys; sys.exit(not (sys.version_info >= (2, 6) and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
 then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
 exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
 exit 0
@@ -245,7 +246,9 @@ class SSH(object):
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
+                                             python2_bin=self.opts['python2_bin'],
+                                             python3_bin=self.opts['python3_bin'])
         self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
@@ -525,8 +528,11 @@ class SSH(object):
 
         # save load to the master job cache
         try:
+            if isinstance(jid, bytes):
+                jid = jid.decode('utf-8')
             self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
         except Exception as exc:
+            log.exception(exc)
             log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
 
         if self.opts.get('verbose'):
@@ -917,8 +923,10 @@ ARGS = {9}\n'''.format(self.minion_config,
                          self.tty,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
-        py_code_enc = py_code.encode('base64')
-
+        if six.PY2:
+            py_code_enc = py_code.encode('base64')
+        else:
+            py_code_enc = base64.encodebytes(py_code.encode('utf-8')).decode('utf-8')
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
