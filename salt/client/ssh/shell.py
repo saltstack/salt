@@ -96,7 +96,7 @@ class Shell(object):
             options.append('PasswordAuthentication=yes')
         else:
             options.append('PasswordAuthentication=no')
-        if self.opts.get('_ssh_version', '') > '4.9':
+        if self.opts.get('_ssh_version', (0,)) > (4, 9):
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
@@ -131,7 +131,7 @@ class Shell(object):
         options = ['ControlMaster=auto',
                    'StrictHostKeyChecking=no',
                    ]
-        if self.opts['_ssh_version'] > '4.9':
+        if self.opts['_ssh_version'] > (4, 9):
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
