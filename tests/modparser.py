@@ -44,6 +44,7 @@ def parse():
 
 def mod_data(opts, full):
     '''
+    Grab the module's data
     '''
     ret = {}
     finder = modulefinder.ModuleFinder()
