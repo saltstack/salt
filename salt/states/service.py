@@ -486,7 +486,7 @@ def mod_watch(name,
         The string to search for when looking for the service process with ps
 
     reload
-        Use reload instead of the default restart (exclusive option with full_restart, 
+        Use reload instead of the default restart (exclusive option with full_restart,
         defaults to reload if both are used)
 
     full_restart
