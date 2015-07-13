@@ -1,6 +1,12 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python2
 
-import argparse
+from __future__ import absolute_import, print_function
+try:
+    import argparse  # pylint: disable=minimum-python-version
+    HAS_ARGPARSE = True
+except ImportError:
+    HAS_ARGPARSE = False
 import os
 import sys
 import os
@@ -30,6 +36,7 @@ def parse():
             '-f',
             '--format',
             dest='format',
+            choices=('pprint', 'yaml'),
             default='pprint')
     out = parser.parse_args()
     return out.__dict__
@@ -37,13 +44,14 @@ def parse():
 
 def mod_data(opts, full):
     '''
+    Grab the module's data
     '''
     ret = {}
     finder = modulefinder.ModuleFinder()
     try:
         finder.load_file(full)
-    except ImportError:
-        sys.stderr.write('ImportError - {}\n'.format(full))
+    except ImportError as exc:
+        print('ImportError - {0} (Reason: {1})'.format(full, exc), file=sys.stderr)
         return ret
     for name, mod in finder.modules.items():
         basemod = name.split('.')[0]
@@ -71,6 +79,7 @@ def mod_data(opts, full):
 
 def scan(opts):
     '''
+    Scan the provided root for python source files
     '''
     ret = {}
     for root, dirs, files in os.walk(opts['root']):
@@ -82,11 +91,18 @@ def scan(opts):
 
 
 if __name__ == '__main__':
+    if not HAS_ARGPARSE:
+        print('The argparse python module is required')
     opts = parse()
-    scand = scan(opts)
-    if opts['format'] == 'yaml':
-        print(yaml.dump(scand))
-    if opts['format'] == 'json':
-        print(json.dumps(scand))
-    else:
-        pprint.pprint(scand)
+    try:
+        scand = scan(opts)
+        if opts['format'] == 'yaml':
+            print(yaml.dump(scand))
+        if opts['format'] == 'json':
+            print(json.dumps(scand))
+        else:
+            pprint.pprint(scand)
+        exit(0)
+    except KeyboardInterrupt:
+        print('\nInterrupted on user request', file=sys.stderr)
+        exit(1)
