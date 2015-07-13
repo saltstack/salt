@@ -1010,7 +1010,7 @@ def _format_instance_info(vm):
         'mac_address': mac_addresses,
         'networks': network_full_info,
         'path': str(vm["config.files.vmPathName"]),
-        'tools_status': str(vm["guest.toolsStatus"]),
+        'tools_status': str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
     }
 
     return vm_full_info
