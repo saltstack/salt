@@ -1229,6 +1229,20 @@ def _create_eni_if_necessary(interface):
         for idx, addr in enumerate(addr_list):
             _associate_eip_with_interface(eni_id, eip_list[idx], addr)
 
+    if 'Name' in interface:
+        tag_params = {'Action': 'CreateTags',
+                      'ResourceId.0': eni_id,
+                      'Tag.0.Key': 'Name',
+                      'Tag.0.Value': interface['Name']}
+        tag_response = aws.query(tag_params,
+                                 return_root=True,
+                                 location=get_location(),
+                                 provider=get_provider(),
+                                 opts=__opts__,
+                                 sigver='4')
+        if 'error' in tag_response:
+            log.error('Failed to set name of interface {0}')
+
     return {'DeviceIndex': interface['DeviceIndex'],
             'NetworkInterfaceId': eni_id}
 
