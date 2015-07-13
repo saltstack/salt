@@ -520,7 +520,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
     # Define some class level attributes to make PyLint happier
     title = None
     description = None
-    _items = _sections = None
+    _items = _sections = _order = None
     __flatten__ = False
     __allow_additional_items__ = False
 
