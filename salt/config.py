@@ -2386,7 +2386,8 @@ def is_profile_configured(opts, provider, profile_name):
     Check if the requested profile contains the minimum required parameters for
     a profile.
 
-    Required parameters include image, provider, and size keys.
+    Required parameters include image and provider for all drivers, while some
+    drivers also require size keys.
 
     .. versionadded:: 2015.8.0
     '''
