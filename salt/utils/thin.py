@@ -151,7 +151,10 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
     if HAS_MARKUPSAFE:
         tops.append(os.path.dirname(markupsafe.__file__))
     tfp = tarfile.open(thintar, 'w:gz', dereference=True)
-    start_dir = os.getcwd()
+    try:  # cwd may not exist if it was removed but salt was run from it
+        start_dir = os.getcwd()
+    except OSError:
+        start_dir = None
     tempdir = None
     for top in tops:
         base = os.path.basename(top)
@@ -182,7 +185,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
         fp_.write(salt.version.__version__)
     os.chdir(os.path.dirname(thinver))
     tfp.add('version')
-    os.chdir(start_dir)
+    if start_dir:
+        os.chdir(start_dir)
     tfp.close()
     return thintar
 

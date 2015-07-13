@@ -298,7 +298,10 @@ class SaltfileMixIn(object):
             # If we're here, no one passed a Saltfile either to the CLI tool or
             # as an environment variable.
             # Is there a Saltfile in the current directory?
-            saltfile = os.path.join(os.getcwd(), 'Saltfile')
+            try:  # cwd may not exist if it was removed but salt was run from it
+                saltfile = os.path.join(os.getcwd(), 'Saltfile')
+            except OSError:
+                saltfile = ''
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
         else:
