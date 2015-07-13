@@ -1651,7 +1651,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
 
 def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
     if error_msg is None:
-        error_msg = 'A wrong password has been issued while establishing ssh session'
+        error_msg = 'A wrong password has been issued while establishing ssh session.'
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
@@ -2170,7 +2170,7 @@ def wait_for_ip(update_callback,
     duration = timeout
     while True:
         log.debug(
-            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
+            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}.'.format(
                 int(timeout // 60),
                 int(timeout % 60)
             )
@@ -2178,21 +2178,23 @@ def wait_for_ip(update_callback,
         data = update_callback(*update_args, **update_kwargs)
         if data is False:
             log.debug(
-                'update_callback has returned False which is considered a '
-                'failure. Remaining Failures: {0}'.format(max_failures)
+                '\'update_callback\' has returned \'False\', which is '
+                'considered a failure. Remaining Failures: {0}.'.format(
+                    max_failures
+                )
             )
             max_failures -= 1
             if max_failures <= 0:
                 raise SaltCloudExecutionFailure(
-                    'Too much failures occurred while waiting for '
-                    'the IP address'
+                    'Too many failures occurred while waiting for '
+                    'the IP address.'
                 )
         elif data is not None:
             return data
 
         if timeout < 0:
             raise SaltCloudExecutionTimeout(
-                'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
+                'Unable to get IP for 00:{0:02d}:{1:02d}.'.format(
                     int(duration // 60),
                     int(duration % 60)
                 )
@@ -2205,7 +2207,7 @@ def wait_for_ip(update_callback,
             if interval > timeout:
                 interval = timeout + 1
             log.info('Interval multiplier in effect; interval is '
-                     'now {0}s'.format(interval))
+                     'now {0}s.'.format(interval))
 
 
 def simple_types_filter(data):
