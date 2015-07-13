@@ -106,7 +106,7 @@ def avail_images(call=None):
         )
 
     server, user, password = _get_xml_rpc()
-    auth = user+':'+password
+    auth = ':'.join([user, password])
     image_pool = server.one.imagepool.info(auth, -1, -1, -1)[1]
 
     images = {}
@@ -139,7 +139,7 @@ def avail_locations(call=None):
         )
 
     server, user, password = _get_xml_rpc()
-    auth = user+':'+password
+    auth = ':'.join([user, password])
     host_pool = server.one.hostpool.info(auth)[1]
 
     locations = {}
@@ -547,7 +547,7 @@ def destroy(name, call=None):
     )
 
     server, user, password = _get_xml_rpc()
-    auth = user+':'+password
+    auth = ':'.join([user, password])
 
     data = show_instance(name, call='action')
     node = server.one.vm.action(auth, 'delete', int(data['id']))
@@ -689,7 +689,7 @@ def _list_nodes(full=False):
         this parameter to ``True``.
     '''
     server, user, password = _get_xml_rpc()
-    auth = user+':'+password
+    auth = ':'.join([user, password])
 
     vm_pool = server.one.vmpool.info(auth, -1, -1, -1, -1)[1]
 
