@@ -807,6 +807,7 @@ class Minion(MinionBase):
                        'the minions connection attempt.')
                 log.error(msg)
             else:
+                self.tok = pub_channel.auth.gen_token('salt')
                 self.connected = True
                 raise tornado.gen.Return((opts['master'], pub_channel))
 
