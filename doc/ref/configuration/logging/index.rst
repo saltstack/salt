@@ -21,7 +21,7 @@ Available Configuration Settings
 
 The log records can be sent to a regular file, local path name, or network location.
 Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
-with rsyslogd(8) configured for network logging.  The format for remote addresses is:
+with rsyslogd(8) configured for network logging. The format for remote addresses is:
 ``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.
 
 Default: Dependent of the binary being executed, for example, for ``salt-master``,
@@ -125,7 +125,7 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 Default: ``[%(levelname)-8s] %(message)s``
 
 The format of the console logging messages. All standard python logging
-:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
+:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used. Salt
 also provides these custom LogRecord attributes to colorize console log output:
 
 .. code-block:: python
@@ -155,7 +155,7 @@ also provides these custom LogRecord attributes to colorize console log output:
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. All standard python logging
-:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
+:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used. Salt
 also provides these custom LogRecord attributes that include padding and
 enclosing brackets ``[`` and ``]``:
 
@@ -178,7 +178,7 @@ enclosing brackets ``[`` and ``]``:
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically.  The example sets
+This can be used to control logging levels more specifically. The example sets
 the main salt library at the 'warning' level, but sets ``salt.modules`` to log
 at the ``debug`` level:
 
@@ -193,5 +193,4 @@ External Logging Handlers
 -------------------------
 
 Besides the internal logging handlers used by salt, there are some external
-which can be used, see the :doc:`external logging handlers<handlers/index>`
-document.
+which can be used, see the Salt module index.

@@ -3,33 +3,16 @@ Reference
 .. toctree::
     :glob:
 
-    auth/all/index
     cli/index
     clientacl
     clients/index
-    clouds/all/index
     configuration/*
     configuration/logging/*
-    configuration/logging/handlers/index
     file_server/index
-    file_server/all/index
     internals/index
-    modules/all/index
-    netapi/all/index
-    output/all/index
+    modules/index
     peer
-    pillar/index
-    pillar/all/index
     renderers/index
     returners/index
-    roster/all/index
     runners/index
     states/index
-    states/all/index
-    modules/index
-    tops/index
-    tops/all/index
-    wheel/all/index
-    beacons/all/index
-    engines/all/index
-    sdb/all/index
