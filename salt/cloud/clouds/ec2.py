@@ -1141,6 +1141,10 @@ def _create_eni_if_necessary(interface):
     '''
     Create an Elastic Interface if necessary and return a Network Interface Specification
     '''
+    if 'NetworkInterfaceId' in interface and interface['NetworkInterfaceId'] is not None:
+        return {'DeviceIndex': interface['DeviceIndex'],
+                'NetworkInterfaceId': interface['NetworkInterfaceId']}
+
     params = {'Action': 'DescribeSubnets'}
     subnet_query = aws.query(params,
                              return_root=True,
@@ -1180,15 +1184,6 @@ def _create_eni_if_necessary(interface):
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
 
-    if 'AssociatePublicIpAddress' in interface:
-        # Associating a public address in a VPC only works when the interface is not
-        # created beforehand, but as a part of the machine creation request.
-        for k in ('DeviceIndex', 'AssociatePublicIpAddress', 'NetworkInterfaceId'):
-            if k in interface:
-                params[k] = interface[k]
-        params['DeleteOnTermination'] = interface.get('delete_interface_on_terminate', True)
-        return params
-
     params['Action'] = 'CreateNetworkInterface'
 
     result = aws.query(params,
@@ -1212,9 +1207,13 @@ def _create_eni_if_necessary(interface):
     if 'SourceDestCheck' in interface:
         _modify_interface_source_dest_check(eni_id, interface['SourceDestCheck'])
 
-    if interface.get('associate_eip'):
+    associate_public_ip = interface.get('AssociatePublicIpAddress', False)
+    if type(associate_public_ip) is str:
+        # Assume id of EIP as value
+        _associate_eip_with_interface(eni_id, associate_public_ip)
+    elif interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
-    elif interface.get('allocate_new_eip'):
+    elif interface.get('allocate_new_eip') or associate_public_ip:
         _new_eip = _request_eip(interface)
         _associate_eip_with_interface(eni_id, _new_eip)
     elif interface.get('allocate_new_eips'):
@@ -1224,6 +1223,20 @@ def _create_eni_if_necessary(interface):
             eip_list.append(_request_eip(interface))
         for idx, addr in enumerate(addr_list):
             _associate_eip_with_interface(eni_id, eip_list[idx], addr)
+
+    if 'Name' in interface:
+        tag_params = {'Action': 'CreateTags',
+                      'ResourceId.0': eni_id,
+                      'Tag.0.Key': 'Name',
+                      'Tag.0.Value': interface['Name']}
+        tag_response = aws.query(tag_params,
+                                 return_root=True,
+                                 location=get_location(),
+                                 provider=get_provider(),
+                                 opts=__opts__,
+                                 sigver='4')
+        if 'error' in tag_response:
+            log.error('Failed to set name of interface {0}')
 
     return {'DeviceIndex': interface['DeviceIndex'],
             'NetworkInterfaceId': eni_id}
