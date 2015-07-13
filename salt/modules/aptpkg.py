@@ -1127,7 +1127,19 @@ def version_cmp(pkg1, pkg2):
     # and also do not rely on shell.
     if HAS_APTPKG:
         try:
-            return apt_pkg.version_compare(pkg1, pkg2)
+            # the apt_pkg module needs to be manually initialized
+            apt_pkg.init_system()
+
+            # if there is a difference in versions, apt_pkg.version_compare will
+            # return an int representing the difference in minor versions, or
+            # 1/-1 if the difference is smaller than minor versions. normalize
+            # to -1, 0 or 1.
+            ret = apt_pkg.version_compare(pkg1, pkg2)
+            if ret > 0:
+                return 1
+            if ret < 0:
+                return -1
+            return 0
         except (TypeError, ValueError):
             # try to use shell version in case of errors via
             # the python binding
