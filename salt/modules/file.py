@@ -3386,7 +3386,7 @@ def manage_file(name,
             name_sum = None
 
         # Check if file needs to be replaced
-        if source and (source_sum['hsum'] != name_sum or name_sum == None):
+        if source and (source_sum['hsum'] != name_sum or name_sum is None):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
