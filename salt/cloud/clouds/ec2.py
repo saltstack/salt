@@ -1156,7 +1156,7 @@ def _create_eni_if_necessary(interface):
 
     for subnet_query_result in subnet_query:
         if 'item' in subnet_query_result:
-            if type(subnet_query_result['item']) is dict:
+            if isinstance(subnet_query_result['item'], dict):
                 for key, value in subnet_query_result['item'].iteritems():
                     if key == "subnetId":
                         if value == interface['SubnetId']:
@@ -1205,7 +1205,7 @@ def _create_eni_if_necessary(interface):
     )
 
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
-    if type(associate_public_ip) is str:
+    if isinstance(associate_public_ip, str):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip)
     elif interface.get('associate_eip'):
@@ -1268,7 +1268,7 @@ def _modify_eni_properties(eni_id, properties=None):
     Change properties of the interface
     with id eni_id to the values in properties dict
     '''
-    if type(properties) is not dict:
+    if not isinstance(properties, dict):
         raise SaltCloudException(
             'ENI properties must be a dictionary'
         )
