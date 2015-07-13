@@ -47,7 +47,7 @@ import salt.utils.cloud
 
 # Import Third Party Libs
 try:
-    import salt.ext.six.moves.xmlrpc_client
+    import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
     HAS_XML_LIBS = True
 except ImportError:
