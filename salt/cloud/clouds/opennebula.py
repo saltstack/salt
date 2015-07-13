@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
 OpenNebula Cloud Module
-==========================
+=======================
 
-The OpenNebula cloud module is used to control access to an OpenNebula
-cloud.
+The OpenNebula cloud module is used to control access to an OpenNebula cloud.
 
-Use of this module requires the ``xml_rpc``, ``user`` and
-``password`` parameter to be set. Set up the cloud configuration
-at ``/etc/salt/cloud.providers`` or
+.. versionadded:: 2014.7.0
+
+Use of this module requires the ``xml_rpc``, ``user``, and ``password``
+parameters to be set.
+
+Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/opennebula.conf``:
 
 .. code-block:: yaml
@@ -20,82 +22,54 @@ at ``/etc/salt/cloud.providers`` or
       driver: opennebula
 
 '''
+
+# Import Python Libs
 from __future__ import absolute_import
-
-# Import python libs
-import os
 import copy
-import time
-import pprint
 import logging
+import os
+import pprint
+import time
 
-# Import salt cloud libs
-import salt.utils.cloud
+# Import Salt Libs
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
-    SaltCloudNotFound,
-    SaltCloudSystemExit,
+    SaltCloudException,
     SaltCloudExecutionFailure,
-    SaltCloudExecutionTimeout
+    SaltCloudExecutionTimeout,
+    SaltCloudNotFound,
+    SaltCloudSystemExit
 )
 
-# Attempt to import xmlrpclib and lxml
+# Import Salt Cloud Libs
+import salt.utils.cloud
+
+# Import Third Party Libs
 try:
     import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
     from lxml import etree
-    HAS_XMLLIBS = True
+    HAS_XML_LIBS = True
 except ImportError:
-    HAS_XMLLIBS = False
+    HAS_XML_LIBS = False
 
-# Get logging started
+# Get Logging Started
 log = logging.getLogger(__name__)
 
-
-# Helper functions
-def _xmltodict(xml):
-    dicts = {}
-    for item in xml:
-        key = item.tag.lower()
-        idx = 1
-        while key in dicts:
-            key = key + str(idx)
-            idx += 1
-        if item.text is None:
-            dicts[key] = _xmltodict(item)
-        else:
-            dicts[key] = item.text
-
-    return dicts
+__virtualname__ = 'opennebula'
 
 
-def _get_xml_rpc():
-    xml_rpc = config.get_cloud_config_value(
-        'xml_rpc', get_configured_provider(), __opts__
-    )
-    user = config.get_cloud_config_value(
-        'user', get_configured_provider(), __opts__
-    )
-    password = config.get_cloud_config_value(
-        'password', get_configured_provider(), __opts__
-    )
-    server = salt.ext.six.moves.xmlrpc_client.ServerProxy(xml_rpc)
-
-    return server, user, password
-
-
-# Only load in this module if the OpenNebula configurations are in place
 def __virtual__():
     '''
-    Check for OpenNebula configurations
+    Check for OpenNebula configs.
     '''
-    if not HAS_XMLLIBS:
+    if not HAS_XML_LIBS:
         return False
 
     if get_configured_provider() is False:
         return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -109,30 +83,21 @@ def get_configured_provider():
     )
 
 
-def avail_locations(call=None):
-    '''
-    Return a dict of all available VM locations on the cloud provider with
-    relevant data
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The avail_locations function must be called with '
-            '-f or --function, or with the --list-locations option'
-        )
-
-    server, user, password = _get_xml_rpc()
-    hostpool = server.one.hostpool.info(user+':'+password)[1]
-
-    locations = {}
-    for host in etree.XML(hostpool):
-        locations[host.find('NAME').text] = _xmltodict(host)
-
-    return locations
-
-
 def avail_images(call=None):
     '''
-    Return a list of the templates that are on the provider
+    Return available OpenNebula images.
+
+    call
+        Optional type of call to use with this function such as ``function``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-images opennebula
+        salt-cloud --function avail_images opennebula
+        salt-cloud -f avail_images opennebula
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -141,101 +106,121 @@ def avail_images(call=None):
         )
 
     server, user, password = _get_xml_rpc()
-    templatepool = server.one.templatepool.info(user+':'+password, -1, -1, -1)[1]
+    auth = ':'.join([user, password])
+    image_pool = server.one.imagepool.info(auth, -1, -1, -1)[1]
 
-    templates = {}
-    for template in etree.XML(templatepool):
-        templates[template.find('NAME').text] = _xmltodict(template)
+    images = {}
+    for image in etree.XML(image_pool):
+        images[image.find('NAME').text] = _xml_to_dict(image)
 
-    return templates
+    return images
 
 
-def avail_sizes(call=None):
+def avail_locations(call=None):
     '''
-    Because sizes are built into templates with OpenNebula, there will be no sizes to
-    return here
+    Return available OpenNebula locations.
+
+    call
+        Optional type of call to use with this function such as ``function``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-locations opennebula
+        salt-cloud --function avail_locations opennebula
+        salt-cloud -f avail_locations opennebula
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The avail_sizes function must be called with '
-            '-f or --function, or with the --list-sizes option'
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
         )
 
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    host_pool = server.one.hostpool.info(auth)[1]
+
+    locations = {}
+    for host in etree.XML(host_pool):
+        locations[host.find('NAME').text] = _xml_to_dict(host)
+
+    return locations
+
+
+def avail_sizes():
+    '''
+    Because sizes are built into templates with OpenNebula, there will be no sizes to
+    return here.
+    '''
+    log.info('Because sizes are built into templates with OpenNebula, '
+             'there are no sizes to return.')
     return {}
 
 
 def list_nodes(call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of VMs on OpenNebubla.
+
+    call
+        Optional type of call to use with this function such as ``function``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -Q
+        salt-cloud --query
+        salt-cloud --fuction list_nodes opennebula
+        salt-cloud -f list_nodes opennebula
+
     '''
     if call == 'action':
-        raise SaltCloudSystemExit(
+        raise SaltCloudException(
             'The list_nodes function must be called with -f or --function.'
         )
 
-    server, user, password = _get_xml_rpc()
-    vmpool = server.one.vmpool.info(user+':'+password, -1, -1, -1, -1)[1]
-
-    vms = {}
-    for vm in etree.XML(vmpool):
-        vms[vm.find('NAME').text] = {}
-        vms[vm.find('NAME').text]['id'] = vm.find('ID').text
-        image = 'template_id {0}'.format(
-            vm.find('TEMPLATE').find('TEMPLATE_ID').text
-        )
-        vms[vm.find('NAME').text]['image'] = image
-        size = 'cpu {0}, memory {1}'.format(
-            vm.find('TEMPLATE').find('CPU').text, vm.find('TEMPLATE').find('MEMORY').text
-        )
-        vms[vm.find('NAME').text]['size'] = size
-        vms[vm.find('NAME').text]['state'] = vm.find('STATE').text
-        private_ips = []
-        for nic in vm.find('TEMPLATE').findall('NIC'):
-            private_ips.append(nic.find('IP').text)
-        vms[vm.find('NAME').text]['private_ips'] = private_ips
-        vms[vm.find('NAME').text]['public_ips'] = []
-
-    return vms
+    return _list_nodes(full=False)
 
 
 def list_nodes_full(call=None):
     '''
-    Return a list of the VMs that are on the provider
+    Return a list of the VMs that are on the provider.
+
+    call
+        Optional type of call to use with this function such as ``function``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -F
+        salt-cloud --full-query
+        salt-cloud --function list_nodes_full opennebula
+        salt-cloud -f list_nodes_full opennebula
+
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
 
-    server, user, password = _get_xml_rpc()
-    vmpool = server.one.vmpool.info(user+':'+password, -1, -1, -1, -1)[1]
-
-    vms = {}
-    for vm in etree.XML(vmpool):
-        vms[vm.find('NAME').text] = _xmltodict(vm)
-        vms[vm.find('NAME').text]['id'] = vm.find('ID').text
-        image = 'template_id {0}'.format(
-            vm.find('TEMPLATE').find('TEMPLATE_ID').text
-        )
-        vms[vm.find('NAME').text]['image'] = image
-        size = 'cpu {0}, memory {1}'.format(
-            vm.find('TEMPLATE').find('CPU').text, vm.find('TEMPLATE').find('MEMORY').text
-        )
-        vms[vm.find('NAME').text]['size'] = size
-        vms[vm.find('NAME').text]['state'] = vm.find('STATE').text
-        private_ips = []
-        for nic in vm.find('TEMPLATE').findall('NIC'):
-            private_ips.append(nic.find('IP').text)
-        vms[vm.find('NAME').text]['private_ips'] = private_ips
-        vms[vm.find('NAME').text]['public_ips'] = []
-
-    return vms
+    return _list_nodes(full=True)
 
 
 def list_nodes_select(call=None):
     '''
-    Return a list of the VMs that are on the provider, with select fields
+    Return a list of the VMs that are on the provider, with select fields.
+
+    call
+        Optional type of call to use with this function such as ``function``.
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
@@ -243,7 +228,10 @@ def list_nodes_select(call=None):
 
 def get_image(vm_):
     '''
-    Return the image object to use
+    Return the image object to use.
+
+    vm_
+        The VM for which to obtain an image.
     '''
     images = avail_images()
     vm_image = str(config.get_cloud_config_value(
@@ -259,7 +247,10 @@ def get_image(vm_):
 
 def get_location(vm_):
     '''
-    Return the VM's location
+    Return the VM's location.
+
+    vm_
+        The VM for which to obtain a location.
     '''
     locations = avail_locations()
     vm_location = str(config.get_cloud_config_value(
@@ -282,7 +273,17 @@ def get_location(vm_):
 
 def create(vm_):
     '''
-    Create a single VM from a data dict
+    Create a single VM from a data dict.
+
+    vm_
+        The name of the VM to create.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -p my-opennebula-profile vm_name
+
     '''
     # Check for required profile parameters before sending any API calls.
     if config.is_profile_configured(__opts__,
@@ -304,6 +305,7 @@ def create(vm_):
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
+        transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -511,61 +513,25 @@ def create(vm_):
     return ret
 
 
-def script(vm_):
-    '''
-    Return the script deployment object
-    '''
-    deploy_script = salt.utils.cloud.os_script(
-        config.get_cloud_config_value('script', vm_, __opts__),
-        vm_,
-        __opts__,
-        salt.utils.cloud.salt_config_to_yaml(
-            salt.utils.cloud.minion_config(__opts__, vm_)
-        )
-    )
-    return deploy_script
-
-
-def show_instance(name, call=None):
-    '''
-    Show the details from OpenNebula concerning a VM
-    '''
-    if call != 'action':
-        raise SaltCloudSystemExit(
-            'The show_instance action must be called with -a or --action.'
-        )
-    node = _get_node(name)
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
-    return node
-
-
-def _get_node(name):
-    attempts = 10
-    while attempts >= 0:
-        try:
-            return list_nodes_full()[name]
-        except KeyError:
-            attempts -= 1
-            log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
-                    name, attempts
-                )
-            )
-            # Just a little delay between attempts...
-            time.sleep(0.5)
-    return {}
-
-
 def destroy(name, call=None):
     '''
     Destroy a node. Will check termination protection and warn if enabled.
+
+    name
+        The name of the vm to be destroyed.
+
+    call
+        Optional type of call to use with this function such as ``action``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud --destroy mymachine
+        salt-cloud --destroy vm_name
+        salt-cloud -d vm_name
+        salt-cloud --action destroy vm_name
+        salt-cloud -a destroy vm_name
+
     '''
     if call == 'function':
         raise SaltCloudSystemExit(
@@ -581,9 +547,10 @@ def destroy(name, call=None):
     )
 
     server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
 
     data = show_instance(name, call='action')
-    node = server.one.vm.action(user+':'+password, 'delete', int(data['id']))[1]
+    node = server.one.vm.action(auth, 'delete', int(data['id']))
 
     salt.utils.cloud.fire_event(
         'event',
@@ -593,6 +560,182 @@ def destroy(name, call=None):
     )
 
     if __opts__.get('update_cachedir', False) is True:
-        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+        salt.utils.cloud.delete_minion_cachedir(
+            name,
+            __active_provider_name__.split(':')[0],
+            __opts__
+        )
+
+    data = {
+        'action': 'vm.delete',
+        'deleted': node[0],
+        'node_id': node[1],
+        'error_code': node[2]
+    }
+
+    return data
+
+
+def script(vm_):
+    '''
+    Return the script deployment object.
+
+    vm_
+        The VM for which to deploy a script.
+    '''
+    deploy_script = salt.utils.cloud.os_script(
+        config.get_cloud_config_value('script', vm_, __opts__),
+        vm_,
+        __opts__,
+        salt.utils.cloud.salt_config_to_yaml(
+            salt.utils.cloud.minion_config(__opts__, vm_)
+        )
+    )
+    return deploy_script
+
+
+def show_instance(name, call=None):
+    '''
+    Show the details from OpenNebula concerning a named VM.
+
+    name
+        The name of the VM for which to display details.
+
+    call
+        Type of call to use with this function such as ``function``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --action show_instance vm_name
+        salt-cloud -a show_instance vm_name
+
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    node = _get_node(name)
+    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
 
     return node
+
+
+# Helper Functions
+
+def _get_node(name):
+    '''
+    Helper function that returns all information about a named node.
+
+    name
+        The name of the node for which to get information.
+    '''
+    attempts = 10
+
+    while attempts >= 0:
+        try:
+            return list_nodes_full()[name]
+        except KeyError:
+            attempts -= 1
+            log.debug(
+                'Failed to get the data for the node {0!r}. Remaining '
+                'attempts {1}'.format(
+                    name, attempts
+                )
+            )
+
+            # Just a little delay between attempts...
+            time.sleep(0.5)
+
+    return {}
+
+
+def _get_xml_rpc():
+    '''
+    Uses the OpenNebula cloud provider configurations to connect to the
+    OpenNebula API.
+
+    Returns the server connection created as well as the user and password
+    values from the cloud provider config file used to make the connection.
+    '''
+    vm_ = get_configured_provider()
+
+    xml_rpc = config.get_cloud_config_value(
+        'xml_rpc', vm_, __opts__, search_global=False
+    )
+
+    user = config.get_cloud_config_value(
+        'user', vm_, __opts__, search_global=False
+    )
+
+    password = config.get_cloud_config_value(
+        'password', vm_, __opts__, search_global=False
+    )
+
+    server = salt.ext.six.moves.xmlrpc_client.ServerProxy(xml_rpc)
+
+    return server, user, password
+
+
+def _list_nodes(full=False):
+    '''
+    Helper function for the list_* query functions - Constructs the
+    appropriate dictionaries to return from the API query.
+
+    full
+        If performing a full query, such as in list_nodes_full, change
+        this parameter to ``True``.
+    '''
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, -1)[1]
+
+    vms = {}
+    for vm in etree.XML(vm_pool):
+        name = vm.find('NAME').text
+        vms[name] = {}
+
+        cpu_size = vm.find('TEMPLATE').find('CPU').text
+        memory_size = vm.find('TEMPLATE').find('MEMORY').text
+
+        private_ips = []
+        for nic in vm.find('TEMPLATE').findall('NIC'):
+            private_ips.append(nic.find('IP').text)
+
+        vms[name]['id'] = vm.find('ID').text
+        vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
+        vms[name]['name'] = name
+        vms[name]['size'] = {'cpu': cpu_size, 'memory': memory_size}
+        vms[name]['state'] = vm.find('STATE').text
+        vms[name]['private_ips'] = private_ips
+        vms[name]['public_ips'] = []
+
+        if full:
+            vms[vm.find('NAME').text] = _xml_to_dict(vm)
+
+    return vms
+
+
+def _xml_to_dict(xml):
+    '''
+    Helper function to covert xml into a data dictionary.
+
+    xml
+        The xml data to convert.
+    '''
+    dicts = {}
+    for item in xml:
+        key = item.tag.lower()
+        idx = 1
+        while key in dicts:
+            key += str(idx)
+            idx += 1
+        if item.text is None:
+            dicts[key] = _xml_to_dict(item)
+        else:
+            dicts[key] = item.text
+
+    return dicts
