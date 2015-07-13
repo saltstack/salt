@@ -242,3 +242,60 @@ class RoosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker()
             )
         self.assertIn('is not of type', excinfo.exception.message)
+
+
+class RosterConfigTest(TestCase):
+
+    def test_roster_config(self):
+        try:
+            self.assertDictEqual(
+                {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "title": "roster_entries",
+                    "description": "Roster entries definition",
+                    "type": "object",
+                    "patternProperties": {
+                        r"^([^:]+)$": ssh_schemas.RosterEntryConfig.serialize()
+                    },
+                    "additionalProperties": False
+                },
+                ssh_schemas.RosterConfig.serialize()
+            )
+        except AssertionError:
+            import json
+            print(json.dumps(ssh_schemas.RosterConfig.serialize(), indent=4))
+            raise
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_roster_config_validate(self):
+        try:
+            jsonschema.validate(
+                {'target-1':
+                    {
+                        'host': 'localhost',
+                        'user': 'root',
+                        'passwd': 'foo'
+                    }
+                },
+                ssh_schemas.RosterConfig.serialize(),
+                format_checker=jsonschema.FormatChecker()
+            )
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate(
+                {'target-1:1':
+                    {
+                        'host': 'localhost',
+                        'user': 'root',
+                        'passwd': 'foo'
+                    }
+                },
+                ssh_schemas.RosterConfig.serialize(),
+                format_checker=jsonschema.FormatChecker()
+            )
+        self.assertIn(
+            'Additional properties are not allowed (\'target-1:1\' was unexpected)',
+            excinfo.exception.message
+        )

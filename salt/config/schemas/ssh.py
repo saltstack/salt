@@ -69,3 +69,12 @@ class RosterEntryConfig(Configuration):
     minion_opts = DictConfig(title='Minion Options',
                              description='Dictionary of minion options',
                              properties=MinionConfiguration())
+
+
+class RosterConfig(Configuration):
+    title = 'Roster Configuration'
+    description = 'Roster entries definition'
+
+    roster_entries = DictConfig(
+        pattern_properties={
+            r'^([^:]+)$': RosterEntryConfig()})(flatten=True)
