@@ -24,6 +24,13 @@ run:
 Do not supply a password for your keypair, and use a name that makes sense
 for your application. Be sure to back up your gpg directory someplace safe!
 
+.. note::
+    Unfortunately, there are some scenarios - for example, on virtual machines
+    which don’t have real hardware - where insufficient entropy causes key
+    generation to be extremely slow. If you come across this problem, you should
+    investigate means of increasing the system entropy. On virtualised Linux
+    systems, this can often be achieved by installing the rng-tools package.
+
 To retrieve the public key:
 
 .. code-block:: bash
