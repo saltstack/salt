@@ -459,7 +459,7 @@ class Master(SMaster):
         process_manager.add_process(Maintenance, args=(self.opts,))
         log.info('Creating master publisher process')
 
-        if self.opts.get('reactor'):
+        if 'reactor' in self.opts:
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
