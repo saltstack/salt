@@ -5,6 +5,7 @@ Management of SQLite3 databases
 
 :depends:   - SQLite3 Python Module
 :configuration: See :py:mod:`salt.modules.sqlite3` for setup instructions
+.. versionadded:: Beryllium
 
 The sqlite3 module is used to create and manage sqlite3 databases
 and execute queries
@@ -95,7 +96,7 @@ def __virtual__():
     return HAS_SQLITE3
 
 
-def row_absent(name, db, table, where_sql, where_args=None, **kwargs):
+def row_absent(name, db, table, where_sql, where_args=None):
     """
     Makes sure the specified row is absent in db.  If multiple rows
     match where_sql, then the state will fail.
@@ -174,8 +175,7 @@ def row_present(name,
                 data,
                 where_sql,
                 where_args=None,
-                update=False,
-                **kwargs):
+                update=False):
     """
     Checks to make sure the given row exists. If row exists and update is True
     then row will be updated with data. Otherwise it will leave existing
@@ -309,7 +309,7 @@ def row_present(name,
     return changes
 
 
-def table_absent(name, db, **kwargs):
+def table_absent(name, db):
     """
     Make sure the specified table does not exist
 
@@ -358,7 +358,7 @@ def table_absent(name, db, **kwargs):
     return changes
 
 
-def table_present(name, db, schema, force=False, **kwargs):
+def table_present(name, db, schema, force=False):
     """
     Make sure the specified table exists with the specified schema
 
