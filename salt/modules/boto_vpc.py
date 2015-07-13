@@ -1274,12 +1274,12 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
                                       netbios_name_servers=None, netbios_node_type=None,
                                       region=None, key=None, keyid=None, profile=None):
     '''
-    ..deprecated:: Beryllium
+    ..deprecated:: Boron
         This function has been deprecated in favor of
         :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>`,
         which now takes vpc_id or vpc_name as kwargs.
 
-        This function will be removed in a future release.
+        This function will be removed in the Salt Boron release.
 
     Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
 
@@ -1290,6 +1290,11 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
         salt myminion boto_vpc.associate_new_dhcp_options_to_vpc 'vpc-6b1fe402' domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
 
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'associate_new_dhcp_options_to_vpc\' has been deprecated '
+        'and will be removed in Salt Boron. Please use \'create_dhcp_options\' instead.'
+    )
 
     return create_dhcp_options(vpc_id=vpc_id, domain_name=domain_name,
                                domain_name_servers=domain_name_servers,
@@ -1499,12 +1504,12 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
 def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
                                         region=None, key=None, keyid=None, profile=None):
     '''
-    ..deprecated:: Beryllium
+    ..deprecated:: Boron
         This function has been deprecated in favor of
         :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>`,
         which now takes subnet_id or subnet_name as kwargs.
 
-        This function will be removed in a future release.
+        This function will be removed in the Salt Boron release.
 
     Given a vpc ID and a subnet ID, associates a new network act to a subnet.
 
@@ -1517,6 +1522,11 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
 
         salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'associate_new_network_acl_to_subnet\' has been deprecated '
+        'and will be removed in Salt Boron. Please use \'create_network_acl\' instead.'
+    )
 
     return create_network_acl(vpc_id=vpc_id, subnet_id=subnet_id,
                               network_acl_name=network_acl_name, tags=tags,

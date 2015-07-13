@@ -79,3 +79,18 @@ the Nitrogen release of Salt. Example provider file:
       keyname: my_test_key
       securitygroup: default
       driver: ec2
+
+- The use of ``lock`` has been deprecated and from ``salt.utils.fopen``.
+``salt.utils.flopen`` should be used instead.
+
+- The following args have been deprecated from the ``rabbitmq_vhost.present``
+state: ``user``, ``owner``, ``conf``, ``write``, ``read``, and ``runas``.
+
+- The use of ``runas`` has been deprecated from the ``rabbitmq_vhost.absent``
+state.
+
+- Support for ``output`` in ``mine.get`` was removed. ``--out`` should be used
+instead.
+
+- The use of ``delim`` was removed from the following functions in the ``match``
+execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,
