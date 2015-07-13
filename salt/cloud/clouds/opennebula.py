@@ -550,7 +550,7 @@ def destroy(name, call=None):
     auth = user+':'+password
 
     data = show_instance(name, call='action')
-    node = server.one.vm.action(auth, 'delete', int(data['id']))[1]
+    node = server.one.vm.action(auth, 'delete', int(data['id']))
 
     salt.utils.cloud.fire_event(
         'event',
@@ -566,7 +566,14 @@ def destroy(name, call=None):
             __opts__
         )
 
-    return node
+    data = {
+        'action': 'vm.delete',
+        'deleted': node[0],
+        'node_id': node[1],
+        'error_code': node[2]
+    }
+
+    return data
 
 
 def script(vm_):
