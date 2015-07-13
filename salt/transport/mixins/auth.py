@@ -38,6 +38,7 @@ class AESPubClientMixin(object):
     @tornado.gen.coroutine
     def _decode_payload(self, payload):
         # we need to decrypt it
+        log.trace('Decoding payload: {0}'.format(payload))
         if payload['enc'] == 'aes':
             self._verify_master_signature(payload)
             try:
