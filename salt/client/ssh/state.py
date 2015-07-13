@@ -174,13 +174,17 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                             os.makedirs(tgt_dir)
                         shutil.copy(filename, tgt)
                     continue
-    cwd = os.getcwd()
+    try:  # cwd may not exist if it was removed but salt was run from it
+        cwd = os.getcwd()
+    except OSError:
+        cwd = None
     os.chdir(gendir)
     with closing(tarfile.open(trans_tar, 'w:gz')) as tfp:
         for root, dirs, files in os.walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
                 tfp.add(full[len(gendir):].lstrip(os.sep))
-    os.chdir(cwd)
+    if cwd:
+        os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar
