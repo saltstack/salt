@@ -382,7 +382,7 @@ def managed(name, type, enabled=True, **kwargs):
                         if second.get('label', '') == 'name':
                             interface_status = True
         if enabled:
-            if not 'noifupdown' in kwargs:
+            if 'noifupdown' not in kwargs:
                 if interface_status:
                     if ret['changes']:
                         # Interface should restart to validate if it's up
@@ -394,7 +394,7 @@ def managed(name, type, enabled=True, **kwargs):
                     __salt__['ip.up'](name, type)
                     ret['changes']['status'] = 'Interface {0} is up'.format(name)
         else:
-            if not 'noifupdown' in kwargs:
+            if 'noifupdown' not in kwargs:
                 if interface_status:
                     __salt__['ip.down'](name, type)
                     ret['changes']['status'] = 'Interface {0} down'.format(name)
