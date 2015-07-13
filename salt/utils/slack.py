@@ -123,4 +123,3 @@ def query(function,
             return ret
         ret['message'] = _result.get(response)
         return ret
-
