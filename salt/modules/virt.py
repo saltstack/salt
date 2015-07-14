@@ -16,6 +16,8 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
+import time
+from xml.etree import ElementTree
 
 # Import third party libs
 import yaml
@@ -1791,3 +1793,25 @@ def vm_diskstats(vm_=None):
         for vm_ in list_active_vms():
             info[vm_] = _info(vm_)
     return info
+
+
+def snapshot(vm, name=None):
+    '''
+    Create a snapshot of a vm.
+
+    :param vm:
+    :param name:
+    :return:
+    '''
+
+    if name and name.lower() == vm.lower():
+        raise CommandExecutionError('Virtual Machine {name} is already defined. '
+                                    'Please choose another name for the snapshot'.format(name=name))
+    if not name:
+        name = "{vmname}-{tsnap}".format(vmname=vm, tsnap=time.strftime('%Y%m%d-%H%M%S', time.localtime()))
+
+    doc = ElementTree.Element('domainsnapshot')
+    n_name = ElementTree.SubElement(doc, 'name')
+    n_name.text = name
+
+    _get_domain(vm).snapshotCreateXML(ElementTree.tostring(doc))
