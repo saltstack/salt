@@ -1218,9 +1218,9 @@ def start(vm_):
     return create(vm_)
 
 
-def stop(vm_):
+def stop(name):
     '''
-    Alias for the obscurely named 'destroy' function
+    Hard power down the virtual machine, this is equivalent to pulling the power.
 
     CLI Example:
 
@@ -1228,7 +1228,7 @@ def stop(vm_):
 
         salt '*' virt.stop <domain>
     '''
-    return destroy(vm_)
+    return _get_domain(name).destroy() == 0
 
 
 def reboot(name):
@@ -1483,21 +1483,6 @@ def set_autostart(vm_, state='on'):
     else:
         # return False if state is set to something other then on or off
         return False
-
-
-def destroy(vm_):
-    '''
-    Hard power down the virtual machine, this is equivalent to pulling the
-    power
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.destroy <domain>
-    '''
-    dom = _get_domain(vm_)
-    return dom.destroy() == 0
 
 
 def undefine(vm_):
