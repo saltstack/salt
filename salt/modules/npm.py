@@ -106,7 +106,7 @@ def install(pkg=None,
 
     '''
 
-    cmd = 'npm install --silent --json'
+    cmd = 'npm install --json'
 
     if dir is None:
         cmd += ' --global'
@@ -259,7 +259,7 @@ def list_(pkg=None,
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    cmd = 'npm list --silent --json'
+    cmd = 'npm list --json'
 
     if dir is None:
         cmd += ' --global'
