@@ -17,6 +17,7 @@ import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
 import time
+import datetime
 from xml.etree import ElementTree
 
 # Import third party libs
@@ -1794,6 +1795,25 @@ def vm_diskstats(vm_=None):
             info[vm_] = _info(vm_)
     return info
 
+
+def _parse_snapshot_description(xmldoc):
+    '''
+    Parse XML doc and return a dict with the status values.
+
+    :param xmldoc:
+    :return:
+    '''
+    ret = dict()
+    tree = ElementTree.fromstring(xmldoc)
+    for node in tree:
+        if node.tag == 'name':
+            ret['name'] = node.text
+        elif node.tag == 'creationTime':
+            ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat(' ')
+        elif node.tag == 'state':
+            ret['running'] = node.text == 'running'
+
+    return ret
 
 def snapshot(vm, name=None):
     '''
