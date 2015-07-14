@@ -23,6 +23,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -171,3 +172,35 @@ def saved(name, suffix=None):
 
     return ret
 
+
+def reverted(name, snapshot=None, cleanup=False):
+    '''
+    Reverts to the particular snapshot.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.reverted:
+            - cleanup: True
+
+        domain_name_1:
+          virt.reverted:
+            - snapshot: snapshot_name
+            - cleanup: False
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    result = dict()
+    try:
+        result = __salt__['virt.revert_snapshot'](name, snapshot=snapshot, cleanup=cleanup)
+        ret['result'] = True
+        ret['changes'] = {'current': result['reverted'], 'deleted': result['deleted']}
+        ret['comment'] = 'Domain has been reverted to the "{0}" snapshot'.format(result['reverted'])
+    except libvirt.libvirtError as err:
+        ret['comment'] = str(err)
+    except CommandExecutionError as err:
+        ret['comment'] = str(err)
+
+    return ret
