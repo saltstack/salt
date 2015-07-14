@@ -106,7 +106,7 @@ def getval(key):
     '''
     Get a value from the minion datastore
 
-    .. deprecated:: 2015.8.0
+    .. deprecated:: Boron
          Use ``get`` instead
 
     CLI Example:
@@ -115,6 +115,11 @@ def getval(key):
 
         salt '*' data.getval <key>
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'getval\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'get\' instead.'
+    )
     return get(key)
 
 
@@ -122,7 +127,7 @@ def getvals(*keylist):
     '''
     Get values from the minion datastore
 
-    .. deprecated:: 2015.8.0
+    .. deprecated:: Boron
          Use ``get`` instead
 
     CLI Example:
@@ -131,6 +136,11 @@ def getvals(*keylist):
 
         salt '*' data.getvals <key> [<key> ...]
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'getvals\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'get\' instead.'
+    )
     return get(keylist)
 
 

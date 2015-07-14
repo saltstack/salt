@@ -1190,19 +1190,6 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # Remove lock from kwargs if present
-    lock = kwargs.pop('lock', False)
-
-    if lock is True:
-        warn_until(
-            'Beryllium',
-            'The \'lock\' keyword argument is deprecated and will be '
-            'removed in Salt Beryllium. Please use '
-            '\'salt.utils.flopen()\' for file locking while calling '
-            '\'salt.utils.fopen()\'.'
-        )
-        return flopen(*args, **kwargs)
-
     # ensure 'binary' mode is always used on windows
     if kwargs.pop('binary', True):
         if is_windows():
@@ -2753,3 +2740,10 @@ def to_unicode(s, encoding=None):
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
         return unicode(s)  # pylint: disable=incompatible-py3-code
+
+
+def is_list(value):
+    '''
+    Check if a variable is a list.
+    '''
+    return isinstance(value, list)
