@@ -119,7 +119,7 @@ def stopped(name):
 
 def running(name):
     '''
-    Starts a VM
+    Starts a VM.
 
     .. versionadded:: Boron
 
