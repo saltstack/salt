@@ -137,7 +137,7 @@ def running(name):
         ret['comment'] = str(err)
 
     if ret['result']:
-        ret['changes'] = {'stopped': name}
+        ret['changes'] = {'running': name}
         ret['comment'] = "Machine has been started"
 
     return ret
