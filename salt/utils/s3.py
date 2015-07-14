@@ -23,17 +23,19 @@ from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name
 
 # Import Salt libs
 import salt.utils
+import salt.utils.aws
 import salt.utils.xmlutil as xml
 import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
+DEFAULT_LOCATION = 'us-east-1'
 
 
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
-          path=None, return_bin=False, action=None, local_file=None,
-          verify_ssl=True):
+          path='', return_bin=False, action=None, local_file=None,
+          verify_ssl=True, location=DEFAULT_LOCATION):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -71,9 +73,6 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not params:
         params = {}
 
-    if path is None:
-        path = ''
-
     if not service_url:
         service_url = 's3.amazonaws.com'
 
@@ -90,74 +89,32 @@ def query(key, keyid, method='GET', params=None, headers=None,
         keyid = iam_creds['access_key']
         token = iam_creds['security_token']
 
-    if not requesturl:
-        x_amz_date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
-        content_type = 'text/plain'
-        if method == 'GET':
-            if bucket:
-                can_resource = '/{0}/{1}'.format(bucket, path)
-            else:
-                can_resource = '/'
-        elif method == 'PUT' or method == 'HEAD' or method == 'DELETE':
-            if path:
-                can_resource = '/{0}/{1}'.format(bucket, path)
-            else:
-                can_resource = '/{0}/'.format(bucket)
-
-        if action:
-            can_resource += '?{0}'.format(action)
-
-        log.debug('CanonicalizedResource: {0}'.format(can_resource))
-
-        headers['Host'] = endpoint
-        headers['Content-type'] = content_type
-        headers['Date'] = x_amz_date
-        if token:
-            headers['x-amz-security-token'] = token
-
-        string_to_sign = '{0}\n'.format(method)
-
-        new_headers = []
-        for header in sorted(headers):
-            if header.lower().startswith('x-amz'):
-                log.debug(header.lower())
-                new_headers.append('{0}:{1}'.format(header.lower(),
-                                                    headers[header]))
-        can_headers = '\n'.join(new_headers)
-        log.debug('CanonicalizedAmzHeaders: {0}'.format(can_headers))
-
-        string_to_sign += '\n{0}'.format(content_type)
-        string_to_sign += '\n{0}'.format(x_amz_date)
-        if can_headers:
-            string_to_sign += '\n{0}'.format(can_headers)
-        string_to_sign += '\n{0}'.format(can_resource)
-        log.debug('String To Sign:: \n{0}'.format(string_to_sign))
-
-        hashed = hmac.new(key, string_to_sign, hashlib.sha1)
-        sig = binascii.b2a_base64(hashed.digest())
-        headers['Authorization'] = 'AWS {0}:{1}'.format(keyid, sig.strip())
-
-        querystring = urlencode(params)
-        if action:
-            if querystring:
-                querystring = '{0}&{1}'.format(action, querystring)
-            else:
-                querystring = action
-        requesturl = 'https://{0}/'.format(endpoint)
-        if path:
-            requesturl += path
-        if querystring:
-            requesturl += '?{0}'.format(querystring)
-
-    data = None
+    data = ''
     if method == 'PUT':
         if local_file:
             with salt.utils.fopen(local_file, 'r') as ifile:
                 data = ifile.read()
 
+    if not requesturl:
+        requesturl = 'https://{0}/{1}'.format(endpoint, path)
+        headers, requesturl = salt.utils.aws.sig4(
+            method,
+            endpoint,
+            params,
+            data=data,
+            uri='/{0}'.format(path),
+            prov_dict={'id': keyid, 'key': key},
+            location=location,
+            product='s3',
+            requesturl=requesturl,
+        )
+
     log.debug('S3 Request: {0}'.format(requesturl))
     log.debug('S3 Headers::')
     log.debug('    Authorization: {0}'.format(headers['Authorization']))
+
+    if not data:
+        data = None
 
     try:
         result = requests.request(method, requesturl, headers=headers,
