@@ -54,7 +54,7 @@ Page custom nsDialogsPage nsDialogsPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish page
-!define MUI_FINISHPAGE_RUN "net"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\nssm"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "start salt-minion"
 !insertmacro MUI_PAGE_FINISH
 
@@ -73,6 +73,7 @@ Page custom nsDialogsPage nsDialogsPageLeave
 !macroend
 
 ; MUI end ------
+
 
 Function nsDialogsPage
   nsDialogs::Create 1018
@@ -98,6 +99,7 @@ Function nsDialogsPage
 
 FunctionEnd
 
+
 Function nsDialogsPageLeave
 
   ${NSD_GetText} $MasterHost $MasterHost_State
@@ -106,6 +108,7 @@ Function nsDialogsPageLeave
   #MessageBox MB_OK "Minion name is:$\n$\n$MinionName_State"
 
 FunctionEnd
+
 
 Function updateMinionConfig
 
@@ -142,12 +145,14 @@ Function updateMinionConfig
 
 FunctionEnd
 
+
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
 InstallDir "c:\salt"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
+
 
 Section "MainSection" SEC01
 
@@ -193,6 +198,7 @@ Section "MainSection" SEC01
 
 SectionEnd
 
+
 Section -Post
   WriteUninstaller "$INSTDIR\uninst.exe"
   WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\bin\Scripts\salt-minion.exe"
@@ -211,21 +217,25 @@ Section -Post
   Call updateMinionConfig
 SectionEnd
 
+
 Function .onInstSuccess
 ; If the installer is running Silently, start the service
   IfSilent 0 +2
   Exec 'net start salt-minion'
 FunctionEnd
 
+
 Function un.onUninstSuccess
   HideWindow
   MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer." /SD IDOK
 FunctionEnd
 
+
 Function un.onInit
   MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
   Abort
 FunctionEnd
+
 
 Function .onInit
 
@@ -288,6 +298,7 @@ Function .onInit
 
 FunctionEnd
 
+
 Function Trim
 
     Exch $R1 ; Original string
@@ -321,6 +332,7 @@ Function Trim
 
 FunctionEnd
 
+
 Section Uninstall
   ExecWait "net stop salt-minion"
   ExecWait "sc delete salt-minion"
@@ -333,7 +345,6 @@ Section Uninstall
   ${AndIf} $INSTDIR != 'Program Files (x86)'
     RMDir /r "$INSTDIR"
   ${EndIf}
-
 
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
   DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"

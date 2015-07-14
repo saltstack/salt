@@ -11,7 +11,7 @@ $( document ).ready(function() {
 
     /*insert links to module functions*/
     if ($( 'a.current' ).length && $( 'dt .headerlink' ).length ) {
-        if (!window.location.href.indexOf('/ref/cli/')) {
+        if (window.location.href.indexOf('/ref/cli/') == -1) {
             var tgt = $( 'a.current' );
             tgt.after('<ul id="function-list"></ul>');
             $('dt .headerlink').each(function(idx, elem) {

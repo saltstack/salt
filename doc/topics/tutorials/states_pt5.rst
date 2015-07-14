@@ -8,13 +8,11 @@ States Tutorial, Part 5 - Orchestration with Salt
   :doc:`States Walkthrough <states_pt1>` pages. It is recommended to start with
   :doc:`Part 1 <states_pt1>` if you are not familiar with how to use states.
 
-
 Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
 Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :doc:`Runner
 </ref/runners/index>` can use the full suite of :doc:`requisites
 </ref/states/requisites>` available in states, and can also execute
 states/functions using salt-ssh.
-
 
 .. _orchestrate-runner:
 
@@ -23,69 +21,115 @@ The Orchestrate Runner
 
 .. versionadded:: 0.17.0
 
-* All :doc:`requisites </ref/states/requisites>` available in states can be
-  used.
-* The states/functions can be executed using salt-ssh.
+.. note:: Orchestrate Deprecates OverState
 
-Configuration Syntax
-~~~~~~~~~~~~~~~~~~~~
+  The Orchestrate Runner (originally called the state.sls runner) offers all
+  the functionality of the OverState, but with some advantages:
 
-To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`:
+  * All :doc:`requisites </ref/states/requisites>` available in states can be
+    used.
+  * The states/functions will also work on salt-ssh minions.
 
-.. code-block:: yaml
+  The Orchestrate Runner was added with the intent to eventually deprecate the
+  OverState system, however the OverState will still be maintained until Salt
+  Boron.
 
-    install_nginx:
-      salt.state:
-        - tgt: 'web*'
-        - sls:
-          - nginx
+The orchestrate runner generalizes the Salt state system to a Salt master
+context.  Whereas the ``state.sls``, ``state.highstate``, et al functions are
+concurrently and independently executed on each Salt minion, the
+``state.orchestrate`` runner is executed on the master, giving it a
+master-level view and control over requisites, such as state ordering and
+conditionals.  This allows for inter minion requisites, like ordering the
+application of states on different minions that must not happen simultaneously,
+or for halting the state run on all minions if a minion fails one of its
+states.
+
+If you want to setup a load balancer in front of a cluster of web servers, for
+example, you can ensure the load balancer is setup before the web servers or
+stop the state run altogether if one of the minions does not set up correctly.
+
+The ``state.sls``, ``state.highstate``, et al functions allow you to statefully
+manage each minion and the ``state.orchestrate`` runner allows you to
+statefully manage your entire infrastructure.
+
+Executing the Orchestrate Runner
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Orchestrate Runner command format is the same as for the ``state.sls``
+function, except that since it is a runner, it is executed with ``salt-run``
+rather than ``salt``.  Assuming you have a state.sls file called
+``/srv/salt/orch/webserver.sls`` the following command run on the master will
+apply the states defined in that file.
+
+.. code-block:: bash
+
+    salt-run state.orchestrate orch.webserver
+
+.. note::
+
+    ``state.orch`` is a synonym for ``state.orchestrate``
+
+.. versionchanged:: 2014.1.1
+
+    The runner function was renamed to ``state.orchestrate`` to avoid confusion
+    with the :mod:`state.sls <salt.modules.state.sls>` execution function. In
+    versions 0.17.0 through 2014.1.0, ``state.sls`` must be used.
+
+Examples
+~~~~~~~~
+
+Function
+^^^^^^^^
 
 To execute a function, use :mod:`salt.function <salt.states.saltmod.function>`:
 
 .. code-block:: yaml
 
+    # /srv/salt/orch/cleanfoo.sls
     cmd.run:
       salt.function:
         - tgt: '*'
         - arg:
           - rm -rf /tmp/foo
 
+.. code-block:: bash
 
-Triggering a Highstate
-~~~~~~~~~~~~~~~~~~~~~~
+    salt-run state.orchestrate orch.cleanfoo
+
+State
+^^^^^
+
+To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`.
 
 .. code-block:: yaml
 
+    # /srv/salt/orch/webserver.sls
+    install_nginx:
+      salt.state:
+        - tgt: 'web*'
+        - sls:
+          - nginx
+
+.. code-block:: bash
+
+    salt-run state.orchestrate orch.webserver
+
+Highstate
+^^^^^^^^^
+
+To run a highstate, set ``highstate: True`` in your state config:
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/web_setup.sls
     webserver_setup:
       salt.state:
         - tgt: 'web*'
         - highstate: True
 
-Executing the Orchestrate Runner
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Orchestrate Runner can be executed using the ``state.orchestrate`` runner
-function. ``state.orch`` also works, for those that would like to type less.
-
-Assuming that your ``base`` environment is located at ``/srv/salt``, and you
-have placed a configuration file in ``/srv/salt/orchestration/webserver.sls``,
-then the following could both be used:
-
 .. code-block:: bash
 
-    salt-run state.orchestrate orchestration.webserver
-    salt-run state.orch orchestration.webserver
-
-.. versionchanged:: 2014.1.1
-
-    The runner function was renamed to ``state.orchestrate``. In versions
-    0.17.0 through 2014.1.0, ``state.sls`` must be used. This was renamed to
-    avoid confusion with the :mod:`state.sls <salt.modules.state.sls>`
-    execution function.
-
-    .. code-block:: bash
-
-        salt-run state.sls orchestration.webserver
+    salt-run state.orchestrate orch.web_setup
 
 
 More Complex Orchestration

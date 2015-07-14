@@ -250,7 +250,7 @@ def create_win_salt_restart_task():
 
         salt '*' service.create_win_salt_restart_task()
     '''
-    cmd = 'schtasks /RU "System" /Create /TN restart-salt-minion /TR "powershell Restart-Service salt-minion" /sc ONCE /sd 01/15/1975 /st 01:00 /F'
+    cmd = 'schtasks /RU "System" /Create /TN restart-salt-minion /TR "powershell Restart-Service salt-minion" /sc ONCE /sd 01/01/1975 /st 01:00 /F /V1 /Z'
 
     return __salt__['cmd.shell'](cmd)
 
