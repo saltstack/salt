@@ -1862,3 +1862,29 @@ def snapshot(vm, name=None):
     _get_domain(vm).snapshotCreateXML(ElementTree.tostring(doc))
 
     return {'name': name}
+
+
+def delete_snapshots(name, *names, **kwargs):
+    '''
+    Delete one or more snapshots of the given VM.
+
+    Options:
+
+    * **all**: Remove all snapshots. Values: True or False (default False).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.delete_snapshots <domain> all=True
+        salt '*' virt.delete_snapshots <domain> <snapshot>
+        salt '*' virt.delete_snapshots <domain> <snapshot1> <snapshot2> ...
+    '''
+    deleted = dict()
+    for snap in _get_domain(name).listAllSnapshots():
+        if snap.getName() in names or not names:
+            deleted[snap.getName()] = _parse_snapshot_description(snap.getXMLDesc())
+            snap.delete()
+
+    return {'available': list_snapshots(name), 'deleted': deleted}
+
