@@ -68,10 +68,9 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         if isinstance(payload, dict) and payload.get('stop'):
             self.stop()
 
-
-class IPCMessageClient(BaseIPCReqCase):
+class IPCMessageClientTests(BaseIPCReqCase):
     '''
-    Test all of the clear msg stuff
+    Test for the IPCMessageClient
     '''
 
     def _get_channel(self):
@@ -84,11 +83,11 @@ class IPCMessageClient(BaseIPCReqCase):
         return channel
 
     def setUp(self):
-        super(IPCMessageClient, self).setUp()
+        super(IPCMessageClientTests, self).setUp()
         self.channel = self._get_channel()
 
     def tearDown(self):
-        super(IPCMessageClient, self).setUp()
+        super(IPCMessageClientTests, self).setUp()
         self.channel.close()
 
     def test_basic_send(self):
@@ -139,6 +138,59 @@ class IPCMessageClient(BaseIPCReqCase):
         self.channel.send({'stop': True})
         self.wait()
         self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
+
+
+class IPCSubscribeClientTests(BaseIPCReqCase):
+    '''
+    Tests for IPCSubscribeClient
+    '''
+    def _get_channel(self):
+        channel = salt.transport.ipc.IPCSubscribeClient(
+            socket_path=self.socket_path,
+            io_loop=self.io_loop,
+        )
+        channel.connect(callback=self.stop)
+        self.wait()
+        return channel
+
+    def setUp(self):
+        super(IPCSubscribeClientTests, self).setUp()
+        self.channel = self._get_channel()
+        self.channel.subscribe(self._handler)
+
+    def tearDown(self):
+        super(IPCSubscribeClientTests, self).setUp()
+        self.channel.close()
+
+    def _handler(self, body):
+        self.payloads.append(body)
+        if isinstance(body, dict) and body.get('stop', False):
+            self.stop()
+
+    def test_basic(self):
+        self.server_channel.publish({'stop': True})
+        self.wait()
+        self.assertEqual({'stop': True}, self.payloads[0])
+
+    def test_many_send(self):
+        msgs = []
+        self.server_channel.stream_handler = MagicMock()
+
+        for i in range(0, 1000):
+            msgs.append('test_many_send_{0}'.format(i))
+
+        for i in msgs:
+            self.server_channel.publish(i)
+        self.server_channel.publish({'stop': True})
+        self.wait()
+        self.assertEqual(self.payloads[:-1], msgs)
+
+    def test_very_big_message(self):
+        long_str = ''.join([str(num) for num in range(10**5)])
+        msg = {'long_str': long_str, 'stop': True}
+        self.server_channel.publish(msg)
+        self.wait()
+        self.assertEqual(msg, self.payloads[0])
 
 
 if __name__ == '__main__':

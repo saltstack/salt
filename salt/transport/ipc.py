@@ -47,6 +47,8 @@ class IPCServer(object):
         self.sock = None
         self.io_loop = io_loop or IOLoop.current()
 
+        self.clients = []  # clients connected to the server
+
     def start(self):
         '''
         Perform the work necessary to start up a Tornado IPC server
@@ -68,6 +70,24 @@ class IPCServer(object):
         )
         self._started = True
 
+    def publish(self, msg):
+        '''
+        Publish a `msg` to all connected clients
+        '''
+        payload = salt.transport.frame.frame_msg(msg)
+        to_remove = []
+        for client in self.clients:
+            try:
+                # Don't wait on the future, best effort only
+                f = client.write(payload)
+                self.io_loop.add_future(f, lambda f: True)
+            except tornado.iostream.StreamClosedError:
+                to_remove.append(item)
+        for client in to_remove:
+            client.close()
+            self.clients.remove(client)
+        log.trace('IPCServer finished publishing msg')
+
     @tornado.gen.coroutine
     def handle_stream(self, stream):
         '''
@@ -78,10 +98,9 @@ class IPCServer(object):
         See http://tornado.readthedocs.org/en/latest/iostream.html#tornado.iostream.IOStream
         for additional details.
         '''
-        @tornado.gen.coroutine
-        def _null(msg):
-            raise tornado.gen.Return(None)
+        self.clients.append(stream)
 
+        # TODO: move to a library?
         def write_callback(stream, header):
             if header.get('mid'):
                 @tornado.gen.coroutine
@@ -94,7 +113,11 @@ class IPCServer(object):
                     yield stream.write(pack)
                 return return_message
             else:
+                @tornado.gen.coroutine
+                def _null(msg):
+                    raise tornado.gen.Return(None)
                 return _null
+
         while not stream.closed():
             try:
                 framed_msg_len = yield stream.read_until(' ')
@@ -104,6 +127,8 @@ class IPCServer(object):
                 self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except Exception as exc:
                 log.error('Exception occurred while handling stream: {0}'.format(exc))
+
+        self.clients.remove(stream)
 
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
@@ -286,6 +311,69 @@ class IPCMessageClient(IPCClient):
             yield self.connect()
         pack = salt.transport.frame.frame_msg(msg, raw_body=True)
         yield self.stream.write(pack)
+
+
+class IPCSubscribeClient(IPCClient):
+    '''
+    Salt IPC subscribe client
+
+    Create an IPC client to send messages to an IPC server
+
+    An example of a very simple IPCSubscribeClient connecting to an IPCServer. This
+    example assumes an already running IPCMessage server.
+
+    IMPORTANT: The below example also assumes a running IOLoop process.
+
+    # Import Tornado libs
+    import tornado.ioloop
+
+    # Import Salt libs
+    import salt.config
+    import salt.transport.ipc
+
+    io_loop = tornado.ioloop.IOLoop.current()
+
+    ipc_server_socket_path = '/var/run/ipc_server.ipc'
+
+    ipc_client = salt.transport.ipc.IPCMessageClient(ipc_server_socket_path, io_loop=io_loop)
+
+    # Connect to the server
+    ipc_client.connect()
+
+    def handler(msg):
+        # do something with msg
+
+    # Send some data
+    ipc_client.subscribe(handler)
+    '''
+    @tornado.gen.coroutine
+    def subscribe(self, handler):
+        if not self.connected():
+            yield self.connect()
+
+        while not self._closing:
+            try:
+                framed_msg_len = yield self.stream.read_until(' ')
+                framed_msg_raw = yield self.stream.read_bytes(int(framed_msg_len.strip()))
+                framed_msg = msgpack.loads(framed_msg_raw)
+                header = framed_msg['head']
+                message_id = header.get('mid')
+                body = msgpack.loads(framed_msg['body'])
+
+                self.io_loop.spawn_callback(handler, body)
+
+            except tornado.iostream.StreamClosedError as e:
+                log.debug('tcp stream to {0} closed, unable to recv'.format(self.socket_path))
+                yield self.connect()
+            except Exception as e:
+                log.error('Exception parsing response', exc_info=True)
+                # if the last connect finished, then we need to make a new one
+                if self._connecting_future.done():
+                    self._connecting_future = self.connect()
+
+    def unsubscribe(self):
+        self._closing = True
+
 
 
 class IPCMessageServer(IPCServer):
