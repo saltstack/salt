@@ -1860,3 +1860,5 @@ def snapshot(vm, name=None):
     n_name.text = name
 
     _get_domain(vm).snapshotCreateXML(ElementTree.tostring(doc))
+
+    return {'name': name}
