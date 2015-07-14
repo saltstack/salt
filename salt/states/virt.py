@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
-Manage libvirt certificates
-===========================
+Manage virt
+===========
 
-This state uses the external pillar in the master to call
+For the key certificate this state uses the external pillar in the master to call
 for the generation and signing of certificates for systems running libvirt:
 
 .. code-block:: yaml
 
     libvirt_keys:
-      libvirt.keys
+      virt.keys
 '''
 from __future__ import absolute_import
 
