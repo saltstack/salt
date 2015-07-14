@@ -706,7 +706,7 @@ def vm_info(vm_=None):
         salt '*' virt.vm_info
     '''
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         raw = dom.info()
         return {'cpu': raw[3],
                 'cputime': int(raw[4]),
@@ -740,7 +740,7 @@ def vm_state(vm_=None):
     '''
     def _info(vm_):
         state = ''
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         raw = dom.info()
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
         return state
@@ -977,7 +977,7 @@ def setmem(vm_, memory, config=False):
     if vm_state(vm_) != 'shutdown':
         return False
 
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # libvirt has a funny bitwise system for the flags in that the flag
     # to affect the "current" setting is 0, which means that to set the
@@ -1010,7 +1010,7 @@ def setvcpus(vm_, vcpus, config=False):
     if vm_state(vm_) != 'shutdown':
         return False
 
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # see notes in setmem
     flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
@@ -1039,7 +1039,7 @@ def freemem():
     # Take off just enough to sustain the hypervisor
     mem -= 256
     for vm_ in list_vms():
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         if dom.ID() > 0:
             mem -= dom.info()[2] / 1024
     return mem
@@ -1059,7 +1059,7 @@ def freecpu():
     conn = __get_conn()
     cpus = conn.getInfo()[2]
     for vm_ in list_vms():
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         if dom.ID() > 0:
             cpus -= dom.info()[3]
     return cpus
@@ -1091,7 +1091,7 @@ def get_xml(vm_):
 
         salt '*' virt.get_xml <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.XMLDesc(0)
 
 
@@ -1137,7 +1137,7 @@ def shutdown(vm_):
 
         salt '*' virt.shutdown <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.shutdown() == 0
 
 
@@ -1151,7 +1151,7 @@ def pause(vm_):
 
         salt '*' virt.pause <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.suspend() == 0
 
 
@@ -1165,7 +1165,7 @@ def resume(vm_):
 
         salt '*' virt.resume <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.resume() == 0
 
 
@@ -1179,7 +1179,7 @@ def create(vm_):
 
         salt '*' virt.create <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.create() == 0
 
 
@@ -1219,7 +1219,7 @@ def reboot(vm_):
 
         salt '*' virt.reboot <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # reboot has a few modes of operation, passing 0 in means the
     # hypervisor will pick the best method for rebooting
@@ -1236,7 +1236,7 @@ def reset(vm_):
 
         salt '*' virt.reset <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # reset takes a flag, like reboot, but it is not yet used
     # so we just pass in 0
@@ -1254,7 +1254,7 @@ def ctrl_alt_del(vm_):
 
         salt '*' virt.ctrl_alt_del <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
 
 
@@ -1454,7 +1454,7 @@ def set_autostart(vm_, state='on'):
         salt "*" virt.set_autostart <vm name> <on | off>
     '''
 
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     if state == 'on':
         return dom.setAutostart(1) == 0
@@ -1478,7 +1478,7 @@ def destroy(vm_):
 
         salt '*' virt.destroy <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.destroy() == 0
 
 
@@ -1493,7 +1493,7 @@ def undefine(vm_):
 
         salt '*' virt.undefine <vm name>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.undefine() == 0
 
 
@@ -1626,7 +1626,7 @@ def vm_cputime(vm_=None):
     host_cpus = __get_conn().getInfo()[2]
 
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         raw = dom.info()
         vcpus = int(raw[3])
         cputime = int(raw[4])
@@ -1678,7 +1678,7 @@ def vm_netstats(vm_=None):
         salt '*' virt.vm_netstats
     '''
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         nics = get_nics(vm_)
         ret = {
                 'rx_bytes': 0,
@@ -1750,7 +1750,7 @@ def vm_diskstats(vm_=None):
         return disks
 
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
