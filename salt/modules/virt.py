@@ -1815,6 +1815,31 @@ def _parse_snapshot_description(xmldoc):
 
     return ret
 
+
+def list_snapshots(vm=None):
+    '''
+    List available snapshots for certain vm or for all.
+
+    :param vm:
+    :return:
+    '''
+    vms = list_vms()
+    if not vms:
+        raise CommandExecutionError('No any virtual machine found.')
+
+    if vm:
+        if vm not in vms:
+            raise CommandExecutionError('Virtual Machine "{0}" was not found'.format(vm))
+        else:
+            vms = [vm]
+
+    ret = dict()
+    for domain in _get_domain(*vms, iterable=True):
+        ret[domain.name()] = [_parse_snapshot_description(snap.getXMLDesc()) for snap in domain.listAllSnapshots()]
+
+    return ret
+
+
 def snapshot(vm, name=None):
     '''
     Create a snapshot of a vm.
