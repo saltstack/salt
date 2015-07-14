@@ -1890,3 +1890,57 @@ def delete_snapshots(name, *names, **kwargs):
 
     return {'available': list_snapshots(name), 'deleted': deleted}
 
+
+def revert_snapshot(name, snapshot=None, cleanup=False):
+    '''
+    Revert snapshot to the previous (if available) or to the specific.
+
+    Options:
+
+    * **cleanup**: Remove all newer than reverted snapshots. Values: True or False (default False).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.revert <domain>
+        salt '*' virt.revert <domain> <snapshot>
+    '''
+    ret = dict()
+    domain = _get_domain(name)
+    snapshots = domain.listAllSnapshots()
+
+    if not snapshots:
+        raise CommandExecutionError('No snapshots found')
+    elif len(snapshots) == 1:
+        raise CommandExecutionError('Cannot revert to itself: only one snapshot is available.')
+
+    snap = None
+    if not snapshot:
+        snap = snapshots[1]
+    else:
+        for snap_domain in snapshots:
+            if snap_domain.getName() == snapshot:
+                snap = snap_domain
+                break
+
+    if snap.isCurrent():
+        raise CommandExecutionError('Cannot revert to the currently running snapshot.')
+
+    # revert here
+    ret['reverted'] = snap.getName()
+    domain.revertToSnapshot(snap)
+
+    if cleanup:
+        delete = list()
+        for snap_domain in snapshots:
+            if snap_domain.getName() != snapshot:
+                delete.append(snap_domain.getName())
+                snap_domain.delete()
+            else:
+                break
+        ret['deleted'] = delete
+    else:
+        ret['deleted'] = 'N/A'
+
+    return ret
