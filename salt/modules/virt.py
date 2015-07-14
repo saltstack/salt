@@ -168,6 +168,9 @@ def _get_domain(*vms, **kwargs):
     conn = __get_conn()
 
     all_vms = list_vms()
+    if not all_vms:
+        raise CommandExecutionError('No virtual machines found.')
+
     if vms:
         for vm in vms:
             if vm not in all_vms:
