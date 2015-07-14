@@ -2,7 +2,7 @@
 '''
 State module to manage Elasticsearch index templates
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 # Import python libs
