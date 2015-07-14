@@ -1843,7 +1843,7 @@ def list_snapshots(vm=None):
     return ret
 
 
-def snapshot(vm, name=None):
+def snapshot(vm, name=None, suffix=None):
     '''
     Create a snapshot of a VM.
 
@@ -1868,6 +1868,9 @@ def snapshot(vm, name=None):
                                     'Please choose another name for the snapshot'.format(name=name))
     if not name:
         name = "{vmname}-{tsnap}".format(vmname=vm, tsnap=time.strftime('%Y%m%d-%H%M%S', time.localtime()))
+
+    if suffix:
+        name = "{name}-{suffix}".format(name=name, suffix=suffix)
 
     doc = ElementTree.Element('domainsnapshot')
     n_name = ElementTree.SubElement(doc, 'name')
