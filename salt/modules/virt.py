@@ -156,14 +156,28 @@ def __get_conn():
     return conn
 
 
-def _get_dom(vm_):
+def _get_domain(*vms):
     '''
-    Return a domain object for the named vm
+    Return a domain object for the named VM or return domain object for all VMs.
     '''
+    ret = list()
+    lookup_vms = list()
     conn = __get_conn()
-    if vm_ not in list_vms():
-        raise CommandExecutionError('The specified vm is not present')
-    return conn.lookupByName(vm_)
+
+    all_vms = list_vms()
+    if vms:
+        for vm in vms:
+            if vm not in all_vms:
+                raise CommandExecutionError('The VM "{name}" is not present'.format(name=vm))
+            else:
+                lookup_vms.append(vm)
+    else:
+        lookup_vms = list(all_vms)
+
+    for vm in lookup_vms:
+        ret.append(conn.lookupByName(vm))
+
+    return len(ret) == 1 and ret[0] or ret
 
 
 def _libvirt_creds():
