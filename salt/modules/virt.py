@@ -756,7 +756,7 @@ def vm_state(vm_=None):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_state <vm name>
+        salt '*' virt.vm_state <domain>
     '''
     def _info(vm_):
         state = ''
@@ -804,7 +804,7 @@ def get_nics(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_nics <vm name>
+        salt '*' virt.get_nics <domain>
     '''
     nics = {}
     doc = minidom.parse(_StringIO(get_xml(vm_)))
@@ -848,7 +848,7 @@ def get_macs(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_macs <vm name>
+        salt '*' virt.get_macs <domain>
     '''
     macs = []
     doc = minidom.parse(_StringIO(get_xml(vm_)))
@@ -868,7 +868,7 @@ def get_graphics(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_graphics <vm name>
+        salt '*' virt.get_graphics <domain>
     '''
     out = {'autoport': 'None',
            'keymap': 'None',
@@ -894,7 +894,7 @@ def get_disks(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_disks <vm name>
+        salt '*' virt.get_disks <domain>
     '''
     disks = {}
     doc = minidom.parse(_StringIO(get_xml(vm_)))
@@ -992,7 +992,8 @@ def setmem(vm_, memory, config=False):
 
     .. code-block:: bash
 
-        salt '*' virt.setmem myvm 768
+        salt '*' virt.setmem <domain> <size>
+        salt '*' virt.setmem my_domain 768
     '''
     if vm_state(vm_) != 'shutdown':
         return False
@@ -1025,7 +1026,8 @@ def setvcpus(vm_, vcpus, config=False):
 
     .. code-block:: bash
 
-        salt '*' virt.setvcpus myvm 2
+        salt '*' virt.setvcpus <domain> <amount>
+        salt '*' virt.setvcpus my_domain 4
     '''
     if vm_state(vm_) != 'shutdown':
         return False
@@ -1109,7 +1111,7 @@ def get_xml(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_xml <vm name>
+        salt '*' virt.get_xml <domain>
     '''
     dom = _get_domain(vm_)
     return dom.XMLDesc(0)
@@ -1155,7 +1157,7 @@ def shutdown(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.shutdown <vm name>
+        salt '*' virt.shutdown <domain>
     '''
     dom = _get_domain(vm_)
     return dom.shutdown() == 0
@@ -1169,7 +1171,7 @@ def pause(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.pause <vm name>
+        salt '*' virt.pause <domain>
     '''
     dom = _get_domain(vm_)
     return dom.suspend() == 0
@@ -1183,7 +1185,7 @@ def resume(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.resume <vm name>
+        salt '*' virt.resume <domain>
     '''
     dom = _get_domain(vm_)
     return dom.resume() == 0
@@ -1197,7 +1199,7 @@ def create(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.create <vm name>
+        salt '*' virt.create <domain>
     '''
     dom = _get_domain(vm_)
     return dom.create() == 0
@@ -1211,7 +1213,7 @@ def start(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.start <vm name>
+        salt '*' virt.start <domain>
     '''
     return create(vm_)
 
@@ -1224,7 +1226,7 @@ def stop(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.stop <vm name>
+        salt '*' virt.stop <domain>
     '''
     return destroy(vm_)
 
@@ -1237,7 +1239,7 @@ def reboot(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.reboot <vm name>
+        salt '*' virt.reboot <domain>
     '''
     dom = _get_domain(vm_)
 
@@ -1254,7 +1256,7 @@ def reset(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.reset <vm name>
+        salt '*' virt.reset <domain>
     '''
     dom = _get_domain(vm_)
 
@@ -1272,7 +1274,7 @@ def ctrl_alt_del(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.ctrl_alt_del <vm name>
+        salt '*' virt.ctrl_alt_del <domain>
     '''
     dom = _get_domain(vm_)
     return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
@@ -1415,7 +1417,7 @@ def migrate(vm_, target, ssh=False):
 
     .. code-block:: bash
 
-        salt '*' virt.migrate <vm name> <target hypervisor>
+        salt '*' virt.migrate <domain> <target hypervisor>
     '''
     cmd = _get_migrate_command() + ' ' + vm_\
         + _get_target(target, ssh)
@@ -1471,7 +1473,7 @@ def set_autostart(vm_, state='on'):
 
     .. code-block:: bash
 
-        salt "*" virt.set_autostart <vm name> <on | off>
+        salt "*" virt.set_autostart <domain> <on | off>
     '''
 
     dom = _get_domain(vm_)
@@ -1496,7 +1498,7 @@ def destroy(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.destroy <vm name>
+        salt '*' virt.destroy <domain>
     '''
     dom = _get_domain(vm_)
     return dom.destroy() == 0
@@ -1511,7 +1513,7 @@ def undefine(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.undefine <vm name>
+        salt '*' virt.undefine <domain>
     '''
     dom = _get_domain(vm_)
     return dom.undefine() == 0
@@ -1527,7 +1529,7 @@ def purge(vm_, dirs=False):
 
     .. code-block:: bash
 
-        salt '*' virt.purge <vm name>
+        salt '*' virt.purge <domain>
     '''
     disks = get_disks(vm_)
     try:
@@ -1828,7 +1830,7 @@ def list_snapshots(vm=None):
     .. code-block:: bash
 
         salt '*' virt.list_snapshots
-        salt '*' virt.list_snapshots <vm name>
+        salt '*' virt.list_snapshots <domain>
     '''
     vms = list_vms()
     if not vms:
@@ -1855,7 +1857,7 @@ def snapshot(vm, name=None):
 
     .. code-block:: bash
 
-        salt '*' virt.snapshot <vm name>
+        salt '*' virt.snapshot <domain>
     '''
     if name and name.lower() == vm.lower():
         raise CommandExecutionError('Virtual Machine {name} is already defined. '
