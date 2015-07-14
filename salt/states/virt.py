@@ -147,8 +147,6 @@ def saved(name, suffix=None):
     '''
     Takes a snapshot of a particular VM.
 
-    :param name:
-
     .. versionadded:: Boron
 
     .. code-block:: yaml
