@@ -142,3 +142,34 @@ def running(name):
 
     return ret
 
+
+def saved(name, suffix=None):
+    '''
+    Takes a snapshot of a particular VM.
+
+    :param name:
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.saved:
+            - suffix: periodic
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    snapshot_name = None
+    try:
+        snapshot_name = __salt__['virt.snapshot'](name, name=None, suffix=suffix)['name']
+        ret['result'] = True
+    except libvirt.libvirtError as err:
+        ret['result'] = False
+        ret['comment'] = str(err)
+
+    if ret['result'] and snapshot_name:
+        ret['changes'] = {'domain': name}
+        ret['comment'] = 'Snapshot "{0}" has been taken'.format(snapshot_name)
+
+    return ret
+
