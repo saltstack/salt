@@ -2318,7 +2318,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
     if name and vm_ and name in vm_:
         # The setting name exists in VM configuration.
         if isinstance(vm_[name], types.GeneratorType):
-            value = vm_[name].next()
+            value = next(vm_[name], '')
         else:
             if isinstance(value, dict):
                 value.update(vm_[name].copy())
