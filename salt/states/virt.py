@@ -15,9 +15,24 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+try:
+    import libvirt  # pylint: disable=import-error
+    HAS_LIBVIRT = True
+except ImportError:
+    HAS_LIBVIRT = False
 
 # Import salt libs
 import salt.utils
+
+
+def __virtual__():
+    '''
+    Only if libvirt bindings for Python are installed.
+
+    :return:
+    '''
+
+    return HAS_LIBVIRT
 
 
 def keys(name, basepath='/etc/pki'):
