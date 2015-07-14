@@ -56,6 +56,9 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 '''
 from __future__ import absolute_import
 
+# Standard Libs
+import re
+
 
 def __virtual__():
     '''
@@ -131,19 +134,44 @@ def present(
     if not subscriptions:
         return ret
 
+    # Get current subscriptions
     _subscriptions = __salt__['boto_sns.get_all_subscriptions_by_topic'](
         name, region=region, key=key, keyid=keyid, profile=profile
     )
-    _subscriptions = [{'protocol': s['Protocol'],
-                       'endpoint': s['Endpoint']}
-                      for s in _subscriptions]
+
+    # Convert subscriptions into a data strucure we can compare against
+    _subscriptions = [
+        {'protocol': s['Protocol'], 'endpoint': s['Endpoint']}
+        for s in _subscriptions
+    ]
+
     for subscription in subscriptions:
+        # If the subscription contains inline digest auth, AWS will *** the
+        # password. So we need to do the same with ours if the regex matches
+        # Example: https://user:****@my.endpoiint.com/foo/bar
+        _endpoint = subscription['endpoint']
+        matches = re.search(
+            r'https://(?P<user>\w+):(?P<pass>\w+)@',
+            _endpoint)
+
+        # We are using https and have auth creds - the password will be starred out,
+        # so star out our password so we can still match it
+        if matches is not None:
+            subscription['endpoint'] = _endpoint.replace(
+                matches.groupdict()['pass'],
+                '****')
+
         if subscription not in _subscriptions:
+            # Ensure the endpoint is set back to it's original value,
+            # incase we starred out a password
+            subscription['endpoint'] = _endpoint
+
             if __opts__['test']:
                 msg = ' AWS SNS subscription {0}:{1} to be set on topic {2}.'\
-                      .format(subscription['protocol'],
-                              subscription['endpoint'],
-                              name)
+                    .format(
+                        subscription['protocol'],
+                        subscription['endpoint'],
+                        name)
                 ret['comment'] += msg
                 ret['result'] = None
                 continue
@@ -168,9 +196,10 @@ def present(
                 return ret
         else:
             msg = ' AWS SNS subscription {0}:{1} already set on topic {2}.'\
-                      .format(subscription['protocol'],
-                              subscription['endpoint'],
-                              name)
+                .format(
+                    subscription['protocol'],
+                    subscription['endpoint'],
+                    name)
             ret['comment'] += msg
     return ret
 
