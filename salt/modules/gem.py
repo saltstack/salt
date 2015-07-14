@@ -30,7 +30,7 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
     ret = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
-        python_shell=False
+        python_shell=True
         )
 
     if ret['retcode'] == 0:
