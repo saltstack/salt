@@ -67,6 +67,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if tok:
                         eauth['token'] = tok.get('token', '')
                 if not res:
+                    sys.stderr.write('ERROR: Authentication failed\n')
                     sys.exit(2)
                 eauth.update(res)
                 eauth['eauth'] = self.options.eauth
@@ -93,6 +94,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         for ret in six.itervalues(res):
                             retcode = salt.utils.job.get_retcode(ret)
                             if retcode != 0:
+                                sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
                                 sys.exit(retcode)
 
         else:
@@ -143,6 +145,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if tok:
                         kwargs['token'] = tok.get('token', '')
                 if not res:
+                    sys.stderr.write('ERROR: Authentication failed\n')
                     sys.exit(2)
                 kwargs.update(res)
                 kwargs['eauth'] = self.options.eauth
@@ -206,6 +209,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     # This is the final point before the 'salt' cmd returns,
                     # which is why we set the retcode here.
                     if retcodes.count(0) < len(retcodes):
+                        sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
                         sys.exit(11)
 
             except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
@@ -285,6 +289,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # Determine the proper output method and run it
             salt.output.display_output(ret, out, self.config)
         if not ret:
+            sys.stderr.write('ERROR: No return received\n')
             sys.exit(2)
 
     def _format_ret(self, full_ret):
