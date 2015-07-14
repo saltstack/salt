@@ -156,7 +156,7 @@ def __get_conn():
     return conn
 
 
-def _get_domain(*vms):
+def _get_domain(*vms, **kwargs):
     '''
     Return a domain object for the named VM or return domain object for all VMs.
     '''
@@ -177,7 +177,7 @@ def _get_domain(*vms):
     for vm in lookup_vms:
         ret.append(conn.lookupByName(vm))
 
-    return len(ret) == 1 and ret[0] or ret
+    return len(ret) == 1 and not kwargs.get('iterable') and ret[0] or ret
 
 
 def _libvirt_creds():
