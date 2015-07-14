@@ -1123,6 +1123,10 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
+    # both apt_pkg.version_compare and _cmd_quote need string arguments.
+    pkg1 = str(pkg1)
+    pkg2 = str(pkg2)
+
     # if we have apt_pkg, this will be quickier this way
     # and also do not rely on shell.
     if HAS_APTPKG:
