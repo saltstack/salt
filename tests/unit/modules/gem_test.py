@@ -22,7 +22,7 @@ class TestGemModule(TestCase):
                          'rbenv.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}):
             gem._gem('install rails')
-            mock.assert_called_once_with('gem install rails', runas=None, python_shell=False)
+            mock.assert_called_once_with('gem install rails', runas=None, python_shell=True)
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         rvm_mock = MagicMock()
@@ -62,7 +62,7 @@ class TestGemModule(TestCase):
                          'cmd.run_all': mock}):
             gem.install('rails', pre_releases=True)
             mock.assert_called_once_with(
-                'gem install rails --no-rdoc --no-ri --pre', runas=None, python_shell=False
+                'gem install rails --no-rdoc --no-ri --pre', runas=None, python_shell=True
             )
 
     def test_list(self):
