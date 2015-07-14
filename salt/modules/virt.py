@@ -1832,18 +1832,8 @@ def list_snapshots(vm=None):
         salt '*' virt.list_snapshots
         salt '*' virt.list_snapshots <domain>
     '''
-    vms = list_vms()
-    if not vms:
-        raise CommandExecutionError('No any virtual machine found.')
-
-    if vm:
-        if vm not in vms:
-            raise CommandExecutionError('Virtual Machine "{0}" was not found'.format(vm))
-        else:
-            vms = [vm]
-
     ret = dict()
-    for domain in _get_domain(*vms, iterable=True):
+    for domain in _get_domain(*(vm and [vm] or list()), iterable=True):
         ret[domain.name()] = [_parse_snapshot_description(snap.getXMLDesc()) for snap in domain.listAllSnapshots()]
 
     return ret
