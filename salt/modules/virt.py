@@ -1801,7 +1801,7 @@ def vm_diskstats(vm_=None):
     return info
 
 
-def _parse_snapshot_description(xmldoc):
+def _parse_snapshot_description(snapshot):
     '''
     Parse XML doc and return a dict with the status values.
 
@@ -1809,7 +1809,7 @@ def _parse_snapshot_description(xmldoc):
     :return:
     '''
     ret = dict()
-    tree = ElementTree.fromstring(xmldoc)
+    tree = ElementTree.fromstring(snapshot.getXMLDesc())
     for node in tree:
         if node.tag == 'name':
             ret['name'] = node.text
@@ -1817,6 +1817,8 @@ def _parse_snapshot_description(xmldoc):
             ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat(' ')
         elif node.tag == 'state':
             ret['running'] = node.text == 'running'
+
+    ret['current'] = snapshot.isCurrent() == 1
 
     return ret
 
@@ -1834,7 +1836,7 @@ def list_snapshots(vm=None):
     '''
     ret = dict()
     for domain in _get_domain(*(vm and [vm] or list()), iterable=True):
-        ret[domain.name()] = [_parse_snapshot_description(snap.getXMLDesc()) for snap in domain.listAllSnapshots()]
+        ret[domain.name()] = [_parse_snapshot_description(snap) for snap in domain.listAllSnapshots()]
 
     return ret
 
@@ -1883,7 +1885,7 @@ def delete_snapshots(name, *names, **kwargs):
     deleted = dict()
     for snap in _get_domain(name).listAllSnapshots():
         if snap.getName() in names or not names:
-            deleted[snap.getName()] = _parse_snapshot_description(snap.getXMLDesc())
+            deleted[snap.getName()] = _parse_snapshot_description(snap)
             snap.delete()
 
     return {'available': list_snapshots(name), 'deleted': deleted}
