@@ -17,9 +17,9 @@ specified user. This configuration is much like the ``peer`` configuration:
       # Allow thatch to execute anything.
       thatch:
         - .*
-      # Allow fred to use ping and pkg, but only on "web*" minions.
+      # Allow fred to use test and pkg, but only on "web*" minions.
       fred:
-        - web*
+        - web*:
           - test.*
           - pkg.*
 
