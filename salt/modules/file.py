@@ -2804,7 +2804,7 @@ def get_managed(
     if template and source:
         # check if we have the template cached
         template_dest = __salt__['cp.is_cached'](source, saltenv)
-        if template_dest:
+        if template_dest and source_hash:
             comps = source_hash.split('=')
             cached_template_sum = get_hash(template_dest, form=source_sum['hash_type'])
             if cached_template_sum == source_sum['hsum']:
