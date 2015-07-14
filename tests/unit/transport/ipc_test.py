@@ -156,16 +156,18 @@ class IPCSubscribeClientTests(BaseIPCReqCase):
     def setUp(self):
         super(IPCSubscribeClientTests, self).setUp()
         self.channel = self._get_channel()
-        self.channel.subscribe(self._handler)
+        self.channel.subscribe(self._get_handler(self.payloads))
 
     def tearDown(self):
         super(IPCSubscribeClientTests, self).setUp()
         self.channel.close()
 
-    def _handler(self, body):
-        self.payloads.append(body)
-        if isinstance(body, dict) and body.get('stop', False):
-            self.stop()
+    def _get_handler(self, payloads):
+        def handler(body):
+            payloads.append(body)
+            if isinstance(body, dict) and body.get('stop', False):
+                self.stop()
+        return handler
 
     def test_basic(self):
         self.server_channel.publish({'stop': True})
@@ -174,8 +176,6 @@ class IPCSubscribeClientTests(BaseIPCReqCase):
 
     def test_many_send(self):
         msgs = []
-        self.server_channel.stream_handler = MagicMock()
-
         for i in range(0, 1000):
             msgs.append('test_many_send_{0}'.format(i))
 
@@ -191,6 +191,61 @@ class IPCSubscribeClientTests(BaseIPCReqCase):
         self.server_channel.publish(msg)
         self.wait()
         self.assertEqual(msg, self.payloads[0])
+
+    def test_multi_subscriber(self):
+        local_client = self._get_channel()
+        local_payloads = []
+        local_client.subscribe(self._get_handler(local_payloads))
+
+        msgs = []
+        for i in range(0, 1000):
+            msgs.append('test_many_send_{0}'.format(i))
+
+        for i in msgs:
+            self.server_channel.publish(i)
+        self.server_channel.publish({'stop': True})
+        self.wait()
+        self.assertEqual(self.payloads[:-1], msgs)
+        self.assertEqual(local_payloads[:-1], msgs)
+
+    def test_multi_subscriber_unsubscribe(self):
+        local_client = self._get_channel()
+        local_payloads = []
+        local_handler = self._get_handler(local_payloads)
+        local_client.subscribe(local_handler)
+
+        msg = {'stop': True}
+
+        self.server_channel.publish(msg)
+        self.wait()
+        self.assertEqual(self.payloads, [msg])
+        self.assertEqual(local_payloads, [msg])
+        local_client.unsubscribe(local_handler)
+        self.server_channel.publish(msg)
+        self.wait()
+        self.assertEqual(self.payloads, [msg, msg])
+        self.assertEqual(local_payloads, [msg])
+
+    def test_multi_subscriber_close(self):
+        local_client = self._get_channel()
+        local_payloads = []
+        local_handler = self._get_handler(local_payloads)
+        local_client.subscribe(local_handler)
+
+        msg = {'stop': True}
+
+        self.server_channel.publish(msg)
+        self.wait()
+        self.assertEqual(self.payloads, [msg])
+        self.assertEqual(local_payloads, [msg])
+        local_client.close()
+        self.server_channel.publish(msg)
+        # make sure the callbacks aren't called
+        with self.assertRaises(AssertionError):
+            self.wait()
+        # ensure no new messages arrived
+        self.assertEqual(self.payloads, [msg])
+        self.assertEqual(local_payloads, [msg])
 
 
 if __name__ == '__main__':

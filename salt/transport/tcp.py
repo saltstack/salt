@@ -438,7 +438,6 @@ class SaltMessageClient(object):
                 break
             except Exception as e:
                 yield tornado.gen.sleep(1)  # TODO: backoff
-                #self._connecting_future.set_exception(e)
 
     @tornado.gen.coroutine
     def _stream_return(self):

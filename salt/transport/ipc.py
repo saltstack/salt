@@ -210,15 +210,17 @@ class IPCClient(object):
         pass
 
     def connected(self):
-        return hasattr(self, 'stream')
+        return hasattr(self, 'stream') and hasattr(self, '_connecting_future') and self._connecting_future.done()
 
     def connect(self, callback=None):
         '''
         Connect to the IPC socket
         '''
         if hasattr(self, '_connecting_future') and not self._connecting_future.done():  # pylint: disable=E0203
+            log.critical('a')
             future = self._connecting_future  # pylint: disable=E0203
         else:
+            log.critical('b {0}'.format(self.connected()))
             future = tornado.concurrent.Future()
             self._connecting_future = future
             self.io_loop.add_callback(self._connect)
@@ -263,6 +265,7 @@ class IPCClient(object):
         self._closing = True
         if hasattr(self, 'stream'):
             self.stream.close()
+            del self.stream
 
 
 class IPCMessageClient(IPCClient):
@@ -346,12 +349,17 @@ class IPCSubscribeClient(IPCClient):
     # Send some data
     ipc_client.subscribe(handler)
     '''
+    def __singleton_init__(self, socket_path, io_loop=None):
+        super(IPCSubscribeClient, self).__singleton_init__(socket_path, io_loop=io_loop)
+        self._subscribed = False
+        self.handlers = []
+
     @tornado.gen.coroutine
-    def subscribe(self, handler):
+    def subscribe_routine(self):
         if not self.connected():
             yield self.connect()
 
-        while not self._closing:
+        while self._subscribed and not self._closing:
             try:
                 framed_msg_len = yield self.stream.read_until(' ')
                 framed_msg_raw = yield self.stream.read_bytes(int(framed_msg_len.strip()))
@@ -360,21 +368,27 @@ class IPCSubscribeClient(IPCClient):
                 message_id = header.get('mid')
                 body = msgpack.loads(framed_msg['body'])
 
-                self.io_loop.spawn_callback(handler, body)
+                for handler in self.handlers:
+                    self.io_loop.spawn_callback(handler, body)
 
             except tornado.iostream.StreamClosedError as e:
                 log.debug('tcp stream to {0} closed, unable to recv'.format(self.socket_path))
                 yield self.connect()
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
-                # if the last connect finished, then we need to make a new one
-                if self._connecting_future.done():
-                    self._connecting_future = self.connect()
+                self.close()
+                yield self.connect()
 
-    def unsubscribe(self):
-        self._closing = True
+    def subscribe(self, handler):
+        self.handlers.append(handler)
+        if not self._subscribed:
+            self._subscribed = True
+            self.io_loop.spawn_callback(self.subscribe_routine)
 
-
+    def unsubscribe(self, handler):
+        self.handlers.remove(handler)
+        if len(self.handlers) == 0:
+            self._subscribed = False
 
 class IPCMessageServer(IPCServer):
     '''
