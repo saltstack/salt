@@ -116,3 +116,29 @@ def stopped(name):
 
     return ret
 
+
+def running(name):
+    '''
+    Starts a VM
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.running
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    try:
+        ret['result'] = __salt__['virt.start'](name)
+    except libvirt.libvirtError as err:
+        ret['result'] = False
+        ret['comment'] = str(err)
+
+    if ret['result']:
+        ret['changes'] = {'stopped': name}
+        ret['comment'] = "Machine has been started"
+
+    return ret
+
