@@ -1191,7 +1191,7 @@ def resume(vm_):
     return dom.resume() == 0
 
 
-def create(vm_):
+def start(name):
     '''
     Start a defined domain
 
@@ -1199,23 +1199,9 @@ def create(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.create <domain>
-    '''
-    dom = _get_domain(vm_)
-    return dom.create() == 0
-
-
-def start(vm_):
-    '''
-    Alias for the obscurely named 'create' function
-
-    CLI Example:
-
-    .. code-block:: bash
-
         salt '*' virt.start <domain>
     '''
-    return create(vm_)
+    return _get_domain(name).create() == 0
 
 
 def stop(name):
