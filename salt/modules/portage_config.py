@@ -58,6 +58,16 @@ def _porttree():
     return portage.db[portage.root]['porttree']
 
 
+def _atom_parts(atom, allow_wildcard=False):
+    '''
+    Parse the given atom, allowing access to its parts
+    Success does not mean that the atom exists, just that it
+    is in the correct format.
+    Returns none if the atom is invalid.
+    '''
+    return portage.dep.Atom(atom, allow_wildcard=allow_wildcard)
+
+
 def _p_to_cp(p):
     '''
     Convert a package name or a DEPEND atom to category/package format.
@@ -321,17 +331,28 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         # boost
         new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-')))
 
-        package_file = _p_to_cp(atom)
-        if not package_file:
-            return
+        if conf == "mask":
+            # You can mask entire overlays with wildcards
+            parts = _atom_parts(atom, allow_wildcard=True)
+            if not parts:
+                return
+            if parts.cp == '*/*':
+                relative_path = parts.repo
+            else:
+                relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
+        else:
+            package_file = _p_to_cp(atom)
+            if not package_file:
+                return
 
-        psplit = package_file.split('/')
-        if len(psplit) == 2:
-            pdir = BASE_PATH.format(conf) + '/' + psplit[0]
-            if not os.path.exists(pdir):
-                os.mkdir(pdir, 0o755)
+            psplit = package_file.split('/')
+            if len(psplit) == 2:
+                pdir = BASE_PATH.format(conf) + '/' + psplit[0]
+                if not os.path.exists(pdir):
+                    os.mkdir(pdir, 0o755)
+            relative_path = package_file
 
-        complete_file_path = BASE_PATH.format(conf) + '/' + package_file
+        complete_file_path = BASE_PATH.format(conf) + '/' + relative_path
 
         try:
             shutil.copy(complete_file_path, complete_file_path + '.bak')
