@@ -316,7 +316,7 @@ def _check_user(user, group):
     return err
 
 
-def _gen_keep_files(name, require):
+def _gen_keep_files(name, require, walk_d=None):
     '''
     Generate the list of files that need to be kept when a dir based function
     like directory or recurse has a clean.
@@ -331,6 +331,26 @@ def _gen_keep_files(name, require):
         relative = os.path.relpath(path, directory)
 
         return not relative.startswith(os.pardir)
+
+    def _add_current_path(path):
+        _ret = set()
+        if os.path.isdir(path):
+            dirs, files = walk_d.get(path, ((), ()))
+            _ret.add(path)
+            for _name in files:
+                _ret.add(os.path.join(path, _name))
+            for _name in dirs:
+                _ret.add(os.path.join(path, _name))
+        return _ret
+
+    def _process_by_walk_d(name, ret):
+        if os.path.isdir(name):
+            walk_ret.update(_add_current_path(name))
+            dirs, _ = walk_d.get(name, ((), ()))
+            for _d in dirs:
+                p = os.path.join(name, _d)
+                walk_ret.update(_add_current_path(p))
+                _process_by_walk_d(p, ret)
 
     def _process(name):
         ret = set()
@@ -352,7 +372,12 @@ def _gen_keep_files(name, require):
                     fn = low['name']
                     if os.path.isdir(comp['file']):
                         if _is_child(comp['file'], name):
-                            keep.update(_process(fn))
+                            if walk_d:
+                                walk_ret = set()
+                                _process_by_walk_d(fn, walk_ret)
+                                keep.update(walk_ret)
+                            else:
+                                keep.update(_process(fn))
                     else:
                         keep.add(fn)
     return list(keep)
@@ -456,6 +481,13 @@ def _check_directory(name,
     Check what changes need to be made on a directory
     '''
     changes = {}
+    if recurse or clean:
+        walk_l = list(os.walk(name))  # walk path only once and store the result
+        # root: (dirs, files) structure, compatible for python2.6
+        walk_d = {}
+        for i in walk_l:
+            walk_d[i[0]] = (i[1], i[2])
+
     if recurse:
         if not set(['user', 'group', 'mode']) >= set(recurse):
             return False, 'Types for "recurse" limited to "user", ' \
@@ -466,7 +498,7 @@ def _check_directory(name,
             group = None
         if 'mode' not in recurse:
             mode = None
-        for root, dirs, files in os.walk(name):
+        for root, dirs, files in walk_l:
             for fname in files:
                 fchange = {}
                 path = os.path.join(root, fname)
@@ -489,7 +521,7 @@ def _check_directory(name,
         if fchange:
             changes[name] = fchange
     if clean:
-        keep = _gen_keep_files(name, require)
+        keep = _gen_keep_files(name, require, walk_d)
 
         def _check_changes(fname):
             path = os.path.join(root, fname)
@@ -502,7 +534,7 @@ def _check_directory(name,
                 else:
                     return {path: {'removed': 'Removed due to clean'}}
 
-        for root, dirs, files in os.walk(name):
+        for root, dirs, files in walk_l:
             for fname in files:
                 changes.update(_check_changes(fname))
             for name_ in dirs:
@@ -1811,6 +1843,13 @@ def directory(name,
                                               dir_mode,
                                               follow_symlinks)
 
+    if recurse or clean:
+        walk_l = list(os.walk(name))  # walk path only once and store the result
+        # root: (dirs, files) structure, compatible for python2.6
+        walk_d = {}
+        for i in walk_l:
+            walk_d[i[0]] = (i[1], i[2])
+
     if recurse:
         if not isinstance(recurse, list):
             ret['result'] = False
@@ -1874,7 +1913,7 @@ def directory(name,
             else:
                 ignore_dirs = False
 
-            for root, dirs, files in os.walk(name):
+            for root, dirs, files in walk_l:
                 if not ignore_files:
                     for fn_ in files:
                         full = os.path.join(root, fn_)
@@ -1897,7 +1936,7 @@ def directory(name,
                             follow_symlinks)
 
     if clean:
-        keep = _gen_keep_files(name, require)
+        keep = _gen_keep_files(name, require, walk_d)
         log.debug('List of kept files when use file.directory with clean: %s',
                   keep)
         removed = _clean_dir(name, list(keep), exclude_pat)
