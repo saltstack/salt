@@ -5,7 +5,7 @@ Elasticsearch - A distributed RESTful search and analytics server
 Module to provide Elasticsearch compatibility to Salt
 (compatible with Elasticsearch version 1.5.2+)
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 :depends:       `elasticsearch-py <http://elasticsearch-py.readthedocs.org/en/latest/>`_
 
