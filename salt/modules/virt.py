@@ -1847,8 +1847,16 @@ def snapshot(vm, name=None):
     '''
     Create a snapshot of a VM.
 
+    Options:
+
+    * **name**: Name of the snapshot. If the name is omitted, then will be used original domain name with
+                ISO 8601 time as a suffix.
+
+    * **suffix**: Add suffix for the new name. Useful in states, where such snapshots
+                  can be distinguished from manually created.
 
     .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
