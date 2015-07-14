@@ -1827,6 +1827,8 @@ def list_snapshots(vm=None):
     '''
     List available snapshots for certain vm or for all.
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -1845,6 +1847,8 @@ def snapshot(vm, name=None):
     '''
     Create a snapshot of a VM.
 
+
+    .. versionadded:: Boron
     CLI Example:
 
     .. code-block:: bash
@@ -1874,6 +1878,8 @@ def delete_snapshots(name, *names, **kwargs):
 
     * **all**: Remove all snapshots. Values: True or False (default False).
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -1898,6 +1904,8 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
     Options:
 
     * **cleanup**: Remove all newer than reverted snapshots. Values: True or False (default False).
+
+    .. versionadded:: Boron
 
     CLI Example:
 
