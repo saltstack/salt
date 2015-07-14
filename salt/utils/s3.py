@@ -7,10 +7,6 @@ Connection library for Amazon S3
 from __future__ import absolute_import
 
 # Import Python libs
-import binascii
-import datetime
-import hashlib
-import hmac
 import logging
 
 # Import 3rd-party libs
@@ -19,7 +15,6 @@ try:
     HAS_REQUESTS = True  # pylint: disable=W0612
 except ImportError:
     HAS_REQUESTS = False  # pylint: disable=W0612
-from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
 
 # Import Salt libs
 import salt.utils
