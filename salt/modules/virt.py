@@ -1231,7 +1231,7 @@ def stop(vm_):
     return destroy(vm_)
 
 
-def reboot(vm_):
+def reboot(name):
     '''
     Reboot a domain via ACPI request
 
@@ -1241,11 +1241,7 @@ def reboot(vm_):
 
         salt '*' virt.reboot <domain>
     '''
-    dom = _get_domain(vm_)
-
-    # reboot has a few modes of operation, passing 0 in means the
-    # hypervisor will pick the best method for rebooting
-    return dom.reboot(0) == 0
+    return _get_domain(name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
 
 
 def reset(vm_):
