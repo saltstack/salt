@@ -1820,8 +1820,12 @@ def list_snapshots(vm=None):
     '''
     List available snapshots for certain vm or for all.
 
-    :param vm:
-    :return:
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_snapshots
+        salt '*' virt.list_snapshots <vm name>
     '''
     vms = list_vms()
     if not vms:
