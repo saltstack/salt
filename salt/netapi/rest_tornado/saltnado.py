@@ -1023,14 +1023,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         f_call = {'args': [chunk['fun'], chunk]}
         pub_data = self.saltclients['runner'](chunk['fun'], chunk)
-        tag = pub_data['tag'] + '/ret'
-        try:
-            event = yield self.application.event_listener.get_event(self, tag=tag)
-
-            # only return the return data
-            raise tornado.gen.Return(event['data']['return'])
-        except TimeoutException:
-            raise tornado.gen.Return('Timeout waiting for runner to execute')
+        raise tornado.gen.Return(pub_data)
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
