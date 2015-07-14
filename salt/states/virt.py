@@ -37,39 +37,21 @@ def keys(name, basepath='/etc/pki'):
     #libvirt.clientcert.pem
     #libvirt.cacert.pem
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
     pillar = __salt__['pillar.ext']({'libvirt': '_'})
     paths = {
-            'serverkey': os.path.join(
-                basepath,
-                'libvirt',
-                'private',
-                'serverkey.pem'),
-            'servercert': os.path.join(
-                basepath,
-                'libvirt',
-                'servercert.pem'),
-            'clientkey': os.path.join(
-                basepath,
-                'libvirt',
-                'private',
-                'clientkey.pem'),
-            'clientcert': os.path.join(
-                basepath,
-                'libvirt',
-                'clientcert.pem'),
-            'cacert': os.path.join(
-                basepath,
-                'CA',
-                'cacert.pem')}
+        'serverkey': os.path.join(basepath, 'libvirt', 'private', 'serverkey.pem'),
+        'servercert': os.path.join(basepath, 'libvirt', 'servercert.pem'),
+        'clientkey': os.path.join(basepath, 'libvirt', 'private', 'clientkey.pem'),
+        'clientcert': os.path.join(basepath,'libvirt','clientcert.pem'),
+        'cacert': os.path.join(basepath, 'CA', 'cacert.pem')
+    }
+
     for key in paths:
         p_key = 'libvirt.{0}.pem'.format(key)
         if p_key not in pillar:
             continue
-        if not os.path.isdir(os.path.dirname(paths[key])):
+        if not os.path.exists(os.path.dirname(paths[key])):
             os.makedirs(os.path.dirname(paths[key]))
         if os.path.isfile(paths[key]):
             with salt.utils.fopen(paths[key], 'r') as fp_:
@@ -77,16 +59,18 @@ def keys(name, basepath='/etc/pki'):
                     ret['changes'][key] = 'update'
         else:
             ret['changes'][key] = 'new'
+
     if not ret['changes']:
         ret['comment'] = 'All keys are correct'
-        return ret
-    if __opts__['test']:
+    elif __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Libvirt keys are set to be updated'
         ret['changes'] = {}
-        return ret
-    for key in ret['changes']:
-        with salt.utils.fopen(paths[key], 'w+') as fp_:
-            fp_.write(pillar['libvirt.{0}.pem'.format(key)])
-    ret['comment'] = 'Updated libvirt certs and keys'
+    else:
+        for key in ret['changes']:
+            with salt.utils.fopen(paths[key], 'w+') as fp_:
+                fp_.write(pillar['libvirt.{0}.pem'.format(key)])
+
+        ret['comment'] = 'Updated libvirt certs and keys'
+
     return ret
