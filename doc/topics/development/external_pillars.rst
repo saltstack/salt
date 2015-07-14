@@ -181,6 +181,7 @@ You can call pillar with the dictionary's top name to retrieve its data.
 From above example, 'external_pillar' is the top dictionary name. Therefore:
 
 .. code-block:: bash
+
     salt-call '*' pillar.get external_pillar
 
 
