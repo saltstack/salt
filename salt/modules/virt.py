@@ -1846,13 +1846,14 @@ def list_snapshots(vm=None):
 
 def snapshot(vm, name=None):
     '''
-    Create a snapshot of a vm.
+    Create a snapshot of a VM.
 
-    :param vm:
-    :param name:
-    :return:
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.snapshot <vm name>
     '''
-
     if name and name.lower() == vm.lower():
         raise CommandExecutionError('Virtual Machine {name} is already defined. '
                                     'Please choose another name for the snapshot'.format(name=name))
