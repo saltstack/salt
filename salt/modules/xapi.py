@@ -634,12 +634,6 @@ def resume(vm_):
             return False
 
 
-# FIXME / TODO
-# This function does NOT use the XenAPI. Instead, it use good old xm / xl.
-# On Xen Source, creating a virtual machine using XenAPI is really painful.
-# XCP / XS make it really easy using xapi.Async.VM.start, but I don't use
-# those on any of my networks.
-
 def start(config_):
     '''
     Start a defined domain
@@ -650,7 +644,11 @@ def start(config_):
 
         salt '*' virt.start <path to Xen cfg file>
     '''
-    return create(config_)
+    # FIXME / TODO
+    # This function does NOT use the XenAPI. Instead, it use good old xm / xl.
+    # On Xen Source, creating a virtual machine using XenAPI is really painful.
+    # XCP / XS make it really easy using xapi.Async.VM.start instead. Anyone?
+    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_), python_shell=False)
 
 
 def reboot(vm_):
