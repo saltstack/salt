@@ -110,10 +110,8 @@ def init(**kwargs):
     '''
     ret = {}
     vmadm = _check_vmadm()
-    check_zone_args = (
-        'image_uuid', 'alias', 'hostname',
-        'max_physical_memory', 'quota', 'nic_tag',
-        'ip', 'netmask', 'gateway')
+    check_zone_args = ('image_uuid', 'alias', 'hostname', 'max_physical_memory',
+                       'quota', 'nic_tag', 'ip', 'netmask', 'gateway')
     check_kvm_args = ('to_be_implemented')
     # check routines for mandatory arguments
     # Zones
