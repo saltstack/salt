@@ -152,19 +152,10 @@ def stopped(name):
         domain_name:
           virt.stopped
     '''
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    try:
-        ret['result'] = __salt__['virt.stop'](name)
-    except libvirt.libvirtError as err:
-        ret['result'] = False
-        ret['comment'] = str(err)
+    return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
 
-    if ret['result']:
-        ret['changes'] = {'stopped': name}
-        ret['comment'] = "Machine has been abruptly turned off"
 
-    return ret
 
 
 def running(name):
