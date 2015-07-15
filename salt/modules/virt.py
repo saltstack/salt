@@ -1878,7 +1878,7 @@ def delete_snapshots(name, *names, **kwargs):
 
 def revert_snapshot(name, snapshot=None, cleanup=False):
     '''
-    Revert snapshot to the previous (if available) or to the specific.
+    Revert snapshot to the previous from current (if available) or to the specific.
 
     Options:
 
