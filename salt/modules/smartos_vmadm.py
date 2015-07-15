@@ -143,7 +143,7 @@ def init(**kwargs):
         raise CommandExecutionError('Missing mandatory arguments')
 
 
-def list_vms():
+def list_domains():
     '''
     Return a list of virtual machine names on the minion
 
@@ -151,7 +151,7 @@ def list_vms():
 
     .. code-block:: bash
 
-        salt '*' virt.list_vms
+        salt '*' virt.list_domains
     '''
     vmadm = _check_vmadm()
     cmd = '{0} list'.format(vmadm)
