@@ -3191,9 +3191,14 @@ def bootstrap(name,
             if install:
                 rstr = __salt__['test.rand_str']()
                 configdir = '/tmp/.c_{0}'.format(rstr)
-                run(name,
+
+                if run(name,
                     'install -m 0700 -d {0}'.format(configdir),
-                    python_shell=False)
+                    python_shell=False):
+                    log.error('tmpdir {0} creation failed ({1}'
+                              .format(configdir, cmd))
+                    return False
+
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
                 dest_dir = os.path.join('/tmp', rstr)
