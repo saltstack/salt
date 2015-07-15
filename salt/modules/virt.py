@@ -1768,7 +1768,7 @@ def vm_diskstats(vm_=None):
     return info
 
 
-def _parse_snapshot_description(snapshot):
+def _parse_snapshot_description(snapshot, unix_time=False):
     '''
     Parse XML doc and return a dict with the status values.
 
@@ -1781,7 +1781,8 @@ def _parse_snapshot_description(snapshot):
         if node.tag == 'name':
             ret['name'] = node.text
         elif node.tag == 'creationTime':
-            ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat(' ')
+            ret['created'] = not unix_time and datetime.datetime.fromtimestamp(
+                float(node.text)).isoformat(' ') or float(node.text)
         elif node.tag == 'state':
             ret['running'] = node.text == 'running'
 
