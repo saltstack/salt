@@ -1897,33 +1897,42 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
     domain = _get_domain(name)
     snapshots = domain.listAllSnapshots()
 
+    _snapshots = list()
+    for snap_obj in snapshots:
+        _snapshots.append({'idx': _parse_snapshot_description(snap_obj, unix_time=True)['created'], 'ptr': snap_obj})
+    snapshots = [w_ptr['ptr'] for w_ptr in sorted(_snapshots, key=lambda item: item['idx'], reverse=True)]
+    del _snapshots
+
     if not snapshots:
         raise CommandExecutionError('No snapshots found')
     elif len(snapshots) == 1:
         raise CommandExecutionError('Cannot revert to itself: only one snapshot is available.')
 
     snap = None
-    if not snapshot:
-        snap = snapshots[1]
-    else:
-        for snap_domain in snapshots:
-            if snap_domain.getName() == snapshot:
-                snap = snap_domain
+    for p_snap in snapshots:
+        if not snapshot:
+            if p_snap.isCurrent() and snapshots[snapshots.index(p_snap) + 1:]:
+                snap = snapshots[snapshots.index(p_snap) + 1:][0]
                 break
+        elif p_snap.getName() == snapshot:
+            snap = p_snap
+            break
 
-    if snap.isCurrent():
+    if not snap:
+        raise CommandExecutionError(
+            snapshot and 'Snapshot "{0}" not found'.format(snapshot) or 'No more previous snapshots available')
+    elif snap.isCurrent():
         raise CommandExecutionError('Cannot revert to the currently running snapshot.')
 
-    # revert here
-    ret['reverted'] = snap.getName()
     domain.revertToSnapshot(snap)
+    ret['reverted'] = snap.getName()
 
     if cleanup:
         delete = list()
-        for snap_domain in snapshots:
-            if snap_domain.getName() != snapshot:
-                delete.append(snap_domain.getName())
-                snap_domain.delete()
+        for p_snap in snapshots:
+            if p_snap.getName() != snap.getName():
+                delete.append(p_snap.getName())
+                p_snap.delete()
             else:
                 break
         ret['deleted'] = delete
