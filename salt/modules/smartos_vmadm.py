@@ -344,8 +344,6 @@ def setmem(uuid, memory):
 
         salt '*' virt.setmem <uuid> 512
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     warning = None
     vmtype = vm_virt_type(uuid)
     if vmtype == 'OS':
