@@ -347,6 +347,10 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
     for path in jenv.get_template(filename).render(stack=stack).splitlines():
         try:
             obj = yaml.safe_load(jenv.get_template(path).render(stack=stack))
+            if not isinstance(obj, dict):
+                log.info('Ignoring pillar stack template "{0}": Can\'t parse '
+                         'as a valid yaml dictionnary'.format(path))
+                continue
             stack = _merge_dict(stack, obj)
         except TemplateNotFound:
             log.info('Ignoring pillar stack template "{0}": can\'t find from '
