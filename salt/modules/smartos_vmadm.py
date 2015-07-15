@@ -313,7 +313,7 @@ def reboot(uuid=None):
         return False
 
 
-def destroy(uuid=None):
+def stop(uuid=None):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the power
 
