@@ -347,6 +347,10 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
     for path in jenv.get_template(filename).render(stack=stack).splitlines():
         try:
             obj = yaml.safe_load(jenv.get_template(path).render(stack=stack))
+            if not isinstance(obj, dict):
+                log.info('Ignoring pillar stack template "{0}": Can\'t parse '
+                         'as a valid yaml dictionnary'.format(path))
+                continue
             stack = _merge_dict(stack, obj)
         except TemplateNotFound:
             log.info('Ignoring pillar stack template "{0}": can\'t find from '
@@ -400,7 +404,7 @@ def _merge_dict(stack, obj):
 
 def _merge_list(stack, obj):
     strategy = 'merge-last'
-    if isinstance(obj[0], dict) and '__' in obj[0]:
+    if obj and isinstance(obj[0], dict) and '__' in obj[0]:
         strategy = obj[0]['__']
         del obj[0]
     if strategy not in strategies:
