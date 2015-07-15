@@ -182,7 +182,7 @@ def list_vms():
 
     .. code-block:: bash
 
-        salt '*' virt.list_vms
+        salt '*' virt.list_domains
     '''
     with _get_xapi_session() as xapi:
         hosts = xapi.VM.get_all()

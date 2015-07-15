@@ -444,7 +444,7 @@ class XapiTestCase(TestCase):
                     self.assertDictEqual(xapi.vm_cputime("1"), ret)
 
             mock = MagicMock(return_value={})
-            with patch.object(xapi, "list_vms", mock):
+            with patch.object(xapi, "list_domains", mock):
                 self.assertDictEqual(xapi.vm_cputime(""), {})
 
     def test_vm_netstats(self):
