@@ -409,5 +409,3 @@ def get_macs(uuid=None):
     if ret != '':
         return ret
     raise CommandExecutionError('We can\'t find the MAC address of this VM')
-
-
