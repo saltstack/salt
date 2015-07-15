@@ -192,7 +192,6 @@ def reverted(name, snapshot=None, cleanup=False):
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    result = dict()
     try:
         result = __salt__['virt.revert_snapshot'](name, snapshot=snapshot, cleanup=cleanup)
         ret['result'] = True
