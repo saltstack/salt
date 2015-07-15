@@ -174,7 +174,7 @@ def _get_val(record, keys):
     return data
 
 
-def list_vms():
+def list_domains():
     '''
     Return a list of virtual machine names on the minion
 
