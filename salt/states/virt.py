@@ -204,10 +204,35 @@ def reverted(name, snapshot=None, cleanup=False):
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     try:
-        result = __salt__['virt.revert_snapshot'](name, snapshot=snapshot, cleanup=cleanup)
-        ret['result'] = True
-        ret['changes'] = {'current': result['reverted'], 'deleted': result['deleted']}
-        ret['comment'] = 'Domain has been reverted to the "{0}" snapshot'.format(result['reverted'])
+        domains = fnmatch.filter(__salt__['virt.list_domains'](), name)
+        if not domains:
+            ret['comment'] = 'No domains found for criteria "{0}"'.format(name)
+        else:
+            ignored_domains = list()
+            if len(domains) > 1:
+                ret['changes'] = {'reverted': list()}
+            for domain in domains:
+                result = {}
+                try:
+                    result = __salt__['virt.revert_snapshot'](domain, snapshot=snapshot, cleanup=cleanup)
+                    result = {'domain': domain, 'current': result['reverted'], 'deleted': result['deleted']}
+                except CommandExecutionError as err:
+                    if len(domains) > 1:
+                        ignored_domains.append({'domain': domain, 'issue': str(err)})
+                if len(domains) > 1:
+                    if result:
+                        ret['changes']['reverted'].append(result)
+                else:
+                    ret['changes'] = result
+                    break
+
+            ret['result'] = len(domains) != len(ignored_domains)
+            if ret['result']:
+                ret['comment'] = 'Domain{0} has been reverted'.format(len(domains) > 1 and "s" or "")
+            if ignored_domains:
+                ret['changes']['ignored'] = ignored_domains
+            if not ret['changes']['reverted']:
+                ret['changes'].pop('reverted')
     except libvirt.libvirtError as err:
         ret['comment'] = str(err)
     except CommandExecutionError as err:
