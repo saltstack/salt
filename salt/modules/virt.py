@@ -643,7 +643,7 @@ def init(name,
                            config=kwargs.get('config'),
                            install=install)
     if start:
-        create(name)
+        _get_domain(name).create()
 
     return True
 
