@@ -172,7 +172,10 @@ class CkMinions(object):
         '''
         pki_dir = os.path.join(self.opts['pki_dir'], self.acc)
         try:
-            files = os.listdir(pki_dir)
+            files = []
+            for fn_ in salt.utils.isorted(os.listdir(pki_dir)):
+                if not fn_.startswith('.') and os.path.isfile(os.path.join(pki_dir, fn_)):
+                    files.append(fn_)
             return fnmatch.filter(files, expr)
         except OSError:
             return []
@@ -194,7 +197,10 @@ class CkMinions(object):
         Return the minions found by looking via regular expressions
         '''
         try:
-            minions = os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+            minions = []
+            for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                    minions.append(fn_)
             reg = re.compile(expr)
             return [m for m in minions if reg.match(m)]
         except OSError:
@@ -213,9 +219,11 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
+            mlist = []
+            for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                    mlist.append(fn_)
+            minions = set(mlist)
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
@@ -293,9 +301,11 @@ class CkMinions(object):
         cache_enabled = self.opts.get('minion_data_cache', False)
 
         if greedy:
-            minions = set(
-                os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-            )
+            mlist = []
+            for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                    mlist.append(fn_)
+            minions = set(mlist)
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
@@ -364,7 +374,11 @@ class CkMinions(object):
             )
             cache_enabled = self.opts.get('minion_data_cache', False)
             if greedy:
-                return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+                mlist = []
+                for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+                    if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                        mlist.append(fn_)
+                return mlist
             elif cache_enabled:
                 return os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
             else:
@@ -393,9 +407,11 @@ class CkMinions(object):
         if not isinstance(expr, six.string_types) and not isinstance(expr, (list, tuple)):
             log.error('Compound target that is neither string, list nor tuple')
             return []
-        minions = set(
-            os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
-        )
+        mlist = []
+        for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+            if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                mlist.append(fn_)
+        minions = set(mlist)
         log.debug('minions: {0}'.format(minions))
 
         if self.opts.get('minion_data_cache', False):
@@ -565,7 +581,11 @@ class CkMinions(object):
         '''
         Return a list of all minions that have auth'd
         '''
-        return os.listdir(os.path.join(self.opts['pki_dir'], self.acc))
+        mlist = []
+        for fn_ in salt.utils.isorted(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
+            if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
+                mlist.append(fn_)
+        return mlist
 
     def check_minions(self,
                       expr,
