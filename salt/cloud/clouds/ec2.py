@@ -994,7 +994,7 @@ def get_availability_zone(vm_):
     if avz is None:
         return None
 
-    zones = _list_availability_zones()
+    zones = _list_availability_zones(vm_)
 
     # Validate user-specified AZ
     if avz not in zones:
@@ -1084,7 +1084,7 @@ def get_provider(vm_=None):
     return provider
 
 
-def _list_availability_zones():
+def _list_availability_zones(vm_=None):
     '''
     List all availability zones in the current region
     '''
@@ -1092,9 +1092,9 @@ def _list_availability_zones():
 
     params = {'Action': 'DescribeAvailabilityZones',
               'Filter.0.Name': 'region-name',
-              'Filter.0.Value.0': get_location()}
+              'Filter.0.Value.0': get_location(vm_)}
     result = aws.query(params,
-                       location=get_location(),
+                       location=get_location(vm_),
                        provider=get_provider(),
                        opts=__opts__,
                        sigver='4')
@@ -1156,7 +1156,7 @@ def _create_eni_if_necessary(interface):
 
     for subnet_query_result in subnet_query:
         if 'item' in subnet_query_result:
-            if type(subnet_query_result['item']) is dict:
+            if isinstance(subnet_query_result['item'], dict):
                 for key, value in subnet_query_result['item'].iteritems():
                     if key == "subnetId":
                         if value == interface['SubnetId']:
@@ -1204,11 +1204,8 @@ def _create_eni_if_necessary(interface):
         )
     )
 
-    if 'SourceDestCheck' in interface:
-        _modify_interface_source_dest_check(eni_id, interface['SourceDestCheck'])
-
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
-    if type(associate_public_ip) is str:
+    if isinstance(associate_public_ip, str):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip)
     elif interface.get('associate_eip'):
@@ -1266,14 +1263,20 @@ def _list_interface_private_addresses(eni_desc):
     return addresses
 
 
-def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
+def _modify_eni_properties(eni_id, properties=None):
     '''
-    Change the state of SourceDestCheck Flag in the interface
-    with id eni_id to the value of source_dest_check
+    Change properties of the interface
+    with id eni_id to the values in properties dict
     '''
+    if not isinstance(properties, dict):
+        raise SaltCloudException(
+            'ENI properties must be a dictionary'
+        )
+
     params = {'Action': 'ModifyNetworkInterfaceAttribute',
-              'NetworkInterfaceId': eni_id,
-              'SourceDestCheck.Value': source_dest_check}
+              'NetworkInterfaceId': eni_id}
+    for k, v in properties.iteritems():
+        params[k] = v
 
     retries = 5
     while retries > 0:
@@ -1284,12 +1287,12 @@ def _modify_interface_source_dest_check(eni_id, source_dest_check=True):
             time.sleep(1)
             continue
 
-        return None
+        return result
 
     raise SaltCloudException(
-        'Could not change SourceDestCheck attribute '
-        'interface=<{0}> SourceDestCheck=<{1}>'.format(
-            eni_id, source_dest_check
+        'Could not change interface <{0}> attributes '
+        '<{1!r}> after 5 retries'.format(
+            eni_id, properties
         )
     )
 
@@ -1363,16 +1366,19 @@ def _update_enis(interfaces, instance):
         instance_enis.append((query_enis['networkInterfaceId'], query_enis['attachment']))
 
     for eni_id, eni_data in instance_enis:
-        params = {'Action': 'ModifyNetworkInterfaceAttribute',
-                  'NetworkInterfaceId': eni_id,
-                  'Attachment.AttachmentId': eni_data['attachmentId'],
-                  'Attachment.DeleteOnTermination': config_enis[eni_data['deviceIndex']].setdefault('delete_interface_on_terminate', True)}
-        set_eni_attributes = aws.query(params,
-                                       return_root=True,
-                                       location=get_location(),
-                                       provider=get_provider(),
-                                       opts=__opts__,
-                                       sigver='4')
+        delete_on_terminate = True
+        if 'DeleteOnTermination' in config_enis[eni_data['deviceIndex']]:
+            delete_on_terminate = config_enis[eni_data['deviceIndex']]['DeleteOnTermination']
+        elif 'delete_interface_on_terminate' in config_enis[eni_data['deviceIndex']]:
+            delete_on_terminate = config_enis[eni_data['deviceIndex']]['delete_interface_on_terminate']
+
+        params_attachment = {'Attachment.AttachmentId': eni_data['attachmentId'],
+                             'Attachment.DeleteOnTermination': delete_on_terminate}
+        set_eni_attachment_attributes = _modify_eni_properties(eni_id, params_attachment)
+
+        if 'SourceDestCheck' in config_enis[eni_data['deviceIndex']]:
+            params_sourcedest = {'SourceDestCheck.Value': config_enis[eni_data['deviceIndex']]['SourceDestCheck']}
+            set_eni_sourcedest_property = _modify_eni_properties(eni_id, params_sourcedest)
 
     return None
 
