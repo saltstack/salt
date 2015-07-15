@@ -94,6 +94,40 @@ def keys(name, basepath='/etc/pki'):
     return ret
 
 
+def _virt_call(domain, function, section, comment, **kwargs):
+    '''
+    Helper to call the virt functions. Wildcards supported.
+
+    :param domain:
+    :param function:
+    :param section:
+    :param comment:
+    :return:
+    '''
+    ret = {'name': domain, 'changes': {}, 'result': True, 'comment': ''}
+    targeted_domains = fnmatch.filter(__salt__['virt.list_domains'](), domain)
+    changed_domains = list()
+    ignored_domains = list()
+    for domain in targeted_domains:
+        try:
+            response = __salt__['virt.{0}'.format(function)](domain, **kwargs)
+            if isinstance(response, dict):
+                response = response['name']
+            changed_domains.append({'domain': domain, function: response})
+        except libvirt.libvirtError as err:
+            ignored_domains.append({'domain': domain, 'issue': str(err)})
+    if not changed_domains:
+        ret['result'] = False
+        ret['comment'] = 'No changes had happened'
+        if ignored_domains:
+            ret['changes'] = {'ignored': ignored_domains}
+    else:
+        ret['changes'] = {section: changed_domains}
+        ret['comment'] = comment
+
+    return ret
+
+
 def stopped(name):
     '''
     Stops a VM
