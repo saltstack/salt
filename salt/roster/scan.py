@@ -10,12 +10,9 @@ import logging
 
 # Import salt libs
 import salt.utils.network
-try:
-    import ipaddress
-    # Python 3
-except ImportError:
-    # Python 2
-    import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
+
+# Import 3rd-party libs
 from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -57,12 +54,14 @@ class RosterMatcher(object):
             except ValueError:
                 pass
         for addr in addrs:
+            addr = str(addr)
+            log.trace('Scanning host: {0}'.format(addr))
             for port in ports:
-                log.debug('Scanning %s:%d', addr, port)
+                log.trace('Scanning port: {0}'.format(port))
                 try:
                     sock = salt.utils.network.get_socket(addr, socket.SOCK_STREAM)
                     sock.settimeout(float(__opts__['ssh_scan_timeout']))
-                    sock.connect((str(addr), port))
+                    sock.connect((addr, port))
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
                     ret[addr] = {'host': addr, 'port': port}
