@@ -143,6 +143,20 @@ def init(**kwargs):
         raise CommandExecutionError('Missing mandatory arguments')
 
 
+def _call_vmadm(cmd):
+    '''
+    Call vmadm and return the result or raise an exception.
+
+    :param cmd: command params for the vmadm on SmartOS.
+    :return:
+    '''
+    res = __salt__['cmd.run_all']('{vmadm} {cmd}'.format(vmadm=_check_vmadm(), cmd=cmd))
+    if res['retcode'] != 0:
+        raise CommandExecutionError(_exit_status(res['retcode']))
+
+    return res
+
+
 def list_domains():
     '''
     Return a list of virtual machine names on the minion
