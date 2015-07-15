@@ -639,18 +639,6 @@ def resume(vm_):
 # On Xen Source, creating a virtual machine using XenAPI is really painful.
 # XCP / XS make it really easy using xapi.Async.VM.start, but I don't use
 # those on any of my networks.
-def create(config_):
-    '''
-    Start a defined domain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.create <path to Xen cfg file>
-    '''
-    return __salt__['cmd.run']('{0} create {1}'.format(_get_xtool(), config_), python_shell=False)
-
 
 def start(config_):
     '''
