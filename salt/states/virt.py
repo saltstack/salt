@@ -61,7 +61,7 @@ def keys(name, basepath='/etc/pki'):
         'serverkey': os.path.join(basepath, 'libvirt', 'private', 'serverkey.pem'),
         'servercert': os.path.join(basepath, 'libvirt', 'servercert.pem'),
         'clientkey': os.path.join(basepath, 'libvirt', 'private', 'clientkey.pem'),
-        'clientcert': os.path.join(basepath,'libvirt','clientcert.pem'),
+        'clientcert': os.path.join(basepath, 'libvirt', 'clientcert.pem'),
         'cacert': os.path.join(basepath, 'CA', 'cacert.pem')
     }
 
