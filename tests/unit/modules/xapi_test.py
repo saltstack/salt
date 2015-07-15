@@ -320,14 +320,14 @@ class XapiTestCase(TestCase):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(xapi.__salt__, {'cmd.run': mock}):
-            self.assertTrue(xapi.create("salt"))
+            self.assertTrue(xapi.start("salt"))
 
     def test_start(self):
         '''
             Test to reboot a domain via ACPI request
         '''
         mock = MagicMock(return_value=True)
-        with patch.object(xapi, "create", mock):
+        with patch.object(xapi, "start", mock):
             self.assertTrue(xapi.start("salt"))
 
     def test_reboot(self):
