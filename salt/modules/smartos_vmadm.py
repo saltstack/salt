@@ -90,13 +90,9 @@ def _gen_zone_json(**kwargs):
     # This one is mandatory for OS virt
     ret.update(brand='joyent')
     # Populate JSON without NIC information
-    ret.update((key, kwargs[key])
-        for key in check_args
-        if key in kwargs and key not in nics_args)
+    ret.update((key, kwargs[key]) for key in check_args if key in kwargs and key not in nics_args)
     # NICs are defined in a subdict
-    nics.update((key, kwargs[key])
-        for key in nics_args
-        if key in kwargs)
+    nics.update((key, kwargs[key]) for key in nics_args if key in kwargs)
     ret.update(nics=[nics])
 
     return json.dumps(ret)
