@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import re
 
 # Import salt libs
 import salt.utils
@@ -94,7 +93,7 @@ def get_all():
     ret = []
     service = _cmd()
     for svc in __salt__['cmd.run']('{0} ls all'.format(service)).splitlines():
-            ret.append(svc)
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -111,7 +110,7 @@ def get_disabled():
     ret = []
     service = _cmd()
     for svc in __salt__['cmd.run']('{0} ls off'.format(service)).splitlines():
-            ret.append(svc)
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -128,7 +127,7 @@ def get_enabled():
     ret = []
     service = _cmd()
     for svc in __salt__['cmd.run']('{0} ls on'.format(service)).splitlines():
-            ret.append(svc)
+        ret.append(svc)
     return sorted(ret)
 
 
