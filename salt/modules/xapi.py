@@ -734,7 +734,7 @@ def migrate(vm_, target,
             return False
 
 
-def destroy(vm_):
+def stop(vm_):
     '''
     Hard power down the virtual machine, this is equivalent to pulling the
     power
