@@ -44,26 +44,26 @@ class TomcatTestCase(TestCase):
         mock1 = MagicMock(return_value='saltstack')
         mock2 = MagicMock(side_effect=['FAIL', 'saltstack'])
         mock3 = MagicMock(return_value='deploy')
-        mock = MagicMock(side_effect=[{'salt': {'version': 'jenkins-1.2.4',
+        mock = MagicMock(side_effect=[{'salt': {'version': 'jenkins-1.20.4',
                                                 'mode': 'running'}},
-                                      {'salt': {'version': 1}},
+                                      {'salt': {'version': '1'}},
                                       {'salt': {'version': 'jenkins-1.2.4',
                                                 'mode': 'run'}},
-                                      {'salt': {'version': 1}},
-                                      {'salt': {'version': 1}}])
+                                      {'salt': {'version': '1'}},
+                                      {'salt': {'version': '1'}}])
         with patch.dict(tomcat.__salt__, {"tomcat.ls": mock,
                                           'tomcat.start': mock1,
                                           'tomcat.undeploy': mock2,
                                           'tomcat.deploy_war': mock3}):
-            ret.update({'comment': 'salt in version jenkins-1.2.4'
+            ret.update({'comment': 'salt in version 1.20.4'
                         ' is already deployed'})
             self.assertDictEqual(tomcat.war_deployed('salt',
                                                      'salt://jenkins'
-                                                     '-1.2.4.war'), ret)
+                                                     '-1.20.4.war'), ret)
 
             with patch.dict(tomcat.__opts__, {"test": True}):
                 ret.update({'changes': {'deploy': 'will deploy salt'
-                                        ' in version jenkins-1.2.4',
+                                        ' in version 1.2.4',
                                         'undeploy': 'undeployed salt'
                                         ' in version 1'},
                             'result': None, 'comment': ''})
@@ -79,7 +79,7 @@ class TomcatTestCase(TestCase):
                                                          '-1.2.4.war'), ret)
 
                 ret.update({'changes': {'deploy': 'will deploy salt in'
-                                        ' version jenkins-1.2.4',
+                                        ' version 1.2.4',
                                         'undeploy': 'undeployed salt in'
                                         ' version 1'},
                             'comment': 'FAIL'})

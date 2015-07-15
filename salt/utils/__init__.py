@@ -2740,3 +2740,10 @@ def to_unicode(s, encoding=None):
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
         return unicode(s)  # pylint: disable=incompatible-py3-code
+
+
+def is_list(value):
+    '''
+    Check if a variable is a list.
+    '''
+    return isinstance(value, list)
