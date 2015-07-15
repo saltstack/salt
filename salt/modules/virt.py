@@ -1791,7 +1791,7 @@ def _parse_snapshot_description(snapshot, unix_time=False):
     return ret
 
 
-def list_snapshots(vm=None):
+def list_snapshots(domain=None):
     '''
     List available snapshots for certain vm or for all.
 
@@ -1805,8 +1805,8 @@ def list_snapshots(vm=None):
         salt '*' virt.list_snapshots <domain>
     '''
     ret = dict()
-    for domain in _get_domain(*(vm and [vm] or list()), iterable=True):
-        ret[domain.name()] = [_parse_snapshot_description(snap) for snap in domain.listAllSnapshots()]
+    for vm_domain in _get_domain(*(domain and [domain] or list()), iterable=True):
+        ret[vm_domain.name()] = [_parse_snapshot_description(snap) for snap in vm_domain.listAllSnapshots()] or 'N/A'
 
     return ret
 
