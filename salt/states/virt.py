@@ -156,6 +156,19 @@ def stopped(name):
     return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
 
 
+def unpowered(name):
+    '''
+    Stops a VM by power off.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.stopped
+    '''
+
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
 
 
 def running(name):
