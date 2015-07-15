@@ -112,7 +112,7 @@ def avail_images(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='images', command='?page=' + str(page))
+        items = query(method='images', command='?page=' + str(page) + '&per_page=200')
 
         for image in items['images']:
             ret[image['id']] = {}
@@ -162,7 +162,7 @@ def list_nodes(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='droplets', command='?page=' + str(page))
+        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             ret[node['name']] = {
                 'id': node['id'],
@@ -194,7 +194,7 @@ def list_nodes_full(call=None, forOutput=True):
     ret = {}
 
     while fetch:
-        items = query(method='droplets', command='?page=' + str(page))
+        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             ret[node['name']] = {}
             for item in node.keys():
