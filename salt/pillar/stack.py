@@ -404,7 +404,7 @@ def _merge_dict(stack, obj):
 
 def _merge_list(stack, obj):
     strategy = 'merge-last'
-    if isinstance(obj[0], dict) and '__' in obj[0]:
+    if obj and isinstance(obj[0], dict) and '__' in obj[0]:
         strategy = obj[0]['__']
         del obj[0]
     if strategy not in strategies:
