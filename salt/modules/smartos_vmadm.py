@@ -411,4 +411,3 @@ def get_macs(uuid=None):
     raise CommandExecutionError('We can\'t find the MAC address of this VM')
 
 
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
