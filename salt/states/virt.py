@@ -202,26 +202,8 @@ def saved(name, suffix=None):
           virt.saved:
             - suffix: periodic
     '''
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    try:
-        changed_domains = list()
-        for domain in fnmatch.filter(__salt__['virt.list_domains'](), name):
-            changed_domains.append(
-                {
-                    'domain': domain,
-                    'snapshot': __salt__['virt.snapshot'](domain, name=None, suffix=suffix)['name']
-                }
-            )
-
-        ret['comment'] = 'Snapshots has been taken'
-        ret['changes'] = {'snapshots': changed_domains}
-        ret['result'] = True
-    except libvirt.libvirtError as err:
-        ret['result'] = False
-        ret['comment'] = str(err)
-
-    return ret
+    return _virt_call(name, 'snapshot', 'saved', 'Snapshots has been taken', suffix=suffix)
 
 
 def reverted(name, snapshot=None, cleanup=False):
