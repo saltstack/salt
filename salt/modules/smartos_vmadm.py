@@ -212,7 +212,7 @@ def list_inactive_vms():
     return vms
 
 
-def vm_info(uuid=None):
+def vm_info(uuid):
     '''
     Return a dict with information about the specified VM on this CN
 
@@ -223,8 +223,6 @@ def vm_info(uuid=None):
         salt '*' virt.vm_info <uuid>
     '''
     info = {}
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
     cmd = '{0} get {1}'.format(vmadm, uuid)
     res = __salt__['cmd.run_all'](cmd)
@@ -235,7 +233,7 @@ def vm_info(uuid=None):
     return info
 
 
-def start(uuid=None):
+def start(uuid):
     '''
     Start a defined domain
 
@@ -245,8 +243,6 @@ def start(uuid=None):
 
         salt '*' virt.start <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
     vmadm = _check_vmadm()
@@ -261,7 +257,7 @@ def start(uuid=None):
         return False
 
 
-def shutdown(uuid=None):
+def shutdown(uuid):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -271,8 +267,6 @@ def shutdown(uuid=None):
 
         salt '*' virt.shutdown <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
     vmadm = _check_vmadm()
@@ -287,7 +281,7 @@ def shutdown(uuid=None):
         return False
 
 
-def reboot(uuid=None):
+def reboot(uuid):
     '''
     Reboot a domain via ACPI request
 
@@ -297,8 +291,6 @@ def reboot(uuid=None):
 
         salt '*' virt.reboot <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
     vmadm = _check_vmadm()
@@ -313,7 +305,7 @@ def reboot(uuid=None):
         return False
 
 
-def stop(uuid=None):
+def stop(uuid):
     '''
     Hard power down the virtual machine, this is equivalent to powering off the hardware.
 
@@ -323,8 +315,6 @@ def stop(uuid=None):
 
         salt '*' virt.destroy <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
     cmd = '{0} delete {1}'.format(vmadm, uuid)
     res = __salt__['cmd.run_all'](cmd)
@@ -334,7 +324,7 @@ def stop(uuid=None):
     return True
 
 
-def vm_virt_type(uuid=None):
+def vm_virt_type(uuid):
     '''
     Return VM virtualization type : OS or KVM
 
@@ -344,8 +334,6 @@ def vm_virt_type(uuid=None):
 
         salt '*' virt.vm_virt_type <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     vmadm = _check_vmadm()
     cmd = '{0} list -p -o type uuid={1}'.format(vmadm, uuid)
     res = __salt__['cmd.run_all'](cmd)
@@ -390,7 +378,7 @@ def setmem(uuid, memory):
     return warning
 
 
-def get_macs(uuid=None):
+def get_macs(uuid):
     '''
     Return a list off MAC addresses from the named VM
 
@@ -400,8 +388,6 @@ def get_macs(uuid=None):
 
         salt '*' virt.get_macs <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     dladm = _check_dladm()
     cmd = '{0} show-vnic -o MACADDRESS -p -z {1}'.format(dladm, uuid)
     res = __salt__['cmd.run_all'](cmd)
