@@ -3201,19 +3201,12 @@ def bootstrap(name,
 
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
-                dest_dir = os.path.join('/tmp', rstr)
-                for cmd in [
-                    'mkdir -p {0}'.format(dest_dir),
-                    'chmod 700 {0}'.format(dest_dir),
-                ]:
-                    if run_stdout(name, cmd):
-                        log.error(
-                            ('tmpdir {0} creation'
-                             ' failed ({1}').format(dest_dir, cmd))
-                        return False
-                cp(name,
-                   bs_,
-                   '{0}/bootstrap.sh'.format(dest_dir))
+                script = '/sbin/{0}_bootstrap.sh'.format(rstr)
+                cp(name, bs_, script)
+                result = run_all(name,
+                                 'sh -c "chmod +x {0};{0}"'''.format(script),
+                                 python_shell=True)
+
                 cp(name, cfg_files['config'],
                    os.path.join(configdir, 'minion'))
                 cp(name, cfg_files['privkey'],
@@ -3221,16 +3214,22 @@ def bootstrap(name,
                 cp(name, cfg_files['pubkey'],
                    os.path.join(configdir, 'minion.pub'))
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('{0} {2}/bootstrap.sh {1}'
+                cmd = ('{0} {2} {1}'
                        .format(bootstrap_shell,
                                bootstrap_args.replace("'", "''"),
-                               dest_dir))
+                               script))
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in LXC container \'{1}\''
                          .format(cmd, name))
                 ret = retcode(name, cmd, output_loglevel='info',
                                   use_vt=True) == 0
+
+                run_all(name,
+                        'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''
+                        ''.format(script),
+                        ignore_retcode=True,
+                        python_shell=True)
             else:
                 ret = False
         else:
