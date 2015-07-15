@@ -15,6 +15,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import fnmatch
+
 try:
     import libvirt  # pylint: disable=import-error
     HAS_LIBVIRT = True
@@ -158,17 +160,22 @@ def saved(name, suffix=None):
     '''
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    snapshot_name = None
     try:
-        snapshot_name = __salt__['virt.snapshot'](name, name=None, suffix=suffix)['name']
+        changed_domains = list()
+        for domain in fnmatch.filter(__salt__['virt.list_domains'](), name):
+            changed_domains.append(
+                {
+                    'domain': domain,
+                    'snapshot': __salt__['virt.snapshot'](name, name=None, suffix=suffix)['name']
+                }
+            )
+
+        ret['comment'] = 'Snapshots has been taken'
+        ret['changes'] = {'snapshots': changed_domains}
         ret['result'] = True
     except libvirt.libvirtError as err:
         ret['result'] = False
         ret['comment'] = str(err)
-
-    if ret['result'] and snapshot_name:
-        ret['changes'] = {'domain': name}
-        ret['comment'] = 'Snapshot "{0}" has been taken'.format(snapshot_name)
 
     return ret
 
