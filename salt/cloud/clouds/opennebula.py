@@ -271,6 +271,46 @@ def get_location(vm_):
     )
 
 
+def get_template_id(kwargs=None, call=None):
+    '''
+    Returns a template's ID from the given template name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_template_id opennebula name=my-template-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    server = kwargs.get('server', None)
+    user = kwargs.get('user', None)
+    password = kwargs.get('password', None)
+
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_template_id function requires a name.'
+        )
+
+    template_id = _get_template(name, server=server, user=user, password=password)['id']
+
+    data = {
+        'template_name': name,
+        'template_id': template_id
+    }
+
+    return data
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict.
@@ -623,7 +663,205 @@ def show_instance(name, call=None):
     return node
 
 
+def template_clone(call=None, kwargs=None):
+    '''
+    Clones an existing virtual machine template.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the new template.
+
+    template_id
+        The ID of the template to be cloned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f template_clone opennebula name=my-cloned-template template_id=0
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The template_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    template_id = kwargs.get('template_id', None)
+
+    if not name or not template_id:
+        raise SaltCloudSystemExit(
+            'The template_clone function requires a name and a template_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    response = server.one.template.clone(auth, int(template_id), name)
+
+    data = {
+        'action': 'template.clone',
+        'cloned': response[0],
+        'cloned_template_id': response[1],
+        'cloned_template_name': name,
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def template_delete(call=None, kwargs=None):
+    '''
+    Deletes the given template from OpenNebula. Either a name or a template_id must
+    be supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the template to delete.
+
+    template_id
+        The ID of the template to delete.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f template_delete opennebula name=my-template
+        salt-cloud --function template_delete opennebula template_id=5
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The template_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    template_id = kwargs.get('template_id', None)
+
+    if not name and not template_id:
+        raise SaltCloudSystemExit(
+            'The template_delete function requires either a name or a template_id '
+            'to be provided.'
+        )
+
+    # Make the API call to O.N. once and pass them to other functions that need them.
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if template_id and name:
+        _check_name_id_collisions(name,
+                                  template_id,
+                                  server=server,
+                                  user=user,
+                                  password=password)
+
+    if name:
+        kwargs = {
+            'name': name,
+            'server': server,
+            'user': user,
+            'password': password
+        }
+        template_id = get_template_id(kwargs)
+
+    response = server.one.template.delete(auth, int(template_id))
+
+    data = {
+        'action': 'template.delete',
+        'deleted': response[0],
+        'template_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def template_instantiate(call=None, kwargs=None):
+    '''
+    Instantiates a new virtual machine from a template.
+
+    .. versionadded:: Boron
+
+    .. note::
+        ``template_instantiate`` creates a VM on OpenNebula from a template, but it
+        does not install Salt on the new VM. Use the ``create`` function for that
+        functionality: ``salt-cloud -p opennebula-profile vm-name``.
+
+    vm_name
+        Name for the new VM instance.
+
+    template_id
+        The ID of the template from which the VM will be created.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f template_instantiate opennebula vm_name=my-new-vm template_id=0
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The template_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    vm_name = kwargs.get('vm_name', None)
+    template_id = kwargs.get('template_id', None)
+
+    if not vm_name or not template_id:
+        raise SaltCloudSystemExit(
+            'The template_instantiate function requires a vm_name and a template_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    response = server.one.template.instantiate(auth, int(template_id), vm_name)
+
+    data = {
+        'action': 'template.instantiate',
+        'instantiated': response[0],
+        'instantiated_vm_id': response[1],
+        'vm_name': vm_name,
+        'error_code': response[2],
+    }
+
+    return data
+
+
 # Helper Functions
+
+def _check_name_id_collisions(name, id_, server=None, user=None, password=None):
+    '''
+    Helper function that ensures that a provided name and provided id match.
+    '''
+    name_id = _get_template(name,
+                            server=server,
+                            user=user,
+                            password=password)['id']
+    if name_id != id_:
+        raise SaltCloudException(
+            'A name and an ID were provided, but the provided id, \'{0}\', does '
+            'not match the ID found for the provided name: \'{1}\': \'{2}\'. '
+            'Nothing was done.'.format(
+                id_,
+                name,
+                name_id
+            )
+        )
+
 
 def _get_node(name):
     '''
@@ -646,6 +884,35 @@ def _get_node(name):
                 )
             )
 
+            # Just a little delay between attempts...
+            time.sleep(0.5)
+
+    return {}
+
+
+def _get_template(name, server=None, user=None, password=None):
+    '''
+    Helper function returning all information about a named template.
+
+    name
+        The name of the template for which to obtain information.
+    '''
+    attempts = 10
+
+    while attempts >= 0:
+        try:
+            return _list_templates(
+                server=server,
+                user=user,
+                password=password)[name]
+        except KeyError:
+            attempts -= 1
+            log.debug(
+                'Failed to get the data for the node {0!r}. Remaining '
+                'attempts {1}'.format(
+                    name, attempts
+                )
+            )
             # Just a little delay between attempts...
             time.sleep(0.5)
 
@@ -717,6 +984,23 @@ def _list_nodes(full=False):
             vms[vm.find('NAME').text] = _xml_to_dict(vm)
 
     return vms
+
+
+def _list_templates(server=None, user=None, password=None):
+    '''
+    Lists all templates available to the user and the user's groups.
+    '''
+    if not server or not user or not password:
+        server, user, password = _get_xml_rpc()
+
+    auth = ':'.join([user, password])
+    template_pool = server.one.templatepool.info(auth, -1, -1, -1)[1]
+
+    templates = {}
+    for template in etree.XML(template_pool):
+        templates[template.find('NAME').text] = _xml_to_dict(template)
+
+    return templates
 
 
 def _xml_to_dict(xml):
