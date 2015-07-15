@@ -70,7 +70,8 @@ def _get_config_file(conf, atom):
         if not parts:
             return
         if parts.cp == '*/*':
-            relative_path = parts.repo
+            # parts.repo will be empty if there is no repo part
+            relative_path = parts.repo or "gentoo"
         else:
             relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
     else:
