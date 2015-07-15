@@ -5,21 +5,17 @@
     tests.unit.modules.portage_flags
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
-
-
 # Import Python libs
 from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import portage_config
-from salt.exceptions import CommandNotFoundError
-from salt.utils import which_bin
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

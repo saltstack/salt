@@ -351,7 +351,6 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         if not os.path.exists(pdir):
             os.makedirs(pdir, 0o755)
 
-
         try:
             shutil.copy(complete_file_path, complete_file_path + '.bak')
         except IOError:
@@ -440,13 +439,19 @@ def get_flags_from_package_conf(conf, atom):
         salt '*' portage_config.get_flags_from_package_conf license salt
     '''
     if conf in SUPPORTED_CONFS:
-        package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
+        package_file = _get_config_file(conf, atom)
         if '/' not in atom:
             atom = _p_to_cp(atom)
-        try:
-            match_list = set(_porttree().dbapi.xmatch("match-all", atom))
-        except AttributeError:
-            return []
+
+        has_wildcard = '*' in atom
+        if has_wildcard:
+            match_list = set(atom)
+        else:
+            try:
+                match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+            except AttributeError:
+                return []
+
         flags = []
         try:
             file_handler = salt.utils.fopen(package_file)
@@ -456,8 +461,15 @@ def get_flags_from_package_conf(conf, atom):
             for line in file_handler:
                 line = line.strip()
                 line_package = line.split()[0]
-                line_list = _porttree().dbapi.xmatch("match-all", line_package)
-                if match_list.issubset(line_list):
+
+                found_match = False
+                if has_wildcard:
+                    found_match = line_package == atom
+                else:
+                    line_list = _porttree().dbapi.xmatch("match-all", line_package)
+                    found_match = match_list.issubset(line_list)
+
+                if found_match:
                     f_tmp = [flag for flag in line.strip().split(' ') if flag][1:]
                     if f_tmp:
                         flags.extend(f_tmp)
