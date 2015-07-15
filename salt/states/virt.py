@@ -170,7 +170,7 @@ def saved(name, suffix=None):
             changed_domains.append(
                 {
                     'domain': domain,
-                    'snapshot': __salt__['virt.snapshot'](name, name=None, suffix=suffix)['name']
+                    'snapshot': __salt__['virt.snapshot'](domain, name=None, suffix=suffix)['name']
                 }
             )
 
