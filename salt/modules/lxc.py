@@ -2870,7 +2870,7 @@ def set_dns(name, dnsservers=None, searchdomains=None):
             name, 'sh -c "chmod +x {0};{0}"'.format(script), python_shell=True)
     # blindly delete the setter file
     run_all(name,
-            'if [ -f "{0}" ];then rm -f "{0}";fi'.format(script),
+            'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''.format(script),
             python_shell=True)
     if result['retcode'] != 0:
         error = ('Unable to write to /etc/resolv.conf in container \'{0}\''
