@@ -167,7 +167,7 @@ def _get_domain(*vms, **kwargs):
     lookup_vms = list()
     conn = __get_conn()
 
-    all_vms = list_vms()
+    all_vms = list_domains()
     if not all_vms:
         raise CommandExecutionError('No virtual machines found.')
 
@@ -648,15 +648,15 @@ def init(name,
     return True
 
 
-def list_vms():
+def list_domains():
     '''
-    Return a list of virtual machine names on the minion
+    Return a list of available domains.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.list_vms
+        salt '*' virt.list_domains
     '''
     vms = []
     vms.extend(list_active_vms())
@@ -740,7 +740,7 @@ def vm_info(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -768,7 +768,7 @@ def vm_state(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -1060,7 +1060,7 @@ def freemem():
     mem = conn.getInfo()[1]
     # Take off just enough to sustain the hypervisor
     mem -= 256
-    for vm_ in list_vms():
+    for vm_ in list_domains():
         dom = _get_domain(vm_)
         if dom.ID() > 0:
             mem -= dom.info()[2] / 1024
@@ -1080,7 +1080,7 @@ def freecpu():
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
-    for vm_ in list_vms():
+    for vm_ in list_domains():
         dom = _get_domain(vm_)
         if dom.ID() > 0:
             cpus -= dom.info()[3]
@@ -1631,7 +1631,7 @@ def vm_cputime(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -1697,7 +1697,7 @@ def vm_netstats(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
