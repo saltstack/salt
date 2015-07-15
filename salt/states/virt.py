@@ -143,7 +143,7 @@ def rebooted(name):
 
 def stopped(name):
     '''
-    Stops a VM
+    Stops a VM by shutting it down nicely.
 
     .. versionadded:: Boron
 
