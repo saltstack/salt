@@ -78,7 +78,7 @@ class XapiTestCase(TestCase):
             Test to return a list of virtual machine names on the minion
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            self.assertListEqual(xapi.list_vms(), [])
+            self.assertListEqual(xapi.list_domains(), [])
 
     def test_vm_info(self):
         '''
