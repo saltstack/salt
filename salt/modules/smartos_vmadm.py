@@ -222,15 +222,11 @@ def vm_info(uuid):
 
         salt '*' virt.vm_info <uuid>
     '''
-    info = {}
-    vmadm = _check_vmadm()
-    cmd = '{0} get {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    info = res['stdout']
-    return info
+    res = __salt__['cmd.run_all']('{0} get {1}'.format(_check_vmadm(), uuid))
+    if res['retcode'] != 0:
+        raise CommandExecutionError(_exit_status(res['retcode']))
+
+    return res['stdout']
 
 
 def start(uuid):
