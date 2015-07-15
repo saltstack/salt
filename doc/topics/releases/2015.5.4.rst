@@ -1,0 +1,13 @@
+===========================
+Salt 2015.5.4 Release Notes
+===========================
+
+:release: TBA
+
+Version 2015.5.4 is a bugfix release for :doc:`2015.5.0
+</topics/releases/2015.5.0>`.
+
+Changes:
+
+- When querying for VMs in ``ditigal_ocean_v2.py``, the number of VMs to include in a page was changed from 20
+  (default) to 200 to reduce the number of API calls to Digital Ocean.
