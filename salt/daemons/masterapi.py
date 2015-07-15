@@ -757,6 +757,8 @@ class RemoteFuncs(object):
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
 
+        load['starttime'] = salt.utils.jid_to_time(load['jid'])
+        load['endtime'] = salt.utils.jid_to_time(salt.utils.jid.gen_jid())
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
         self.mminion.returners[fstr](load)
 
