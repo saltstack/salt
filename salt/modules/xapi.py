@@ -231,7 +231,7 @@ def vm_info(vm_=None):
             if ret is not None:
                 info[vm_] = ret
         else:
-            for vm_ in list_vms():
+            for vm_ in list_domains():
                 ret = _info(vm_)
                 if ret is not None:
                     info[vm_] = _info(vm_)
@@ -258,7 +258,7 @@ def vm_state(vm_=None):
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
             return info
 
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _get_record_by_label(xapi, 'VM', vm_)['power_state']
         return info
 
@@ -825,7 +825,7 @@ def vm_cputime(vm_=None):
             info[vm_] = _info(vm_)
             return info
 
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
 
         return info
@@ -875,7 +875,7 @@ def vm_netstats(vm_=None):
         if vm_:
             info[vm_] = _info(vm_)
         else:
-            for vm_ in list_vms():
+            for vm_ in list_domains():
                 info[vm_] = _info(vm_)
         return info
 
@@ -922,6 +922,6 @@ def vm_diskstats(vm_=None):
         if vm_:
             info[vm_] = _info(vm_)
         else:
-            for vm_ in list_vms():
+            for vm_ in list_domains():
                 info[vm_] = _info(vm_)
         return info
