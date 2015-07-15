@@ -155,6 +155,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
         os.makedirs(thindir)
     thintar = os.path.join(thindir, 'thin.tgz')
     thinver = os.path.join(thindir, 'version')
+    pythinver = os.path.join(thindir, '.thin-gen-py-version')
     salt_call = os.path.join(thindir, 'salt-call')
     with salt.utils.fopen(salt_call, 'w+') as fp_:
         fp_.write(SALTCALL)
@@ -163,6 +164,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             if os.path.isfile(thinver):
                 with salt.utils.fopen(thinver) as fh_:
                     overwrite = fh_.read() != salt.version.__version__
+                if overwrite is False and os.path.isfile(pythinver):
+                    with salt.utils.fopen(pythinver) as fh_:
+                        overwrite = fh_.read() != str(sys.version_info[0])
             else:
                 overwrite = True
 
@@ -248,8 +252,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     tfp.add('salt-call')
     with salt.utils.fopen(thinver, 'w+') as fp_:
         fp_.write(salt.version.__version__)
+    with salt.utils.fopen(pythinver, 'w+') as fp_:
+        fp_.write(str(sys.version_info[0]))
     os.chdir(os.path.dirname(thinver))
     tfp.add('version')
+    tfp.add('.thin-gen-py-version')
     if start_dir:
         os.chdir(start_dir)
     tfp.close()
