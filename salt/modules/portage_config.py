@@ -58,14 +58,29 @@ def _porttree():
     return portage.db[portage.root]['porttree']
 
 
-def _atom_parts(atom, allow_wildcard=False):
+def _get_config_file(conf, atom):
     '''
     Parse the given atom, allowing access to its parts
     Success does not mean that the atom exists, just that it
     is in the correct format.
     Returns none if the atom is invalid.
     '''
-    return portage.dep.Atom(atom, allow_wildcard=allow_wildcard)
+    if '*' in atom:
+        parts = portage.dep.Atom(atom, allow_wildcard=True)
+        if not parts:
+            return
+        if parts.cp == '*/*':
+            relative_path = parts.repo
+        else:
+            relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
+    else:
+        relative_path = _p_to_cp(atom)
+        if not relative_path:
+            return
+
+    complete_file_path = BASE_PATH.format(conf) + '/' + relative_path
+
+    return complete_file_path
 
 
 def _p_to_cp(p):
@@ -331,28 +346,11 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         # boost
         new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-')))
 
-        if conf == "mask":
-            # You can mask entire overlays with wildcards
-            parts = _atom_parts(atom, allow_wildcard=True)
-            if not parts:
-                return
-            if parts.cp == '*/*':
-                relative_path = parts.repo
-            else:
-                relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
-        else:
-            package_file = _p_to_cp(atom)
-            if not package_file:
-                return
+        complete_file_path = _get_config_file(conf, atom)
+        pdir = os.path.dirname(complete_file_path)
+        if not os.path.exists(pdir):
+            os.makedirs(pdir, 0o755)
 
-            psplit = package_file.split('/')
-            if len(psplit) == 2:
-                pdir = BASE_PATH.format(conf) + '/' + psplit[0]
-                if not os.path.exists(pdir):
-                    os.mkdir(pdir, 0o755)
-            relative_path = package_file
-
-        complete_file_path = BASE_PATH.format(conf) + '/' + relative_path
 
         try:
             shutil.copy(complete_file_path, complete_file_path + '.bak')
@@ -530,8 +528,18 @@ def is_present(conf, atom):
         salt '*' portage_config.is_present unmask salt
     '''
     if conf in SUPPORTED_CONFS:
-        package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
-        match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+        if not isinstance(atom, portage.dep.Atom):
+            atom = portage.dep.Atom(atom, allow_wildcard=True)
+        has_wildcard = '*' in atom
+
+        package_file = _get_config_file(conf, str(atom))
+
+        # wildcards are valid in confs
+        if has_wildcard:
+            match_list = set(atom)
+        else:
+            match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+
         try:
             file_handler = salt.utils.fopen(package_file)
         except IOError:
@@ -540,9 +548,14 @@ def is_present(conf, atom):
             for line in file_handler:
                 line = line.strip()
                 line_package = line.split()[0]
-                line_list = _porttree().dbapi.xmatch("match-all", line_package)
-                if match_list.issubset(line_list):
-                    return True
+
+                if has_wildcard:
+                    if line_package == str(atom):
+                        return True
+                else:
+                    line_list = _porttree().dbapi.xmatch("match-all", line_package)
+                    if match_list.issubset(line_list):
+                        return True
             return False
 
 
