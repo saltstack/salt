@@ -743,7 +743,7 @@ def stop(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.destroy <vm name>
+        salt '*' virt.stop <vm name>
     '''
     with _get_xapi_session() as xapi:
         vm_uuid = _get_label_uuid(xapi, 'VM', vm_)
