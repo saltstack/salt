@@ -642,7 +642,7 @@ def resume(vm_):
 
 def start(config_):
     '''
-    Alias for the obscurely named 'create' function
+    Start a defined domain
 
     CLI Example:
 
