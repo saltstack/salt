@@ -2395,7 +2395,8 @@ def is_profile_configured(opts, provider, profile_name):
     alias, driver = provider.split(':')
 
     # Most drivers need a size, but some do not.
-    non_size_drivers = ['parallels', 'softlayer', 'softlayer_hw']
+    non_size_drivers = ['opennebula', 'parallels', 'softlayer', 'softlayer_hw',
+                        'vmware', 'vsphere']
 
     if driver not in non_size_drivers:
         required_keys.append('size')
