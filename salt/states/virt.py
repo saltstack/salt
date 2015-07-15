@@ -182,19 +182,8 @@ def running(name):
         domain_name:
           virt.running
     '''
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    try:
-        ret['result'] = __salt__['virt.start'](name)
-    except libvirt.libvirtError as err:
-        ret['result'] = False
-        ret['comment'] = str(err)
-
-    if ret['result']:
-        ret['changes'] = {'running': name}
-        ret['comment'] = "Machine has been started"
-
-    return ret
+    return _virt_call(name, 'start', 'running', 'Machine has been started')
 
 
 def saved(name, suffix=None):
