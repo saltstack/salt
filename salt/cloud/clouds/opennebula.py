@@ -6,6 +6,8 @@ OpenNebula Cloud Module
 The OpenNebula cloud module is used to control access to an OpenNebula
 cloud.
 
+:depends: lxml
+
 Use of this module requires the ``xml_rpc``, ``user`` and
 ``password`` parameter to be set. Set up the cloud configuration
 at ``/etc/salt/cloud.providers`` or
