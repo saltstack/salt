@@ -35,8 +35,12 @@ Create a new `virtualenv`_:
 .. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
 Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
+
 On Arch Linux, where Python 3 is the default installation of Python, use
 the ``virtualenv2`` command instead of ``virtualenv``.
+
+On Gentoo you must use ``--system-site-packages`` to enable pkg and portage_config
+functionality
 
 .. note:: Using system Python modules in the virtualenv
 
