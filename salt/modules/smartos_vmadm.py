@@ -315,7 +315,7 @@ def reboot(uuid=None):
 
 def stop(uuid=None):
     '''
-    Hard power down the virtual machine, this is equivalent to pulling the power
+    Hard power down the virtual machine, this is equivalent to powering off the hardware.
 
     CLI Example:
 
