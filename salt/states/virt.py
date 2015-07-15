@@ -148,13 +148,17 @@ def running(name):
 
 def saved(name, suffix=None):
     '''
-    Takes a snapshot of a particular VM.
+    Takes a snapshot of a particular VM or by a UNIX-style wildcard.
 
     .. versionadded:: Boron
 
     .. code-block:: yaml
 
         domain_name:
+          virt.saved:
+            - suffix: periodic
+
+        domain*:
           virt.saved:
             - suffix: periodic
     '''
