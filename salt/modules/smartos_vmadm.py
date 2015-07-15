@@ -255,16 +255,10 @@ def start(uuid):
     '''
     if uuid in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
-    vmadm = _check_vmadm()
-    cmd = '{0} start {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    if uuid in list_active_vms():
-        return True
-    else:
-        return False
+
+    _call_vmadm('start {0}'.format(uuid))
+
+    return uuid in list_active_vms()
 
 
 def shutdown(uuid):
@@ -279,16 +273,10 @@ def shutdown(uuid):
     '''
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
-    vmadm = _check_vmadm()
-    cmd = '{0} stop {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    if uuid in list_inactive_vms():
-        return True
-    else:
-        return False
+
+    _call_vmadm('stop {0}'.format(uuid))
+
+    return uuid in list_inactive_vms()
 
 
 def reboot(uuid):
@@ -303,16 +291,10 @@ def reboot(uuid):
     '''
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
-    vmadm = _check_vmadm()
-    cmd = '{0} reboot {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    if uuid in list_active_vms():
-        return True
-    else:
-        return False
+
+    _call_vmadm('reboot {0}'.format(uuid))
+
+    return uuid in list_active_vms()
 
 
 def stop(uuid):
@@ -325,13 +307,12 @@ def stop(uuid):
 
         salt '*' virt.destroy <uuid>
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} delete {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    return True
+    if uuid in list_inactive_vms():
+        raise CommandExecutionError('The specified vm is stopped')
+
+    _call_vmadm('delete {0}'.format(uuid))
+
+    return uuid in list_inactive_vms()
 
 
 def vm_virt_type(uuid):
@@ -344,16 +325,10 @@ def vm_virt_type(uuid):
 
         salt '*' virt.vm_virt_type <uuid>
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} list -p -o type uuid={1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    ret = res['stdout']
-    if ret != '':
-        return ret
-    raise CommandExecutionError('We can\'t determine the type of this VM')
+    ret = _call_vmadm('list -p -o type uuid={0}'.format(uuid))['stdout']
+    if not ret:
+        raise CommandExecutionError('We can\'t determine the type of this VM')
+    return ret
 
 
 def setmem(uuid, memory):
@@ -371,21 +346,21 @@ def setmem(uuid, memory):
     '''
     if not uuid:
         raise CommandExecutionError('UUID parameter is mandatory')
-    # We want to determine the nature of the VM
+    warning = None
     vmtype = vm_virt_type(uuid)
-    vmadm = _check_vmadm()
-    warning = []
     if vmtype == 'OS':
-        cmd = '{0} update {1} max_physical_memory={2}'.format(vmadm, uuid, memory)
+        cmd = 'update {1} max_physical_memory={2}'.format(uuid, memory)
     elif vmtype == 'KVM':
-        cmd = '{0} update {1} ram={2}'.format(vmadm, uuid, memory)
-        warning = 'Done, but please note this will require a restart of the VM'
-    retcode = __salt__['cmd.retcode'](cmd)
-    if retcode != 0:
+        cmd = 'update {1} ram={2}'.format(uuid, memory)
+        warning = 'Changes will be applied after the VM restart.'
+    else:
+        raise CommandExecutionError('Unknown VM type')
+
+    retcode = _call_vmadm(cmd)['retcode']
+    if retcode:
         raise CommandExecutionError(_exit_status(retcode))
-    if not warning:
-        return True
-    return warning
+
+    return warning or None
 
 
 def get_macs(uuid):
