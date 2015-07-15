@@ -393,16 +393,16 @@ class XapiTestCase(TestCase):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.destroy("salt"))
+                self.assertFalse(xapi.stop("salt"))
 
-                self.assertTrue(xapi.destroy("salt"))
+                self.assertTrue(xapi.stop("salt"))
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.destroy("salt"))
+                    self.assertFalse(xapi.stop("salt"))
 
     def test_is_hyper(self):
         '''
