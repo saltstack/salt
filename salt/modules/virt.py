@@ -1810,7 +1810,7 @@ def list_snapshots(vm=None):
     return ret
 
 
-def snapshot(vm, name=None, suffix=None):
+def snapshot(domain, name=None, suffix=None):
     '''
     Create a snapshot of a VM.
 
@@ -1830,11 +1830,11 @@ def snapshot(vm, name=None, suffix=None):
 
         salt '*' virt.snapshot <domain>
     '''
-    if name and name.lower() == vm.lower():
+    if name and name.lower() == domain.lower():
         raise CommandExecutionError('Virtual Machine {name} is already defined. '
                                     'Please choose another name for the snapshot'.format(name=name))
     if not name:
-        name = "{vmname}-{tsnap}".format(vmname=vm, tsnap=time.strftime('%Y%m%d-%H%M%S', time.localtime()))
+        name = "{domain}-{tsnap}".format(domain=domain, tsnap=time.strftime('%Y%m%d-%H%M%S', time.localtime()))
 
     if suffix:
         name = "{name}-{suffix}".format(name=name, suffix=suffix)
@@ -1843,7 +1843,7 @@ def snapshot(vm, name=None, suffix=None):
     n_name = ElementTree.SubElement(doc, 'name')
     n_name.text = name
 
-    _get_domain(vm).snapshotCreateXML(ElementTree.tostring(doc))
+    _get_domain(domain).snapshotCreateXML(ElementTree.tostring(doc))
 
     return {'name': name}
 
