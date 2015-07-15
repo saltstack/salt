@@ -19,6 +19,9 @@ Salt Cloud Changes
 
 - Modified the Linode Salt Cloud driver to use Linode's native API instead of
   depending on apache-libcloud or linode-python.
+- When querying for VMs in ``ditigal_ocean.py``, the number of VMs to include in
+  a page was changed from 20 (default) to 200 to reduce the number of API calls
+  to Digital Ocean.
 
 JBoss 7 State
 =============
