@@ -1500,7 +1500,7 @@ def purge(vm_, dirs=False):
     '''
     disks = get_disks(vm_)
     try:
-        if not destroy(vm_):
+        if not stop(vm_):
             return False
     except libvirt.libvirtError:
         # This is thrown if the machine is already shut down
