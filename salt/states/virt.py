@@ -128,6 +128,19 @@ def _virt_call(domain, function, section, comment, **kwargs):
     return ret
 
 
+def rebooted(name):
+    '''
+    Reboots VMs
+
+    .. versionadded:: Boron
+
+    :param name:
+    :return:
+    '''
+
+    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted")
+
+
 def stopped(name):
     '''
     Stops a VM
