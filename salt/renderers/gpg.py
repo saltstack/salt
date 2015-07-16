@@ -98,21 +98,30 @@ from salt.exceptions import SaltRenderError
 import salt.ext.six as six
 
 
-if salt.utils.which('gpg'):
-    HAS_GPG = True
-else:
-    HAS_GPG = False
-    raise SaltRenderError('GPG unavailable')
-
 LOG = logging.getLogger(__name__)
 
-GPG_BINARY = salt.utils.which('gpg')
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
 
-if __salt__['config.get']('gpg_keydir'):
-    DEFAULT_GPG_KEYDIR = __salt__['config.get']('gpg_keydir')
-else:
-    DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+
+def _get_gpg_exec():
+    '''
+    return the GPG executable or raise an error
+    '''
+    gpg_exec = salt.utils.which('gpg')
+    if gpg_exec:
+        return gpg_exec
+    else:
+        raise SaltRenderError('GPG unavailable')
+
+
+def _get_key_dir():
+    '''
+    return the location of the GPG key directory
+    '''
+    if __salt__['config.get']('gpg_keydir'):
+        return __salt__['config.get']('gpg_keydir')
+    else:
+        return os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
 def _decrypt_ciphertext(cipher):
@@ -121,7 +130,7 @@ def _decrypt_ciphertext(cipher):
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
     '''
-    cmd = [GPG_BINARY, '--homedir', DEFAULT_GPG_KEYDIR, '-d']
+    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
@@ -159,8 +168,8 @@ def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
     '''
-    if not HAS_GPG:
+    if not _get_gpg_exec():
         raise SaltRenderError('GPG unavailable')
-    LOG.debug('Reading GPG keys from: %s', DEFAULT_GPG_KEYDIR)
+    LOG.debug('Reading GPG keys from: %s', _get_key_dir())
 
     return _decrypt_object(gpg_data)
