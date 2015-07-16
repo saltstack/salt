@@ -310,6 +310,15 @@ class Inspector(object):
 
         return ignored_all
 
+    def _init_env(self):
+        '''
+        Initialize some Salt environment.
+        '''
+        from salt.config import minion_config
+        from salt.grains import core as g_core
+        g_core.__opts__ = minion_config(self.DEFAULT_MINION_CONFIG_PATH)
+        self.grains_core = g_core
+
     def snapshot(self, mode):
         '''
         Take a snapshot of the system.
