@@ -4,7 +4,7 @@ Managing Images in OpenStack Glance
 ===================================
 '''
 # Import python libs
-import logging
+import logging, time
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +63,9 @@ def image_present(name, visibility='public', protected=None,
     elif wait_for is None and checksum is not None:
         wait_for = 'active'
     elif wait_for in ['saving', 'queued'] and checksum is not None:
-        ret['warning'] = "Can't verify checksum until image is in " +\
-                        "state 'active'!"
+        ret['warning'] = "Checksum won't be verified as image hasn't " +\
+                    "'status=active' yet."
+
     # Just pop states until we reach the
     # first acceptable one:
     for state in acceptable:
@@ -78,18 +79,33 @@ def image_present(name, visibility='public', protected=None,
     # No image yet and we know where to get one
     if image is None and location is not None:
         image = __salt__['glance.image_create'](name=name,
-        protected=protected, visibility=visibility, location=location)
+            protected=protected, visibility=visibility,
+            location=location)
         log.debug('Created new image:\n{0}'.format(image))
         timer = timeout
+        if image.keys()[0] == name:
+            image = image.values()[0]
         # Kinda busy-loopy but I don't think the Glance
         # API has events we can listen for
         while timer > 0:
-            if image['status'] in acceptable:
+            if image.has_key('status') and \
+                    image['status'] in acceptable:
                 break
             else:
                 timer -= 5
                 time.sleep(5)
-                image = _find_image(name)
+                image, msg = _find_image(name)
+                if not image:
+                    ret['result'] = False
+                    ret['comment'] += 'Created image {0} '.format(
+                        name) + ' vanished:\n' + msg
+                    return ret
+                elif image.keys()[0] == name:
+                    image = image.values()[0]
+        if timer <= 0 and imate['status'] not in acceptable:
+            ret['result'] = False
+            ret['comment'] += 'Image did\'nt reach an acceptable '+\
+                    ' state before timeout.\n'
 
         # Wrapped dict workaround (see Salt issue #24568)
         if name in image:
@@ -122,7 +138,8 @@ def image_present(name, visibility='public', protected=None,
     if wait_for == 'active' and checksum:
         if not image.has_key('checksum'):
             ret['result'] = False
-            ret['comment'] += 'No checksum available for this image.\n'
+            ret['comment'] += 'No checksum available for this image:\n' +\
+                    '\tImage has status "{0}".'.format(image['status'])
         elif image['checksum'] != checksum:
             ret['result'] = False
             ret['comment'] += '"checksum" is {0}, should be {1}.\n'.format(
