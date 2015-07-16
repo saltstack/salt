@@ -1940,3 +1940,20 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
         ret['deleted'] = 'N/A'
 
     return ret
+
+
+# Deprecated aliases
+def create(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.start` instead.
+
+    Start a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.create <domain>
+    '''
+    return start(domain)
