@@ -191,8 +191,8 @@ def list_job(jid, ext_source=None, outputter=None):
     ret.update(_format_jid_instance(jid, job))
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
 
-    fstr = '{0}.get_endtime'.format(self.opts['master_job_cache'])
-    if (self.opts.get['job_cache_store_endtime']
+    fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
+    if (__opts__.get['job_cache_store_endtime']
             and fstr in self.mminion.returners):
         endtime = mminion.returners[fstr](jid)
         if endtime:
@@ -353,8 +353,8 @@ def print_job(jid, ext_source=None, outputter=None):
         return ret
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
 
-    fstr = '{0}.get_endtime'.format(self.opts['master_job_cache'])
-    if (self.opts.get['job_cache_store_endtime']
+    fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
+    if (__opts__.get['job_cache_store_endtime']
             and fstr in self.mminion.returners):
         endtime = mminion.returners[fstr](jid)
         if endtime:
