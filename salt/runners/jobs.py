@@ -192,8 +192,8 @@ def list_job(jid, ext_source=None, outputter=None):
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
 
     fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
-    if (__opts__.get['job_cache_store_endtime']
-            and fstr in self.mminion.returners):
+    if (__opts__.get('job_cache_store_endtime')
+            and fstr in mminion.returners):
         endtime = mminion.returners[fstr](jid)
         if endtime:
             ret['EndTime'] = endtime
@@ -354,11 +354,11 @@ def print_job(jid, ext_source=None, outputter=None):
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
 
     fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
-    if (__opts__.get['job_cache_store_endtime']
-            and fstr in self.mminion.returners):
+    if (__opts__.get('job_cache_store_endtime')
+            and fstr in mminion.returners):
         endtime = mminion.returners[fstr](jid)
         if endtime:
-            ret['EndTime'] = endtime
+            ret[jid]['EndTime'] = endtime
 
     if outputter:
         salt.utils.warn_until(
