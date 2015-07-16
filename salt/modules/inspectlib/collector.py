@@ -30,6 +30,7 @@ from salt.utils import reinit_crypto
 
 
 class Inspector(object):
+    DEFAULT_MINION_CONFIG_PATH = '/etc/salt/minion'
 
     MODE = ['configuration', 'payload', 'all']
     IGNORE_MOUNTS = ["proc", "sysfs", "devtmpfs", "tmpfs", "fuse.gvfs-fuse-daemon"]
