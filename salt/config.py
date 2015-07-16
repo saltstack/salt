@@ -517,7 +517,7 @@ VALID_OPTS = {
     'master_job_cache': str,
 
     # Specify whether the master should store end times for jobs as returns come in
-    'jos_cache_store_endtime': False,
+    'jos_cache_store_endtime': bool,
 
     # The minion data cache is a cache of information about the minions stored on the master.
     # This information is primarily the pillar and grains data. The data is cached in the master
