@@ -1956,6 +1956,7 @@ def create(domain):
 
         salt '*' virt.create <domain>
     '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.start" instead.')
     return start(domain)
 
 
@@ -1972,6 +1973,7 @@ def destroy(domain):
 
         salt '*' virt.destroy <domain>
     '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.stop" instead.')
     return stop(domain)
 
 
@@ -1988,4 +1990,5 @@ def list_vms():
 
         salt '*' virt.list_vms <domain>
     '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
     return list_domains()
