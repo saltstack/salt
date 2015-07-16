@@ -69,7 +69,16 @@ class Inspector(object):
 
     def _get_cfg_pkgs(self):
         '''
-        Get packages with configuration files.
+        Package scanner switcher between the platforms.
+
+        :return:
+        '''
+        if self.grains_core.os_data().get('os_family') == 'Debian':
+            return self.__get_cfg_pkgs_dpkg()
+        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+            return self.__get_cfg_pkgs_rpm()
+        else:
+            return dict()
         '''
         out, err = self._syscall('rpm', None, None, '-qa', '--configfiles',
                                  '--queryformat', '%{name}-%{version}-%{release}\\n')
