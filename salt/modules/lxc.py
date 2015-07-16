@@ -3192,9 +3192,8 @@ def bootstrap(name,
                 rstr = __salt__['test.rand_str']()
                 configdir = '/tmp/.c_{0}'.format(rstr)
 
-                if run(name,
-                    'install -m 0700 -d {0}'.format(configdir),
-                    python_shell=False):
+                cmd = 'install -m 0700 -d {0}'.format(configdir)
+                if run(name, cmd, python_shell=False):
                     log.error('tmpdir {0} creation failed ({1}'
                               .format(configdir, cmd))
                     return False
