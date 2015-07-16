@@ -79,6 +79,35 @@ class Inspector(object):
             return self.__get_cfg_pkgs_rpm()
         else:
             return dict()
+
+    def __get_cfg_pkgs_dpkg(self):
+        '''
+        Get packages with configuration files on Dpkg systems.
+        :return:
+        '''
+        # Get list of all available packages
+        data = dict()
+
+        for pkg_name in salt.utils.to_str(self._syscall('dpkg-query', None, None,
+                                                        '-Wf', "${binary:Package}\\n")[0]).split(os.linesep):
+            pkg_name = pkg_name.strip()
+            if not pkg_name:
+                continue
+            data[pkg_name] = list()
+            for pkg_cfg_item in salt.utils.to_str(self._syscall('dpkg-query', None, None, '-Wf', "${Conffiles}\\n",
+                                                                pkg_name)[0]).split(os.linesep):
+                pkg_cfg_item = pkg_cfg_item.strip()
+                if not pkg_cfg_item:
+                    continue
+                pkg_cfg_file, pkg_cfg_sum = pkg_cfg_item.strip().split(" ", 1)
+                data[pkg_name].append(pkg_cfg_file)
+
+            # Dpkg meta data is unreliable. Check every package
+            # and remove which actually does not have config files.
+            if not data[pkg_name]:
+                data.pop(pkg_name)
+
+        return data
         '''
         out, err = self._syscall('rpm', None, None, '-qa', '--configfiles',
                                  '--queryformat', '%{name}-%{version}-%{release}\\n')
