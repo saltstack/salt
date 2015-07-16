@@ -56,7 +56,8 @@ class Inspector(object):
             pid_file = globals().get('__salt__')['config.get']('inspector.pid', '')
 
         if not pid_file:
-            raise InspectorSnapshotException("Inspector PID file location is not configured yet in minion.")
+            raise InspectorSnapshotException("Inspector PID file location is not configured yet in minion.\n"
+                                             'Add "inspector.pid: /path/to/pids in "/etc/salt/minion".')
         self.pidfile = pid_file
 
     def _syscall(self, command, input=None, env=None, *params):
