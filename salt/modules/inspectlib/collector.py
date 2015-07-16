@@ -245,16 +245,15 @@ class Inspector(object):
                     continue
             if not valid or not os.path.exists(obj):
                 continue
-            mode = os.lstat(obj).st_mode
-            if stat.S_ISLNK(mode):
+            if os.path.islink(obj):
                 links.append(obj)
-            elif stat.S_ISDIR(mode):
+            elif os.path.isdir(obj):
                 dirs.append(obj)
                 f_obj, d_obj, l_obj = self._get_all_files(obj, *exclude)
                 files.extend(f_obj)
                 dirs.extend(d_obj)
                 links.extend(l_obj)
-            elif stat.S_ISREG(mode):
+            elif os.path.isfile(obj):
                 files.append(obj)
 
         return sorted(files), sorted(dirs), sorted(links)
