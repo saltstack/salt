@@ -139,19 +139,26 @@ class Inspector(object):
 
     def _get_changed_cfg_pkgs(self, data):
         '''
-        Filter out unchanged packages.
+        Filter out unchanged packages on the Debian or RPM systems.
+
+        :param data: Structure {package-name -> [ file .. file1 ]}
+        :return: Same structure as data, except only files that were changed.
         '''
         f_data = dict()
         for pkg_name, pkg_files in data.items():
             cfgs = list()
-            out, err = self._syscall("rpm", None, None, '-V', '--nodeps', '--nodigest',
-                                     '--nosignature', '--nomtime', '--nolinkto', pkg_name)
-            out = salt.utils.to_str(out)
-            for line in out.split(os.linesep):
+            cfg_data = list()
+            if self.grains_core.os_data().get('os_family') == 'Debian':
+                cfg_data = salt.utils.to_str(self._syscall("dpkg", None, None, '--verify',
+                                                           pkg_name)[0]).split(os.linesep)
+            elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+                cfg_data = salt.utils.to_str(self._syscall("rpm", None, None, '-V', '--nodeps', '--nodigest',
+                                                           '--nosignature', '--nomtime', '--nolinkto',
+                                                           pkg_name)[0]).split(os.linesep)
+            for line in cfg_data:
                 line = line.strip()
                 if not line or line.find(" c ") < 0 or line.split(" ")[0].find("5") < 0:
                     continue
-
                 cfg_file = line.split(" ")[-1]
                 if cfg_file in pkg_files:
                     cfgs.append(cfg_file)
@@ -356,9 +363,7 @@ class Inspector(object):
         '''
         Take a snapshot of the system.
         '''
-        # TODO: Mode
         self._init_env()
-
 
         self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
         self._save_payload(*self._scan_payload())
