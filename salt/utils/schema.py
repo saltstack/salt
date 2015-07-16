@@ -3,7 +3,7 @@
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
 
-    salt.utils.config
+    salt.utils.schema
     ~~~~~~~~~~~~~~~~~
 
     Object Oriented Configuration - JSON Schema compatible generator
