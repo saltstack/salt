@@ -45,7 +45,8 @@ class Inspector(object):
             db_path = globals().get('__salt__')['config.get']('inspector.db', '')
 
         if not db_path:
-            raise InspectorSnapshotException("Inspector database location is not configured yet in minion.")
+            raise InspectorSnapshotException('Inspector database location is not configured yet in minion.\n'
+                                             'Add "inspector.db: /path/to/cache" in "/etc/salt/minion".')
         self.dbfile = db_path
 
         self.db = DBHandle(self.dbfile)
