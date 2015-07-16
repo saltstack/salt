@@ -1973,3 +1973,19 @@ def destroy(domain):
         salt '*' virt.destroy <domain>
     '''
     return stop(domain)
+
+
+def list_vms():
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.list_domains` instead.
+
+    List all virtual machines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_vms <domain>
+    '''
+    return list_domains()
