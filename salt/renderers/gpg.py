@@ -97,7 +97,6 @@ from salt.exceptions import SaltRenderError
 # Import 3rd-party libs
 import salt.ext.six as six
 
-# pylint: disable=import-error
 
 if salt.utils.which('gpg'):
     HAS_GPG = True
@@ -124,9 +123,10 @@ def _decrypt_ciphertext(cipher):
     '''
     cmd = [GPG_BINARY, '--homedir', DEFAULT_GPG_KEYDIR, '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
-    decrypted_data = proc.communicate(input=cipher)[0]
+    decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
-        LOG.error('Could not decrypt cipher %s, received: %s', cipher, decrypted_data)
+        LOG.error('Could not decrypt cipher %s, received: %s', cipher, decrypt_error)
+        return cipher
     else:
         return str(decrypted_data)
 
