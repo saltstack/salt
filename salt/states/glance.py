@@ -62,14 +62,11 @@ def image_present(name, visibility='public', protected=None,
         wait_for = 'saving'
     elif wait_for is None and checksum is not None:
         wait_for = 'active'
-    elif wait_for in ['saving', 'queued'] and checksum is not None:
-        ret['warning'] = "Checksum won't be verified as image hasn't " +\
-                    "'status=active' yet."
 
     # Just pop states until we reach the
     # first acceptable one:
-    for state in acceptable:
-        if state == wait_for:
+    while len(acceptable) > 0:
+        if acceptable[0] == wait_for:
             break
         else:
             acceptable.pop(0)
@@ -81,7 +78,19 @@ def image_present(name, visibility='public', protected=None,
         image = __salt__['glance.image_create'](name=name,
             protected=protected, visibility=visibility,
             location=location)
+        if image.keys()[0] == name:
+            image = image.values()[0]
         log.debug('Created new image:\n{0}'.format(image))
+        ret['changes'] = {
+            name:
+                {
+                    'new':
+                        {
+                        'id': image['id']
+                        },
+                    'old': None
+                }
+            }
         timer = timeout
         if image.keys()[0] == name:
             image = image.values()[0]
@@ -90,6 +99,8 @@ def image_present(name, visibility='public', protected=None,
         while timer > 0:
             if image.has_key('status') and \
                     image['status'] in acceptable:
+                log.debug('Image {0} has reached status {1}'.format(
+                    image['name'], image['status']))
                 break
             else:
                 timer -= 5
@@ -102,10 +113,11 @@ def image_present(name, visibility='public', protected=None,
                     return ret
                 elif image.keys()[0] == name:
                     image = image.values()[0]
-        if timer <= 0 and imate['status'] not in acceptable:
+        if timer <= 0 and image['status'] not in acceptable:
             ret['result'] = False
-            ret['comment'] += 'Image did\'nt reach an acceptable '+\
-                    ' state before timeout.\n'
+            ret['comment'] += 'Image didn\'t reach an acceptable '+\
+                    'state ({0}) before timeout:\n'.format(acceptable)+\
+                    '\tLast status was "{0}".\n'.format(image['status'])
 
         # Wrapped dict workaround (see Salt issue #24568)
         if name in image:
@@ -118,6 +130,10 @@ def image_present(name, visibility='public', protected=None,
         ret['comment'] = 'No location to copy image from specified,\n' +\
                          'not creating a new image.'
         return ret
+
+    # If we've created a new image also return its last status:
+    if ret['changes'].has_key(name):
+        ret['changes'][name]['new']['status'] = image['status']
 
     if visibility:
         if image['visibility'] != visibility:
@@ -135,16 +151,21 @@ def image_present(name, visibility='public', protected=None,
         else:
             ret['comment'] += '"protected" is correct ({0}).\n'.format(
                 protected)
-    if wait_for == 'active' and checksum:
-        if not image.has_key('checksum'):
-            ret['result'] = False
-            ret['comment'] += 'No checksum available for this image:\n' +\
-                    '\tImage has status "{0}".'.format(image['status'])
-        elif image['checksum'] != checksum:
-            ret['result'] = False
-            ret['comment'] += '"checksum" is {0}, should be {1}.\n'.format(
-                image['checksum'], checksum)
-        else:
-            ret['comment'] += '"checksum" is correct ({0}).\n'.format(
-                checksum)
+    if image.has_key('status') and checksum:
+        if image['status'] == 'active':
+            if not image.has_key('checksum'):
+                ret['result'] = False
+                ret['comment'] += 'No checksum available for this image:\n' +\
+                        '\tImage has status "{0}".'.format(image['status'])
+            elif image['checksum'] != checksum:
+                ret['result'] = False
+                ret['comment'] += '"checksum" is {0}, should be {1}.\n'.format(
+                    image['checksum'], checksum)
+            else:
+                ret['comment'] += '"checksum" is correct ({0}).\n'.format(
+                    checksum)
+        elif image['status'] in ['saving', 'queued']:
+            ret['comment'] += 'Checksum won\'t be verified as image ' +\
+                'hasn\'t reached\n\t "status=active" yet.\n'
+    log.debug('glance.image_present will return: {0}'.format(ret))
     return ret
