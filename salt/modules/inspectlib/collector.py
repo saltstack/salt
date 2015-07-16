@@ -297,7 +297,7 @@ class Inspector(object):
         for entry_path in [pth for pth in (allowed or os.listdir("/")) if pth]:
             if entry_path[0] != "/":
                 entry_path = "/{0}".format(entry_path)
-            if entry_path in ignored:
+            if entry_path in ignored or os.path.islink(entry_path):
                 continue
             e_files, e_dirs, e_links = self._get_all_files(entry_path, *ignored)
             all_files.extend(e_files)
