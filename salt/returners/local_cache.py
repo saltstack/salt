@@ -264,6 +264,23 @@ def get_jids():
     return ret
 
 
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all jobs information filtered by the given criteria.
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    ret = []
+    for jid, job, _, _ in _walk_through(_job_dir()):
+        job = salt.utils.jid.format_jid_instance_ext(jid, job)
+        if filter_find_job and job['Function'] == 'saltutil.find_job':
+            continue
+        ret.append(job)
+    # JID is time based string so the following will sort by recent
+    ret.sort(key=lambda val: val['JID'], reverse=True)
+    return ret[:count]
+
+
 def clean_old_jobs():
     '''
     Clean out the old jobs from the job cache
