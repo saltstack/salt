@@ -17,6 +17,7 @@ Salt Table of Contents
     topics/eauth/access_control
     topics/jobs/index
     topics/jobs/job_cache
+    topics/jobs/external_cache
     topics/sdb/index
     topics/event/index
     topics/beacons/index

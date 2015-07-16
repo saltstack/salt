@@ -310,11 +310,14 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'aws',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'aws',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None

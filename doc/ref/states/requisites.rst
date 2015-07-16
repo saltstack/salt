@@ -47,7 +47,7 @@ Requisites come in two types: Direct requisites (such as ``require``),
 and requisite_ins (such as ``require_in``). The relationships are
 directional: a direct requisite requires something from another state.
 However, a requisite_in inserts a requisite into the targeted state pointing to
-the targeting state.  The following example demonstrates a direct requisite:
+the targeting state. The following example demonstrates a direct requisite:
 
 .. code-block:: yaml
 
@@ -463,8 +463,8 @@ the specified commands return ``False``. The ``unless`` requisite operates
 as NOR and is useful in giving more granular control over when a state should
 execute.
 
-**NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with 
-``python_shell=True``.  This means the commands referenced by unless will be
+**NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with
+``python_shell=True``. This means the commands referenced by unless will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
 same privileges as the salt-minion.
 
@@ -494,7 +494,7 @@ For example:
         - names:
           - first_deploy_cmd
           - second_deploy_cmd
-        - unless: some_check
+        - unless: ls /usr/bin/vim
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
@@ -508,8 +508,8 @@ Onlyif
 return ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
 
-**NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with 
-``python_shell=True``.  This means the commands referenced by unless will be
+**NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with
+``python_shell=True``. This means the commands referenced by unless will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
 same privileges as the salt-minion.
 
@@ -587,8 +587,8 @@ check_cmd
 Check Command is used for determining that a state did or did not run as
 expected.
 
-**NOTE**: Under the hood ``check_cmd`` calls ``cmd.retcode`` with 
-``python_shell=True``.  This means the commands referenced by unless will be
+**NOTE**: Under the hood ``check_cmd`` calls ``cmd.retcode`` with
+``python_shell=True``. This means the commands referenced by unless will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
 same privileges as the salt-minion.
 

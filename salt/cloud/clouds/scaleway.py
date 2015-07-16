@@ -190,11 +190,14 @@ def create(server_):
     '''
     Create a single BareMetal server from a data dict.
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'scaleway',
-                                    server_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'scaleway',
+                                        server_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     salt.utils.cloud.fire_event(
         'event',
