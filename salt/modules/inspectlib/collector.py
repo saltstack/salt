@@ -208,13 +208,48 @@ class Inspector(object):
         '''
         Build a in-memory data of all managed files.
         '''
+        if self.grains_core.os_data().get('os_family') == 'Debian':
+            return self.__get_managed_files_dpkg()
+        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+            return self.__get_managed_files_rpm()
+
+        return list(), list(), list()
+
+    def __get_managed_files_dpkg(self):
+        '''
+        Get a list of all system files, belonging to the Debian package manager.
+        '''
         dirs = set()
         links = set()
         files = set()
 
-        cmd = __salt__['cmd.run_stdout']('rpm -qlav')
+        for pkg_name in salt.utils.to_str(self._syscall("dpkg-query", None, None,
+                                                        '-Wf', '${binary:Package}\\n')[0]).split(os.linesep):
+            pkg_name = pkg_name.strip()
+            if not pkg_name:
+                continue
+            for resource in salt.utils.to_str(self._syscall("dpkg", None, None, '-L', pkg_name)[0]).split(os.linesep):
+                resource = resource.strip()
+                if not resource or resource in ['/', './', '.']:
+                    continue
+                if os.path.isdir(resource):
+                    dirs.add(resource)
+                elif os.path.islink(resource):
+                    links.add(resource)
+                elif os.path.isfile(resource):
+                    files.add(resource)
 
-        for line in cmd:
+        return sorted(files), sorted(dirs), sorted(links)
+
+    def __get_managed_files_rpm(self):
+        '''
+        Get a list of all system files, belonging to the RedHat package manager.
+        '''
+        dirs = set()
+        links = set()
+        files = set()
+
+        for line in salt.utils.to_str(self._syscall("rpm", None, None, '-qlav')[0]).split(os.linesep):
             line = line.strip()
             if not line:
                 continue
