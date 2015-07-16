@@ -14,25 +14,25 @@
 
 
     A configuration document or configuration document section is defined using the
-    py:class:`Configuration`, the configuration items are defined by any of the subclasses
-    of py:class:`BaseConfigItem` as attributes of a subclass of py:class:`Configuration` class.
+    py:class:`Schema`, the configuration items are defined by any of the subclasses
+    of py:class:`BaseSchemaItem` as attributes of a subclass of py:class:`Schema` class.
 
     As an example:
 
     .. code-block:: python
 
-        class HostConfig(Configuration):
+        class HostConfig(Schema):
             title = 'Host Configuration'
             description = 'This is the host configuration'
 
-            host = StringConfig(
+            host = StringItem(
                 'Host',
                 'The looong host description',
                 default=None,
                 minimum=1
             )
 
-            port = NumberConfig(
+            port = NumberItem(
                 description='The port number',
                 default=80,
                 required=False,
@@ -136,18 +136,18 @@
 
     .. code-block:: python
 
-        class LoggingConfig(Configuration):
+        class LoggingConfig(Schema):
             title = 'Logging Configuration'
             description = 'This is the logging configuration'
 
-            log_level = StringConfig(
+            log_level = StringItem(
                 'Logging Level',
                 'The logging level',
                 default='debug',
                 minimum=1
             )
 
-        class MyConfig(Configuration):
+        class MyConfig(Schema):
 
             title = 'My Config'
             description = 'This my configuration'
@@ -258,7 +258,7 @@
 
     .. code-block:: python
 
-        class MyConfig(Configuration):
+        class MyConfig(Schema):
 
             title = 'My Config'
             description = 'This my configuration'
@@ -395,7 +395,7 @@ NullSentinel.__new__ = staticmethod(_failing_new)
 del _failing_new
 
 
-class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
+class SchemaMeta(six.with_metaclass(Prepareable, type)):
 
     @classmethod
     def __prepare__(mcs, name, bases):
@@ -455,7 +455,7 @@ class ConfigurationMeta(six.with_metaclass(Prepareable, type)):
         return instance
 
 
-class BaseConfigItemMeta(six.with_metaclass(Prepareable, type)):
+class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
     '''
     Config item metaclass to "tag" the class as a configuration item
     '''
@@ -512,7 +512,7 @@ class BaseConfigItemMeta(six.with_metaclass(Prepareable, type)):
         return instance
 
 
-class Configuration(six.with_metaclass(ConfigurationMeta, object)):
+class Schema(six.with_metaclass(SchemaMeta, object)):
     '''
     Configuration definition class
     '''
@@ -582,7 +582,8 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
                 if name not in ordering:
                     ordering.append(name)
 
-        serialized['properties'] = properties
+        if properties:
+            serialized['properties'] = properties
 
         # Update the serialized object with any items to include after properties
         serialized.update(after_items_update)
@@ -617,7 +618,7 @@ class Configuration(six.with_metaclass(ConfigurationMeta, object)):
     #    raise NotImplementedError
 
 
-class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
+class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
     '''
     Base configuration items class.
 
@@ -683,7 +684,7 @@ class BaseItem(six.with_metaclass(BaseConfigItemMeta, object)):
         raise NotImplementedError
 
 
-class BaseConfigItem(BaseItem):
+class BaseSchemaItem(SchemaItem):
     '''
     Base configuration items class.
 
@@ -692,7 +693,7 @@ class BaseConfigItem(BaseItem):
 
     # Let's define description as a class attribute, this will allow a custom configuration
     # item to do something like:
-    #   class MyCustomConfig(StringConfig):
+    #   class MyCustomConfig(StringItem):
     #       '''
     #       This is my custom config, blah, blah, blah
     #       '''
@@ -729,7 +730,7 @@ class BaseConfigItem(BaseItem):
             self.enum = enum
         if enumNames is not None:
             self.enumNames = enumNames
-        super(BaseConfigItem, self).__init__(**kwargs)
+        super(BaseSchemaItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
         if self.enum is not None:
@@ -811,11 +812,11 @@ class BaseConfigItem(BaseItem):
     #    return output + '\n'
 
 
-class BooleanConfig(BaseConfigItem):
+class BooleanItem(BaseSchemaItem):
     __type__ = 'boolean'
 
 
-class StringConfig(BaseConfigItem):
+class StringItem(BaseSchemaItem):
     '''
     A string configuration field
     '''
@@ -867,14 +868,14 @@ class StringConfig(BaseConfigItem):
             self.min_length = min_length
         if max_length is not None:
             self.max_length = max_length
-        super(StringConfig, self).__init__(**kwargs)
+        super(StringItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
         if self.format is None and self.__format__ is not None:
             self.format = self.__format__
 
 
-class EMailConfig(StringConfig):
+class EMailItem(StringItem):
     '''
     An internet email address, see `RFC 5322, section 3.4.1`__.
 
@@ -883,7 +884,7 @@ class EMailConfig(StringConfig):
     __format__ = 'email'
 
 
-class IPv4Config(StringConfig):
+class IPv4Item(StringItem):
     '''
     An IPv4 address configuration field, according to dotted-quad ABNF syntax as defined in
     `RFC 2673, section 3.2`__.
@@ -893,7 +894,7 @@ class IPv4Config(StringConfig):
     __format__ = 'ipv4'
 
 
-class IPv6Config(StringConfig):
+class IPv6Item(StringItem):
     '''
     An IPv6 address configuration field, as defined in `RFC 2373, section 2.2`__.
 
@@ -902,7 +903,7 @@ class IPv6Config(StringConfig):
     __format__ = 'ipv6'
 
 
-class HostnameConfig(StringConfig):
+class HostnameItem(StringItem):
     '''
     An Internet host name configuration field, see `RFC 1034, section 3.1`__.
 
@@ -911,7 +912,7 @@ class HostnameConfig(StringConfig):
     __format__ = 'hostname'
 
 
-class DateTimeConfig(StringConfig):
+class DateTimeItem(StringItem):
     '''
     An ISO 8601 formatted date-time configuration field, as defined by `RFC 3339, section 5.6`__.
 
@@ -920,7 +921,7 @@ class DateTimeConfig(StringConfig):
     __format__ = 'date-time'
 
 
-class UriConfig(StringConfig):
+class UriItem(StringItem):
     '''
     A universal resource identifier (URI) configuration field, according to `RFC3986`__.
 
@@ -929,14 +930,14 @@ class UriConfig(StringConfig):
     __format__ = 'uri'
 
 
-class SecretConfig(StringConfig):
+class SecretItem(StringItem):
     '''
     A string configuration field containing a secret, for example, passwords, API keys, etc
     '''
     __format__ = 'secret'
 
 
-class NumberConfig(BaseConfigItem):
+class NumberItem(BaseSchemaItem):
 
     __type__ = 'number'
 
@@ -992,14 +993,14 @@ class NumberConfig(BaseConfigItem):
             self.maximum = maximum
         if exclusive_maximum is not None:
             self.exclusive_maximum = exclusive_maximum
-        super(NumberConfig, self).__init__(**kwargs)
+        super(NumberItem, self).__init__(**kwargs)
 
 
-class IntegerConfig(NumberConfig):
+class IntegerItem(NumberItem):
     __type__ = 'integer'
 
 
-class ArrayConfig(BaseConfigItem):
+class ArrayItem(BaseSchemaItem):
     __type__ = 'array'
 
     __serialize_attr_aliases__ = {
@@ -1036,8 +1037,8 @@ class ArrayConfig(BaseConfigItem):
             A list(list, tuple, set) of valid choices.
         :param items:
             Either of the following:
-                * :class:`BaseConfigItem` -- all items of the array must match the field schema;
-                * a list or a tuple of :class:`fields <.BaseConfigItem>` -- all items of the array must be
+                * :class:`BaseSchemaItem` -- all items of the array must match the field schema;
+                * a list or a tuple of :class:`fields <.BaseSchemaItem>` -- all items of the array must be
                   valid according to the field schema at the corresponding index (tuple typing);
         :param min_items:
             Minimum length of the array
@@ -1049,7 +1050,7 @@ class ArrayConfig(BaseConfigItem):
             If the value of ``items`` is a list or a tuple, and the array length is larger than
             the number of fields in ``items``, then the additional items are described
             by the :class:`.BaseField` passed using this argument.
-        :type additional_items: bool or :class:`.BaseConfigItem`
+        :type additional_items: bool or :class:`.BaseSchemaItem`
         '''
         if items is not None:
             self.items = items
@@ -1061,7 +1062,7 @@ class ArrayConfig(BaseConfigItem):
             self.unique_items = unique_items
         if additional_items is not None:
             self.additional_items = additional_items
-        super(ArrayConfig, self).__init__(**kwargs)
+        super(ArrayItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
         if not self.items:
@@ -1070,22 +1071,22 @@ class ArrayConfig(BaseConfigItem):
             )
         if isinstance(self.items, (list, tuple)):
             for item in self.items:
-                if not isinstance(item, (Configuration, BaseItem)):
+                if not isinstance(item, (Schema, SchemaItem)):
                     raise RuntimeError(
                         'All items passed in the item argument tuple/list must be '
-                        'a subclass of Configuration, BaseItem or BaseConfigItem, '
+                        'a subclass of Schema, SchemaItem or BaseSchemaItem, '
                         'not {0}'.format(type(item))
                     )
-        elif not isinstance(self.items, (Configuration, BaseItem)):
+        elif not isinstance(self.items, (Schema, SchemaItem)):
             raise RuntimeError(
                 'The items argument passed must be a subclass of '
-                'Configuration, BaseItem or BaseConfigItem, not '
+                'Schema, SchemaItem or BaseSchemaItem, not '
                 '{0}'.format(type(self.items))
             )
 
     def __get_items__(self):
-        if isinstance(self.items, (Configuration, BaseItem)):
-            # This is either a Configuration or a Basetem, return it in it's
+        if isinstance(self.items, (Schema, SchemaItem)):
+            # This is either a Schema or a Basetem, return it in it's
             # serialized form
             return self.items.serialize()
         if isinstance(self.items, (tuple, list)):
@@ -1095,7 +1096,7 @@ class ArrayConfig(BaseConfigItem):
             return items
 
 
-class DictConfig(BaseConfigItem):
+class DictItem(BaseSchemaItem):
 
     __type__ = 'object'
 
@@ -1141,12 +1142,12 @@ class DictConfig(BaseConfigItem):
             A dictionary whose keys are regular expressions (ECMA 262).
             Properties match against these regular expressions, and for any that match,
             the property is described by the corresponding field schema.
-        :type pattern_properties: dict[str -> :class:`.Configuration` or
-                                       :class:`.BaseItem` or :class:`.BaseItemConfig`]
+        :type pattern_properties: dict[str -> :class:`.Schema` or
+                                       :class:`.SchemaItem` or :class:`.BaseSchemaItem`]
         :param additional_properties:
             Describes properties that are not described by the ``properties`` or ``pattern_properties``.
-        :type additional_properties: bool or :class:`.Configuration` or :class:`.BaseItem`
-                                     or :class:`.BaseItemConfig`
+        :type additional_properties: bool or :class:`.Schema` or :class:`.SchemaItem`
+                                     or :class:`.BaseSchemaItem`
         :param min_properties:
             A minimum number of properties.
         :type min_properties: int
@@ -1164,7 +1165,7 @@ class DictConfig(BaseConfigItem):
             self.min_properties = min_properties
         if max_properties is not None:
             self.max_properties = max_properties
-        super(DictConfig, self).__init__(**kwargs)
+        super(DictItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
         if not self.properties and not self.pattern_properties:
@@ -1172,18 +1173,19 @@ class DictConfig(BaseConfigItem):
                 'One of properties or pattern properties must be passed'
             )
         if self.properties is not None:
-            if not isinstance(self.properties, dict):
+            if not isinstance(self.properties, (Schema, dict)):
                 raise RuntimeError(
-                    'The passed properties must be passed as a dict not '
-                    '\'{0}\''.format(type(self.properties))
+                    'The passed properties must be passed as a dict or '
+                    ' a Schema not \'{0}\''.format(type(self.properties))
                 )
-            for key, prop in self.properties.items():
-                if not isinstance(prop, (Configuration, BaseItem)):
-                    raise RuntimeError(
-                        'The passed property who\'s key is \'{0}\' must be of type '
-                        'Configuration, BaseItem or BaseConfigItem, not '
-                        '\'{1}\''.format(key, type(prop))
-                    )
+            if not isinstance(self.properties, Schema):
+                for key, prop in self.properties.items():
+                    if not isinstance(prop, (Schema, SchemaItem)):
+                        raise RuntimeError(
+                            'The passed property who\'s key is \'{0}\' must be of type '
+                            'Schema, SchemaItem or BaseSchemaItem, not '
+                            '\'{1}\''.format(key, type(prop))
+                        )
         if self.pattern_properties is not None:
             if not isinstance(self.pattern_properties, dict):
                 raise RuntimeError(
@@ -1191,17 +1193,17 @@ class DictConfig(BaseConfigItem):
                     'not \'{0}\''.format(type(self.pattern_properties))
                 )
             for key, prop in self.pattern_properties.items():
-                if not isinstance(prop, (Configuration, BaseItem)):
+                if not isinstance(prop, (Schema, SchemaItem)):
                     raise RuntimeError(
                         'The passed pattern_property who\'s key is \'{0}\' must '
-                        'be of type Configuration, BaseItem or BaseConfigItem, '
+                        'be of type Schema, SchemaItem or BaseSchemaItem, '
                         'not \'{1}\''.format(key, type(prop))
                     )
         if self.additional_properties is not None:
-            if not isinstance(self.additional_properties, (bool, Configuration, BaseItem)):
+            if not isinstance(self.additional_properties, (bool, Schema, SchemaItem)):
                 raise RuntimeError(
                     'The passed additional_properties must be of type bool, '
-                    'Configuration, BaseItem or BaseConfigItem, not \'{0}\''.format(
+                    'Schema, SchemaItem or BaseSchemaItem, not \'{0}\''.format(
                         type(self.pattern_properties)
                     )
                 )
@@ -1209,6 +1211,8 @@ class DictConfig(BaseConfigItem):
     def __get_properties__(self):
         if self.properties is None:
             return
+        if isinstance(self.properties, Schema):
+            return self.properties.serialize()['properties']
         properties = OrderedDict()
         for key, prop in self.properties.items():
             properties[key] = prop.serialize()
@@ -1229,8 +1233,12 @@ class DictConfig(BaseConfigItem):
             return self.additional_properties
         return self.additional_properties.serialize()
 
+    def __call__(self, flatten=False):
+        self.__flatten__ = flatten
+        return self
 
-class RequirementsItem(BaseItem):
+
+class RequirementsItem(SchemaItem):
     __type__ = 'object'
 
     requirements = None
@@ -1245,37 +1253,42 @@ class RequirementsItem(BaseItem):
             raise RuntimeError(
                 'The passed requirements must not be empty'
             )
-        if not isinstance(self.requirements, (Configuration, list, tuple, set)):
+        if not isinstance(self.requirements, (Schema, SchemaItem, list, tuple, set)):
             raise RuntimeError(
                 'The passed requirements must be passed as a list, tuple, '
-                'set or Configuration, not \'{0}\''.format(self.requirements)
+                'set SchemaItem, BaseSchemaItem or Schema, not \'{0}\''.format(self.requirements)
             )
 
-        if not isinstance(self.requirements, Configuration):
+        if not isinstance(self.requirements, (SchemaItem, Schema)):
             if not isinstance(self.requirements, list):
                 self.requirements = list(self.requirements)
 
             for idx, item in enumerate(self.requirements):
-                if not isinstance(item, (six.string_types, Configuration)):
+                if not isinstance(item, (six.string_types, (SchemaItem, Schema))):
                     raise RuntimeError(
                         'The passed requirement at the {0} index must be of type '
-                        'str or Configuration, not \'{1}\''.format(idx, type(item))
+                        'str or Schema, not \'{1}\''.format(idx, type(item))
                     )
 
     def serialize(self):
-        if isinstance(self.requirements, Configuration):
+        if isinstance(self.requirements, Schema):
             requirements = self.requirements.serialize()['required']
+        elif isinstance(self.requirements, SchemaItem):
+            requirements = self.requirements.serialize()
         else:
             requirements = []
             for requirement in self.requirements:
-                if isinstance(requirement, Configuration):
+                if isinstance(requirement, Schema):
                     requirements.extend(requirement.serialize()['required'])
+                    continue
+                if isinstance(requirement, SchemaItem):
+                    requirements.append(requirement.serialize())
                     continue
                 requirements.append(requirement)
         return {'required': requirements}
 
 
-class OneOfConfig(BaseItem):
+class OneOfItem(SchemaItem):
 
     __type__ = 'oneOf'
 
@@ -1284,7 +1297,7 @@ class OneOfConfig(BaseItem):
     def __init__(self, items=None):
         if items is not None:
             self.items = items
-        super(OneOfConfig, self).__init__()
+        super(OneOfItem, self).__init__()
 
     def __validate_attributes__(self):
         if not self.items:
@@ -1297,10 +1310,10 @@ class OneOfConfig(BaseItem):
                 '\'{0}\''.format(type(self.items))
             )
         for idx, item in enumerate(self.items):
-            if not isinstance(item, (Configuration, BaseItem)):
+            if not isinstance(item, (Schema, SchemaItem)):
                 raise RuntimeError(
                     'The passed item at the {0} index must be of type '
-                    'Configuration, BaseItem or BaseConfigItem, not '
+                    'Schema, SchemaItem or BaseSchemaItem, not '
                     '\'{1}\''.format(idx, type(item))
                 )
         if not isinstance(self.items, list):
@@ -1314,17 +1327,17 @@ class OneOfConfig(BaseItem):
         return {self.__type__: [i.serialize() for i in self.items]}
 
 
-class AnyOfConfig(OneOfConfig):
+class AnyOfItem(OneOfItem):
 
     __type__ = 'anyOf'
 
 
-class AllOfConfig(OneOfConfig):
+class AllOfItem(OneOfItem):
 
     __type__ = 'allOf'
 
 
-class NotConfig(BaseItem):
+class NotItem(SchemaItem):
 
     __type__ = 'not'
 
@@ -1333,18 +1346,25 @@ class NotConfig(BaseItem):
     def __init__(self, item=None):
         if item is not None:
             self.item = item
-        super(NotConfig, self).__init__()
+        super(NotItem, self).__init__()
 
     def __validate_attributes__(self):
         if not self.item:
             raise RuntimeError(
                 'An item must be passed'
             )
-        if not isinstance(self.item, (Configuration, BaseItem)):
+        if not isinstance(self.item, (Schema, SchemaItem)):
             raise RuntimeError(
-                'The passed item be of type Configuration, BaseItem or '
-                'BaseConfigItem, not \'{1}\''.format(type(self.item))
+                'The passed item be of type Schema, SchemaItem or '
+                'BaseSchemaItem, not \'{1}\''.format(type(self.item))
             )
 
     def serialize(self):
         return {self.__type__: self.item.serialize()}
+
+
+# ----- Custom Preconfigured Configs -------------------------------------------------------------------------------->
+class PortItem(IntegerItem):
+    minimum = 0  # yes, 0 is a valid port number
+    maximum = 65535
+# <---- Custom Preconfigured Configs ---------------------------------------------------------------------------------
