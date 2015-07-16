@@ -942,3 +942,19 @@ def create(domain):
         salt '*' virt.create <domain>
     '''
     return start(domain)
+
+
+def destroy(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.stop` instead.
+
+    Power off a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.destroy <domain>
+    '''
+    return stop(domain)
