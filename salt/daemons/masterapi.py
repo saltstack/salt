@@ -762,7 +762,7 @@ class RemoteFuncs(object):
         fstr = '{0}.update_endtime'.format(self.opts['master_job_cache'])
         if (self.opts.get['job_cache_store_endtime']
                 and fstr in self.mminion.returners):
-            self.mminion.returners[fstr](endtime)
+            self.mminion.returners[fstr](load['jid'], endtime)
 
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
         self.mminion.returners[fstr](load)
