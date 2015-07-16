@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=function-redefined
+# pylint: disable=function-redefined,missing-docstring
 # TODO: Remove the following PyLint disable as soon as we support YAML and RST rendering
 # pylint: disable=abstract-method
 
@@ -67,8 +67,8 @@ class ConfigTestCase(TestCase):
                       'default': True,
                       'type': 'boolean',
                       'title': 'base'
-                     },
-                     'hungry': {
+                    },
+                    'hungry': {
                         'type': 'boolean',
                         'description': 'Are you hungry?',
                         'title': 'Hungry'
@@ -519,8 +519,8 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.BooleanItem(title='Hungry',
-                                    description='Are you hungry?',
-                                    default=False)
+                                  description='Are you hungry?',
+                                  default=False)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'boolean',
@@ -531,8 +531,8 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.BooleanItem(title='Hungry',
-                                    description='Are you hungry?',
-                                    default=schema.Null)
+                                  description='Are you hungry?',
+                                  default=schema.Null)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'boolean',
@@ -578,10 +578,10 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.StringItem(title='Foo',
-                                   description='Foo Item',
-                                   min_length=1,
-                                   max_length=3,
-                                   default='foo')
+                                 description='Foo Item',
+                                 min_length=1,
+                                 max_length=3,
+                                 default='foo')
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'string',
@@ -594,10 +594,10 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.StringItem(title='Foo',
-                                   description='Foo Item',
-                                   min_length=1,
-                                   max_length=3,
-                                   enum=('foo', 'bar'))
+                                 description='Foo Item',
+                                 min_length=1,
+                                 max_length=3,
+                                 enum=('foo', 'bar'))
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'string',
@@ -610,11 +610,11 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.StringItem(title='Foo',
-                                   description='Foo Item',
-                                   min_length=1,
-                                   max_length=3,
-                                   enum=('foo', 'bar'),
-                                   enumNames=('Foo', 'Bar'))
+                                 description='Foo Item',
+                                 min_length=1,
+                                 max_length=3,
+                                 enum=('foo', 'bar'),
+                                 enumNames=('Foo', 'Bar'))
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'string',
@@ -628,8 +628,8 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.StringItem(title='Foo',
-                                   description='Foo Item',
-                                   pattern=r'^([\w_-]+)$')
+                                 description='Foo Item',
+                                 pattern=r'^([\w_-]+)$')
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'string',
@@ -651,7 +651,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo', description='Foo Item',
-                                       min_length=1, max_length=10)
+                                     min_length=1, max_length=10)
 
         try:
             jsonschema.validate({'item': 'the item'}, TestConf.serialize())
@@ -668,7 +668,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo', description='Foo Item',
-                                       min_length=10, max_length=100)
+                                     min_length=10, max_length=100)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'the item'}, TestConf.serialize())
@@ -676,8 +676,8 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo',
-                                       description='Foo Item',
-                                       enum=('foo', 'bar'))
+                                     description='Foo Item',
+                                     enum=('foo', 'bar'))
 
         try:
             jsonschema.validate({'item': 'foo'}, TestConf.serialize())
@@ -686,15 +686,15 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo',
-                                       description='Foo Item',
-                                       enum=('foo', 'bar'))
+                                     description='Foo Item',
+                                     enum=('foo', 'bar'))
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 'bin'}, TestConf.serialize())
         self.assertIn('is not one of', excinfo.exception.message)
 
         class TestConf(schema.Schema):
             item = schema.StringItem(title='Foo', description='Foo Item',
-                                       pattern=r'^([\w_-]+)$')
+                                     pattern=r'^([\w_-]+)$')
 
         try:
             jsonschema.validate({'item': 'the-item'}, TestConf.serialize(),
@@ -893,9 +893,9 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.NumberItem(title='How many dogs',
-                                   description='Question',
-                                   minimum=0,
-                                   maximum=10)
+                                 description='Question',
+                                 minimum=0,
+                                 maximum=10)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'number',
@@ -907,8 +907,8 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.NumberItem(title='How many dogs',
-                                   description='Question',
-                                   multiple_of=2)
+                                 description='Question',
+                                 multiple_of=2)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'number',
@@ -919,11 +919,11 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.NumberItem(title='How many dogs',
-                                   description='Question',
-                                   minimum=0,
-                                   exclusive_minimum=True,
-                                   maximum=10,
-                                   exclusive_maximum=True)
+                                 description='Question',
+                                 minimum=0,
+                                 exclusive_minimum=True,
+                                 maximum=10,
+                                 exclusive_maximum=True)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'number',
@@ -937,10 +937,10 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.NumberItem(title='How many dogs',
-                                   description='Question',
-                                   minimum=0,
-                                   maximum=10,
-                                   default=0)
+                                 description='Question',
+                                 minimum=0,
+                                 maximum=10,
+                                 default=0)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'number',
@@ -953,11 +953,11 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.NumberItem(title='How many dogs',
-                                   description='Question',
-                                   minimum=0,
-                                   maximum=10,
-                                   default=0,
-                                   enum=(0, 2, 4, 6))
+                                 description='Question',
+                                 minimum=0,
+                                 maximum=10,
+                                 default=0,
+                                 enum=(0, 2, 4, 6))
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'number',
@@ -986,8 +986,8 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='How many dogs',
-                                       description='Question',
-                                       multiple_of=2.2)
+                                     description='Question',
+                                     multiple_of=2.2)
 
         try:
             jsonschema.validate({'item': 4.4}, TestConf.serialize())
@@ -1000,7 +1000,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo', description='Foo Item',
-                                       minimum=1, maximum=10)
+                                     minimum=1, maximum=10)
 
         try:
             jsonschema.validate({'item': 3}, TestConf.serialize())
@@ -1013,7 +1013,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo', description='Foo Item',
-                                       minimum=10, maximum=100)
+                                     minimum=10, maximum=100)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
@@ -1021,11 +1021,11 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='How many dogs',
-                                       description='Question',
-                                       minimum=0,
-                                       exclusive_minimum=True,
-                                       maximum=10,
-                                       exclusive_maximum=True)
+                                     description='Question',
+                                     minimum=0,
+                                     exclusive_minimum=True,
+                                     maximum=10,
+                                     exclusive_maximum=True)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 0}, TestConf.serialize())
@@ -1037,8 +1037,8 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo',
-                                       description='Foo Item',
-                                       enum=(0, 2, 4, 6))
+                                     description='Foo Item',
+                                     enum=(0, 2, 4, 6))
 
         try:
             jsonschema.validate({'item': 4}, TestConf.serialize())
@@ -1047,8 +1047,8 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.NumberItem(title='Foo',
-                                       description='Foo Item',
-                                       enum=(0, 2, 4, 6))
+                                     description='Foo Item',
+                                     enum=(0, 2, 4, 6))
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
         self.assertIn('is not one of', excinfo.exception.message)
@@ -1064,9 +1064,9 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.IntegerItem(title='How many dogs',
-                                    description='Question',
-                                    minimum=0,
-                                    maximum=10)
+                                  description='Question',
+                                  minimum=0,
+                                  maximum=10)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'integer',
@@ -1078,8 +1078,8 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.IntegerItem(title='How many dogs',
-                                    description='Question',
-                                    multiple_of=2)
+                                  description='Question',
+                                  multiple_of=2)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'integer',
@@ -1090,11 +1090,11 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.IntegerItem(title='How many dogs',
-                                    description='Question',
-                                    minimum=0,
-                                    exclusive_minimum=True,
-                                    maximum=10,
-                                    exclusive_maximum=True)
+                                  description='Question',
+                                  minimum=0,
+                                  exclusive_minimum=True,
+                                  maximum=10,
+                                  exclusive_maximum=True)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'integer',
@@ -1108,10 +1108,10 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.IntegerItem(title='How many dogs',
-                                    description='Question',
-                                    minimum=0,
-                                    maximum=10,
-                                    default=0)
+                                  description='Question',
+                                  minimum=0,
+                                  maximum=10,
+                                  default=0)
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'integer',
@@ -1124,11 +1124,11 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.IntegerItem(title='How many dogs',
-                                    description='Question',
-                                    minimum=0,
-                                    maximum=10,
-                                    default=0,
-                                    enum=(0, 2, 4, 6))
+                                  description='Question',
+                                  minimum=0,
+                                  maximum=10,
+                                  default=0,
+                                  enum=(0, 2, 4, 6))
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'integer',
@@ -1157,8 +1157,8 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='How many dogs',
-                                        description='Question',
-                                        multiple_of=2)
+                                      description='Question',
+                                      multiple_of=2)
 
         try:
             jsonschema.validate({'item': 4}, TestConf.serialize())
@@ -1171,7 +1171,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo', description='Foo Item',
-                                        minimum=1, maximum=10)
+                                      minimum=1, maximum=10)
 
         try:
             jsonschema.validate({'item': 3}, TestConf.serialize())
@@ -1184,7 +1184,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo', description='Foo Item',
-                                        minimum=10, maximum=100)
+                                      minimum=10, maximum=100)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
@@ -1192,11 +1192,11 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='How many dogs',
-                                        description='Question',
-                                        minimum=0,
-                                        exclusive_minimum=True,
-                                        maximum=10,
-                                        exclusive_maximum=True)
+                                      description='Question',
+                                      minimum=0,
+                                      exclusive_minimum=True,
+                                      maximum=10,
+                                      exclusive_maximum=True)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 0}, TestConf.serialize())
@@ -1208,8 +1208,8 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo',
-                                        description='Foo Item',
-                                        enum=(0, 2, 4, 6))
+                                      description='Foo Item',
+                                      enum=(0, 2, 4, 6))
 
         try:
             jsonschema.validate({'item': 4}, TestConf.serialize())
@@ -1218,18 +1218,18 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.IntegerItem(title='Foo',
-                                        description='Foo Item',
-                                        enum=(0, 2, 4, 6))
+                                      description='Foo Item',
+                                      enum=(0, 2, 4, 6))
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': 3}, TestConf.serialize())
         self.assertIn('is not one of', excinfo.exception.message)
 
     def test_array_config(self):
         string_item = schema.StringItem(title='Dog Name',
-                                          description='The dog name')
+                                        description='The dog name')
         item = schema.ArrayItem(title='Dog Names',
-                                  description='Name your dogs',
-                                  items=string_item)
+                                description='Name your dogs',
+                                items=string_item)
 
         self.assertDictEqual(
             item.serialize(), {
@@ -1245,10 +1245,10 @@ class ConfigTestCase(TestCase):
         )
 
         integer_item = schema.IntegerItem(title='Dog Age',
-                                            description='The dog age')
+                                          description='The dog age')
         item = schema.ArrayItem(title='Dog Names',
-                                  description='Name your dogs',
-                                  items=(string_item, integer_item))
+                                description='Name your dogs',
+                                items=(string_item, integer_item))
 
         self.assertDictEqual(
             item.serialize(), {
@@ -1271,13 +1271,13 @@ class ConfigTestCase(TestCase):
         )
 
         item = schema.ArrayItem(title='Dog Names',
-                                  description='Name your dogs',
-                                  items=(schema.StringItem(),
-                                         schema.IntegerItem()),
-                                  min_items=1,
-                                  max_items=3,
-                                  additional_items=False,
-                                  unique_items=True)
+                                description='Name your dogs',
+                                items=(schema.StringItem(),
+                                       schema.IntegerItem()),
+                                min_items=1,
+                                 max_items=3,
+                                additional_items=False,
+                                unique_items=True)
 
         self.assertDictEqual(
             item.serialize(), {
@@ -1303,8 +1303,8 @@ class ConfigTestCase(TestCase):
             item = schema.IntegerItem(title='How many dogs', description='Question')
 
         item = schema.ArrayItem(title='Dog Names',
-                                  description='Name your dogs',
-                                  items=HowManyConfig())
+                                description='Name your dogs',
+                                items=HowManyConfig())
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'array',
@@ -1318,8 +1318,8 @@ class ConfigTestCase(TestCase):
             item = schema.IntegerItem()
 
         item = schema.ArrayItem(title='Dog Names',
-                                  description='Name your dogs',
-                                  items=(HowManyConfig(), AgesConfig()))
+                                description='Name your dogs',
+                                items=(HowManyConfig(), AgesConfig()))
         self.assertDictEqual(
             item.serialize(), {
                 'type': 'array',
@@ -1336,8 +1336,8 @@ class ConfigTestCase(TestCase):
     def test_array_config_validation(self):
         class TestConf(schema.Schema):
             item = schema.ArrayItem(title='Dog Names',
-                                      description='Name your dogs',
-                                      items=schema.StringItem())
+                                    description='Name your dogs',
+                                    items=schema.StringItem())
 
         try:
             jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
@@ -1352,10 +1352,10 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(title='Dog Names',
-                                      description='Name your dogs',
-                                      items=schema.StringItem(),
-                                      min_items=1,
-                                      max_items=2)
+                                    description='Name your dogs',
+                                    items=schema.StringItem(),
+                                    min_items=1,
+                                    max_items=2)
 
         try:
             jsonschema.validate({'item': ['Tobias', 'Óscar']}, TestConf.serialize(),
@@ -1375,9 +1375,9 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(title='Dog Names',
-                                      description='Name your dogs',
-                                      items=schema.StringItem(),
-                                      uniqueItems=True)
+                                    description='Name your dogs',
+                                    items=schema.StringItem(),
+                                    uniqueItems=True)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['Tobias', 'Tobias']}, TestConf.serialize(),
@@ -1386,7 +1386,7 @@ class ConfigTestCase(TestCase):
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(items=(schema.StringItem(),
-                                             schema.IntegerItem()))
+                                           schema.IntegerItem()))
         try:
             jsonschema.validate({'item': ['Óscar', 4]}, TestConf.serialize(),
                                 format_checker=jsonschema.FormatChecker())
@@ -1480,7 +1480,7 @@ class ConfigTestCase(TestCase):
             title='Poligon',
             description='Describe the Poligon',
             pattern_properties={
-                's*': schema.IntegerItem()
+                's.*': schema.IntegerItem()
             },
             min_properties=1,
             max_properties=2
@@ -1491,7 +1491,7 @@ class ConfigTestCase(TestCase):
                 'title': item.title,
                 'description': item.description,
                 'patternProperties': {
-                    's*': {'type': 'integer'}
+                    's.*': {'type': 'integer'}
                 },
                 'minProperties': 1,
                 'maxProperties': 2
@@ -1568,7 +1568,7 @@ class ConfigTestCase(TestCase):
                 'sides': schema.IntegerItem()
             },
             additional_properties=schema.OneOfItem(items=[schema.BooleanItem(),
-                                                            schema.StringItem()])
+                                                          schema.StringItem()])
         )
         self.assertDictEqual(
             item.serialize(), {
@@ -1597,7 +1597,6 @@ class ConfigTestCase(TestCase):
                     'sides': schema.IntegerItem()
                 }
             )
-
         try:
             jsonschema.validate({'item': {'sides': 1}}, TestConf.serialize())
         except jsonschema.exceptions.ValidationError as exc:
@@ -1663,7 +1662,6 @@ class ConfigTestCase(TestCase):
                 additional_properties=schema.OneOfItem(items=[
                     schema.BooleanItem(),
                     schema.IntegerItem()
-
                 ])
             )
 
@@ -1688,7 +1686,6 @@ class ConfigTestCase(TestCase):
                 additional_properties=schema.OneOfItem(items=[
                     schema.BooleanItem(),
                     schema.IntegerItem()
-
                 ]),
                 min_properties=2,
                 max_properties=3
