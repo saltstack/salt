@@ -255,6 +255,12 @@ def get_jids():
     ret = {}
     for jid, job, _, _ in _walk_through(_job_dir()):
         ret[jid] = salt.utils.jid.format_jid_instance(jid, job)
+
+        if __opts__.get['job_cache_store_endtime']:
+            endtime = get_endtime(jid)
+            if endtime:
+                ret[jid]['EndTime'] = endtime
+
     return ret
 
 
