@@ -324,6 +324,8 @@ class Inspector(object):
         Take a snapshot of the system.
         '''
         # TODO: Mode
+        self._init_env()
+
 
         self._save_cfg_pkgs(self._get_changed_cfg_pkgs(self._get_cfg_pkgs()))
         self._save_payload(*self._scan_payload())
