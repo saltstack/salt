@@ -925,3 +925,20 @@ def vm_diskstats(vm_=None):
             for vm_ in list_domains():
                 info[vm_] = _info(vm_)
         return info
+
+
+# Deprecated aliases
+def create(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.start` instead.
+
+    Start a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.create <domain>
+    '''
+    return start(domain)
