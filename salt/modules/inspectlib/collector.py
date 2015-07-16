@@ -108,6 +108,10 @@ class Inspector(object):
                 data.pop(pkg_name)
 
         return data
+
+    def __get_cfg_pkgs_rpm(self):
+        '''
+        Get packages with configuration files on RPM systems.
         '''
         out, err = self._syscall('rpm', None, None, '-qa', '--configfiles',
                                  '--queryformat', '%{name}-%{version}-%{release}\\n')
