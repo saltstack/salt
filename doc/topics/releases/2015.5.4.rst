@@ -11,3 +11,7 @@ Changes:
 
 - When querying for VMs in ``ditigal_ocean_v2.py``, the number of VMs to include in a page was changed from 20
   (default) to 200 to reduce the number of API calls to Digital Ocean.
+
+- The ``vmware`` Salt-Cloud driver was back-ported from the develop branch in order for installations of Salt
+  that are older than 2015.8.0 to be able to use the ``vmware`` driver without stack-tracing on various
+  deprecation paths that were implemented in the 2015.8.0 release.
