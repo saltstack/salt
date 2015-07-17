@@ -122,7 +122,7 @@ def avail_images(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='images', command='?page=' + str(page))
+        items = query(method='images', command='?page=' + str(page) + '&per_page=200')
 
         for image in items['images']:
             ret[image['id']] = {}
@@ -172,7 +172,7 @@ def list_nodes(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='droplets', command='?page=' + str(page))
+        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             ret[node['name']] = {
                 'id': node['id'],
@@ -204,7 +204,7 @@ def list_nodes_full(call=None, forOutput=True):
     ret = {}
 
     while fetch:
-        items = query(method='droplets', command='?page=' + str(page))
+        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             ret[node['name']] = {}
             for item in six.iterkeys(node):
@@ -295,11 +295,14 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'digital_ocean',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'digital_ocean',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
