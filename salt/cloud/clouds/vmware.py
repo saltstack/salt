@@ -27,19 +27,19 @@ cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      driver: vmware
+      provider: vmware
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter01.domain.com"
 
     vmware-vcenter02:
-      driver: vmware
+      provider: vmware
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter02.domain.com"
 
     vmware-vcenter03:
-      driver: vmware
+      provider: vmware
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter03.domain.com"
