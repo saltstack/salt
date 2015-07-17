@@ -704,6 +704,120 @@ def show_instance(name, call=None):
     return node
 
 
+def secgroup_clone(call=None, kwargs=None):
+    '''
+    Clones an existing security group.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the new template.
+
+    secgroup_id
+        The ID of the template to be cloned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f secgroup_clone opennebula name=my-cloned-secgroup secgroup_id=0
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The secgroup_clone function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    secgroup_id = kwargs.get('secgroup_id', None)
+
+    if not name or not secgroup_id:
+        raise SaltCloudSystemExit(
+            'The secgroup_clone function requires a name and a secgroup_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    response = server.one.secgroup.clone(auth, int(secgroup_id), name)
+
+    data = {
+        'action': 'secgroup.clone',
+        'cloned': response[0],
+        'cloned_secgroup_id': response[1],
+        'cloned_secgroup_name': name,
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def secgroup_delete(call=None, kwargs=None):
+    '''
+    Deletes the given security group from OpenNebula. Either a name or a secgroup_id
+    must be supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the security group to delete.
+
+    secgroup_id
+        The ID of the security group to delete.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f secgroup_delete opennebula name=my-secgroup
+        salt-cloud --function secgroup_delete opennebula secgroup_id=100
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The secgroup_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    secgroup_id = kwargs.get('secgroup_id', None)
+
+    if not name and not secgroup_id:
+        raise SaltCloudSystemExit(
+            'The secgroup_delete function requires either a name or a secgroup_id '
+            'to be provided.'
+        )
+
+    # Make the API call to O.N. once and pass them to other functions that need them.
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not secgroup_id:
+        kwargs = {
+            'name': name,
+            'server': server,
+            'user': user,
+            'password': password
+        }
+        secgroup_id = get_secgroup_id(kwargs)
+
+    response = server.one.secgroup.delete(auth, int(secgroup_id))
+
+    data = {
+        'action': 'secgroup.delete',
+        'deleted': response[0],
+        'template_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def secgroup_info(call=None, kwargs=None):
     '''
     Retrieves information for the given security group. Either a name or a
@@ -724,7 +838,7 @@ def secgroup_info(call=None, kwargs=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The template_delete function must be called with -f or --function.'
+            'The secgroup_info function must be called with -f or --function.'
         )
 
     if kwargs is None:
@@ -756,7 +870,7 @@ def secgroup_info(call=None, kwargs=None):
     response = server.one.secgroup.info(auth, int(secgroup_id))[1]
     tree = etree.XML(response)
     info[tree.find('NAME').text] = _xml_to_dict(tree)
-    
+
     return info
 
 
@@ -781,7 +895,7 @@ def template_clone(call=None, kwargs=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The template_delete function must be called with -f or --function.'
+            'The template_clone function must be called with -f or --function.'
         )
 
     if kwargs is None:
@@ -907,7 +1021,7 @@ def template_instantiate(call=None, kwargs=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The template_delete function must be called with -f or --function.'
+            'The template_instantiate function must be called with -f or --function.'
         )
 
     if kwargs is None:
