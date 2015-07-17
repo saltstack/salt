@@ -17,5 +17,7 @@ Full list of builtin auth modules
     mysql
     pam
     pki
+    rest
+    sharedsecret
     stormpath
     yubico
