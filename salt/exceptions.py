@@ -262,3 +262,11 @@ class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
     '''
+
+
+class NotImplemented(SaltException):
+    '''
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
+    '''
+
