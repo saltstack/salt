@@ -80,6 +80,43 @@ class ConfigTestCase(TestCase):
             }
         )
 
+        class MergedConfigClass(schema.Schema):
+            thirsty = schema.BooleanItem(title='Thirsty', description='Are you thirsty?', required=True)
+            merge_subclassed = SubClassedConfig(flatten=True)
+
+        expected = {
+            '$schema': 'http://json-schema.org/draft-04/schema#',
+            'type': 'object',
+            'properties': {
+                'thirsty': {
+                    'type': 'boolean',
+                    'description': 'Are you thirsty?',
+                    'title': 'Thirsty'
+                },
+                'base': {
+                  'default': True,
+                  'type': 'boolean',
+                  'title': 'base'
+                },
+                'hungry': {
+                    'type': 'boolean',
+                    'description': 'Are you hungry?',
+                    'title': 'Hungry'
+                }
+            },
+            'required': ['thirsty', 'base', 'hungry'],
+            'x-ordering': ['thirsty', 'base', 'hungry'],
+            'additionalProperties': False,
+        }
+        self.assertDictContainsSubset(
+            MergedConfigClass.serialize()['properties'],
+            expected['properties']
+        )
+        self.assertDictContainsSubset(
+            expected,
+            MergedConfigClass.serialize()
+        )
+
     def test_configuration_items_order(self):
 
         class One(schema.Schema):
