@@ -100,6 +100,8 @@ class Shell(object):
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
+            options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
             options.extend(['StrictHostKeyChecking=no',
                             'UserKnownHostsFile=/dev/null'])
         known_hosts = self.opts.get('known_hosts_file')
@@ -133,6 +135,8 @@ class Shell(object):
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
+            options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
             options.extend(['StrictHostKeyChecking=no',
                             'UserKnownHostsFile=/dev/null'])
 
