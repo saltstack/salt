@@ -140,7 +140,7 @@ class ConfigTestCase(TestCase):
                 title='SSH Private Key',
                 description='The path to an SSH private key which will be used '
                             'to authenticate on the deployed VMs',
-                required=True)
+                )
 
         class SSHKeyNamesSchema(schema.Schema):
             ssh_key_names = schema.StringItem(
@@ -148,7 +148,7 @@ class ConfigTestCase(TestCase):
                 description='The names of an SSH key being managed on '
                             'Digital Ocean account which will be used to '
                             'authenticate on the deployed VMs',
-                required=True)
+                )
 
         class Requirements(BaseRequirements):
             title = 'Digital Ocean'
@@ -169,54 +169,54 @@ class ConfigTestCase(TestCase):
             ssh_key_file = SSHKeyFileSchema(flatten=True)
             ssh_key_names = SSHKeyNamesSchema(flatten=True)
 
-        expexcted = {
-                "$schema": "http://json-schema.org/draft-04/schema#",
-                "title": "Digital Ocean",
-                "description": "Digital Ocean Cloud VM configuration requirements.",
-                "type": "object",
-                "properties": {
-                    "driver": {
-                        "default": "digital_ocean",
-                        "format": "hidden",
-                        "type": "string",
-                        "title": "driver"
-                    },
-                    "personal_access_token": {
-                        "type": "string",
-                        "description": "This is the API access token which can be "
-                                       "generated under the API/Application on your account",
-                        "title": "Personal Access Token"
-                    },
-                    "ssh_key_file": {
-                        "type": "string",
-                        "description": "The path to an SSH private key which will "
-                                       "be used to authenticate on the deployed VMs",
-                        "title": "SSH Private Key"
-                    },
-                    "ssh_key_names": {
-                        "type": "string",
-                        "description": "The names of an SSH key being managed on Digital "
-                                       "Ocean account which will be used to authenticate "
-                                       "on the deployed VMs",
-                        "title": "SSH Key Names"
-                    }
+        expected = {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "Digital Ocean",
+            "description": "Digital Ocean Cloud VM configuration requirements.",
+            "type": "object",
+            "properties": {
+                "driver": {
+                    "default": "digital_ocean",
+                    "format": "hidden",
+                    "type": "string",
+                    "title": "driver"
                 },
-                "anyOf": [
-                    {"required": ["ssh_key_file"]},
-                    {"required": ["ssh_key_names"]}
-                ],
-                "required": [
-                    "personal_access_token"
-                ],
-                "x-ordering": [
-                    "driver",
-                    "personal_access_token",
-                    "ssh_key_file",
-                    "ssh_key_names",
-                ],
-                "additionalProperties": False
-            }
-        self.assertDictEqual(expexcted, Requirements.serialize())
+                "personal_access_token": {
+                    "type": "string",
+                    "description": "This is the API access token which can be "
+                                   "generated under the API/Application on your account",
+                    "title": "Personal Access Token"
+                },
+                "ssh_key_file": {
+                    "type": "string",
+                    "description": "The path to an SSH private key which will "
+                                   "be used to authenticate on the deployed VMs",
+                    "title": "SSH Private Key"
+                },
+                "ssh_key_names": {
+                    "type": "string",
+                    "description": "The names of an SSH key being managed on Digital "
+                                   "Ocean account which will be used to authenticate "
+                                   "on the deployed VMs",
+                    "title": "SSH Key Names"
+                }
+            },
+            "anyOf": [
+                {"required": ["ssh_key_file"]},
+                {"required": ["ssh_key_names"]}
+            ],
+            "required": [
+                "personal_access_token"
+            ],
+            "x-ordering": [
+                "driver",
+                "personal_access_token",
+                "ssh_key_file",
+                "ssh_key_names",
+            ],
+            "additionalProperties": False
+        }
+        self.assertDictEqual(expected, Requirements.serialize())
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
@@ -227,16 +227,14 @@ class ConfigTestCase(TestCase):
             ssh_key_file = schema.StringItem(
                 title='SSH Private Key',
                 description='The path to an SSH private key which will be used '
-                            'to authenticate on the deployed VMs',
-                required=True)
+                            'to authenticate on the deployed VMs')
 
         class SSHKeyNamesSchema(schema.Schema):
             ssh_key_names = schema.StringItem(
                 title='SSH Key Names',
                 description='The names of an SSH key being managed on  '
                             'Digial Ocean account which will be used to '
-                            'authenticate on the deployed VMs',
-                required=True)
+                            'authenticate on the deployed VMs')
 
         class Requirements(BaseRequirements):
             title = 'Digital Ocean'

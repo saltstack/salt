@@ -601,7 +601,12 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
 
     @classmethod
     def as_requirements_item(cls):
-        return RequirementsItem(requirements=cls())
+        serialized_schema = cls.serialize()
+        required = serialized_schema.get('required', [])
+        for name in serialized_schema['properties']:
+            if name not in required:
+                required.append(name)
+        return RequirementsItem(requirements=required)
 
     #@classmethod
     #def render_as_rst(cls):
@@ -1255,34 +1260,29 @@ class RequirementsItem(SchemaItem):
             raise RuntimeError(
                 'The passed requirements must not be empty'
             )
-        if not isinstance(self.requirements, (Schema, SchemaItem, list, tuple, set)):
+        if not isinstance(self.requirements, (SchemaItem, list, tuple, set)):
             raise RuntimeError(
                 'The passed requirements must be passed as a list, tuple, '
-                'set SchemaItem, BaseSchemaItem or Schema, not \'{0}\''.format(self.requirements)
+                'set SchemaItem or BaseSchemaItem, not \'{0}\''.format(self.requirements)
             )
 
-        if not isinstance(self.requirements, (SchemaItem, Schema)):
+        if not isinstance(self.requirements, SchemaItem):
             if not isinstance(self.requirements, list):
                 self.requirements = list(self.requirements)
 
             for idx, item in enumerate(self.requirements):
-                if not isinstance(item, (six.string_types, (SchemaItem, Schema))):
+                if not isinstance(item, (six.string_types, SchemaItem)):
                     raise RuntimeError(
                         'The passed requirement at the {0} index must be of type '
-                        'str or Schema, not \'{1}\''.format(idx, type(item))
+                        'str or SchemaItem, not \'{1}\''.format(idx, type(item))
                     )
 
     def serialize(self):
-        if isinstance(self.requirements, Schema):
-            requirements = self.requirements.serialize()['required']
-        elif isinstance(self.requirements, SchemaItem):
+        if isinstance(self.requirements, SchemaItem):
             requirements = self.requirements.serialize()
         else:
             requirements = []
             for requirement in self.requirements:
-                if isinstance(requirement, Schema):
-                    requirements.extend(requirement.serialize()['required'])
-                    continue
                 if isinstance(requirement, SchemaItem):
                     requirements.append(requirement.serialize())
                     continue
