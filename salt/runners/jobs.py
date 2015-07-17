@@ -15,6 +15,7 @@ import salt.payload
 import salt.utils
 import salt.utils.jid
 import salt.minion
+import salt.returners
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -353,7 +354,10 @@ def list_jobs_filter(count,
         __jid_event__.fire_event({'message': 'Querying returner {0} for jobs.'.format(returner)}, 'progress')
     mminion = salt.minion.MasterMinion(__opts__)
 
-    ret = mminion.returners['{0}.get_jids_filter'.format(returner)](count, filter_find_job)
+    fun = '{0}.get_jids_filter'.format(returner)
+    if fun not in mminion.returners:
+        raise salt.exceptions.NotImplemented('\'{0}\' returner function not implemented yet.'.format(fun))
+    ret = mminion.returners[fun](count, filter_find_job)
 
     if outputter:
         return {'outputter': outputter, 'data': ret}
