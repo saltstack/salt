@@ -218,6 +218,83 @@ class ConfigTestCase(TestCase):
         }
         self.assertDictEqual(expected, Requirements.serialize())
 
+        class Requirements2(BaseRequirements):
+            title = 'Digital Ocean'
+            description = 'Digital Ocean Cloud VM configuration requirements.'
+
+            personal_access_token = schema.StringItem(
+                title='Personal Access Token',
+                description='This is the API access token which can be generated '
+                            'under the API/Application on your account',
+                required=True)
+
+            ssh_key_file = schema.StringItem(
+                title='SSH Private Key',
+                description='The path to an SSH private key which will be used '
+                            'to authenticate on the deployed VMs')
+
+            ssh_key_names = schema.StringItem(
+                title='SSH Key Names',
+                description='The names of an SSH key being managed on '
+                            'Digital Ocean account which will be used to '
+                            'authenticate on the deployed VMs')
+
+            requirements_definition = schema.AnyOfItem(
+                items=(
+                    schema.RequirementsItem(requirements=['ssh_key_file']),
+                    schema.RequirementsItem(requirements=['ssh_key_names'])
+                ),
+            )(flatten=True)
+
+        expected = {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "title": "Digital Ocean",
+            "description": "Digital Ocean Cloud VM configuration requirements.",
+            "type": "object",
+            "properties": {
+                "driver": {
+                    "default": "digital_ocean",
+                    "format": "hidden",
+                    "type": "string",
+                    "title": "driver"
+                },
+                "personal_access_token": {
+                    "type": "string",
+                    "description": "This is the API access token which can be "
+                                   "generated under the API/Application on your account",
+                    "title": "Personal Access Token"
+                },
+                "ssh_key_file": {
+                    "type": "string",
+                    "description": "The path to an SSH private key which will "
+                                   "be used to authenticate on the deployed VMs",
+                    "title": "SSH Private Key"
+                },
+                "ssh_key_names": {
+                    "type": "string",
+                    "description": "The names of an SSH key being managed on Digital "
+                                   "Ocean account which will be used to authenticate "
+                                   "on the deployed VMs",
+                    "title": "SSH Key Names"
+                }
+            },
+            "anyOf": [
+                {"required": ["ssh_key_file"]},
+                {"required": ["ssh_key_names"]}
+            ],
+            "required": [
+                "personal_access_token"
+            ],
+            "x-ordering": [
+                "driver",
+                "personal_access_token",
+                "ssh_key_file",
+                "ssh_key_names",
+            ],
+            "additionalProperties": False
+        }
+        self.assertDictContainsSubset(expected, Requirements2.serialize())
+
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
