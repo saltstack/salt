@@ -379,7 +379,7 @@ class SMinion(object):
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv')
+            pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -1350,7 +1350,7 @@ class Minion(MinionBase):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv')
+                pillarenv=self.opts.get('pillarenv'),
             ).compile_pillar()
         except SaltClientError:
             # Do not exit if a pillar refresh fails.
@@ -2508,7 +2508,7 @@ class ProxyMinion(Minion):
             opts['grains'],
             opts['id'],
             opts['environment'],
-            pillarenv=opts.get('pillarenv')
+            pillarenv=opts.get('pillarenv'),
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)

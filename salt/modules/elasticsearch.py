@@ -13,6 +13,8 @@ Module to provide Elasticsearch compatibility to Salt
     parameters or as configuration settings in /etc/salt/minion on the relevant
     minions:
 
+    .. code-block:: yaml
+
         elasticsearch:
           host: '10.10.10.100:9200'
 

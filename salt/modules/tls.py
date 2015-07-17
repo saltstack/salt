@@ -14,16 +14,16 @@ or use Self-Signed certificates.
 CLI Example #1
 Creating a CA, a server request and its signed certificate:
 
-    .. code-block:: bash
+.. code-block:: bash
 
     # salt-call tls.create_ca my_little \
-      days=5 \
-      CN='My Little CA' \
-      C=US \
-      ST=Utah \
-      L=Salt Lake City \
-      O=Saltstack \
-      emailAddress=pleasedontemail@thisisnot.coms
+    days=5 \
+    CN='My Little CA' \
+    C=US \
+    ST=Utah \
+    L=Salt Lake City \
+    O=Saltstack \
+    emailAddress=pleasedontemail@thisisnot.coms
 
     Created Private Key: "/etc/pki/my_little/my_little_ca_cert.key"
     Created CA "my_little_ca": "/etc/pki/my_little_ca/my_little_ca_cert.crt"
@@ -38,7 +38,7 @@ Creating a CA, a server request and its signed certificate:
 CLI Example #2:
 Creating a client request and its signed certificate
 
-    .. code-block:: bash
+.. code-block:: bash
 
     # salt-call tls.create_csr my_little CN=DBReplica_No.1 cert_type=client
     Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key."
@@ -50,7 +50,8 @@ Creating a client request and its signed certificate
 CLI Example #3:
 Creating both a server and client req + cert for the same CN
 
-    .. code-block:: bash
+.. code-block:: bash
+
     # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2  \
         cert_type=client
     Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key."
@@ -83,7 +84,7 @@ Creating both a server and client req + cert for the same CN
 CLI Example #4:
 Create a server req + cert with non-CN filename for the cert
 
-    .. code-block:: bash
+.. code-block:: bash
 
     # salt-call tls.create_csr my_little CN=www.anothersometh.ing \
         cert_type=server type_ext=True
@@ -93,7 +94,6 @@ Create a server req + cert with non-CN filename for the cert
     # salt-call tls_create_ca_signed_cert my_little CN=www.anothersometh.ing \
         cert_type=server cert_filename="something_completely_different"
     Created Certificate for "www.anothersometh.ing": /etc/pki/my_little/certs/something_completely_different.crt
-
 '''
 from __future__ import absolute_import
 # pylint: disable=C0103

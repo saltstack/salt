@@ -3777,11 +3777,13 @@ def manage_file(name,
             real_name = name
 
         # Only test the checksums on files with managed contents
-        if source:
+        if source and not (not follow_symlinks and os.path.islink(real_name)):
             name_sum = get_hash(real_name, source_sum['hash_type'])
+        else:
+            name_sum = None
 
         # Check if file needs to be replaced
-        if source and source_sum['hsum'] != name_sum:
+        if source and (source_sum['hsum'] != name_sum or name_sum is None):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:

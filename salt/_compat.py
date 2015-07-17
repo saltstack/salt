@@ -169,3 +169,9 @@ if sys.version_info < (2, 7):
             raise subprocess.CalledProcessError(retcode, cmd, output=output)
         return output
     subprocess.check_output = check_output
+
+
+if PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
