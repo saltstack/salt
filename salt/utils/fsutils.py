@@ -112,6 +112,7 @@ def _blkid(fs_type=None):
 
     return data
 
+
 def _is_device(path):
     '''
     Return True if path is a physical device.
