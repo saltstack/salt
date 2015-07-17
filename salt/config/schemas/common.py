@@ -13,13 +13,13 @@
 from __future__ import absolute_import
 
 # Import salt libs
-from salt.utils.config import (Configuration,
-                               StringConfig,
-                               ArrayConfig,
-                               OneOfConfig)
+from salt.utils.schema import (Schema,
+                               StringItem,
+                               ArrayItem,
+                               OneOfItem)
 
 
-class DefaultIncludeConfig(StringConfig):
+class DefaultIncludeConfig(StringItem):
     '''
     Per default, the {0}, will automatically include all config files
     from '{1}/*.conf' ('{1}' is a sub-directory in the same directory
@@ -55,9 +55,9 @@ class MasterDefaultInclude(DefaultIncludeConfig):
     __confd_directory = 'master.d'
 
 
-class IncludeConfig(Configuration):
+class IncludeConfig(Schema):
     title = 'Include Configuration File(s)'
     description = 'Include one or more specific configuration files'
 
-    string_or_array = OneOfConfig(items=(StringConfig(),
-                                         ArrayConfig(items=StringConfig())))(flatten=True)
+    string_or_array = OneOfItem(items=(StringItem(),
+                                       ArrayItem(items=StringItem())))(flatten=True)
