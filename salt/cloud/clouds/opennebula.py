@@ -752,16 +752,12 @@ def secgroup_info(call=None, kwargs=None):
         }
         secgroup_id = get_secgroup_id(kwargs)
 
-    response = server.one.secgroup.info(auth, int(secgroup_id))
-
-    data = {
-        'action': 'secgroup.info',
-        'deleted': response[0],
-        'template_id': response[1],
-        'error_code': response[2],
-    }
-
-    return data
+    info = {}
+    response = server.one.secgroup.info(auth, int(secgroup_id))[1]
+    tree = etree.XML(response)
+    info[tree.find('NAME').text] = _xml_to_dict(tree)
+    
+    return info
 
 
 def template_clone(call=None, kwargs=None):
