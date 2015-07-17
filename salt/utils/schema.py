@@ -558,8 +558,9 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                     properties.update(serialized_section['properties'])
                     if 'x-ordering' in serialized_section:
                         ordering.extend(serialized_section['x-ordering'])
-                    if 'required' in serialized:
+                    if 'required' in serialized_section:
                         required.extend(serialized_section['required'])
+                    skip_order = True
                 else:
                     # Store it as a configuration section
                     properties[name] = serialized_section
@@ -568,7 +569,8 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                 config = cls._items[name]
                 # Handle the configuration items defined in the class instance
                 if config.__flatten__ is True:
-                    after_items_update.update(config.serialize())
+                    serialized_config = config.serialize()
+                    after_items_update.update(serialized_config)
                     skip_order = True
                 else:
                     properties[name] = config.serialize()
