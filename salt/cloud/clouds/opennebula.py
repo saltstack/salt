@@ -271,6 +271,44 @@ def get_location(vm_):
     )
 
 
+def get_secgroup_id(kwargs=None, call=None):
+    '''
+    Returns a security group's ID from the given security group name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_secgroup_id opennebula name=my-secgroup-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    server = kwargs.get('server', None)
+    user = kwargs.get('user', None)
+    password = kwargs.get('password', None)
+
+    secgroup_id = _list_security_groups(
+        server=server,
+        user=user,
+        password=password)[name]['id']
+
+    data = {
+        'secgroup_name': name,
+        'secgroup_id': secgroup_id
+    }
+
+    return data
+
+
 def get_template_id(kwargs=None, call=None):
     '''
     Returns a template's ID from the given template name.
@@ -666,6 +704,66 @@ def show_instance(name, call=None):
     return node
 
 
+def secgroup_info(call=None, kwargs=None):
+    '''
+    Retrieves information for the given security group. Either a name or a
+    secgroup_id must be supplied.
+
+    name
+        The name of the security group for which to gather information.
+
+    template_id
+        The ID of the security group for which to gather information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f secgroup_info opennebula name=my-secgroup
+        salt-cloud --function secgroup_info opennebula secgroup_id=5
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The template_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    secgroup_id = kwargs.get('secgroup_id', None)
+
+    if not name and not secgroup_id:
+        raise SaltCloudSystemExit(
+            'The secgroup_info function requires either a name or a secgroup_id '
+            'to be provided.'
+        )
+
+    # Make the API call to O.N. once and pass them to other functions that need them.
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not secgroup_id:
+        kwargs = {
+            'name': name,
+            'server': server,
+            'user': user,
+            'password': password
+        }
+        secgroup_id = get_secgroup_id(kwargs)
+
+    response = server.one.secgroup.info(auth, int(secgroup_id))
+
+    data = {
+        'action': 'secgroup.info',
+        'deleted': response[0],
+        'template_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def template_clone(call=None, kwargs=None):
     '''
     Clones an existing virtual machine template.
@@ -911,7 +1009,7 @@ def _get_template(name, server=None, user=None, password=None):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
+                'Failed to get the data for the template {0!r}. Remaining '
                 'attempts {1}'.format(
                     name, attempts
                 )
@@ -987,6 +1085,23 @@ def _list_nodes(full=False):
             vms[vm.find('NAME').text] = _xml_to_dict(vm)
 
     return vms
+
+
+def _list_security_groups(server=None, user=None, password=None):
+    '''
+    Lists all security groups available to the user and the user's groups.
+    '''
+    if not server or not user or not password:
+        server, user, password = _get_xml_rpc()
+
+    auth = ':'.join([user, password])
+    secgroup_pool = server.one.secgrouppool.info(auth, -1, -1, -1)[1]
+
+    groups = {}
+    for group in etree.XML(secgroup_pool):
+        groups[group.find('NAME').text] = _xml_to_dict(group)
+
+    return groups
 
 
 def _list_templates(server=None, user=None, password=None):
