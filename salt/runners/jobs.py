@@ -190,6 +190,14 @@ def list_job(jid, ext_source=None, outputter=None):
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
     ret['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+
+    fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
+    if (__opts__.get('job_cache_store_endtime')
+            and fstr in mminion.returners):
+        endtime = mminion.returners[fstr](jid)
+        if endtime:
+            ret['EndTime'] = endtime
+
     if outputter:
         salt.utils.warn_until(
             'Boron',
@@ -344,6 +352,14 @@ def print_job(jid, ext_source=None, outputter=None):
             'Check master log for details.'.format(returner))
         return ret
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
+
+    fstr = '{0}.get_endtime'.format(__opts__['master_job_cache'])
+    if (__opts__.get('job_cache_store_endtime')
+            and fstr in mminion.returners):
+        endtime = mminion.returners[fstr](jid)
+        if endtime:
+            ret[jid]['EndTime'] = endtime
+
     if outputter:
         salt.utils.warn_until(
             'Boron',
