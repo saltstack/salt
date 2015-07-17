@@ -546,7 +546,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         ordering = []
         serialized['type'] = 'object'
         properties = OrderedDict()
-        after_items_update = OrderedDict()
+        cls.after_items_update = []
         for name in cls._order:
             skip_order = False
             if name in cls._sections:
@@ -560,6 +560,8 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                         ordering.extend(serialized_section['x-ordering'])
                     if 'required' in serialized_section:
                         required.extend(serialized_section['required'])
+                    if hasattr(section, 'after_items_update'):
+                        cls.after_items_update.extend(section.after_items_update)
                     skip_order = True
                 else:
                     # Store it as a configuration section
@@ -570,7 +572,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                 # Handle the configuration items defined in the class instance
                 if config.__flatten__ is True:
                     serialized_config = config.serialize()
-                    after_items_update.update(serialized_config)
+                    cls.after_items_update.append(serialized_config)
                     skip_order = True
                 else:
                     properties[name] = config.serialize()
@@ -588,7 +590,15 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
             serialized['properties'] = properties
 
         # Update the serialized object with any items to include after properties
-        serialized.update(after_items_update)
+        if cls.after_items_update:
+            after_items_update = {}
+            for entry in cls.after_items_update:
+                name, data = next(six.iteritems(entry))
+                if name in after_items_update:
+                    after_items_update[name].extend(data)
+                else:
+                    after_items_update[name] = data
+            serialized.update(after_items_update)
 
         if required:
             # Only include required if not empty
