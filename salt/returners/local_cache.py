@@ -283,8 +283,8 @@ def get_jids_filter(count, filter_find_job=True):
         keys.insert(i, jid)
         ret.insert(i, job)
         if len(keys) > count:
-            del(keys[0])
-            del(ret[0])
+            del keys[0]
+            del ret[0]
     return ret
 
 
