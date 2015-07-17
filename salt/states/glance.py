@@ -4,9 +4,12 @@ Managing Images in OpenStack Glance
 ===================================
 '''
 # Import python libs
-import logging, time
+from __future__ import absolute_import
+import logging
+import time
 
 log = logging.getLogger(__name__)
+
 
 def _find_image(name):
     '''
@@ -97,7 +100,7 @@ def image_present(name, visibility='public', protected=None,
         # Kinda busy-loopy but I don't think the Glance
         # API has events we can listen for
         while timer > 0:
-            if image.has_key('status') and \
+            if 'status' in image and \
                     image['status'] in acceptable:
                 log.debug('Image {0} has reached status {1}'.format(
                     image['name'], image['status']))
@@ -132,7 +135,7 @@ def image_present(name, visibility='public', protected=None,
         return ret
 
     # If we've created a new image also return its last status:
-    if ret['changes'].has_key(name):
+    if name in ret['changes']:
         ret['changes'][name]['new']['status'] = image['status']
 
     if visibility:
@@ -151,9 +154,9 @@ def image_present(name, visibility='public', protected=None,
         else:
             ret['comment'] += '"protected" is correct ({0}).\n'.format(
                 protected)
-    if image.has_key('status') and checksum:
+    if 'status' in image and checksum:
         if image['status'] == 'active':
-            if not image.has_key('checksum'):
+            if 'checksum' not in image:
                 ret['result'] = False
                 ret['comment'] += 'No checksum available for this image:\n' +\
                         '\tImage has status "{0}".'.format(image['status'])
