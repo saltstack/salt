@@ -68,13 +68,12 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         if isinstance(payload, dict) and payload.get('stop'):
             self.stop()
 
-class IPCMessageClientTests(BaseIPCReqCase):
+class IPCClientSendTests(BaseIPCReqCase):
     '''
-    Test for the IPCMessageClient
+    Test for the IPCClient
     '''
-
     def _get_channel(self):
-        channel = salt.transport.ipc.IPCMessageClient(
+        channel = salt.transport.ipc.IPCClient(
             socket_path=self.socket_path,
             io_loop=self.io_loop,
         )
@@ -83,38 +82,43 @@ class IPCMessageClientTests(BaseIPCReqCase):
         return channel
 
     def setUp(self):
-        super(IPCMessageClientTests, self).setUp()
+        super(IPCClientSendTests, self).setUp()
         self.channel = self._get_channel()
 
     def tearDown(self):
-        super(IPCMessageClientTests, self).setUp()
+        super(IPCClientSendTests, self).setUp()
         self.channel.close()
 
+    @tornado.testing.gen_test
     def test_basic_send(self):
-        msg = {'foo': 'bar', 'stop': True}
-        self.channel.send(msg)
-        self.wait()
+        msg = {'foo': 'bar'}
+        ret = yield self.channel.send(msg)
         self.assertEqual(self.payloads[0], msg)
+        self.assertEqual(ret, msg)
 
+    @tornado.testing.gen_test
     def test_many_send(self):
         msgs = []
-        self.server_channel.stream_handler = MagicMock()
-
         for i in range(0, 1000):
             msgs.append('test_many_send_{0}'.format(i))
 
+        futures = []
         for i in msgs:
-            self.channel.send(i)
-        self.channel.send({'stop': True})
-        self.wait()
-        self.assertEqual(self.payloads[:-1], msgs)
+            futures.append(self.channel.send(i))
+        # wait until the last one is finished
+        yield futures[-1:]
+        self.assertEqual(self.payloads, msgs)
+        for i, f in enumerate(futures):
+            r = yield f
+            self.assertEqual(r, msgs[i])
 
+    @tornado.testing.gen_test
     def test_very_big_message(self):
         long_str = ''.join([str(num) for num in range(10**5)])
-        msg = {'long_str': long_str, 'stop': True}
-        self.channel.send(msg)
-        self.wait()
+        msg = {'long_str': long_str}
+        ret = yield self.channel.send(msg)
         self.assertEqual(msg, self.payloads[0])
+        self.assertEqual(msg, ret)
 
     def test_multistream_sends(self):
         local_channel = self._get_channel()
@@ -140,12 +144,12 @@ class IPCMessageClientTests(BaseIPCReqCase):
         self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
 
 
-class IPCSubscribeClientTests(BaseIPCReqCase):
+class IPCClientSubscribeTests(BaseIPCReqCase):
     '''
-    Tests for IPCSubscribeClient
+    Test for the IPCClient
     '''
     def _get_channel(self):
-        channel = salt.transport.ipc.IPCSubscribeClient(
+        channel = salt.transport.ipc.IPCClient(
             socket_path=self.socket_path,
             io_loop=self.io_loop,
         )
@@ -154,16 +158,17 @@ class IPCSubscribeClientTests(BaseIPCReqCase):
         return channel
 
     def setUp(self):
-        super(IPCSubscribeClientTests, self).setUp()
+        super(IPCClientSubscribeTests, self).setUp()
         self.channel = self._get_channel()
         self.channel.subscribe(self._get_handler(self.payloads))
 
     def tearDown(self):
-        super(IPCSubscribeClientTests, self).setUp()
+        super(IPCClientSubscribeTests, self).setUp()
         self.channel.close()
 
     def _get_handler(self, payloads):
         def handler(body):
+            log.critical('got a thing!: {0}'.format(body))
             payloads.append(body)
             if isinstance(body, dict) and body.get('stop', False):
                 self.stop()
@@ -246,7 +251,6 @@ class IPCSubscribeClientTests(BaseIPCReqCase):
         # ensure no new messages arrived
         self.assertEqual(self.payloads, [msg])
         self.assertEqual(local_payloads, [msg])
-
 
 if __name__ == '__main__':
     from integration import run_tests

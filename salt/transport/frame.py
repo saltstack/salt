@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import msgpack
 
 
+# TODO: remove raw_body??
 def frame_msg(body, header=None, raw_body=False):
     '''
     Frame the given message with our wire protocol
