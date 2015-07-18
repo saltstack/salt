@@ -32,12 +32,12 @@ log = logging.getLogger(__name__)
 ensure_in_syspath('../')
 
 
-class BaseIPCReqCase(tornado.testing.AsyncTestCase):
+class BaseIPCCase(tornado.testing.AsyncTestCase):
     '''
     Test the req server/client pair
     '''
     def setUp(self):
-        super(BaseIPCReqCase, self).setUp()
+        super(BaseIPCCase, self).setUp()
         self._start_handlers = dict(self.io_loop._handlers)
         self.socket_path = os.path.join(integration.TMP, 'ipc_test.ipc')
 
@@ -51,7 +51,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         self.payloads = []
 
     def tearDown(self):
-        super(BaseIPCReqCase, self).tearDown()
+        super(BaseIPCCase, self).tearDown()
         failures = []
         self.server_channel.close()
         os.unlink(self.socket_path)
@@ -68,7 +68,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         if isinstance(payload, dict) and payload.get('stop'):
             self.stop()
 
-class IPCClientSendTests(BaseIPCReqCase):
+class IPCClientSendTests(BaseIPCCase):
     '''
     Test for the IPCClient
     '''
@@ -144,7 +144,7 @@ class IPCClientSendTests(BaseIPCReqCase):
         self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
 
 
-class IPCClientSubscribeTests(BaseIPCReqCase):
+class IPCClientSubscribeTests(BaseIPCCase):
     '''
     Test for the IPCClient
     '''
@@ -254,4 +254,5 @@ class IPCClientSubscribeTests(BaseIPCReqCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(IPCMessageClient, needs_daemon=False)
+    run_tests(IPCClientSendTests, needs_daemon=False)
+    run_tests(IPCClientSubscribeTests, needs_daemon=False)
