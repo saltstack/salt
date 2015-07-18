@@ -663,4 +663,4 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
         # Send it over IPC!
-        pub_sock.send(int_payload)
+        pub_sock.publish(int_payload)

@@ -334,17 +334,29 @@ class IPCClient(object):
                 yield salt.utils.async.Any(self.inflight_messages.itervalues())
             if not self.connected():
                 yield self.connect()
-            message_future = self.send_queue.pop(0)
-            message_id = self._alloc_mid()
-            message_future._msg_id = message_id
-            msg = salt.transport.frame.frame_msg(
-                message_future._msg,
-                header={'mid': message_id},
-                raw_body=True
-            )
             try:
-                yield self.stream.write(msg)
-                self.inflight_messages[message_id] = message_future
+                message_future = self.send_queue.pop(0)
+                if message_future._msg_kind == 'send':
+                    message_id = self._alloc_mid()
+                    message_future._msg_id = message_id
+                    msg = salt.transport.frame.frame_msg(
+                        message_future._msg,
+                        header={'mid': message_id},
+                        raw_body=True
+                    )
+                    yield self.stream.write(msg)
+                    self.inflight_messages[message_id] = message_future
+                elif message_future._msg_kind == 'publish':
+                    msg = salt.transport.frame.frame_msg(
+                        message_future._msg,
+                        raw_body=True
+                    )
+                    yield self.stream.write(msg)
+                    self.remove_message_timeout(message_future)
+                    message_future.set_result(True)
+                else:
+                    log.critical('Unknown message kind {0}'.format(message_future._msg_kind))
+
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
             except tornado.iostream.StreamClosedError as e:
@@ -377,7 +389,8 @@ class IPCClient(object):
         Send given message, and return a future with the result of the message
         '''
         future = tornado.concurrent.Future()
-        future._msg = msg
+        future._msg = msg  # TODO: create a future subclass?
+        future._msg_kind = 'send'
         if callback is not None:
             def handle_future(future):
                 response = future.result()
@@ -394,13 +407,29 @@ class IPCClient(object):
         self.send_queue.append(future)
         return future
 
-    # TODO: implement if we need it?
     def publish(self, msg, timeout=None, callback=None):
         '''
         Publish a message (send without expecting a response. Return a future
         which will complete when the message has been sent
         '''
-        raise NotImplementedError()
+        future = tornado.concurrent.Future()
+        future._msg = msg  # TODO: create a future subclass?
+        future._msg_kind = 'publish'
+        if callback is not None:
+            def handle_future(future):
+                response = future.result()
+                self.io_loop.add_callback(callback, response)
+            future.add_done_callback(handle_future)
+
+        if timeout is not None:
+            send_timeout = self.io_loop.call_later(timeout, self.timeout_message, future)
+            self.timeout_map[future] = send_timeout
+
+        # if we don't have a send queue, we need to spawn the callback to do the sending
+        if len(self.send_queue) == 0:
+            self.io_loop.spawn_callback(self._handle_outgoing)
+        self.send_queue.append(future)
+        return future
 
     def subscribe(self, handler):
         '''
