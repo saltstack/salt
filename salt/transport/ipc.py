@@ -369,7 +369,6 @@ class IPCClient(object):
         '''
         timeout a given message_id
         '''
-        log.trace('Timing out message_id {0} on {1}'.format(message_id, self.socket_path))
         del self.timeout_map[message_future]
         if message_future in self.send_queue:
             log.trace('Timing out future from send queue')

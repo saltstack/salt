@@ -18,6 +18,7 @@ except ImportError:
 import contextlib
 import weakref
 
+
 class Any(tornado.concurrent.Future):
     '''
     Future that wraps other futures to "block" until one is done
