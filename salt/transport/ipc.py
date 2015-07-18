@@ -22,6 +22,7 @@ from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
+import salt.utils.async
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 
 log = logging.getLogger(__name__)
@@ -169,7 +170,6 @@ class IPCClient(object):
         if key not in loop_instance_map:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
             new_client = object.__new__(cls)
-            # FIXME
             new_client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
             loop_instance_map[key] = new_client
         else:
@@ -191,9 +191,11 @@ class IPCClient(object):
 
         self.subscribe_handlers = []
         self._mid = 1
+        # TODO: move to config
         self._max_messages = sys.maxint - 1  # number of IDs before we wrap
 
-        # TODO: maxflight messages
+        # Maximum number of inflight messages
+        self.maxflight = 5  # TODO: config
 
         # queue of messages to send
         self.send_queue = []
@@ -201,7 +203,7 @@ class IPCClient(object):
         # mapping of message_id -> future
         self.inflight_messages = {}
 
-        # mapping of message_id -> timeout
+        # mapping of message_future -> timeout
         self.timeout_map = {}
 
     def _alloc_mid(self):
@@ -303,8 +305,9 @@ class IPCClient(object):
                     # if its odd, then we are getting a return for something we requested
                     if message_id % 2 == 1:
                         log.trace('Recieved return for message_id {0} on {1}'.format(message_id, self.socket_path))
-                        self.inflight_messages.pop(message_id).set_result(body)
-                        self.remove_message_timeout(message_id)
+                        message_future = self.inflight_messages.pop(message_id)
+                        self.remove_message_timeout(message_future)
+                        message_future.set_result(body)
 
                     # if its even, we are getting a request to respond to
                     else:
@@ -325,60 +328,71 @@ class IPCClient(object):
         '''
         Handle all sending of messages
         '''
-        # TODO: maxflight messages
         while len(self.send_queue) > 0 and not self._closing:
+            # if there are too many outgoing, lets wait until one finishes
+            if len(self.inflight_messages) >= self.maxflight:
+                log.trace('IPC socket {0} has too many messages inflight, waiting...'.format(self.socket_path))
+                yield salt.utils.async.Any(self.inflight_messages.itervalues())
             if not self.connected():
                 yield self.connect()
-            message_id, item = self.send_queue.pop(0)
+            message_future = self.send_queue.pop(0)
+            message_id = self._alloc_mid()
+            message_future._msg_id = message_id
+            msg = salt.transport.frame.frame_msg(
+                message_future._msg,
+                header={'mid': message_id},
+                raw_body=True
+            )
             try:
-                yield self.stream.write(item)
+                yield self.stream.write(msg)
+                self.inflight_messages[message_id] = message_future
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
             except tornado.iostream.StreamClosedError as e:
                 self.inflight_messages.pop(message_id).set_exception(Exception())
-                self.remove_message_timeout(message_id)
+                self.remove_message_timeout(message_future)
                 # if the last connect finished, then we need to make a new one
                 self.disconnect()
 
-    # TODO: return something to say if we sent it or not??
-    def timeout_message(self, message_id):
+    def timeout_message(self, message_future):
         '''
         timeout a given message_id
         '''
         log.trace('Timing out message_id {0} on {1}'.format(message_id, self.socket_path))
-        del self.timeout_map[message_id]
-        self.inflight_messages.pop(message_id).set_exception(SaltReqTimeoutError('Message timed out'))
+        del self.timeout_map[message_future]
+        if message_future in self.send_queue:
+            log.trace('Timing out future from send queue')
+            self.send_queue.remove(message_future)
+        else:
+            log.trace('Timing out inflight future from send queue')
+            self.inflight_messages.pop(message_future._msg_id).set_exception(SaltReqTimeoutError('Message timed out'))
 
-    def remove_message_timeout(self, message_id):
-        if message_id not in self.timeout_map:
+    def remove_message_timeout(self, message_future):
+        if message_future not in self.timeout_map:
             return
-        timeout = self.timeout_map.pop(message_id)
+        timeout = self.timeout_map.pop(message_future)
         self.io_loop.remove_timeout(timeout)
 
     def send(self, msg, timeout=None, callback=None):
         '''
         Send given message, and return a future with the result of the message
         '''
-        message_id = self._alloc_mid()
-        header = {'mid': message_id}
-
         future = tornado.concurrent.Future()
+        future._msg = msg
         if callback is not None:
             def handle_future(future):
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
             future.add_done_callback(handle_future)
-        # Add this future to the mapping
-        self.inflight_messages[message_id] = future
 
         if timeout is not None:
-            send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message_id)
-            self.timeout_map[message_id] = send_timeout
+            send_timeout = self.io_loop.call_later(timeout, self.timeout_message, future)
+            self.timeout_map[future] = send_timeout
 
         # if we don't have a send queue, we need to spawn the callback to do the sending
         if len(self.send_queue) == 0:
             self.io_loop.spawn_callback(self._handle_outgoing)
-        self.send_queue.append((message_id, salt.transport.frame.frame_msg(msg, header=header, raw_body=True)))
+        self.send_queue.append(future)
         return future
 
     # TODO: implement if we need it?
@@ -387,6 +401,7 @@ class IPCClient(object):
         Publish a message (send without expecting a response. Return a future
         which will complete when the message has been sent
         '''
+        raise NotImplementedError()
 
     def subscribe(self, handler):
         '''

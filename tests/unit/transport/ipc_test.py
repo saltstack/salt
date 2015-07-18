@@ -6,6 +6,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import time
 import logging
 
 import tornado.gen
@@ -64,6 +65,8 @@ class BaseIPCCase(tornado.testing.AsyncTestCase):
     @tornado.gen.coroutine
     def _handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
+        if isinstance(payload, dict) and payload.get('sleep'):
+            yield tornado.gen.sleep(payload['sleep'])
         yield reply_func(payload)
         if isinstance(payload, dict) and payload.get('stop'):
             self.stop()
@@ -95,6 +98,28 @@ class IPCClientSendTests(BaseIPCCase):
         ret = yield self.channel.send(msg)
         self.assertEqual(self.payloads[0], msg)
         self.assertEqual(ret, msg)
+
+    @tornado.testing.gen_test
+    def test_send_maxflight(self):
+        '''
+        Send more messages than maxflight, and then ensure that we actually rate
+        limit requests
+        '''
+        sleep_interval = 0.2
+        total_messages = self.channel.maxflight * 4
+        expected_total_time = sleep_interval * (total_messages / self.channel.maxflight)
+
+        msg = {'foo': 'bar', 'sleep': sleep_interval}
+        start = time.time()
+        futures = []
+        for x in xrange(0, total_messages):
+            futures.append(self.channel.send(msg))
+
+        rets = yield futures
+        duration = time.time()
+
+        self.assertGreaterEqual(duration, expected_total_time)
+        self.assertEqual(self.payloads, rets)
 
     @tornado.testing.gen_test
     def test_many_send(self):
@@ -168,7 +193,6 @@ class IPCClientSubscribeTests(BaseIPCCase):
 
     def _get_handler(self, payloads):
         def handler(body):
-            log.critical('got a thing!: {0}'.format(body))
             payloads.append(body)
             if isinstance(body, dict) and body.get('stop', False):
                 self.stop()
