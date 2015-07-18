@@ -22,6 +22,7 @@ from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
+from salt.exceptions import SaltReqTimeoutError, SaltClientError
 
 log = logging.getLogger(__name__)
 
@@ -232,7 +233,7 @@ class IPCClient(object):
         '''
         Connect to the IPC socket
         '''
-        if hasattr(self, '_connecting_future') and (self.connected or not self._connecting_future.done()):  # pylint: disable=E0203
+        if hasattr(self, '_connecting_future') and (self.connected() or not self._connecting_future.done()):  # pylint: disable=E0203
             future = self._connecting_future  # pylint: disable=E0203
         else:
             future = tornado.concurrent.Future()
@@ -261,7 +262,6 @@ class IPCClient(object):
             try:
                 log.trace('IPCClient: Connecting to socket: {0}'.format(self.socket_path))
                 yield self.stream.connect(self.socket_path)
-                log.critical('Creating incoming handler')
                 self.io_loop.spawn_callback(self._handle_incoming)
                 self._connecting_future.set_result(True)
                 break
@@ -297,41 +297,38 @@ class IPCClient(object):
                 if message_id is None:
                     log.trace('Recieved subcribed message on {0}'.format(self.socket_path))
                     for handler in self.subscribe_handlers:
-                        log.critical('Calling handler')
                         self.io_loop.spawn_callback(handler, body)
                 # otherwise we have a message ID, lets handle it
                 else:
                     # if its odd, then we are getting a return for something we requested
                     if message_id % 2 == 1:
                         log.trace('Recieved return for message_id {0} on {1}'.format(message_id, self.socket_path))
-                        self.inflight_messages[message_id].set_result(body)
+                        self.inflight_messages.pop(message_id).set_result(body)
                         self.remove_message_timeout(message_id)
 
                     # if its even, we are getting a request to respond to
                     else:
-                        # TODO: implement
-                        log.critical('Something we should handle and respond to')
-                        ret_func = write_callback(self.stream, header)
-
+                        # TODO: implement if we need it
+                        #ret_func = write_callback(self.stream, header)
+                        pass
 
             except tornado.iostream.StreamClosedError as e:
                 log.debug('IPC stream to {0} closed, unable to recv'.format(self.socket_path))
                 yield self.connect()
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
-                self.close()
-                yield self.connect()
+                self.disconnect()
+                raise tornado.gen.Return()
 
     @tornado.gen.coroutine
     def _handle_outgoing(self):
         '''
         Handle all sending of messages
         '''
-        if not self.connected():
-            yield self.connect()
-
         # TODO: maxflight messages
         while len(self.send_queue) > 0 and not self._closing:
+            if not self.connected():
+                yield self.connect()
             message_id, item = self.send_queue.pop(0)
             try:
                 yield self.stream.write(item)
@@ -341,8 +338,7 @@ class IPCClient(object):
                 self.inflight_messages.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_id)
                 # if the last connect finished, then we need to make a new one
-                if self._connecting_future.done():
-                    self._connecting_future = self.connect()
+                self.disconnect()
 
     # TODO: return something to say if we sent it or not??
     def timeout_message(self, message_id):
@@ -356,7 +352,7 @@ class IPCClient(object):
     def remove_message_timeout(self, message_id):
         if message_id not in self.timeout_map:
             return
-        timeout = self.inflight_messages.pop(message_id)
+        timeout = self.timeout_map.pop(message_id)
         self.io_loop.remove_timeout(timeout)
 
     def send(self, msg, timeout=None, callback=None):
@@ -418,7 +414,21 @@ class IPCClient(object):
         if hasattr(self, 'stream'):
             self.stream.close()
             del self.stream
-        # TODO: close out all inflight messages etc.
+
+        # close out all inflight messages and remove all timeouts
+        for message_id, future in self.inflight_messages.iteritems():
+            future.set_exception(SaltReqTimeoutError('IPC Channel closed'))
+            self.remove_message_timeout(message_id)
+
+    def disconnect(self):
+        '''
+        Foribly disconnect the current stream, this will cause a reconnect unlike
+        close() which will just close and shutdown
+        '''
+        if hasattr(self, 'stream'):
+            self.stream.close()
+            del self.stream
+
 
 # TODO: move to a library?
 def write_callback(stream, header):
