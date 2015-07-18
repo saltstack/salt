@@ -25,7 +25,6 @@ from salt.ext.six.moves import range
 # Import Salt Testing libs
 import integration
 
-from salttesting.mock import MagicMock
 from salttesting.helpers import ensure_in_syspath
 
 log = logging.getLogger(__name__)
@@ -70,6 +69,7 @@ class BaseIPCCase(tornado.testing.AsyncTestCase):
         yield reply_func(payload)
         if isinstance(payload, dict) and payload.get('stop'):
             self.stop()
+
 
 class IPCClientSendTests(BaseIPCCase):
     '''

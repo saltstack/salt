@@ -23,7 +23,7 @@ from tornado.iostream import IOStream
 import salt.transport.client
 import salt.transport.frame
 import salt.utils.async
-from salt.exceptions import SaltReqTimeoutError, SaltClientError
+from salt.exceptions import SaltReqTimeoutError
 
 log = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class IPCServer(object):
                 f = client.write(payload)
                 self.io_loop.add_future(f, lambda f: True)
             except tornado.iostream.StreamClosedError:
-                to_remove.append(item)
+                to_remove.append(client)
         for client in to_remove:
             client.close()
             self.clients.remove(client)
@@ -222,7 +222,6 @@ class IPCClient(object):
                 self._mid += 2
 
         return self._mid
-
 
     def __init__(self, socket_path, io_loop=None):
         # Handled by singleton __new__
