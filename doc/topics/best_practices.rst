@@ -451,7 +451,7 @@ accessible by the appropriate hosts:
 .. code-block:: yaml
 
     testdb:
-      mysql_database.present::
+      mysql_database.present:
         - name: testerdb
 
 ``/srv/salt/mysql/user.sls``:
