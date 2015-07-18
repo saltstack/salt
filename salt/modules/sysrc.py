@@ -40,18 +40,18 @@ def get(**kwargs):
 
     cmd = 'sysrc -v'
 
+    if 'file' in kwargs:
+        cmd += ' -f '+kwargs['file']
+
+    if 'jail' in kwargs:
+        cmd += ' -j '+kwargs['jail']
+
     if 'name' in kwargs:
         cmd += ' '+kwargs['name']
     elif kwargs.get('includeDefaults', False):
         cmd += ' -A'
     else:
         cmd += ' -a'
-
-    if 'file' in kwargs:
-        cmd += ' -f '+kwargs['file']
-
-    if 'jail' in kwargs:
-        cmd += ' -j '+kwargs['jail']
 
     sysrcs = __salt__['cmd.run'](cmd)
     if "sysrc: unknown variable" in sysrcs:
