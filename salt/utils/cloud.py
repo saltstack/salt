@@ -423,6 +423,9 @@ def bootstrap(vm_, opts):
         'win_installer', vm_, opts
     )
     if win_installer:
+        deploy_kwargs['port'] = salt.config.get_cloud_config_value(
+            'smb_port', vm_, opts, default=445
+        )
         deploy_kwargs['win_installer'] = win_installer
         minion = salt.utils.cloud.minion_config(opts, vm_)
         deploy_kwargs['master'] = minion['master']
