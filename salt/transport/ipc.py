@@ -94,8 +94,8 @@ class IPCServer(object):
         for client in self.clients:
             try:
                 # Don't wait on the future, best effort only
-                f = client.write(payload)
-                self.io_loop.add_future(f, lambda f: True)
+                future = client.write(payload)
+                self.io_loop.add_future(future, lambda future: True)
             except tornado.iostream.StreamClosedError:
                 to_remove.append(client)
         for client in to_remove:
@@ -281,14 +281,14 @@ class IPCClient(object):
                 self.io_loop.spawn_callback(self._handle_incoming)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as e:
+            except Exception as exc:
                 yield tornado.gen.sleep(1)  # TODO: backoff
-                #self._connecting_future.set_exception(e)
+                #self._connecting_future.set_exception(exc)
 
     @tornado.gen.coroutine
     def _handle_incoming(self):
         '''
-        Coroutine responsible for handling all incoming data and disbatching it
+        Coroutine responsible for handling all incoming data and dispatching it
         appropriately
 
         - msg incoming with no message_id -- subscribe
@@ -329,10 +329,10 @@ class IPCClient(object):
                         #ret_func = write_callback(self.stream, header)
                         pass
 
-            except tornado.iostream.StreamClosedError as e:
+            except tornado.iostream.StreamClosedError:
                 log.debug('IPC stream to {0} closed, unable to recv'.format(self.socket_path))
                 yield self.connect()
-            except Exception as e:
+            except Exception:
                 log.error('Exception parsing response', exc_info=True)
                 self.disconnect()
                 raise tornado.gen.Return()
@@ -374,7 +374,7 @@ class IPCClient(object):
 
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
-            except tornado.iostream.StreamClosedError as e:
+            except tornado.iostream.StreamClosedError as exc:
                 self.inflight_messages.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_future)
                 # if the last connect finished, then we need to make a new one
