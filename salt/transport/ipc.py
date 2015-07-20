@@ -110,11 +110,11 @@ class IPCServer(object):
             try:
                 framed_msg_len = yield stream.read_until(six.b(' '))
                 framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
-                body = framed_msg[six.b('body')]
+                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
+                body = framed_msg['body']
                 self.io_loop.spawn_callback(self.payload_handler,
                                             body,
-                                            write_callback(stream, framed_msg[six.b('head')]))
+                                            write_callback(stream, framed_msg['head']))
             except Exception as exc:
                 log.exception(exc)
                 log.error('Exception occurred while handling stream: {0}'.format(exc),
