@@ -61,7 +61,7 @@ The package definition file should look similar to this example for Firefox:
 
 .. code-block:: yaml
 
-    Firefox:
+    firefox:
       17.0.1:
         installer: 'salt://win/repo/firefox/English/Firefox Setup 17.0.1.exe'
         full_name: Mozilla Firefox 17.0.1 (x86 en-US)
