@@ -29,8 +29,6 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 from __future__ import absolute_import
 
 # Import python libs
-import copy
-import pprint
 import logging
 import time
 

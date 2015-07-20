@@ -29,8 +29,6 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 from __future__ import absolute_import
 
 # Import python libs
-import copy
-import pprint
 import logging
 import time
 import decimal
@@ -157,7 +155,6 @@ def avail_sizes(call=None):
             for price in group['prices']:
                 ret[price['id']] = price['item'].copy()
                 del ret[price['id']]['id']
-        pprint.pprint(category)
     return ret
 
 
@@ -180,7 +177,6 @@ def avail_images(call=None):
             for price in group['prices']:
                 ret[price['id']] = price['item'].copy()
                 del ret[price['id']]['id']
-        pprint.pprint(category)
     return ret
 
 
