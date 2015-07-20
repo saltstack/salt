@@ -28,7 +28,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import time
 import pprint
 import logging
