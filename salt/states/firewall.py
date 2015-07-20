@@ -2,12 +2,11 @@
 '''
 State to check firewall configurations
 '''
-# import libs
 
-import os
-import salt.utils
 
 def __virtual__():
+    
+    
     '''
     Load only if network is loaded
     '''
@@ -16,7 +15,6 @@ def __virtual__():
 
 
 def check(name, port=None, **kwargs):
-
 
 
     '''
@@ -65,6 +63,5 @@ def check(name, port=None, **kwargs):
         results = __salt__['network.connect'](host, port, **kwargs)
         ret['result'] = results['result']
         ret['comment'] = results['comment']
-
 
     return ret
