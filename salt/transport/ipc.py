@@ -116,7 +116,6 @@ class IPCServer(object):
                                             body,
                                             write_callback(stream, framed_msg['head']))
             except Exception as exc:
-                log.exception(exc)
                 log.error('Exception occurred while handling stream: {0}'.format(exc),
                           exc_info_on_loglevel=logging.DEBUG)
 
