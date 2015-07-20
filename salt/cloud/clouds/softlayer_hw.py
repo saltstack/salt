@@ -281,9 +281,9 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': port_speed})
 
-    # Default is 125 (Unlimited Bandwidth (100 Mbps Uplink))
+    # Default is 1800 (0 GB Bandwidth)
     bandwidth = config.get_cloud_config_value(
-        'bandwidth', vm_, __opts__, default=125
+        'bandwidth', vm_, __opts__, default=1800
     )
     kwargs['prices'].append({'id': bandwidth})
 
