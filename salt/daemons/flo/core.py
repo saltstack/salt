@@ -134,6 +134,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         RoadStack.Bk = raeting.BodyKind.msgpack.value
         RoadStack.JoinentTimeout = 0.0
 
+    _prepare = postinitio
+
     def action(self):
         '''
         enter action
@@ -236,6 +238,8 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
     def postinitio(self):
         self.masters = daemons.extract_masters(self.opts.value)
         # self.mha = (self.opts.value['master'], int(self.opts.value['master_port']))
+
+    _prepare = postinitio
 
     def action(self, **kwa):
         '''
@@ -499,6 +503,8 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
     def postinitio(self):
         self._load_modules()
 
+    _prepare = postinitio
+
     def action(self):
         self._load_modules()
 
@@ -626,6 +632,8 @@ class SaltSchedule(ioflo.base.deeding.Deed):
                 self.modules.value,
                 self.returners.value)
 
+    _prepare = postinitio
+
     def action(self):
         '''
         Eval the schedule
@@ -664,6 +672,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         Set up required objects and queues
         '''
         pass
+
+    _prepare = postinitio
 
     def action(self):
         '''
@@ -1259,6 +1269,8 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
     def postinitio(self):
         self.master_events.value = deque()
 
+    _prepare = postinitio
+
     def action(self):
         if not self.master_events.value:
             return
@@ -1307,6 +1319,8 @@ class SaltRaetThreadShellJobber(ioflo.base.deeding.Deed):
 
     def postinitio(self):
         self.threads.value = deque()
+
+    _prepare = postinitio
 
     def action(self):
         '''
@@ -1382,6 +1396,8 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
         self.proc_dir = salt.minion.get_proc_dir(self.opts['cachedir'])
         self.serial = salt.payload.Serial(self.opts)
         self.executors.value = {}
+
+    _prepare = postinitio
 
     def _setup_jobber_stack(self):
         '''
