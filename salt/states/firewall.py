@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 State to check firewall configurations
+.. versionadded:: Boron
 '''
 
 
 def __virtual__():
-    
     
     '''
     Load only if network is loaded
@@ -15,7 +15,6 @@ def __virtual__():
 
 
 def check(name, port=None, **kwargs):
-
 
     '''
     Checks if there is an open connection from the minion to the defined
@@ -28,7 +27,7 @@ def check(name, port=None, **kwargs):
       The port to test the connection on
 
     **kwargs
-      Additional parameters, parameters tested are:
+      Additional parameters, parameters allowed are:
         proto (tcp or udp)
         family (ipv4 or ipv6)
         timeout
@@ -40,7 +39,6 @@ def check(name, port=None, **kwargs):
           - name: 'google.com'
           - port: 80
           - proto: 'tcp'
-
 
     '''
 
