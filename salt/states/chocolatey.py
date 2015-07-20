@@ -1,10 +1,8 @@
+# -*- coding: utf-8 -*-
+
 '''
 Manage Chocolatey package installs
 '''
-
-# import salt libs
-import salt.utils
-import os
 
 
 def __virtual__():
@@ -94,7 +92,6 @@ def install(name, version=None, source=None, force=False, install_args=None,
 
     if not ret['result']:
         ret['comment'] = 'Failed to install the package {0}'.format(name)
-
 
     return ret
 
