@@ -3,7 +3,6 @@
 Manage ruby gems.
 """
 from __future__ import absolute_import
-import logging
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -19,8 +18,6 @@ import salt.utils
 __func_alias__ = {
     'list_': 'list'
 }
-
-log = logging.getLogger(__name__)
 
 
 def _gem(command, ruby=None, runas=None, gem_bin=None):
