@@ -2,6 +2,7 @@
 
 '''
 Manage Chocolatey package installs
+.. versionadded:: Boron
 '''
 
 
@@ -44,7 +45,6 @@ def install(name, version=None, source=None, force=False, install_args=None,
     force_x86
       Force x86 (32bit) installation on 64 bit systems. Defaults to false.
 
-
     .. code-block:: yaml
 
         Installsomepackage:
@@ -53,8 +53,6 @@ def install(name, version=None, source=None, force=False, install_args=None,
             - version: '12.04'
             - source: 'mychocolatey/source'
             - force: True
-
-
 
     '''
 
@@ -75,6 +73,7 @@ def install(name, version=None, source=None, force=False, install_args=None,
 
     if __opts__['test']:
         ret['result'] = None
+        ret['comment'] = 'The installation was tested'
         return ret
 
     # Install the package
@@ -117,9 +116,6 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
       When this is set to False uninstall_args will be appended to the end of
       the default arguments
 
-
-
-
     .. code-block: yaml
 
       Removemypackage:
@@ -143,6 +139,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
 
     if __opts__['test']:
         ret['result'] = None
+        ret['comment'] = 'The uninstall was tested'
         return ret
 
     # Uninstall the package
