@@ -54,6 +54,7 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['clients'],
                          ['runner',
+                          'runner_async',
                           'local_async',
                           'local',
                           'local_batch']
@@ -302,6 +303,25 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         response_obj = json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)
         self.assertEqual(set(response_obj['return'][0]), set(['minion', 'sub_minion']))
+
+    # runner_async tests
+    def test_simple_local_runner_async_post(self):
+        low = [{'client': 'runner_async',
+                'fun': 'manage.up',
+                }]
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              connect_timeout=10,
+                              request_timeout=10,
+                              )
+        response_obj = json.loads(response.body)
+        self.assertIn('return', response_obj)
+        self.assertEqual(1, len(response_obj['return']))
+        self.assertIn('jid', response_obj['return'][0])
+        self.assertIn('tag', response_obj['return'][0])
 
 
 @skipIf(HAS_TORNADO is False, 'Tornado must be installed to run these tests')
