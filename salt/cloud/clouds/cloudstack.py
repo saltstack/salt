@@ -25,7 +25,6 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import pprint
 import logging
 
