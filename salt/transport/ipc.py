@@ -303,22 +303,22 @@ class IPCClient(object):
 
         while not self._closing:
             try:
-                framed_msg_len = yield self.stream.read_until(' ')
+                framed_msg_len = yield self.stream.read_until(six.b(' '))
                 framed_msg_raw = yield self.stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
+                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
                 header = framed_msg['head']
                 message_id = header.get('mid')
                 body = framed_msg['body']
 
                 if message_id is None:
-                    log.trace('Recieved subcribed message on {0}'.format(self.socket_path))
+                    log.trace('Received subscribed message on {0}'.format(self.socket_path))
                     for handler in self.subscribe_handlers:
                         self.io_loop.spawn_callback(handler, body)
                 # otherwise we have a message ID, lets handle it
                 else:
                     # if its odd, then we are getting a return for something we requested
                     if message_id % 2 == 1:
-                        log.trace('Recieved return for message_id {0} on {1}'.format(message_id, self.socket_path))
+                        log.trace('Received return for message_id {0} on {1}'.format(message_id, self.socket_path))
                         message_future = self.inflight_messages.pop(message_id)
                         self.remove_message_timeout(message_future)
                         message_future.set_result(body)
