@@ -139,8 +139,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     return params_with_headers
 
 
-def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
-         product='ec2', uri='/', requesturl=None):
+def sig4(method, endpoint, params, prov_dict,
+         aws_api_version=DEFAULT_AWS_API_VERSION, location=DEFAULT_LOCATION,
+         product='ec2', uri='/', requesturl=None, data=''):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
     Process. This is documented at:
@@ -155,7 +156,8 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     access_key_id, secret_access_key, token = creds(prov_dict)
 
     params_with_headers = params.copy()
-    params_with_headers['Version'] = aws_api_version
+    if product != 's3':
+        params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
     querystring = urlencode(list(zip(keys, values))).replace('+', '%20')
@@ -173,7 +175,7 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
 
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
-    payload_hash = hashlib.sha256('').hexdigest()
+    payload_hash = hashlib.sha256(data).hexdigest()
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
@@ -223,7 +225,8 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
 
     headers = {
         'x-amz-date': amzdate,
-        'Authorization': authorization_header
+        'x-amz-content-sha256': payload_hash,
+        'Authorization': authorization_header,
     }
 
     # Add in security token if we have one

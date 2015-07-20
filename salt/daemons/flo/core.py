@@ -249,6 +249,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         RoadStack.Bk = raeting.BodyKind.msgpack.value
         RoadStack.JoinentTimeout = 0.0
 
+    _prepare = postinitio
+
     def action(self):
         '''
         enter action
@@ -355,6 +357,8 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                     stack='stack',
                     ushers='ushers',
                     opts='.salt.opts')
+
+    _prepare = postinitio
 
     def action(self, **kwa):
         '''
@@ -631,6 +635,8 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
     def _prepare(self):
         self._load_modules()
 
+    _prepare = postinitio
+
     def action(self):
         self._load_modules()
 
@@ -762,6 +768,8 @@ class SaltSchedule(ioflo.base.deeding.Deed):
                 self.modules.value,
                 self.returners.value)
 
+    _prepare = postinitio
+
     def action(self):
         '''
         Eval the schedule
@@ -802,6 +810,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
         Set up required objects and queues
         '''
         pass
+
+    _prepare = postinitio
 
     def action(self):
         '''
@@ -1733,6 +1743,8 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
 
     def _prepare(self):
         self.master_events.value = deque()
+
+    _prepare = postinitio
 
     def action(self):
         if not self.master_events.value:
