@@ -295,12 +295,13 @@ def ip_addrs6(interface=None, include_loopback=False):
 
 ipaddrs6 = ip_addrs6
 
+
 def connect(host, port=None, **kwargs):
     '''
     Test connectivity to a host using a particular
     port from the minion.
 
-    .. versionadded:: 2014.7
+    .. versionadded:: Boron
 
     CLI Example:
 
