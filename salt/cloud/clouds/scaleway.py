@@ -272,11 +272,11 @@ def create(server_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    vm_['ssh_host'] = ip_address
-    vm_['ssh_password'] = config.get_cloud_config_value(
-        'ssh_password', vm_, __opts__
+    server_['ssh_host'] = data['public_ip']['address']
+    server_['ssh_password'] = config.get_cloud_config_value(
+        'ssh_password', server_, __opts__
     )
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    ret = salt.utils.cloud.bootstrap(server_, __opts__)
 
     ret.update(data)
 
