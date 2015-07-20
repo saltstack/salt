@@ -118,3 +118,14 @@ def format_jid_instance(jid, job):
     ret = format_job_instance(job)
     ret.update({'StartTime': jid_to_time(jid)})
     return ret
+
+
+def format_jid_instance_ext(jid, job):
+    '''
+    Format the jid correctly with jid included
+    '''
+    ret = format_job_instance(job)
+    ret.update({
+        'JID': jid,
+        'StartTime': jid_to_time(jid)})
+    return ret

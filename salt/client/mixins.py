@@ -336,12 +336,15 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except (Exception, SystemExit):
-            data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                            self.client,
-                            fun,
-                            traceback.format_exc(),
-                            )
+        except (Exception, SystemExit) as ex:
+            if isinstance(ex, salt.exceptions.NotImplemented):
+                data['return'] = str(ex)
+            else:
+                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
+                                self.client,
+                                fun,
+                                traceback.format_exc(),
+                                )
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
