@@ -134,6 +134,9 @@ def _query(function, api_key=None, api_version=None, method='GET', data=None):
     elif api_version == 'v2':
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
         data = json.dumps(data)
+
+        if method == 'POST':
+            headers['Content-Type'] = 'application/json'
     else:
         log.error('Unsupported HipChat API version')
         return False

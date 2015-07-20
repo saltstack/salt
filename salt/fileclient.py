@@ -545,10 +545,6 @@ class Client(object):
                 else:
                     return ''
         elif not no_cache:
-            if salt.utils.is_windows():
-                netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
-            else:
-                netloc = url_data.netloc
             dest = self._extrn_path(url, saltenv)
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
@@ -695,12 +691,16 @@ class Client(object):
         Return the extn_filepath for a given url
         '''
         url_data = urlparse(url)
+        if salt.utils.is_windows():
+            netloc = salt.utils.sanitize_win_path_string(url_data.netloc)
+        else:
+            netloc = url_data.netloc
 
         return salt.utils.path_join(
             self.opts['cachedir'],
             'extrn_files',
             saltenv,
-            url_data.netloc,
+            netloc,
             url_data.path
         )
 

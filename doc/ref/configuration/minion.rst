@@ -329,7 +329,7 @@ to enable set grains_cache to ``True``.
 
 .. code-block:: yaml
 
-    cache_jobs: False
+    grains_cache: False
 
 
 .. conf_minion:: sock_dir

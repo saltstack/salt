@@ -872,7 +872,8 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
+    if hash_type:
+        ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
