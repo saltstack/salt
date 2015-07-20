@@ -24,7 +24,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import copy
 import time
 import pprint
 import logging
