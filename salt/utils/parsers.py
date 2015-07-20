@@ -2463,7 +2463,15 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help='By default ssh host keys are honored and connections will '
-                 'ask for approval'
+                 'ask for approval. Use this option to disable '
+                 'StrictHostKeyChecking.'
+        )
+        auth_group.add_option(
+            '--no-host-keys',
+            dest='no_host_keys',
+            default=False,
+            action='store_true',
+            help='Removes all host key checking functionality from SSH session.'
         )
         auth_group.add_option(
             '--user',
