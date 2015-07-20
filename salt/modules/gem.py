@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Manage ruby gems.
-"""
+'''
 from __future__ import absolute_import
 
 try:
@@ -21,7 +21,7 @@ __func_alias__ = {
 
 
 def _gem(command, ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     Run the actual gem command. If rvm or rbenv is installed, run the command
     using the corresponding module. rbenv is not available on windows, so don't
     try.
@@ -38,7 +38,7 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
 
     :return:
     Returns the full standard out including success codes or False if it fails
-    """
+    '''
     cmdline = '{gem} {command}'.format(gem=gem_bin or 'gem', command=command)
 
     # If a custom gem is given, use that and don't check for rvm/rbenv. User
@@ -74,7 +74,7 @@ def install(gems,           # pylint: disable=C0103
             ri=False,
             pre_releases=False,
             proxy=None):      # pylint: disable=C0103
-    """
+    '''
     Installs one or several gems.
 
     :param gems: string
@@ -106,7 +106,7 @@ def install(gems,           # pylint: disable=C0103
         salt '*' gem.install vagrant
 
         salt '*' gem.install redphone gem_bin=/opt/sensu/embedded/bin/gem
-    """
+    '''
 
     # Check for injection
     if gems:
@@ -118,7 +118,7 @@ def install(gems,           # pylint: disable=C0103
 
     options = []
     if version:
-        version = _cmd_quote(version) # injection check
+        version = _cmd_quote(version)  # injection check
         options.append('--version {0}'.format(version))
     if not rdoc:
         options.append('--no-rdoc')
@@ -127,7 +127,7 @@ def install(gems,           # pylint: disable=C0103
     if pre_releases:
         options.append('--pre')
     if proxy:
-        proxy = _cmd_quote(proxy) # injection check
+        proxy = _cmd_quote(proxy)  # injection check
         options.append('-p {0}'.format(proxy))
 
     cmdline_args = ' '.join(options)
@@ -139,7 +139,7 @@ def install(gems,           # pylint: disable=C0103
 
 
 def uninstall(gems, ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     Uninstall one or several gems.
 
     :param gems: string
@@ -157,7 +157,8 @@ def uninstall(gems, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.uninstall vagrant
-    """
+    '''
+    # Check for injection
     if gems:
         gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
     if ruby:
@@ -172,7 +173,7 @@ def uninstall(gems, ruby=None, runas=None, gem_bin=None):
 
 
 def update(gems, ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     Update one or several gems.
 
     :param gems: string
@@ -190,7 +191,8 @@ def update(gems, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.update vagrant
-    """
+    '''
+    # Check for injection
     if gems:
         gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
     if ruby:
@@ -205,7 +207,7 @@ def update(gems, ruby=None, runas=None, gem_bin=None):
 
 
 def update_system(version='', ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     Update rubygems.
 
     :param version: string : (newest)
@@ -223,7 +225,8 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.update_system
-    """
+    '''
+    # Check for injection
     if version:
         version = _cmd_quote(version)
     if ruby:
@@ -238,7 +241,7 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
 
 
 def list_(prefix='', ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     List locally installed gems.
 
     :param prefix: string :
@@ -256,8 +259,9 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.list
-    """
+    '''
     gems = {}
+    # Check for injection
     if prefix:
         prefix = _cmd_quote(prefix)
     if ruby:
@@ -284,7 +288,7 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
 
 
 def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     Add a gem source.
 
     :param source_uri: string
@@ -302,7 +306,8 @@ def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.sources_add http://rubygems.org/
-    """
+    '''
+    # Check for injection
     if source_uri:
         source_uri = _cmd_quote(source_uri)
     if ruby:
@@ -317,7 +322,7 @@ def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
 
 
 def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     Remove a gem source.
 
     :param source_uri: string
@@ -335,7 +340,8 @@ def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.sources_remove http://rubygems.org/
-    """
+    '''
+    # Check for injection
     if source_uri:
         source_uri = _cmd_quote(source_uri)
     if ruby:
@@ -350,7 +356,7 @@ def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
 
 
 def sources_list(ruby=None, runas=None, gem_bin=None):
-    """
+    '''
     List the configured gem sources.
 
     :param gem_bin: string : None
@@ -366,7 +372,8 @@ def sources_list(ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.sources_list
-    """
+    '''
+    # Check for injection
     if ruby:
         ruby = _cmd_quote(ruby)
     if gem_bin:
