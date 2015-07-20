@@ -24,7 +24,6 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 from __future__ import absolute_import
 
-import copy
 import json
 import logging
 import pprint
