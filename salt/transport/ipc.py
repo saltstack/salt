@@ -28,6 +28,15 @@ from salt.exceptions import SaltReqTimeoutError
 # Import 3rd-party libs
 import salt.ext.six as six
 
+try:
+    MAXSIZE = sys.maxint
+except AttributeError:
+    if not six.PY3:
+        raise
+    # sys.maxint does not exist under Python 3 its integer type has no limits aside from memory.
+    # Let's default to sys.maxsize which in Python 2 equals sys.maxint
+    MAXSIZE = sys.maxsize
+
 log = logging.getLogger(__name__)
 
 
@@ -198,7 +207,7 @@ class IPCClient(object):
         self.subscribe_handlers = []
         self._mid = 1
         # TODO: move to config
-        self._max_messages = sys.maxint - 1  # number of IDs before we wrap
+        self._max_messages = MAXSIZE - 1  # number of IDs before we wrap
 
         # Maximum number of inflight messages
         self.maxflight = 5  # TODO: config
