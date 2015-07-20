@@ -270,7 +270,7 @@ def create(vm_):
     }
 
     optional_products = config.get_cloud_config_value(
-        'optional_products', vm_, __opts__, default=True
+        'optional_products', vm_, __opts__, default=[]
     )
     for product in optional_products:
         kwargs['prices'].append({'id': product})
@@ -281,9 +281,9 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': port_speed})
 
-    # Default is 248 (5000 GB Bandwidth)
+    # Default is 1800 (0 GB Bandwidth)
     bandwidth = config.get_cloud_config_value(
-        'bandwidth', vm_, __opts__, default=248
+        'bandwidth', vm_, __opts__, default=1800
     )
     kwargs['prices'].append({'id': bandwidth})
 
@@ -699,3 +699,29 @@ def show_pricing(kwargs=None, call=None):
         ret['_raw'] = raw
 
     return {profile['profile']: ret}
+
+
+def show_all_prices(call=None, kwargs=None):
+    '''
+    Return a dict of all available VM images on the cloud provider.
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
+    conn = get_conn(service='SoftLayer_Product_Package')
+    if 'code' not in kwargs:
+        return conn.getCategories(id=50)
+
+    ret = {}
+    for category in conn.getCategories(id=50):
+        if category['categoryCode'] != kwargs['code']:
+            continue
+        for group in category['groups']:
+            for price in group['prices']:
+                ret[price['id']] = price['item'].copy()
+                del ret[price['id']]['id']
+        pprint.pprint(category)
+    return ret
