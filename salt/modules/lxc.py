@@ -3203,7 +3203,7 @@ def bootstrap(name,
                 script = '/sbin/{0}_bootstrap.sh'.format(rstr)
                 cp(name, bs_, script)
                 result = run_all(name,
-                                 'sh -c "chmod +x {0};{0}"'''.format(script),
+                                 'sh -c "chmod +x {0}"'.format(script),
                                  python_shell=True)
 
                 cp(name, cfg_files['config'],
