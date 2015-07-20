@@ -22,6 +22,9 @@ from tornado.iostream import IOStream
 import salt.transport.client
 import salt.transport.frame
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -97,13 +100,16 @@ class IPCServer(object):
                 return _null
         while not stream.closed():
             try:
-                framed_msg_len = yield stream.read_until(' ')
+                framed_msg_len = yield stream.read_until(six.b(' '))
                 framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
+                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
                 body = framed_msg['body']
-                self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                self.io_loop.spawn_callback(self.payload_handler,
+                                            body,
+                                            write_callback(stream, framed_msg['head']))
             except Exception as exc:
-                log.error('Exception occurred while handling stream: {0}'.format(exc))
+                log.error('Exception occurred while handling stream: {0}'.format(exc),
+                          exc_info_on_loglevel=logging.DEBUG)
 
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
