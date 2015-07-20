@@ -440,7 +440,6 @@ class ConfigTestCase(TestCase):
         }
         self.assertDictContainsSubset(expected, Requirements4.serialize())
 
-
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_optional_requirements_config_validation(self):
         class BaseRequirements(schema.Schema):
