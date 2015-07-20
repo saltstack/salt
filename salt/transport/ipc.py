@@ -25,6 +25,9 @@ import salt.transport.frame
 import salt.utils.async
 from salt.exceptions import SaltReqTimeoutError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
@@ -105,13 +108,17 @@ class IPCServer(object):
 
         while not stream.closed():
             try:
-                framed_msg_len = yield stream.read_until(' ')
+                framed_msg_len = yield stream.read_until(six.b(' '))
                 framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
                 framed_msg = msgpack.loads(framed_msg_raw)
-                body = framed_msg['body']
-                self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                body = framed_msg[six.b('body')]
+                self.io_loop.spawn_callback(self.payload_handler,
+                                            body,
+                                            write_callback(stream, framed_msg[six.b('head')]))
             except Exception as exc:
-                log.error('Exception occurred while handling stream: {0}'.format(exc))
+                log.exception(exc)
+                log.error('Exception occurred while handling stream: {0}'.format(exc),
+                          exc_info_on_loglevel=logging.DEBUG)
 
         self.clients.remove(stream)
 
