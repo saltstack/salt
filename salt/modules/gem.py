@@ -1,18 +1,47 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Manage ruby gems.
-'''
+"""
 from __future__ import absolute_import
+import logging
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import python libs
 import re
+
+# Import salt libs
+import salt.utils
 
 __func_alias__ = {
     'list_': 'list'
 }
 
+log = logging.getLogger(__name__)
+
 
 def _gem(command, ruby=None, runas=None, gem_bin=None):
+    """
+    Run the actual gem command. If rvm or rbenv is installed, run the command
+    using the corresponding module. rbenv is not available on windows, so don't
+    try.
+
+    :param command: string
+    Command to run
+    :param ruby: string : None
+    If RVM or rbenv are installed, the ruby version and gemset to use.
+    Ignored if ``gem_bin`` is specified.
+    :param runas: string : None
+    The user to run gem as.
+    :param gem_bin: string : None
+    Full path to the ``gem`` binary
+
+    :return:
+    Returns the full standard out including success codes or False if it fails
+    """
     cmdline = '{gem} {command}'.format(gem=gem_bin or 'gem', command=command)
 
     # If a custom gem is given, use that and don't check for rvm/rbenv. User
@@ -21,7 +50,7 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
         if __salt__['rvm.is_installed'](runas=runas):
             return __salt__['rvm.do'](ruby, cmdline, runas=runas)
 
-        if __salt__['rbenv.is_installed'](runas=runas):
+        if not salt.utils.is_windows() and __salt__['rbenv.is_installed'](runas=runas):
             if ruby is None:
                 return __salt__['rbenv.do'](cmdline, runas=runas)
             else:
@@ -30,7 +59,7 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
     ret = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
-        python_shell=False
+        python_shell=True
         )
 
     if ret['retcode'] == 0:
@@ -48,28 +77,28 @@ def install(gems,           # pylint: disable=C0103
             ri=False,
             pre_releases=False,
             proxy=None):      # pylint: disable=C0103
-    '''
+    """
     Installs one or several gems.
 
-    gems
+    :param gems: string
         The gems to install
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
-    version : None
+    :param version: string : None
         Specify the version to install for the gem.
         Doesn't play nice with multiple gems at once
-    rdoc : False
+    :param rdoc: boolean : False
         Generate RDoc documentation for the gem(s).
-    ri : False
+    :param ri: boolean : False
         Generate RI documentation for the gem(s).
-    pre_releases
+    :param pre_releases: boolean : False
         Include pre-releases in the available versions
-    proxy : None
+    :param proxy: string : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
 
@@ -80,9 +109,19 @@ def install(gems,           # pylint: disable=C0103
         salt '*' gem.install vagrant
 
         salt '*' gem.install redphone gem_bin=/opt/sensu/embedded/bin/gem
-    '''
+    """
+
+    # Check for injection
+    if gems:
+        gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     options = []
     if version:
+        version = _cmd_quote(version) # injection check
         options.append('--version {0}'.format(version))
     if not rdoc:
         options.append('--no-rdoc')
@@ -91,6 +130,7 @@ def install(gems,           # pylint: disable=C0103
     if pre_releases:
         options.append('--pre')
     if proxy:
+        proxy = _cmd_quote(proxy) # injection check
         options.append('-p {0}'.format(proxy))
 
     cmdline_args = ' '.join(options)
@@ -102,17 +142,17 @@ def install(gems,           # pylint: disable=C0103
 
 
 def uninstall(gems, ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     Uninstall one or several gems.
 
-    gems
+    :param gems: string
         The gems to uninstall.
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -120,25 +160,32 @@ def uninstall(gems, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.uninstall vagrant
-    '''
-    return _gem('uninstall {gems}'.format(gems=gems),
+    """
+    if gems:
+        gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
+    return _gem('uninstall {gems} -a -x'.format(gems=gems),
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
 
 
 def update(gems, ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     Update one or several gems.
 
-    gems
+    :param gems: string
         The gems to update.
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -146,7 +193,14 @@ def update(gems, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.update vagrant
-    '''
+    """
+    if gems:
+        gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     return _gem('update {gems}'.format(gems=gems),
                 ruby,
                 gem_bin=gem_bin,
@@ -154,17 +208,17 @@ def update(gems, ruby=None, runas=None, gem_bin=None):
 
 
 def update_system(version='', ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     Update rubygems.
 
-    version : (newest)
+    :param version: string : (newest)
         The version of rubygems to install.
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -172,7 +226,14 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.update_system
-    '''
+    """
+    if version:
+        version = _cmd_quote(version)
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     return _gem('update --system {version}'.format(version=version),
                 ruby,
                 gem_bin=gem_bin,
@@ -180,17 +241,17 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
 
 
 def list_(prefix='', ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     List locally installed gems.
 
-    prefix :
+    :param prefix: string :
         Only list gems when the name matches this prefix.
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -198,12 +259,20 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.list
-    '''
+    """
     gems = {}
+    if prefix:
+        prefix = _cmd_quote(prefix)
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     stdout = _gem('list {prefix}'.format(prefix=prefix),
                   ruby,
                   gem_bin=gem_bin,
                   runas=runas)
+
     lines = []
     if isinstance(stdout, str):
         lines = stdout.splitlines()
@@ -213,21 +282,22 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
             gem = match.group(1)
             versions = match.group(2).split(', ')
             gems[gem] = versions
+
     return gems
 
 
 def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     Add a gem source.
 
-    source_uri
+    :param source_uri: string
         The source URI to add.
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -235,7 +305,14 @@ def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.sources_add http://rubygems.org/
-    '''
+    """
+    if source_uri:
+        source_uri = _cmd_quote(source_uri)
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     return _gem('sources --add {source_uri}'.format(source_uri=source_uri),
                 ruby,
                 gem_bin=gem_bin,
@@ -243,17 +320,17 @@ def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
 
 
 def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     Remove a gem source.
 
-    source_uri
+    :param source_uri: string
         The source URI to remove.
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -261,7 +338,14 @@ def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.sources_remove http://rubygems.org/
-    '''
+    """
+    if source_uri:
+        source_uri = _cmd_quote(source_uri)
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     return _gem('sources --remove {source_uri}'.format(source_uri=source_uri),
                 ruby,
                 gem_bin=gem_bin,
@@ -269,15 +353,15 @@ def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
 
 
 def sources_list(ruby=None, runas=None, gem_bin=None):
-    '''
+    """
     List the configured gem sources.
 
-    gem_bin : None
+    :param gem_bin: string : None
         Full path to ``gem`` binary to use.
-    ruby : None
+    :param ruby: string : None
         If RVM or rbenv are installed, the ruby version and gemset to use.
         Ignored if ``gem_bin`` is specified.
-    runas : None
+    :param runas: string : None
         The user to run gem as.
 
     CLI Example:
@@ -285,6 +369,11 @@ def sources_list(ruby=None, runas=None, gem_bin=None):
     .. code-block:: bash
 
         salt '*' gem.sources_list
-    '''
+    """
+    if ruby:
+        ruby = _cmd_quote(ruby)
+    if gem_bin:
+        gem_bin = _cmd_quote(gem_bin)
+
     ret = _gem('sources', ruby, gem_bin=gem_bin, runas=runas)
     return [] if ret is False else ret.splitlines()[2:]
