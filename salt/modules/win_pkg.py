@@ -646,7 +646,7 @@ def _get_name_map():
     u_name_map = {}
     name_map = get_repo_data().get('name_map', {})
     for k in name_map.keys():
-            u_name_map[salt.utils.sdecode(k)] = name_map[k]
+        u_name_map[salt.utils.sdecode(k)] = name_map[k]
     return u_name_map
 
 
