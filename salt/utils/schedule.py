@@ -189,18 +189,16 @@ The default for maxrunning is 1.
           jid_include: True
           maxrunning: 1
 
-By default, data about jobs runs from the Salt scheduler is not returned to the
-master.  Because of this information for these jobs will not be listed in the
-:py:func:`jobs.list_jobs <salt.runners.jobs.list_jobs>` runner.  The
-``return_job`` parameter will return the data back to the Salt master, making
-the job available in this list.
+By default, data about jobs runs from the Salt scheduler is returned to the
+master.  Setting the ``return_job`` parameter to False will prevent the data
+from being sent back to the Salt master.
 
 .. versionadded:: 2015.5.0
 
     schedule:
       job1:
           function: scheduled_job_function
-          return_job: True
+          return_job: False
 
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
@@ -564,7 +562,9 @@ class Schedule(object):
                             )
                         )
 
-            if 'return_job' in data and data['return_job']:
+            if 'return_job' in data and not data['return_job']:
+                pass
+            else:
                 # Send back to master so the job is included in the job list
                 mret = ret.copy()
                 mret['jid'] = 'req'
