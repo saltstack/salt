@@ -782,11 +782,13 @@ class Single(object):
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
-            retcode = opts_pkg['retcode']
+
+            retcode = 0
 
             if '_error' in opts_pkg:
                 # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
+                retcode = opts_pkg['retcode']
                 return ret, retcode
 
             pillar = salt.pillar.Pillar(
@@ -857,8 +859,10 @@ class Single(object):
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+            retcode = 1
         except Exception as exc:
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
+            retcode = 1
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and 'local' in result:
