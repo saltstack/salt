@@ -384,7 +384,7 @@ class Master(SMaster):
         if salt.utils.is_windows() and self.opts['user'] == 'root':
             # 'root' doesn't typically exist on Windows. Use the current user
             # home directory instead.
-            home = os.path.expanduser('~' + salt.utils.get_user())
+            home = os.path.expanduser('~')
         else:
             home = os.path.expanduser('~' + self.opts['user'])
         try:
