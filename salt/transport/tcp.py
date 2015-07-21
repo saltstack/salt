@@ -609,7 +609,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         pub_server.listen(int(self.opts['publish_port']), address=self.opts['interface'])
 
         # Set up Salt IPC server
-        pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        pull_uri = 'ipc://{0}'.format(os.path.join(self.opts['sock_dir'], 'publish_pull.ipc'))
         pull_sock = salt.transport.ipc.IPCMessageServer(
             pull_uri,
             io_loop=self.io_loop,
@@ -648,7 +648,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             log.debug("Signing data packet")
             payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
         # Use the Salt IPC server
-        pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        pull_uri = 'ipc://{0}'.format(os.path.join(self.opts['sock_dir'], 'publish_pull.ipc'))
         # TODO: switch to the actual async interface
         #pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.async.SyncWrapper(

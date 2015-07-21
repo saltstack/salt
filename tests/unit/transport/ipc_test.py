@@ -40,9 +40,10 @@ class BaseIPCCase(tornado.testing.AsyncTestCase):
         super(BaseIPCCase, self).setUp()
         self._start_handlers = dict(self.io_loop._handlers)
         self.socket_path = os.path.join(integration.TMP, 'ipc_test.ipc')
+        self.ipc_url = 'ipc://{0}'.format(self.socket_path)
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
-            self.socket_path,
+            self.ipc_url,
             io_loop=self.io_loop,
             payload_handler=self._handle_payload,
         )
@@ -77,7 +78,7 @@ class IPCClientSendTests(BaseIPCCase):
     '''
     def _get_channel(self):
         channel = salt.transport.ipc.IPCClient(
-            socket_path=self.socket_path,
+            ipc_url=self.ipc_url,
             io_loop=self.io_loop,
         )
         channel.connect(callback=self.stop)
@@ -175,7 +176,7 @@ class IPCClientSubscribeTests(BaseIPCCase):
     '''
     def _get_channel(self):
         channel = salt.transport.ipc.IPCClient(
-            socket_path=self.socket_path,
+            ipc_url=self.ipc_url,
             io_loop=self.io_loop,
         )
         channel.connect(callback=self.stop)
@@ -283,7 +284,7 @@ class IPCClientPublishTests(BaseIPCCase):
     '''
     def _get_channel(self):
         channel = salt.transport.ipc.IPCClient(
-            socket_path=self.socket_path,
+            ipc_url=self.ipc_url,
             io_loop=self.io_loop,
         )
         channel.connect(callback=self.stop)

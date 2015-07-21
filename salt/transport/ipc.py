@@ -9,6 +9,7 @@ import logging
 import socket
 import sys
 import msgpack
+import urlparse
 import weakref
 
 # Import Tornado libs
@@ -45,15 +46,17 @@ class IPCServer(object):
     A Tornado IPC server very similar to Tornado's TCPServer class
     but using either UNIX domain sockets or TCP sockets
     '''
-    def __init__(self, socket_path, io_loop=None, payload_handler=None):
+    def __init__(self, ipc_url, io_loop=None, payload_handler=None):
         '''
         Create a new Tornado IPC server
 
+        :param str ipc_url: A URL that defines where the ipc socket is
         :param IOLoop io_loop: A Tornado ioloop to handle scheduling
-        :param func stream_handler: A function to customize handling of an
-                                    incoming stream.
+        :param func payload_handler: A function to handle incoming payloads which
+                                        will be called with `payload` and a return func
         '''
-        self.socket_path = socket_path
+        self.ipc_url = ipc_url
+        self.ipc_url_parsed = urlparse.urlparse(self.ipc_url)
         self._started = False
         self.payload_handler = payload_handler
 
@@ -69,14 +72,15 @@ class IPCServer(object):
         Perform the work necessary to start up a Tornado IPC server
 
         Blocks until socket is established
-
-        :param str socket_path: Path on the filesystem for the socket to bind to.
-                                This socket does not need to exist prior to calling
-                                this method, but parent directories should.
         '''
         # Start up the ioloop
-        log.trace('IPCServer: binding to socket: {0}'.format(self.socket_path))
-        self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+        log.trace('IPCServer: binding to socket: {0}'.format(self.ipc_url))
+        if self.ipc_url_parsed.scheme == 'ipc':
+            self.sock = tornado.netutil.bind_unix_socket(self.ipc_url_parsed.path)
+        elif self.ipc_url_parsed.scheme == 'tcp':
+            self.sock = tornado.netutil.bind_socket(self.ipc_url_parsed.netloc)
+        else:
+            raise Exception('IPC {0} not supported'.format(self.ipc_url_parsed.scheme))
 
         tornado.netutil.add_accept_handler(
             self.sock,
@@ -85,6 +89,7 @@ class IPCServer(object):
         )
         self._started = True
 
+    # TODO: HWMs? or queues
     def publish(self, msg):
         '''
         Publish a `msg` to all connected clients
@@ -167,34 +172,32 @@ class IPCClient(object):
     This was written because Tornado does not have its own IPC
     server/client implementation.
 
+    :param str ipc_url: A URL that defines where the ipc socket is
     :param IOLoop io_loop: A Tornado ioloop to handle scheduling
-    :param str socket_path: A path on the filesystem where a socket
-                            belonging to a running IPCServer can be
-                            found.
     '''
 
     # Create singleton map between two sockets
     instance_map = weakref.WeakKeyDictionary()
 
-    def __new__(cls, socket_path, io_loop=None):
+    def __new__(cls, ipc_url, io_loop=None):
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
         if io_loop not in IPCClient.instance_map:
             IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = IPCClient.instance_map[io_loop]
 
         # FIXME
-        key = socket_path
+        key = ipc_url
 
         if key not in loop_instance_map:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
             new_client = object.__new__(cls)
-            new_client.__singleton_init__(io_loop=io_loop, socket_path=socket_path)
+            new_client.__singleton_init__(io_loop=io_loop, ipc_url=ipc_url)
             loop_instance_map[key] = new_client
         else:
             log.debug('Re-using IPCClient for {0}'.format(key))
         return loop_instance_map[key]
 
-    def __singleton_init__(self, socket_path, io_loop=None):
+    def __singleton_init__(self, ipc_url, io_loop=None):
         '''
         Create a new IPC client
 
@@ -204,7 +207,8 @@ class IPCClient(object):
 
         '''
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
-        self.socket_path = socket_path
+        self.ipc_url = ipc_url
+        self.ipc_url_parsed = urlparse.urlparse(self.ipc_url)
         self._closing = False
 
         self.subscribe_handlers = []
@@ -241,7 +245,7 @@ class IPCClient(object):
 
         return self._mid
 
-    def __init__(self, socket_path, io_loop=None):
+    def __init__(self, ipc_url, io_loop=None):
         # Handled by singleton __new__
         pass
 
@@ -271,20 +275,31 @@ class IPCClient(object):
         '''
         Connect to a running IPCServer
         '''
-        self.stream = IOStream(
-            socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
-            io_loop=self.io_loop,
-        )
         while True:
             if self._closing:
                 break
             try:
-                log.trace('IPCClient: Connecting to socket: {0}'.format(self.socket_path))
-                yield self.stream.connect(self.socket_path)
+                log.trace('IPCClient: Connecting to socket: {0}'.format(self.ipc_url))
+                if self.ipc_url_parsed.scheme == 'ipc':
+                    self.stream = IOStream(
+                        socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
+                        io_loop=self.io_loop,
+                    )
+                    yield self.stream.connect(self.ipc_url_parsed.path)
+                elif self.ipc_url_parsed.scheme == 'tcp':
+                    self.stream = IOStream(
+                        socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+                        io_loop=self.io_loop,
+                    )
+                    yield self.stream.connect(self.ipc_url_parsed.netloc)
+                else:
+                    raise Exception('IPC {0} not supported'.format(self.ipc_url_parsed.scheme))
+
                 self.io_loop.spawn_callback(self._handle_incoming)
                 self._connecting_future.set_result(True)
                 break
             except Exception as exc:
+                log.critical('foo', exc_info=True)
                 yield tornado.gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(exc)
 
@@ -314,14 +329,14 @@ class IPCClient(object):
                 body = framed_msg['body']
 
                 if message_id is None:
-                    log.trace('Received subscribed message on {0}'.format(self.socket_path))
+                    log.trace('Received subscribed message on {0}'.format(self.ipc_url))
                     for handler in self.subscribe_handlers:
                         self.io_loop.spawn_callback(handler, body)
                 # otherwise we have a message ID, lets handle it
                 else:
                     # if its odd, then we are getting a return for something we requested
                     if message_id % 2 == 1:
-                        log.trace('Received return for message_id {0} on {1}'.format(message_id, self.socket_path))
+                        log.trace('Received return for message_id {0} on {1}'.format(message_id, self.ipc_url))
                         message_future = self.inflight_messages.pop(message_id)
                         self.remove_message_timeout(message_future)
                         message_future.set_result(body)
@@ -333,7 +348,7 @@ class IPCClient(object):
                         pass
 
             except tornado.iostream.StreamClosedError:
-                log.debug('IPC stream to {0} closed, unable to recv'.format(self.socket_path))
+                log.debug('IPC stream to {0} closed, unable to recv'.format(self.ipc_url))
                 yield self.connect()
             except Exception:
                 log.error('Exception parsing response', exc_info=True)
@@ -348,7 +363,7 @@ class IPCClient(object):
         while len(self.send_queue) > 0 and not self._closing:
             # if there are too many outgoing, lets wait until one finishes
             if len(self.inflight_messages) >= self.maxflight:
-                log.trace('IPC socket {0} has too many messages inflight, waiting...'.format(self.socket_path))
+                log.trace('IPC socket {0} has too many messages inflight, waiting...'.format(self.ipc_url))
                 yield salt.utils.async.Any(self.inflight_messages.itervalues())
             if not self.connected():
                 yield self.connect()
@@ -532,9 +547,9 @@ class IPCMessageClient(IPCClient):
 
     io_loop = tornado.ioloop.IOLoop.current()
 
-    ipc_server_socket_path = '/var/run/ipc_server.ipc'
+    ipc_server_url = 'ipc:///var/run/ipc_server.ipc'
 
-    ipc_client = salt.transport.ipc.IPCMessageClient(ipc_server_socket_path, io_loop=io_loop)
+    ipc_client = salt.transport.ipc.IPCMessageClient(ipc_server_url, io_loop=io_loop)
 
     # Connect to the server
     ipc_client.connect()
@@ -556,6 +571,7 @@ class IPCMessageServer(IPCServer):
 
         # Import Tornado libs
         import tornado.ioloop
+        import tornado.gen
 
         # Import Salt libs
         import salt.transport.ipc
@@ -564,18 +580,23 @@ class IPCMessageServer(IPCServer):
         opts = salt.config.master_opts()
 
         io_loop = tornado.ioloop.IOLoop.current()
-        ipc_server_socket_path = '/var/run/ipc_server.ipc'
-        ipc_server = salt.transport.ipc.IPCMessageServer(opts, io_loop=io_loop
-                                                         stream_handler=print_to_console)
+        ipc_server_url = 'ipc:///var/run/ipc_server.ipc'
+        ipc_server = salt.transport.ipc.IPCMessageServer(
+            ipc_server_url,
+            io_loop=io_loop
+            stream_handler=print_to_console,
+        )
         # Bind to the socket and prepare to run
-        ipc_server.start(ipc_server_socket_path)
+        ipc_server.start()
 
         # Start the server
         io_loop.start()
 
         # This callback is run whenever a message is received
-        def print_to_console(payload):
+        @tornado.gen.coroutine
+        def print_to_console(payload, reply_func):
             print(payload)
+            yield reply_func('Return something to the caller')
 
     See IPCMessageClient() for an example of sending messages to an IPCMessageServer instance
     '''
