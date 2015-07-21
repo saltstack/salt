@@ -41,6 +41,7 @@ from salt.exceptions import (
     SaltCloudNotFound,
     SaltCloudSystemExit
 )
+from salt.utils import is_true
 
 # Import Salt Cloud Libs
 import salt.utils.cloud
@@ -245,6 +246,35 @@ def get_image(vm_):
     )
 
 
+def get_image_id(kwargs=None, call=None):
+    '''
+    Returns an image's ID from the given image name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_image_id opennebula name=my-image-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_image_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_image_id function requires a name.'
+        )
+
+    return _list_images()[name]['id']
+
+
 def get_location(vm_):
     '''
     Return the VM's location.
@@ -285,28 +315,15 @@ def get_secgroup_id(kwargs=None, call=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The list_nodes_full function must be called with -f or --function.'
+            'The get_secgroup_id function must be called with -f or --function.'
         )
 
     if kwargs is None:
         kwargs = {}
 
     name = kwargs.get('name', None)
-    server = kwargs.get('server', None)
-    user = kwargs.get('user', None)
-    password = kwargs.get('password', None)
 
-    secgroup_id = _list_security_groups(
-        server=server,
-        user=user,
-        password=password)[name]['id']
-
-    data = {
-        'secgroup_name': name,
-        'secgroup_id': secgroup_id
-    }
-
-    return data
+    return _list_security_groups()[name]['id']
 
 
 def get_template_id(kwargs=None, call=None):
@@ -330,23 +347,13 @@ def get_template_id(kwargs=None, call=None):
         kwargs = {}
 
     name = kwargs.get('name', None)
-    server = kwargs.get('server', None)
-    user = kwargs.get('user', None)
-    password = kwargs.get('password', None)
 
     if name is None:
         raise SaltCloudSystemExit(
             'The get_template_id function requires a name.'
         )
 
-    template_id = _get_template(name, server=server, user=user, password=password)['id']
-
-    data = {
-        'template_name': name,
-        'template_id': template_id
-    }
-
-    return data
+    return _get_template(name)['id']
 
 
 def create(vm_):
@@ -657,6 +664,229 @@ def destroy(name, call=None):
     return data
 
 
+def image_clone(call=None, kwargs=None):
+    '''
+    Clones an existing image.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the new image.
+
+    image_id
+        The ID of the image to be cloned.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_clone opennebula name=my-new-image image_id=10
+
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_clone function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    image_id = kwargs.get('image_id', None)
+
+    if not name or not image_id:
+        raise SaltCloudSystemExit(
+            'The image_clone function requires a name and an image_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    response = server.one.image.clone(auth, int(image_id), name)
+
+    data = {
+        'action': 'image.clone',
+        'cloned': response[0],
+        'cloned_image_id': response[1],
+        'cloned_image_name': name,
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def image_delete(call=None, kwargs=None):
+    '''
+    Deletes the given image from OpenNebula. Either a name or an image_id must
+    be supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the image to delete.
+
+    image_id
+        The ID of the image to delete.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_delete opennebula name=my-image
+        salt-cloud --function image_delete opennebula image_id=100
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    image_id = kwargs.get('image_id', None)
+
+    if not name and not image_id:
+        raise SaltCloudSystemExit(
+            'The image_delete function requires a name or an image_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not image_id:
+        image_id = get_image_id(kwargs={'name': name})
+
+    response = server.one.image.delete(auth, int(image_id))
+
+    data = {
+        'action': 'image.delete',
+        'deleted': response[0],
+        'image_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def image_info(call=None, kwargs=None):
+    '''
+    Retrieves information for a given image. Either a name or an image_id must be
+    supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the image for which to gather information.
+
+    template_id
+        The ID of the image for which to gather information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_info opennebula name=my-image
+        salt-cloud --function image_info opennebula image_id=5
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_info function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    image_id = kwargs.get('image_id', None)
+
+    if not name and not image_id:
+        raise SaltCloudSystemExit(
+            'The image_info function requires either a name or an image_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not image_id:
+        image_id = get_image_id(kwargs={'name': name})
+
+    info = {}
+    response = server.one.image.info(auth, int(image_id))[1]
+    tree = etree.XML(response)
+    info[tree.find('NAME').text] = _xml_to_dict(tree)
+
+    return info
+
+
+def image_persistent(call=None, kwargs=None):
+    '''
+    Sets the Image as persistent or not persistent.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the image to set.
+
+    persist
+        A boolean value to set the image as persistent or not. Set to true
+        for persistent, false for non-persisent.
+
+    template_id
+        The ID of the image to set.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_persistent opennebula name=my-image
+        salt-cloud --function image_persistent opennebula image_id=5
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_persistent function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    persist = kwargs.get('persist', None)
+    image_id = kwargs.get('image_id', None)
+
+    if not name and not image_id:
+        raise SaltCloudSystemExit(
+            'The image_persistent function requires either a name or an image_id '
+            'to be provided.'
+        )
+
+    if not persist:
+        raise SaltCloudSystemExit(
+            'The image_persistent function requires \'persist\' to be set to \'True\' '
+            'or \'False\'.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not image_id:
+        image_id = get_image_id(kwargs={'name': name})
+
+    response = server.one.image.persistent(auth, int(image_id), is_true(persist))
+
+    data = {
+        'action': 'image.persistent',
+        'response': response[0],
+        'image_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def script(vm_):
     '''
     Return the script deployment object.
@@ -798,20 +1028,14 @@ def secgroup_delete(call=None, kwargs=None):
     auth = ':'.join([user, password])
 
     if name and not secgroup_id:
-        kwargs = {
-            'name': name,
-            'server': server,
-            'user': user,
-            'password': password
-        }
-        secgroup_id = get_secgroup_id(kwargs)
+        secgroup_id = get_secgroup_id(kwargs={'name': name})
 
     response = server.one.secgroup.delete(auth, int(secgroup_id))
 
     data = {
         'action': 'secgroup.delete',
         'deleted': response[0],
-        'template_id': response[1],
+        'secgroup_id': response[1],
         'error_code': response[2],
     }
 
@@ -858,13 +1082,7 @@ def secgroup_info(call=None, kwargs=None):
     auth = ':'.join([user, password])
 
     if name and not secgroup_id:
-        kwargs = {
-            'name': name,
-            'server': server,
-            'user': user,
-            'password': password
-        }
-        secgroup_id = get_secgroup_id(kwargs)
+        secgroup_id = get_secgroup_id(kwargs={'name': name})
 
     info = {}
     response = server.one.secgroup.info(auth, int(secgroup_id))[1]
@@ -974,14 +1192,8 @@ def template_delete(call=None, kwargs=None):
                                   user=user,
                                   password=password)
 
-    if name:
-        kwargs = {
-            'name': name,
-            'server': server,
-            'user': user,
-            'password': password
-        }
-        template_id = get_template_id(kwargs)
+    if name and not template_id:
+        template_id = get_template_id(kwargs={'name': name})
 
     response = server.one.template.delete(auth, int(template_id))
 
@@ -1195,6 +1407,23 @@ def _list_nodes(full=False):
             vms[vm.find('NAME').text] = _xml_to_dict(vm)
 
     return vms
+
+
+def _list_images(server=None, user=None, password=None):
+    '''
+    Lists all images available to the user and the user's groups.
+    '''
+    if not server or not user or not password:
+        server, user, password = _get_xml_rpc()
+
+    auth = ':'.join([user, password])
+    image_pool = server.one.imagepool.info(auth, -1, -1, -1)[1]
+
+    images = {}
+    for image in etree.XML(image_pool):
+        images[image.find('NAME').text] = _xml_to_dict(image)
+
+    return images
 
 
 def _list_security_groups(server=None, user=None, password=None):
