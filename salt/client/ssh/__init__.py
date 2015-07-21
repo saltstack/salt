@@ -533,8 +533,12 @@ class SSH(object):
         final_exit = 0
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
-            host_ret = ret[host].get('retcode', 0)
-            if host_ret != 0:
+            if isinstance(ret[host], dict):
+                host_ret = ret[host].get('retcode', 0)
+                if host_ret != 0:
+                    final_exit = 1
+            else:
+                # Error on host
                 final_exit = 1
 
             self.cache_job(jid, host, ret[host], fun)
