@@ -618,17 +618,17 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         service_url=service_url,
                         verify_ssl=verify_ssl,
                         path=_quote(path),
-                        local_file=cached_file_path
+                        local_file=cached_file_path,
+                        full_headers=True
                     )
                     if ret is not None:
-                        for header in ret['headers']:
-                            name, value = header.split(':', 1)
-                            name = name.strip()
-                            value = value.strip()
-                            if name == 'Last-Modified':
+                        for header_name, header_value in ret['headers'].items():
+                            name = header_name.strip()
+                            value = header_value.strip()
+                            if name == 'Last-Modified'.lower():
                                 s3_file_mtime = datetime.datetime.strptime(
                                     value, '%a, %d %b %Y %H:%M:%S %Z')
-                            elif name == 'Content-Length':
+                            elif name == 'Content-Length'.lower():
                                 s3_file_size = int(value)
                         if (cached_file_size == s3_file_size and
                                 cached_file_mtime > s3_file_mtime):
