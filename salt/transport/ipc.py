@@ -25,6 +25,18 @@ import salt.transport.frame
 import salt.utils.async
 from salt.exceptions import SaltReqTimeoutError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+try:
+    MAXSIZE = sys.maxint
+except AttributeError:
+    if not six.PY3:
+        raise
+    # sys.maxint does not exist under Python 3 its integer type has no limits aside from memory.
+    # Let's default to sys.maxsize which in Python 2 equals sys.maxint
+    MAXSIZE = sys.maxsize
+
 log = logging.getLogger(__name__)
 
 
@@ -82,8 +94,8 @@ class IPCServer(object):
         for client in self.clients:
             try:
                 # Don't wait on the future, best effort only
-                f = client.write(payload)
-                self.io_loop.add_future(f, lambda f: True)
+                future = client.write(payload)
+                self.io_loop.add_future(future, lambda future: True)
             except tornado.iostream.StreamClosedError:
                 to_remove.append(client)
         for client in to_remove:
@@ -105,13 +117,16 @@ class IPCServer(object):
 
         while not stream.closed():
             try:
-                framed_msg_len = yield stream.read_until(' ')
+                framed_msg_len = yield stream.read_until(six.b(' '))
                 framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
+                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
                 body = framed_msg['body']
-                self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                self.io_loop.spawn_callback(self.payload_handler,
+                                            body,
+                                            write_callback(stream, framed_msg['head']))
             except Exception as exc:
-                log.error('Exception occurred while handling stream: {0}'.format(exc))
+                log.error('Exception occurred while handling stream: {0}'.format(exc),
+                          exc_info_on_loglevel=logging.DEBUG)
 
         self.clients.remove(stream)
 
@@ -192,7 +207,7 @@ class IPCClient(object):
         self.subscribe_handlers = []
         self._mid = 1
         # TODO: move to config
-        self._max_messages = sys.maxint - 1  # number of IDs before we wrap
+        self._max_messages = MAXSIZE - 1  # number of IDs before we wrap
 
         # Maximum number of inflight messages
         self.maxflight = 5  # TODO: config
@@ -266,14 +281,14 @@ class IPCClient(object):
                 self.io_loop.spawn_callback(self._handle_incoming)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as e:
+            except Exception as exc:
                 yield tornado.gen.sleep(1)  # TODO: backoff
-                #self._connecting_future.set_exception(e)
+                #self._connecting_future.set_exception(exc)
 
     @tornado.gen.coroutine
     def _handle_incoming(self):
         '''
-        Coroutine responsible for handling all incoming data and disbatching it
+        Coroutine responsible for handling all incoming data and dispatching it
         appropriately
 
         - msg incoming with no message_id -- subscribe
@@ -288,22 +303,22 @@ class IPCClient(object):
 
         while not self._closing:
             try:
-                framed_msg_len = yield self.stream.read_until(' ')
+                framed_msg_len = yield self.stream.read_until(six.b(' '))
                 framed_msg_raw = yield self.stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
+                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
                 header = framed_msg['head']
                 message_id = header.get('mid')
                 body = framed_msg['body']
 
                 if message_id is None:
-                    log.trace('Recieved subcribed message on {0}'.format(self.socket_path))
+                    log.trace('Received subscribed message on {0}'.format(self.socket_path))
                     for handler in self.subscribe_handlers:
                         self.io_loop.spawn_callback(handler, body)
                 # otherwise we have a message ID, lets handle it
                 else:
                     # if its odd, then we are getting a return for something we requested
                     if message_id % 2 == 1:
-                        log.trace('Recieved return for message_id {0} on {1}'.format(message_id, self.socket_path))
+                        log.trace('Received return for message_id {0} on {1}'.format(message_id, self.socket_path))
                         message_future = self.inflight_messages.pop(message_id)
                         self.remove_message_timeout(message_future)
                         message_future.set_result(body)
@@ -314,10 +329,10 @@ class IPCClient(object):
                         #ret_func = write_callback(self.stream, header)
                         pass
 
-            except tornado.iostream.StreamClosedError as e:
+            except tornado.iostream.StreamClosedError:
                 log.debug('IPC stream to {0} closed, unable to recv'.format(self.socket_path))
                 yield self.connect()
-            except Exception as e:
+            except Exception:
                 log.error('Exception parsing response', exc_info=True)
                 self.disconnect()
                 raise tornado.gen.Return()
@@ -359,7 +374,7 @@ class IPCClient(object):
 
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
-            except tornado.iostream.StreamClosedError as e:
+            except tornado.iostream.StreamClosedError as exc:
                 self.inflight_messages.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_future)
                 # if the last connect finished, then we need to make a new one
