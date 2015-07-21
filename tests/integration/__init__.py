@@ -522,7 +522,7 @@ class TestDaemon(object):
             master_opts['transport'] = 'tcp'
             minion_opts['transport'] = 'tcp'
             sub_minion_opts['transport'] = 'tcp'
-            # syndic_master_opts['transport'] = 'raet'
+            syndic_master_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = {
