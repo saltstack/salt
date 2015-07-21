@@ -421,6 +421,9 @@ class IPCClient(object):
         self.send_queue.append(future)
         return future
 
+    # TODO: don't go through the regular queue. Right now if maxflight messages
+    # are out and we do a publish it won't go until one of those other messages
+    # completes
     def publish(self, msg, timeout=None, callback=None):
         '''
         Publish a message (send without expecting a response. Return a future
