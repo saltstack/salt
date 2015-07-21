@@ -34,7 +34,7 @@ import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
 import salt.utils.jid
-from salt.pillar import  git_pillar
+from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
