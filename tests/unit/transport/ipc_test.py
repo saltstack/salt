@@ -276,6 +276,52 @@ class IPCClientSubscribeTests(BaseIPCCase):
         self.assertEqual(self.payloads, [msg])
         self.assertEqual(local_payloads, [msg])
 
+
+class IPCClientPublishTests(BaseIPCCase):
+    '''
+    Test for the IPCClient
+    '''
+    def _get_channel(self):
+        channel = salt.transport.ipc.IPCClient(
+            socket_path=self.socket_path,
+            io_loop=self.io_loop,
+        )
+        channel.connect(callback=self.stop)
+        self.wait()
+        return channel
+
+    def setUp(self):
+        super(IPCClientPublishTests, self).setUp()
+        self.channel = self._get_channel()
+
+    def tearDown(self):
+        super(IPCClientPublishTests, self).setUp()
+        self.channel.close()
+
+    def test_basic(self):
+        self.channel.publish({'stop': True})
+        self.wait()
+        self.assertEqual({'stop': True}, self.payloads[0])
+
+    def test_many_publish(self):
+        msgs = []
+        for i in range(0, 1000):
+            msgs.append('test_many_send_{0}'.format(i))
+
+        for i in msgs:
+            self.channel.publish(i)
+        self.channel.publish({'stop': True})
+        self.wait()
+        self.assertEqual(self.payloads[:-1], msgs)
+
+    def test_very_big_message(self):
+        long_str = ''.join([str(num) for num in range(10**5)])
+        msg = {'long_str': long_str, 'stop': True}
+        self.channel.publish(msg)
+        self.wait()
+        self.assertEqual(msg, self.payloads[0])
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(IPCClientSendTests, needs_daemon=False)
