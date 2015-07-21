@@ -32,6 +32,7 @@ from __future__ import absolute_import
 import logging
 import time
 import decimal
+import pprint
 
 # Import salt cloud libs
 import salt.utils.cloud
