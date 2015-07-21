@@ -3190,7 +3190,7 @@ def bootstrap(name,
         if needs_install or force_install or unconditional_install:
             if install:
                 rstr = __salt__['test.rand_str']()
-                configdir = '/tmp/.c_{0}'.format(rstr)
+                configdir = '/var/tmp/.c_{0}'.format(rstr)
 
                 cmd = 'install -m 0700 -d {0}'.format(configdir)
                 if run(name, cmd, python_shell=False):
@@ -3203,7 +3203,7 @@ def bootstrap(name,
                 script = '/sbin/{0}_bootstrap.sh'.format(rstr)
                 cp(name, bs_, script)
                 result = run_all(name,
-                                 'sh -c "chmod +x {0};{0}"'''.format(script),
+                                 'sh -c "chmod +x {0}"'.format(script),
                                  python_shell=True)
 
                 cp(name, cfg_files['config'],
