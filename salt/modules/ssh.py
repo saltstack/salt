@@ -30,7 +30,6 @@ log = logging.getLogger(__name__)
 DEFAULT_SSH_PORT = 22
 
 
-
 def __virtual__():
     # TODO: This could work on windows with some love
     if salt.utils.is_windows():
@@ -990,7 +989,6 @@ def hash_known_hosts(user=None, config=None):
         uinfo = __salt__['user.info'](user)
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'comment': cmd_result}
-
 
 
 def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
