@@ -29,6 +29,8 @@ from salt.ext.six.moves import range
 log = logging.getLogger(__name__)
 DEFAULT_SSH_PORT = 22
 
+
+
 def __virtual__():
     # TODO: This could work on windows with some love
     if salt.utils.is_windows():
@@ -653,7 +655,7 @@ def get_known_host(user, hostname, config=None, port=None):
     if isinstance(full, dict):
         return full
 
-    ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname,port)
+    ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
     cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(ssh_hostname, full)
     lines = __salt__['cmd.run'](cmd, ignore_retcode=True,
                                 python_shell=False).splitlines()
@@ -693,7 +695,7 @@ def recv_known_host(hostname, enc=None, port=None, hash_hostname=False):
 
 
 def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
-                     config=None,port=None):
+                     config=None, port=None):
     '''
     Check the record in known_hosts file, either by its value or by fingerprint
     (it's enough to set up either key or fingerprint, you don't need to set up
@@ -756,7 +758,7 @@ def rm_known_host(user=None, hostname=None, config=None, port=None):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
 
-    ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname,port)
+    ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
     cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(ssh_hostname, full)
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     # ssh-keygen creates a new file, thus a chown is required.
@@ -798,7 +800,7 @@ def set_known_host(user=None,
                 'conjunction with argument hash_hostname'}
 
     update_required = False
-    stored_host = get_known_host(user, hostname, config,port)
+    stored_host = get_known_host(user, hostname, config, port)
 
     if not stored_host:
         update_required = True
@@ -989,8 +991,10 @@ def hash_known_hosts(user=None, config=None):
         os.chown(full, uinfo['uid'], uinfo['gid'])
     return {'status': 'updated', 'comment': cmd_result}
 
-def _hostname_and_port_to_ssh_hostname(hostname,port=DEFAULT_SSH_PORT):
+
+
+def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
     if not port or port == DEFAULT_SSH_PORT:
         return hostname
     else:
-        return '[{0}]:{1}'.format(hostname,port)
+        return '[{0}]:{1}'.format(hostname, port)
