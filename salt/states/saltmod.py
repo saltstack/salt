@@ -198,8 +198,8 @@ def state(
         ret['result'] = False
         return ret
 
-    if test:
-        cmd_kw['kwarg']['test'] = test
+    if test or __opts__['test']:
+        cmd_kw['kwarg']['test'] = True
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
@@ -213,14 +213,6 @@ def state(
         ret['result'] = False
         return ret
 
-    if __opts__['test'] is True:
-        ret['comment'] = (
-                '{0} will be run on target {1} as test={2}'
-                ).format(fun == 'state.highstate' and 'Highstate'
-                    or 'States '+','.join(cmd_kw['arg']),
-                tgt, str(test))
-        ret['result'] = None
-        return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
 
     changes = {}
@@ -289,6 +281,10 @@ def state(
                         ).splitlines()
                     )
             ret['comment'] += '\n'
+    if test or __opts__['test']:
+        if ret['changes'] and ret['result'] is True:
+            # Test mode with changes is the only case where result should ever be none
+            ret['result'] = None
     return ret
 
 
