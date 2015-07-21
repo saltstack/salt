@@ -21,26 +21,6 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 import salt.utils
 
 # pylint: disable=import-error
-try:
-    import apt.cache
-    import apt.debfile
-    from aptsources import sourceslist
-    HAS_APT = True
-except ImportError:
-    HAS_APT = False
-
-try:
-    import apt_pkg
-    HAS_APTPKG = True
-except ImportError:
-    HAS_APTPKG = False
-
-try:
-    import softwareproperties.ppa
-    HAS_SOFTWAREPROPERTIES = True
-except ImportError:
-    HAS_SOFTWAREPROPERTIES = False
-# pylint: enable=import-error
 
 
 __virtualname__ = 'pkgbuild'
@@ -50,9 +30,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__.get('os_family', False) in ( 'Kali', 'Debian' ):
+    if __grains__.get('os_family', False) in ('Kali', 'Debian'):
         return __virtualname__
     return False
+
 
 def _create_pbuilders():
     '''
@@ -74,9 +55,9 @@ Package: sphinx-common
 Pin: release a=experimental
 Pin-Priority: 900
 
-Package: *\n' )
-Pin: release a=jessie-backports\n' )
-Pin-Priority: 750\n' )
+Package: *
+Pin: release a=jessie-backports
+Pin-Priority: 750
 
 Package: *
 Pin: release a=stable
@@ -107,19 +88,18 @@ fi
 HOOKDIR="${HOME}/.pbuilder-hooks"
 OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free  | deb http://ftp.us.debian.org/debian/ experimental main contrib non-free"
 '''
-    home = os.path.expanduser( '~' )
-    pbuilder_hooksdir = os.path.join( home, '.pbuilder-hooks' )
-    if not os.path.isdir( pbuilder_hooksdir ):
-        os.makedirs( pbuilder_hooksdir )
+    home = os.path.expanduser('~')
+    pbuilder_hooksdir = os.path.join(home, '.pbuilder-hooks')
+    if not os.path.isdir(pbuilder_hooksdir):
+        os.makedirs(pbuilder_hooksdir)
 
+    d05hook = os.path.join(pbuilder_hooksdir, 'D05apt-preferences')
+    with open(d05hook, "w") as fow:
+        fow.write('{0}'.format(hook_text))
 
-    d05hook = os.path.join( pbuilder_hooksdir, 'D05apt-preferences' )
-    with open( d05hook, "w") as fw:
-        fw.write( '{0}'.format( hook_text) )
-
-    pbuilderrc = os.path.join( home, '.pbuilderrc' )
-    with open( pbuilderrc , "w") as fw:
-        fw.write( '{0}'.format( pbldrc_text) )
+    pbuilderrc = os.path.join(home, '.pbuilderrc')
+    with open(pbuilderrc, "w") as fow:
+        fow.write('{0}'.format(pbldrc_text))
 
 
 def _mk_tree():
@@ -138,10 +118,7 @@ def _get_spec(tree_base, spec, template, saltenv='base'):
     '''
     spec_tgt = os.path.basename(spec)
     dest = os.path.join(tree_base, spec_tgt)
-    return __salt__['cp.get_url'](
-            spec,
-            dest,
-            saltenv=saltenv)
+    return __salt__['cp.get_url'](spec, dest, saltenv=saltenv)
 
 
 def _get_src(tree_base, source, saltenv='base'):
@@ -191,47 +168,47 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     else:
         return ret
 
-    frontname =  salttarball.split( '.tar.gz' )
+    frontname = salttarball.split('.tar.gz')
     salttar_name = frontname[0]
-    debname = salttar_name.replace( '-', '_' )
+    debname = salttar_name.replace('-', '_')
     debname += '+ds'
     debname_orig = debname + '.orig.tar.gz'
-    abspath_debname = os.path.join( tree_base, debname )
+    abspath_debname = os.path.join(tree_base, debname)
 
-    cmd = 'tar -xvzf {0}'.format( salttarball )
-    __salt__['cmd.run']( cmd, cwd=tree_base )
-    cmd = 'mv {0} {1}'.format( salttar_name, debname )
-    __salt__['cmd.run']( cmd, cwd=tree_base )
-    cmd = 'tar -cvzf {0} {1}'.format( os.path.join( tree_base, debname_orig), debname )
-    __salt__['cmd.run']( cmd, cwd=tree_base )
-    cmd = 'rm -f {0}'.format( salttarball )
-    __salt__['cmd.run']( cmd, cwd=tree_base )
-    cmd = 'cp {0}  {1}'.format( spec_pathfile, abspath_debname )
-    __salt__['cmd.run']( cmd , cwd=abspath_debname )
-    cmd = 'tar -xvJf {0}'.format( spec_pathfile )
-    __salt__['cmd.run']( cmd, cwd=abspath_debname )
-    cmd = 'rm -f {0}'.format( os.path.basename( spec_pathfile ) )
-    __salt__['cmd.run']( cmd, cwd=abspath_debname )
+    cmd = 'tar -xvzf {0}'.format(salttarball)
+    __salt__['cmd.run'](cmd, cwd=tree_base)
+    cmd = 'mv {0} {1}'.format(salttar_name, debname)
+    __salt__['cmd.run'](cmd, cwd=tree_base)
+    cmd = 'tar -cvzf {0} {1}'.format(os.path.join(tree_base, debname_orig), debname)
+    __salt__['cmd.run'](cmd, cwd=tree_base)
+    cmd = 'rm -f {0}'.format(salttarball)
+    __salt__['cmd.run'](cmd, cwd=tree_base)
+    cmd = 'cp {0}  {1}'.format(spec_pathfile, abspath_debname)
+    __salt__['cmd.run'](cmd, cwd=abspath_debname)
+    cmd = 'tar -xvJf {0}'.format(spec_pathfile)
+    __salt__['cmd.run'](cmd, cwd=abspath_debname)
+    cmd = 'rm -f {0}'.format(os.path.basename(spec_pathfile))
+    __salt__['cmd.run'](cmd, cwd=abspath_debname)
     cmd = 'debuild -S -uc -us'
-    __salt__['cmd.run']( cmd, cwd=abspath_debname, python_shell=True )
+    __salt__['cmd.run'](cmd, cwd=abspath_debname, python_shell=True)
 
-    cmd = 'rm -fR {0}'.format( abspath_debname )
+    cmd = 'rm -fR {0}'.format(abspath_debname)
     __salt__['cmd.run'](cmd)
 
-    for dfile in os.listdir( tree_base ):
-        if dfile.startswith( 'salt_'):
-            if not dfile.endswith( '.build' ):
-                full = os.path.join( tree_base, dfile )
-                trgt = os.path.join( dest_dir, dfile )
-                shutil.copy( full, trgt )
-                ret.append( trgt )
+    for dfile in os.listdir(tree_base):
+        if dfile.startswith('salt_'):
+            if not dfile.endswith('.build'):
+                full = os.path.join(tree_base, dfile)
+                trgt = os.path.join(dest_dir, dfile)
+                shutil.copy(full, trgt)
+                ret.append(trgt)
 
     return ret
 
 
 def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
     '''
-    Given the package destination directory, the tarball containing debian files ( e.g. control)
+    Given the package destination directory, the tarball containing debian files (e.g. control)
     and package sources, use pbuilder to safely build the platform package
 
     CLI Example:
@@ -253,10 +230,10 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
-        afile = os.path.basename( dsc )
-        adist = os.path.join( dest_dir, afile )
-        if afile != os.path.basename( spec ):
-            shutil.copy( dsc, adist )
+        afile = os.path.basename(dsc)
+        adist = os.path.join(dest_dir, afile)
+        if afile != os.path.basename(spec):
+            shutil.copy(dsc, adist)
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
@@ -269,9 +246,7 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
 
             cmd = 'pbuilder create'
             __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
-            cmd = 'pbuilder --build --buildresult {1} {0}'.format(
-                    dsc,
-                    results_dir )
+            cmd = 'pbuilder --build --buildresult {1} {0}'.format(dsc, results_dir)
             __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
             for bfile in os.listdir(results_dir):
@@ -309,17 +284,14 @@ Pull: jessie
         os.makedirs(repoconf)
 
     repoconfdist = os.path.join(repoconf, 'distributions')
-    with open( repoconfdist, "w") as fw:
-        fw.write('{0}'.format( repocfg_text ) )
+    with open(repoconfdist, "w") as fow:
+        fow.write('{0}'.format(repocfg_text))
 
     for debfile in os.listdir(repodir):
         if debfile.endswith('.changes'):
-            cmd = 'reprepro -Vb . include jessie {0}'.format(
-                    os.path.join( repodir, debfile ) )
-            __salt__['cmd.run']( cmd, cwd=repodir )
+            cmd = 'reprepro -Vb . include jessie {0}'.format(os.path.join(repodir, debfile))
+            __salt__['cmd.run'](cmd, cwd=repodir)
 
         if debfile.endswith('.deb'):
-            cmd = 'reprepro -Vb . includedeb jessie {0}'.format(
-                    os.path.join( repodir, debfile ) )
-            __salt__['cmd.run']( cmd, cwd=repodir )
-
+            cmd = 'reprepro -Vb . includedeb jessie {0}'.format(os.path.join(repodir, debfile))
+            __salt__['cmd.run'](cmd, cwd=repodir)

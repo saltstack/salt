@@ -36,20 +36,20 @@ def _create_rpmmacros():
     '''
     Create the .rpmmacros file in user's home directory
     '''
-    home = os.path.expanduser( '~' )
-    rpmbuilddir = os.path.join( home, 'rpmbuild' )
-    if not os.path.isdir( rpmbuilddir ):
-        os.makedirs( rpmbuilddir )
+    home = os.path.expanduser('~')
+    rpmbuilddir = os.path.join(home, 'rpmbuild')
+    if not os.path.isdir(rpmbuilddir):
+        os.makedirs(rpmbuilddir)
 
-    mockdir = os.path.join( home, 'mock' )
-    if not os.path.isdir( mockdir ):
-        os.makedirs( mockdir )
+    mockdir = os.path.join(home, 'mock')
+    if not os.path.isdir(mockdir):
+        os.makedirs(mockdir)
 
-    rpmmacros = os.path.join( home, '.rpmmacros' )
-    with open( rpmmacros, "w") as fw:
-        fw.write( '%_topdir {0}\n'.format( rpmbuilddir ) )
-        fw.write( '%signature gpg\n' )
-        fw.write( '%_gpg_name packaging@saltstack.com\n' )
+    rpmmacros = os.path.join(home, '.rpmmacros')
+    with open(rpmmacros, "w") as afile:
+        afile.write('%_topdir {0}\n'.format(rpmbuilddir))
+        afile.write('%signature gpg\n')
+        afile.write('%_gpg_name packaging@saltstack.com\n')
 
 
 def _mk_tree():
