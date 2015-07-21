@@ -612,5 +612,4 @@ def show_all_prices(call=None, kwargs=None):
             for price in group['prices']:
                 ret[price['id']] = price['item'].copy()
                 del ret[price['id']]['id']
-        pprint.pprint(category)
     return ret
