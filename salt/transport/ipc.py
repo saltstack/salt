@@ -119,7 +119,7 @@ class IPCServer(object):
             try:
                 framed_msg_len = yield stream.read_until(six.b(' '))
                 framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
+                framed_msg = msgpack.loads(framed_msg_raw)
                 body = framed_msg['body']
                 self.io_loop.spawn_callback(self.payload_handler,
                                             body,
@@ -305,7 +305,7 @@ class IPCClient(object):
             try:
                 framed_msg_len = yield self.stream.read_until(six.b(' '))
                 framed_msg_raw = yield self.stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw, encoding='utf-8')
+                framed_msg = msgpack.loads(framed_msg_raw)
                 header = framed_msg['head']
                 message_id = header.get('mid')
                 body = framed_msg['body']

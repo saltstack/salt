@@ -25,7 +25,7 @@ def frame_msg(body, header=None, raw_body=False):
 
     framed_msg['head'] = header
     framed_msg['body'] = body
-    framed_msg_packed = msgpack.packb(framed_msg, encoding='utf-8')
+    framed_msg_packed = msgpack.packb(framed_msg)
     msg = six.b('{0} '.format(len(framed_msg_packed)))
     msg += framed_msg_packed
     return msg
