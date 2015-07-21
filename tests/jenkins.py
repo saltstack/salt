@@ -828,8 +828,10 @@ def parse():
     parser.add_option(
         '--test-transport',
         default='zeromq',
-        choices=('zeromq', 'raet'),
-        help='Set to raet to run integration tests with raet transport. Default: %default')
+        choices=('zeromq', 'raet', 'tcp'),
+        help=('Select which transport to run the integration tests with, '
+              'zeromq, raet, or tcp. Default: %default')
+    )
     parser.add_option(
         '--test-without-coverage',
         default=False,
