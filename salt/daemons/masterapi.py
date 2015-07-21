@@ -739,6 +739,8 @@ class RemoteFuncs(object):
         '''
         Handle the return data sent from the minions
         '''
+        # Generate EndTime
+        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
@@ -756,6 +758,11 @@ class RemoteFuncs(object):
         self.event.fire_ret_load(load)
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
+
+        fstr = '{0}.update_endtime'.format(self.opts['master_job_cache'])
+        if (self.opts.get('job_cache_store_endtime')
+                and fstr in self.mminion.returners):
+            self.mminion.returners[fstr](load['jid'], endtime)
 
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
         self.mminion.returners[fstr](load)
