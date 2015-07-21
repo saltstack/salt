@@ -76,9 +76,8 @@ Extend declaration
 ------------------
 
 Extends a :ref:`name-declaration` from an included ``SLS module``. The
-keys of the extend declaration always define existing :ref`ID declaration`
-which have been defined in included
-``SLS modules``.
+keys of the extend declaration always refer to an existing
+:ref:`id-declaration` which have been defined in included ``SLS modules``.
 
 Occurs only in the top level and defines a dictionary.
 
