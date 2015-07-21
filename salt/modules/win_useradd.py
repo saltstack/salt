@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except:
+except:  # pylint: disable=W0702
     from pipes import quote as _cmd_quote
 
 # Import salt libs
