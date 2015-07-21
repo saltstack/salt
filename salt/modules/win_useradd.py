@@ -6,6 +6,11 @@ NOTE: This currently only works with local user accounts, not domain accounts
 '''
 from __future__ import absolute_import
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except:  # pylint: disable=W0702
+    from pipes import quote as _cmd_quote
+
 # Import salt libs
 import salt.utils
 from salt.ext.six import string_types
@@ -236,10 +241,13 @@ def chfullname(name, fullname):
     if not pre_info:
         return False
 
+    name = _cmd_quote(name)
+    fullname_qts = _cmd_quote(fullname).replace("'", "\"")
+
     if fullname == pre_info['fullname']:
         return True
-    if __salt__['cmd.retcode']('net user {0} /fullname:"{1}"'.format(
-            name, fullname)) != 0:
+    if __salt__['cmd.retcode']('net user {0} /fullname:{1}'.format(
+            name, fullname_qts), python_shell=True) != 0:
         return False
 
     post_info = info(name)

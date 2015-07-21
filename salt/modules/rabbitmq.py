@@ -57,6 +57,27 @@ def _get_rabbitmq_plugin():
     return rabbitmq
 
 
+def _strip_listing_to_done(output_list):
+    '''Conditionally remove non-relevant first and last line,
+    "Listing ..." - "...done".
+    outputlist: rabbitmq command output split by newline
+    return value: list, conditionally modified, may be empty.
+    '''
+
+    # conditionally remove non-relevant first line
+    f_line = ''.join(output_list[:1])
+    if f_line.startswith('Listing') and f_line.endswith('...'):
+        output_list.pop(0)
+
+    # some versions of rabbitmq have no trailing '...done' line,
+    # which some versions do not output.
+    l_line = ''.join(output_list[-1:])
+    if l_line == '...done':
+        output_list.pop()
+
+    return output_list
+
+
 def _output_to_dict(cmdoutput, values_mapper=None):
     '''Convert rabbitmqctl output to a dict of data
     cmdoutput: string output of rabbitmqctl commands
@@ -67,11 +88,11 @@ def _output_to_dict(cmdoutput, values_mapper=None):
         values_mapper = lambda string: string.split('\t')
 
     # remove first and last line: Listing ... - ...done
-    data_rows = cmdoutput.splitlines()[1:-1]
+    data_rows = _strip_listing_to_done(cmdoutput.splitlines())
+
     for row in data_rows:
         key, values = row.split('\t', 1)
         ret[key] = values_mapper(values)
-
     return ret
 
 
@@ -111,7 +132,7 @@ def list_vhosts(runas=None):
                               runas=runas)
 
     # remove first and last line: Listing ... - ...done
-    return res.splitlines()[1:-1]
+    return _strip_listing_to_done(res.splitlines())
 
 
 def user_exists(name, runas=None):

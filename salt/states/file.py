@@ -3606,11 +3606,11 @@ def copy(
         if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
-            if hash1 != hash2:
+            if hash1 == hash2:
                 changed = False
         if not force:
             changed = False
-        elif not __opts__['test']:
+        elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
                 if os.path.islink(name):

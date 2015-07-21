@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Manage ruby installations with rbenv.
+Manage ruby installations with rbenv. Rbenv is supported on Linux and Mac OS X.
+Rbenv doesn't work on Windows (and isn't really necessary on Windows as there is
+no system Ruby on Windows). On Windows, the RubyInstaller and/or Pik are both
+good alternatives to work with multiple versions of Ruby on the same box.
+
+http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-ruby/
 
 .. versionadded:: 0.16.0
 '''
@@ -28,6 +33,15 @@ __opts__ = {
     'rbenv.root': None,
     'rbenv.build_env': None,
 }
+
+
+def __virtual__():
+    """
+    Only work on POSIX-like systems
+    """
+    if salt.utils.is_windows():
+        return False
+    return True
 
 
 def _shlex_split(s):
