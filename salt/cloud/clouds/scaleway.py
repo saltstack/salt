@@ -199,6 +199,11 @@ def create(server_):
     except AttributeError:
         pass
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in server_:
+        server_['driver'] = server_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -206,7 +211,7 @@ def create(server_):
         {
             'name': server_['name'],
             'profile': server_['profile'],
-            'provider': server_['provider'],
+            'provider': server_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -381,7 +386,7 @@ def create(server_):
         {
             'name': server_['name'],
             'profile': server_['profile'],
-            'provider': server_['provider'],
+            'provider': server_['driver'],
         },
         transport=__opts__['transport']
     )
