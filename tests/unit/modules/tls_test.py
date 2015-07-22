@@ -271,7 +271,9 @@ class TLSAddTestCase(TestCase):
                 del source['signature_algorithm']
             if 'extensions' not in reference:
                 del source['extensions']
-        result = ignore_extensions(tls.cert_info(certp))
+        with patch('salt.utils.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            result = ignore_extensions(tls.cert_info(certp))
         remove_not_in_result(ret, result)
         self.assertEqual(result, ret)
 
