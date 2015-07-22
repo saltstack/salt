@@ -188,7 +188,6 @@ class TLSAddTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
-    @patch('salt.utils.fopen', mock_open(read_data=_TLS_TEST_DATA['ca_cert']))
     def test_get_ca_text(self):
         '''
         Test get_ca text
@@ -196,9 +195,11 @@ class TLSAddTestCase(TestCase):
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
-            self.assertEqual(tls.get_ca(ca_name, as_text=True),
-                             _TLS_TEST_DATA['ca_cert'])
+        with patch('salt.utils.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
+                self.assertEqual(tls.get_ca(ca_name, as_text=True),
+                                 _TLS_TEST_DATA['ca_cert'])
 
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
@@ -220,7 +221,6 @@ class TLSAddTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
-    @patch('salt.utils.fopen', mock_open(read_data=_TLS_TEST_DATA['ca_cert']))
     def test_cert_info(self):
         '''
         Test cert info
@@ -271,7 +271,9 @@ class TLSAddTestCase(TestCase):
                 del source['signature_algorithm']
             if 'extensions' not in reference:
                 del source['extensions']
-        result = ignore_extensions(tls.cert_info(certp))
+        with patch('salt.utils.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            result = ignore_extensions(tls.cert_info(certp))
         remove_not_in_result(ret, result)
         self.assertEqual(result, ret)
 
