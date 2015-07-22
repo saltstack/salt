@@ -94,7 +94,11 @@ def failhard(role):
 
 class GitProvider(object):
     '''
-    Base class for gitfs/git_pillar provider classes
+    Base class for gitfs/git_pillar provider classes Should never be used
+    directly.
+
+    self.provider should be set in the sub-class' __init__ function before
+    invoking GitProvider.__init__().
     '''
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
@@ -126,7 +130,8 @@ class GitProvider(object):
             per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in override_params):
-                if param in AUTH_PARAMS and provider not in AUTH_PROVIDERS:
+                if param in AUTH_PARAMS \
+                        and self.provider not in AUTH_PROVIDERS:
                     msg = (
                         '{0} authentication parameter \'{1}\' (from remote '
                         '\'{2}\') is only supported by the following '
@@ -136,7 +141,7 @@ class GitProvider(object):
                             param,
                             self.id,
                             ', '.join(AUTH_PROVIDERS),
-                            provider
+                            self.provider
                         )
                     )
                     if self.role == 'gitfs':
@@ -282,13 +287,13 @@ class GitProvider(object):
                 success.append(msg)
         return success, failed
 
-    def init_remote(self, blob, dest):
+    def init_remote(self):
         '''
         This function must be overridden in a sub-class
         '''
         raise NotImplementedError()
 
-    def checkout(self, tgt):
+    def checkout(self):
         '''
         This function must be overridden in a sub-class
         '''
@@ -374,6 +379,12 @@ class GitPython(GitProvider):
     '''
     Interface to GitPython
     '''
+    def __init__(self, opts, remote, per_remote_defaults,
+                 override_params, cache_root, role='gitfs'):
+        self.provider = 'gitpython'
+        GitProvider.__init__(self, opts, remote, per_remote_defaults,
+                             override_params, cache_root, role)
+
     def checkout(self):
         '''
         Checkout the configured branch/tag
@@ -399,7 +410,7 @@ class GitPython(GitProvider):
             if ref.name.startswith('refs/tags/'):
                 # Work around GitPython bug affecting removal of tags
                 # https://github.com/gitpython-developers/GitPython/issues/260
-                repo_obj.git.tag('-d', ref.name[10:])
+                self.repo.git.tag('-d', ref.name[10:])
             else:
                 ref.delete(self.repo, ref)
             cleaned.append(ref)
@@ -604,6 +615,12 @@ class Pygit2(GitProvider):
     '''
     Interface to Pygit2
     '''
+    def __init__(self, opts, remote, per_remote_defaults,
+                 override_params, cache_root, role='gitfs'):
+        self.provider = 'pygit2'
+        GitProvider.__init__(self, opts, remote, per_remote_defaults,
+                             override_params, cache_root, role)
+
     def checkout(self):
         '''
         Checkout the configured branch/tag
@@ -650,7 +667,7 @@ class Pygit2(GitProvider):
         )
         return None
 
-    def clean_stale_refs(self, local_refs=None):
+    def clean_stale_refs(self, local_refs=None):  # pylint: disable=arguments-differ
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
@@ -1055,7 +1072,7 @@ class Pygit2(GitProvider):
             fp_.write(blob.data)
 
 
-class Dulwich(GitProvider):
+class Dulwich(GitProvider):  # pylint: disable=abstract-method
     '''
     Interface to dulwich
     '''
@@ -1065,6 +1082,7 @@ class Dulwich(GitProvider):
             x for x in refs if re.match('refs/(heads|tags)', x)
             and not x.endswith('^{}')
         ]
+        self.provider = 'dulwich'
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              override_params, cache_root, role)
 
@@ -1897,6 +1915,7 @@ class GitBase(object):
         self.opts['verified_{0}_provider'.format(self.role)] = 'dulwich'
         log.debug('dulwich {0}_provider enabled'.format(self.role))
         return True
+
 
 class GitFS(GitBase):
     '''
