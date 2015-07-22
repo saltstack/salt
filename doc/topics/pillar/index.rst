@@ -364,17 +364,17 @@ can be created like this:
 Master Config In Pillar
 =======================
 
-For convenience the data stored in the master configuration file is made
+For convenience the data stored in the master configuration file can be made
 available in all minion's pillars. This makes global configuration of services
 and systems very easy but may not be desired if sensitive data is stored in the
-master configuration.
+master configuration. This option is disabled by default.
 
-To disable the master config from being added to the pillar set ``pillar_opts``
-to ``False``:
+To enable the master config from being added to the pillar set ``pillar_opts``
+to ``True``:
 
 .. code-block:: yaml
 
-    pillar_opts: False
+    pillar_opts: True
 
 
 Master Provided Pillar Error
