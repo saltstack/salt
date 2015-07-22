@@ -13,6 +13,7 @@ import logging
 import os.path
 import pprint
 import socket
+import urllib
 
 import ssl
 try:
@@ -384,6 +385,9 @@ def query(url,
             else:
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
+
+        if isinstance(data, dict):
+            data = urllib.urlencode(data)
 
         try:
             result = HTTPClient().fetch(
