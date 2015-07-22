@@ -508,6 +508,8 @@ def version(*names, **kwargs):
 
 def version_cmp(pkg1, pkg2):
     '''
+    .. versionadded:: 2015.5.4
+
     Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
     pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
     making the comparison.
