@@ -6,7 +6,7 @@ State to check firewall configurations
 
 
 def __virtual__():
-    
+
     '''
     Load only if network is loaded
     '''
