@@ -32,6 +32,26 @@ def __virtual__():
     return False
 
 
+def _create_rpmmacros():
+    '''
+    Create the .rpmmacros file in user's home directory
+    '''
+    home = os.path.expanduser('~')
+    rpmbuilddir = os.path.join(home, 'rpmbuild')
+    if not os.path.isdir(rpmbuilddir):
+        os.makedirs(rpmbuilddir)
+
+    mockdir = os.path.join(home, 'mock')
+    if not os.path.isdir(mockdir):
+        os.makedirs(mockdir)
+
+    rpmmacros = os.path.join(home, '.rpmmacros')
+    with open(rpmmacros, "w") as afile:
+        afile.write('%_topdir {0}\n'.format(rpmbuilddir))
+        afile.write('%signature gpg\n')
+        afile.write('%_gpg_name packaging@saltstack.com\n')
+
+
 def _mk_tree():
     '''
     Create the rpm build tree
@@ -53,8 +73,7 @@ def _get_spec(tree_base, spec, template, saltenv='base'):
     return __salt__['cp.get_url'](
             spec,
             dest,
-            saltenv=saltenv,
-            template=template)
+            saltenv=saltenv)
 
 
 def _get_src(tree_base, source, saltenv='base'):
@@ -81,6 +100,7 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
     '''
+    _create_rpmmacros()
     tree_base = _mk_tree()
     spec_path = _get_spec(tree_base, spec, template, saltenv)
     if isinstance(sources, str):
@@ -108,7 +128,7 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
 
     CLI Example:
 
-        salt '*' pkgbuild.make_src_pkg mock epel-7-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for rhel 7 using user
     "mock" and place it in /var/www/html/ on the minion
