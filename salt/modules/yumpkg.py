@@ -33,6 +33,12 @@ try:
 except ImportError:
     from salt.ext.six.moves import configparser
     HAS_YUM = False
+
+try:
+    import rpmUtils.miscutils
+    HAS_RPMUTILS = True
+except ImportError:
+    HAS_RPMUTILS = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -498,6 +504,42 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     return __salt__['pkg_resource.version'](*names, **kwargs)
+
+
+def version_cmp(pkg1, pkg2):
+    '''
+    .. versionadded:: 2015.5.4
+
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    if HAS_RPMUTILS:
+        try:
+            cmp_result = rpmUtils.miscutils.compareEVR(
+                rpmUtils.miscutils.stringToVersion(pkg1),
+                rpmUtils.miscutils.stringToVersion(pkg2)
+            )
+            if cmp_result not in (-1, 0, 1):
+                raise Exception(
+                    'cmp result \'{0}\' is invalid'.format(cmp_result)
+                )
+            return cmp_result
+        except Exception as exc:
+            log.warning(
+                'Failed to compare version \'{0}\' to \'{1}\' using '
+                'rpmUtils: {2}'.format(pkg1, pkg2, exc)
+            )
+    # Fall back to distutils.version.LooseVersion (should only need to do
+    # this for RHEL5, or if an exception is raised when attempting to compare
+    # using rpmUtils)
+    return salt.utils.version_cmp(pkg1, pkg2)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -1086,11 +1128,13 @@ def install(name=None,
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
-                                                    ver2=cver):
+                                                    ver2=cver,
+                                                    cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
             elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                          oper='>=',
-                                                         ver2=cver):
+                                                         ver2=cver,
+                                                         cmp_func=version_cmp):
                 targets.append(pkgstr)
             else:
                 downgrade.append(pkgstr)
