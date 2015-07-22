@@ -853,6 +853,53 @@ def show_instance(name, call=None):
     return node
 
 
+def secgroup_allocate(call=None, kwargs=None):
+    '''
+    Allocates a new security group in OpenNebula.
+
+    .. versionadded:: Boron
+
+    path
+        The path to a file containing the template of the security group. Syntax
+        within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f secgroup_allocate opennebula file=/path/to/secgroup_file.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The secgroup_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The secgroup_allocate function requires a file path to be provided.'
+        )
+
+    data = salt.utils.fopen(path, mode='r').read()
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    response = server.one.secgroup.allocate(auth, data)
+
+    data = {
+        'action': 'secgroup.allocate',
+        'allocated': response[0],
+        'secgroup_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def secgroup_clone(call=None, kwargs=None):
     '''
     Clones an existing security group.
@@ -942,7 +989,6 @@ def secgroup_delete(call=None, kwargs=None):
             'to be provided.'
         )
 
-    # Make the API call to O.N. once and pass them to other functions that need them.
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
@@ -996,7 +1042,6 @@ def secgroup_info(call=None, kwargs=None):
             'to be provided.'
         )
 
-    # Make the API call to O.N. once and pass them to other functions that need them.
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
@@ -1009,6 +1054,77 @@ def secgroup_info(call=None, kwargs=None):
     info[tree.find('NAME').text] = _xml_to_dict(tree)
 
     return info
+
+
+def secgroup_update(call=None, kwargs=None):
+    '''
+    Replaces the security group template contents.
+
+    .. versionadded:: Boron
+
+    secgroup_id
+        The ID of the security group to update.
+
+    path
+        The path to a file containing the template of the security group. Syntax
+        within the file can be the usual attribute=value or XML.
+
+    update_type
+        There are two ways to update a security group: ``replace`` the whole template
+        or ``merge`` the new template with the existing one.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --function secgroup_update opennebula secgroup_id=100 \
+            file=/path/to/secgroup_update_file.txt \
+            update_type=replace
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The secgroup_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    secgroup_id = kwargs.get('secgroup_id', None)
+    path = kwargs.get('path', None)
+    update_type = kwargs.get('update_type', None)
+    update_args = ['replace', 'merge']
+
+    if not secgroup_id or not path or not update_type:
+        raise SaltCloudSystemExit(
+            'The secgroup_update function requires a \'secgroup_id\', a file \'path\', '
+            'and an \'update_type\' to be provided.'
+        )
+
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    file_data = salt.utils.fopen(path, mode='r').read()
+    response = server.one.secgroup.update(auth, int(secgroup_id), file_data, int(update_number))
+
+    data = {
+        'action': 'secgroup.update',
+        'updated': response[0],
+        'secgroup_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
 
 
 def template_clone(call=None, kwargs=None):
