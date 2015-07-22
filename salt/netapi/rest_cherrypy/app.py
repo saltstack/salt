@@ -333,7 +333,7 @@ def salt_token_tool():
 
 def salt_client_acl_tool(username, ip):
     '''
-    ..versionadded:: 2015.5.2
+    ..versionadded:: Boron
 
     Verifies user requests against the API whitelist (IP whitelisting)
     in order to provide whitelisting like the master has for users, but
