@@ -1436,6 +1436,12 @@ class Login(LowDataAdapter):
             raise salt.exceptions.SaltDaemonNotRunning(
                 'Salt Master is not available.')
 
+        # the urlencoded_processor will wrap this in a list
+        if isinstance(cherrypy.serving.request.lowstate, list):
+            creds = cherrypy.serving.request.lowstate[0]
+        else:
+            creds = cherrypy.serving.request.lowstate
+
         # Check client acl for the api.
         failure_str = ("[client_acl] Authentication failed for "
                        "user {0} from IP {1}")
@@ -1448,12 +1454,6 @@ class Login(LowDataAdapter):
             raise cherrypy.HTTPError(401, failure_str.format(user, ip))
         else:
             logger.debug(success_str.format(user, ip))
-
-        # the urlencoded_processor will wrap this in a list
-        if isinstance(cherrypy.serving.request.lowstate, list):
-            creds = cherrypy.serving.request.lowstate[0]
-        else:
-            creds = cherrypy.serving.request.lowstate
 
         token = self.auth.mk_token(creds)
         if 'token' not in token:
