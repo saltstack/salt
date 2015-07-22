@@ -333,6 +333,7 @@ Full list of builtin execution modules
     xmpp
     yumpkg
     zcbuildout
+    zenoss
     zfs
     zk_concurrency
     znc

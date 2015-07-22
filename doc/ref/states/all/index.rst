@@ -192,4 +192,5 @@ Full list of builtin state modules
     x509
     xmpp
     zcbuildout
+    zenoss
     zk_concurrency
