@@ -293,7 +293,7 @@ def _local_to_abs_sid(sid, sls):  # id must starts with '.'
 
 
 def _relative_to_abs_sls(relative, sls):
-    ''' 
+    '''
     Convert ``relative`` sls reference into absolute, relative to ``sls``.
     '''
     levels, suffix = re.match(r'^(\.+)(.*)$', relative).groups()
