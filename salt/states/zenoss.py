@@ -2,6 +2,8 @@
 '''
 State to manage monitoring in Zenoss.
 
+.. versionadded:: Boron
+
 This state module depends on the 'zenoss' Salt execution module.
 
 Allows for setting a state of minions in Zenoss using the Zenoss API. Currently Zenoss 4.x is supported.
