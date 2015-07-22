@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import codecs
+import copy
 import os
 import imp
 import logging
@@ -57,6 +58,7 @@ def wrap_tmpl_func(render_str):
         # Alias cmd.run to cmd.shell to make python_shell=True the default for
         # templated calls
         if 'salt' in kws:
+            kws['salt'] = copy.deepcopy(kws['salt'])
             if 'cmd.run' in kws['salt'] and 'cmd.shell' in kws['salt']:
                 kws['salt']['cmd.run'] = kws['salt']['cmd.shell']
             if 'run' in kws['salt'].get('cmd', {}) \
