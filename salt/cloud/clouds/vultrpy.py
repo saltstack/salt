@@ -25,15 +25,11 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
-from os.path import exists, expanduser
-
 
 # Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
-from salt.cloud.exceptions import SaltCloudConfigError
-from salt.utils import namespaced_function
-
+from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
