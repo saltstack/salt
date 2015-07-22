@@ -2307,16 +2307,14 @@ def create(vm_):
         new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
 
         # If it a template or if it does not need to be powered on then do not wait for the IP
-        if not template and power:
+        if not template and power and deploy:
             ip = _wait_for_ip(new_vm_ref, 20)
             if ip:
                 log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
                 # ssh or smb using ip and install salt only if deploy is True
-                if deploy:
-                    vm_['key_filename'] = key_filename
-                    vm_['ssh_host'] = ip
-
-                    salt.utils.cloud.bootstrap(vm_, __opts__)
+                vm_['key_filename'] = key_filename
+                vm_['ssh_host'] = ip
+                salt.utils.cloud.bootstrap(vm_, __opts__)
 
         data = show_instance(vm_name, call='action')
 
