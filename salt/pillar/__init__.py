@@ -567,17 +567,10 @@ class Pillar(object):
 
         return pillar, errors
 
-    def _external_pillar_data(self,
-                             pillar,
-                             val,
-                             pillar_dirs,
-                             key):
+    def _external_pillar_data(self, pillar, val, pillar_dirs, key):
         '''
-        Builds actual pillar data structure
-        and update
-        the variable ``pillar``
+        Builds actual pillar data structure and updates the ``pillar`` variable
         '''
-
         ext = None
 
         # try the new interface, which includes the minion ID
@@ -585,7 +578,14 @@ class Pillar(object):
         if isinstance(val, dict):
             ext = self.ext_pillars[key](self.opts['id'], pillar, **val)
         elif isinstance(val, list):
-            ext = self.ext_pillars[key](self.opts['id'], pillar, *val)
+            if key == 'git':
+                ext = self.ext_pillars[key](self.opts['id'],
+                                            val,
+                                            pillar_dirs)
+            else:
+                ext = self.ext_pillars[key](self.opts['id'],
+                                            pillar,
+                                            *val)
         else:
             if key == 'git':
                 ext = self.ext_pillars[key](self.opts['id'],

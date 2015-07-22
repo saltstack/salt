@@ -37,7 +37,7 @@ from salt.pillar import Pillar, git_pillar
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not git_pillar.HAS_GIT, 'no GitPython')
+@skipIf(not git_pillar.HAS_GITPYTHON, 'no GitPython')
 class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     'test git_pillar pillar'
     maxDiff = None
@@ -58,7 +58,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
                 'pillar_opts': False
                 }
         git_pillar.__grains__ = {}
-        git_pillar.update('master', 'file://{0}'.format(self.repo_path))
+        git_pillar._update('master', 'file://{0}'.format(self.repo_path))
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)

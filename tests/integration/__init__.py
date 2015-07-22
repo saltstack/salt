@@ -136,8 +136,9 @@ def run_tests(*test_cases, **kwargs):
                 self.add_option(
                     '--transport',
                     default='zeromq',
-                    choices=('zeromq', 'raet'),
-                    help='Set to raet to run integration tests with raet transport. Default: %default'
+                    choices=('zeromq', 'raet', 'tcp'),
+                    help=('Select which transport to run the integration tests with, '
+                          'zeromq, raet, or tcp. Default: %default')
                 )
 
         def validate_options(self):
@@ -184,6 +185,8 @@ class TestDaemon(object):
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
             self.start_raet_daemons()
+        elif self.parser.options.transport == 'tcp':
+            self.start_tcp_daemons()
 
         self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
@@ -287,6 +290,8 @@ class TestDaemon(object):
         #                                            'start')
 
         # no raet syndic daemon yet
+
+    start_tcp_daemons = start_zeromq_daemons
 
     def prep_ssh(self):
         '''
@@ -512,6 +517,12 @@ class TestDaemon(object):
             sub_minion_opts['transport'] = 'raet'
             sub_minion_opts['raet_port'] = 64520
             # syndic_master_opts['transport'] = 'raet'
+
+        if transport == 'tcp':
+            master_opts['transport'] = 'tcp'
+            minion_opts['transport'] = 'tcp'
+            sub_minion_opts['transport'] = 'tcp'
+            syndic_master_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = {

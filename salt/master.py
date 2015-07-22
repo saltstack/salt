@@ -167,7 +167,7 @@ class Maintenance(multiprocessing.Process):
         # Make Event bus for firing
         self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
         # Init any values needed by the git ext pillar
-        self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
+        self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Set up search object
         self.search = salt.search.Search(self.opts)
 
@@ -198,7 +198,7 @@ class Maintenance(multiprocessing.Process):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
             self.handle_search(now, last)
-            self.handle_pillargit()
+            self.handle_git_pillar()
             self.handle_schedule()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
@@ -252,16 +252,19 @@ class Maintenance(multiprocessing.Process):
                           'due to key rotation')
                 salt.utils.master.ping_all_connected_minions(self.opts)
 
-    def handle_pillargit(self):
+    def handle_git_pillar(self):
         '''
         Update git pillar
         '''
         try:
-            for pillargit in self.pillargitfs:
-                pillargit.update()
+            for pillar in self.git_pillar:
+                pillar.update()
         except Exception as exc:
-            log.error('Exception {0} occurred in file server update '
-                      'for git_pillar module.'.format(exc))
+            log.error(
+                'Exception \'{0}\' caught while updating git_pillar'
+                .format(exc),
+                exc_info_on_loglevel=logging.DEBUG
+            )
 
     def handle_schedule(self):
         '''
@@ -380,6 +383,7 @@ class Master(SMaster):
         should not start up.
         '''
         errors = []
+        critical_errors = []
 
         if salt.utils.is_windows() and self.opts['user'] == 'root':
             # 'root' doesn't typically exist on Windows. Use the current user
@@ -411,13 +415,22 @@ class Master(SMaster):
             try:
                 fileserver.init()
             except FileserverConfigError as exc:
-                errors.append('{0}'.format(exc))
+                critical_errors.append('{0}'.format(exc))
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
-        if errors:
+
+        try:
+            # Init any values needed by the git ext pillar
+            salt.utils.gitfs.GitPillar(self.opts)
+        except FileserverConfigError as exc:
+            critical_errors.append(exc.strerror)
+
+        if errors or critical_errors:
             for error in errors:
                 log.error(error)
-            log.error('Master failed pre flight checks, exiting\n')
+            for error in critical_errors:
+                log.critical(error)
+            log.critical('Master failed pre flight checks, exiting\n')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # run_reqserver cannot be defined within a class method in order for it

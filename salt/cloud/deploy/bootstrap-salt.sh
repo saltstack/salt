@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2015.07.17"
+__ScriptVersion="2015.07.22"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -426,8 +426,8 @@ elif [ "$ITYPE" = "stable" ]; then
         STABLE_REV="latest"
     else
         __check_unparsed_options "$*"
-        if [ "$(echo "$1" | egrep '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5)$')" = "" ]; then
-          echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, latest)"
+        if [ "$(echo "$1" | egrep '^(latest|1\.6|1\.7|2014\.1|2014\.7|2015\.5|2015\.8)$')" = "" ]; then
+          echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, latest)"
           exit 1
         else
           STABLE_REV="$1"
@@ -1758,38 +1758,49 @@ install_ubuntu_deps() {
 
     __enable_universe_repository || return 1
 
+    __PIP_PACKAGES=""
+
     # Minimal systems might not have upstart installed, install it
-    __apt_get_install_noinput upstart
+    __PACKAGES="upstart"
 
     # Need python-apt for managing packages via Salt
-    __apt_get_install_noinput python-apt
+    __PACKAGES="${__PACKAGES} python-apt"
+
+    echoinfo "Installing Python Requests/Chardet from Chris Lea's PPA repository"
+    if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
+        # Above Ubuntu 11.04 add a -y flag
+        add-apt-repository -y "ppa:chris-lea/python-requests" || return 1
+        add-apt-repository -y "ppa:chris-lea/python-chardet" || return 1
+    else
+        add-apt-repository "ppa:chris-lea/python-requests" || return 1
+        add-apt-repository "ppa:chris-lea/python-chardet" || return 1
+    fi
+
+    __PACKAGES="${__PACKAGES} python-requests"
 
     if [ "$DISTRO_MAJOR_VERSION" -gt 12 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 12 ] && [ "$DISTRO_MINOR_VERSION" -gt 03 ]); then
         if ([ "$DISTRO_MAJOR_VERSION" -lt 15 ] && [ "$_ENABLE_EXTERNAL_ZMQ_REPOS" -eq $BS_TRUE ]); then
             echoinfo "Installing ZMQ>=4/PyZMQ>=14 from Chris Lea's PPA repository"
             add-apt-repository -y ppa:chris-lea/zeromq || return 1
-            apt-get update
         fi
-        __apt_get_install_noinput python-requests
-        __PIP_PACKAGES=""
-    else
-        check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package 'requests'"
-        __apt_get_install_noinput python-setuptools python-pip
-        # shellcheck disable=SC2089
-        __PIP_PACKAGES="requests>=$_PY_REQUESTS_MIN_VERSION"
     fi
 
     # Additionally install procps and pciutils which allows for Docker boostraps. See 366#issuecomment-39666813
-    __apt_get_install_noinput procps pciutils || return 1
+    __PACKAGES="${__PACKAGES} procps pciutils"
+
 
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         check_pip_allowed "You need to allow pip based installations (-P) in order to install 'apache-libcloud'"
-        if [ "${__PIP_PACKAGES}" = "" ]; then
-            __apt_get_install_noinput python-pip
+        if [ "$(which pip)" = "" ]; then
+            __PACKAGES="${__PACKAGES} python-setuptools python-pip"
         fi
         # shellcheck disable=SC2089
         __PIP_PACKAGES="${__PIP_PACKAGES} 'apache-libcloud>=$_LIBCLOUD_MIN_VERSION'"
     fi
+
+    apt-get update
+    # shellcheck disable=SC2086,SC2090
+    __apt_get_install_noinput ${__PACKAGES} || return 1
 
     if [ "${__PIP_PACKAGES}" != "" ]; then
         # shellcheck disable=SC2086,SC2090
@@ -1826,6 +1837,16 @@ install_ubuntu_stable_deps() {
         add-apt-repository -y "ppa:$STABLE_PPA" || return 1
     else
         add-apt-repository "ppa:$STABLE_PPA" || return 1
+    fi
+
+    if [ ! "$(echo "$STABLE_REV" | egrep '^(2015\.8|latest)$')" = "" ]; then
+        # We need a recent tornado package
+        __REQUIRED_TORNADO="tornado >= 4.0"
+        check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package '${__REQUIRED_TORNADO}'"
+        if [ "$(which pip)" = "" ]; then
+            __apt_get_install_noinput python-setuptools python-pip
+        fi
+        pip install -U "${__REQUIRED_TORNADO}"
     fi
 
     apt-get update
@@ -1874,7 +1895,7 @@ install_ubuntu_git_deps() {
             if [ "$(which pip)" = "" ]; then
                 __apt_get_install_noinput python-setuptools python-pip
             fi
-            pip install -U "'${__REQUIRED_TORNADO}'"
+            pip install -U "${__REQUIRED_TORNADO}"
         fi
     fi
 
@@ -4229,7 +4250,7 @@ install_smartos_git_deps() {
             if [ "$(which pip)" = "" ]; then
                 pkgin -y install py27-pip
             fi
-            pip install -U "'${__REQUIRED_TORNADO}'"
+            pip install -U "${__REQUIRED_TORNADO}"
         fi
     fi
 

@@ -264,15 +264,9 @@ def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
             data[sid] = {states: []}
 
 
-def _parent_sls(sls):
-    i = sls.rfind('.')
-    return sls[:i] + '.' if i != -1 else ''
-
-
 def rewrite_sls_includes_excludes(data, sls, saltenv):
     # if the path of the included/excluded sls starts with a leading dot(.)
     # then it's taken to be relative to the including/excluding sls.
-    sls = _parent_sls(sls)
     for sid in data:
         if sid == 'include':
             includes = data[sid]
@@ -283,15 +277,33 @@ def rewrite_sls_includes_excludes(data, sls, saltenv):
                     slsenv = saltenv
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: (sls + incl[1:])}
+                    includes[i] = {slsenv: _relative_to_abs_sls(incl, sls)}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):
-                    sdata['sls'] = sls + sdata['sls'][1:]
+                    sdata['sls'] = _relative_to_abs_sls(sdata['sls'], sls)
 
 
 def _local_to_abs_sid(sid, sls):  # id must starts with '.'
-    return _parent_sls(sls) + sid[1:] if '::' in sid else sls + '::' + sid[1:]
+    if '::' in sid:
+        return _relative_to_abs_sls(sid, sls)
+    else:
+        abs_sls = _relative_to_abs_sls(sid, sls + '.')
+        return '::'.join(abs_sls.rsplit('.', 1))
+
+
+def _relative_to_abs_sls(relative, sls):
+    '''
+    Convert ``relative`` sls reference into absolute, relative to ``sls``.
+    '''
+    levels, suffix = re.match(r'^(\.+)(.*)$', relative).groups()
+    level_count = len(levels)
+    p_comps = sls.split('.')
+    if level_count > len(p_comps):
+        raise SaltRenderError(
+            'Attempted relative include goes beyond top level package'
+        )
+    return '.'.join(p_comps[:-level_count] + [suffix])
 
 
 def nvlist(thelist, names=None):

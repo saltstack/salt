@@ -22,6 +22,7 @@ import fnmatch
 import logging
 import datetime
 import traceback
+import re
 
 # Import salt libs
 import salt.utils
@@ -2633,11 +2634,21 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
+                        levels, include = \
+                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
-                            inc_sls = sls + inc_sls
-                        else:
-                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
+                            p_comps.append('init')
+                        if level_count > len(p_comps):
+                            msg = ('Attempted relative include of {0!r} '
+                                   'within SLS \'{1}:{2}\' '
+                                   'goes beyond top level package '
+                                   .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
+                        inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment

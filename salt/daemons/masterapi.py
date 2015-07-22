@@ -58,31 +58,41 @@ def init_git_pillar(opts):
     '''
     Clear out the ext pillar caches, used when the master starts
     '''
-    pillargitfs = []
+    ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            try:
-                import git
-            except ImportError:
-                return pillargitfs
-            parts = opts_dict['git'].strip().split()
-            try:
-                br = parts[0]
-                loc = parts[1]
-            except IndexError:
-                log.critical(
-                    'Unable to extract external pillar data: {0}'
-                    .format(opts_dict['git'])
-                )
-            else:
-                pillargitfs.append(
-                    git_pillar.GitPillar(
-                        br,
-                        loc,
-                        opts
+            if isinstance(opts_dict['git'], six.string_types):
+                # Legacy git pillar code
+                try:
+                    import git
+                except ImportError:
+                    return ret
+                parts = opts_dict['git'].strip().split()
+                try:
+                    br = parts[0]
+                    loc = parts[1]
+                except IndexError:
+                    log.critical(
+                        'Unable to extract external pillar data: {0}'
+                        .format(opts_dict['git'])
                     )
+                else:
+                    ret.append(
+                        git_pillar.LegacyGitPillar(
+                            br,
+                            loc,
+                            opts
+                        )
+                    )
+            else:
+                # New git_pillar code
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_PARAMS
                 )
-    return pillargitfs
+                ret.append(pillar)
+    return ret
 
 
 def clean_fsbackend(opts):

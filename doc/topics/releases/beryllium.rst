@@ -23,6 +23,14 @@ Salt Cloud Changes
   a page was changed from 20 (default) to 200 to reduce the number of API calls
   to Digital Ocean.
 
+Git Pillar Rewritten
+====================
+
+The Git external pillar has been rewritten to bring it up to feature parity
+with :mod:`gitfs <salt.fileserver.gitfs>`. See :mod:`here
+<salt.pillar.git_pillar>` for more information on the new git_pillar
+functionality.
+
 JBoss 7 State
 =============
 

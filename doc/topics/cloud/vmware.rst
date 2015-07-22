@@ -2,7 +2,7 @@
 Getting Started With VMware
 ===========================
 
-.. versionadded:: 2015.8.0
+.. versionadded:: 2015.5.4
 
 **Author**: Nitin Madhok <nmadhok@clemson.edu>
 

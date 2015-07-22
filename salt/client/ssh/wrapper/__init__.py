@@ -125,7 +125,6 @@ class FunctionWrapper(object):
                 if len(ret) < 2 and 'local' in ret:
                     ret = ret['local']
                 ret = ret.get('return', {})
-                ret.update({'retcode': retcode})
             except ValueError:
                 ret = {'_error': 'Failed to return clean data',
                        'stderr': stderr,
