@@ -198,7 +198,7 @@ def state(
         ret['result'] = False
         return ret
 
-    if test or __opts__['test']:
+    if test or __opts__.get('test'):
         cmd_kw['kwarg']['test'] = True
 
     if pillar:
@@ -281,7 +281,7 @@ def state(
                         ).splitlines()
                     )
             ret['comment'] += '\n'
-    if test or __opts__['test']:
+    if test or __opts__.get('test'):
         if ret['changes'] and ret['result'] is True:
             # Test mode with changes is the only case where result should ever be none
             ret['result'] = None
