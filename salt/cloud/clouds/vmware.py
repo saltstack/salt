@@ -747,7 +747,8 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds".format(vm_ref.name, max_wait))
+    max_wait_minutes = round(max_wait / 60, 1)
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} minutes".format(vm_ref.name, max_wait_minutes))
     return False
 
 
@@ -777,7 +778,8 @@ def _wait_for_ip(vm_ref, max_wait):
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
+    max_wait_ip_minutes = round(max_wait_ip / 60, 1)
+    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} minutes".format(vm_ref.name, max_wait_ip_minutes))
     return False
 
 
