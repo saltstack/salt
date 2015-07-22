@@ -331,6 +331,26 @@ def salt_token_tool():
         cherrypy.request.cookie['session_id'] = x_auth
 
 
+def salt_client_acl_tool(username, ip):
+    '''
+    ..versionadded:: 2015.5.2
+
+    Verifies user requests against the API whitelist (IP whitelisting)
+    in order to provide whitelisting like the master has for users, but
+    over the API.
+    '''
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            acl = cherrypy_conf.get('client_acl', None)
+            if username in acl and ip in acl[username]:
+                return True
+            elif username in acl and not ip in acl[username]:
+                return False
+    return True
+
+
 def salt_ip_verify_tool():
     '''
     If there is a list of restricted IPs, verify current
@@ -1415,6 +1435,19 @@ class Login(LowDataAdapter):
         if not self.api._is_master_running():
             raise salt.exceptions.SaltDaemonNotRunning(
                 'Salt Master is not available.')
+
+        # Check client acl for the api.
+        failure_str = ("[client_acl] Authentication failed for "
+                       "user {0} from IP {1}")
+        success_str = ("[client_acl] Authentication sucessful for "
+                       "user {0} from IP {1}")
+        user = creds['username']
+        ip = cherrypy.request.remote.ip
+        if not salt_client_acl_tool(user, ip):
+            logger.debug(failure_str.format(user, ip))
+            raise cherrypy.HTTPError(401, failure_str.format(user, ip))
+        else:
+            logger.debug(success_str.format(user, ip))
 
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
