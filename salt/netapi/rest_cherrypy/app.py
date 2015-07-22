@@ -344,10 +344,11 @@ def salt_client_acl_tool(username, ip):
         cherrypy_conf = salt_config.get('rest_cherrypy', None)
         if cherrypy_conf:
             acl = cherrypy_conf.get('client_acl', None)
-            if username in acl and ip in acl[username]:
-                return True
-            elif username in acl and not ip in acl[username]:
-                return False
+            if acl:
+                if username in acl and ip in acl[username]:
+                    return True
+                elif username in acl and not ip in acl[username]:
+                    return False
     return True
 
 
