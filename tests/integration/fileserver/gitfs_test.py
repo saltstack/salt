@@ -20,7 +20,8 @@ ensure_in_syspath('../..')
 import integration
 from salt.fileserver import gitfs
 
-gitfs.__opts__ = {'gitfs_remotes': [''],
+gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
+                  'gitfs_remotes': [''],
                   'gitfs_root': '',
                   'fileserver_backend': ['git'],
                   'gitfs_base': 'master',
@@ -34,7 +35,8 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'gitfs_insecure_auth': False,
                   'gitfs_privkey': '',
                   'gitfs_pubkey': '',
-                  'gitfs_passphrase': ''
+                  'gitfs_passphrase': '',
+                  'gitfs_ssl_verify': True
 }
 
 LOAD = {'saltenv': 'base'}

@@ -1070,37 +1070,38 @@ def os_data():
             os.stat('/run/systemd/system')
             grains['init'] = 'systemd'
         except OSError:
-            with salt.utils.fopen('/proc/1/cmdline') as fhr:
-                init_cmdline = fhr.read().replace('\x00', ' ').split()
-                init_bin = salt.utils.which(init_cmdline[0])
-                if init_bin is not None:
-                    supported_inits = ('upstart', 'sysvinit', 'systemd')
-                    edge_len = max(len(x) for x in supported_inits) - 1
-                    buf_size = __opts__['file_buffer_size']
-                    try:
-                        with open(init_bin, 'rb') as fp_:
-                            buf = True
-                            edge = ''
-                            buf = fp_.read(buf_size).lower()
-                            while buf:
-                                buf = edge + buf
-                                for item in supported_inits:
-                                    if item in buf:
-                                        grains['init'] = item
-                                        buf = ''
-                                        break
-                                edge = buf[-edge_len:]
+            if os.path.exists('/proc/1/cmdline'):
+                with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                    init_cmdline = fhr.read().replace('\x00', ' ').split()
+                    init_bin = salt.utils.which(init_cmdline[0])
+                    if init_bin is not None:
+                        supported_inits = ('upstart', 'sysvinit', 'systemd')
+                        edge_len = max(len(x) for x in supported_inits) - 1
+                        buf_size = __opts__['file_buffer_size']
+                        try:
+                            with open(init_bin, 'rb') as fp_:
+                                buf = True
+                                edge = ''
                                 buf = fp_.read(buf_size).lower()
-                    except (IOError, OSError) as exc:
+                                while buf:
+                                    buf = edge + buf
+                                    for item in supported_inits:
+                                        if item in buf:
+                                            grains['init'] = item
+                                            buf = ''
+                                            break
+                                    edge = buf[-edge_len:]
+                                    buf = fp_.read(buf_size).lower()
+                        except (IOError, OSError) as exc:
+                            log.error(
+                                'Unable to read from init_bin ({0}): {1}'
+                                .format(init_bin, exc)
+                            )
+                    else:
                         log.error(
-                            'Unable to read from init_bin ({0}): {1}'
-                            .format(init_bin, exc)
+                            'Could not determine init location from command line: ({0})'
+                            .format(' '.join(init_cmdline))
                         )
-                else:
-                    log.error(
-                        'Could not determine init location from command line: ({0})'
-                        .format(' '.join(init_cmdline))
-                    )
 
         # Add lsb grains on any distro with lsb-release
         try:

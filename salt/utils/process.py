@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 import sys
 import time
+import types
 import signal
 import subprocess
 import logging
@@ -238,7 +239,20 @@ class ProcessManager(object):
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
         process.start()
-        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, process.pid))
+
+        # create a nicer name for the debug log
+        if isinstance(tgt, types.FunctionType):
+            name = '{0}.{1}'.format(
+                tgt.__module__,
+                tgt.__name__,
+            )
+        else:
+            name = '{0}.{1}.{2}'.format(
+                tgt.__module__,
+                tgt.__class__,
+                tgt.__name__,
+            )
+        log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
                                           'kwargs': kwargs,

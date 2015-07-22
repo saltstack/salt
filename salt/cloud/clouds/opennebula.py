@@ -7,6 +7,8 @@ The OpenNebula cloud module is used to control access to an OpenNebula cloud.
 
 .. versionadded:: 2014.7.0
 
+:depends: lxml
+
 Use of this module requires the ``xml_rpc``, ``user``, and ``password``
 parameters to be set.
 

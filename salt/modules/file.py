@@ -3604,7 +3604,7 @@ def check_file_meta(
     if contents is not None:
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
-        with salt.utils.fopen(tmp, 'w') as tmp_:
+        with salt.utils.fopen(tmp, 'wb') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
         with contextlib.nested(

@@ -403,9 +403,9 @@ Default: ``''``
 Specify the returner to use to log events. A returner may have installation and
 configuration requirements. Read the returner's documentation.
 
-.. note:: 
+.. note::
 
-   Not all returners support event returns. Verify that a returner has an 
+   Not all returners support event returns. Verify that a returner has an
    ``event_return()`` function before configuring this option with a returner.
 
 .. code-block:: yaml
@@ -1126,10 +1126,10 @@ Specify one value among valid values: ``gitpython``, ``pygit2``, ``dulwich``
 Default: ``True``
 
 The ``gitfs_ssl_verify`` option specifies whether to ignore SSL certificate
-errors when contacting the gitfs backend. You might want to set this to false
-if you're using a git backend that uses a self-signed certificate but keep in
-mind that setting this flag to anything other than the default of ``True`` is a
-security concern, you may want to try using the ssh transport.
+errors when contacting the gitfs backend. You might want to set this to
+``False`` if you're using a git backend that uses a self-signed certificate but
+keep in mind that setting this flag to anything other than the default of
+``True`` is a security concern, you may want to try using the ssh transport.
 
 .. code-block:: yaml
 
@@ -1897,15 +1897,265 @@ There are additional details at :ref:`salt-pillars`
 
 .. versionadded:: 2015.5.0
 
-The ext_pillar_first option allows for external pillar sources to populate
-before file system pillar. This allows for targeting file system pillar from
-ext_pillar.
-
 Default: ``False``
+
+This option allows for external pillar sources to be evaluated before
+:conf_master:`pillar_roots`. This allows for targeting file system pillar from
+ext_pillar.
 
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. _git-pillar-config-opts:
+
+Git External Pillar (git_pillar) Configuration Options
+------------------------------------------------------
+
+.. conf_master:: git_pillar_base
+
+``git_pillar_base``
+*******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``master``
+
+If the desired branch matches this value, and the environment is omitted from
+the git_pillar configuration, then the environment for that git_pillar remote
+will be ``base``. For example, in the configuration below, the ``foo``
+branch/tag would be assigned to the ``base`` environment, while ``bar`` would
+be mapped to the ``bar`` environment.
+
+.. code-block:: yaml
+
+    git_pillar_base: foo
+
+    ext_pillar:
+      - git:
+        - foo https://mygitserver/git-pillar.git
+        - bar https://mygitserver/git-pillar.git
+
+.. conf_master:: git_pillar_branch
+
+``git_pillar_branch``
+*********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``master``
+
+If the branch is omitted from a git_pillar remote, then this branch will be
+used instead. For example, in the configuration below, the first two remotes
+would use the ``pillardata`` branch/tag, while the third would use the ``foo``
+branch/tag.
+
+.. code-block:: yaml
+
+    git_pillar_branch: pillardata
+
+    ext_pillar:
+      - git:
+        - https://mygitserver/pillar1.git
+        - https://mygitserver/pillar2.git:
+          - root: pillar
+        - foo https://mygitserver/pillar3.git
+
+.. conf_master:: git_pillar_env
+
+``git_pillar_env``
+******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''`` (unset)
+
+Environment to use for git_pillar remotes. This is normally derived from the
+branch/tag (or from a per-remote ``env`` parameter), but if set this will
+override the process of deriving the env from the branch/tag name. For example,
+in the configuration below the ``foo`` branch would be assigned to the ``base``
+environment, while the ``bar`` branch would need to explicitly have ``bar``
+configured as it's environment to keep it from also being mapped to the
+``base`` environment.
+
+.. code-block:: yaml
+
+    git_pillar_env: base
+
+    ext_pillar:
+      - git:
+        - foo https://mygitserver/git-pillar.git
+        - bar https://mygitserver/git-pillar.git:
+          - env: bar
+
+For this reason, this option is recommended to be left unset, unless the use
+case calls for all (or almost all) of the git_pillar remotes to use the same
+environment irrespective of the branch/tag being used.
+
+.. conf_master:: git_pillar_root
+
+``git_pillar_root``
+********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Path relative to the root of the repository where the git_pillar top file and
+SLS files are located. In the below configuration, the pillar top file and SLS
+files would be looked for in a subdirectory called ``pillar``.
+
+.. code-block:: yaml
+
+    git_pillar_root: pillar
+
+    ext_pillar:
+      - git:
+        - master https://mygitserver/pillar1.git
+        - master https://mygitserver/pillar2.git
+
+.. note::
+
+    This is a global option. If only one or two repos need to have their files
+    sourced from a subdirectory, then :conf_master:`git_pillar_root` can be
+    omitted and the root can be specified on a per-remote basis, like so:
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - git:
+            - master https://mygitserver/pillar1.git
+            - master https://mygitserver/pillar2.git:
+              - root: pillar
+
+    In this example, for the first remote the top file and SLS files would be
+    looked for in the root of the repository, while in the second remote the
+    pillar data would be retrieved from the ``pillar`` subdirectory.
+
+.. conf_master:: git_pillar_ssl_verify
+
+``git_pillar_ssl_verify``
+*************************
+
+.. versionadded:: 2015.8.0
+
+Default: ``True``
+
+Specifies whether or not to ignore SSL certificate errors when contacting the
+git_pillar remote repository. You might want to set this to ``False`` if you're
+using a git backend that uses a self-signed certificate but keep in mind that
+setting this flag to anything other than the default of ``True`` is a security
+concern, you may want to try using the ssh transport.
+
+.. code-block:: yaml
+
+    git_pillar_ssl_verify: True
+
+git_pillar Authentication Options
+*********************************
+
+These parameters only currently apply to the pygit2 gitfs provider.
+Authentication works the same as it does in gitfs, as outlined in the
+:ref:`GitFS Walkthrough <gitfs-authentication>`, though the global
+configuration options are named differently to reflect that they are for
+git_pillar instead of gitfs.
+
+.. conf_master:: git_pillar_user
+
+``git_pillar_user``
+~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_password`, is used to authenticate to HTTPS
+remotes.
+
+.. code-block:: yaml
+
+    git_pillar_user: git
+
+.. conf_master:: git_pillar_password
+
+``git_pillar_password``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_user`, is used to authenticate to HTTPS
+remotes. This parameter is not required if the repository does not use
+authentication.
+
+.. code-block:: yaml
+
+    git_pillar_password: mypassword
+
+.. conf_master:: git_pillar_insecure_auth
+
+``git_pillar_insecure_auth``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. This
+parameter enables authentication over HTTP. **Enable this at your own risk.**
+
+.. code-block:: yaml
+
+    git_pillar_insecure_auth: True
+
+.. conf_master:: git_pillar_pubkey
+
+``git_pillar_pubkey``
+~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_privkey` (and optionally
+:conf_master:`git_pillar_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    git_pillar_pubkey: /path/to/key.pub
+
+.. conf_master:: git_pillar_privkey
+
+``git_pillar_privkey``
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_pubkey` (and optionally
+:conf_master:`git_pillar_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    git_pillar_privkey: /path/to/key
+
+.. conf_master:: git_pillar_passphrase
+
+``git_pillar_passphrase``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+This parameter is optional, required only when the SSH key being used to
+authenticate is protected by a passphrase.
+
+.. code-block:: yaml
+
+    git_pillar_passphrase: mypassphrase
 
 .. conf_master:: pillar_source_merging_strategy
 
@@ -2227,7 +2477,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`. When it is not set explicitly 
+:conf_log:`log_level_logfile`. When it is not set explicitly
 it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml

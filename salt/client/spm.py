@@ -273,10 +273,8 @@ class SPMClient(object):
                 with salt.utils.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
-                response = http.query(
-                    '{0}/SPM-METADATA'.format(dl_path),
-                )
-                metadata = response.get('dict', {})
+                response = http.query(dl_path, text=True)
+                metadata = response.get('text', {})
             cache_path = '{0}/{1}.p'.format(
                 self.opts['spm_cache_dir'],
                 repo

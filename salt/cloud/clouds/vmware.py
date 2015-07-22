@@ -3,7 +3,7 @@
 VMware Cloud Module
 ===================
 
-.. versionadded:: 2015.8.0
+.. versionadded:: 2015.5.4
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 

@@ -426,7 +426,17 @@ VALID_OPTS = {
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
 
-
+    'git_pillar_base': str,
+    'git_pillar_branch': str,
+    'git_pillar_env': str,
+    'git_pillar_root': str,
+    'git_pillar_ssl_verify': bool,
+    'git_pillar_user': str,
+    'git_pillar_password': str,
+    'git_pillar_insecure_auth': bool,
+    'git_pillar_privkey': str,
+    'git_pillar_pubkey': str,
+    'git_pillar_passphrase': str,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -439,6 +449,7 @@ VALID_OPTS = {
     'gitfs_passphrase': str,
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
+    'gitfs_ssl_verify': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -743,6 +754,17 @@ DEFAULT_MINION_OPTS = {
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -755,6 +777,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -879,6 +902,17 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'file_client': 'local',
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -891,6 +925,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -2404,8 +2439,8 @@ def is_profile_configured(opts, provider, profile_name):
     alias, driver = provider.split(':')
 
     # Most drivers need a size, but some do not.
-    non_size_drivers = ['opennebula', 'parallels', 'softlayer', 'softlayer_hw',
-                        'vmware', 'vsphere']
+    non_size_drivers = ['opennebula', 'parallels', 'scaleway', 'softlayer',
+                        'softlayer_hw', 'vmware', 'vsphere']
 
     if driver not in non_size_drivers:
         required_keys.append('size')
