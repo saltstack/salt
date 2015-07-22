@@ -159,7 +159,6 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import git
-    import gitdb
     HAS_GITPYTHON = True
 except ImportError:
     HAS_GITPYTHON = False
