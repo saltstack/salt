@@ -109,9 +109,9 @@ class S3Credentials(object):
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                bucket,
-               verify_ssl,
                key=None,
                keyid=None,
+               verify_ssl=True,
                multiple_env=False,
                environment='base',
                prefix='',
