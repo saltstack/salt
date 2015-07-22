@@ -357,6 +357,35 @@ def get_template_id(kwargs=None, call=None):
     return _get_template(name)['id']
 
 
+def get_vn_id(kwargs=None, call=None):
+    '''
+    Returns a virtual network's ID from the given virtual network's name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_vn_id opennebula name=my-vn-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_vn_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_vn_id function requires a name.'
+        )
+
+    return _list_vns()[name]['id']
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict.
@@ -1185,6 +1214,264 @@ def template_instantiate(call=None, kwargs=None):
     return data
 
 
+def vn_add_ar(call=None, kwargs=None):
+    '''
+    Adds address ranges to a given virtual network.
+
+    .. versionadded:: Boron
+
+    vn_id
+        The ID of the virtual network to add the address range.
+
+    path
+        The path to a file containing the template of the address range to add.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_add_ar opennbula vn_id=3 path=/path/to/address_range.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_add_ar function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    vn_id = kwargs.get('vn_id', None)
+    path = kwargs.get('path', None)
+
+    if not vn_id and not path:
+        raise SaltCloudSystemExit(
+            'The vn_add_ar function requires a \'vn_id\' and a file \'path\' to '
+            'be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vn.add_ar(auth, int(vn_id), file_data)
+
+    data = {
+        'action': 'vn.add_ar',
+        'address_range_added': response[0],
+        'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vn_allocate(call=None, kwargs=None):
+    '''
+    Allocates a new virtual network in OpenNebula.
+
+    .. versionadded:: Boron
+
+    path
+        The path to a file containing the template of the virtual network to allocate.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    cluster_id
+        The ID of the cluster for which to add the new virtual network. If not provided,
+        the virtual network won’t be added to any cluster.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_allocate opennebula path=/path/to/vn_file.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The secgroup_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    cluster_id = kwargs.get('cluster_id', '-1')
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vn_allocate function requires a file \'path\' to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vn.allocate(auth, file_data, int(cluster_id))
+
+    data = {
+        'action': 'vn.allocate',
+        'allocated': response[0],
+        'vn_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vn_delete(call=None, kwargs=None):
+    '''
+    Deletes the given virtual network from OpenNebula. Either a name or a vn_id must
+    be supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the virtual network to delete.
+
+    vn_id
+        The ID of the virtual network to delete.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_delete opennebula name=my-virtual-network
+        salt-cloud --function vn_delete opennebula vn_id=3
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    vn_id = kwargs.get('vn_id', None)
+
+    if not name and not vn_id:
+        raise SaltCloudSystemExit(
+            'The vn_delete function requires a name or a vn_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not vn_id:
+        vn_id = get_image_id(kwargs={'name': name})
+
+    response = server.one.image.delete(auth, int(vn_id))
+
+    data = {
+        'action': 'vn.delete',
+        'deleted': response[0],
+        'vn_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vn_free_ar(call=None, kwargs=None):
+    '''
+    Frees a reserved address range from a virtual network.
+
+    .. versionadded:: Boron
+
+    vn_id
+        The ID of the virtual network from which to free an address range.
+
+    ar_id
+        The ID of the address range to free.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_free_ar opennebula vn_id=3 ar_id=1
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_free_ar function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    vn_id = kwargs.get('vn_id', None)
+    ar_id = kwargs.get('ar_id', None)
+
+    if not vn_id or not ar_id:
+        raise SaltCloudSystemExit(
+            'The vn_free_ar function requires a vn_id and an rn_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vn.free_ar(auth, int(vn_id), int(ar_id))
+
+    data = {
+        'action': 'vn.free_ar',
+        'ar_freed': response[0],
+        'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vn_info(call=None, kwargs=None):
+    '''
+    Retrieves information for the virtual network.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the virtual network for which to gather information.
+
+    vn_id
+        The ID of the virtual network for which to gather information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_info opennebula vn_id=3
+        salt-cloud --function vn_info opennebula name=public
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_info function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    vn_id = kwargs.get('vn_id', None)
+
+    if not name and not vn_id:
+        raise SaltCloudSystemExit(
+            'The vn_info function requires either a name or a vn_id '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+
+    if name and not vn_id:
+        vn_id = get_vn_id(kwargs={'name': name})
+
+    info = {}
+    response = server.one.vn.info(auth, int(vn_id))
+
+    if response[0] is False:
+        return response[1]
+    else:
+        tree = etree.XML(response[1])
+        info[tree.find('NAME').text] = _xml_to_dict(tree)
+        return info
+
+
 # Helper Functions
 
 def _check_name_id_collisions(name, id_, server=None, user=None, password=None):
@@ -1379,6 +1666,23 @@ def _list_templates(server=None, user=None, password=None):
         templates[template.find('NAME').text] = _xml_to_dict(template)
 
     return templates
+
+
+def _list_vns(server=None, user=None, password=None):
+    '''
+    Lists all virtual networks available to the user and the user's groups.
+    '''
+    if not server or not user or not password:
+        server, user, password = _get_xml_rpc()
+
+    auth = ':'.join([user, password])
+    vn_pool = server.one.vnpool.info(auth, -1, -1, -1)[1]
+
+    vns = {}
+    for v_network in etree.XML(vn_pool):
+        vns[v_network.find('NAME').text] = _xml_to_dict(v_network)
+
+    return vns
 
 
 def _xml_to_dict(xml):
