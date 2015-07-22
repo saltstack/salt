@@ -48,19 +48,7 @@ Walkthrough <tutorial-gitfs>`.
 
 # Import python libs
 from __future__ import absolute_import
-import copy
-import distutils.version  # pylint: disable=import-error,no-name-in-module
-import errno
-import fnmatch
-import glob
-import hashlib
 import logging
-import os
-import re
-import shutil
-import stat
-import subprocess
-from datetime import datetime
 
 PER_REMOTE_PARAMS = ('base', 'mountpoint', 'root', 'ssl_verify')
 SYMLINK_RECURSE_DEPTH = 100
@@ -73,9 +61,6 @@ AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
 # Import salt libs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
-
-# Import third party libs
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
