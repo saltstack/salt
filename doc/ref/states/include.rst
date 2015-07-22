@@ -49,6 +49,23 @@ the running sls formula was added, simply precede the formula name with a
       - .virt
       - .virt.hyper
 
+In Salt 2015.8, the ability to include sls formulas which are relative to the
+the parents of the running sls forumla was added.  In order to achieve this,
+prece the formula name with more than one `.`. Much like Python's relative
+import abilities, two or more leading dots give a relative import to the
+parent or parents of the current package, with each `.` representing one level
+after the first.
+
+Within a sls fomula at ``example.dev.virtual``, the following:
+
+.. code-block:: yaml
+
+    include:
+      - ..http
+      - ...base
+
+would result in ``example.http`` and ``base`` being included.
+
 Exclude
 =======
 
@@ -58,7 +75,7 @@ high data has been compiled, so nothing should be able to override an
 exclude.
 
 Since the exclude can remove an id or an sls the type of component to
-exclude needs to be defined. an exclude statement that verifies that the
+exclude needs to be defined. An exclude statement that verifies that the
 running highstate does not contain the `http` sls and the `/etc/vimrc` id
 would look like this:
 
