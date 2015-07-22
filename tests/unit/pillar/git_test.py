@@ -37,7 +37,7 @@ from salt.pillar import Pillar, git_pillar
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(not git_pillar.HAS_GIT, 'no GitPython')
+@skipIf(not git_pillar.HAS_GITPYTHON, 'no GitPython')
 class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     'test git_pillar pillar'
     maxDiff = None

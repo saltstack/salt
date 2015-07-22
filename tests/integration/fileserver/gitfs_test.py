@@ -20,7 +20,8 @@ ensure_in_syspath('../..')
 import integration
 from salt.fileserver import gitfs
 
-gitfs.__opts__ = {'gitfs_remotes': [''],
+gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
+                  'gitfs_remotes': [''],
                   'gitfs_root': '',
                   'fileserver_backend': ['git'],
                   'gitfs_base': 'master',
