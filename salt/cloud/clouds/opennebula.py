@@ -585,6 +585,57 @@ def destroy(name, call=None):
     return data
 
 
+def image_allocate(call=None, kwargs=None):
+    '''
+    Allocates a new image in OpenNebula.
+
+    .. versionadded:: Boron
+
+    path
+        The path to a file containing the template of the image to allocate.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    datastore_id
+        The ID of the data-store to be used for the new image.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_allocate opennebula file=/path/to/image_file.txt datastore_id=1
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    path = kwargs.get('path', None)
+    datastore_id = kwargs.get('datastore_id', None)
+
+    if not path or not datastore_id:
+        raise SaltCloudSystemExit(
+            'The image_allocate function requires a file \'path\' and a '
+            '\'datastore_id\' to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.image.allocate(auth, file_data, int(datastore_id))
+
+    data = {
+        'action': 'image.allocate',
+        'allocated': response[0],
+        'image_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def image_clone(call=None, kwargs=None):
     '''
     Clones an existing image.
@@ -801,6 +852,75 @@ def image_persistent(call=None, kwargs=None):
     data = {
         'action': 'image.persistent',
         'response': response[0],
+        'image_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def image_update(call=None, kwargs=None):
+    '''
+    Replaces the image template contents.
+
+    .. versionadded:: Boron
+
+    image_id
+        The ID of the image to update.
+
+    path
+        The path to a file containing the template of the image. Syntax within the
+        file can be the usual attribute=value or XML.
+
+    update_type
+        There are two ways to update an image: ``replace`` the whole template
+        or ``merge`` the new template with the existing one.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_update opennebula image_id=0 file=/path/to/image_update_file.txt update_type=replace
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    image_id = kwargs.get('image_id', None)
+    path = kwargs.get('path', None)
+    update_type = kwargs.get('update_type', None)
+    update_args = ['replace', 'merge']
+
+    if not image_id or not path or not update_type:
+        raise SaltCloudSystemExit(
+            'The image_update function requires an \'image_id\', a file \'path\', '
+            'and an \'update_type\' to be provided.'
+        )
+
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    file_data = salt.utils.fopen(path, mode='r').read()
+    response = server.one.image.update(auth, int(image_id), file_data, int(update_number))
+
+    data = {
+        'action': 'image.update',
+        'updated': response[0],
         'image_id': response[1],
         'error_code': response[2],
     }
