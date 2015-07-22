@@ -347,7 +347,7 @@ def salt_client_acl_tool(username, ip):
             if acl:
                 if username in acl and ip in acl[username]:
                     return True
-                elif username in acl and not ip in acl[username]:
+                elif username in acl and ip not in acl[username]:
                     return False
     return True
 
