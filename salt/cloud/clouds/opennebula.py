@@ -1278,6 +1278,51 @@ def secgroup_update(call=None, kwargs=None):
     return data
 
 
+def template_allocate(call=None, kwargs=None):
+    '''
+    Allocates a new template in OpenNebula.
+
+    .. versionadded:: Boron
+
+    path
+        The path to a file containing the elements of the template to be allocated.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f template_allocate opennebula path=/path/to/template_file.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The template_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The template_allocate function requires a file path to be provided.'
+        )
+
+    path_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.template.allocate(auth, path_data)
+
+    data = {
+        'action': 'template.allocate',
+        'allocated': response[0],
+        'template_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def template_clone(call=None, kwargs=None):
     '''
     Clones an existing virtual machine template.
@@ -1855,6 +1900,77 @@ def vn_reserve(call=None, kwargs=None):
         'action': 'vn.reserve',
         'reserved': response[0],
         'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def template_update(call=None, kwargs=None):
+    '''
+    Replaces the template contents.
+
+    .. versionadded:: Boron
+
+    template_id
+        The ID of the template to update.
+
+    path
+        The path to a file containing the elements of the template to be updated.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    update_type
+        There are two ways to update a template: ``replace`` the whole template
+        or ``merge`` the new template with the existing one.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --function template_update opennebula template_id=1 \
+            path=/path/to/template_update_file.txt \
+            update_type=replace
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The template_update function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    template_id = kwargs.get('template_id', None)
+    path = kwargs.get('path', None)
+    update_type = kwargs.get('update_type', None)
+    update_args = ['replace', 'merge']
+
+    if not template_id or not path or not update_type:
+        raise SaltCloudSystemExit(
+            'The template_update function requires a \'template_id\', a file \'path\', '
+            'and an \'update_type\' to be provided.'
+        )
+
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
+        )
+
+    path_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.template.update(auth, int(template_id), path_data, int(update_number))
+
+    data = {
+        'action': 'template.update',
+        'updated': response[0],
+        'template_id': response[1],
         'error_code': response[2],
     }
 
