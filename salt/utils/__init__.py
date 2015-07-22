@@ -1996,8 +1996,8 @@ def version_cmp(pkg1, pkg2):
         elif distutils.version.LooseVersion(pkg1) > \
                 distutils.version.LooseVersion(pkg2):
             return 1
-    except Exception as e:
-        log.exception(e)
+    except Exception as exc:
+        log.exception(exc)
     return None
 
 
