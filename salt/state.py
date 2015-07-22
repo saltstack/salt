@@ -2635,7 +2635,7 @@ class BaseHighState(object):
 
                     if inc_sls.startswith('.'):
                         levels, include = \
-                            re.match('^(\.+)(.*)$', inc_sls).groups()
+                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
                         level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
