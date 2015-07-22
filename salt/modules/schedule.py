@@ -193,7 +193,7 @@ def delete(name, **kwargs):
         else:
             out = __salt__['event.fire']({'name': name, 'where': 'pillar', 'func': 'delete'}, 'manage_schedule')
             if out:
-                ret['comment'] = 'Deleted Job {0} from schedule.'.format(name)
+                ret['comment'] = 'Deleted Job {0} from schedule. Minions may need a refreshed pillar. Run saltutil.refresh_pillar.'.format(name)
             else:
                 ret['comment'] = 'Failed to delete job {0} from schedule.'.format(name)
                 ret['result'] = False
