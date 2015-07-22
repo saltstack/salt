@@ -2,6 +2,8 @@
 '''
 Module for working with the Zenoss API
 
+.. versionadded:: Boron
+
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
     For example:
