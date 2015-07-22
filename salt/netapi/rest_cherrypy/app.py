@@ -1448,7 +1448,7 @@ class Login(LowDataAdapter):
                        "user {0} from IP {1}")
         success_str = ("[client_acl] Authentication sucessful for "
                        "user {0} from IP {1}")
-        user = creds['username']
+        user = creds.get('username', '')
         ip = cherrypy.request.remote.ip
         if not salt_client_acl_tool(user, ip):
             logger.debug(failure_str.format(user, ip))
