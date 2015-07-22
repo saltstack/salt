@@ -131,7 +131,7 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
-            rdurations.append(ret['duration'])
+            rdurations.append(ret.get('duration', 0))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
