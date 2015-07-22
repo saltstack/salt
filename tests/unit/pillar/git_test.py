@@ -58,7 +58,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
                 'pillar_opts': False
                 }
         git_pillar.__grains__ = {}
-        git_pillar.update('master', 'file://{0}'.format(self.repo_path))
+        git_pillar._update('master', 'file://{0}'.format(self.repo_path))
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)

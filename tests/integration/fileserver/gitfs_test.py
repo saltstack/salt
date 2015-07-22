@@ -35,7 +35,8 @@ gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
                   'gitfs_insecure_auth': False,
                   'gitfs_privkey': '',
                   'gitfs_pubkey': '',
-                  'gitfs_passphrase': ''
+                  'gitfs_passphrase': '',
+                  'gitfs_ssl_verify': True
 }
 
 LOAD = {'saltenv': 'base'}
