@@ -163,22 +163,6 @@ try:
     HAS_GITPYTHON = True
 except ImportError:
     HAS_GITPYTHON = False
-
-try:
-    import pygit2
-    HAS_PYGIT2 = True
-except ImportError:
-    HAS_PYGIT2 = False
-
-try:
-    import dulwich.errors
-    import dulwich.repo
-    import dulwich.client
-    import dulwich.config
-    import dulwich.objects
-    HAS_DULWICH = True
-except ImportError:
-    HAS_DULWICH = False
 # pylint: enable=import-error
 
 PER_REMOTE_PARAMS = ('env', 'root', 'ssl_verify')
