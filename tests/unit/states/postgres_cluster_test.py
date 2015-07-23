@@ -75,13 +75,13 @@ class PostgresClusterTestCase(TestCase):
                         }):
             comt = 'The cluster {0}/{1} has been created'.format(version, name)
             ret.update({'comment': comt, 'result': True,
-                        'changes': {'{0}/{1}'.format(version, name) : 'Present'}
+                        'changes': {'{0}/{1}'.format(version, name): 'Present'}
                         })
             self.assertDictEqual(postgres_cluster.present(version, name),
                                  ret)
             with patch.dict(postgres_cluster.__opts__, {'test': True}):
                 comt = 'Cluster {0}/{1} is set to be created'.format(version, name)
-                ret.update({'comment': comt, 'result': None, 'changes':{}})
+                ret.update({'comment': comt, 'result': None, 'changes': {}})
                 self.assertDictEqual(postgres_cluster.present(version, name),
                                      ret)
 
