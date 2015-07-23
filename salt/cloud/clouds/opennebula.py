@@ -357,6 +357,35 @@ def get_template_id(kwargs=None, call=None):
     return _get_template(name)['id']
 
 
+def get_vm_id(kwargs=None, call=None):
+    '''
+    Returns a virtual machine's ID from the given virtual machine's name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_vm_id opennebula name=my-vm
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_vm_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_vm_id function requires a name.'
+        )
+
+    return _list_vms()[name]['id']
+
+
 def get_vn_id(kwargs=None, call=None):
     '''
     Returns a virtual network's ID from the given virtual network's name.
@@ -1495,6 +1524,191 @@ def template_instantiate(call=None, kwargs=None):
     return data
 
 
+def vm_action(name=None, action=None, call=None):
+    '''
+    Submits an action to be performed on a given virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to action.
+        
+    action
+        The action to be performed on the VM. Available options include:
+          - boot
+          - delete
+          - delete-recreate
+          - hold
+          - poweroff
+          - poweroff-hard
+          - shutdown
+          - shutdown-hard
+          - stop
+          - suspend
+          - reboot
+          - reboot-hard
+          - release
+          - resched
+          - resume
+          - undeploy
+          - undeploy-hard
+          - unresched
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_action my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_info action must be called with -a or --action.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.action(auth, action, vm_id)
+
+    data = {
+        'action': 'vm.action.' + action,
+        'actioned': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_allocate(call=None, kwargs=None):
+    '''
+    Allocates a new virtual machine in OpenNebula.
+
+    .. versionadded:: Boron
+
+    path
+        The path to a file defining the template of the VM to allocate.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    hold
+        If this parameter is set to ``True``, the VM will be created in
+        the ``HOLD`` state. If not set, the VM is created in the ``PENDING``
+        state. Default is ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vm_allocate path=/path/to/vm_template.txt
+        salt-cloud --function vm_allocate path=/path/to/vm_template.txt hold=True
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vm_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    path = kwargs.get('path', None)
+    hold = kwargs.get('hold', None)
+
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_allocate function requires a file \'path\' to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vm.allocate(auth, file_data, is_true(hold))
+
+    data = {
+        'action': 'vm.allocate',
+        'allocated': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_info(name=None, call=None):
+    '''
+    Retrieves information for a given virtual machine. A VM name must be supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM for which to gather information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_info my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_info action must be called with -a or --action.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.info(auth, vm_id)
+
+    if response[0] is False:
+        return response[1]
+    else:
+        info = {}
+        tree = etree.XML(response[1])
+        info[tree.find('NAME').text] = _xml_to_dict(tree)
+        return info
+
+
+def vm_monitoring(name=None, call=None):
+    '''
+    Returns the monitoring records for a given virtual machine. A VM name must be
+    supplied.
+
+    The monitoring information returned is a list of VM elements. Each VM element
+    contains the complete dictionary of the VM with the updated information returned
+    by the poll action.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM of which to gather monitoring records.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_monitoring my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_monitoring action must be called with -a or --action.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.monitoring(auth, vm_id)
+
+    if response[0] is False:
+        log.error(
+            'There was an error retrieving the specified VM\'s monitoring information.'
+        )
+        return {}
+    else:
+        info = {}
+        for vm_ in etree.XML(response[1]):
+            info[vm_.find('ID').text] = _xml_to_dict(vm_)
+        return info
+
+
 def vn_add_ar(call=None, kwargs=None):
     '''
     Adds address ranges to a given virtual network.
@@ -1793,12 +2007,12 @@ def vn_info(call=None, kwargs=None):
     if name and not vn_id:
         vn_id = get_vn_id(kwargs={'name': name})
 
-    info = {}
     response = server.one.vn.info(auth, int(vn_id))
 
     if response[0] is False:
         return response[1]
     else:
+        info = {}
         tree = etree.XML(response[1])
         info[tree.find('NAME').text] = _xml_to_dict(tree)
         return info
@@ -2171,6 +2385,23 @@ def _list_templates(server=None, user=None, password=None):
         templates[template.find('NAME').text] = _xml_to_dict(template)
 
     return templates
+
+
+def _list_vms(server=None, user=None, password=None):
+    '''
+    Lists all virtual machines available to the user and the user's groups.
+    '''
+    if not server or not user or not password:
+        server, user, password = _get_xml_rpc()
+
+    auth = ':'.join([user, password])
+    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, 3)[1]
+
+    vms = {}
+    for v_machine in etree.XML(vm_pool):
+        vms[v_machine.find('NAME').text] = _xml_to_dict(v_machine)
+
+    return vms
 
 
 def _list_vns(server=None, user=None, password=None):
