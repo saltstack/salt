@@ -313,6 +313,7 @@ def _query(path, method='GET', data=None, params=None, header_dict=None, decode=
         text=True,
         decode=decode,
         decode_type='json',
+        hide_fields=['api_key'],
         opts=__opts__,
     )
 
