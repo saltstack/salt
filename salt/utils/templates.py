@@ -72,7 +72,7 @@ class AliasedLoader:
     def __getitem__(self, name):
         if name in ALIASES:
             salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return self.wrapped[ALIASES['name']]
+            return self.wrapped[ALIASES[name]]
         else:
             return self.wrapped[name]
 
