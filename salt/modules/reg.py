@@ -155,7 +155,7 @@ def read_key(hkey, path, key=None):
         else:
             ret['vdata'] = None
             ret['comment'] = 'Empty Value'
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
         ret['comment'] = '{0}'.format(exc)
         ret['success'] = False
@@ -164,7 +164,7 @@ def read_key(hkey, path, key=None):
 
 
 def read_value(hive, key, vname=None):
-    '''
+    r'''
     Reads a registry value or the default value for a key.
 
     :param hive: string
@@ -214,7 +214,7 @@ def read_value(hive, key, vname=None):
             ret['vtype'] = registry.vtype_reverse[vtype]
         else:
             ret['comment'] = 'Empty Value'
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
         ret['comment'] = '{0}'.format(exc)
         ret['success'] = False
@@ -267,7 +267,7 @@ def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
     try:
         _winreg.SetValue(hive, path, vtype, value)
         return True
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc)
         return False
 
@@ -324,7 +324,7 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc)
         return False
 
@@ -374,7 +374,7 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
         handle = _winreg.CreateKeyEx(hive, key, 0, access_mask)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc)
         return False
 
@@ -424,7 +424,7 @@ def delete_key(hkey, path, key=None, reflection=True):
     try:
         _winreg.DeleteKey(hive, key)
         return True
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc)
         return False
 
@@ -469,7 +469,7 @@ def delete_value(hive, key, vname=None, reflection=True):
         _winreg.DeleteValue(handle, vname)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:  # pylint: disable=E0602`
+    except WindowsError as exc:  # pylint: disable=E0602
         _winreg.CloseKey(handle)
         log.error(exc)
         return False
