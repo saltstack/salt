@@ -226,6 +226,7 @@ def mounted(name,
                 mount_invisible_keys = [
                     'actimeo',
                     'comment',
+                    'direct-io-mode',
                     'password',
                     'retry',
                     'port',
