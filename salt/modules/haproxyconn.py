@@ -13,16 +13,17 @@ import stat
 import os
 import logging
 
+log = logging.getLogger(__name__)
+
 try:
     import haproxy.cmds
     import haproxy.conn
     HAS_HAPROXY = True
 except ImportError:
+    log.error('haproxyctl not found.  Try pip install haproxyctl')
     HAS_HAPROXY = False
 
-log = logging.getLogger(__name__)
-
-__virtualname__ = 'haproxy'
+__virtualname__ = 'haproxyconn'
 
 
 def __virtual__():
