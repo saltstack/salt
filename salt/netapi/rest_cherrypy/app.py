@@ -331,7 +331,7 @@ def salt_token_tool():
         cherrypy.request.cookie['session_id'] = x_auth
 
 
-def salt_client_acl_tool(username, ip):
+def salt_api_acl_tool(username, ip):
     '''
     ..versionadded:: Boron
 
@@ -343,7 +343,7 @@ def salt_client_acl_tool(username, ip):
     if salt_config:
         cherrypy_conf = salt_config.get('rest_cherrypy', None)
         if cherrypy_conf:
-            acl = cherrypy_conf.get('client_acl', None)
+            acl = cherrypy_conf.get('api_acl', None)
             if acl:
                 if username in acl and ip in acl[username]:
                     return True
@@ -1443,14 +1443,14 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
-        # Check client acl for the api.
-        failure_str = ("[client_acl] Authentication failed for "
+        # Check acl for the api.
+        failure_str = ("[api_acl] Authentication failed for "
                        "user {0} from IP {1}")
-        success_str = ("[client_acl] Authentication sucessful for "
+        success_str = ("[api_acl] Authentication sucessful for "
                        "user {0} from IP {1}")
         user = creds.get('username', '')
         ip = cherrypy.request.remote.ip
-        if not salt_client_acl_tool(user, ip):
+        if not salt_api_acl_tool(user, ip):
             logger.debug(failure_str.format(user, ip))
             raise cherrypy.HTTPError(401, failure_str.format(user, ip))
         else:
