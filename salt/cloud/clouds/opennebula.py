@@ -1419,6 +1419,57 @@ def vn_free_ar(call=None, kwargs=None):
     return data
 
 
+def vn_hold(call=None, kwargs=None):
+    '''
+    Holds a virtual network lease as used.
+
+    .. versionadded:: Boron
+
+    vn_id
+        The ID of the virtual network from which to hold the lease.
+
+    path
+        The path to a file defining the template of the lease to hold.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_hold opennebula vn_id=3 path=/path/to/vn_hold_file.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_hold function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    vn_id = kwargs.get('vn_id', None)
+    path = kwargs.get('path', None)
+
+    if not vn_id or not path:
+        raise SaltCloudSystemExit(
+            'The vn_hold function requires a \'vn_id\' and a \'path\' '
+            'to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vn.hold(auth, int(vn_id), file_data)
+
+    data = {
+        'action': 'vn.hold',
+        'held': response[0],
+        'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def vn_info(call=None, kwargs=None):
     '''
     Retrieves information for the virtual network.
@@ -1470,6 +1521,108 @@ def vn_info(call=None, kwargs=None):
         tree = etree.XML(response[1])
         info[tree.find('NAME').text] = _xml_to_dict(tree)
         return info
+
+
+def vn_release(call=None, kwargs=None):
+    '''
+    Releases a virtual network lease that was previously on hold.
+
+    .. versionadded:: Boron
+
+    vn_id
+        The ID of the virtual network from which to release the lease.
+
+    path
+        The path to a file defining the template of the lease to release.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_release opennebula vn_id=3 path=/path/to/vn_release_file.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_reserve function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    vn_id = kwargs.get('vn_id', None)
+    path = kwargs.get('path', None)
+
+    if not vn_id or not path:
+        raise SaltCloudSystemExit(
+            'The vn_release function requires a \'vn_id\' and a \'path\' '
+            'to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vn.release(auth, int(vn_id), file_data)
+
+    data = {
+        'action': 'vn.release',
+        'released': response[0],
+        'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vn_reserve(call=None, kwargs=None):
+    '''
+    Reserve network addresses.
+
+    .. versionadded:: Boron
+
+    vn_id
+        The ID of the virtual network from which to reserve addresses.
+
+    path
+        The path to a file defining the template of the address reservation.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vn_reserve opennebula vn_id=3 path=/path/to/vn_reserve_file.txt
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vn_reserve function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    vn_id = kwargs.get('vn_id', None)
+    path = kwargs.get('path', None)
+
+    if not vn_id or not path:
+        raise SaltCloudSystemExit(
+            'The vn_reserve function requires a \'vn_id\' and a \'path\' '
+            'to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vn.reserve(auth, int(vn_id), file_data)
+
+    data = {
+        'action': 'vn.reserve',
+        'reserved': response[0],
+        'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
 
 
 # Helper Functions
