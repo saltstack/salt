@@ -299,7 +299,7 @@ class IPCClient(object):
                 self._connecting_future.set_result(True)
                 break
             except Exception as exc:
-                log.critical('foo', exc_info=True)
+                log.error('Exception connecting to {0}'.format(self.ipc_url), exc_info_on_loglevel=logging.DEBUG)
                 yield tornado.gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(exc)
 
