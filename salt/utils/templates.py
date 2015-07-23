@@ -48,6 +48,10 @@ ALIAS_WARN = (
         'Please switch to cmd.shell or set python_shell=True to avoid '
         'breakage in the future, when this aliasing is removed.'
 )
+ALIASES = {
+        'cmd.run': 'cmd.shell',
+        'cmd': {'run': 'shell'},
+}
 
 
 class AliasedLoader:
@@ -61,25 +65,21 @@ class AliasedLoader:
     Non-dotted aliases ('cmd') must resolve to a dictionary of function
     aliases for that module (e.g. {'run': 'shell'})
     '''
-    aliases = {
-            'cmd.run': 'cmd.shell',
-            'cmd': {'run': 'shell'},
-    }
 
     def __init__(self, wrapped):
         self.wrapped = wrapped
 
     def __getitem__(self, name):
-        if name in aliases:
+        if name in ALIASES:
             salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return self.wrapped[aliases['name']]
+            return self.wrapped[ALIASES['name']]
         else:
             return self.wrapped[name]
 
     def __getattr__(self, name):
-        if name in aliases:
+        if name in ALIASES:
             salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return AliasedModule(getattr(self.wrapped, name), aliases[name])
+            return AliasedModule(getattr(self.wrapped, name), ALIASES[name])
         else:
             return getattr(self.wrapped, name)
 
