@@ -142,11 +142,9 @@ def list_upgrades(refresh=False):
     else:
         out = call['stdout']
 
-    output = iter(out.splitlines())
-    output.next()  # Skip informational output line
-    for line in output:
+    for line in iter(out.splitlines()):
         comps = line.split(' ')
-        if len(comps) < 2:
+        if len(comps) != 2:
             continue
         upgrades[comps[0]] = comps[1]
     return upgrades
