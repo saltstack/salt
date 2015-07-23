@@ -6,6 +6,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Load this state if the reg module exists

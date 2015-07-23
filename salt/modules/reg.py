@@ -55,9 +55,12 @@ class Registry(object):
     '''
     def __init__(self):
         self.hkeys = {
-            "HKEY_USERS": _winreg.HKEY_USERS,
             "HKEY_CURRENT_USER": _winreg.HKEY_CURRENT_USER,
             "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
+            "HKEY_USERS": _winreg.HKEY_USERS,
+            "HKCU": _winreg.HKEY_CURRENT_USER,
+            "HKLM": _winreg.HKEY_LOCAL_MACHINE,
+            "HKU": _winreg.HKEY_USERS,
             }
 
         self.reflection_mask = {
@@ -152,7 +155,7 @@ def read_key(hkey, path, key=None):
         else:
             ret['vdata'] = None
             ret['comment'] = 'Empty Value'
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         log.debug(exc)
         ret['comment'] = '{0}'.format(exc)
         ret['success'] = False
@@ -162,11 +165,30 @@ def read_key(hkey, path, key=None):
 
 def read_value(hive, key, vname=None):
     '''
+    Reads a registry value or the default value for a key.
 
-    :param hive:
-    :param key:
-    :param vname:
-    :return:
+    :param hive: string
+    The name of the hive. Can be one of the following
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
+
+    :param key: string
+    The key (looks like a path) to the value name.
+
+    :param vname: string
+    The value name. These are the individual name/data pairs under the key. If
+    not passed, the key (Default) value will be returned
+
+    :return: dict
+    A dictionary containing the passed settings as well as the value_data if
+    successful. If unsuccessful, sets success to False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt' 'version'
     '''
 
     # Setup the return array
@@ -192,7 +214,7 @@ def read_value(hive, key, vname=None):
             ret['vtype'] = registry.vtype_reverse[vtype]
         else:
             ret['comment'] = 'Empty Value'
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         log.debug(exc)
         ret['comment'] = '{0}'.format(exc)
         ret['success'] = False
@@ -245,21 +267,52 @@ def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
     try:
         _winreg.SetValue(hive, path, vtype, value)
         return True
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         log.error(exc)
         return False
 
 
 def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True):
     '''
+    Sets a registry value.
 
-    :param hive:
-    :param key:
-    :param vname:
-    :param vdata:
-    :param vtype:
-    :param reflection:
-    :return:
+    :param hive: string
+    The name of the hive. Can be one of the following
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
+
+    :param key: string
+    The key (looks like a path) to the value name.
+
+    :param vname: string
+    The value name. These are the individual name/data pairs under the key. If
+    not passed, the key (Default) value will be set.
+
+    :param vdata: string
+    The value data to be set.
+
+    :param vtype: string
+    The value type. Can be one of the following:
+    - REG_BINARY
+    - REG_DWORD
+    - REG_EXPAND_SZ
+    - REG_MULTI_SZ
+    - REG_SZ
+
+    :param reflection: boolean
+    A boolean value indicating that the value should also be set in the
+    Wow6432Node portion of the registry. Only applies to 64 bit Windows. This
+    setting is ignored for 32 bit Windows.
+
+    :return: boolean
+    Returns True if successful, False if not
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
     '''
     registry = Registry()
     hive = registry.hkeys[hive]
@@ -271,7 +324,7 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         log.error(exc)
         return False
 
@@ -321,7 +374,7 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
         handle = _winreg.CreateKeyEx(hive, key, 0, access_mask)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         log.error(exc)
         return False
 
@@ -341,6 +394,7 @@ def delete_key(hkey, path, key=None, reflection=True):
     the key.
 
     In the Boron release path will be removed and key will be the path.
+    reflection will also be removed.
     ***
 
     Delete a registry key
@@ -351,7 +405,7 @@ def delete_key(hkey, path, key=None, reflection=True):
 
     .. code-block:: bash
 
-        salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
+        salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt'
     '''
 
     if key:  # This if statement will be removed in Boron
@@ -370,22 +424,41 @@ def delete_key(hkey, path, key=None, reflection=True):
     try:
         _winreg.DeleteKey(hive, key)
         return True
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         log.error(exc)
         return False
 
 
 def delete_value(hive, key, vname=None, reflection=True):
     '''
-    Delete a registry key
+    Deletes a registry value.
 
-    Note: This cannot delete a key with subkeys
+    :param hive: string
+    The name of the hive. Can be one of the following
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
+
+    :param key: string
+    The key (looks like a path) to the value name.
+
+    :param vname: string
+    The value name. These are the individual name/data pairs under the key. If
+    not passed, the key (Default) value will be deleted.
+
+    :param reflection: boolean
+    A boolean value indicating that the value should also be set in the
+    Wow6432Node portion of the registry. Only applies to 64 bit Windows. This
+    setting is ignored for 32 bit Windows.
+
+    :return: boolean
+    Returns True if successful, False if not
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
+        salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
     registry = Registry()
     hive = registry.hkeys[hive]
@@ -396,7 +469,7 @@ def delete_value(hive, key, vname=None, reflection=True):
         _winreg.DeleteValue(handle, vname)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:
+    except WindowsError as exc:  # pylint: disable=E0602`
         _winreg.CloseKey(handle)
         log.error(exc)
         return False
