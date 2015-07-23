@@ -34,6 +34,7 @@ urllib3_logger.setLevel(logging.WARNING)
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if requests is installed
@@ -52,6 +53,7 @@ ROUTERS = {'MessagingRouter': 'messaging',
            'ReportRouter': 'report',
            'MibRouter': 'mib',
            'ZenPackRouter': 'zenpack'}
+
 
 def _session():
     '''
@@ -94,12 +96,14 @@ def _router_request(router, method, data=None):
 
     return json.loads(response.content).get('result', None)
 
+
 def _determine_device_class():
     '''
     If no device class is given when adding a device, this helps determine
     '''
     if __salt__['grains.get']('kernel') == 'Linux':
         return '/Server/Linux'
+
 
 def _find_device(device):
     '''
