@@ -1532,7 +1532,7 @@ def vm_action(name=None, action=None, call=None):
 
     name
         The name of the VM to action.
-        
+
     action
         The action to be performed on the VM. Available options include:
           - boot
