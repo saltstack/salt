@@ -65,7 +65,7 @@ def present(version,
         info = infos['{0}/{1}'.format(version, name)]
         # TODO: check locale en encoding configs also
         if any((port != info['port'] if port else False,
-                datdir != info['datadir'] if datadir else False,)):
+                datadir != info['datadir'] if datadir else False,)):
             ret['comment'] = 'Cluster {0}/{1} has wrong parameters ' \
                              'which couldn\'t be changed on fly.' \
                                  .format(version, name)
