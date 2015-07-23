@@ -58,8 +58,13 @@ class PostgresClusterTestCase(TestCase):
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(postgres_cluster.present(version, name), ret)
             infos['{0}/{1}'.format(version, name)]['port'] = 5433
-            comt = ('Cluster {0}/{1} has wrong parameters ' \
-                    'which couldn\'t be changed on fly.'.format(version,name))
+            comt = ('Cluster {0}/{1} has wrong parameters '
+                    'which couldn\'t be changed on fly.'.format(version, name))
+            ret.update({'comment': comt, 'result': False})
+            self.assertDictEqual(postgres_cluster.present(version, name, port=5434), ret)
+            infos['{0}/{1}'.format(version, name)]['datadir'] = '/tmp/'
+            comt = ('Cluster {0}/{1} has wrong parameters '
+                    'which couldn\'t be changed on fly.'.format(version, name))
             ret.update({'comment': comt, 'result': False})
             self.assertDictEqual(postgres_cluster.present(version, name, port=5434), ret)
 
@@ -69,13 +74,13 @@ class PostgresClusterTestCase(TestCase):
                          'postgres.cluster_create': mock_t,
                         }):
             comt = 'The cluster {0}/{1} has been created'.format(version, name)
-            ret.update({'comment': comt, 'result': True, 
-                        'changes':{'{0}/{1}'.format(version,name):'Present'}
+            ret.update({'comment': comt, 'result': True,
+                        'changes': {'{0}/{1}'.format(version, name) : 'Present'}
                         })
             self.assertDictEqual(postgres_cluster.present(version, name),
                                  ret)
             with patch.dict(postgres_cluster.__opts__, {'test': True}):
-                comt = 'Cluster {0}/{1} is set to be created'.format(version,name)
+                comt = 'Cluster {0}/{1} is set to be created'.format(version, name)
                 ret.update({'comment': comt, 'result': None, 'changes':{}})
                 self.assertDictEqual(postgres_cluster.present(version, name),
                                      ret)
