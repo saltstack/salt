@@ -375,8 +375,9 @@ def _format_host(host, data):
         if sum_duration > 999:
             sum_duration /= 1000
             duration_unit = 's'
-        total_duration = u'Total run time: {0:>{1}} {2}'.format(
-            sum_duration, line_max_len - 7, duration_unit)
+        total_duration = u'Total run time: {0} {1}'.format(
+            '{:.3f}'.format(sum_duration).rjust(9 - len(duration_unit)),
+            duration_unit)
         hstrs.append(colorfmt.format(colors['CYAN'], total_duration, colors))
 
     if strip_colors:
