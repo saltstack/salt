@@ -54,7 +54,7 @@ ALIASES = {
 }
 
 
-class AliasedLoader:
+class AliasedLoader(object):
     '''
     Light wrapper around the LazyLoader to redirect 'cmd.run' calls to
     'cmd.shell', for easy use of shellisms during templating calls
@@ -84,7 +84,7 @@ class AliasedLoader:
             return getattr(self.wrapped, name)
 
 
-class AliasedModule:
+class AliasedModule(object):
     '''
     Light wrapper around module objects returned by the LazyLoader's getattr
     for the purposes of `salt.cmd.run()` syntax in templates
