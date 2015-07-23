@@ -2755,7 +2755,7 @@ def comment(name, regex, char='#', backup='.bak'):
         slines = fp_.readlines()
 
     # Perform the edit
-    __salt__['file.comment'](name, regex, char, backup)
+    __salt__['file.comment_line'](name, regex, char, True, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
@@ -2849,7 +2849,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         slines = fp_.readlines()
 
     # Perform the edit
-    __salt__['file.uncomment'](name, regex, char, backup)
+    __salt__['file.comment_line'](name, regex, char, False, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
