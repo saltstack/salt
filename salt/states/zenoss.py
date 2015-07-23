@@ -17,9 +17,8 @@ Allows for setting a state of minions in Zenoss using the Zenoss API. Currently 
         - collector: localhost
 '''
 
-import time
-import logging
 from __future__ import absolute_import
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ def monitored(name, device_class=None, collector='localhost'):
           zenoss.monitored:
             - name: web01.example.com
             - device_class: /Servers/Linux
-            - collector: localhost            
+            - collector: localhost
     '''
 
     ret = {}
@@ -55,7 +54,7 @@ def monitored(name, device_class=None, collector='localhost'):
         ret['comment'] = '{0} is already monitored'.format(name)
         return ret
 
-    if __opts__['test'] == True:
+    if __opts__['test']:
         ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
         ret['changes'] = {'old': 'monitored == False', 'new': 'monitored == True'}
         ret['result'] = None
