@@ -12,7 +12,7 @@ Runner to interact with Spacewalk using Spacewalk API
 To use this runner, set up the Spacewalk URL, username and password in the
 master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/spacewalk.conf``:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     spacewalk:
       spacewalk01.domain.com

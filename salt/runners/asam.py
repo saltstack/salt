@@ -12,7 +12,7 @@ Runner to interact with Novell ASAM Fan-Out Driver
 To use this runner, set up the Novell Fan-Out Driver URL, username and password in the
 master configuration at ``/etc/salt/master`` or ``/etc/salt/master.d/asam.conf``:
 
-.. code-block::yaml
+.. code-block:: yaml
 
     asam:
       prov1.domain.com
@@ -109,6 +109,7 @@ def _get_asam_configuration(driver_url=''):
                 ret = {
                     'platform_edit_url': "{0}://{1}:{2}/config/PlatformEdit.html".format(protocol, asam_server, port),
                     'platform_config_url': "{0}://{1}:{2}/config/PlatformConfig.html".format(protocol, asam_server, port),
+                    'platformset_edit_url': "{0}://{1}:{2}/config/PlatformSetEdit.html".format(protocol, asam_server, port),
                     'platformset_config_url': "{0}://{1}:{2}/config/PlatformSetConfig.html".format(protocol, asam_server, port),
                     'username': username,
                     'password': password
@@ -174,6 +175,18 @@ def _get_platforms(data):
     return platform_list
 
 
+def _get_platform_sets(data):
+    platform_set_list = []
+    for item in data:
+        if item.startswith('PlatformSetEdit.html?'):
+            parameter_list = item.split('PlatformSetEdit.html?', 1)[1].split('&')
+            for parameter in parameter_list:
+                if parameter.startswith("platformSetName"):
+                    platform_set_list.append(parameter.split('=')[1].replace('%20', ' '))
+
+    return platform_set_list
+
+
 def remove_platform(name, server_url):
     '''
     To remove specified ASAM platform from the Novell Fan-Out Driver
@@ -234,7 +247,7 @@ def remove_platform(name, server_url):
 
 def list_platforms(server_url):
     '''
-    To remove specified ASAM platform from the Novell Fan-Out Driver
+    To list all ASAM platforms present on the Novell Fan-Out Driver
 
     CLI Example:
 
@@ -260,9 +273,9 @@ def list_platforms(server_url):
     try:
         html_content =  _make_post_request(url, data, auth, verify=False)
     except Exception as exc:
-        err_msg = "Failed to look up existing platforms on {0}".format(server_url)
+        err_msg = "Failed to look up existing platforms"
         log.error("{0}:\n{1}".format(err_msg, exc))
-        return {name: err_msg}
+        return {server_url: err_msg}
 
     parser = _parse_html_content(html_content)
     platform_list = _get_platforms(parser.data)
@@ -270,4 +283,98 @@ def list_platforms(server_url):
     if platform_list:
          return {server_url: platform_list}
     else:
-        return {name: "No existing platforms found on {0}".format(server_url)}
+        return {server_url: "No existing platforms found"}
+
+
+def list_platform_sets(server_url):
+    '''
+    To list all ASAM platform sets present on the Novell Fan-Out Driver
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run asam.list_platform_sets prov1.domain.com
+    '''
+    config = _get_asam_configuration(server_url)
+    if not config:
+        return False
+
+    url = config['platformset_config_url']
+
+    data = {
+        'manual': 'false',
+    }
+
+    auth = (
+        config['username'],
+        config['password']
+    )
+
+    try:
+        html_content =  _make_post_request(url, data, auth, verify=False)
+    except Exception as exc:
+        err_msg = "Failed to look up existing platform sets"
+        log.error("{0}:\n{1}".format(err_msg, exc))
+        return {server_url: err_msg}
+
+    parser = _parse_html_content(html_content)
+    platform_set_list = _get_platform_sets(parser.data)
+
+    if platform_set_list:
+         return {server_url: platform_set_list}
+    else:
+        return {server_url: "No existing platform sets found"}
+
+
+def add_platform(name, platform_set, server_url):
+    '''
+    To add an ASAM platform using the specified ASAM platform set on the Novell
+    Fan-Out Driver
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run asam.add_platform my-test-vm test-platform-set prov1.domain.com
+    '''
+    config = _get_asam_configuration(server_url)
+    if not config:
+        return False
+
+    platforms = list_platforms(server_url)
+    if name in platforms[server_url]:
+        return {name: "Specified platform already exists on {0}".format(server_url)}
+
+    platform_sets = list_platform_sets(server_url)
+    if platform_set not in platform_sets[server_url]:
+        return {name: "Specified platform set does not exist on {0}".format(server_url)}
+
+    url = config['platform_edit_url']
+
+    data = {
+        'platformName': name,
+        'platformSetName': platform_set,
+        'manual': 'false',
+        'previousURL': '/config/platformAdd.html',
+        'postType': 'PlatformAdd',
+        'Submit': 'Apply'
+    }
+
+    auth = (
+        config['username'],
+        config['password']
+    )
+
+    try:
+        html_content =  _make_post_request(url, data, auth, verify=False)
+    except Exception as exc:
+        err_msg = "Failed to add platform on {0}".format(server_url)
+        log.error("{0}:\n{1}".format(err_msg, exc))
+        return {name: err_msg}
+
+    platforms = list_platforms(server_url)
+    if name in platforms[server_url]:
+        return {name: "Successfully added platform on {0}".format(server_url)}
+    else:
+        return {name: "Failed to add platform on {0}".format(server_url)}
