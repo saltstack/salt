@@ -3,7 +3,9 @@
 Vultr Cloud Module using python-vultr bindings
 ==============================================
 
-The Vultr cloud module is used to control access to the Vultr VPS system
+.. versionadded:: Boron
+
+The Vultr cloud module is used to control access to the Vultr VPS system.
 
 Use of this module only requires the ``api_key`` parameter.
 
@@ -18,10 +20,9 @@ my-vultr-config:
   driver: vultrpy
 
 '''
-from __future__ import absolute_import
-# pylint: disable=E0102
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
 import logging
 import time
