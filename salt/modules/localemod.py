@@ -259,10 +259,10 @@ def gen_locale(locale, **kwargs):
     locale_info = _split_locale(locale)
 
     if on_debian or on_gentoo:  # file-based search
-        path = '/usr/share/i18n/SUPPORTED'
+        search = '/usr/share/i18n/SUPPORTED'
 
         def search_locale():
-            return __salt__['file.search'](path,
+            return __salt__['file.search'](search,
                                            '^{0}$'.format(locale),
                                            flags=re.MULTILINE)
 
