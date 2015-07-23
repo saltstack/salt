@@ -97,9 +97,9 @@ class AliasedModule:
         self.wrapped = wrapped
 
     def __getattr__(self, name):
-        if name in aliases:
+        if name in self.aliases:
             salt.utils.warn_until('Nitrogen', ALIAS_WARN)
-            return getattr(self.wrapped, aliases[name])
+            return getattr(self.wrapped, self.aliases[name])
         else:
             return getattr(self.wrapped, name)
 
