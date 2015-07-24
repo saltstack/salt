@@ -1036,7 +1036,7 @@ def comment_line(path,
                  char='#',
                  cmnt=True,
                  backup='.bak'):
-    '''
+    r'''
     Comment or Uncomment a line in a text file.
 
     :param path: string
