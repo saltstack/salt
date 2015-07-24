@@ -68,8 +68,6 @@ except ImportError:
     HAS_CERTIFI = False
 
 log = logging.getLogger(__name__)
-JARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.txt')
-SESSIONJARFILE = os.path.join(syspaths.CACHE_DIR, 'cookies.session.p')
 USERAGENT = 'Salt/{0}'.format(salt.version.__version__)
 
 
@@ -90,10 +88,10 @@ def query(url,
           headers=False,
           text=False,
           cookies=None,
-          cookie_jar=JARFILE,
+          cookie_jar=None,
           cookie_format='lwp',
           persist_session=False,
-          session_cookie_jar=SESSIONJARFILE,
+          session_cookie_jar=None,
           data_render=False,
           data_renderer=None,
           header_render=False,
@@ -177,6 +175,11 @@ def query(url,
 
     if header_list is None:
         header_list = []
+
+    if cookie_jar is None:
+        cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.txt')
+    if session_cookie_jar is None:
+        session_cookie_jar = os.path.join(opts.get('cachedir', syspaths.CACHE_DIR), 'cookies.session.p')
 
     if persist_session is True and HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with

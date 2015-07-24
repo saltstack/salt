@@ -631,6 +631,7 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
+                    'log_file': 'salt-call.log'
                 })
         self.minion_config = yaml.dump(self.minion_opts)
         self.target = kwargs
