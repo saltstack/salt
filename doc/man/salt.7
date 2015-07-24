@@ -108465,6 +108465,44 @@ carbon.mode: pickle
 .UNINDENT
 .UNINDENT
 .sp
+You can also specify the pattern used for the metric base path (except for virt modules metrics):
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+carbon.metric_base_pattern: carbon.[minion_id].[module].[function]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+These tokens can used :
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[module]: salt module
+[function]: salt function
+[minion_id]: minion id
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Default is :
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+carbon.metric_base_pattern: [module].[function].[minion_id]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
 Carbon settings may also be configured as:
 .INDENT 0.0
 .INDENT 3.5
@@ -108476,6 +108514,7 @@ Carbon settings may also be configured as:
       port: <carbon port>
       skip_on_error: True
       mode: (pickle|text)
+      metric_base_pattern: <pattern> | [module].[function].[minion_id]
 
 To use the carbon returner, append \(aq\-\-return carbon\(aq to the salt command. ex:
 
