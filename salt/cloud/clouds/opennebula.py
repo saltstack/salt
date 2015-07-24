@@ -1524,7 +1524,7 @@ def template_instantiate(call=None, kwargs=None):
     return data
 
 
-def vm_action(name, action=None, call=None):
+def vm_action(name, kwargs=None, call=None):
     '''
     Submits an action to be performed on a given virtual machine.
 
@@ -1558,11 +1558,17 @@ def vm_action(name, action=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_action my-vm
+        salt-cloud -a vm_action my-vm action='release'
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The vm_info action must be called with -a or --action.'
+            'The vm_action function must be called with -a or --action.'
+        )
+
+    action = kwargs.get('action', None)
+    if not action:
+        raise SaltCloudSystemExit(
+            'The vm_action function must have an \'action\' provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1633,7 +1639,7 @@ def vm_allocate(call=None, kwargs=None):
     return data
 
 
-def vm_attach(name, path, call=None):
+def vm_attach(name, kwargs=None, call=None):
     '''
     Attaches a new disk to the given virtual machine.
 
@@ -1650,11 +1656,17 @@ def vm_attach(name, path, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_attach my-vm /path/to/disk_file.txt
+        salt-cloud -a vm_attach my-vm path=/path/to/disk_file.txt
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The vm_attach action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_attach function requires a file \'path\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1674,7 +1686,7 @@ def vm_attach(name, path, call=None):
     return data
 
 
-def vm_attachnic(name, path, call=None):
+def vm_attachnic(name, kwargs=None, call=None):
     '''
     Attaches a new network interface to the given virtual machine.
 
@@ -1691,11 +1703,17 @@ def vm_attachnic(name, path, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_attachnic my-vm /path/to/nic_file.txt
+        salt-cloud -a vm_attachnic my-vm path=/path/to/nic_file.txt
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The vm_attach action must be called with -a or --action.'
+            'The vm_attachnic action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_attachnic function requires a file \'path\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1715,7 +1733,7 @@ def vm_attachnic(name, path, call=None):
     return data
 
 
-def vm_detach(name, disk_id, call=None):
+def vm_detach(name, kwargs=None, call=None):
     '''
     Detaches a disk from a virtual machine.
 
@@ -1731,11 +1749,17 @@ def vm_detach(name, disk_id, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_detach my-vm 1
+        salt-cloud -a vm_detach my-vm disk_id=1
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The vm_detach action must be called with -a or --action.'
+        )
+
+    disk_id = kwargs.get('disk_id', None)
+    if not disk_id:
+        raise SaltCloudSystemExit(
+            'The vm_detach function requires a \'disk_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1753,7 +1777,7 @@ def vm_detach(name, disk_id, call=None):
     return data
 
 
-def vm_detachnic(name, nic_id, call=None):
+def vm_detachnic(name, kwargs=None, call=None):
     '''
     Detaches a disk from a virtual machine.
 
@@ -1769,11 +1793,17 @@ def vm_detachnic(name, nic_id, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_detachnic my-vm 1
+        salt-cloud -a vm_detachnic my-vm nic_id=1
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The vm_detachnic action must be called with -a or --action.'
+        )
+
+    nic_id = kwargs.get('nic_id', None)
+    if not nic_id:
+        raise SaltCloudSystemExit(
+            'The vm_detachnic function requires a \'nic_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1867,7 +1897,7 @@ def vm_monitoring(name, call=None):
         return info
 
 
-def vm_resize(name, path, capacity_maintained=True, call=None):
+def vm_resize(name, kwargs=None, call=None):
     '''
     Changes the capacity of the virtual machine.
 
@@ -1890,11 +1920,19 @@ def vm_resize(name, path, capacity_maintained=True, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_resize my-vm /path/to/capacity_template.txt
+        salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt
+        salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt capacity_maintained=False
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The vm_resize action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    capacity_maintained = kwargs.get('capacity_maintained', True)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_resize function requires a file \'path\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1914,7 +1952,7 @@ def vm_resize(name, path, capacity_maintained=True, call=None):
     return data
 
 
-def vm_update(name, path, update_type, call=None):
+def vm_update(name, kwargs=None, call=None):
     '''
     Replaces the user template contents.
 
@@ -1940,6 +1978,14 @@ def vm_update(name, path, update_type, call=None):
     if call != 'action':
         raise SaltCloudSystemExit(
             'The vm_update action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    update_type = kwargs.get('update_type', None)
+    if not path and not update_type:
+        raise SaltCloudSystemExit(
+            'The vm_update function requires a file \'path\' and an \'update_type\' '
+            'to be provided.'
         )
 
     update_number = 0
