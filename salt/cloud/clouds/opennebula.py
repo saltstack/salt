@@ -888,6 +888,153 @@ def image_persistent(call=None, kwargs=None):
     return data
 
 
+def image_snapshot_delete(call=None, kwargs=None):
+    '''
+    Deletes a snapshot from the image.
+
+    .. versionadded:: Boron
+
+    image_id
+        The ID of the image from which to delete the snapshot.
+
+    snapshot_id
+        The ID of the snapshot to delete.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_snapshot_delete vm_id=106 snapshot_id=45
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_snapshot_delete function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    image_id = kwargs.get('image_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if image_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The image_stanpshot_delete function requires a \'image_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.image.snapshotdelete(auth, int(image_id), int(snapshot_id))
+
+    data = {
+        'action': 'image.snapshotdelete',
+        'deleted': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def image_snapshot_revert(call=None, kwargs=None):
+    '''
+    Reverts an image state to a previous snapshot.
+
+    .. versionadded:: Boron
+
+    image_id
+        The ID of the image to revert.
+
+    snapshot_id
+        The ID of the snapshot to which the image will be reverted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_snapshot_revert vm_id=106 snapshot_id=45
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_snapshot_revert function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    image_id = kwargs.get('image_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if image_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The image_stanpshot_revert function requires a \'image_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.image.snapshotrevert(auth, int(image_id), int(snapshot_id))
+
+    data = {
+        'action': 'image.snapshotrevert',
+        'reverted': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def image_snapshot_flatten(call=None, kwargs=None):
+    '''
+    Flatten the snapshot of an image and discards others.
+
+    .. versionadded:: Boron
+
+    image_id
+        The ID of the image.
+
+    snapshot_id
+        The ID of the snapshot to flatten.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f image_snapshot_flatten vm_id=106 snapshot_id=45
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The image_snapshot_flatten function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    image_id = kwargs.get('image_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if image_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The image_stanpshot_flatten function requires a \'image_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.image.snapshotrevert(auth, int(image_id), int(snapshot_id))
+
+    data = {
+        'action': 'image.snapshotflatten',
+        'flattened': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def image_update(call=None, kwargs=None):
     '''
     Replaces the image template contents.
