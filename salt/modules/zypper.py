@@ -280,7 +280,7 @@ def _get_repo_info(alias, repos_cfg=None):
             elif val == 'NONE':
                 meta[key] = None
         return meta
-    except ValueError:
+    except (ValueError, configparser.NoSectionError) as error:
         return {}
 
 
