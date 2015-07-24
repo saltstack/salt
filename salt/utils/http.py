@@ -181,13 +181,13 @@ def query(url,
     log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
     if method == 'POST':
         # Make sure no secret fields show up in logs
-        log_data = data.copy()
         if isinstance(data, dict):
+            log_data = data.copy()
             for item in data:
                 for field in hide_fields:
                     if item == field:
                         log_data[item] = 'XXXXXXXXXX'
-        log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+            log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
 
     if header_file is not None:
         header_tpl = _render(
