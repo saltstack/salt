@@ -45,6 +45,7 @@ __outputter__ = {
     'template': 'highstate',
     'template_str': 'highstate',
     'apply': 'highstate',
+    'apply_': 'highstate',
     'request': 'highstate',
     'check_request': 'highstate',
     'run_request': 'highstate',
