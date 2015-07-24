@@ -357,6 +357,35 @@ def get_template_id(kwargs=None, call=None):
     return _get_template(name)['id']
 
 
+def get_vm_id(kwargs=None, call=None):
+    '''
+    Returns a virtual machine's ID from the given virtual machine's name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_vm_id opennebula name=my-vm
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_vm_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_vm_id function requires a name.'
+        )
+
+    return _list_vms()[name]['id']
+
+
 def get_vn_id(kwargs=None, call=None):
     '''
     Returns a virtual network's ID from the given virtual network's name.
@@ -1495,6 +1524,770 @@ def template_instantiate(call=None, kwargs=None):
     return data
 
 
+def vm_action(name, kwargs=None, call=None):
+    '''
+    Submits an action to be performed on a given virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to action.
+
+    action
+        The action to be performed on the VM. Available options include:
+          - boot
+          - delete
+          - delete-recreate
+          - hold
+          - poweroff
+          - poweroff-hard
+          - shutdown
+          - shutdown-hard
+          - stop
+          - suspend
+          - reboot
+          - reboot-hard
+          - release
+          - resched
+          - resume
+          - undeploy
+          - undeploy-hard
+          - unresched
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_action my-vm action='release'
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_action function must be called with -a or --action.'
+        )
+
+    action = kwargs.get('action', None)
+    if not action:
+        raise SaltCloudSystemExit(
+            'The vm_action function must have an \'action\' provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.action(auth, action, vm_id)
+
+    data = {
+        'action': 'vm.action.' + action,
+        'actioned': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_allocate(call=None, kwargs=None):
+    '''
+    Allocates a new virtual machine in OpenNebula.
+
+    .. versionadded:: Boron
+
+    path
+        The path to a file defining the template of the VM to allocate.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    hold
+        If this parameter is set to ``True``, the VM will be created in
+        the ``HOLD`` state. If not set, the VM is created in the ``PENDING``
+        state. Default is ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f vm_allocate path=/path/to/vm_template.txt
+        salt-cloud --function vm_allocate path=/path/to/vm_template.txt hold=True
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The vm_allocate function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    path = kwargs.get('path', None)
+    hold = kwargs.get('hold', None)
+
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_allocate function requires a file \'path\' to be provided.'
+        )
+
+    file_data = salt.utils.fopen(path, mode='r').read()
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.vm.allocate(auth, file_data, is_true(hold))
+
+    data = {
+        'action': 'vm.allocate',
+        'allocated': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_attach(name, kwargs=None, call=None):
+    '''
+    Attaches a new disk to the given virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM for which to attach the new disk.
+
+    path
+        The path to a file containing a single DISK vector attribute.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_attach my-vm path=/path/to/disk_file.txt
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_attach action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_attach function requires a file \'path\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    file_data = salt.utils.fopen(path, mode='r').read()
+
+    response = server.one.vm.attachnic(auth, vm_id, file_data)
+
+    data = {
+        'action': 'vm.attach',
+        'attached': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_attachnic(name, kwargs=None, call=None):
+    '''
+    Attaches a new network interface to the given virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM for which to attach the new network interface.
+
+    path
+        The path to a file containing a single NIC vector attribute.
+        Syntax within the file can be the usual attribute=value or XML.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_attachnic my-vm path=/path/to/nic_file.txt
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_attachnic action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_attachnic function requires a file \'path\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    file_data = salt.utils.fopen(path, mode='r').read()
+
+    response = server.one.vm.attach(auth, vm_id, file_data)
+
+    data = {
+        'action': 'vm.attachnic',
+        'nic_attached': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_deploy(name, kwargs=None, call=None):
+    '''
+    Initiates the instance of the given VM on the target host.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to deploy.
+
+    host_id
+        The ID of the target host where the VM will be deployed.
+
+    capacity_maintained
+        True to enforce the Host capacity is not over-committed. This parameter is only
+        acknowledged for users in the ``oneadmin`` group. Host capacity will be always
+        enforced for regular users.
+
+    datastore_id
+        The ID of the target system data-store where the VM will be deployed. Optional.
+        If not set, OpenNebula will choose the data-store.
+
+    CLI Exmaple:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_deploy my-vm host_id=0
+        salt-cloud -a vm_deploy my-vm host_id=1 capacity_maintained=False
+        salt-cloud -a vm_deploy my-vm host_id=0 datastore_id=1
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_deploy action must be called with -a or --action.'
+        )
+
+    host_id = kwargs.get('host_id', None)
+    capacity_maintained = kwargs.get('capacity_maintained', True)
+    datastore_id = int(kwargs.get('datastore_id', '-1'))
+
+    if host_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_deploy function requires a \'host_id\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.deploy(auth, vm_id, int(host_id), is_true(capacity_maintained), datastore_id)
+
+    data = {
+        'action': 'vm.deploy',
+        'deployed': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_detach(name, kwargs=None, call=None):
+    '''
+    Detaches a disk from a virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM from which to detach the disk.
+
+    disk_id
+        The ID of the disk to detach.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_detach my-vm disk_id=1
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_detach action must be called with -a or --action.'
+        )
+
+    disk_id = kwargs.get('disk_id', None)
+    if not disk_id:
+        raise SaltCloudSystemExit(
+            'The vm_detach function requires a \'disk_id\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.detach(auth, vm_id, int(disk_id))
+
+    data = {
+        'action': 'vm.detach',
+        'detached': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_detachnic(name, kwargs=None, call=None):
+    '''
+    Detaches a disk from a virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM from which to detach the network interface.
+
+    nic_id
+        The ID of the nic to detach.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_detachnic my-vm nic_id=1
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_detachnic action must be called with -a or --action.'
+        )
+
+    nic_id = kwargs.get('nic_id', None)
+    if not nic_id:
+        raise SaltCloudSystemExit(
+            'The vm_detachnic function requires a \'nic_id\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.detachnic(auth, vm_id, int(nic_id))
+
+    data = {
+        'action': 'vm.detachnic',
+        'nic_detached': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_disk_save(name, kwargs=None, call=None):
+    '''
+    Sets the disk to be saved in the given image.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM containing the disk to save.
+
+    disk_id
+        The ID of the disk to save.
+
+    image_name
+        The name of the new image where the disk will be saved.
+
+    image_type
+        The type for the new image. If not set, then the default ``ONED`` Configuration
+        will be used. Other valid types include: OS, CDROM, DATABLOCK, KERNEL, RAMDISK,
+        and CONTEXT.
+
+    snapshot_id
+        The ID of the snapshot to export. If not set, the current image state will be
+        used.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_save my-vm disk_id=1 image_name=my-new-image
+        salt-cloud -a vm_disk_save my-vm disk_id=1 image_name=my-new-image image_tyep=CONTEXT snapshot_id=10
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_save action must be called with -a or --action.'
+        )
+
+    disk_id = kwargs.get('disk_id', None)
+    image_name = kwargs.get('image_name', False)
+    image_type = kwargs.get('image_type', '')
+    snapshot_id = int(kwargs.get('datastore_id', '-1'))
+
+    if disk_id is None or image_name is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_save function requires a \'disk_id\' and an \'image_name\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksave(auth,
+                                      vm_id,
+                                      int(disk_id),
+                                      image_name,
+                                      image_type,
+                                      snapshot_id)
+
+    data = {
+        'action': 'vm.disksave',
+        'saved': response[0],
+        'image_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_info(name, call=None):
+    '''
+    Retrieves information for a given virtual machine. A VM name must be supplied.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM for which to gather information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_info my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_info action must be called with -a or --action.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.info(auth, vm_id)
+
+    if response[0] is False:
+        return response[1]
+    else:
+        info = {}
+        tree = etree.XML(response[1])
+        info[tree.find('NAME').text] = _xml_to_dict(tree)
+        return info
+
+
+def vm_migrate(name, kwargs=None, call=None):
+    '''
+    Migrates the specified virtual machine to the specified target host.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to migrate.
+
+    host_id
+        The ID of the host to which the VM will be migrated.
+
+    live_migration
+        If set to ``True``, a live-migration will be performed. Default is ``False``.
+
+    capacity_maintained
+        True to enforce the Host capacity is not over-committed. This parameter is only
+        acknowledged for users in the ``oneadmin`` group. Host capacity will be always
+        enforced for regular users.
+
+    datastore_id
+        The target system data-store ID where the VM will be migrated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_migrate my-vm host_id=0 datastore_id=1
+        salt-cloud -a vm_migrate my-vm host_id=0 datastore_id=1 live_migration=True
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_migrate action must be called with -a or --action.'
+        )
+
+    host_id = kwargs.get('host_id', None)
+    live_migration = kwargs.get('live_migration', False)
+    capactiy_maintained = kwargs.get('capacity_maintained', True)
+    datastore_id = kwargs.get('datastore_id', None)
+
+    if host_id is None and datastore_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_migrate function requires a \'host_id\' and a \'datastore_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.migrate(auth,
+                                     vm_id,
+                                     int(host_id),
+                                     is_true(live_migration),
+                                     is_true(capactiy_maintained),
+                                     int(datastore_id))
+
+    data = {
+        'action': 'vm.migrate',
+        'migrated': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_monitoring(name, call=None):
+    '''
+    Returns the monitoring records for a given virtual machine. A VM name must be
+    supplied.
+
+    The monitoring information returned is a list of VM elements. Each VM element
+    contains the complete dictionary of the VM with the updated information returned
+    by the poll action.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM for which to gather monitoring records.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_monitoring my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_monitoring action must be called with -a or --action.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.monitoring(auth, vm_id)
+
+    if response[0] is False:
+        log.error(
+            'There was an error retrieving the specified VM\'s monitoring information.'
+        )
+        return {}
+    else:
+        info = {}
+        for vm_ in etree.XML(response[1]):
+            info[vm_.find('ID').text] = _xml_to_dict(vm_)
+        return info
+
+
+def vm_resize(name, kwargs=None, call=None):
+    '''
+    Changes the capacity of the virtual machine.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to resize.
+
+    path
+        The path to a file containing new capacity elements CPU, VCPU, MEMORY. If one
+        of them is not present, or its value is 0, it will not be resized. Syntax within
+        the file can be the usual attribute=value or XML.
+
+    capacity_maintained
+        True to enforce the Host capacity is not over-committed. This parameter is only
+        acknowledged for users in the ``oneadmin`` group. Host capacity will be always
+        enforced for regular users.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt
+        salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt capacity_maintained=False
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_resize action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    capacity_maintained = kwargs.get('capacity_maintained', True)
+    if not path:
+        raise SaltCloudSystemExit(
+            'The vm_resize function requires a file \'path\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    file_data = salt.utils.fopen(path, mode='r').read()
+
+    response = server.one.vm.resize(auth, vm_id, file_data, is_true(capacity_maintained))
+
+    data = {
+        'action': 'vm.resize',
+        'resized': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_snapshot_create(vm_name, kwargs=None, call=None):
+    '''
+    Creates a new virtual machine snapshot from the provided VM.
+
+    .. versionadded:: Boron
+
+    vm_name
+        The name of the VM from which to create the snapshot.
+
+    snapshot_name
+        The name of the snapshot to be created.
+
+    CLI Exmampe:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_snapshot_create my-vm snapshot_name=my-new-snapshot
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_create action must be called with -a or --action.'
+        )
+
+    snapshot_name = kwargs.get('snapshot_name', None)
+    if snapshot_name is None:
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_create function requires a \'snapshot_name\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': vm_name}))
+    response = server.one.vm.snapshotcreate(auth, vm_id, snapshot_name)
+
+    data = {
+        'action': 'vm.snapshotcreate',
+        'snapshot_created': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_snapshot_revert(vm_name, kwargs=None, call=None):
+    '''
+    Reverts a virtual machine to a snapshot
+
+    .. versionadded:: Boron
+
+    vm_name
+        The name of the VM to revert.
+
+    snapshot_id
+        The snapshot ID.
+
+    CLI Exmampe:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_snapshot_create my-vm snapshot_name=my-new-snapshot
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_revert action must be called with -a or --action.'
+        )
+
+    snapshot_id = kwargs.get('snapshot_id', None)
+    if snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_revert function requires a \'snapshot_id\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': vm_name}))
+    response = server.one.vm.snapshotrevert(auth, vm_id, int(snapshot_id))
+
+    data = {
+        'action': 'vm.snapshotrevert',
+        'snapshot_reverted': response[0],
+        'vm_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_update(name, kwargs=None, call=None):
+    '''
+    Replaces the user template contents.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to update.
+
+    path
+        The path to a file containing new user template contents. Syntax within the
+        file can be the usual attribute=value or XML.
+
+    update_type
+        There are two ways to update a VM: ``replace`` the whole template
+        or ``merge`` the new template with the existing one.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_update my-vm /path/to/user_template_file.txt 'replace'
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_update action must be called with -a or --action.'
+        )
+
+    path = kwargs.get('path', None)
+    update_type = kwargs.get('update_type', None)
+    if not path and not update_type:
+        raise SaltCloudSystemExit(
+            'The vm_update function requires a file \'path\' and an \'update_type\' '
+            'to be provided.'
+        )
+
+    update_number = 0
+    if update_type == 'merge':
+        update_number = 1
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    file_data = salt.utils.fopen(path, mode='r').read()
+
+    response = server.one.vm.update(auth, vm_id, file_data, update_number)
+
+    data = {
+        'action': 'vm.update',
+        'updated': response[0],
+        'resource_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def vn_add_ar(call=None, kwargs=None):
     '''
     Adds address ranges to a given virtual network.
@@ -1793,12 +2586,12 @@ def vn_info(call=None, kwargs=None):
     if name and not vn_id:
         vn_id = get_vn_id(kwargs={'name': name})
 
-    info = {}
     response = server.one.vn.info(auth, int(vn_id))
 
     if response[0] is False:
         return response[1]
     else:
+        info = {}
         tree = etree.XML(response[1])
         info[tree.find('NAME').text] = _xml_to_dict(tree)
         return info
@@ -2171,6 +2964,23 @@ def _list_templates(server=None, user=None, password=None):
         templates[template.find('NAME').text] = _xml_to_dict(template)
 
     return templates
+
+
+def _list_vms(server=None, user=None, password=None):
+    '''
+    Lists all virtual machines available to the user and the user's groups.
+    '''
+    if not server or not user or not password:
+        server, user, password = _get_xml_rpc()
+
+    auth = ':'.join([user, password])
+    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, 3)[1]
+
+    vms = {}
+    for v_machine in etree.XML(vm_pool):
+        vms[v_machine.find('NAME').text] = _xml_to_dict(v_machine)
+
+    return vms
 
 
 def _list_vns(server=None, user=None, password=None):
