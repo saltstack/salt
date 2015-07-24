@@ -83,7 +83,7 @@ class SaltStackVersion(object):
         'Beryllium'     : (MAX_SIZE - 105, 0),
         'Boron'         : (MAX_SIZE - 104, 0),
         'Carbon'        : (MAX_SIZE - 103, 0),
-        #'Nitrogen'     : (MAX_SIZE - 102, 0),
+        'Nitrogen'      : (MAX_SIZE - 102, 0),
         #'Oxygen'       : (MAX_SIZE - 101, 0),
         #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
