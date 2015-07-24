@@ -188,6 +188,8 @@ def query(url,
                     if item == field:
                         log_data[item] = 'XXXXXXXXXX'
             log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+        else:
+            log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
 
     if header_file is not None:
         header_tpl = _render(
