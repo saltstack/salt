@@ -17,6 +17,18 @@ the pickle protocol, set ``carbon.mode`` to ``pickle``::
 
     carbon.mode: pickle
 
+You can also specify the pattern used for the metric base path (except for virt modules metrics):
+    carbon.metric_base_pattern: carbon.[minion_id].[module].[function]
+
+These tokens can used :
+    [module]: salt module
+    [function]: salt function
+    [minion_id]: minion id
+
+Default is :
+    carbon.metric_base_pattern: [module].[function].[minion_id]
+
+
 Carbon settings may also be configured as::
 
     carbon:
@@ -24,6 +36,7 @@ Carbon settings may also be configured as::
         port: <carbon port>
         skip_on_error: True
         mode: (pickle|text)
+        metric_base_pattern: <pattern> | [module].[function].[minion_id]
 
   To use the carbon returner, append '--return carbon' to the salt command. ex:
 
@@ -163,12 +176,14 @@ def returner(ret):
         port = c_cfg.get('port', cfg('carbon.port', None))
         skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
         mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+        metric_base_pattern = c_cfg.get('metric_base_pattern', cfg('carbon.metric_base_pattern', None))
     else:
         cfg = __opts__
         host = cfg.get('cabon.host', None)
         port = cfg.get('cabon.port', None)
         skip = cfg.get('carbon.skip_on_error', False)
         mode = cfg.get('carbon.mode', 'text').lower()
+        metric_base_pattern = cfg('carbon.metric_base_pattern', None)
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
@@ -190,7 +205,13 @@ def returner(ret):
     # module since then we will get stable metric bases even if the VM is
     # migrate from host to host
     if not metric_base.startswith('virt.'):
-        metric_base += '.' + ret['id'].replace('.', '_')
+        minion_id = ret['id'].replace('.', '_')
+        if metric_base_pattern is not None:
+            [module, function] = ret['fun'].split('.')
+            metric_base = metric_base_pattern.replace("[module]", module).replace("[function]", function).replace("[minion_id]", minion_id)
+        else:
+            metric_base += '.' + minion_id
+        log.debug('Carbon metric_base : %s', metric_base)
 
     metrics = []
     _walk(metric_base, saltdata, metrics, timestamp, skip)
