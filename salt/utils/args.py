@@ -109,7 +109,7 @@ def yamlify_arg(arg):
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
             parsed_arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
-            if isinstance(parsed_arg, string_types):
+            if isinstance(parsed_arg, string_types) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == 'None':
