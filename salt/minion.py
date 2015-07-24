@@ -761,7 +761,7 @@ class Minion(MinionBase):
                     safe=True,
                     failed=False):
         '''
-        Evaluates and returns the current master address. In standard mode, just calls
+        Evaluates and returns the current master address. In str mode, just calls
         authenticate() with the given master address.
 
         With master_type=func evaluates the current master address from the given
@@ -775,7 +775,7 @@ class Minion(MinionBase):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'standard' and opts['__role'] != 'syndic':
+        if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
