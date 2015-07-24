@@ -38,28 +38,28 @@ class RosterEntryConfig(Schema):
     description = 'Salt SSH roster entry definition'
 
     host = StringItem(title='Host',
-                        description='The IP address or DNS name of the remote host',
-                        # Pretty naive pattern matching
-                        pattern=r'^((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|([A-Za-z0-9][A-Za-z0-9\.\-]{1,255}))$',
-                        min_length=1,
-                        required=True)
+                      description='The IP address or DNS name of the remote host',
+                      # Pretty naive pattern matching
+                      pattern=r'^((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})|([A-Za-z0-9][A-Za-z0-9\.\-]{1,255}))$',
+                      min_length=1,
+                      required=True)
     port = PortItem(title='Port',
-                      description='The target system\'s ssh port number',
-                      default=22)
+                    description='The target system\'s ssh port number',
+                    default=22)
     user = StringItem(title='User',
-                        description='The user to log in as. Defaults to root',
-                        default='root',
-                        min_length=1,
-                        required=True)
+                      description='The user to log in as. Defaults to root',
+                      default='root',
+                      min_length=1,
+                      required=True)
     passwd = SecretItem(title='Password',
-                          description='The password to log in with')
+                        description='The password to log in with')
     priv = StringItem(title='Private Key',
-                        description='File path to ssh private key, defaults to salt-ssh.rsa')
+                      description='File path to ssh private key, defaults to salt-ssh.rsa')
     passwd_or_priv_requirement = AnyOfItem(items=(RequirementsItem(requirements=['passwd']),
-                                                    RequirementsItem(requirements=['priv'])))(flatten=True)
+                                                  RequirementsItem(requirements=['priv'])))(flatten=True)
     sudo = BooleanItem(title='Sudo',
-                         description='run command via sudo. Defaults to False',
-                         default=False)
+                       description='run command via sudo. Defaults to False',
+                       default=False)
     timeout = IntegerItem(title='Timeout',
                             description=('Number of seconds to wait for response '
                                          'when establishing an SSH connection'))
