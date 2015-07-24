@@ -121,13 +121,13 @@ class SaltLoggingClass(with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, Ne
                                LOGGING_TEMP_HANDLER):
                     continue
 
-                if not handler.lock:
-                    handler.createLock()
-                handler.acquire()
-
                 formatter = handler.formatter
                 if not formatter:
                     continue
+
+                if not handler.lock:
+                    handler.createLock()
+                handler.acquire()
 
                 fmt = formatter._fmt.replace('%', '%%')
 
