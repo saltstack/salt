@@ -138,7 +138,7 @@ def execute(context=None, lens=None, commands=()):
                 value = value.strip('"').strip("'")
                 args = {'path': path, 'value': value}
             elif method == 'setm':
-		base, sub, value =  re.findall('([^\'" ]+|"[^"]*"|\'[^\']*\')', arg)
+                base, sub, value = re.findall('([^\'" ]+|"[^"]*"|\'[^\']*\')', arg)
                 base = base.rstrip()
                 if context:
                     base = os.path.join(context.rstrip('/'), base.lstrip('/'))
