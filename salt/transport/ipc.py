@@ -179,7 +179,7 @@ class IPCClient(object):
     # Create singleton map between two sockets
     instance_map = weakref.WeakKeyDictionary()
 
-    def __new__(cls, ipc_url, io_loop=None):
+    def __new__(cls, ipc_url, io_loop=None, singleton=True):
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
         if io_loop not in IPCClient.instance_map:
             IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
@@ -188,7 +188,7 @@ class IPCClient(object):
         # FIXME
         key = ipc_url
 
-        if key not in loop_instance_map:
+        if key not in loop_instance_map or not singleton:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
             new_client = object.__new__(cls)
             new_client.__singleton_init__(io_loop=io_loop, ipc_url=ipc_url)
@@ -197,7 +197,7 @@ class IPCClient(object):
             log.debug('Re-using IPCClient for {0}'.format(key))
         return loop_instance_map[key]
 
-    def __singleton_init__(self, ipc_url, io_loop=None):
+    def __singleton_init__(self, ipc_url, io_loop=None, singleton=True):
         '''
         Create a new IPC client
 
@@ -210,8 +210,8 @@ class IPCClient(object):
         self.ipc_url = ipc_url
         self.ipc_url_parsed = urlparse.urlparse(self.ipc_url)
         self._closing = False
+        self._subscribed = False
 
-        self.subscribe_handlers = []
         self._mid = 1
         # TODO: move to config
         self._max_messages = MAXSIZE - 1  # number of IDs before we wrap
@@ -221,6 +221,8 @@ class IPCClient(object):
 
         # queue of messages to send
         self.send_queue = []
+        # queue of messages we recieved (published remotely)
+        self.recv_queue = []  # TODO: HWM
 
         # mapping of message_id -> future
         self.inflight_messages = {}
@@ -245,7 +247,7 @@ class IPCClient(object):
 
         return self._mid
 
-    def __init__(self, ipc_url, io_loop=None):
+    def __init__(self, ipc_url, io_loop=None, singleton=True):
         # Handled by singleton __new__
         pass
 
@@ -330,8 +332,8 @@ class IPCClient(object):
 
                 if message_id is None:
                     log.trace('Received subscribed message on {0}'.format(self.ipc_url))
-                    for handler in self.subscribe_handlers:
-                        self.io_loop.spawn_callback(handler, body)
+                    if self._subscribed:
+                        self.recv_queue.append(body)
                 # otherwise we have a message ID, lets handle it
                 else:
                     # if its odd, then we are getting a return for something we requested
@@ -466,18 +468,38 @@ class IPCClient(object):
         self.send_queue.append(future)
         return future
 
-    def subscribe(self, handler):
+    @tornado.gen.coroutine
+    def recv(self):
         '''
-        Subscribe to all incoming publishes messages. `handler` will be called
-        with the message
-        '''
-        self.subscribe_handlers.append(handler)
+        Get a subscribed message
 
-    def unsubscribe(self, handler):
+        Note: this currently gaurantees that all messages will be recv() BUT it does
+        not keep track of who recv()s them, which means if this is used as a singleton
+        then messages will be recieved by *one* of the users of this object
         '''
-        Unsubscribe `handler` from incoming messages
+        if self._subscribed is False:
+            self.subscribe()
+
+        # TODO: don't `poll`, we should use a tornado-d queue that we can wait on
+        while True:
+            try:
+                msg = self.recv_queue.pop(0)
+                raise tornado.gen.Return(msg)
+            except IndexError:
+                yield tornado.gen.sleep(1)
+
+
+    def subscribe(self):
         '''
-        self.subscribe_handlers.remove(handler)
+        Subscribe to all incoming publishes messages.
+        '''
+        self._subscribed = True
+
+    def unsubscribe(self):
+        '''
+        Unsubscribe from all incoming messages
+        '''
+        self._subscribed = False
 
     def __del__(self):
         self.close()

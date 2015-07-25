@@ -186,24 +186,19 @@ class IPCClientSubscribeTests(BaseIPCCase):
     def setUp(self):
         super(IPCClientSubscribeTests, self).setUp()
         self.channel = self._get_channel()
-        self.channel.subscribe(self._get_handler(self.payloads))
+        self.channel.subscribe()
 
     def tearDown(self):
         super(IPCClientSubscribeTests, self).setUp()
         self.channel.close()
 
-    def _get_handler(self, payloads):
-        def handler(body):
-            payloads.append(body)
-            if isinstance(body, dict) and body.get('stop', False):
-                self.stop()
-        return handler
-
+    @tornado.testing.gen_test
     def test_basic(self):
-        self.server_channel.publish({'stop': True})
-        self.wait()
-        self.assertEqual({'stop': True}, self.payloads[0])
+        self.server_channel.publish('foo')
+        msg = yield self.channel.recv()
+        self.assertEqual('foo', msg)
 
+    @tornado.testing.gen_test
     def test_many_send(self):
         msgs = []
         for i in range(0, 1000):
@@ -211,21 +206,25 @@ class IPCClientSubscribeTests(BaseIPCCase):
 
         for i in msgs:
             self.server_channel.publish(i)
-        self.server_channel.publish({'stop': True})
-        self.wait()
-        self.assertEqual(self.payloads[:-1], msgs)
 
+        for i in msgs:
+            m = yield self.channel.recv()
+            self.assertEqual(m, i)
+
+    @tornado.testing.gen_test
     def test_very_big_message(self):
         long_str = ''.join([str(num) for num in range(10**5)])
-        msg = {'long_str': long_str, 'stop': True}
+        msg = {'long_str': long_str}
         self.server_channel.publish(msg)
-        self.wait()
-        self.assertEqual(msg, self.payloads[0])
+        recv_msg = yield self.channel.recv()
+        self.assertEqual(msg, recv_msg)
 
     def test_multi_subscriber(self):
+        '''
+        '''
         local_client = self._get_channel()
         local_payloads = []
-        local_client.subscribe(self._get_handler(local_payloads))
+        local_client.subscribe()
 
         msgs = []
         for i in range(0, 1000):
@@ -233,49 +232,19 @@ class IPCClientSubscribeTests(BaseIPCCase):
 
         for i in msgs:
             self.server_channel.publish(i)
-        self.server_channel.publish({'stop': True})
-        self.wait()
-        self.assertEqual(self.payloads[:-1], msgs)
-        self.assertEqual(local_payloads[:-1], msgs)
 
-    def test_multi_subscriber_unsubscribe(self):
-        local_client = self._get_channel()
-        local_payloads = []
-        local_handler = self._get_handler(local_payloads)
-        local_client.subscribe(local_handler)
-
-        msg = {'stop': True}
-
-        self.server_channel.publish(msg)
-        self.wait()
-        self.assertEqual(self.payloads, [msg])
-        self.assertEqual(local_payloads, [msg])
-        local_client.unsubscribe(local_handler)
-        self.server_channel.publish(msg)
-        self.wait()
-        self.assertEqual(self.payloads, [msg, msg])
-        self.assertEqual(local_payloads, [msg])
-
-    def test_multi_subscriber_close(self):
-        local_client = self._get_channel()
-        local_payloads = []
-        local_handler = self._get_handler(local_payloads)
-        local_client.subscribe(local_handler)
-
-        msg = {'stop': True}
-
-        self.server_channel.publish(msg)
-        self.wait()
-        self.assertEqual(self.payloads, [msg])
-        self.assertEqual(local_payloads, [msg])
-        local_client.close()
-        self.server_channel.publish(msg)
-        # make sure the callbacks aren't called
-        with self.assertRaises(AssertionError):
+        recvd_msgs = set()
+        for i in range(0, 500):
+            one = self.channel.recv()
+            two = self.channel.recv()
+            one.add_done_callback(self.stop)
             self.wait()
-        # ensure no new messages arrived
-        self.assertEqual(self.payloads, [msg])
-        self.assertEqual(local_payloads, [msg])
+            recvd_msgs.add(one.result())
+            two.add_done_callback(self.stop)
+            self.wait()
+            recvd_msgs.add(two.result())
+
+        self.assertEqual(set(msgs), recvd_msgs)
 
 
 class IPCClientPublishTests(BaseIPCCase):
