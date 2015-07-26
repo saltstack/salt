@@ -255,7 +255,8 @@ using the Python \fBpprint\fP standard library module.
 .INDENT 7.0
 .INDENT 3.5
 If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
-Without the static option, you will get a JSON string for each minion.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
 This is due to using an iterative outputter. So if you want to feed it
 to a JSON parser, use \fB\-\-static\fP as well.
 .UNINDENT
