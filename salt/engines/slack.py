@@ -156,15 +156,15 @@ def start(token,
 
                                 ret = {}
                                 if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
-                                        salt_cmd = aliases[cmd].get('cmd')
+                                    salt_cmd = aliases[cmd].get('cmd')
 
-                                        if 'type' in aliases[cmd]:
-                                            if aliases[cmd]['type'] == 'runner':
-                                                runner = salt.runner.RunnerClient(__opts__)
-                                                ret = runner.cmd(salt_cmd, arg=args, kwarg=kwargs)
-                                        else:
-                                            local = salt.client.LocalClient()
-                                            ret = local.cmd('{}'.format(target), salt_cmd, args, kwargs)
+                                    if 'type' in aliases[cmd]:
+                                        if aliases[cmd]['type'] == 'runner':
+                                            runner = salt.runner.RunnerClient(__opts__)
+                                            ret = runner.cmd(salt_cmd, arg=args, kwarg=kwargs)
+                                    else:
+                                        local = salt.client.LocalClient()
+                                        ret = local.cmd('{0}'.format(target), salt_cmd, args, kwargs)
 
                                 elif cmd in runner_functions:
                                     runner = salt.runner.RunnerClient(__opts__)
@@ -173,7 +173,7 @@ def start(token,
                                 # default to trying to run as a client module.
                                 else:
                                     local = salt.client.LocalClient()
-                                    ret = local.cmd('{}'.format(target), cmd, args, kwargs)
+                                    ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
 
                                 if ret:
                                     pp = pprint.PrettyPrinter(indent=4)
@@ -187,7 +187,7 @@ def start(token,
                                         channel.send_message(return_text)
                             else:
                                 # Fire event to event bus
-                                fire('{}/{}'.format(tag, _m['type']), _m)
+                                fire('{0}/{1}'.format(tag, _m['type']), _m)
                     else:
                         # Fire event to event bus
-                        fire('{}/{}'.format(tag, _m['type']), _m)
+                        fire('{0}/{1}'.format(tag, _m['type']), _m)
