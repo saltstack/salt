@@ -850,7 +850,7 @@ class FileTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ('Must provide name to file.comment')
+        comt = ('Must provide name to file.comment_line')
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.comment('', regex), ret)
 
@@ -875,7 +875,7 @@ class FileTestCase(TestCase):
 
             with patch.dict(filestate.__salt__,
                             {'file.search': mock_t,
-                             'file.comment': mock_t}):
+                             'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
                     ret.update({'comment': comt, 'result': None})
@@ -919,7 +919,7 @@ class FileTestCase(TestCase):
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
                             {'file.search': mock,
-                             'file.uncomment': mock_t}):
+                             'file.comment_line': mock_t}):
                 comt = ('Pattern already uncommented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.uncomment(name, regex), ret)
