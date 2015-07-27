@@ -650,7 +650,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # Use the Salt IPC server
         pull_uri = 'ipc://{0}'.format(os.path.join(self.opts['sock_dir'], 'publish_pull.ipc'))
         # TODO: switch to the actual async interface
-        #pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.async.SyncWrapper(
             salt.transport.ipc.IPCMessageClient,
             (pull_uri,)
