@@ -3,7 +3,7 @@
 Manage Windows features via the ServerManager powershell module
 '''
 from __future__ import absolute_import
-
+import logging
 
 # Import python libs
 try:
@@ -13,6 +13,8 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -68,7 +70,8 @@ def list_available():
 
 def list_installed():
     '''
-    List installed features
+    List installed features. Supported on Windows Server 2008 and Windows 8 and
+    newer.
 
     CLI Example:
 
@@ -83,10 +86,12 @@ def list_installed():
         name = splt.pop(-1)
         display_name = ' '.join(splt)
         ret[name] = display_name
-    state = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select InstallState,Name')
+    state = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select Installed,Name')
     for line in state.splitlines()[2:]:
         splt = line.split()
-        if splt[0] != 'Installed' and splt[1] in ret:
+        if splt[0] == 'False' and splt[1] in ret:
+            del ret[splt[1]]
+        if '----' in splt[0]:
             del ret[splt[1]]
     return ret
 
