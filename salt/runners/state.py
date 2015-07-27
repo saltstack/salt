@@ -56,7 +56,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             test,
             exclude,
             pillar=pillar)
-    ret = {minion.opts['id']: running}
+    ret = {minion.opts['id']: running, 'outputter': 'highstate'}
     return ret
 
 # Aliases for orchestrate runner
