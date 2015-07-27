@@ -228,9 +228,9 @@ class IPCClient(object):
         self.maxflight = 5  # TODO: config
 
         # queue of messages to send
-        self.send_queue = []
+        self.send_queue = []  # TODO: HWM
         # queue of messages we recieved (published remotely)
-        self.recv_queue = tornado.queues.Queue()  # TODO: HWM
+        self.recv_queue = tornado.queues.Queue(maxsize=500)  # TODO: configurable HWM
 
         # mapping of message_id -> future
         self.inflight_messages = {}
@@ -522,6 +522,7 @@ class IPCClient(object):
             timeout = time.time() + timeout
 
         msg = yield self.recv_queue.get(timeout=timeout)
+        self.recv_queue.task_done()
         raise tornado.gen.Return(msg)
 
     def subscribe(self):

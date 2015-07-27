@@ -154,7 +154,10 @@ class IPCClientSendTests(BaseIPCCase):
 
         self.channel.send({'stop': True})
         self.wait()
-        self.assertEqual(self.payloads[:-1], ['foo', 'foo'])
+        local_channel.send({'stop': True})
+        self.wait()
+
+        self.assertEqual(self.payloads.count('foo'), 2)
 
     def test_multistream_errors(self):
         local_channel = self._get_channel()
@@ -167,7 +170,10 @@ class IPCClientSendTests(BaseIPCCase):
 
         self.channel.send({'stop': True})
         self.wait()
-        self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
+        local_channel.send({'stop': True})
+        self.wait()
+        self.assertEqual(self.payloads.count('foo'), 2)
+        self.assertEqual(self.payloads.count(None), 2)
 
 
 class IPCClientSubscribeTests(BaseIPCCase):
