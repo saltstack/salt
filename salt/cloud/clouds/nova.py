@@ -333,6 +333,17 @@ def rackconnect(vm_):
     )
 
 
+def cloudnetwork(vm_):
+    '''
+    Determine if we should use an extra network to bootstrap
+    Either 'False' (default) or 'True'.
+    '''
+    return config.get_cloud_config_value(
+        'cloudnetwork', vm_, __opts__, default='False',
+        search_global=False
+    )
+
+
 def managedcloud(vm_):
     '''
     Determine if we should wait for the managed cloud automation before
@@ -632,6 +643,14 @@ def create(vm_):
                     break
             vm_['rackconnect'] = True
 
+        if ssh_interface(vm_) in node['addresses']:
+            networkname = ssh_interface(vm_)
+            for network in node['addresses'].get(networkname, []):
+                if network['version'] is 4:
+                    node['extra']['access_ip'] = network['addr']
+                    break
+            vm_['cloudnetwork'] = True
+
         if rackconnect(vm_) is True:
             extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
@@ -688,6 +707,10 @@ def create(vm_):
             if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
                 data.public_ips = access_ip
                 return data
+
+        if cloudnetwork(vm_) is True:
+            data.public_ips = access_ip
+            return data
 
         if result:
             log.debug('result = {0}'.format(result))
