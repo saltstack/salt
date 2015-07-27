@@ -25,10 +25,10 @@
 # Minions can connect to multiple masters simultaneously (all masters
 # are "hot"), or can be configured to failover if a master becomes
 # unavailable.  Multiple hot masters are configured by setting this
-# value to "standard".  Failover masters can be requested by setting
+# value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
-# master_type: standard
+# master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
 # respected if master_type above is "failover".
