@@ -841,7 +841,7 @@ class Key(object):
             try:
                 os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 self.event.fire_event(eload, tagify(prefix='key'))
-            except (OSError, IOError)
+            except (OSError, IOError):
                 pass
         self.check_minion_cache()
         return self.list_keys()
