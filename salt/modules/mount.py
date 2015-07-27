@@ -41,7 +41,8 @@ def _list_mounts():
 
     for line in mounts.split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
-        ret[comps[2]] = comps[0]
+        if len(comps) >= 3:
+            ret[comps[2]] = comps[0]
     return ret
 
 
