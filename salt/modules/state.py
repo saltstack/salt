@@ -768,7 +768,8 @@ def top(topfn,
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
     st_.opts['state_top'] = os.path.join('salt://', topfn)
-    st_.opts['state_top_saltenv'] = saltenv
+    if saltenv:
+        st_.opts['state_top_saltenv'] = saltenv
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
