@@ -24,7 +24,7 @@ ensure_in_syspath('../../')
 from salt.states import saltmod
 
 saltmod.__opts__ = {}
-saltmod.__salt__ = {}
+saltmod.__salt__ = {'saltutil.cmd': MagicMock()}
 saltmod.__env__ = {}
 
 
@@ -49,6 +49,12 @@ class SaltmodTestCase(TestCase):
                'result': False,
                'comment': comt}
 
+        test_ret = {'name': name,
+                    'changes': {},
+                    'result': True,
+                    'comment': 'States ran successfully.'
+                    }
+
         self.assertDictEqual(saltmod.state(name, tgt, allow_fail='a'), ret)
 
         comt = ('No highstate or sls specified, no execution made')
@@ -60,10 +66,9 @@ class SaltmodTestCase(TestCase):
         self.assertDictEqual(saltmod.state(name, tgt, highstate=True,
                                            concurrent='a'), ret)
 
-        comt = ('Highstate will be run on target minion1 as test=False')
         ret.update({'comment': comt, 'result': None})
         with patch.dict(saltmod.__opts__, {'test': True}):
-            self.assertDictEqual(saltmod.state(name, tgt, highstate=True), ret)
+            self.assertDictEqual(saltmod.state(name, tgt, highstate=True), test_ret)
 
         ret.update({'comment': 'States ran successfully.', 'result': True})
         with patch.dict(saltmod.__opts__, {'test': False}):

@@ -419,11 +419,13 @@ class Master(SMaster):
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
-        try:
-            # Init any values needed by the git ext pillar
-            salt.utils.gitfs.GitPillar(self.opts)
-        except FileserverConfigError as exc:
-            critical_errors.append(exc.strerror)
+        if any('git' in ext_pillar
+               for ext_pillar in self.opts.get('ext_pillar', [])):
+            try:
+                # Init any values needed by the git ext pillar
+                salt.utils.gitfs.GitPillar(self.opts)
+            except FileserverConfigError as exc:
+                critical_errors.append(exc.strerror)
 
         if errors or critical_errors:
             for error in errors:

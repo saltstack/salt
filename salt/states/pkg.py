@@ -150,11 +150,12 @@ def _fulfills_version_spec(versions, oper, desired_version):
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
+    cmp_func = __salt__.get('pkg.version_cmp')
     for ver in versions:
         if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
                                        ver2=desired_version,
-                                       cmp_func=__salt__.get('version_cmp')):
+                                       cmp_func=cmp_func):
             return True
     return False
 
@@ -1371,7 +1372,7 @@ def latest(
 
     targets = {}
     problems = []
-    cmp_func = __salt__.get('pkg.version_cmp', __salt__.get('version_cmp'))
+    cmp_func = __salt__.get('pkg.version_cmp')
     minion_os = __salt__['grains.item']('os')['os']
 
     if minion_os == 'Gentoo' and watch_flags:
