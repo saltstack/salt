@@ -483,7 +483,7 @@ def get_secgroup_id(kwargs=None, call=None):
 
     name = kwargs.get('name', None)
 
-    return list_security_groups()[name]['id']
+    return list_security_groups(call=call)[name]['id']
 
 
 def get_template_id(kwargs=None, call=None):
@@ -570,7 +570,7 @@ def get_vn_id(kwargs=None, call=None):
             'The get_vn_id function requires a name.'
         )
 
-    return list_vns()[name]['id']
+    return list_vns(call=call)[name]['id']
 
 
 def create(vm_):
