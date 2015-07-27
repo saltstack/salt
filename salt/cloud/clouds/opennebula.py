@@ -2189,6 +2189,174 @@ def vm_disk_save(name, kwargs=None, call=None):
     return data
 
 
+def vm_disk_snapshot_create(name, kwargs=None, call=None):
+    '''
+    Takes a new snapshot of the disk image.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM of which to take the snapshot.
+
+    disk_id
+        The ID of the disk to save.
+
+    description
+        The description for the snapshot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_snapshot_create my-vm disk_id=0 description="My Snapshot Description"
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_create action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get('disk_id', None)
+    description = kwargs.get('description', None)
+
+    if disk_id is None or description is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_create function requires a \'disk_id\' and a \'description\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksnapshotcreate(auth,
+                                                vm_id,
+                                                int(disk_id),
+                                                description)
+
+    data = {
+        'action': 'vm.disksnapshotcreate',
+        'created': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_disk_snapshot_delete(name, kwargs=None, call=None):
+    '''
+    Deletes a disk snapshot based on the given VM and the disk_id.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM containing the snapshot to delete.
+
+    disk_id
+        The ID of the disk to save.
+
+    snapshot_id
+        The ID of the snapshot to be deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_snapshot_delete my-vm disk_id=0 snapshot_id=6
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_delete action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get('disk_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if disk_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_create function requires a \'disk_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksnapshotdelete(auth,
+                                                vm_id,
+                                                int(disk_id),
+                                                int(snapshot_id))
+
+    data = {
+        'action': 'vm.disksnapshotdelete',
+        'deleted': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_disk_snapshot_revert(name, kwargs=None, call=None):
+    '''
+    Reverts a disk state to a previously taken snapshot.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM containing the snapshot.
+
+    disk_id
+        The ID of the disk to revert its state.
+
+    snapshot_id
+        The ID of the snapshot to which the snapshot should be reverted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_snapshot_revert my-vm disk_id=0 snapshot_id=6
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_revert action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get('disk_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if disk_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_revert function requires a \'disk_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksnapshotrevert(auth,
+                                                vm_id,
+                                                int(disk_id),
+                                                int(snapshot_id))
+
+    data = {
+        'action': 'vm.disksnapshotrevert',
+        'deleted': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def vm_info(name, call=None):
     '''
     Retrieves information for a given virtual machine. A VM name must be supplied.
@@ -2433,6 +2601,53 @@ def vm_snapshot_create(vm_name, kwargs=None, call=None):
         'action': 'vm.snapshotcreate',
         'snapshot_created': response[0],
         'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_snapshot_delete(vm_name, kwargs=None, call=None):
+    '''
+    Deletes a virtual machine snapshot from the provided VM.
+
+    .. versionadded:: Boron
+
+    vm_name
+        The name of the VM from which to delete the snapshot.
+
+    snapshot_id
+        The ID of the snapshot to be deleted.
+
+    CLI Exmampe:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_snapshot_delete my-vm snapshot_id=8
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_delete action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    snapshot_id = kwargs.get('snapshot_id', None)
+    if snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_delete function requires a \'snapshot_id\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': vm_name}))
+    response = server.one.vm.snapshotcreate(auth, vm_id, int(snapshot_id))
+
+    data = {
+        'action': 'vm.snapshotdelete',
+        'snapshot_deleted': response[0],
+        'vm_id': response[1],
         'error_code': response[2],
     }
 
