@@ -639,7 +639,7 @@ def create(vm_):
             networkname = rackconnectv3
             for network in node['addresses'].get(networkname, []):
                 if network['version'] is 4:
-                    node['extra']['access_ip'] = network['addr']
+                    access_ip = network['addr']
                     break
             vm_['rackconnect'] = True
 
