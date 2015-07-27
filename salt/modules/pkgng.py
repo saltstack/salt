@@ -725,7 +725,7 @@ def install(name=None,
         opts += 'U'
     if salt.utils.is_true(dryrun):
         opts += 'n'
-    if not salt.utils.is_true(dryrun):
+    if not salt.utils.is_true(dryrun) and pkg_type != 'file':
         opts += 'y'
     if salt.utils.is_true(quiet):
         opts += 'q'
@@ -746,7 +746,7 @@ def install(name=None,
 
     if pkg_type == 'file':
         pkg_cmd = 'add'
-        targets = list(pkg_params.keys())
+        targets = pkg_params
     elif pkg_type == 'repository':
         pkg_cmd = 'install'
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
