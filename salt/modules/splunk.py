@@ -23,10 +23,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import yaml
 import hmac
-import os
-import time
 import base64
 import subprocess
 
@@ -34,6 +31,8 @@ import subprocess
 HAS_LIBS = False
 try:
     import splunklib.client
+    from splunklib.client import AuthenticationError
+    from splunklib.binding import HTTPError
     HAS_LIBS = True
 except ImportError:
     pass
@@ -75,7 +74,7 @@ def _get_secret_key(profile):
 
 def _generate_password(email):
     m = hmac.new(base64.b64decode(_get_secret_key('splunk')), str([email, SERVICE_NAME]))
-    return base64.urlsafe_b64encode(m.digest()).strip().replace('=','')
+    return base64.urlsafe_b64encode(m.digest()).strip().replace('=', '')
 
 
 def _send_email(name, email):
@@ -88,29 +87,31 @@ def _send_email(name, email):
         message = email_object.get('message').format(name, name, _generate_password(email), name)
 
         try:
-            mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin = subprocess.PIPE)
-        except Exception, e:
-            log.error("unable to send email to %s: %s" % (email, str(e)))
+            mail_process = subprocess.Popen(['mail', '-s', subject, '-c', cc, email], stdin=subprocess.PIPE)
+        except Exception as e:
+            log.error("unable to send email to {0}: {1}".format(email, str(e)))
 
         mail_process.communicate(message)
 
-        log.info("sent account creation email to %s" % email)
+        log.info("sent account creation email to {0}".format(email))
 
 
 def _populate_cache(profile="splunk"):
     config = __salt__['config.option'](profile)
 
-    ''' works for multi splunk server configuration '''
     key = "splunk.users.{0}".format(
         config.get('host')
     )
 
     if key not in __context__:
         client = _get_splunk(profile)
-        kwargs = { 'sort_key': 'realname', 'sort_dir': 'asc' }
+        kwargs = {'sort_key': 'realname', 'sort_dir': 'asc'}
         users = client.users.list(count=-1, **kwargs)
 
-        result = { user.email.lower(): user for user in users }
+        result = {}
+        for user in users:
+            result[user.email.lower()] = user
+
         __context__[key] = result
 
     return True
@@ -169,7 +170,7 @@ def get_user(email, profile="splunk", **kwargs):
         salt myminion splunk.get_user 'user@example.com' user_details=true
     '''
 
-    user_map  = list_users(profile)
+    user_map = list_users(profile)
     user_found = email.lower() in user_map.keys()
 
     if not kwargs.get('user_details', False) and user_found:
@@ -178,7 +179,10 @@ def get_user(email, profile="splunk", **kwargs):
     elif kwargs.get('user_details', False) and user_found:
         user = user_map[email.lower()]
 
-        response = { field: user[field]  for field in ['defaultApp', 'realname', 'name', 'email'] }
+        response = {}
+        for field in ['defaultApp', 'realname', 'name', 'email']:
+            response[field] = user[field]
+
         response['roles'] = []
         for role in user.role_entities:
             response['roles'].append(role.name)
@@ -217,7 +221,7 @@ def create_user(email, profile="splunk", **kwargs):
         # create
         for req_field in REQUIRED_FIELDS_FOR_CREATE:
             if not property_map.get(req_field):
-                log.error("Missing required params %s " % ', '.join([str(k) for k in REQUIRED_FIELDS_FOR_CREATE]))
+                log.error("Missing required params {0}".format(', '.join([str(k) for k in REQUIRED_FIELDS_FOR_CREATE])))
                 return False
 
         newuser = client.users.create(username=property_map['name'],
@@ -227,9 +231,13 @@ def create_user(email, profile="splunk", **kwargs):
                                 realname=property_map['realname'])
 
         _send_email(newuser.name, newuser.email)
-        return { field: newuser[field] for field in ['email', 'password', 'realname', 'roles'] }
+
+        response = {}
+        for field in ['email', 'password', 'realname', 'roles']:
+            response[field] = newuser[field]
+
     except Exception as e:
-        log.error("Caught exception %s" % str(e))
+        log.error("Caught exception {0}".format(str(e)))
         return False
 
 
@@ -269,7 +277,7 @@ def update_user(email, profile="splunk", **kwargs):
             if k.lower() == 'name':
                 continue
             if k.lower() == 'roles':
-                if type(v) is str:
+                if isinstance(v, str):
                     v = v.split(',')
                 if set(roles) != set(v):
                     kwargs['roles'] = list(set(v))
@@ -278,7 +286,11 @@ def update_user(email, profile="splunk", **kwargs):
 
     if len(kwargs) > 0:
         user.update(**kwargs).refresh()
-        return { field: user[field] for field in ALLOWED_FIELDS_FOR_MODIFICATION }
+
+        fields_modified = {}
+        for field in ALLOWED_FIELDS_FOR_MODIFICATION:
+            fields_modified[field] = user[field]
+
     else:
         #succeeded, no change
         return True
@@ -301,7 +313,7 @@ def delete_user(email, profile="splunk"):
         try:
             client.users.delete(user.name)
         except (AuthenticationError, HTTPError) as e:
-            log.info('Exception "%s"' % str(e))
+            log.info('Exception: {0}'.format(str(e)))
             return False
     else:
         return False

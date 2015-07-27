@@ -90,17 +90,17 @@ def present(email, profile="splunk", **kwargs):
         else:
             diff = {}
             for field in ['name', 'realname', 'roles', 'defaultApp', 'tz', 'capabilities']:
-                  if field == 'roles':
+                if field == 'roles':
                     diff['roles'] = list(set(target.get(field, [])).symmetric_difference(set(result.get(field, []))))
-                  elif target.get(field) != result.get(field):
-                       diff[field] = result.get(field) 
+                elif target.get(field) != result.get(field):
+                    diff[field] = result.get(field)
 
             newvalues = result
             ret['result'] = True
             ret['changes']['diff'] = diff
             ret['changes']['old'] = target
             ret['changes']['new'] = newvalues
-    
+
     return ret
 
 
