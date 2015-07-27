@@ -59,6 +59,8 @@ REQUIRED_FIELDS_FOR_CREATE = [
     'roles'
 ]
 
+USERS_CACHE_KEY = 'splunk.users'
+
 def __virtual__():
     '''
     Only load this module if splunk is installed on this minion.
@@ -96,18 +98,18 @@ def _send_email(name, email):
 
         log.info("sent account creation email to %s" % email)
 
-def _populate_cache(profile="splunk"):
-    key = "splunk.lyft.users"
 
-    if key not in __context__:
+def _populate_cache(profile="splunk"):
+    if USERS_CACHE_KEY not in __context__:
         client = _get_splunk(profile)
         kwargs = { 'sort_key': 'realname', 'sort_dir': 'asc' }
         users = client.users.list(count=-1, **kwargs)
 
         result = { user.email.lower(): user for user in users }
-        __context__[key] =  result
+        __context__[USERS_CACHE_KEY] = result
 
     return True
+
 
 def _get_splunk(profile):
     '''
@@ -141,12 +143,10 @@ def list_users(profile="splunk"):
         salt myminion splunk.list_users
     '''
 
-    key = "splunk.lyft.users"
-
-    if key not in __context__:
+    if USERS_CACHE_KEY not in __context__:
         _populate_cache(profile)
 
-    return __context__[key]
+    return __context__[USERS_CACHE_KEY]
 
 
 def get_user(email, profile="splunk", **kwargs):
