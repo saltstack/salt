@@ -19,6 +19,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       password: mypassword
       url: hypervisor.domain.tld
       provider: proxmox
+      verify_ssl: True
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
 :maturity: new
@@ -88,13 +89,14 @@ def get_configured_provider():
 url = None
 ticket = None
 csrf = None
+verify_ssl = None
 
 
 def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf
+    global url, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
     )
@@ -104,12 +106,17 @@ def _authenticate():
     passwd = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__, search_global=False
     )
+    verify_ssl = config.get_cloud_config_value(
+        'verify_ssl', get_configured_provider(), __opts__, search_global=False
+    )
+    if verify_ssl is None:
+        verify_ssl = True
 
     connect_data = {'username': username, 'password': passwd}
     full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
 
     returned_data = requests.post(
-        full_url, verify=True, data=connect_data).json()
+        full_url, verify=verify_ssl, data=connect_data).json()
 
     ticket = {'PVEAuthCookie': returned_data['data']['ticket']}
     csrf = str(returned_data['data']['CSRFPreventionToken'])
@@ -133,24 +140,24 @@ def query(conn_type, option, post_data=None):
 
     if conn_type == 'post':
         httpheaders['CSRFPreventionToken'] = csrf
-        response = requests.post(full_url, verify=True,
+        response = requests.post(full_url, verify=verify_ssl,
                                  data=post_data,
                                  cookies=ticket,
                                  headers=httpheaders)
     elif conn_type == 'put':
         httpheaders['CSRFPreventionToken'] = csrf
-        response = requests.put(full_url, verify=True,
+        response = requests.put(full_url, verify=verify_ssl,
                                 data=post_data,
                                 cookies=ticket,
                                 headers=httpheaders)
     elif conn_type == 'delete':
         httpheaders['CSRFPreventionToken'] = csrf
-        response = requests.delete(full_url, verify=True,
+        response = requests.delete(full_url, verify=verify_ssl,
                                    data=post_data,
                                    cookies=ticket,
                                    headers=httpheaders)
     elif conn_type == 'get':
-        response = requests.get(full_url, verify=True,
+        response = requests.get(full_url, verify=verify_ssl,
                                 cookies=ticket)
 
     response.raise_for_status()
