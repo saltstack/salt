@@ -850,7 +850,7 @@ class FileTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ('Must provide name to file.comment_line')
+        comt = ('Must provide name to file.comment')
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.comment('', regex), ret)
 
