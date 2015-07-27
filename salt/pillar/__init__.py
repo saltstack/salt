@@ -68,8 +68,8 @@ def get_async_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=
         saltenv = env
     ptype = {
         'remote': AsyncRemotePillar,
-        #'local': AsyncPillar  # TODO: implement
-    }.get(opts['file_client'], Pillar)
+        'local': AsyncPillar,
+    }.get(opts['file_client'], AsyncPillar)
     return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 
@@ -688,3 +688,12 @@ class Pillar(object):
                 log.critical('Pillar render error: {0}'.format(error))
             pillar['_errors'] = errors
         return pillar
+
+
+# TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
+# ext_pillar etc.
+class AsyncPillar(Pillar):
+    @tornado.gen.coroutine
+    def compile_pillar(self, ext=True, pillar_dirs=None):
+        ret = super(AsyncPillar, self).compile_pillar(ext=ext, pillar_dirs=pillar_dirs)
+        raise tornado.gen.Return(ret)

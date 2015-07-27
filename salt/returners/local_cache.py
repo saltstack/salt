@@ -12,6 +12,7 @@ import os
 import shutil
 import time
 import hashlib
+import bisect
 
 # Import salt libs
 import salt.payload
@@ -261,6 +262,29 @@ def get_jids():
             if endtime:
                 ret[jid]['EndTime'] = endtime
 
+    return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all jobs information filtered by the given criteria.
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    keys = []
+    ret = []
+    for jid, job, _, _ in _walk_through(_job_dir()):
+        job = salt.utils.jid.format_jid_instance_ext(jid, job)
+        if filter_find_job and job['Function'] == 'saltutil.find_job':
+            continue
+        i = bisect.bisect(keys, jid)
+        if len(keys) == count and i == 0:
+            continue
+        keys.insert(i, jid)
+        ret.insert(i, job)
+        if len(keys) > count:
+            del keys[0]
+            del ret[0]
     return ret
 
 

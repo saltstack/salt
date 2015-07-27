@@ -14,4 +14,5 @@ Full list of builtin sdb modules
     etcd_db
     keyring_db
     memcached
+    rest
     sqlite3

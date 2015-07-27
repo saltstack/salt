@@ -14,7 +14,10 @@ import salt.ext.six as six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
-    from novaclient.v1_1 import client
+    try:
+        from novaclient.v2 import client
+    except ImportError:
+        from novaclient.v1_1 import client
     from novaclient.shell import OpenStackComputeShell
     import novaclient.utils
     import novaclient.auth_plugin

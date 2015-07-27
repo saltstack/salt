@@ -388,7 +388,7 @@ class Master(SMaster):
         if salt.utils.is_windows() and self.opts['user'] == 'root':
             # 'root' doesn't typically exist on Windows. Use the current user
             # home directory instead.
-            home = os.path.expanduser('~' + salt.utils.get_user())
+            home = os.path.expanduser('~')
         else:
             home = os.path.expanduser('~' + self.opts['user'])
         try:
@@ -474,7 +474,7 @@ class Master(SMaster):
         process_manager.add_process(Maintenance, args=(self.opts,))
         log.info('Creating master publisher process')
 
-        if self.opts.get('reactor'):
+        if 'reactor' in self.opts:
             log.info('Creating master reactor process')
             process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 

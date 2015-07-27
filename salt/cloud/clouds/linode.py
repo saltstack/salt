@@ -769,7 +769,7 @@ def list_nodes_full():
     .. code-block:: bash
 
         salt-cloud -F
-         salt-cloud --full-query
+        salt-cloud --full-query
 
     .. note::
 

@@ -448,7 +448,7 @@ def sync_all(saltenv=None, refresh=True):
     environment
 
     refresh : True
-        Also refresh the execution modules available to the minion.
+        Also refresh the execution modules and pillar data available to the minion.
 
     .. important::
 
@@ -486,6 +486,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
     if refresh:
         refresh_modules()
+        refresh_pillar()
     return ret
 
 

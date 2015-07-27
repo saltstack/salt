@@ -453,6 +453,10 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif 'Parallels Software' in osdata.get('manufacturer'):
         grains['virtual'] = 'Parallels'
+    # Apache CloudStack
+    elif 'CloudStack KVM Hypervisor' in osdata.get('productname', ''):
+        grains['virtual'] = 'kvm'
+        grains['virtual_subtype'] = 'cloudstack'
     return grains
 
 
@@ -969,7 +973,8 @@ _OS_FAMILY_MAP = {
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
     'ScientificLinux': 'RedHat',
-    'Raspbian': 'Debian'
+    'Raspbian': 'Debian',
+    'Devuan': 'Debian'
 }
 
 
@@ -1069,7 +1074,7 @@ def os_data():
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
-                    if init_bin:
+                    if init_bin is not None:
                         supported_inits = ('upstart', 'sysvinit', 'systemd')
                         edge_len = max(len(x) for x in supported_inits) - 1
                         buf_size = __opts__['file_buffer_size']
@@ -1092,6 +1097,11 @@ def os_data():
                                 'Unable to read from init_bin ({0}): {1}'
                                 .format(init_bin, exc)
                             )
+                    else:
+                        log.error(
+                            'Could not determine init location from command line: ({0})'
+                            .format(' '.join(init_cmdline))
+                        )
 
         # Add lsb grains on any distro with lsb-release
         try:

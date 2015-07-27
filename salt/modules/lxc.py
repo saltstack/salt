@@ -117,7 +117,7 @@ def version():
     '''
     k = 'lxc.version'
     if not __context__.get(k, None):
-        cversion = __salt__['cmd.run_all']('lxc-ls --version')
+        cversion = __salt__['cmd.run_all']('lxc-info --version')
         if not cversion['retcode']:
             ver = distutils.version.LooseVersion(cversion['stdout'])
             if ver < distutils.version.LooseVersion('1.0'):

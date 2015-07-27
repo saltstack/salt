@@ -600,7 +600,7 @@ same privileges as the salt-minion.
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
-          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
+          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && exit 1 || exit 0
 
 This will attempt to do a replace on all enabled=0 in the .repo file, and
 replace them with enabled=1. The check_cmd is just a bash command. It will do

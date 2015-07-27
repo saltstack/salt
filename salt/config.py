@@ -14,6 +14,7 @@ import time
 import codecs
 import logging
 from copy import deepcopy
+import types
 
 # Import third party libs
 import yaml
@@ -2355,10 +2356,13 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
 
     if name and vm_ and name in vm_:
         # The setting name exists in VM configuration.
-        if isinstance(value, dict):
-            value.update(vm_[name].copy())
+        if isinstance(vm_[name], types.GeneratorType):
+            value = next(vm_[name], '')
         else:
-            value = deepcopy(vm_[name])
+            if isinstance(value, dict):
+                value.update(vm_[name].copy())
+            else:
+                value = deepcopy(vm_[name])
 
     return value
 
@@ -2425,7 +2429,8 @@ def is_profile_configured(opts, provider, profile_name):
     Check if the requested profile contains the minimum required parameters for
     a profile.
 
-    Required parameters include image, provider, and size keys.
+    Required parameters include image and provider for all drivers, while some
+    drivers also require size keys.
 
     .. versionadded:: 2015.8.0
     '''

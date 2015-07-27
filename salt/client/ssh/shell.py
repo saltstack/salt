@@ -101,6 +101,9 @@ class Shell(object):
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
         known_hosts = self.opts.get('known_hosts_file')
         if known_hosts and os.path.isfile(known_hosts):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
@@ -133,6 +136,9 @@ class Shell(object):
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
 
         if self.passwd:
             options.extend(['PasswordAuthentication=yes',
