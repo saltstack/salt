@@ -185,7 +185,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     else:
         tops_py_version_mapping['3'] = tops
 
-    # TODO: Consider putting know py2 and py3 compatible libs in it's own sharable directory.
+    # TODO: Consider putting known py2 and py3 compatible libs in it's own sharable directory.
     #       This would reduce the thin size.
     if six.PY2 and sys.version_info[0] == 2:
         # Get python 3 tops
