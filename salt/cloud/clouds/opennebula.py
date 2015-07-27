@@ -228,6 +228,81 @@ def list_nodes_select(call=None):
     )
 
 
+def reboot(name, call=None):
+    '''
+    Reboot a VM.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to reboot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    log.info('Rebooting node {0}'.format(name))
+
+    return vm_action(name, kwargs={'action': 'reboot'}, call=call)
+
+
+def start(name, call=None):
+    '''
+    Start a VM.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to start.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    log.info('Starting node {0}'.format(name))
+
+    return vm_action(name, kwargs={'action': 'resume'}, call=call)
+
+
+def stop(name, call=None):
+    '''
+    Stop a VM.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM to stop.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop my-vm
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    log.info('Stopping node {0}'.format(name))
+
+    return vm_action(name, kwargs={'action': 'stop'}, call=call)
+
+
 def get_image(vm_):
     '''
     Return the image object to use.
@@ -383,7 +458,7 @@ def get_vm_id(kwargs=None, call=None):
             'The get_vm_id function requires a name.'
         )
 
-    return _list_vms()[name]['id']
+    return list_nodes(call=call)[name]['id']
 
 
 def get_vn_id(kwargs=None, call=None):
@@ -1541,15 +1616,15 @@ def vm_action(name, kwargs=None, call=None):
           - hold
           - poweroff
           - poweroff-hard
-          - shutdown
-          - shutdown-hard
-          - stop
-          - suspend
           - reboot
           - reboot-hard
           - release
           - resched
           - resume
+          - shutdown
+          - shutdown-hard
+          - stop
+          - suspend
           - undeploy
           - undeploy-hard
           - unresched
@@ -1565,8 +1640,11 @@ def vm_action(name, kwargs=None, call=None):
             'The vm_action function must be called with -a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     action = kwargs.get('action', None)
-    if not action:
+    if action is None:
         raise SaltCloudSystemExit(
             'The vm_action function must have an \'action\' provided.'
         )
@@ -1577,7 +1655,7 @@ def vm_action(name, kwargs=None, call=None):
     response = server.one.vm.action(auth, action, vm_id)
 
     data = {
-        'action': 'vm.action.' + action,
+        'action': 'vm.action.' + str(action),
         'actioned': response[0],
         'vm_id': response[1],
         'error_code': response[2],
@@ -1663,6 +1741,9 @@ def vm_attach(name, kwargs=None, call=None):
             'The vm_attach action must be called with -a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     path = kwargs.get('path', None)
     if not path:
         raise SaltCloudSystemExit(
@@ -1709,6 +1790,9 @@ def vm_attachnic(name, kwargs=None, call=None):
         raise SaltCloudSystemExit(
             'The vm_attachnic action must be called with -a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     path = kwargs.get('path', None)
     if not path:
@@ -1767,6 +1851,9 @@ def vm_deploy(name, kwargs=None, call=None):
             'The vm_deploy action must be called with -a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     host_id = kwargs.get('host_id', None)
     capacity_maintained = kwargs.get('capacity_maintained', True)
     datastore_id = int(kwargs.get('datastore_id', '-1'))
@@ -1814,6 +1901,9 @@ def vm_detach(name, kwargs=None, call=None):
             'The vm_detach action must be called with -a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     disk_id = kwargs.get('disk_id', None)
     if not disk_id:
         raise SaltCloudSystemExit(
@@ -1857,6 +1947,9 @@ def vm_detachnic(name, kwargs=None, call=None):
         raise SaltCloudSystemExit(
             'The vm_detachnic action must be called with -a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     nic_id = kwargs.get('nic_id', None)
     if not nic_id:
@@ -1914,6 +2007,9 @@ def vm_disk_save(name, kwargs=None, call=None):
         raise SaltCloudSystemExit(
             'The vm_disk_save action must be called with -a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     disk_id = kwargs.get('disk_id', None)
     image_name = kwargs.get('image_name', False)
@@ -2014,6 +2110,9 @@ def vm_migrate(name, kwargs=None, call=None):
         raise SaltCloudSystemExit(
             'The vm_migrate action must be called with -a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     host_id = kwargs.get('host_id', None)
     live_migration = kwargs.get('live_migration', False)
@@ -2119,6 +2218,9 @@ def vm_resize(name, kwargs=None, call=None):
             'The vm_resize action must be called with -a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     path = kwargs.get('path', None)
     capacity_maintained = kwargs.get('capacity_maintained', True)
     if not path:
@@ -2166,6 +2268,9 @@ def vm_snapshot_create(vm_name, kwargs=None, call=None):
             'The vm_snapshot_create action must be called with -a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     snapshot_name = kwargs.get('snapshot_name', None)
     if snapshot_name is None:
         raise SaltCloudSystemExit(
@@ -2209,6 +2314,9 @@ def vm_snapshot_revert(vm_name, kwargs=None, call=None):
         raise SaltCloudSystemExit(
             'The vm_snapshot_revert action must be called with -a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     snapshot_id = kwargs.get('snapshot_id', None)
     if snapshot_id is None:
@@ -2258,6 +2366,9 @@ def vm_update(name, kwargs=None, call=None):
         raise SaltCloudSystemExit(
             'The vm_update action must be called with -a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     path = kwargs.get('path', None)
     update_type = kwargs.get('update_type', None)
@@ -2966,15 +3077,18 @@ def _list_templates(server=None, user=None, password=None):
     return templates
 
 
-def _list_vms(server=None, user=None, password=None):
+def _list_vms(server=None, user=None, password=None, state=None):
     '''
     Lists all virtual machines available to the user and the user's groups.
     '''
     if not server or not user or not password:
         server, user, password = _get_xml_rpc()
 
+    if state is None:
+        state = 3
+
     auth = ':'.join([user, password])
-    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, 3)[1]
+    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, state)[1]
 
     vms = {}
     for v_machine in etree.XML(vm_pool):
