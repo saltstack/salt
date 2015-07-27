@@ -686,7 +686,7 @@ class Minion(MinionBase):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'standard':
+        if opts['master_type'] != 'str':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
