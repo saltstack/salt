@@ -52,9 +52,11 @@ class RosterEntryConfig(Schema):
                       min_length=1,
                       required=True)
     passwd = SecretItem(title='Password',
-                        description='The password to log in with')
+                        description='The password to log in with',
+                        min_length=1)
     priv = StringItem(title='Private Key',
-                      description='File path to ssh private key, defaults to salt-ssh.rsa')
+                      description='File path to ssh private key, defaults to salt-ssh.rsa',
+                      min_length=1)
     passwd_or_priv_requirement = AnyOfItem(items=(RequirementsItem(requirements=['passwd']),
                                                   RequirementsItem(requirements=['priv'])))(flatten=True)
     sudo = BooleanItem(title='Sudo',

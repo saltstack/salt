@@ -446,7 +446,7 @@ class SSH(object):
             if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
                 time.sleep(0.1)
 
-    def run_iter(self, mine=False):
+    def run_iter(self, mine=False, jid=None):
         '''
         Execute and yield returns as they come in, do not print to the display
 
@@ -456,7 +456,7 @@ class SSH(object):
             will modify the argv with the arguments from mine_functions
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts['argv']
@@ -500,12 +500,12 @@ class SSH(object):
                                                                               'return': ret,
                                                                               'fun': fun})
 
-    def run(self):
+    def run(self, jid=None):
         '''
         Execute the overall routine, print results via outputters
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts['argv']

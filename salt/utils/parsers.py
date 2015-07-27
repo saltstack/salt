@@ -32,6 +32,7 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+import salt.utils.jid
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
@@ -2456,6 +2457,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default='python3',
             help='Path to a python3 binary which has salt installed'
         )
+        self.add_option(
+            '--jid',
+            default=None,
+            help='Pass a JID to be used instead of generating one'
+        )
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
@@ -2565,6 +2571,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
+
+    def process_jid(self):
+        if self.options.jid is not None:
+            if not salt.utils.jid.is_jid(self.options.jid):
+                self.error('\'{0}\' is not a valid JID'.format(self.options.jid))
 
 
 class SaltCloudParser(six.with_metaclass(OptionParserMeta,
