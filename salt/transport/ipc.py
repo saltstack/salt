@@ -11,12 +11,14 @@ import sys
 import msgpack
 import urlparse
 import weakref
+import time
 
 # Import Tornado libs
 import tornado
 import tornado.gen
 import tornado.netutil
 import tornado.concurrent
+import tornado.queues
 from tornado.ioloop import IOLoop
 from tornado.iostream import IOStream
 
@@ -179,7 +181,13 @@ class IPCClient(object):
     # Create singleton map between two sockets
     instance_map = weakref.WeakKeyDictionary()
 
-    def __new__(cls, ipc_url, io_loop=None, singleton=True):
+    # TODO: enable singletons by default? They might just be overkill..
+    def __new__(cls, ipc_url, io_loop=None, singleton=False):
+        if not singleton:
+            new_client = object.__new__(cls)
+            new_client.__singleton_init__(io_loop=io_loop, ipc_url=ipc_url)
+            return new_client
+
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
         if io_loop not in IPCClient.instance_map:
             IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
@@ -188,7 +196,7 @@ class IPCClient(object):
         # FIXME
         key = ipc_url
 
-        if key not in loop_instance_map or not singleton:
+        if key not in loop_instance_map:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
             new_client = object.__new__(cls)
             new_client.__singleton_init__(io_loop=io_loop, ipc_url=ipc_url)
@@ -222,7 +230,7 @@ class IPCClient(object):
         # queue of messages to send
         self.send_queue = []
         # queue of messages we recieved (published remotely)
-        self.recv_queue = []  # TODO: HWM
+        self.recv_queue = tornado.queues.Queue()  # TODO: HWM
 
         # mapping of message_id -> future
         self.inflight_messages = {}
@@ -254,6 +262,13 @@ class IPCClient(object):
     def connected(self):
         return hasattr(self, 'stream') and hasattr(self, '_connecting_future') and self._connecting_future.done()
 
+    # TODO: remove... we need it for the sync wrappers
+    @tornado.gen.coroutine
+    def connect_async(self, timeout=1):
+        f = self.connect()
+        if timeout:
+            yield salt.utils.async.Any((f, tornado.gen.sleep(timeout)))
+
     def connect(self, callback=None):
         '''
         Connect to the IPC socket
@@ -282,6 +297,22 @@ class IPCClient(object):
                 break
             try:
                 log.trace('IPCClient: Connecting to socket: {0}'.format(self.ipc_url))
+                # TODO
+                '''
+                # Start the master event publisher
+                old_umask = os.umask(0o177)
+                try:
+                    self.epull_sock.bind(epull_uri)
+                    self.epub_sock.bind(epub_uri)
+                    if (self.opts.get('ipc_mode', '') != 'tcp' and (
+                            self.opts.get('client_acl') or
+                            self.opts.get('external_auth'))):
+                        os.chmod(os.path.join(
+                            self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
+                finally:
+                    os.umask(old_umask)
+                '''
+                self.num_reads = 0
                 if self.ipc_url_parsed.scheme == 'ipc':
                     self.stream = IOStream(
                         socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
@@ -317,12 +348,11 @@ class IPCClient(object):
             server even: meaning we are getting a request which we must respond to
 
         '''
-
-        if not self.connected():
-            yield self.connect()
-
         while not self._closing:
+            # since the connect mechanism creates this routine, we should exit if
+            # we aren't connected
             try:
+                self.num_reads += 1
                 framed_msg_len = yield self.stream.read_until(six.b(' '))
                 framed_msg_raw = yield self.stream.read_bytes(int(framed_msg_len.strip()))
                 framed_msg = msgpack.loads(framed_msg_raw)
@@ -333,7 +363,7 @@ class IPCClient(object):
                 if message_id is None:
                     log.trace('Received subscribed message on {0}'.format(self.ipc_url))
                     if self._subscribed:
-                        self.recv_queue.append(body)
+                        self.recv_queue.put(body)
                 # otherwise we have a message ID, lets handle it
                 else:
                     # if its odd, then we are getting a return for something we requested
@@ -348,13 +378,15 @@ class IPCClient(object):
                         # TODO: implement if we need it
                         #ret_func = write_callback(self.stream, header)
                         pass
-
             except tornado.iostream.StreamClosedError:
                 log.debug('IPC stream to {0} closed, unable to recv'.format(self.ipc_url))
-                yield self.connect()
+                self.disconnect()
+                self.connect()
+                raise tornado.gen.Return()
             except Exception:
                 log.error('Exception parsing response', exc_info=True)
                 self.disconnect()
+                self.connect()
                 raise tornado.gen.Return()
 
     @tornado.gen.coroutine
@@ -369,6 +401,7 @@ class IPCClient(object):
                 yield salt.utils.async.Any(self.inflight_messages.itervalues())
             if not self.connected():
                 yield self.connect()
+            message_id = None
             try:
                 message_future = self.send_queue.pop(0)
                 if message_future._msg_kind == 'send':
@@ -395,7 +428,9 @@ class IPCClient(object):
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
             except tornado.iostream.StreamClosedError as exc:
-                self.inflight_messages.pop(message_id).set_exception(Exception())
+                if message_id:
+                    # TODO: exception
+                    self.inflight_messages.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_future)
                 # if the last connect finished, then we need to make a new one
                 self.disconnect()
@@ -468,8 +503,11 @@ class IPCClient(object):
         self.send_queue.append(future)
         return future
 
+    # TODO: still allow for singletons, if we create a method that will yield back
+    # futures which will be the messages-- to allow for N clients to consume
+    # to do this we'll need a lot of bookeeping
     @tornado.gen.coroutine
-    def recv(self):
+    def recv(self, timeout=None):  # TODO: timeout
         '''
         Get a subscribed message
 
@@ -480,14 +518,11 @@ class IPCClient(object):
         if self._subscribed is False:
             self.subscribe()
 
-        # TODO: don't `poll`, we should use a tornado-d queue that we can wait on
-        while True:
-            try:
-                msg = self.recv_queue.pop(0)
-                raise tornado.gen.Return(msg)
-            except IndexError:
-                yield tornado.gen.sleep(1)
+        if timeout is not None:
+            timeout = time.time() + timeout
 
+        msg = yield self.recv_queue.get(timeout=timeout)
+        raise tornado.gen.Return(msg)
 
     def subscribe(self):
         '''
