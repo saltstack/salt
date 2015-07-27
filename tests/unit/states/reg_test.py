@@ -44,10 +44,10 @@ class RegTestCase(TestCase):
                'result': True,
                'comment': '{0} is already configured'.format(name)}
 
-        mock = MagicMock(side_effect=[value, 'a', 'a'])
+        mock = MagicMock(side_effect=[{'vdata': value}, {'vdata': 'a'}, {'vdata': 'a'}])
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_key': mock,
-                                       'reg.set_key': mock_t}):
+        with patch.dict(reg.__salt__, {'reg.read_value': mock,
+                                       'reg.set_value': mock_t}):
             self.assertDictEqual(reg.present(name, value), ret)
 
             with patch.dict(reg.__opts__, {'test': True}):
@@ -72,10 +72,10 @@ class RegTestCase(TestCase):
                'result': True,
                'comment': '{0} is already absent'.format(name)}
 
-        mock = MagicMock(side_effect=[False, True, True])
+        mock = MagicMock(side_effect=[{'success': False}, {'success': True}, {'success': True}])
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_key': mock,
-                                       'reg.delete_key': mock_t}):
+        with patch.dict(reg.__salt__, {'reg.read_value': mock,
+                                       'reg.delete_value': mock_t}):
             self.assertDictEqual(reg.absent(name), ret)
 
             with patch.dict(reg.__opts__, {'test': True}):
