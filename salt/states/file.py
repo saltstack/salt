@@ -3720,7 +3720,7 @@ def copy(
         'comment': 'Copied "{0}" to "{1}"'.format(source, name),
         'result': True}
     if not name:
-        return _error(ret, 'Must provide name to file.comment')
+        return _error(ret, 'Must provide name to file.copy')
 
     changed = True
     if not os.path.isabs(name):
