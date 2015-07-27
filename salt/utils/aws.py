@@ -141,7 +141,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
 def sig4(method, endpoint, params, prov_dict,
          aws_api_version=DEFAULT_AWS_API_VERSION, location=DEFAULT_LOCATION,
-         product='ec2', uri='/', requesturl=None, data=''):
+         product='ec2', uri='/', requesturl=None, data='', headers=None):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
     Process. This is documented at:
@@ -165,11 +165,17 @@ def sig4(method, endpoint, params, prov_dict,
     amzdate = timenow.strftime('%Y%m%dT%H%M%SZ')
     datestamp = timenow.strftime('%Y%m%d')
 
-    canonical_headers = 'host:{0}\nx-amz-date:{1}\n'.format(
+    canonical_headers = 'host:{0}\nx-amz-date:{1}'.format(
         endpoint,
         amzdate,
     )
     signed_headers = 'host;x-amz-date'
+
+    if isinstance(headers, dict):
+        for header in sorted(headers.keys()):
+            canonical_headers += '\n{0}:{1}'.format(header, headers[header])
+            signed_headers += ';{0}'.format(header)
+    canonical_headers += '\n'
 
     algorithm = 'AWS4-HMAC-SHA256'
 
@@ -223,18 +229,21 @@ def sig4(method, endpoint, params, prov_dict,
             signature,
         )
 
-    headers = {
+    new_headers = {
         'x-amz-date': amzdate,
         'x-amz-content-sha256': payload_hash,
         'Authorization': authorization_header,
     }
+    if isinstance(headers, dict):
+        for header in sorted(headers.keys()):
+            new_headers[header] = headers[header]
 
     # Add in security token if we have one
     if token != '':
-        headers['X-Amz-Security-Token'] = token
+        new_headers['X-Amz-Security-Token'] = token
 
     requesturl = '{0}?{1}'.format(requesturl, querystring)
-    return headers, requesturl
+    return new_headers, requesturl
 
 
 def _sign(key, msg):
