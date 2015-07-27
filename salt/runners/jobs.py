@@ -15,6 +15,7 @@ import salt.payload
 import salt.utils
 import salt.utils.jid
 import salt.minion
+import salt.returners
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -327,6 +328,41 @@ def list_jobs(ext_source=None,
         return {'outputter': outputter, 'data': mret}
     else:
         return mret
+
+
+def list_jobs_filter(count,
+                     filter_find_job=True,
+                     ext_source=None,
+                     outputter=None,
+                     display_progress=False):
+    '''
+    List all detectable jobs and associated functions
+
+    ext_source
+        The external job cache to use. Default: `None`.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run jobs.list_jobs_filter 50
+        salt-run jobs.list_jobs_filter 100 filter_find_job=False
+
+    '''
+    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    if display_progress:
+        __jid_event__.fire_event({'message': 'Querying returner {0} for jobs.'.format(returner)}, 'progress')
+    mminion = salt.minion.MasterMinion(__opts__)
+
+    fun = '{0}.get_jids_filter'.format(returner)
+    if fun not in mminion.returners:
+        raise salt.exceptions.NotImplemented('\'{0}\' returner function not implemented yet.'.format(fun))
+    ret = mminion.returners[fun](count, filter_find_job)
+
+    if outputter:
+        return {'outputter': outputter, 'data': ret}
+    else:
+        return ret
 
 
 def print_job(jid, ext_source=None, outputter=None):

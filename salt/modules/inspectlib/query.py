@@ -65,11 +65,8 @@ class SysInfo(object):
         Get available file systems and their types.
         '''
 
-        out = __salt__['cmd.run_all']("blkid -o export")
-        salt.utils.fsutils._verify_run(out)
-
         data = dict()
-        for dev, dev_data in salt.utils.fsutils._blkid_output(out['stdout']).items():
+        for dev, dev_data in salt.utils.fsutils._blkid().items():
             dev = self._get_disk_size(dev)
             device = dev.pop('device')
             dev['type'] = dev_data['type']
