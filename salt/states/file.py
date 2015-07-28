@@ -2095,6 +2095,7 @@ def recurse(name,
     ret = {
         'name': name,
         'changes': {},
+        'pchanges': {},
         'result': True,
         'comment': {}  # { path: [comment, ...] }
     }
@@ -2423,7 +2424,11 @@ def line(name, content, match=None, mode=None, location=None,
            - before: somekey.*?
     '''
     name = os.path.expanduser(name)
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': True,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
@@ -2435,6 +2440,7 @@ def line(name, content, match=None, mode=None, location=None,
                                     before=before, after=after, show_changes=show_changes,
                                     backup=backup, quiet=quiet, indent=indent)
     if changes:
+        ret['pchanges']['diff'] = changes
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
