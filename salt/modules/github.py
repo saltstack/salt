@@ -20,7 +20,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import os
 
 # Import third party libs
 HAS_LIBS = False
@@ -75,13 +74,13 @@ def _get_client(profile):
     )
 
     if key not in __context__:
-        __context__[key] =  github.Github(
+        __context__[key] = github.Github(
             config.get('token')
         )
     return __context__[key]
 
 
-def _get_members(organization, params = None):
+def _get_members(organization, params=None):
     return github.PaginatedList.PaginatedList(
         github.NamedUser.NamedUser,
         organization._requester,
@@ -92,7 +91,7 @@ def _get_members(organization, params = None):
 
 def list_users(profile="github"):
     '''
-    List all users 
+    List all users
 
     CLI Example:
 
@@ -106,8 +105,8 @@ def list_users(profile="github"):
         client = _get_client(profile)
         organization = client.get_organization(_get_org_name(profile))
 
-        users = [ member.login for member in _get_members(organization, None) ]
-        __context__[key] =  users
+        users = [member.login for member in _get_members(organization, None)]
+        __context__[key] = users
 
 
     return __context__[key]
@@ -135,7 +134,7 @@ def get_user(name, profile="github", **kwargs):
     try:
         user = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception("Resource not found %s : " % str(e))
+        logging.exception("Resource not found {0}: ".format(str(e)))
         return False
 
     response['company'] = user.company
@@ -180,7 +179,7 @@ def add_user(name, profile="github", **kwargs):
     try:
         github_named_user = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception("Resource not found %s : " % str(e))
+        logging.exception("Resource not found {0}: ".format(str(e)))
         return False
 
     org_team = organization.get_team(_get_dev_team_id(profile))
@@ -191,7 +190,7 @@ def add_user(name, profile="github", **kwargs):
             org_team.url + "/memberships/" + github_named_user._identity,
             input={'role': 'member'},
             parameters={'role': 'member'}
-        ) 
+        )
     except github.GithubException as e:
         logging.error(str(e))
         return True
@@ -219,7 +218,7 @@ def remove_user(name, profile="github", **kwargs):
     try:
         git_user = client.get_user(name)
     except UnknownObjectException as e:
-        logging.exception("Resource not found %s : " % str(e))
+        logging.exception("Resource not found: {0}".format(str(e)))
         return False
 
 

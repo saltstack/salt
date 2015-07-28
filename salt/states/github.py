@@ -4,7 +4,7 @@ Github User State Module
 
 .. versionadded:: 2015.2.0
 
-This state is used to ensure presence of users in Github Lyft Organization.
+This state is used to ensure presence of users in the Organization.
 
 .. code-block:: yaml
 
@@ -12,7 +12,7 @@ This state is used to ensure presence of users in Github Lyft Organization.
         github.present:
             - name: 'Example TestUser1'
             - email: example@domain.com
-            - username: 'gitexample'            
+            - username: 'gitexample'
 '''
 
 def __virtual__():
@@ -52,14 +52,12 @@ def present(name, profile="github", **kwargs):
 
     target = __salt__['github.get_user'](name, profile=profile, **kwargs)
 
-    ''' If the user has a valid github handle and is not 
-       in the lyft org already
-    '''
+    # If the user has a valid github handle and is not in the org already
     if not target:
         ret['result'] = False
         ret['comment'] = 'Couldnt find user {0}'.format(name)
     elif isinstance(target, bool) and target:
-        ret['comment'] = 'User %s is already in the org ' % (name)
+        ret['comment'] = 'User {0} is already in the org '.format(name)
         ret['result'] = True
     elif not target.get('in_org', False) and target.get('membership_state') != 'pending':
         if __opts__['test']:
@@ -80,7 +78,7 @@ def present(name, profile="github", **kwargs):
             ret['comment'] = 'Failed to add user {0} to the org'.format(name)
     else:
         ret['comment'] = 'User {0} has already been invited.'.format(name)
-        ret['result'] = None        
+        ret['result'] = None
 
     return ret
 
@@ -95,7 +93,7 @@ def absent(name, profile="github", **kwargs):
             github.absent:
                 - name: 'Example TestUser1'
                 - email: example@domain.com
-                - username: 'gitexample'            
+                - username: 'gitexample'
 
     The following parameters are required:
 
