@@ -864,7 +864,7 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock}):
+                            {'file.search': mock}):
                 comt = ('Pattern already commented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -874,8 +874,8 @@ class FileTestCase(TestCase):
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock_t,
-                             'file.comment': mock_t}):
+                            {'file.search': mock_t,
+                             'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
                     ret.update({'comment': comt, 'result': None})
@@ -918,8 +918,8 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.contains_regex_multiline': mock,
-                             'file.uncomment': mock_t}):
+                            {'file.search': mock,
+                             'file.comment_line': mock_t}):
                 comt = ('Pattern already uncommented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.uncomment(name, regex), ret)
