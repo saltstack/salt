@@ -19,6 +19,10 @@ import salt.payload
 import salt.utils
 import salt.utils.jid
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+
 log = logging.getLogger(__name__)
 
 # load is the published job
@@ -45,8 +49,10 @@ def _jid_dir(jid):
     '''
     Return the jid_dir for the given job id
     '''
-    jid = str(jid)
-    jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
+    if six.PY3:
+        jhash = getattr(hashlib, __opts__['hash_type'])(jid.encode('utf-8')).hexdigest()
+    else:
+        jhash = getattr(hashlib, __opts__['hash_type'])(str(jid)).hexdigest()
     return os.path.join(_job_dir(),
                         jhash[:2],
                         jhash[2:])
@@ -96,7 +102,10 @@ def prep_jid(nocache=False, passed_jid=None):
             return prep_jid(nocache=nocache)
 
     with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
-        fn_.write(jid)
+        if six.PY2:
+            fn_.write(jid)
+        else:
+            fn_.write(bytes(jid, 'utf-8'))
     if nocache:
         with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
             fn_.write('')
