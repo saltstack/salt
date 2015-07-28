@@ -187,7 +187,7 @@ def _add_image(collection, image):
     else:
         log.error('collection is {0}'.format(type(collection)) +\
                 'instead of dict or list.')
-        raise(TypeError, 'collection is neither list nor '\
+        raise TypeError('collection is neither list nor '\
             'dict.'.format(type(collection)))
     return collection
 
@@ -267,9 +267,9 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
         g_client.images.delete(id)
     except exc.HTTPNotFound:
         return {'Error': 'No image with ID {0}'.format(id)}
-    except exc.HTTPForbidden, msg:
-        log.error(msg)
-        return {'Error': str(msg)}
+    except exc.HTTPForbidden as forbidden:
+        log.error(str(forbidden))
+        return {'Error': str(forbidden)}
     ret = 'Deleted image with ID {0}'.format(id)
     if name:
         ret += ' ({0})'.format(name)
@@ -385,7 +385,7 @@ def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=
     for key, value in kwargs.items():
         if key.startswith('_'):
             continue
-        if not image.has_key(key) or image[key] != value:
+        if key not in image or image[key] != value:
             log.debug('add <{0}={1}> to to_update'.format(key, value))
             to_update[key] = value
     g_client = _auth(profile)
