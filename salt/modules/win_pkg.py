@@ -90,7 +90,10 @@ def latest_version(*names, **kwargs):
         # get latest available (from win_repo) version of package
         pkg_info = _get_package_info(name)
         log.trace('Raw win_repo pkg_info for {0} is {1}'.format(name, pkg_info))
-        latest_available = _get_latest_pkg_version(pkg_info)
+        if not pkg_info:
+            latest_available = 'Not Found in WinRepo (names are case sensitive)'
+        else:
+            latest_available = _get_latest_pkg_version(pkg_info)
         if latest_available:
             log.debug('Latest available version of package {0} is {1}'.format(name, latest_available))
 
