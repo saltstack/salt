@@ -335,27 +335,34 @@ def salt_api_acl_tool(username, request):
     '''
     ..versionadded:: Boron
 
-    Verifies user requests against the API whitelist (IP whitelisting)
-    in order to provide whitelisting like the master has for users, but
-    over the API.
+    Verifies user requests against the API whitelist. (User/IP pair)
+    in order to provide whitelisting for the API similar to the
+    master, but over the API.
 
     ..code-block:: yaml
-    
+
         rest_cherrypy:
             api_acl:
-                proxy_requests: True
-                proxy_header: 'X-Forwarded-For'
                 users:
                     '*':
                         - 1.1.1.1
                         - 1.1.1.2
                     foo:
                         - 8.8.4.4
+
+    :param username: Username to check against the API.
+    :type username: str
+    :param request: Cherrypy request to check against the API.
+    :type request: cherrypy.request
     '''
     failure_str = ("[api_acl] Authentication failed for "
                    "user {0} from IP {1}")
     success_str = ("[api_acl] Authentication sucessful for "
                    "user {0} from IP {1}")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user {0} from IP {1}")
+
+    acl = None
     # Salt Configuration
     salt_config = cherrypy.config.get('saltopts', None)
     if salt_config:
@@ -364,50 +371,31 @@ def salt_api_acl_tool(username, request):
         if cherrypy_conf:
             # ACL Config.
             acl = cherrypy_conf.get('api_acl', None)
-            if acl:
-                # Check users first so we don't even bother with
-                # checking the ACL if the user isn't in the whitelist.
-                users = acl.get('users', {})
-                if username in users or '*' in users:
-                    check_user = username if username in users else '*'
-                    # Do we serve requests through a proxy?
-                    proxy = acl.get('proxy_requests', False)
-                    if proxy:
-                        # Do we have a special header?
-                        proxy_header = acl.get('proxy_header', 'X-Forwarded-For')
-                        ips = request.headers.get(proxy_header)
-                        if ips and isinstance(ips, list):
-                            for ip in ips:
-                                if ip in users[check_user]:
-                                     logger.info(success_str.format(username, ips))
-                                     return True
-                            else:
-                                logger.info(failure_str.format(username, ips))
-                                return False
-                        elif ips and isinstance(ips, str):
-                            if ip in users[check_user]:
-                                logger.info(success_str.format(username, ip))
-                                return True
-                            else:
-                                logger.info(failure_str.format(username, ip))
-                                return False
-                        else:
-                            ip = request.remote.ip
-                            if ip in users[check_user]:
-                                logger.info(success_str.format(username, ip))
-                                return True
-                            else:
-                                logger.info(failure_str.format(username, ip))
-                                return False
-                    else:
-                        ip = request.remote.ip
-                        if ip in users[check_user]:
-                            logger.info(success_str.format(username, ip))
-                            return True
-                        else:
-                            logger.info(failure_str.format(username, ip))
-                            return False
-    return True
+    
+    if acl:
+        users = acl.get('users', {})
+        if users:
+            ip = request.remote.ip
+            if username in users:
+                if ip in users[username]:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            elif username not in users and '*' in users:
+                if ip in users['*']:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            else:
+                logger.info(failure_str.format(username, ip))
+                return False
+    else:
+        logger.info(pass_str.format(username, ip))
+        return True
 
 def salt_ip_verify_tool():
     '''
