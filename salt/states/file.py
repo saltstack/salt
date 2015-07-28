@@ -1025,6 +1025,7 @@ def exists(name):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -1048,6 +1049,7 @@ def missing(name):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -1321,6 +1323,7 @@ def managed(name,
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
+           'pchanges': {},
            'comment': '',
            'name': name,
            'result': True}
@@ -1427,24 +1430,24 @@ def managed(name,
             context = {}
         context['accumulator'] = accum_data[name]
 
+    ret['pchanges'] = __salt__['file.check_managed_changes'](
+        name,
+        source,
+        source_hash,
+        user,
+        group,
+        mode,
+        template,
+        context,
+        defaults,
+        __env__,
+        contents,
+        **kwargs
+    )
+
     try:
         if __opts__['test']:
-            ret['changes'] = __salt__['file.check_managed_changes'](
-                name,
-                source,
-                source_hash,
-                user,
-                group,
-                mode,
-                template,
-                context,
-                defaults,
-                __env__,
-                contents,
-                **kwargs
-            )
-
-            if ret['changes']:
+            if ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
             else:
