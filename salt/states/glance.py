@@ -180,6 +180,11 @@ def image_present(name, visibility='public', protected=None,
     if 'status' in image and checksum:
         if image['status'] == 'active':
             if 'checksum' not in image:
+                # Refresh our info about the image
+                image = __salt__['glance.image_show'](image['id'])
+                if len(image.keys()) == 1:
+                    image = image.values()[0]
+            if 'checksum' not in image:
                 if not __opts__['test']:
                     ret['result'] = False
                 else:
