@@ -2,7 +2,7 @@
 '''
 Module for interop with the Splunk API
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.2.0
 
 :depends:   - splunk-sdk python module
 :configuration: Configure this module by specifying the name of a configuration
@@ -57,6 +57,7 @@ REQUIRED_FIELDS_FOR_CREATE = [
     'name',
     'roles'
 ]
+
 
 def __virtual__():
     '''
