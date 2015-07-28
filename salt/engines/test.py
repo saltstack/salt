@@ -21,13 +21,15 @@ def start():
     if __opts__['__role'] == 'master':
         event_bus = salt.utils.event.get_master_event(
                 __opts__,
-                __opts__['sock_dir'])
+                __opts__['sock_dir'],
+                listen=True)
     else:
         event_bus = salt.utils.event.get_event(
             'minion',
             transport=__opts__['transport'],
             opts=__opts__,
-            sock_dir=__opts__['sock_dir'])
+            sock_dir=__opts__['sock_dir'],
+            listen=True)
         log.debug('test engine started')
 
     while True:

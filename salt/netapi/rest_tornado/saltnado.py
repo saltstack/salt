@@ -260,6 +260,7 @@ class EventListener(object):
             opts['sock_dir'],
             opts['transport'],
             opts=opts,
+            listen=True,
         )
 
         self.event.subscribe()  # start listening for events immediately
@@ -1608,7 +1609,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             'master',
             self.application.opts['sock_dir'],
             self.application.opts['transport'],
-            opts=self.application.opts)
+            opts=self.application.opts,
+            listen=False)
 
         ret = self.event.fire_event({
             'post': self.raw_data,

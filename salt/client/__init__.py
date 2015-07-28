@@ -139,7 +139,7 @@ class LocalClient(object):
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,
-                listen=not self.opts.get('__worker', False))
+                listen=False)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -978,7 +978,7 @@ class LocalClient(object):
                         self.opts['sock_dir'],
                         self.opts['transport'],
                         opts=self.opts,
-                        listen=not self.opts.get('__worker', False))
+                        listen=False)
                 # start listening for new events, before firing off the pings
                 event.connect_pub()
                 # since this is a new ping, no one has responded yet
