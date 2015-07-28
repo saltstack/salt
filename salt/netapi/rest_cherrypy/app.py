@@ -1490,7 +1490,7 @@ class Login(LowDataAdapter):
 
         # Validate against the whitelist.
         if not salt_api_acl_tool(creds['username'], cherrypy.request):
-            raise cherrypy.HTTPError(401, failure_str.format(user, ip))
+            raise cherrypy.HTTPError(401)
 
         # Mint token.
         token = self.auth.mk_token(creds)
