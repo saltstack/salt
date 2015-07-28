@@ -191,7 +191,7 @@ def _add_image(collection, image):
     return collection
 
 def image_create(name, location, profile=None, visibility='public',
-            container_format='bare', disk_format='raw'):
+            protected=None, container_format='bare', disk_format='raw'):
     '''
     Create an image (glance image-create)
 
@@ -213,20 +213,31 @@ def image_create(name, location, profile=None, visibility='public',
     # valid options for "disk_format":
     df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk',
                'raw', 'qcow2', 'vdi', 'iso']
+    kwargs = {'copy_from': location}
     if visibility not in v_list:
         raise SaltInvocationError('"visibility" needs to be one ' +
             'of the following: {0}'.format(', '.join(v_list)))
+    elif visibility == 'public':
+        kwargs['is_public'] = True
+    else:
+        kwargs['is_public'] = False
     if container_format not in cf_list:
         raise SaltInvocationError('"container_format" needs to be ' +
             'one of the following: {0}'.format(', '.join(cf_list)))
+    else:
+        kwargs['container_format'] = container_format
     if disk_format not in df_list:
         raise SaltInvocationError('"disk_format" needs to be one ' +
             'of the following: {0}'.format(', '.join(df_list)))
+    else:
+        kwargs['disk_format'] = disk_format
+    if protected is not None:
+        kwargs['protected'] = protected
     # Icehouse's glanceclient doesn't have add_location() and
     # glanceclient.v2 doesn't implement Client.images.create()
     # in a usable fashion. Thus we have to use v1 for now.
     g_client = _auth(profile, api_version=1)
-    image = g_client.images.create(name=name, copy_from=location)
+    image = g_client.images.create(name=name, **kwargs)
     return image_show(image.id)
 
 
