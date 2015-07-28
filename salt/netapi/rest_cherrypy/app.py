@@ -1499,24 +1499,9 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
-        # Check acl for the api.
-        failure_str = ("[api_acl] Authentication failed for "
-                       "user {0} from IP {1}")
-        success_str = ("[api_acl] Authentication sucessful for "
-                       "user {0} from IP {1}")
-        user = creds.get('username', '')
-
-        # Check if handling a request from a proxy.
-        ip = cherrypy.request.headers.get('X-Forwarded-For', None)
-        if not ip:
-            ip = cherrypy.request.remote.ip
-
         # Validate against the whitelist.
         if not salt_api_acl_tool(user, ip):
-            logger.debug(failure_str.format(user, ip))
             raise cherrypy.HTTPError(401, failure_str.format(user, ip))
-        else:
-            logger.debug(success_str.format(user, ip))
 
         # Mint token.
         token = self.auth.mk_token(creds)
