@@ -93,7 +93,7 @@ def image_present(name, visibility='public', protected=None,
         image = __salt__['glance.image_create'](name=name,
             protected=protected, visibility=visibility,
             location=location)
-        if image.keys()[0] == name:
+        if len(image.keys()) == 1:
             image = image.values()[0]
         log.debug('Created new image:\n{0}'.format(image))
         ret['changes'] = {
@@ -107,7 +107,7 @@ def image_present(name, visibility='public', protected=None,
                 }
             }
         timer = timeout
-        if image.keys()[0] == name:
+        if len(image.keys()) == 1:
             image = image.values()[0]
         # Kinda busy-loopy but I don't think the Glance
         # API has events we can listen for
@@ -126,7 +126,7 @@ def image_present(name, visibility='public', protected=None,
                     ret['comment'] += 'Created image {0} '.format(
                         name) + ' vanished:\n' + msg
                     return ret
-                elif image.keys()[0] == name:
+                elif len(image.keys()) == 1:
                     image = image.values()[0]
         if timer <= 0 and image['status'] not in acceptable:
             ret['result'] = False
@@ -135,8 +135,8 @@ def image_present(name, visibility='public', protected=None,
                     '\tLast status was "{0}".\n'.format(image['status'])
 
         # Wrapped dict workaround (see Salt issue #24568)
-        if name in image:
-            image = image[name]
+        if len(image.keys()) == 1:
+            image = image.values()[0]
             # ret[comment] +=
 
     # There's no image but where would I get one??
@@ -160,7 +160,9 @@ def image_present(name, visibility='public', protected=None,
             old_value = image['visibility']
             if not __opts__['test']:
                 image = __salt__['glance.image_update'](
-                    image.id, visibility=visibility)
+                    id=image['id'], visibility=visibility)
+            if len(image.keys()) == 1:
+                image = image.values()[0]
             # Check if image_update() worked:
             if image ['visibility'] != visibility:
                 if not __opts__['test']:
@@ -171,8 +173,14 @@ def image_present(name, visibility='public', protected=None,
                     'should be {1}.\n'.format(image['visibility'],
                         visibility)
             else:
-                ret['changes']['new']['visibility'] = visibility
-                ret['changes']['old']['visibility'] = old_value
+                if 'new' in ret['changes']:
+                    ret['changes']['new']['visibility'] = visibility
+                else:
+                    ret['changes']['new'] = {'visibility': visibility}
+                if 'old' in ret['changes']:
+                    ret['changes']['old']['visibility'] = old_value
+                else:
+                    ret['changes']['old'] = {'visibility': old_value}
         else:
             ret['comment'] += '"visibility" is correct ({0}).\n'.format(
                 visibility)
