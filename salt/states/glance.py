@@ -156,13 +156,23 @@ def image_present(name, visibility='public', protected=None,
         ret['changes'][name]['new']['status'] = image['status']
 
     if visibility:
-        if not __opts__['test'] and \
-                image['visibility'] != visibility:
-            ret['result'] = False
-        elif __opts__['test']:
-            ret['result'] = None
-            ret['comment'] += '"visibility" is {0}, should be {1}.\n'.format(
-                image['visibility'], visibility)
+        if image['visibility'] != visibility:
+            old_value = image['visibility']
+            if not __opts__['test']:
+                image = __salt__['glance.image_update'](
+                    image.id, visibility=visibility)
+            # Check if image_update() worked:
+            if image ['visibility'] != visibility:
+                if not __opts__['test']:
+                    ret['result'] = False
+                elif __opts__['test']:
+                    ret['result'] = None
+                ret['comment'] += '"visibility" is {0}, '\
+                    'should be {1}.\n'.format(image['visibility'],
+                        visibility)
+            else:
+                ret['changes']['new']['visibility'] = visibility
+                ret['changes']['old']['visibility'] = old_value
         else:
             ret['comment'] += '"visibility" is correct ({0}).\n'.format(
                 visibility)
