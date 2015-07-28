@@ -968,6 +968,7 @@ def absent(name):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -979,6 +980,7 @@ def absent(name):
     if name == '/':
         return _error(ret, 'Refusing to make "/" absent')
     if os.path.isfile(name) or os.path.islink(name):
+        ret['pchanges']['removed'] = name
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'File {0} is set for removal'.format(name)
@@ -992,6 +994,7 @@ def absent(name):
             return _error(ret, '{0}'.format(exc))
 
     elif os.path.isdir(name):
+        ret['pchanges']['removed'] = name
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
