@@ -599,32 +599,36 @@ def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
+    pchanges = {}
     if not os.path.exists(name) and not __salt__['file.is_link'](name):
+        pchanges['new'] = name
         return None, 'Symlink {0} to {1} is set for creation'.format(
             name, target
-        )
+        ), pchanges
     if __salt__['file.is_link'](name):
         if __salt__['file.readlink'](name) != target:
+            pchanges['change'] = name
             return None, 'Link {0} target is set to be changed to {1}'.format(
                 name, target
-            )
+            ), pchanges
         else:
             result = True
             msg = 'The symlink {0} is present'.format(name)
             if not _check_symlink_ownership(name, user, group):
                 result = None
+                pchanges['ownership'] = '{0}:{1}'.format(*_get_symlink_ownership(name))
                 msg += (
                     ', but the ownership of the symlink would be changed '
                     'from {2}:{3} to {0}:{1}'
                 ).format(user, group, *_get_symlink_ownership(name))
-            return result, msg
+            return result, msg, pchanges
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
                           'make way for a new symlink targeting {1}'
-                          .format(name, target))
+                          .format(name, target)), pchanges
         return False, ('File or directory exists where the symlink {0} '
-                       'should be. Did you mean to use force?'.format(name))
+                       'should be. Did you mean to use force?'.format(name)), pchanges
 
 
 def _test_owner(kwargs, user=None):
@@ -846,9 +850,14 @@ def symlink(
             msg += '.'
         return _error(ret, msg)
 
+    presult, pcomment, ret['pchanges'] = _symlink_check(name,
+                                                        target,
+                                                        force,
+                                                        user,
+                                                        group)
     if __opts__['test']:
-        ret['result'], ret['comment'] = _symlink_check(name, target, force,
-                                                       user, group)
+        ret['result'] = presult
+        ret['comment'] = pcomment
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):
