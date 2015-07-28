@@ -195,7 +195,10 @@ class SaltCloud(parsers.SaltCloudParser):
                                       self.config.get('map', None)):
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
-                names = mapper.get_vmnames_by_action(self.options.action)
+                try:
+                    names = mapper.get_vmnames_by_action(self.options.action)
+                except SaltCloudException:
+                    return []
             else:
                 names = self.config.get('names', None)
 
