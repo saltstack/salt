@@ -83,7 +83,11 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(salt.defaults.exitcodes.EX_OK)
 
         log.info('salt-cloud starting')
-        mapper = salt.cloud.Map(self.config)
+        try:
+            mapper = salt.cloud.Map(self.config)
+        except SaltCloudException as exc:
+            msg = 'There was an error generating the mapper.'
+            self.handle_exception(msg, exc)
 
         names = self.config.get('names', None)
         if names is not None:
