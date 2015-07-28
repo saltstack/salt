@@ -629,7 +629,7 @@ def get_repo_data(saltenv='base'):
         log.error('No repo file found on the minion')
         return {}
     try:
-        with salt.utils.fopen(repocache, 'rb') as repofile:
+        with salt.utils.fopen(cached_repo, 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
                 #__context__['winrepo.data'] = repodata
