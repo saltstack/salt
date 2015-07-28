@@ -259,7 +259,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     return ret
 
 
-def image_list(id=None, profile=None):  # pylint: disable=C0103
+def image_list(id=None, name=None, profile=None):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
@@ -273,6 +273,9 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
     ret = {}
     # TODO: Get rid of the wrapping dict, see #24568
     for image in g_client.images.list():
+        # might be reasonable not to build this
+        # potentially large dict when we're
+        # looking for _one_ particular image
         ret[image.name] = {
                 'id': image.id,
                 'name': image.name,
@@ -293,6 +296,9 @@ def image_list(id=None, profile=None):  # pylint: disable=C0103
                 ret[image.name][attr] = image[attr]
         if id == image.id:
             return ret[image.name]
+        if name == image.name:
+            return ret[image.name]
+    log.debug('Returning image: {0}'.format(ret))
     return ret
 
 
