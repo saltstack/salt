@@ -24,6 +24,7 @@ from salt.utils import etcd_util
 
 # Globals
 etcd_mod.__opts__ = {}
+etcd_mod.__utils__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -57,8 +58,8 @@ class EtcdModTestCase(TestCase):
                     raise
                 return MockEtcd
 
-        with patch.object(etcd_util, 'get_conn',
-                          MagicMock(return_value=MockEtcd())):
+        with patch.dict(etcd_mod.__utils__, {'etcd_util.get_conn':
+                        MagicMock(return_value=MockEtcd())}):
             self.assertEqual(etcd_mod.get_('salt'), 'salt')
 
             with patch.object(etcd_util, 'tree', MagicMock(return_value={})):
@@ -96,8 +97,8 @@ class EtcdModTestCase(TestCase):
                     raise
                 return MockEtcd
 
-        with patch.object(etcd_util, 'get_conn',
-                          MagicMock(return_value=MockEtcd())):
+        with patch.dict(etcd_mod.__utils__, {'etcd_util.get_conn':
+                        MagicMock(return_value=MockEtcd())}):
             self.assertEqual(etcd_mod.set_('salt', 'stack'), 'salt')
 
             self.assertEqual(etcd_mod.set_('', 'stack'), '')
@@ -130,8 +131,8 @@ class EtcdModTestCase(TestCase):
                     raise
                 return MockEtcd
 
-        with patch.object(etcd_util, 'get_conn',
-                          MagicMock(return_value=MockEtcd())):
+        with patch.dict(etcd_mod.__utils__, {'etcd_util.get_conn':
+                        MagicMock(return_value=MockEtcd())}):
             self.assertDictEqual(etcd_mod.ls_(), {'/': {}})
 
             self.assertDictEqual(etcd_mod.ls_(''), {})
@@ -170,8 +171,8 @@ class EtcdModTestCase(TestCase):
                     return False
                 return MockEtcd
 
-        with patch.object(etcd_util, 'get_conn',
-                          MagicMock(return_value=MockEtcd())):
+        with patch.dict(etcd_mod.__utils__, {'etcd_util.get_conn':
+                        MagicMock(return_value=MockEtcd())}):
             self.assertFalse(etcd_mod.rm_('salt'))
 
             self.assertTrue(etcd_mod.rm_('salt', recurse=True))
@@ -192,8 +193,8 @@ class EtcdModTestCase(TestCase):
             """
             children = []
 
-        with patch.object(etcd_util, 'get_conn',
-                          MagicMock(return_value=MockEtcd())):
+        with patch.dict(etcd_mod.__utils__, {'etcd_util.get_conn':
+                        MagicMock(return_value=MockEtcd())}):
             with patch.object(etcd_util, 'tree', MagicMock(return_value={})):
                 self.assertDictEqual(etcd_mod.tree(), {})
 
