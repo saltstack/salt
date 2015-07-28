@@ -37,6 +37,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'github'
 
+
 def __virtual__():
     '''
     Only load this module if github is installed on this minion.
@@ -108,7 +109,6 @@ def list_users(profile="github"):
         users = [member.login for member in _get_members(organization, None)]
         __context__[key] = users
 
-
     return __context__[key]
 
 
@@ -156,7 +156,6 @@ def get_user(name, profile="github", **kwargs):
         response['membership_state'] = 'nonexistent'
         response['in_org'] = False
         return response
-
 
     response['in_org'] = organization.has_in_members(user)
     response['membership_state'] = data.get('state')
@@ -220,7 +219,6 @@ def remove_user(name, profile="github", **kwargs):
     except UnknownObjectException as e:
         logging.exception("Resource not found: {0}".format(str(e)))
         return False
-
 
     if organization.has_in_members(git_user):
         organization.remove_from_members(git_user)
