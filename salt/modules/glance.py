@@ -362,6 +362,7 @@ def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=
       - protected (bool)
       - visibility ('public' or 'private')
     '''
+    saltversion = __salt__['grains.get']('saltversion')
     if id:
         image = image_show(id=id)
         if len(image.keys()) == 1:
@@ -389,6 +390,8 @@ def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
+    if saltversion <= '2015.8':
+        updated = {updated.name: updated}
     return updated
 
 
