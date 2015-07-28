@@ -63,12 +63,14 @@ class RoosterEntryConfigTest(TestCase):
                     'title': 'Password',
                     'type': 'string',
                     'description': 'The password to log in with',
-                    'format': 'secret'
+                    'format': 'secret',
+                    'minLength': 1
                 },
                 'priv': {
                     'type': 'string',
                     'description': 'File path to ssh private key, defaults to salt-ssh.rsa',
-                    'title': 'Private Key'
+                    'title': 'Private Key',
+                    'minLength': 1
                 },
                 'sudo': {
                     'default': False,
@@ -247,10 +249,10 @@ class RosterItemTest(TestCase):
 
     def test_roster_config(self):
         try:
-            self.assertDictEqual(
+            self.assertDictContainsSubset(
                 {
                     "$schema": "http://json-schema.org/draft-04/schema#",
-                    "title": "roster_entries",
+                    "title": "Roster Configuration",
                     "description": "Roster entries definition",
                     "type": "object",
                     "patternProperties": {
