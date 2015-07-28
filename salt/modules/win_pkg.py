@@ -624,6 +624,10 @@ def get_repo_data(saltenv='base'):
     cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
     if not cached_repo:
         __salt__['pkg.refresh_db']()
+        cached_repo = __salt__['cp.is_cached'](repocache, saltenv)
+    if not __salt__['file.file_exists'](cached_repo):
+        log.error('No repo file found on the minion')
+        return {}
     try:
         with salt.utils.fopen(repocache, 'rb') as repofile:
             try:
