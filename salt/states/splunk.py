@@ -2,13 +2,11 @@
 '''
 Splunk User State Module
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.2.0
 
 This state is used to ensure presence of users in splunk.
 
 .. code-block:: yaml
-
-    .. code-block:: yaml
 
     ensure example test user 1:
         splunk.present:
