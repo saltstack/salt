@@ -157,6 +157,29 @@ def _auth(profile=None, api_version=2, **connection_args):
         raise NotImplementedError(
             "Can't retrieve a auth_token without keystone")
 
+def _add_image(image_dict, image):
+    '''
+    Add image to given dictionary
+    '''
+    image_dict[image.name] = {
+            'id': image.id,
+            'name': image.name,
+            'created_at': image.created_at,
+            'file': image.file,
+            'min_disk': image.min_disk,
+            'min_ram': image.min_ram,
+            'owner': image.owner,
+            'protected': image.protected,
+            'status': image.status,
+            'tags': image.tags,
+            'updated_at': image.updated_at,
+            'visibility': image.visibility,
+        }
+    # Those cause AttributeErrors in Icehouse' glanceclient
+    for attr in ['container_format', 'disk_format', 'size']:
+        if attr in image:
+            image_dict[image.name][attr] = image[attr]
+    return image_dict
 
 def image_create(name, location, profile=None, visibility='public',
             container_format='bare', disk_format='raw'):
@@ -278,32 +301,15 @@ def image_list(id=None, name=None, profile=None):  # pylint: disable=C0103
     ret = {}
     # TODO: Get rid of the wrapping dict, see #24568
     for image in g_client.images.list():
-        # might be reasonable not to build this
-        # potentially large dict when we're
-        # looking for _one_ particular image
-        ret[image.name] = {
-                'id': image.id,
-                'name': image.name,
-                'created_at': image.created_at,
-                'file': image.file,
-                'min_disk': image.min_disk,
-                'min_ram': image.min_ram,
-                'owner': image.owner,
-                'protected': image.protected,
-                'status': image.status,
-                'tags': image.tags,
-                'updated_at': image.updated_at,
-                'visibility': image.visibility,
-            }
-        # Those cause AttributeErrors in Icehouse' glanceclient
-        for attr in ['container_format', 'disk_format', 'size']:
-            if attr in image:
-                ret[image.name][attr] = image[attr]
-        if id == image.id:
-            return ret[image.name]
-        if name == image.name:
-            return ret[image.name]
-    log.debug('Returning image: {0}'.format(ret))
+        if id is None and name is None:
+            _add_image(ret, image)
+        else:
+            if id is not None and id == image.id:
+                _add_image(ret, image)
+                return ret[image.name]
+            if name == image.name:
+                _add_image(ret, image)
+    log.debug('Returning images: {0}'.format(ret))
     return ret
 
 
