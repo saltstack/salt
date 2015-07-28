@@ -837,12 +837,16 @@ class Key(object):
         Delete all denied keys
         '''
         keys = self.list_keys()
-        for key in keys[self.DEN]:
-            try:
-                os.remove(os.path.join(self.opts['pki_dir'], status, key))
-                self.event.fire_event(eload, tagify(prefix='key'))
-            except (OSError, IOError):
-                pass
+        for status, keys in six.iteritems(self.list_keys()):
+            for key in keys[self.DEN]:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                                 'act': 'delete',
+                                 'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
         self.check_minion_cache()
         return self.list_keys()
 
