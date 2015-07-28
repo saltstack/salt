@@ -1200,6 +1200,12 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
 
+    def chdir(self, dirname):
+        try:
+            os.chdir(dirname)
+        except OSError:
+            os.chdir(INTEGRATION_TEST_DIR)
+
     def run_salt(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
         Execute salt
