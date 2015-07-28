@@ -218,7 +218,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
     if 'connstate' in kwargs:
         if '-m state' not in rule:
-            rule += '-m state '
+            rule.append('-m state')
 
         rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
 
