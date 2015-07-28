@@ -342,14 +342,15 @@ def salt_api_acl_tool(username, request):
     ..code-block:: yaml
     
         rest_cherrypy:
-            proxy_requests: True
-            proxy_header: 'X-Forwarded-For'
-            users:
-                '*':
-                    - 1.1.1.1
-                    - 1.1.1.2
-                foo:
-                    - 8.8.4.4
+            api_acl:
+                proxy_requests: True
+                proxy_header: 'X-Forwarded-For'
+                users:
+                    '*':
+                        - 1.1.1.1
+                        - 1.1.1.2
+                    foo:
+                        - 8.8.4.4
     '''
     failure_str = ("[api_acl] Authentication failed for "
                    "user {0} from IP {1}")
