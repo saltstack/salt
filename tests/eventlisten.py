@@ -107,7 +107,8 @@ def listen(opts):
         opts['node'],
         sock_dir=opts['sock_dir'],
         transport=opts['transport'],
-        opts=opts
+        opts=opts,
+        listen=True
     )
     check_access_and_print_warning(opts['sock_dir'])
     print(event.puburi)
