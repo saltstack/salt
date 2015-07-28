@@ -157,11 +157,11 @@ def _auth(profile=None, api_version=2, **connection_args):
         raise NotImplementedError(
             "Can't retrieve a auth_token without keystone")
 
-def _add_image(image_dict, image):
+def _add_image(collection, image):
     '''
     Add image to given dictionary
     '''
-    image_dict[image.name] = {
+    image_prep = {
             'id': image.id,
             'name': image.name,
             'created_at': image.created_at,
@@ -178,8 +178,17 @@ def _add_image(image_dict, image):
     # Those cause AttributeErrors in Icehouse' glanceclient
     for attr in ['container_format', 'disk_format', 'size']:
         if attr in image:
-            image_dict[image.name][attr] = image[attr]
-    return image_dict
+            image_prep[attr] = image[attr]
+    if type(collection) is dict:
+        collection[image.name] = image_prep
+    elif type(collection) is list:
+        collection.append(image_prep)
+    else:
+        log.error('collection is {0}'.format(type(collection)) +\
+                'instead of dict or list.')
+        raise(TypeError, 'collection is neither list nor '\
+            'dict.'.format(type(collection)))
+    return collection
 
 def image_create(name, location, profile=None, visibility='public',
             container_format='bare', disk_format='raw'):
@@ -297,8 +306,14 @@ def image_list(id=None, name=None, profile=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
+    saltversion = __salt__['grains.get']('saltversion')
     g_client = _auth(profile)
-    ret = {}
+    # Someone will punish me for this...
+    # *@0xf10e pleads guilty*
+    if saltversion <= '2015.8':
+        ret = {}
+    else:
+        ret = []
     # TODO: Get rid of the wrapping dict, see #24568
     for image in g_client.images.list():
         if id is None and name is None:
@@ -306,8 +321,12 @@ def image_list(id=None, name=None, profile=None):  # pylint: disable=C0103
         else:
             if id is not None and id == image.id:
                 _add_image(ret, image)
-                return ret[image.name]
+                return ret
             if name == image.name:
+                if name in ret:
+                    if saltversion <= '2015.8':
+                        return {'Error': 'More than one image '\
+                            'with name "{0}"'.format(name)}
                 _add_image(ret, image)
     log.debug('Returning images: {0}'.format(ret))
     return ret
