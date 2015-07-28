@@ -3262,7 +3262,7 @@ def append(name,
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
             __salt__['file.makedirs'](name)
-            check_res, check_msg, ret['pchanges']= _check_directory(
+            check_res, check_msg, ret['pchanges'] = _check_directory(
                 dirname, None, None, False, None, False, False, None
             )
             if not check_res:
