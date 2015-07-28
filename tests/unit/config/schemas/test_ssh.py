@@ -6,7 +6,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -17,7 +17,6 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
-from salt.utils.config import DictConfig
 
 # Import 3rd-party libs
 try:
@@ -88,9 +87,9 @@ class RoosterEntryConfigTest(TestCase):
                     'title': 'Thin Directory'
                 },
                 # The actuall representation of the minion options would make this HUGE!
-                'minion_opts': DictConfig(title='Minion Options',
-                                          description='Dictionary of minion options',
-                                          properties=MinionConfiguration()).serialize(),
+                'minion_opts': ssh_schemas.DictItem(title='Minion Options',
+                                                    description='Dictionary of minion options',
+                                                    properties=MinionConfiguration()).serialize(),
             },
             'anyOf': [
                 {
@@ -244,7 +243,7 @@ class RoosterEntryConfigTest(TestCase):
         self.assertIn('is not of type', excinfo.exception.message)
 
 
-class RosterConfigTest(TestCase):
+class RosterItemTest(TestCase):
 
     def test_roster_config(self):
         try:
@@ -259,11 +258,11 @@ class RosterConfigTest(TestCase):
                     },
                     "additionalProperties": False
                 },
-                ssh_schemas.RosterConfig.serialize()
+                ssh_schemas.RosterItem.serialize()
             )
         except AssertionError:
             import json
-            print(json.dumps(ssh_schemas.RosterConfig.serialize(), indent=4))
+            print(json.dumps(ssh_schemas.RosterItem.serialize(), indent=4))
             raise
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
@@ -277,7 +276,7 @@ class RosterConfigTest(TestCase):
                         'passwd': 'foo'
                     }
                 },
-                ssh_schemas.RosterConfig.serialize(),
+                ssh_schemas.RosterItem.serialize(),
                 format_checker=jsonschema.FormatChecker()
             )
         except jsonschema.exceptions.ValidationError as exc:
@@ -292,7 +291,7 @@ class RosterConfigTest(TestCase):
                         'passwd': 'foo'
                     }
                 },
-                ssh_schemas.RosterConfig.serialize(),
+                ssh_schemas.RosterItem.serialize(),
                 format_checker=jsonschema.FormatChecker()
             )
         self.assertIn(
