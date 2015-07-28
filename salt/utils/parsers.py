@@ -108,7 +108,7 @@ class CustomOption(optparse.Option, object):
     def take_action(self, action, dest, *args, **kwargs):
         # see https://github.com/python/cpython/blob/master/Lib/optparse.py#L786
         self.explicit = True
-        return optparse.Option.take_action(self, *args, **kwargs)
+        return optparse.Option.take_action(self, action, dest, *args, **kwargs)
 
 
 class OptionParser(optparse.OptionParser, object):
