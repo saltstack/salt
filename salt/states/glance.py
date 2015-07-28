@@ -68,7 +68,7 @@ def image_present(name, visibility='public', protected=None,
 
     # Just pop states until we reach the
     # first acceptable one:
-    while len(acceptable) > 0:
+    while len(acceptable) > 1:
         if acceptable[0] == wait_for:
             break
         else:
