@@ -122,8 +122,8 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     # TODO: AIO core is separate from transport
     if transport in ('zeromq', 'tcp'):
         if node == 'master':
-            return MasterEvent(sock_dir, opts)
-        return SaltEvent(node, sock_dir, opts)
+            return MasterEvent(sock_dir, opts, listen=listen)
+        return SaltEvent(node, sock_dir, opts, listen=listen)
     elif transport == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.RAETEvent(node,
@@ -138,7 +138,7 @@ def get_master_event(opts, sock_dir, listen=True):
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp'):
-        return MasterEvent(sock_dir, opts)
+        return MasterEvent(sock_dir, opts, listen=listen)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
@@ -172,7 +172,7 @@ class SaltEvent(object):
     RAET compatible
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, opts=None):
+    def __init__(self, node, sock_dir=None, opts=None, listen=True):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -186,7 +186,8 @@ class SaltEvent(object):
         if salt.utils.is_windows() and not hasattr(opts, 'ipc_mode'):
             opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
-        self.subscribe()
+        if listen:
+            self.subscribe()
         self.pending_events = []
         self.__load_cache_regex()
 
@@ -606,8 +607,8 @@ class MasterEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, sock_dir, opts=None):
-        super(MasterEvent, self).__init__('master', sock_dir, opts)
+    def __init__(self, sock_dir, opts=None, listen=True):
+        super(MasterEvent, self).__init__('master', sock_dir, opts, listen=listen)
 
 
 class LocalClientEvent(MasterEvent):
@@ -640,9 +641,9 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, listen=True):
         super(MinionEvent, self).__init__(
-            'minion', sock_dir=opts.get('sock_dir', None), opts=opts)
+            'minion', sock_dir=opts.get('sock_dir', None), opts=opts, listen=listen)
 
 
 class AsyncEventPublisher(object):
@@ -904,7 +905,7 @@ class EventReturn(multiprocessing.Process):
         signal.signal(signal.SIGTERM, self.sig_stop)
 
         salt.utils.appendproctitle(self.__class__.__name__)
-        self.event = get_event('master', opts=self.opts)
+        self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
@@ -947,7 +948,6 @@ class StateFire(object):
     '''
     def __init__(self, opts, auth=None):
         self.opts = opts
-        self.event = SaltEvent(opts, 'minion')
         if not auth:
             self.auth = salt.crypt.SAuth(self.opts)
         else:

@@ -34,7 +34,8 @@ def list_(saltenv='base', test=None):
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     __jid_event__.fire_event({}, 'salt/reactors/manage/list')
 
@@ -60,7 +61,8 @@ def add(event, reactors, saltenv='base', test=None):
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     __jid_event__.fire_event({'event': event,
                               'reactors': reactors},
@@ -84,7 +86,8 @@ def delete(event, saltenv='base', test=None):
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     __jid_event__.fire_event({'event': event}, 'salt/reactors/manage/delete')
 

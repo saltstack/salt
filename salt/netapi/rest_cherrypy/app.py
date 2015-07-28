@@ -1781,7 +1781,8 @@ class Events(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1954,7 +1955,8 @@ class WebsocketEndpoint(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
