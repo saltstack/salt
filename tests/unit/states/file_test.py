@@ -263,6 +263,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         mock_t = MagicMock(return_value=True)
