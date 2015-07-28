@@ -468,7 +468,7 @@ def _check_directory(name,
     if recurse:
         if not set(['user', 'group', 'mode']) >= set(recurse):
             return False, 'Types for "recurse" limited to "user", ' \
-                          '"group" and "mode"'
+                          '"group" and "mode"', changes
         if 'user' not in recurse:
             user = None
         if 'group' not in recurse:
@@ -524,8 +524,8 @@ def _check_directory(name,
         for fn_ in changes:
             for key, val in six.iteritems(changes[fn_]):
                 comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
-        return None, ''.join(comments)
-    return True, 'The directory {0} is in the correct state'.format(name)
+        return None, ''.join(comments), changes
+    return True, 'The directory {0} is in the correct state'.format(name), changes
 
 
 def _check_dir_meta(name,
@@ -1715,6 +1715,7 @@ def directory(name,
     name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -1786,17 +1787,19 @@ def directory(name,
             elif os.path.islink(name):
                 return _error(
                      ret, 'Specified location {0} exists and is a symlink'.format(name))
+    presult, pcomment, ret['pchanges'] = _check_directory(
+        name,
+        user,
+        group,
+        recurse or [],
+        dir_mode,
+        clean,
+        require,
+        exclude_pat)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _check_directory(
-            name,
-            user,
-            group,
-            recurse or [],
-            dir_mode,
-            clean,
-            require,
-            exclude_pat)
+        ret['result'] = presult
+        ret['comment'] = pcomment
         return ret
 
     if not os.path.isdir(name):
@@ -3191,7 +3194,12 @@ def append(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {
+            'name': name,
+            'changes': {},
+            'pchanges': {},
+            'result': False,
+            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.append')
 
@@ -3215,7 +3223,7 @@ def append(name,
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
             __salt__['file.makedirs'](name)
-            check_res, check_msg = _check_directory(
+            check_res, check_msg, ret['pchanges']= _check_directory(
                 dirname, None, None, False, None, False, False, None
             )
             if not check_res:
@@ -3361,7 +3369,11 @@ def prepend(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.prepend')
 
@@ -3385,7 +3397,7 @@ def prepend(name,
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
             __salt__['file.makedirs'](name)
-            check_res, check_msg = _check_directory(
+            check_res, check_msg, ret['pchanges'] = _check_directory(
                 dirname, None, None, False, None, False, False, None
             )
             if not check_res:
