@@ -1232,7 +1232,7 @@ class FileTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ('Must provide name to file.comment')
+        comt = ('Must provide name to file.copy')
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.copy('', source), ret)
 
