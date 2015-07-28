@@ -265,8 +265,10 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
     try:
         g_client.images.delete(id)
     except exc.HTTPNotFound:
-        ret = {'Error': 'No image with ID {0}'.format(id)}
-        return ret
+        return {'Error': 'No image with ID {0}'.format(id)}
+    except exc.HTTPForbidden, msg:
+        log.error(msg)
+        return {'Error': str(msg)}
     ret = 'Deleted image with ID {0}'.format(id)
     if name:
         ret += ' ({0})'.format(name)
