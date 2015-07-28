@@ -75,9 +75,21 @@ def image_present(name, visibility='public', protected=None,
             acceptable.pop(0)
 
     image, msg = _find_image(name)
+    if image is False:
+        if __opts__['test']:
+            ret['result'] = None
+        else:
+            ret['result'] = False
+        ret['comment'] = msg
+        return ret
     log.debug(msg)
     # No image yet and we know where to get one
     if image is None and location is not None:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'glance.image_present would ' \
+                'create an image from {0}'.format(location)
+            return ret
         image = __salt__['glance.image_create'](name=name,
             protected=protected, visibility=visibility,
             location=location)
@@ -129,8 +141,13 @@ def image_present(name, visibility='public', protected=None,
 
     # There's no image but where would I get one??
     elif location is None:
-        ret['result'] = False
-        ret['comment'] = 'No location to copy image from specified,\n' +\
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'No location to copy image from specified,\n' +\
+                         'glance.image_present would not create one'
+        else:
+            ret['result'] = False
+            ret['comment'] = 'No location to copy image from specified,\n' +\
                          'not creating a new image.'
         return ret
 
@@ -139,8 +156,11 @@ def image_present(name, visibility='public', protected=None,
         ret['changes'][name]['new']['status'] = image['status']
 
     if visibility:
-        if image['visibility'] != visibility:
+        if not __opts__['test'] and \
+                image['visibility'] != visibility:
             ret['result'] = False
+        elif __opts__['test']:
+            ret['result'] = None
             ret['comment'] += '"visibility" is {0}, should be {1}.\n'.format(
                 image['visibility'], visibility)
         else:
@@ -148,7 +168,10 @@ def image_present(name, visibility='public', protected=None,
                 visibility)
     if protected is not None:
         if not isinstance(protected, bool) or image['protected'] ^ protected:
-            ret['result'] = False
+            if not __opts__['test']:
+                ret['result'] = False
+            else:
+                ret['result'] = None
             ret['comment'] += '"protected" is {0}, should be {1}.\n'.format(
                 image['protected'], protected)
         else:
@@ -157,11 +180,17 @@ def image_present(name, visibility='public', protected=None,
     if 'status' in image and checksum:
         if image['status'] == 'active':
             if 'checksum' not in image:
-                ret['result'] = False
+                if not __opts__['test']:
+                    ret['result'] = False
+                else:
+                    ret['result'] = None
                 ret['comment'] += 'No checksum available for this image:\n' +\
                         '\tImage has status "{0}".'.format(image['status'])
             elif image['checksum'] != checksum:
-                ret['result'] = False
+                if not __opts__['test']:
+                    ret['result'] = False
+                else:
+                    ret['result'] = None
                 ret['comment'] += '"checksum" is {0}, should be {1}.\n'.format(
                     image['checksum'], checksum)
             else:
