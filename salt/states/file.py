@@ -2536,7 +2536,11 @@ def replace(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': True,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.replace')
 
@@ -2558,6 +2562,7 @@ def replace(name,
                                        show_changes=show_changes)
 
     if changes:
+        ret['pchanges']['diff'] = changes
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
@@ -2786,7 +2791,11 @@ def blockreplace(
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.blockreplace')
 
@@ -2849,11 +2858,12 @@ def blockreplace(
     )
 
     if changes:
-        ret['changes'] = {'diff': changes}
+        ret['pchanges'] = {'diff': changes}
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Changes would be made'
         else:
+            ret['changes'] = {'diff': changes}
             ret['result'] = True
             ret['comment'] = 'Changes were made'
     else:
@@ -2900,7 +2910,11 @@ def comment(name, regex, char='#', backup='.bak'):
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.comment')
 
@@ -2919,6 +2933,7 @@ def comment(name, regex, char='#', backup='.bak'):
         else:
             return _error(ret, '{0}: Pattern not found'.format(unanchor_regex))
 
+    ret['pchanges'][name] = 'updated'
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
@@ -2987,7 +3002,11 @@ def uncomment(name, regex, char='#', backup='.bak'):
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.uncomment')
 
@@ -3012,6 +3031,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
+    ret['pchanges'][name] = 'updated'
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
