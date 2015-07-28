@@ -2245,6 +2245,7 @@ class BaseHighState(object):
                 opts['state_top'] = os.path.join('salt://', mopts['state_top'][1:])
             else:
                 opts['state_top'] = os.path.join('salt://', mopts['state_top'])
+            opts['state_top_saltenv'] = mopts.get('state_top_saltenv', None)
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
                     'state_auto_order',
@@ -2286,7 +2287,8 @@ class BaseHighState(object):
                         )
                     ]
         else:
-            for saltenv in self._get_envs():
+            if self.opts.get('state_top_saltenv', False):
+                saltenv = self.opts['state_top_saltenv']
                 tops[saltenv].append(
                         compile_template(
                             self.client.cache_file(
@@ -2298,6 +2300,19 @@ class BaseHighState(object):
                             saltenv=saltenv
                             )
                         )
+            else:
+                for saltenv in self._get_envs():
+                    tops[saltenv].append(
+                            compile_template(
+                                self.client.cache_file(
+                                    self.opts['state_top'],
+                                    saltenv
+                                    ),
+                                self.state.rend,
+                                self.state.opts['renderer'],
+                                saltenv=saltenv
+                                )
+                            )
 
         # Search initial top files for includes
         for saltenv, ctops in tops.items():

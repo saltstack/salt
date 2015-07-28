@@ -460,6 +460,7 @@ class RemoteFuncs(object):
         mopts['renderer'] = self.opts['renderer']
         mopts['failhard'] = self.opts['failhard']
         mopts['state_top'] = self.opts['state_top']
+        mopts['state_top_saltenv'] = self.opts['state_top_saltenv']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
