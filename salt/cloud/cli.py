@@ -197,8 +197,9 @@ class SaltCloud(parsers.SaltCloudParser):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
                 try:
                     names = mapper.get_vmnames_by_action(self.options.action)
-                except SaltCloudException:
-                    return []
+                except SaltCloudException as exc:
+                    msg = 'There was an error actioning virtual machines.'
+                    self.handle_exception(msg, exc)
             else:
                 names = self.config.get('names', None)
 
