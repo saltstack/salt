@@ -492,7 +492,8 @@ def wait_for_event(
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     del_counter = 0
     starttime = time.time()

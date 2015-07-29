@@ -52,13 +52,15 @@ def start(host, port=5959, tag='salt/engine/logstash'):
     if __opts__.get('id').endswith('_master'):
         event_bus = salt.utils.event.get_master_event(
                 __opts__,
-                __opts__['sock_dir'])
+                __opts__['sock_dir'],
+                listen=True)
     else:
         event_bus = salt.utils.event.get_event(
             'minion',
             transport=__opts__['transport'],
             opts=__opts__,
-            sock_dir=__opts__['sock_dir'])
+            sock_dir=__opts__['sock_dir'],
+            listen=True)
         log.debug('Logstash engine started')
 
     while True:
