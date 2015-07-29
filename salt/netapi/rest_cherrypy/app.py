@@ -371,7 +371,7 @@ def salt_api_acl_tool(username, request):
         if cherrypy_conf:
             # ACL Config.
             acl = cherrypy_conf.get('api_acl', None)
-    
+
     if acl:
         users = acl.get('users', {})
         if users:
@@ -396,6 +396,7 @@ def salt_api_acl_tool(username, request):
     else:
         logger.info(pass_str.format(username, ip))
         return True
+
 
 def salt_ip_verify_tool():
     '''
