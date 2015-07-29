@@ -164,7 +164,7 @@ def image_present(name, visibility='public', protected=None,
             if len(image.keys()) == 1:
                 image = image.values()[0]
             # Check if image_update() worked:
-            if image ['visibility'] != visibility:
+            if image['visibility'] != visibility:
                 if not __opts__['test']:
                     ret['result'] = False
                 elif __opts__['test']:
