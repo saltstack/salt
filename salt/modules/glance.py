@@ -208,14 +208,21 @@ def _add_image(collection, image):
     return collection
 
 
-def image_create(name, location, profile=None, visibility='public',
-        container_format='bare', disk_format='raw', protected=None):
+def image_create(name, location=None, profile=None, visibility=None,
+        container_format='bare', disk_format='raw', protected=None,
+        copy_from=None, is_public=None):
     '''
     Create an image (glance image-create)
 
-    CLI Example:
+    CLI Example, old format:
 
     .. code-block:: bash
+        salt '*' glance.image_create name=f16-jeos is_public=true \\
+                 disk_format=qcow2 container_format=ovf \\
+                 copy_from=http://berrange.fedorapeople.org/\
+                    images/2012-02-29/f16-x86_64-openstack-sda.qcow2
+
+    CLI Example, new format resembling Glance API v2:
 
         salt '*' glance.image_create name=f16-jeos visibility=public \\
                  disk_format=qcow2 container_format=ovf \\
@@ -224,6 +231,7 @@ def image_create(name, location, profile=None, visibility='public',
 
     For all possible values, run ``glance help image-create`` on the minion.
     '''
+    kwargs = {}
     # valid options for "visibility":
     v_list = ['public', 'private']
     # valid options for "container_format":
@@ -231,14 +239,33 @@ def image_create(name, location, profile=None, visibility='public',
     # valid options for "disk_format":
     df_list = ['ami', 'ari', 'aki', 'vhd', 'vmdk',
                'raw', 'qcow2', 'vdi', 'iso']
-    kwargs = {'copy_from': location}
-    if visibility not in v_list:
-        raise SaltInvocationError('"visibility" needs to be one ' +
-            'of the following: {0}'.format(', '.join(v_list)))
-    elif visibility == 'public':
-        kwargs['is_public'] = True
+    # 'location' and 'visibility' are the parameters used in
+    # Glance API v2. For now we have to use v1 for now (see below)
+    # but this modules interface will change in Boron.
+    if copy_from is not None or is_public is not None:
+        warn_until('Boron', 'The parameters \'copy_from\' and '
+            '\'is_public\' are deprecated and will be removed. '
+            'Use \'location\' and \'visibility\' instead.')
+    if is_public is not None and visibility is not None:
+        raise SaltInvocationError('Must only specify one of '
+            '\'is_public\' and \'visibility\'')
+    if copy_from is not None and location is not None:
+        raise SaltInvocationError('Must only specify one of '
+            '\'copy_from\' and \'location\'')
+    if copy_from is not None:
+        kwargs['copy_from'] = copy_from
     else:
-        kwargs['is_public'] = False
+        kwargs['copy_from'] = location
+    if is_public is not None:
+        kwargs['is_public'] = is_public
+    else:
+        if visibility not in v_list:
+            raise SaltInvocationError('"visibility" needs to be one ' +
+                'of the following: {0}'.format(', '.join(v_list)))
+        elif visibility == 'public':
+            kwargs['is_public'] = True
+        else:
+            kwargs['is_public'] = False
     if container_format not in cf_list:
         raise SaltInvocationError('"container_format" needs to be ' +
             'one of the following: {0}'.format(', '.join(cf_list)))
