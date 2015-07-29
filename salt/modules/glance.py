@@ -422,19 +422,19 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     '''
     if id:
         image = image_show(id=id)
-        if len(image.keys()) == 1:
-            image = image[image.keys()[0]]
+        # TODO: This unwrapping should get a warn_until
+        if len(image) == 1:
+            image = image.values()[0]
     elif name:
-        image = image_show(name=name)
-        if not image:
-            # TODO: Replace this untested PSEUDOCODE
-            image_ids = [image[image.keys()[0]].id
-                    for image in image_list(name=name)]
+        img_list = image_list(name=name)
+        if img_list is not list and 'Error' in img_list:
+            return img_list
+        elif len(img_list) == 0:
             return {'result': False,
-                'comment': 'Found more than one image with name "{0}":\n'+
-                    '\n'.join(image_ids)}
-        if len(image.keys()) == 1:
-            image = image[image.keys()[0]]
+                'comment': 'No image with name \'{0}\' '
+                    'found.'.format(name)}
+        elif len(img_list) == 1:
+            image = img_list[0]
     else:
         raise SaltInvocationError
     log.debug('Found image:\n{0}'.format(image))
