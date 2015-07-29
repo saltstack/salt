@@ -15,6 +15,7 @@ This state is used to ensure presence of users in the Organization.
             - username: 'gitexample'
 '''
 
+
 def __virtual__():
     '''
     Only load if the github module is available in __salt__
