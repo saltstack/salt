@@ -372,10 +372,10 @@ def salt_api_acl_tool(username, request):
             # ACL Config.
             acl = cherrypy_conf.get('api_acl', None)
 
+    ip = request.remote.ip
     if acl:
         users = acl.get('users', {})
         if users:
-            ip = request.remote.ip
             if username in users:
                 if ip in users[username]:
                     logger.info(success_str.format(username, ip))
