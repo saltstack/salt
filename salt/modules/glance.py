@@ -192,7 +192,7 @@ def _add_image(collection, image):
     return collection
 
 def image_create(name, location, profile=None, visibility='public',
-            protected=None, container_format='bare', disk_format='raw'):
+        container_format='bare', disk_format='raw', protected=None):
     '''
     Create an image (glance image-create)
 
@@ -310,7 +310,7 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     return ret
 
 
-def image_list(id=None, name=None, profile=None):  # pylint: disable=C0103
+def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
     '''
     Return a list of available images (glance image-list)
 
