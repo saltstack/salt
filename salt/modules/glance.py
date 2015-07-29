@@ -229,7 +229,8 @@ def image_create(name, location=None, profile=None, visibility=None,
                  copy_from=http://berrange.fedorapeople.org/\
                     images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
-    For all possible values, run ``glance help image-create`` on the minion.
+    The parameter 'visibility' defaults to 'public' if neither
+    'visibility' nor 'is_public' is specified.
     '''
     kwargs = {}
     # valid options for "visibility":
@@ -258,7 +259,7 @@ def image_create(name, location=None, profile=None, visibility=None,
         kwargs['copy_from'] = location
     if is_public is not None:
         kwargs['is_public'] = is_public
-    else:
+    elif visibility is not None:
         if visibility not in v_list:
             raise SaltInvocationError('"visibility" needs to be one ' +
                 'of the following: {0}'.format(', '.join(v_list)))
@@ -266,6 +267,8 @@ def image_create(name, location=None, profile=None, visibility=None,
             kwargs['is_public'] = True
         else:
             kwargs['is_public'] = False
+    else:
+        kwargs['is_public'] = True
     if container_format not in cf_list:
         raise SaltInvocationError('"container_format" needs to be ' +
             'one of the following: {0}'.format(', '.join(cf_list)))
