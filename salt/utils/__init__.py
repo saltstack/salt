@@ -1587,6 +1587,17 @@ def is_sunos():
 
 
 @real_memoize
+def is_smartos():
+    '''
+    Simple function to return if host is SmartOS (Illumos) or not
+    '''
+    if not is_sunos():
+        return False
+    else:
+      return os.uname()[3].startswith('joyent_')
+
+
+@real_memoize
 def is_freebsd():
     '''
     Simple function to return if host is FreeBSD or not
