@@ -60,7 +60,7 @@ def _systemctl_cmd(action, name):
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
     '''
-    return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
+    return 'systemctl -n 0 {0} {1}'.format(action, _canonical_unit_name(name))
 
 
 def _get_all_units():
