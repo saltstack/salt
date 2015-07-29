@@ -185,7 +185,8 @@ def managed(name, **kwargs):
        keyid option must also be set for this option to work.
 
     key_url
-       URL to retrieve a GPG key from.
+       URL to retrieve a GPG key from. Allows the usage of ``http://``,
+       ``https://`` as well as ``salt://``.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
