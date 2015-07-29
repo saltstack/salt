@@ -21,7 +21,7 @@ https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 :depends: requests
 
 '''
-
+from __future__ import absolute_import
 from salt._compat import string_types
 import json
 import logging

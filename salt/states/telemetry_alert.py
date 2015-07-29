@@ -22,7 +22,6 @@ Example:
     telemetry:
         telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
 '''
-
 from salt._compat import string_types
 
 __virtualname__ = 'telemetry_alert'
