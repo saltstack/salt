@@ -58,6 +58,7 @@ except ImportError:
 # Import salt libs
 import salt
 import salt.utils
+import salt.exceptions
 
 SALTCALL = '''
 import os
@@ -177,6 +178,29 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
                 pass
         else:
             return thintar
+    if six.PY3:
+        # Let's check for the minimum python 2 version requirement, 2.6
+        py_shell_cmd = (
+            python2_bin + ' -c \'from __future__ import print_function; import sys; '
+            'print("{0}.{1}".format(*(sys.version_info[:2])));\''
+        )
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        stdout, _ = cmd.communicate()
+        if cmd.returncode == 0:
+            py2_version = tuple(int(n) for n in stdout.decode('utf-8').strip().split('.'))
+            if py2_version < (2, 6):
+                # Bail!
+                raise salt.exceptions.SaltSystemExit(
+                    'The minimum required python version to run salt-ssh is "2.6".'
+                    'The version reported by "{0}" is "{1}". Please try "salt-ssh '
+                    '--python2-bin=<path-to-python-2.6-binary-or-higher>".'.format(python2_bin,
+                                                                                stdout.strip())
+                )
+    elif sys.version_info < (2, 6):
+        # Bail! Though, how did we reached this far in the first place.
+        raise salt.exceptions.SaltSystemExit(
+            'The minimum required python version to run salt-ssh is "2.6".'
+        )
 
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)

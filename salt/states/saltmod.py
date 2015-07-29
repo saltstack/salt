@@ -95,7 +95,7 @@ def state(
         The default salt environment to pull sls files from
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
 
     roster
         In the event of using salt-ssh, a roster system can be set
@@ -333,7 +333,7 @@ def function(
         based on the returned data dict for individual minions
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
     '''
     ret = {'name': name,
            'changes': {},
@@ -492,7 +492,8 @@ def wait_for_event(
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     del_counter = 0
     starttime = time.time()

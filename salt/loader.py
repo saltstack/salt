@@ -204,7 +204,7 @@ def minion_mods(
 
     ret.pack['__salt__'] = ret
     if notify:
-        evt = salt.utils.event.get_event('minion', opts=opts)
+        evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
         evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
 
     return ret
