@@ -15,17 +15,18 @@ Example:
 
 .. code-block:: yaml
 
-    telemetry:
-        telemetry_api_keys:
-          - abc123  # Key 1
-          - efg321  # Backup Key 1
-    telemetry:
-        telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
+    ensure telemetry alert X is defined on deployment Y:
+        telemetry_alert.present:
+            - deployment_id: "rs-XXXXXX"
+            - metric_name: "testMetric"
+            - alert_config:
+               max: 1
+               filter:  SERVER_ROLE_MONGOD_PRIMARY
+               escalate_to: "example@pagerduty.com"
+            - name: "**MANAGED BY ORCA DO NOT EDIT BY HAND** manages alarm on testMetric"
 '''
+from __future__ import absolute_import
 from salt._compat import string_types
-
-__virtualname__ = 'telemetry_alert'
-
 
 def __virtual__():
     # Only load if telemetry is available.
