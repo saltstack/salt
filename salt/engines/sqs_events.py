@@ -113,7 +113,8 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
             __opts__,
-            __opts__['sock_dir']).fire_event
+            __opts__['sock_dir'],
+            listen=False).fire_event
     else:
         fire_master = None
 

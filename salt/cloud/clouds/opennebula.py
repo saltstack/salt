@@ -228,6 +228,90 @@ def list_nodes_select(call=None):
     )
 
 
+def list_security_groups(call=None):
+    '''
+    Lists all security groups available to the user and the user's groups.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_security_groups opennebula
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_security_groups function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    secgroup_pool = server.one.secgrouppool.info(auth, -1, -1, -1)[1]
+
+    groups = {}
+    for group in etree.XML(secgroup_pool):
+        groups[group.find('NAME').text] = _xml_to_dict(group)
+
+    return groups
+
+
+def list_templates(call=None):
+    '''
+    Lists all templates available to the user and the user's groups.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_templates opennebula
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_templates function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    template_pool = server.one.templatepool.info(auth, -1, -1, -1)[1]
+
+    templates = {}
+    for template in etree.XML(template_pool):
+        templates[template.find('NAME').text] = _xml_to_dict(template)
+
+    return templates
+
+
+def list_vns(call=None):
+    '''
+    Lists all virtual networks available to the user and the user's groups.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_vns opennebula
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vns function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vn_pool = server.one.vnpool.info(auth, -1, -1, -1)[1]
+
+    vns = {}
+    for v_network in etree.XML(vn_pool):
+        vns[v_network.find('NAME').text] = _xml_to_dict(v_network)
+
+    return vns
+
+
 def reboot(name, call=None):
     '''
     Reboot a VM.
@@ -348,7 +432,7 @@ def get_image_id(kwargs=None, call=None):
             'The get_image_id function requires a name.'
         )
 
-    return _list_images()[name]['id']
+    return avail_images(call=call)[name]['id']
 
 
 def get_location(vm_):
@@ -399,7 +483,7 @@ def get_secgroup_id(kwargs=None, call=None):
 
     name = kwargs.get('name', None)
 
-    return _list_security_groups()[name]['id']
+    return list_security_groups(call=call)[name]['id']
 
 
 def get_template_id(kwargs=None, call=None):
@@ -423,13 +507,12 @@ def get_template_id(kwargs=None, call=None):
         kwargs = {}
 
     name = kwargs.get('name', None)
-
     if name is None:
         raise SaltCloudSystemExit(
-            'The get_template_id function requires a name.'
+            'The get_template_id function requires a \'name\'.'
         )
 
-    return _get_template(name)['id']
+    return list_templates(call=call)[name]['id']
 
 
 def get_vm_id(kwargs=None, call=None):
@@ -487,7 +570,7 @@ def get_vn_id(kwargs=None, call=None):
             'The get_vn_id function requires a name.'
         )
 
-    return _list_vns()[name]['id']
+    return list_vns(call=call)[name]['id']
 
 
 def create(vm_):
@@ -1659,20 +1742,12 @@ def template_delete(call=None, kwargs=None):
 
     if not name and not template_id:
         raise SaltCloudSystemExit(
-            'The template_delete function requires either a name or a template_id '
+            'The template_delete function requires either a \'name\' or a \'template_id\' '
             'to be provided.'
         )
 
-    # Make the API call to O.N. once and pass them to other functions that need them.
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-
-    if template_id and name:
-        _check_name_id_collisions(name,
-                                  template_id,
-                                  server=server,
-                                  user=user,
-                                  password=password)
 
     if name and not template_id:
         template_id = get_template_id(kwargs={'name': name})
@@ -2189,6 +2264,174 @@ def vm_disk_save(name, kwargs=None, call=None):
     return data
 
 
+def vm_disk_snapshot_create(name, kwargs=None, call=None):
+    '''
+    Takes a new snapshot of the disk image.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM of which to take the snapshot.
+
+    disk_id
+        The ID of the disk to save.
+
+    description
+        The description for the snapshot.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_snapshot_create my-vm disk_id=0 description="My Snapshot Description"
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_create action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get('disk_id', None)
+    description = kwargs.get('description', None)
+
+    if disk_id is None or description is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_create function requires a \'disk_id\' and a \'description\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksnapshotcreate(auth,
+                                                vm_id,
+                                                int(disk_id),
+                                                description)
+
+    data = {
+        'action': 'vm.disksnapshotcreate',
+        'created': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_disk_snapshot_delete(name, kwargs=None, call=None):
+    '''
+    Deletes a disk snapshot based on the given VM and the disk_id.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM containing the snapshot to delete.
+
+    disk_id
+        The ID of the disk to save.
+
+    snapshot_id
+        The ID of the snapshot to be deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_snapshot_delete my-vm disk_id=0 snapshot_id=6
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_delete action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get('disk_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if disk_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_create function requires a \'disk_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksnapshotdelete(auth,
+                                                vm_id,
+                                                int(disk_id),
+                                                int(snapshot_id))
+
+    data = {
+        'action': 'vm.disksnapshotdelete',
+        'deleted': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_disk_snapshot_revert(name, kwargs=None, call=None):
+    '''
+    Reverts a disk state to a previously taken snapshot.
+
+    .. versionadded:: Boron
+
+    name
+        The name of the VM containing the snapshot.
+
+    disk_id
+        The ID of the disk to revert its state.
+
+    snapshot_id
+        The ID of the snapshot to which the snapshot should be reverted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_disk_snapshot_revert my-vm disk_id=0 snapshot_id=6
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_revert action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    disk_id = kwargs.get('disk_id', None)
+    snapshot_id = kwargs.get('snapshot_id', None)
+
+    if disk_id is None or snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_disk_snapshot_revert function requires a \'disk_id\' and a \'snapshot_id\' '
+            'to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': name}))
+    response = server.one.vm.disksnapshotrevert(auth,
+                                                vm_id,
+                                                int(disk_id),
+                                                int(snapshot_id))
+
+    data = {
+        'action': 'vm.disksnapshotrevert',
+        'deleted': response[0],
+        'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
 def vm_info(name, call=None):
     '''
     Retrieves information for a given virtual machine. A VM name must be supplied.
@@ -2433,6 +2676,53 @@ def vm_snapshot_create(vm_name, kwargs=None, call=None):
         'action': 'vm.snapshotcreate',
         'snapshot_created': response[0],
         'snapshot_id': response[1],
+        'error_code': response[2],
+    }
+
+    return data
+
+
+def vm_snapshot_delete(vm_name, kwargs=None, call=None):
+    '''
+    Deletes a virtual machine snapshot from the provided VM.
+
+    .. versionadded:: Boron
+
+    vm_name
+        The name of the VM from which to delete the snapshot.
+
+    snapshot_id
+        The ID of the snapshot to be deleted.
+
+    CLI Exmampe:
+
+    .. code-block:: bash
+
+        salt-cloud -a vm_snapshot_delete my-vm snapshot_id=8
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_delete action must be called with -a or --action.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    snapshot_id = kwargs.get('snapshot_id', None)
+    if snapshot_id is None:
+        raise SaltCloudSystemExit(
+            'The vm_snapshot_delete function requires a \'snapshot_id\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vm_id = int(get_vm_id(kwargs={'name': vm_name}))
+    response = server.one.vm.snapshotcreate(auth, vm_id, int(snapshot_id))
+
+    data = {
+        'action': 'vm.snapshotdelete',
+        'snapshot_deleted': response[0],
+        'vm_id': response[1],
         'error_code': response[2],
     }
 
@@ -3030,26 +3320,6 @@ def template_update(call=None, kwargs=None):
 
 # Helper Functions
 
-def _check_name_id_collisions(name, id_, server=None, user=None, password=None):
-    '''
-    Helper function that ensures that a provided name and provided id match.
-    '''
-    name_id = _get_template(name,
-                            server=server,
-                            user=user,
-                            password=password)['id']
-    if name_id != id_:
-        raise SaltCloudException(
-            'A name and an ID were provided, but the provided id, \'{0}\', does '
-            'not match the ID found for the provided name: \'{1}\': \'{2}\'. '
-            'Nothing was done.'.format(
-                id_,
-                name,
-                name_id
-            )
-        )
-
-
 def _get_node(name):
     '''
     Helper function that returns all information about a named node.
@@ -3071,35 +3341,6 @@ def _get_node(name):
                 )
             )
 
-            # Just a little delay between attempts...
-            time.sleep(0.5)
-
-    return {}
-
-
-def _get_template(name, server=None, user=None, password=None):
-    '''
-    Helper function returning all information about a named template.
-
-    name
-        The name of the template for which to obtain information.
-    '''
-    attempts = 10
-
-    while attempts >= 0:
-        try:
-            return _list_templates(
-                server=server,
-                user=user,
-                password=password)[name]
-        except KeyError:
-            attempts -= 1
-            log.debug(
-                'Failed to get the data for the template {0!r}. Remaining '
-                'attempts {1}'.format(
-                    name, attempts
-                )
-            )
             # Just a little delay between attempts...
             time.sleep(0.5)
 
@@ -3171,94 +3412,6 @@ def _list_nodes(full=False):
             vms[vm.find('NAME').text] = _xml_to_dict(vm)
 
     return vms
-
-
-def _list_images(server=None, user=None, password=None):
-    '''
-    Lists all images available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    image_pool = server.one.imagepool.info(auth, -1, -1, -1)[1]
-
-    images = {}
-    for image in etree.XML(image_pool):
-        images[image.find('NAME').text] = _xml_to_dict(image)
-
-    return images
-
-
-def _list_security_groups(server=None, user=None, password=None):
-    '''
-    Lists all security groups available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    secgroup_pool = server.one.secgrouppool.info(auth, -1, -1, -1)[1]
-
-    groups = {}
-    for group in etree.XML(secgroup_pool):
-        groups[group.find('NAME').text] = _xml_to_dict(group)
-
-    return groups
-
-
-def _list_templates(server=None, user=None, password=None):
-    '''
-    Lists all templates available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    template_pool = server.one.templatepool.info(auth, -1, -1, -1)[1]
-
-    templates = {}
-    for template in etree.XML(template_pool):
-        templates[template.find('NAME').text] = _xml_to_dict(template)
-
-    return templates
-
-
-def _list_vms(server=None, user=None, password=None, state=None):
-    '''
-    Lists all virtual machines available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    if state is None:
-        state = 3
-
-    auth = ':'.join([user, password])
-    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, state)[1]
-
-    vms = {}
-    for v_machine in etree.XML(vm_pool):
-        vms[v_machine.find('NAME').text] = _xml_to_dict(v_machine)
-
-    return vms
-
-
-def _list_vns(server=None, user=None, password=None):
-    '''
-    Lists all virtual networks available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    vn_pool = server.one.vnpool.info(auth, -1, -1, -1)[1]
-
-    vns = {}
-    for v_network in etree.XML(vn_pool):
-        vns[v_network.find('NAME').text] = _xml_to_dict(v_network)
-
-    return vns
 
 
 def _xml_to_dict(xml):
