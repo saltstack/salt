@@ -228,6 +228,90 @@ def list_nodes_select(call=None):
     )
 
 
+def list_security_groups(call=None):
+    '''
+    Lists all security groups available to the user and the user's groups.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_security_groups opennebula
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_security_groups function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    secgroup_pool = server.one.secgrouppool.info(auth, -1, -1, -1)[1]
+
+    groups = {}
+    for group in etree.XML(secgroup_pool):
+        groups[group.find('NAME').text] = _xml_to_dict(group)
+
+    return groups
+
+
+def list_templates(call=None):
+    '''
+    Lists all templates available to the user and the user's groups.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_templates opennebula
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_templates function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    template_pool = server.one.templatepool.info(auth, -1, -1, -1)[1]
+
+    templates = {}
+    for template in etree.XML(template_pool):
+        templates[template.find('NAME').text] = _xml_to_dict(template)
+
+    return templates
+
+
+def list_vns(call=None):
+    '''
+    Lists all virtual networks available to the user and the user's groups.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_vns opennebula
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_vns function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    vn_pool = server.one.vnpool.info(auth, -1, -1, -1)[1]
+
+    vns = {}
+    for v_network in etree.XML(vn_pool):
+        vns[v_network.find('NAME').text] = _xml_to_dict(v_network)
+
+    return vns
+
+
 def reboot(name, call=None):
     '''
     Reboot a VM.
@@ -348,7 +432,7 @@ def get_image_id(kwargs=None, call=None):
             'The get_image_id function requires a name.'
         )
 
-    return _list_images()[name]['id']
+    return avail_images(call=call)[name]['id']
 
 
 def get_location(vm_):
@@ -399,7 +483,7 @@ def get_secgroup_id(kwargs=None, call=None):
 
     name = kwargs.get('name', None)
 
-    return _list_security_groups()[name]['id']
+    return list_security_groups(call=call)[name]['id']
 
 
 def get_template_id(kwargs=None, call=None):
@@ -423,13 +507,12 @@ def get_template_id(kwargs=None, call=None):
         kwargs = {}
 
     name = kwargs.get('name', None)
-
     if name is None:
         raise SaltCloudSystemExit(
-            'The get_template_id function requires a name.'
+            'The get_template_id function requires a \'name\'.'
         )
 
-    return _get_template(name)['id']
+    return list_templates(call=call)[name]['id']
 
 
 def get_vm_id(kwargs=None, call=None):
@@ -487,7 +570,7 @@ def get_vn_id(kwargs=None, call=None):
             'The get_vn_id function requires a name.'
         )
 
-    return _list_vns()[name]['id']
+    return list_vns(call=call)[name]['id']
 
 
 def create(vm_):
@@ -1659,20 +1742,12 @@ def template_delete(call=None, kwargs=None):
 
     if not name and not template_id:
         raise SaltCloudSystemExit(
-            'The template_delete function requires either a name or a template_id '
+            'The template_delete function requires either a \'name\' or a \'template_id\' '
             'to be provided.'
         )
 
-    # Make the API call to O.N. once and pass them to other functions that need them.
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-
-    if template_id and name:
-        _check_name_id_collisions(name,
-                                  template_id,
-                                  server=server,
-                                  user=user,
-                                  password=password)
 
     if name and not template_id:
         template_id = get_template_id(kwargs={'name': name})
@@ -3030,26 +3105,6 @@ def template_update(call=None, kwargs=None):
 
 # Helper Functions
 
-def _check_name_id_collisions(name, id_, server=None, user=None, password=None):
-    '''
-    Helper function that ensures that a provided name and provided id match.
-    '''
-    name_id = _get_template(name,
-                            server=server,
-                            user=user,
-                            password=password)['id']
-    if name_id != id_:
-        raise SaltCloudException(
-            'A name and an ID were provided, but the provided id, \'{0}\', does '
-            'not match the ID found for the provided name: \'{1}\': \'{2}\'. '
-            'Nothing was done.'.format(
-                id_,
-                name,
-                name_id
-            )
-        )
-
-
 def _get_node(name):
     '''
     Helper function that returns all information about a named node.
@@ -3071,35 +3126,6 @@ def _get_node(name):
                 )
             )
 
-            # Just a little delay between attempts...
-            time.sleep(0.5)
-
-    return {}
-
-
-def _get_template(name, server=None, user=None, password=None):
-    '''
-    Helper function returning all information about a named template.
-
-    name
-        The name of the template for which to obtain information.
-    '''
-    attempts = 10
-
-    while attempts >= 0:
-        try:
-            return _list_templates(
-                server=server,
-                user=user,
-                password=password)[name]
-        except KeyError:
-            attempts -= 1
-            log.debug(
-                'Failed to get the data for the template {0!r}. Remaining '
-                'attempts {1}'.format(
-                    name, attempts
-                )
-            )
             # Just a little delay between attempts...
             time.sleep(0.5)
 
@@ -3171,94 +3197,6 @@ def _list_nodes(full=False):
             vms[vm.find('NAME').text] = _xml_to_dict(vm)
 
     return vms
-
-
-def _list_images(server=None, user=None, password=None):
-    '''
-    Lists all images available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    image_pool = server.one.imagepool.info(auth, -1, -1, -1)[1]
-
-    images = {}
-    for image in etree.XML(image_pool):
-        images[image.find('NAME').text] = _xml_to_dict(image)
-
-    return images
-
-
-def _list_security_groups(server=None, user=None, password=None):
-    '''
-    Lists all security groups available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    secgroup_pool = server.one.secgrouppool.info(auth, -1, -1, -1)[1]
-
-    groups = {}
-    for group in etree.XML(secgroup_pool):
-        groups[group.find('NAME').text] = _xml_to_dict(group)
-
-    return groups
-
-
-def _list_templates(server=None, user=None, password=None):
-    '''
-    Lists all templates available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    template_pool = server.one.templatepool.info(auth, -1, -1, -1)[1]
-
-    templates = {}
-    for template in etree.XML(template_pool):
-        templates[template.find('NAME').text] = _xml_to_dict(template)
-
-    return templates
-
-
-def _list_vms(server=None, user=None, password=None, state=None):
-    '''
-    Lists all virtual machines available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    if state is None:
-        state = 3
-
-    auth = ':'.join([user, password])
-    vm_pool = server.one.vmpool.info(auth, -1, -1, -1, state)[1]
-
-    vms = {}
-    for v_machine in etree.XML(vm_pool):
-        vms[v_machine.find('NAME').text] = _xml_to_dict(v_machine)
-
-    return vms
-
-
-def _list_vns(server=None, user=None, password=None):
-    '''
-    Lists all virtual networks available to the user and the user's groups.
-    '''
-    if not server or not user or not password:
-        server, user, password = _get_xml_rpc()
-
-    auth = ':'.join([user, password])
-    vn_pool = server.one.vnpool.info(auth, -1, -1, -1)[1]
-
-    vns = {}
-    for v_network in etree.XML(vn_pool):
-        vns[v_network.find('NAME').text] = _xml_to_dict(v_network)
-
-    return vns
 
 
 def _xml_to_dict(xml):
