@@ -6,8 +6,8 @@ Connection module for Telemetry
 
 https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
-:configuration: This module accepts explicit telemetry credentials but can also and
-    explicit access key. More Information available at::
+:configuration: This module accepts explicit telemetry credentials or
+    can also read api key credentials from a pillar. More Information available at::
 
     https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
