@@ -16,12 +16,7 @@ https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
         telemetry.telemetry_api_keys:
               - abc123  # Key 1
               - efg321  # Backup Key 1
-        telemetry.metrics:
-              - effectiveLockPercentage
-              - writesWaitingForGlobalLock
-        telemetry.notifcationChannels:
-                onCallEngineer: c-XXX
-                apiNotifications: c-YYY
+        telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
 
 :depends: requests
 
@@ -57,7 +52,7 @@ def _get_telemetry_base(profile):
 
 
 def _auth(api_key=None, profile='telemetry'):
-    "return telemetry api key in the header"
+    # return telemetry api key in the header
     if api_key is None and profile is None:
         raise Exception("Missing api_key and profile")
     if profile:
@@ -140,7 +135,6 @@ def get_notification_channel(notify_channel, profile="telemetry"):
     # This helper is used to procure the channel ids
     # used to notify when the alarm threshold is violated
 
-    _profile = __salt__['config.option'](profile)
     auth = _auth(profile=profile)
 
     notification_channel_id = retrieve_channel_id(notify_channel)

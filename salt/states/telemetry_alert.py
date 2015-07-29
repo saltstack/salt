@@ -19,14 +19,8 @@ Example:
         telemetry_api_keys:
           - abc123  # Key 1
           - efg321  # Backup Key 1
-    telemetry
-        metrics:
-          - effectiveLockPercentage
-          - writesWaitingForGlobalLock
-    telemetry
-        notifcationChannels:
-            onCallEngineer: c-XXX
-            apiNotifications: c-YYY
+    telemetry:
+        telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
 
 '''
 
