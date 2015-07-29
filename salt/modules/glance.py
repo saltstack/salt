@@ -40,12 +40,19 @@ from __future__ import absolute_import
 
 # Import third party libs
 #import salt.ext.six as six
+
+# Import salt libs
 from salt.exceptions import (
     #CommandExecutionError,
     SaltInvocationError
     )
 
-from salt.version import __version__, SaltStackVersion
+from salt.utils import warn_until
+
+from salt.version import (
+    __version__,
+    SaltStackVersion
+    )
 CUR_VER = SaltStackVersion(__version__[0], __version__[1])
 CARBON = SaltStackVersion.from_name('Carbon')
 
