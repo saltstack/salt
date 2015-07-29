@@ -50,7 +50,8 @@ class SyncWrapper(object):
     ret = sync.async_method()
     '''
     loop_map = weakref.WeakKeyDictionary()  # keep a mapping of parent io_loop -> sync_loop
-    loops_in_use = weakref.WeakSet()  # set of sync_loops in use
+    # Can't use WeakSet since we have to support python 2.6 :(
+    loops_in_use = weakref.WeakKeyDictionary()  # set of sync_loops in use
 
     def __init__(self, method, args=tuple(), kwargs=None):
         if kwargs is None:
@@ -64,7 +65,7 @@ class SyncWrapper(object):
         if io_loop in self.loops_in_use:
             io_loop = LOOP_CLASS()
         self.io_loop = io_loop
-        self.loops_in_use.add(self.io_loop)
+        self.loops_in_use[self.io_loop] = True
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
@@ -75,7 +76,7 @@ class SyncWrapper(object):
         Once the async wrapper is complete, remove our loop from the in use set
         so someone else can use it without making another one
         '''
-        self.loops_in_use.remove(self.io_loop)
+        del self.loops_in_use[self.io_loop]
 
     def __getattribute__(self, key):
         try:
