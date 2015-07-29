@@ -77,7 +77,7 @@ def _update_cache(deployment_id, metric_name, alert):
         alerts[metric_name] = alert
         __context__[key] = alerts
 
-    return __context__[key]
+    return __context__.get(key, [])
 
 
 def retrieve_channel_id(email, profile='telemetry'):
@@ -119,9 +119,10 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
         if response.status_code == 200:
             for alert in response.json():
                 http_result[alert.get('condition', {}).get('metric')] = alert
+                __context__[key] = http_result
 
-        if bool(http_result):
-            __context__[key] = http_result
+    if not __context__.get(key):
+        return []
 
     alerts = __context__[key].values()
 
