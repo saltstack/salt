@@ -5,9 +5,10 @@ Control the state system on the minion.
 State Caching
 -------------
 
-When a highstate is called, the minion automatically caches a copy of the last high data.
-If you then run a highstate with cache=True it will use that cached highdata and won't hit the fileserver
-except for ``salt://`` links in the states themselves.
+When a highstate is called, the minion automatically caches a copy of the last
+high data. If you then run a highstate with cache=True it will use that cached
+highdata and won't hit the fileserver except for ``salt://`` links in the
+states themselves.
 '''
 
 # Import python libs
