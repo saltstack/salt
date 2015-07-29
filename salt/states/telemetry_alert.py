@@ -21,17 +21,15 @@ Example:
           - efg321  # Backup Key 1
     telemetry:
         telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
-
 '''
 
 from salt._compat import string_types
 
 __virtualname__ = 'telemetry_alert'
 
+
 def __virtual__():
-    '''
-    Only load if telemetry is available.
-    '''
+    # Only load if telemetry is available.
     return 'telemetry_alert' if 'telemetry.get_alert_config' in __salt__ else False
 
 
@@ -80,7 +78,7 @@ def present(name, deployment_id, metric_name, alert_config, api_key=None, profil
     post_body = {
         "deployment": deployment_id,
         "filter": alert_config.get('filter'),
-        "notificationChannel" :  __salt__['telemetry.get_notification_channel'](alert_config.get('escalate_to')).split(),
+        "notificationChannel":  __salt__['telemetry.get_notification_channel'](alert_config.get('escalate_to')).split(),
         "condition": {
         "metric": metric_name,
         "max": alert_config.get('max'),

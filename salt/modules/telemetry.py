@@ -37,10 +37,9 @@ except ImportError:
 
 __virtualname__ = 'telemetry'
 
+
 def __virtual__():
-    '''
-    Only load if imports exist.
-    '''
+    # Only load if imports exist.
     if not HAS_REQUESTS:
         return False
     return __virtualname__
@@ -214,7 +213,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     post_body = {
         "deployment": deployment_id,
         "filter": data.get('filter'),
-        "notificationChannel" : get_notification_channel(data.get('escalate_to')).split(),
+        "notificationChannel": get_notification_channel(data.get('escalate_to')).split(),
         "condition": {
             "metric": metric_name,
             "max": data.get('max'),
@@ -264,7 +263,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     post_body = {
         "deployment": deployment_id,
         "filter": data.get('filter'),
-        "notificationChannel" : get_notification_channel(data.get('escalate_to')).split(),
+        "notificationChannel": get_notification_channel(data.get('escalate_to')).split(),
         "condition": {
             "metric": metric_name,
             "max": data.get('max'),
@@ -332,4 +331,3 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
         return False, "Failed to delete {0} alarms in deployment: {1}" .format(', '.join(failed_to_delete), deployment_id)
 
     return True, "Successfully deleted {0} alerts in deployment: {1}".format(', '.join(alert_ids), deployment_id)
-
