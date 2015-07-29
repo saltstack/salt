@@ -1614,7 +1614,7 @@ def is_smartos_globalzone():
             return False
         if zonename.returncode:
             return False
-        if zonename.stdout.read().strip() == "global":
+        if zonename.stdout.read().strip() == 'global':
             return True
 
         return False
