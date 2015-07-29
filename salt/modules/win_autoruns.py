@@ -48,7 +48,6 @@ def list_():
         'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /reg:64',
         'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
     ]
-    winver = __grains__['osfullname']
     for key in keys:
         autoruns[key] = []
         cmd = ['reg', 'query', key]
@@ -57,12 +56,12 @@ def list_():
                 autoruns[key].append(line)
 
     # Find autoruns in user's startup folder
-    if '7' in winver:
-        user_dir = 'C:\\Users\\'
-        startup_dir = '\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup'
-    else:
+    if os.path.exists('C:\\Documents and Settings\\'):
         user_dir = 'C:\\Documents and Settings\\'
         startup_dir = '\\Start Menu\\Programs\\Startup'
+    else:
+        user_dir = 'C:\\Users\\'
+        startup_dir = '\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup'
 
     for user in os.listdir(user_dir):
         try:
