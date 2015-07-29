@@ -120,7 +120,8 @@ ssh_key_name
 ssh_interface
     This option allows you to create a VM without a public IP. If this option
     is omitted and the VM does not have a public IP, then the salt-cloud waits
-    for a certain period of time and then destroys the VM.
+    for a certain period of time and then destroys the VM. With the nova drive,
+    private cloud networks can be defined here.
 
 For more information concerning cloud profiles, see :doc:`here
 </topics/cloud/profiles>`.
