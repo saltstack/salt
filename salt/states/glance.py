@@ -8,6 +8,9 @@ from __future__ import absolute_import
 import logging
 import time
 
+# Import salt libs
+from salt.utils import warn_until
+
 log = logging.getLogger(__name__)
 
 
@@ -21,9 +24,14 @@ def _find_image(name):
     images_dict = __salt__['glance.image_list'](name=name)
     log.debug('Got images_dict: {0}'.format(images_dict))
 
+    warn_until('Carbon', 'Starting with Carbon '
+        '\'glance.image_list\' is not supposed to return '
+        'the images wrapped in a separate dict anymore.')
     if len(images_dict) == 1 and 'images' in images_dict:
         images_dict = images_dict['images']
 
+    # I /think/ this will still work when glance.image_list
+    # starts returning a list instead of a dictionary...
     if len(images_dict) == 0:
         return None, 'No image with name "{0}"'.format(name)
     elif len(images_dict) == 1:
@@ -93,6 +101,10 @@ def image_present(name, visibility='public', protected=None,
         image = __salt__['glance.image_create'](name=name,
             protected=protected, visibility=visibility,
             location=location)
+        # See Salt issue #24568
+        warn_until('Carbon', 'Starting with Carbon '
+            '\'glance.image_create\' is not supposed to return '
+            'the image wrapped in a dict anymore.')
         if len(image.keys()) == 1:
             image = image.values()[0]
         log.debug('Created new image:\n{0}'.format(image))
@@ -107,8 +119,6 @@ def image_present(name, visibility='public', protected=None,
                 }
             }
         timer = timeout
-        if len(image.keys()) == 1:
-            image = image.values()[0]
         # Kinda busy-loopy but I don't think the Glance
         # API has events we can listen for
         while timer > 0:
@@ -127,6 +137,10 @@ def image_present(name, visibility='public', protected=None,
                         name) + ' vanished:\n' + msg
                     return ret
                 elif len(image.keys()) == 1:
+                    # See Salt issue #24568
+                    warn_until('Carbon', 'Starting with Carbon '
+                        '\'_find_image()\' is not supposed to return '
+                        'the image wrapped in a dict anymore.')
                     image = image.values()[0]
         if timer <= 0 and image['status'] not in acceptable:
             ret['result'] = False
@@ -134,7 +148,10 @@ def image_present(name, visibility='public', protected=None,
                     'state ({0}) before timeout:\n'.format(acceptable)+\
                     '\tLast status was "{0}".\n'.format(image['status'])
 
-        # Wrapped dict workaround (see Salt issue #24568)
+        # See Salt issue #24568
+        warn_until('Carbon', 'Starting with Carbon '
+            '\'_find_image()\' is not supposed to return '
+            'the image wrapped in a dict anymore.')
         if len(image.keys()) == 1:
             image = image.values()[0]
             # ret[comment] +=
@@ -161,6 +178,10 @@ def image_present(name, visibility='public', protected=None,
             if not __opts__['test']:
                 image = __salt__['glance.image_update'](
                     id=image['id'], visibility=visibility)
+            # See Salt issue #24568
+            warn_until('Carbon', 'Starting with Carbon '
+                '\'glance.image_update\' is not supposed to return '
+                'the image wrapped in a dict anymore.')
             if len(image.keys()) == 1:
                 image = image.values()[0]
             # Check if image_update() worked:
@@ -200,6 +221,9 @@ def image_present(name, visibility='public', protected=None,
             if 'checksum' not in image:
                 # Refresh our info about the image
                 image = __salt__['glance.image_show'](image['id'])
+                warn_until('Carbon', 'Starting with Carbon '
+                    '\'glance.image_show\' is not supposed to return '
+                    'the image wrapped in a dict anymore.')
                 if len(image.keys()) == 1:
                     image = image.values()[0]
             if 'checksum' not in image:
