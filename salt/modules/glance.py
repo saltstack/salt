@@ -165,6 +165,7 @@ def _auth(profile=None, api_version=2, **connection_args):
         raise NotImplementedError(
             "Can't retrieve a auth_token without keystone")
 
+
 def _add_image(collection, image):
     '''
     Add image to given dictionary
@@ -192,11 +193,12 @@ def _add_image(collection, image):
     elif type(collection) is list:
         collection.append(image_prep)
     else:
-        log.error('collection is {0}'.format(type(collection)) +\
-                'instead of dict or list.')
-        raise TypeError('collection is neither list nor '\
-            'dict.'.format(type(collection)))
+        msg = '"collection" is {0}'.format(type(collection)) +\
+            'instead of dict or list.'
+        log.error(msg)
+        raise TypeError(msg)
     return collection
+
 
 def image_create(name, location, profile=None, visibility='public',
         container_format='bare', disk_format='raw', protected=None):
@@ -268,7 +270,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
                 id = image.id  # pylint: disable=C0103
                 continue
     if not id:
-        return {'Error': 'Unable to resolve '\
+        return {'Error': 'Unable to resolve '
             'image id for name {0}'.format(name)}
     try:
         g_client.images.delete(id)
@@ -345,7 +347,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                 return ret
             if name == image.name:
                 if name in ret and CUR_VER <= CARBON:
-                    return {'Error': 'More than one image '\
+                    return {'Error': 'More than one image '
                             'with name "{0}"'.format(name)}
                 _add_image(ret, image)
     log.debug('Returning images: {0}'.format(ret))
@@ -360,7 +362,7 @@ def image_schema(profile=None):
     return schema_get('image', profile)
 
 
-def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=C0103
+def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable=C0103
     '''
     Update properties of given image.
     Known to work for:
