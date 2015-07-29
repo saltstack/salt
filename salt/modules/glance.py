@@ -44,6 +44,11 @@ from salt.exceptions import (
     #CommandExecutionError,
     SaltInvocationError
     )
+
+from salt.version import __version__, SaltStackVersion
+CUR_VER = SaltStackVersion(__version__[0], __version__[1])
+CARBON = SaltStackVersion.from_name('Carbon')
+
 # pylint: disable=import-error
 HAS_GLANCE = False
 try:
@@ -144,12 +149,14 @@ def _auth(profile=None, api_version=2, **connection_args):
                 'get a new one using username and password.')
 
     if HAS_KEYSTONE:
-        # TODO: redact kwargs['password']
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
             '{0}, **{1})'.format(endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
         log.debug(help(keystone.get_token))
         kwargs['token'] = keystone.get_token(keystone.session)
+        # This doesn't realy prevent the password to show up
+        # in the minion log as keystoneclient.session is
+        # logging it anyway when in debug-mode
         kwargs.pop('password')
         log.debug('Calling glanceclient.client.Client(' +
             '{0}, {1}, **{2})'.format(api_version, endpoint, kwargs))
@@ -299,14 +306,17 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     pformat = pprint.PrettyPrinter(indent=4).pformat
     log.debug('Properties of image {0}:\n{1}'.format(
         image.name, pformat(image)))
-    # TODO: Get rid of the wrapping dict, see #24568
-    ret[image.name] = {}
+    ret_details = {}
+    if CUR_VER < CARBON:
+        ret[image.name] = ret_details
+    else:
+        ret = ret_details
     schema = image_schema(profile=profile)
     if len(schema.keys()) == 1:
         schema = schema['image']
     for key in schema.keys():
         if key in image:
-            ret[image.name][key] = image[key]
+            ret_details[key] = image[key]
     return ret
 
 
@@ -320,15 +330,12 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
-    saltversion = __salt__['grains.get']('saltversion')
     g_client = _auth(profile)
-    # Someone will punish me for this...
-    # *@0xf10e pleads guilty*
-    if saltversion <= '2015.8':
+    # TODO: warn_until
+    if CUR_VER < CARBON:
         ret = {}
     else:
         ret = []
-    # TODO: Get rid of the wrapping dict, see #24568
     for image in g_client.images.list():
         if id is None and name is None:
             _add_image(ret, image)
@@ -337,9 +344,8 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                 _add_image(ret, image)
                 return ret
             if name == image.name:
-                if name in ret:
-                    if saltversion <= '2015.8':
-                        return {'Error': 'More than one image '\
+                if name in ret and CUR_VER <= CARBON:
+                    return {'Error': 'More than one image '\
                             'with name "{0}"'.format(name)}
                 _add_image(ret, image)
     log.debug('Returning images: {0}'.format(ret))
@@ -362,7 +368,6 @@ def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=
       - protected (bool)
       - visibility ('public' or 'private')
     '''
-    saltversion = __salt__['grains.get']('saltversion')
     if id:
         image = image_show(id=id)
         if len(image.keys()) == 1:
@@ -390,7 +395,7 @@ def image_update(id=None, name=None, profile=None, **kwargs): # pylint: disable=
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
-    if saltversion <= '2015.8':
+    if CUR_VER <= CARBON:
         updated = {updated.name: updated}
     return updated
 
