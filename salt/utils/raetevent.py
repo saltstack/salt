@@ -40,16 +40,15 @@ class RAETEvent(object):
         '''
         self.node = node  # application kind see kinds.APPL_KIND_NAMES
         self.sock_dir = sock_dir
-        self.listen = listen
         if opts is None:
             opts = {}
         self.opts = opts
         self.stack = None
         self.ryn = 'manor'  # remote yard name
         self.connected = False
-        self.__prep_stack()
+        self.__prep_stack(listen)
 
-    def __prep_stack(self):
+    def __prep_stack(self, listen):
         '''
         Prepare the stack objects
         '''
@@ -59,7 +58,8 @@ class RAETEvent(object):
             else:
                 self.stack = transport.jobber_stack = self._setup_stack(ryn=self.ryn)
         log.debug("RAETEvent Using Jobber Stack at = {0}\n".format(self.stack.ha))
-        self.connect_pub()
+        if listen:
+            self.subscribe()
 
     def _setup_stack(self, ryn='manor'):
         kind = self.opts.get('__role', '')  # opts optional for master
@@ -112,7 +112,8 @@ class RAETEvent(object):
         '''
         Included for compat with zeromq events, not required
         '''
-        return
+        if not self.connected:
+            self.connect_pub()
 
     def unsubscribe(self, tag=None):
         '''
@@ -124,16 +125,15 @@ class RAETEvent(object):
         '''
         Establish the publish connection
         '''
-        if not self.connected and self.listen:
-            try:
-                route = {'dst': (None, self.ryn, 'event_req'),
-                         'src': (None, self.stack.local.name, None)}
-                msg = {'route': route}
-                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
-                self.stack.serviceAll()
-                self.connected = True
-            except Exception:
-                pass
+        try:
+            route = {'dst': (None, self.ryn, 'event_req'),
+                     'src': (None, self.stack.local.name, None)}
+            msg = {'route': route}
+            self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+            self.stack.serviceAll()
+            self.connected = True
+        except Exception:
+            pass
 
     def connect_pull(self, timeout=1000):
         '''
@@ -156,7 +156,8 @@ class RAETEvent(object):
 
         IF wait is 0 then block forever.
         '''
-        self.connect_pub()
+        if not self.connected:
+            self.connect_pub()
         start = time.time()
         while True:
             self.stack.serviceAll()
@@ -180,7 +181,8 @@ class RAETEvent(object):
         '''
         Get the raw event msg without blocking or any other niceties
         '''
-        self.connect_pub()
+        if not self.connected:
+            self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
             msg, sender = self.stack.rxMsgs.popleft()
@@ -204,7 +206,6 @@ class RAETEvent(object):
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
         '''
-        self.connect_pub()
         # Timeout is retained for compat with zeromq events
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
@@ -272,18 +273,17 @@ class PresenceEvent(MasterEvent):
         '''
         Establish the publish connection
         '''
-        if not self.connected and self.listen:
-            try:
-                route = {'dst': (None, self.ryn, 'presence_req'),
-                         'src': (None, self.stack.local.name, None)}
-                msg = {'route': route}
-                if self.state:
-                    msg['data'] = {'state': self.state}
-                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
-                self.stack.serviceAll()
-                self.connected = True
-            except Exception:
-                pass
+        try:
+            route = {'dst': (None, self.ryn, 'presence_req'),
+                     'src': (None, self.stack.local.name, None)}
+            msg = {'route': route}
+            if self.state:
+                msg['data'] = {'state': self.state}
+            self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+            self.stack.serviceAll()
+            self.connected = True
+        except Exception:
+            pass
 
 
 class StatsEvent(MasterEvent):
@@ -297,13 +297,12 @@ class StatsEvent(MasterEvent):
         '''
         Establish the publish connection
         '''
-        if not self.connected and self.listen:
-            try:
-                route = {'dst': (self.estate, None, 'stats_req'),
-                         'src': (None, self.stack.local.name, None)}
-                msg = {'route': route, 'tag': self.tag}
-                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
-                self.stack.serviceAll()
-                self.connected = True
-            except Exception:
-                pass
+        try:
+            route = {'dst': (self.estate, None, 'stats_req'),
+                     'src': (None, self.stack.local.name, None)}
+            msg = {'route': route, 'tag': self.tag}
+            self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+            self.stack.serviceAll()
+            self.connected = True
+        except Exception:
+            pass
