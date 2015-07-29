@@ -516,7 +516,7 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
-    if 'use_dns' in vm_ and not 'ip_address' in vm_:
+    if 'use_dns' in vm_ and 'ip_address' not in vm_:
         use_dns = vm_['use_dns']
         if use_dns:
             from socket import gethostbyname, gaierror
