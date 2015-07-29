@@ -700,10 +700,11 @@ def push(path, keep_symlinks=False):
             'tok': auth.gen_token('salt')}
     channel = salt.transport.Channel.factory(__opts__)
     with salt.utils.fopen(path, 'rb') as fp_:
+        init_send = False
         while True:
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
-            if not load['data']:
+            if not load['data'] and init_send:
                 return True
             ret = channel.send(load)
             if not ret:
@@ -711,6 +712,7 @@ def push(path, keep_symlinks=False):
                 '\'file_recv\' set to \'True\' and that the file is not '
                 'larger than the \'file_recv_size_max\' setting on the master.')
                 return ret
+            init_send = True
 
 
 def push_dir(path, glob=None):
