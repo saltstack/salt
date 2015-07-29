@@ -140,7 +140,7 @@ def _unit_file_changed(name):
     Returns True if systemctl reports that the unit file has changed, otherwise
     returns False.
     '''
-    return 'warning: unit file changed on disk' in \
+    return "'systemctl daemon-reload'" in \
         __salt__['cmd.run'](_systemctl_cmd('status', name)).lower()
 
 
