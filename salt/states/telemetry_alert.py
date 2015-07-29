@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: 2015.7.0
+.. versionadded:: Boron.
 
 Manage Telemetry alert configurations
 =================
