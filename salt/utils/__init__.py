@@ -1594,7 +1594,7 @@ def is_smartos():
     if not is_sunos():
         return False
     else:
-      return os.uname()[3].startswith('joyent_')
+        return os.uname()[3].startswith('joyent_')
 
 
 @real_memoize
