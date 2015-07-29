@@ -516,6 +516,17 @@ def create(vm_):
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
 
+    if 'use_dns' in vm_ and not 'ip_address' in vm_:
+        use_dns = vm_['use_dns']
+        if use_dns:
+            from socket import gethostbyname, gaierror
+            try:
+                ip_address = gethostbyname(str(vm_['name']))
+            except gaierror:
+                log.debug('Resolving of {hostname} failed'.format(hostname=str(vm_['name'])))
+            else:
+                vm_['ip_address'] = str(ip_address)
+
     try:
         data = create_node(vm_)
     except Exception as exc:
