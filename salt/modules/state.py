@@ -24,11 +24,11 @@ import tempfile
 
 # Import salt libs
 import salt.config
+import salt.payload
+import salt.state
 import salt.utils
 import salt.utils.jid
 import salt.utils.url
-import salt.state
-import salt.payload
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
