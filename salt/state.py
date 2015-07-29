@@ -360,7 +360,7 @@ class Compiler(object):
                             # Add the requires to the reqs dict and check them
                             # all for recursive requisites.
                             argfirst = next(iter(arg))
-                            if argfirst in ('require', 'watch', 'prereq'):
+                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
                                     ' statement in state {1!r} in SLS {2!r} '
@@ -965,7 +965,7 @@ class State(object):
                                         'formed as a list'
                                         .format(name, body['__sls__'])
                                     )
-                            if argfirst in ('require', 'watch', 'prereq'):
+                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
                                         'The {0} statement in state {1!r} in '
