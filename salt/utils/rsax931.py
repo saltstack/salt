@@ -23,7 +23,7 @@ def _load_libcrypto():
     '''
     if sys.platform.startswith('win'):
         return cdll.LoadLibrary('libeay32')
-    elif getattr(sys, 'frozen', False) and salt.utils.is_smartos_globalzone():
+    elif getattr(sys, 'frozen', False) and salt.utils.is_smartos():
         return cdll.LoadLibrary(glob.glob(os.path.join(
             os.path.dirname(sys.executable),
             'libcrypto.so*'))[0])
