@@ -48,7 +48,7 @@ def __virtual__():
 
 def _get_telemetry_base(profile):
     config = __salt__['config.option'](profile)
-    return config.get('TELEMETRY_API_BASE')
+    return config.get('telemetry_api_base_url')
 
 
 def _auth(api_key=None, profile='telemetry'):
