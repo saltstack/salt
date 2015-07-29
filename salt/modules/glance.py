@@ -309,6 +309,12 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
     log.debug('Properties of image {0}:\n{1}'.format(
         image.name, pformat(image)))
     ret_details = {}
+    # I may want to use this code on Boron
+    # until we got Carbon packages for Ubuntu
+    # so please keep this code until Nitrogen
+    warn_until('Nitrogen', 'Starting with \'Carbon\' image_show() '
+            'will stop wrapping the returned image in another '
+            'dictionary.')
     if CUR_VER < CARBON:
         ret[image.name] = ret_details
     else:
@@ -333,8 +339,13 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
         salt '*' glance.image_list
     '''
     g_client = _auth(profile)
-    # TODO: warn_until
-    if CUR_VER < CARBON:
+    # I may want to use this code on Boron
+    # until we got Carbon packages for Ubuntu
+    # so please keep this code until Nitrogen
+    warn_until('Nitrogen', 'Starting in \'Carbon\' image_list() '
+        'will return a list of images instead of a dictionary '
+        'keyed with the images\' names.')
+    if CUR_VER <= CARBON:
         ret = {}
     else:
         ret = []
@@ -347,6 +358,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                 return ret
             if name == image.name:
                 if name in ret and CUR_VER <= CARBON:
+                    # Not really worth an exception
                     return {'Error': 'More than one image '
                             'with name "{0}"'.format(name)}
                 _add_image(ret, image)
@@ -397,6 +409,12 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
             to_update[key] = value
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
+    # I may want to use this code on Boron
+    # until we got Carbon packages for Ubuntu
+    # so please keep this code until Nitrogen
+    warn_until('Nitrogen', 'Starting with \'Carbon\' image_update() '
+            'will stop wrapping the returned, updated image in '
+            'another dictionary.')
     if CUR_VER <= CARBON:
         updated = {updated.name: updated}
     return updated
