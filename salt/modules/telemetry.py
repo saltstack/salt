@@ -230,7 +230,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     if response.status_code >= 200 and response.status_code < 300:
         # update cache
         log.info("Created alarm on metric: {0} in deployment: {1}".format(metric_name, deployment_id))
-        log.info("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
+        log.debug("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
         _update_cache(deployment_id, metric_name, response.json())
     else:
         log.error("Failed to create alarm on metric: {0} in deployment {1}:  payload: {2}".
@@ -279,7 +279,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
     if response.status_code >= 200 and response.status_code < 300:
         # Also update cache
-        log.info("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
+        log.debug("Updating cache for metric {0} in deployment {1}: {2}".format(metric_name, deployment_id, response.json()))
         _update_cache(deployment_id, metric_name, response.json())
         log.info("Updated alarm on metric: {0} in deployment: {1}".format(metric_name, deployment_id))
         return True, response.json()
@@ -318,7 +318,7 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
         try:
             response = requests.delete(delete_url, headers=auth)
             if metric_name:
-                log.info("updating cache and delete {0} key from {1}".format(metric_name, deployment_id))
+                log.debug("updating cache and delete {0} key from {1}".format(metric_name, deployment_id))
                 _update_cache(deployment_id, metric_name, None)
 
         except requests.exceptions.RequestException as e:
