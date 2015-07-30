@@ -653,6 +653,7 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
+                    'log_file': 'salt-call.log'
                 })
         self.minion_config = yaml.dump(self.minion_opts)
         self.target = kwargs
@@ -1074,6 +1075,11 @@ ARGS = {9}\n'''.format(self.minion_config,
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
                 'checksum mismatched',
                 'The salt thin transfer was corrupted'
+            ),
+            (
+                (salt.defaults.exitcodes.EX_SCP_NOT_FOUND,),
+                'scp not found',
+                'No scp binary. openssh-clients package required'
             ),
             (
                 (salt.defaults.exitcodes.EX_CANTCREAT,),

@@ -82,9 +82,9 @@ The option can can also be set to a list of masters, enabling
 
 .. versionadded:: 2014.7.0
 
-Default: ``standard``
+Default: ``str``
 
-The type of the :conf_minion:`master` variable. Can be ``standard``, ``failover`` or
+The type of the :conf_minion:`master` variable. Can be ``str``, ``failover`` or
 ``func``.
 
 .. code-block:: yaml

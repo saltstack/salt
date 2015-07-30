@@ -984,12 +984,11 @@ def uncomment(path,
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
     '''
-    pattern = '^{0}{1}'.format(char, regex.lstrip('^').rstrip('$'))
-    repl = "{0}".format(regex.lstrip('^').rstrip('$'))
-    return replace(path=path,
-                   pattern=pattern,
-                   repl=repl,
-                   backup=backup)
+    return comment_line(path=path,
+                        regex=regex,
+                        char=char,
+                        cmnt=False,
+                        backup=backup)
 
 
 def comment(path,
@@ -1027,11 +1026,174 @@ def comment(path,
 
         salt '*' file.comment /etc/modules pcspkr
     '''
-    repl = "{0}{1}".format(char, regex.lstrip('^').rstrip('$'))
-    return replace(path=path,
-                   pattern=regex,
-                   repl=repl,
-                   backup=backup)
+    return comment_line(path=path,
+                        regex=regex,
+                        char=char,
+                        cmnt=True,
+                        backup=backup)
+
+
+def comment_line(path,
+                 regex,
+                 char='#',
+                 cmnt=True,
+                 backup='.bak'):
+    r'''
+    Comment or Uncomment a line in a text file.
+
+    :param path: string
+    The full path to the text file.
+
+    :param regex: string
+    A regex expression that begins with ``^`` that will find the line you wish
+    to comment. Can be as simple as ``^color =``
+
+    :param char: string
+    The character used to comment a line in the type of file you're referencing.
+    Default is ``#``
+
+    :param cmnt: boolean
+    True to comment the line. False to uncomment the line. Default is True.
+
+    :param backup: string
+    The file extension to give the backup file. Default is ``.bak``
+
+    :return: boolean
+    Returns True if successful, False if not
+
+    CLI Example:
+
+    The following example will comment out the ``pcspkr`` line in the
+    ``/etc/modules`` file using the default ``#`` character and create a backup
+    file named ``modules.bak``
+
+    .. code-block:: bash
+
+        salt '*' file.comment_line '/etc/modules' '^pcspkr'
+
+
+    CLI Example:
+
+    The following example will uncomment the ``log_level`` setting in ``minion``
+    config file if it is set to either ``warning``, ``info``, or ``debug`` using
+    the ``#`` character and create a backup file named ``minion.bk``
+
+    .. code-block:: bash
+
+    salt '*' file.comment_line 'C:\salt\conf\minion' '^log_level: (warning|info|debug)' '#' False '.bk'
+    '''
+    # Get the regex for comment or uncomment
+    if cmnt:
+        regex = '{0}({1}){2}'.format(
+                '^' if regex.startswith('^') else '',
+                regex.lstrip('^').rstrip('$'),
+                '$' if regex.endswith('$') else '')
+    else:
+        regex = '^{0}({1}){2}'.format(
+                char,
+                regex.lstrip('^').rstrip('$'),
+                '$' if regex.endswith('$') else '')
+
+    # Load the real path to the file
+    path = os.path.realpath(os.path.expanduser(path))
+
+    # Make sure the file exists
+    if not os.path.exists(path):
+        raise SaltInvocationError('File not found: {0}'.format(path))
+
+    # Make sure it is a text file
+    if not salt.utils.istextfile(path):
+        raise SaltInvocationError(
+            'Cannot perform string replacements on a binary file: {0}'.format(path))
+
+    # First check the whole file, determine whether to make the replacement
+    # Searching first avoids modifying the time stamp if there are no changes
+    found = False
+    # Dictionaries for comparing changes
+    orig_file = []
+    new_file = []
+    # Buffer size for fopen
+    bufsize = os.path.getsize(path)
+    try:
+        # Use a read-only handle to open the file
+        with salt.utils.fopen(path,
+                              mode='rb',
+                              buffering=bufsize) as r_file:
+            # Loop through each line of the file and look for a match
+            for line in r_file:
+                # Is it in this line
+                if re.match(regex, line):
+                    # Load lines into dictionaries, set found to True
+                    orig_file.append(line)
+                    if cmnt:
+                        new_file.append('{0}{1}'.format(char, line))
+                    else:
+                        new_file.append(line.lstrip(char))
+                    found = True
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to open file '{0}'. "
+            "Exception: {1}".format(path, exc)
+        )
+
+    # We've searched the whole file. If we didn't find anything, return False
+    if not found:
+        return False
+
+    # Create a copy to read from and to use as a backup later
+    try:
+        temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError("Exception: {0}".format(exc))
+
+    try:
+        # Open the file in write mode
+        with salt.utils.fopen(path,
+                              mode='wb',
+                              buffering=bufsize) as w_file:
+            try:
+                # Open the temp file in read mode
+                with salt.utils.fopen(temp_file,
+                                      mode='rb',
+                                      buffering=bufsize) as r_file:
+                    # Loop through each line of the file and look for a match
+                    for line in r_file:
+                        try:
+                            # Is it in this line
+                            if re.match(regex, line):
+                                # Write the new line
+                                if cmnt:
+                                    w_file.write('{0}{1}'.format(char, line))
+                                else:
+                                    w_file.write(line.lstrip(char))
+                            else:
+                                # Write the existing line (no change)
+                                w_file.write(line)
+                        except (OSError, IOError) as exc:
+                            raise CommandExecutionError(
+                                "Unable to write file '{0}'. Contents may "
+                                "be truncated. Temporary file contains copy "
+                                "at '{1}'. "
+                                "Exception: {2}".format(path, temp_file, exc)
+                            )
+            except (OSError, IOError) as exc:
+                raise CommandExecutionError("Exception: {0}".format(exc))
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError("Exception: {0}".format(exc))
+
+    # Move the backup file to the original directory
+    backup_name = '{0}{1}'.format(path, backup)
+    try:
+        shutil.move(temp_file, backup_name)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to move the temp file '{0}' to the "
+            "backup file '{1}'. "
+            "Exception: {2}".format(path, temp_file, exc)
+        )
+
+    # Return a diff using the two dictionaries
+    return ''.join(difflib.unified_diff(orig_file, new_file))
 
 
 def _get_flags(flags):
@@ -3826,6 +3988,8 @@ def manage_file(name,
         if contents is not None:
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
+            if salt.utils.is_windows():
+                contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
 
@@ -3998,6 +4162,8 @@ def manage_file(name,
         if contents is not None:
             # Write the static contents to a temporary file
             tmp = salt.utils.mkstemp(text=True)
+            if salt.utils.is_windows():
+                contents = os.linesep.join(contents.splitlines())
             with salt.utils.fopen(tmp, 'w') as tmp_:
                 tmp_.write(str(contents))
             # Copy into place

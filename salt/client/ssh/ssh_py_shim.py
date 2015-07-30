@@ -16,6 +16,7 @@ import shutil
 import sys
 import os
 import stat
+import subprocess
 
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
@@ -24,6 +25,7 @@ EXT_ARCHIVE = 'salt-ext_mods.tgz'
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
+EX_SCP_NOT_FOUND = 14
 
 
 class OBJ(object):
@@ -132,6 +134,10 @@ def main(argv):  # pylint: disable=W0613
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
+        scpstat = subprocess.Popen(['/bin/bash', '-c', 'command -v scp']).wait()
+        if not scpstat == 0:
+            sys.exit(EX_SCP_NOT_FOUND)
+
         if not os.path.exists(OPTIONS.saltdir):
             need_deployment()
 
@@ -206,14 +212,12 @@ def main(argv):  # pylint: disable=W0613
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
     if OPTIONS.tty:
-        import subprocess
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
         sys.stdout.write(stdout)
         sys.stdout.flush()
         if OPTIONS.wipe:
             shutil.rmtree(OPTIONS.saltdir)
     elif OPTIONS.wipe:
-        import subprocess
         subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
     else:

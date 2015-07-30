@@ -98,12 +98,14 @@ _s3_sync_on_update = True  # sync cache on update rather than jit
 
 
 class S3Credentials(object):
-    def __init__(self, key, keyid, bucket, service_url, verify_ssl=True):
+    def __init__(self, key, keyid, bucket, service_url, verify_ssl,
+                 location):
         self.key = key
         self.keyid = keyid
         self.bucket = bucket
         self.service_url = service_url
         self.verify_ssl = verify_ssl
+        self.location = location
 
 
 def ext_pillar(minion_id,
@@ -112,6 +114,7 @@ def ext_pillar(minion_id,
                key=None,
                keyid=None,
                verify_ssl=True,
+               location=None,
                multiple_env=False,
                environment='base',
                prefix='',
@@ -120,7 +123,8 @@ def ext_pillar(minion_id,
     Execute a command and read the output as YAML
     '''
 
-    s3_creds = S3Credentials(key, keyid, bucket, service_url, verify_ssl)
+    s3_creds = S3Credentials(key, keyid, bucket, service_url, verify_ssl,
+                             location)
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
@@ -235,6 +239,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
             bucket=creds.bucket,
             service_url=creds.service_url,
             verify_ssl=creds.verify_ssl,
+            location=creds.location,
             return_bin=False,
             params={'prefix': prefix})
 
@@ -373,5 +378,6 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         service_url=creds.service_url,
         path=_quote(path),
         local_file=cached_file_path,
-        verify_ssl=creds.verify_ssl
+        verify_ssl=creds.verify_ssl,
+        location=creds.location
     )

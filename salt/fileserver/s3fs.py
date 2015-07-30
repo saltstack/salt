@@ -320,8 +320,11 @@ def _get_s3_key():
     verify_ssl = __opts__['s3.verify_ssl'] \
         if 's3.verify_ssl' in __opts__ \
         else None
+    location = __opts__['s3.location'] \
+        if 's3.location' in __opts__ \
+        else None
 
-    return key, keyid, service_url, verify_ssl
+    return key, keyid, service_url, verify_ssl, location
 
 
 def _init():
@@ -391,7 +394,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url, verify_ssl = _get_s3_key()
+    key, keyid, service_url, verify_ssl, location = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -402,6 +405,7 @@ def _refresh_buckets_cache_file(cache_file):
                 bucket=bucket,
                 service_url=service_url,
                 verify_ssl=verify_ssl,
+                location=location,
                 return_bin=False)
 
     if _is_env_per_bucket():
@@ -582,7 +586,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     '''
-    key, keyid, service_url, verify_ssl = _get_s3_key()
+    key, keyid, service_url, verify_ssl, location = _get_s3_key()
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
@@ -617,6 +621,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         bucket=bucket_name,
                         service_url=service_url,
                         verify_ssl=verify_ssl,
+                        location=location,
                         path=_quote(path),
                         local_file=cached_file_path,
                         full_headers=True
@@ -645,6 +650,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
         bucket=bucket_name,
         service_url=service_url,
         verify_ssl=verify_ssl,
+        location=location,
         path=_quote(path),
         local_file=cached_file_path
     )

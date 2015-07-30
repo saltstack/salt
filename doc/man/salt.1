@@ -82,8 +82,10 @@ query the minions and check on running jobs. Default: 5
 .B \-s, \-\-static
 By default as of version 0.9.8 the salt command returns data to the
 console as it is received from minions, but previous releases would return
-data only after all data was received. To only return the data with a hard
-timeout and after all minions have returned then use the static option.
+data only after all data was received. Use the static option to only return
+the data with a hard timeout and after all minions have returned.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -280,7 +282,8 @@ using the Python \fBpprint\fP standard library module.
 .INDENT 7.0
 .INDENT 3.5
 If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
-Without the static option, you will get a JSON string for each minion.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
 This is due to using an iterative outputter. So if you want to feed it
 to a JSON parser, use \fB\-\-static\fP as well.
 .UNINDENT

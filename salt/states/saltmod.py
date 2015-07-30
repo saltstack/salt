@@ -95,7 +95,7 @@ def state(
         The default salt environment to pull sls files from
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
 
     roster
         In the event of using salt-ssh, a roster system can be set
@@ -333,7 +333,7 @@ def function(
         based on the returned data dict for individual minions
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
     '''
     ret = {'name': name,
            'changes': {},
@@ -554,6 +554,12 @@ def runner(name, **kwargs):
         The name of the function to run
     kwargs
         Any keyword arguments to pass to the runner function
+
+    .. code-block:: yaml
+
+         run-manage-up:
+          salt.runner:
+            - name: manage.up
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     out = __salt__['saltutil.runner'](name, **kwargs)

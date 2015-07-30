@@ -355,14 +355,18 @@ def addgroup(name, group):
 
         salt '*' user.addgroup username groupname
     '''
+    name = _cmd_quote(name)
+    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+
     user = info(name)
     if not user:
         return False
     if group in user['groups']:
         return True
-    ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /add'.format(group, name)
-    )
+
+    cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+
     return ret['retcode'] == 0
 
 
@@ -376,6 +380,9 @@ def removegroup(name, group):
 
         salt '*' user.removegroup username groupname
     '''
+    name = _cmd_quote(name)
+    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+
     user = info(name)
 
     if not user:
@@ -384,9 +391,9 @@ def removegroup(name, group):
     if group not in user['groups']:
         return True
 
-    ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /delete'.format(group, name)
-    )
+    cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+
     return ret['retcode'] == 0
 
 
@@ -450,10 +457,10 @@ def chfullname(name, fullname):
     return update(name=name, fullname=fullname)
 
 
-def chgroups(name, groups, append=False):
+def chgroups(name, groups, append=True):
     '''
-    Change the groups this user belongs to, add append to append the specified
-    groups
+    Change the groups this user belongs to, add append=False to make the user a
+    member of only the specified groups
 
     CLI Example:
 
@@ -469,17 +476,22 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
 
+    name = _cmd_quote(name)
+
     if not append:
         for group in ugrps:
+            group = _cmd_quote(group).lstrip('\'').rstrip('\'')
             if group not in groups:
-                __salt__['cmd.retcode'](
-                        'net localgroup {0} {1} /delete'.format(group, name))
+                cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+                __salt__['cmd.run_all'](cmd, python_shell=True)
 
     for group in groups:
         if group in ugrps:
             continue
-        __salt__['cmd.retcode'](
-                'net localgroup {0} {1} /add'.format(group, name))
+        group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+        cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+        __salt__['cmd.run_all'](cmd, python_shell=True)
+
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
 

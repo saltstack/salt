@@ -63,8 +63,25 @@ def _convert_key_to_str(key):
     return key
 
 
+def get_iam_region(version='latest', url='http://169.254.169.254',
+                   timeout=None, num_retries=5):
+    '''
+    Gets instance identity document and returns region
+    '''
+    instance_identity_url = '{0}/{1}/latest/dynamic/instance-identity/document'.format(url, version)
+
+    region = None
+    try:
+        document = _retry_get_url(instance_identity_url, num_retries, timeout)
+        region = json.loads(document)['region']
+    except (ValueError, TypeError, KeyError):
+        # JSON failed to decode
+        log.error('Failed to read region from instance metadata. Giving up.')
+    return region
+
+
 def get_iam_metadata(version='latest', url='http://169.254.169.254',
-        timeout=None, num_retries=5):
+                     timeout=None, num_retries=5):
     '''
     Grabs the first IAM role from this instances metadata if it exists.
     '''
