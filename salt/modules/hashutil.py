@@ -16,7 +16,7 @@ import salt.ext.six as six
 
 def base64_b64encode(instr):
     '''
-    Encode a string as base64 using the "modern" Python interface. 
+    Encode a string as base64 using the "modern" Python interface.
 
     Among other possible differences, the "modern" encoder does not include newline ('\n') characters in
     the encoded output.
@@ -60,10 +60,10 @@ def base64_b64decode(instr):
 
 def base64_encodestring(instr):
     '''
-    Encode a string as base64 using the "legacy" Python interface. 
+    Encode a string as base64 using the "legacy" Python interface.
 
-    Among other possible differences, the "legacy" encoder includes 
-    a newline ('\n') character after every 76 characters and always 
+    Among other possible differences, the "legacy" encoder includes
+    a newline ('\n') character after every 76 characters and always
     at the end of the encoded string.
 
     .. versionadded:: 2014.7.0
