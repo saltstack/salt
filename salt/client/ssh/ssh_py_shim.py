@@ -24,6 +24,7 @@ EXT_ARCHIVE = 'salt-ext_mods.tgz'
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
+EX_SCP_NOT_FOUND = 14
 
 
 class OBJ(object):
