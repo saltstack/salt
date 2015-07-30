@@ -1050,7 +1050,7 @@ def image_info(call=None, kwargs=None):
     name
         The name of the image for which to gather information.
 
-    template_id
+    image_id
         The ID of the image for which to gather information.
 
     CLI Example:
@@ -1229,7 +1229,7 @@ def image_snapshot_revert(call=None, kwargs=None):
         The ID of the image to revert. Can be used instead of image_name.
 
     image_name
-        The name of the image to revery. Can be used instead of image_id.
+        The name of the image to revert. Can be used instead of image_id.
 
     snapshot_id
         The ID of the snapshot to which the image will be reverted.
@@ -1523,7 +1523,10 @@ def secgroup_clone(call=None, kwargs=None):
         The name of the new template.
 
     secgroup_id
-        The ID of the template to be cloned.
+        The ID of the security group to be cloned. Can be used instead of secgroup_name.
+
+    secgroup_name
+        The name of the security groupe to be cloned. Can be used instead of secgroup_id.
 
     CLI Example:
 
@@ -1542,11 +1545,19 @@ def secgroup_clone(call=None, kwargs=None):
 
     name = kwargs.get('name', None)
     secgroup_id = kwargs.get('secgroup_id', None)
+    secgroup_name = kwargs.get('secgroup_name', None)
 
-    if not name or not secgroup_id:
+    if secgroup_id is None:
+        if secgroup_name is None:
+            raise SaltCloudSystemExit(
+                'The secgroup_clone function requires either a \'secgroup_id\' or a '
+                '\'secgroup_name\' to be provided.'
+            )
+        secgroup_id = get_secgroup_id(kwargs={'name': secgroup_name})
+
+    if name is None:
         raise SaltCloudSystemExit(
-            'The secgroup_clone function requires a name and a secgroup_id '
-            'to be provided.'
+            'The secgroup_clone function requires a \'name\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1628,7 +1639,7 @@ def secgroup_info(call=None, kwargs=None):
     name
         The name of the security group for which to gather information.
 
-    template_id
+    secgroup_id
         The ID of the security group for which to gather information.
 
     CLI Example:
@@ -1676,7 +1687,10 @@ def secgroup_update(call=None, kwargs=None):
     .. versionadded:: Boron
 
     secgroup_id
-        The ID of the security group to update.
+        The ID of the security group to update. Can be used instead of secgroup_name.
+
+    secgroup_name
+        The name of the security group to update. Can be used instead of secgroup_id.
 
     path
         The path to a file containing the template of the security group. Syntax
@@ -1703,14 +1717,23 @@ def secgroup_update(call=None, kwargs=None):
         kwargs = {}
 
     secgroup_id = kwargs.get('secgroup_id', None)
+    secgroup_name = kwargs.get('secgroup_name', None)
     path = kwargs.get('path', None)
     update_type = kwargs.get('update_type', None)
     update_args = ['replace', 'merge']
 
-    if not secgroup_id or not path or not update_type:
+    if secgroup_id is None:
+        if secgroup_name is None:
+            raise SaltCloudSystemExit(
+                'The secgroup_update function requires either a \'secgroup_id\' or a '
+                '\'secgroup_name\' to be provided.'
+            )
+        secgroup_id = get_secgroup_id(kwargs={'name': secgroup_name})
+
+    if path is None or update_type is None:
         raise SaltCloudSystemExit(
-            'The secgroup_update function requires a \'secgroup_id\', a file \'path\', '
-            'and an \'update_type\' to be provided.'
+            'The secgroup_update function requires a file \'path\' and an \'update_type\' '
+            'to be provided.'
         )
 
     if update_type == update_args[0]:
