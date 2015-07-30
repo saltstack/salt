@@ -4,102 +4,187 @@
 Salt Syndic
 ===========
 
-The Salt Syndic interface is a powerful tool which allows for the construction
-of Salt command topologies. A basic Salt setup has a Salt Master commanding a
-group of Salt Minions. The Syndic interface is a special passthrough
-Minion, it is run on a Master and connects to another Master, then the Master
-that the Syndic Minion is listening to can control the Minions attached to
-the Master running the Syndic.
+The most basic or typical Salt topology consists of a single Master node
+controlling a group of Minion nodes.  An intermediate node type, called Syndic,
+when used offers greater structural flexibility and scalability in the
+construction of Salt topologies than topologies constructed only out of Master
+and Minion node types.
 
-The intent for supporting many layouts is not presented with the intent of
-supposing the use of any single topology, but to allow a more flexible method
-of controlling many systems.
+A Syndic node can be thought of as a special passthrough Minion node.  A Syndic
+node consists of a ``salt-syndic`` daemon and a ``salt-master`` daemon running
+on the same system.  The ``salt-master`` daemon running on the Syndic node
+controls a group of lower level Minion nodes and the ``salt-syndic`` daemon
+connects higher level Master node, sometimes called a Master of Masters.
+
+The ``salt-syndic`` daemon relays publications and events between the Master
+node and the local ``salt-master`` daemon.  This gives the Master node control
+over the Minion nodes attached to the ``salt-master`` daemon running on the
+Syndic node.
 
 Configuring the Syndic
 ======================
 
-Since the Syndic only needs to be attached to a higher level Master the
-configuration is very simple. On a Master that is running a Syndic to connect
-to a higher level Master the :conf_master:`syndic_master` option needs to be
-set in the Master config file. The ``syndic_master`` option contains the
-hostname or IP address of the Master server that can control the Master that
-the Syndic is running on.
+To setup a Salt Syndic you need to tell the Syndic node and its Master node
+about each other.  If your Master node is located at ``10.10.0.1``, then your
+configurations would be:
 
-The Master that the Syndic connects to sees the Syndic as an ordinary Minion,
-and treats it as such. the higher level Master will need to accept the Syndic's
-Minion key like any other Minion. This Master will also need to set the
-:conf_master:`order_masters` value in the configuration to ``True``. The
-``order_masters`` option in the config on the higher level Master is very
-important, to control a Syndic extra information needs to be sent with the
-publications, the ``order_masters`` option makes sure that the extra data is
-sent out.
+On the Syndic node:
 
-To sum up, you have those configuration options available on the Master side:
+.. code-block:: yaml
 
-    - :conf_master:`syndic_master`: MasterOfMaster ip/address
-    - :conf_master:`syndic_master_port`: MasterOfMaster ret_port
-    - :conf_master:`syndic_log_file`: path to the logfile (absolute or not)
-    - :conf_master:`syndic_pidfile`: path to the pidfile (absolute or not)
+    # /etc/salt/master
+    syndic_master: 10.10.0.1  # may be either an IP address or a hostname
 
-Each Syndic must provide its own ``file_roots`` directory. Files will not be
-automatically transferred from the Master-Master.
+.. code-block:: yaml
+
+    # /etc/salt/minion
+
+    # id is shared by the salt-syndic daemon and a possible salt-minion daemon
+    # on the Syndic node
+    id: my_syndic
+
+On the Master node:
+
+.. code-block:: yaml
+
+    # /etc/salt/master
+    order_masters: True
+
+The :conf_master:`syndic_master` option tells the Syndic node where to find the
+Master node in the same way that the :conf_minion:`master` option tells a
+Minion node where to find a Master node.
+
+The :conf_minion:`id` option is used by the ``salt-syndic`` daemon to identify
+with the Master node and if unset will default to the hostname or IP address of
+the Syndic just as with a Minion.
+
+The :conf_master:`order_masters` option configures the Master node to send
+extra information with its publications that is needed by Syndic nodes
+connected directly to it.
+
+.. note::
+
+    Each Syndic must provide its own ``file_roots`` directory. Files will not
+    be automatically transferred from the Master node.
 
 Running the Syndic
 ==================
 
-The Syndic is a separate daemon that needs to be started on the Master that is
-controlled by a higher Master. Starting the Syndic daemon is the same as
-starting the other Salt daemons.
+The ``salt-syndic`` daemon is a separate process that needs to be started in
+addition to the ``salt-master`` daemon running on the Syndic node.  Starting
+the ``salt-syndic`` daemon is the same as starting the other Salt daemons.
+
+The Master node in many ways sees the Syndic as an ordinary Minion node.  In
+particular, the Master will need to accept the Syndic's Minion key as it would
+for any other Minion.
+
+On the Syndic node:
 
 .. code-block:: bash
 
     # salt-syndic
+    or
+    # service salt-syndic start
 
-.. note::
+On the Master node:
 
-    If you have an exceptionally large infrastructure or many layers of
-    Syndics, you may find that the CLI doesn't wait long enough for the Syndics
-    to return their events.  If you think this is the case, you can set the
-    :conf_master:`syndic_wait` value in the upper Master config.  The default
-    value is ``1``, and should work for the majority of deployments.
+.. code-block:: bash
 
+    # salt-key -a my_syndic
+
+The Master node will now be able to control the Minion nodes connected to the
+Syndic.  Only the Syndic key will be listed in the Master node's key registry
+but this also means that key activity between the Syndic's Minions and the
+Syndic does not encumber the Master node.  In this way, the Syndic's key on the
+Master node can be thought of as a placeholder for the keys of all the Minion
+and Syndic nodes beneath it, giving the Master node a clear, high level
+structural view on the Salt cluster.
+
+On the Master node:
+
+.. code-block:: bash
+
+    # salt-key -L
+    Accepted Keys:
+    my_syndic
+    Denied Keys:
+    Unaccepted Keys:
+    Rejected Keys:
+
+    # salt '*' test.ping
+    minion_1:
+        True
+    minion_2:
+        True
+    minion_4:
+        True
+    minion_3:
+        True
 
 Topology
 ========
 
-The ``salt-syndic`` is little more than a command and event forwarder. When a
-command is issued from a higher-level Master, it will be received by the
-configured Syndics on lower-level Masters, and propagated to to their Minions,
-and other Syndics that are bound to them further down in the hierarchy. When
-events and job return data are generated by Minions, they aggregated back,
-through the same Syndic(s), to the Master which issued the command.
+A Master node (a node which is itself not a Syndic to another higher level
+Master node) must run a ``salt-master`` daemon and optionally a ``salt-minion``
+daemon.
 
-The Master sitting at the top of the hierarchy (the Master of Masters) will *not*
-be running the ``salt-syndic`` daemon. It will have the ``salt-master``
-daemon running, and optionally, the ``salt-minion`` daemon. Each Syndic
-connected to an upper-level Master will have both the ``salt-master`` and the
-``salt-syndic`` daemon running, and optionally, the ``salt-minion`` daemon.
+A Syndic node must run ``salt-syndic`` and ``salt-master`` daemons and
+optionally a ``salt-minion`` daemon.
 
-Nodes on the lowest points of the hierarchy (Minions which do not propagate
-data to another level) will only have the ``salt-minion`` daemon running. There
-is no need for either ``salt-master`` or ``salt-syndic`` to be running on a
-standard Minion.
+A Minion node must run a ``salt-minion`` daemon.
 
-Syndic and the CLI
-==================
+When a ``salt-master`` daemon issues a command, it will be received by the
+Syndic and Minion nodes directly connected to it.  A Minion node will process
+the command in the way it ordinarily would.  On a Syndic node, the
+``salt-syndic`` daemon will relay the command to the ``salt-master`` daemon
+running on the Syndic node, which then propagates the command to to the Minions
+and Syndics connected to it.
 
-In order for the high-level Master to return information from Minions that are
-below the Syndic(s), the CLI requires a short wait time in order to allow the
-Syndic(s) to gather responses from their Minions. This value is defined in the
-``syndic_wait`` and has a default of five seconds.
+When events and job return data are generated by ``salt-minion`` daemons, they
+are aggregated by the ``salt-master`` daemon they are connected to, which
+``salt-master`` daemon then relays the data back through its ``salt-syndic``
+daemon until the data reaches the Master or Syndic node that issued the command.
 
-While it is possible to run a Syndic without a Minion installed on the same machine,
-it is recommended, for a faster CLI response time, to do so. Without a Minion
-installed on the Syndic, the timeout value of ``syndic_wait`` increases
-significantly - about three-fold. With a Minion installed on the Syndic, the CLI
-timeout resides at the value defined in ``syndic_wait``. 
+Syndic wait
+===========
 
 .. note::
 
-    To reduce the amount of time the CLI waits for Minions to respond, install a Minion
-    on the Syndic or tune the value of the ``syndic_wait`` configuration.
+    To reduce the amount of time the CLI waits for Minions to respond, install
+    a Minion on the Syndic or tune the value of the ``syndic_wait``
+    configuration.
+
+While it is possible to run a Syndic without a Minion installed on the same
+system, it is recommended, for a faster CLI response time, to do so.  Without a
+Minion installed on the Syndic node, the timeout value of ``syndic_wait``
+increases significantly - about three-fold. With a Minion installed on the
+Syndic, the CLI timeout resides at the value defined in ``syndic_wait``.
+
+.. note::
+
+    If you have a very large infrastructure or many layers of Syndics, you may
+    find that the CLI doesn't wait long enough for the Syndics to return their
+    events.  If you think this is the case, you can set the
+    :conf_master:`syndic_wait` value in the Master configs on the Master or
+    Syndic nodes from which commands are executed.  The default value is ``5``,
+    and should work for the majority of deployments.
+
+In order for a Master or Syndic node to return information from Minions that
+are below their Syndics, the CLI requires a short wait time in order to allow
+the Syndics to gather responses from their Minions. This value is defined in
+the :conf_master:`syndic_wait` config option and has a default of five seconds.
+
+Syndic config options
+=====================
+
+These are the options that can be used to configure a Syndic node.  Note that
+other than ``id``, Syndic config options are placed in the Master config on the
+Syndic node.
+
+    - :conf_minion:`id`: Syndic id (shared by the ``salt-syndic`` daemon with a
+      potential ``salt-minion`` daemon on the same system)
+    - :conf_master:`syndic_master`: Master node IP address or hostname
+    - :conf_master:`syndic_master_port`: Master node ret_port
+    - :conf_master:`syndic_log_file`: path to the logfile (absolute or not)
+    - :conf_master:`syndic_pidfile`: path to the pidfile (absolute or not)
+    - :conf_master:`syndic_wait`: time in seconds to wait on returns from this syndic
