@@ -1478,8 +1478,12 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         load = salt.utils.event.SaltEvent.unpack(package)[1]
         load['tok'] = self.tok
-        ret = channel.send(load)
-        return ret
+        try:
+            ret = channel.send(load)
+            return ret
+        except SaltReqTimeoutError:
+            log.warning('Unable to send mine data to master.')
+            return None
 
     @tornado.gen.coroutine
     def handle_event(self, package):
@@ -1612,16 +1616,19 @@ class Minion(MinionBase):
         # Properly exit if a SIGTERM is signalled
         signal.signal(signal.SIGTERM, self.clean_die)
 
-        log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
-
-        if start:
-            self.sync_connect_master()
-
+        # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.utils.event.AsyncEventPublisher(
             self.opts,
             self.handle_event,
             io_loop=self.io_loop,
         )
+
+        log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
+
+        if start:
+            self.sync_connect_master()
+
+
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
