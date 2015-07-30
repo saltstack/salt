@@ -541,14 +541,23 @@ def installed(name,
         ret.setdefault('warnings', []).append(msg)
         name = repo
 
-    if mirrors and salt.utils.compare_versions(ver1=cur_pip_version, oper='>=',
-                                               ver2='7.0.0'):
-        ret['result'] = False
-        ret['comment'] = (
-            'The support for \'mirrors\' was removed in pip >= 7.0.0, please '
-            'use \'index_url\' and \'extra_index_url\' as suggested in the '
-            'release notes of pip'
-        )
+    if salt.utils.compare_versions(ver1=cur_pip_version, oper='>=', ver2='7.0.0'):
+        if mirrors:
+            ret['result'] = False
+            ret['comment'] = (
+                'The support for \'mirrors\' was removed in pip >= 7.0.0, please '
+                'use \'index_url\' and \'extra_index_url\' as suggested in the '
+                'release notes of pip'
+            )
+            return ret
+        if no_download:
+            ret['result'] = False
+            ret['comment'] = 'The support for \'no_download\' was removed in pip >= 7.0.0'
+            return ret
+        if no_install:
+            ret['result'] = False
+            ret['comment'] = 'The support for \'no_install\' was removed in pip >= 7.0.0'
+            return ret
 
     # Get the packages parsed name and version from the pip library.
     # This only is done when there is no requirements or editable parameter.
