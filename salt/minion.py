@@ -1477,8 +1477,12 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         load = salt.utils.event.SaltEvent.unpack(package)[1]
         load['tok'] = self.tok
-        ret = channel.send(load)
-        return ret
+        try:
+            ret = channel.send(load)
+            return ret
+        except SaltReqTimeoutError:
+            log.warning('Unable to send mine data to master.')
+            return None
 
     @tornado.gen.coroutine
     def handle_event(self, package):
