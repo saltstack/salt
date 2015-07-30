@@ -161,6 +161,34 @@ def avail_sizes():
     return {}
 
 
+def list_datastores(call=None):
+    '''
+    Returns a list of data stores on OpenNebula.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_datastores opennebula
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_datastores function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    datastore_pool = server.one.datastorepool.info(auth)[1]
+
+    datastores = {}
+    for datastore in etree.XML(datastore_pool):
+        datastores[datastore.find('NAME').text] = _xml_to_dict(datastore)
+
+    return datastores
+
+
 def list_nodes(call=None):
     '''
     Return a list of VMs on OpenNebubla.
@@ -385,6 +413,35 @@ def stop(name, call=None):
     log.info('Stopping node {0}'.format(name))
 
     return vm_action(name, kwargs={'action': 'stop'}, call=call)
+
+
+def get_datastore_id(kwargs=None, call=None):
+    '''
+    Returns a data store's ID from the given data store name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_datastore_id opennebula name=my-datastore-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_datastore_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_datastore_id function requires a name.'
+        )
+
+    return list_datastores(call=call)[name]['id']
 
 
 def get_image(vm_):
@@ -814,6 +871,10 @@ def image_allocate(call=None, kwargs=None):
     datastore_id
         The ID of the data-store to be used for the new image.
 
+    datastore_name
+        The name of the data-store to be used for the new image. Can be used instead of
+        datastore_id.
+
     CLI Example:
 
     .. code-block:: bash
@@ -830,11 +891,19 @@ def image_allocate(call=None, kwargs=None):
 
     path = kwargs.get('path', None)
     datastore_id = kwargs.get('datastore_id', None)
+    datastore_name = kwargs.get('datastore_name', None)
 
-    if not path or not datastore_id:
+    if datastore_id is None:
+        if datastore_name is None:
+            raise SaltCloudSystemExit(
+                'The image_allocate function requires either a \'datastore_id\' or a '
+                '\'datastore_name\' to be provided.'
+            )
+        datastore_id = get_datastore_id(kwargs={'name': datastore_name})
+
+    if not path:
         raise SaltCloudSystemExit(
-            'The image_allocate function requires a file \'path\' and a '
-            '\'datastore_id\' to be provided.'
+            'The image_allocate function requires a file \'path\' to be provided.'
         )
 
     file_data = salt.utils.fopen(path, mode='r').read()
@@ -2058,15 +2127,22 @@ def vm_deploy(name, kwargs=None, call=None):
 
     datastore_id
         The ID of the target system data-store where the VM will be deployed. Optional.
-        If not set, OpenNebula will choose the data-store.
+        If neither datastore_id nor datastore_name are set, OpenNebula will choose the
+        data-store.
 
-    CLI Exmaple:
+    datastore_name
+        The name of the target system data-store where the VM will be deployed. Optional,
+        and can be used instead of datastore_id. If neither datastore_id nor datastore_name
+        are set, OpenNebula will choose the data-store.
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a vm_deploy my-vm host_id=0
         salt-cloud -a vm_deploy my-vm host_id=1 capacity_maintained=False
         salt-cloud -a vm_deploy my-vm host_id=0 datastore_id=1
+        salt-cloud -a vm_deploy my-vm host_id=8 datastore_name=default
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2079,11 +2155,15 @@ def vm_deploy(name, kwargs=None, call=None):
     host_id = kwargs.get('host_id', None)
     capacity_maintained = kwargs.get('capacity_maintained', True)
     datastore_id = int(kwargs.get('datastore_id', '-1'))
+    datastore_name = kwargs.get('datastore_name', None)
 
     if host_id is None:
         raise SaltCloudSystemExit(
             'The vm_deploy function requires a \'host_id\' to be provided.'
         )
+
+    if datastore_name is None:
+        datastore_id = int(get_datastore_id(kwargs={'name': datastore_name}))
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
@@ -2236,7 +2316,7 @@ def vm_disk_save(name, kwargs=None, call=None):
     disk_id = kwargs.get('disk_id', None)
     image_name = kwargs.get('image_name', False)
     image_type = kwargs.get('image_type', '')
-    snapshot_id = int(kwargs.get('datastore_id', '-1'))
+    snapshot_id = int(kwargs.get('snapshot_id', '-1'))
 
     if disk_id is None or image_name is None:
         raise SaltCloudSystemExit(
@@ -2489,6 +2569,10 @@ def vm_migrate(name, kwargs=None, call=None):
     datastore_id
         The target system data-store ID where the VM will be migrated.
 
+    datastore_name
+        The name of the data-store target system where the VM will be migrated. Can be
+        used instead of datastore_id.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2508,11 +2592,19 @@ def vm_migrate(name, kwargs=None, call=None):
     live_migration = kwargs.get('live_migration', False)
     capactiy_maintained = kwargs.get('capacity_maintained', True)
     datastore_id = kwargs.get('datastore_id', None)
+    datastore_name = kwargs.get('datastore_name', None)
+
+    if datastore_id is None:
+        if datastore_name is None:
+            raise SaltCloudSystemExit(
+                'The vm_migrate function requires either a \'datastore_id\' or a '
+                '\'datastore_name\' to be provided.'
+            )
+        datastore_id = get_datastore_id(kwargs={'name': datastore_name})
 
     if host_id is None and datastore_id is None:
         raise SaltCloudSystemExit(
-            'The vm_migrate function requires a \'host_id\' and a \'datastore_id\' '
-            'to be provided.'
+            'The vm_migrate function requires a \'host_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
