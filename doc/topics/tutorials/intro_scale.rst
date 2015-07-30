@@ -53,6 +53,7 @@ be connections on port 4505.
 
 Too many minions authing
 ------------------------
+
 When the minion service is first started up, it will connect to its master's publisher
 on port 4505. If too many minions are started at once, this can cause a "thundering herd".
 This can be avoided by not starting too many minions at once.
@@ -64,9 +65,9 @@ will then wait `acceptance_wait_time` to retry. If `acceptance_wait_time_max` is
 set then the minion will increase its wait time by the `acceptance_wait_time` each
 subsequent retry until reaching `acceptance_wait_time_max`.
 
-
 Too many minions re-authing
 ---------------------------
+
 This is most likely to happen in the testing phase of a salt deployment, when
 all minion keys have already been accepted, but the framework is being tested
 and parameters are frequently changed in the salt master's configuration
@@ -93,9 +94,9 @@ in the minions configuration file to a higher value and stagger the amount
 of re-auth attempts. Increasing this value will of course increase the time
 it takes until all minions are reachable via salt commands.
 
-
 Too many minions re-connecting
 ------------------------------
+
 By default the zmq socket will re-connect every 100ms which for some larger
 installations may be too quick. This will control how quickly the TCP session is
 re-established, but has no bearing on the auth load.
@@ -163,7 +164,6 @@ round about 16 connection attempts a second. These values should be altered to
 values that match your environment. Keep in mind though, that it may grow over
 time and that more minions might raise the problem again.
 
-
 Too many minions returning at once
 ----------------------------------
 
@@ -186,7 +186,6 @@ This can be easily avoided with salts batch mode:
 
 This will only address 50 minions at once while looping through all addressed
 minions.
-
 
 Too few resources
 =================
