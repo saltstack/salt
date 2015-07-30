@@ -79,7 +79,7 @@ def _update_cache(deployment_id, metric_name, alert):
     return __context__.get(key, [])
 
 
-def _retrieve_channel_id(email):
+def _retrieve_channel_id(email, profile='telemetry'):
     '''
     Given an email address, checks the local
     cache if corresponding email address: channel_id
@@ -91,10 +91,20 @@ def _retrieve_channel_id(email):
         A dict of telemetry config information.
     '''
     key = "telemetry.channels"
-    if key in __context__:
-        return __context__[key].get(email, False)
-    else:
-        return False
+    auth = _auth(profile=profile)
+
+    if key not in __context__:
+        get_url = _get_telemetry_base(profile) + "/notification-channels?_type=EmailNotificationChannel"
+        response = requests.get(get_url, headers=auth)
+
+        if response.status_code == 200:
+            cache_result = {}
+            for index, alert in enumerate(response.json()):
+                cache_result[alert.get('email')] = alert.get('_id', 'false')
+
+            __context__[key] = cache_result
+
+    return __context__[key].get(email, False)
 
 
 def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="telemetry"):
