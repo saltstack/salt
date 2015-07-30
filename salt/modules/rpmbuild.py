@@ -19,6 +19,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import SaltInvocationError
 
 __virtualname__ = 'pkgbuild'
 
@@ -71,9 +72,9 @@ def _get_spec(tree_base, spec, template, saltenv='base'):
     spec_tgt = os.path.basename(spec)
     dest = os.path.join(tree_base, 'SPECS', spec_tgt)
     return __salt__['cp.get_url'](
-            spec,
-            dest,
-            saltenv=saltenv)
+        spec,
+        dest,
+        saltenv=saltenv)
 
 
 def _get_src(tree_base, source, saltenv='base'):
@@ -87,6 +88,46 @@ def _get_src(tree_base, source, saltenv='base'):
         lsrc = __salt__['cp.get_url'](source, dest, saltenv=saltenv)
     else:
         shutil.copy(source, dest)
+
+
+def _get_distset(tgt):
+    '''
+    Get the distribution string for use with rpmbuild and mock
+    '''
+    # Centos adds that string to rpm names, removing that to have
+    # consistent naming on Centos and Redhat
+    tgtattrs = tgt.split('-')
+    if tgtattrs[1] in ['5', '6', '7']:
+        distset = '--define "dist .el{0}"'.format(tgtattrs[1])
+    else:
+        distset = ""
+
+    return distset
+
+
+def _get_deps(deps, tree_base, saltenv='base'):
+    '''
+    Get include string for list of dependent rpms to build package
+    '''
+    deps_list = ""
+    if deps is None:
+        return deps_list
+    if not isinstance(deps, list):
+        raise SaltInvocationError(
+            '\'deps\' must be a Python list or comma-separated string'
+        )
+    for deprpm in deps:
+        parsed = _urlparse(deprpm)
+        depbase = os.path.basename(deprpm)
+        dest = os.path.join(tree_base, depbase)
+        if parsed.scheme:
+            __salt__['cp.get_url'](deprpm, dest, saltenv=saltenv)
+        else:
+            shutil.copy(deprpm, dest)
+
+        deps_list += ' --install {0}'.format(dest)
+
+    return deps_list
 
 
 def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
@@ -107,7 +148,9 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
         sources = sources.split(',')
     for src in sources:
         _get_src(tree_base, src, saltenv)
-    cmd = 'rpmbuild --define "_topdir {0}" -bs {1}'.format(tree_base, spec_path)
+
+    # make source rpms for dist el5, usable with mock on other dists
+    cmd = 'rpmbuild --define "_topdir {0}" -bs --define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5" --define "dist .el5" {1}'.format(tree_base, spec_path)
     __salt__['cmd.run'](cmd)
     srpms = os.path.join(tree_base, 'SRPMS')
     ret = []
@@ -121,7 +164,7 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
+def build(runas, tgt, dest_dir, spec, sources, deps, template, saltenv='base'):
     '''
     Given the package destination directory, the spec file source and package
     sources, use mock to safely build the rpm defined in the spec file
@@ -141,6 +184,17 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
             pass
     srpm_dir = tempfile.mkdtemp()
     srpms = make_src_pkg(srpm_dir, spec, sources, template, saltenv)
+
+    distset = _get_distset(tgt)
+
+    noclean = ""
+    deps_dir = tempfile.mkdtemp()
+    deps_list = _get_deps(deps, deps_dir, saltenv)
+    if deps_list and not deps_list.isspace():
+        cmd = 'mock --root={0} {1}'.format(tgt, deps_list)
+        __salt__['cmd.run'](cmd, runas=runas)
+        noclean += " --no-clean"
+
     for srpm in srpms:
         dbase = os.path.dirname(srpm)
         cmd = 'chown {0} -R {1}'.format(runas, dbase)
@@ -148,10 +202,12 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
         results_dir = tempfile.mkdtemp()
         cmd = 'chown {0} -R {1}'.format(runas, results_dir)
         __salt__['cmd.run'](cmd)
-        cmd = 'mock -r {0} --rebuild {1} --resultdir {2}'.format(
-                tgt,
-                srpm,
-                results_dir)
+        cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
+            tgt,
+            results_dir,
+            distset,
+            noclean,
+            srpm)
         __salt__['cmd.run'](cmd, runas=runas)
         for rpm in os.listdir(results_dir):
             full = os.path.join(results_dir, rpm)
@@ -170,6 +226,7 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
                 with salt.utils.fopen(full, 'r') as fp_:
                     ret[rpm] = fp_.read()
         shutil.rmtree(results_dir)
+    shutil.rmtree(deps_dir)
     shutil.rmtree(srpm_dir)
     return ret
 

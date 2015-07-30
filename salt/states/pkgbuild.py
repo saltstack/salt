@@ -53,6 +53,7 @@ def built(
         sources,
         template,
         tgt,
+        deps=None,
         results=None,
         always=False,
         saltenv='base'):
@@ -80,6 +81,13 @@ def built(
     tgt
         The target platform to run the build on
 
+    deps
+        Packages required to ensure that the named package is built
+        can be hosted on either the salt master server or on an HTTP
+        or FTP server.  Both HTTPS and HTTP are supported as well as
+        downloading directly from Amazon S3 compatible URLs with both
+        pre-configured and automatic IAM credentials
+
     results
         The names of the expected rpms that will be built
 
@@ -101,7 +109,7 @@ def built(
         present = set()
         if os.path.isdir(dest_dir):
             for fn_ in os.listdir(dest_dir):
-                present.appd(fn_)
+                present.add(fn_)
         need = results.difference(present)
         if not need:
             ret['comment'] = 'All needed packages exist'
@@ -111,13 +119,14 @@ def built(
         ret['result'] = None
         return ret
     ret['changes'] = __salt__['pkgbuild.build'](
-            runas,
-            tgt,
-            dest_dir,
-            spec,
-            sources,
-            template,
-            saltenv)
+        runas,
+        tgt,
+        dest_dir,
+        spec,
+        sources,
+        deps,
+        template,
+        saltenv)
     ret['comment'] = 'Packages Built'
     return ret
 
