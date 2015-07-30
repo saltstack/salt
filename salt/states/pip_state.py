@@ -503,11 +503,12 @@ def installed(name,
     ret = {'name': ';'.join(pkgs), 'result': None,
            'comment': '', 'changes': {}}
 
+    cur_pip_version = __salt__['pip.version'](bin_env)
+
     # Check that the pip binary supports the 'use_wheel' option
     if use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.compare_versions(ver1=cur_pip_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
@@ -518,8 +519,7 @@ def installed(name,
     # Check that the pip binary supports the 'no_use_wheel' option
     if no_use_wheel:
         min_version = '1.4'
-        cur_version = __salt__['pip.version'](bin_env)
-        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+        if not salt.utils.compare_versions(ver1=cur_pip_version, oper='>=',
                                            ver2=min_version):
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
@@ -540,6 +540,15 @@ def installed(name,
         salt.utils.warn_until('Lithium', msg)
         ret.setdefault('warnings', []).append(msg)
         name = repo
+
+    if mirrors and salt.utils.compare_versions(ver1=cur_pip_version, oper='>=',
+                                               ver2='7.0.0'):
+        ret['result'] = False
+        ret['comment'] = (
+            'The support for \'mirrors\' was removed in pip >= 7.0.0, please '
+            'use \'index_url\' and \'extra_index_url\' as suggested in the '
+            'release notes of pip'
+        )
 
     # Get the packages parsed name and version from the pip library.
     # This only is done when there is no requirements or editable parameter.
