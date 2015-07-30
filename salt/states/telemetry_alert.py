@@ -29,7 +29,6 @@ from __future__ import absolute_import
 from salt._compat import string_types
 
 
-
 def __virtual__():
     # Only load if telemetry is available.
     return 'telemetry_alert' if 'telemetry.get_alert_config' in __salt__ else False
