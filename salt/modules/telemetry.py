@@ -91,7 +91,10 @@ def _retrieve_channel_id(email):
         A dict of telemetry config information.
     '''
     key = "telemetry.channels"
-    return __context__[key].get(email, False)
+    if key in __context__:
+        return __context__[key].get(email, False)
+    else:
+        return False
 
 
 def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="telemetry"):
