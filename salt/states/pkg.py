@@ -302,7 +302,12 @@ def _find_install_targets(name=None,
         # Takes extra time. Disable for improved performance
         if not skip_suggestions:
             # Perform platform-specific pre-flight checks
-            problems = _preflight_check(desired, **kwargs)
+            not_installed = dict([
+                (name, version)
+                for name, version in desired.items()
+                if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
+            ])
+            problems = _preflight_check(not_installed, **kwargs)
             comments = []
             if problems.get('no_suggest'):
                 comments.append(
