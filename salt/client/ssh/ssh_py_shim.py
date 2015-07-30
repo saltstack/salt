@@ -133,6 +133,10 @@ def main(argv):  # pylint: disable=W0613
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
+        scpstat = subprocess.Popen(["command", "-v", "scp"])
+        if not scpstat.returncode = 0
+            sys.exit(EX_SCP_NOT_FOUND)
+
         if not os.path.exists(OPTIONS.saltdir):
             need_deployment()
 
