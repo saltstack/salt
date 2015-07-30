@@ -1049,6 +1049,11 @@ ARGS = {9}\n'''.format(self.minion_config,
                 'The salt thin transfer was corrupted'
             ),
             (
+                (salt.defaults.exitcodes.EX_SCP_NOT_FOUND,),
+                'scp not found',
+                'No scp binary. openssh-clients package required'
+            ),
+            (
                 (salt.defaults.exitcodes.EX_CANTCREAT,),
                 'salt path .* exists but is not a directory',
                 'A necessary path for salt thin unexpectedly exists:\n ' + stderr,
