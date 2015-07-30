@@ -558,7 +558,7 @@ def runner(name, **kwargs):
 
     .. code-block:: yaml
 
-        accept_minion_key:
+         run-manage-up:
           salt.runner:
             - name: manage.up
     '''
