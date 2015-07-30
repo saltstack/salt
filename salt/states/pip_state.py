@@ -513,7 +513,7 @@ def installed(name,
             ret['result'] = False
             ret['comment'] = ('The \'use_wheel\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+                              'was {1}.').format(min_version, cur_pip_version)
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
@@ -524,7 +524,7 @@ def installed(name,
             ret['result'] = False
             ret['comment'] = ('The \'no_use_wheel\' option is only supported in '
                               'pip {0} and newer. The version of pip detected '
-                              'was {1}.').format(min_version, cur_version)
+                              'was {1}.').format(min_version, cur_pip_version)
             return ret
 
     # Deprecation warning for the repo option
