@@ -1628,7 +1628,6 @@ class Minion(MinionBase):
         if start:
             self.sync_connect_master()
 
-
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
