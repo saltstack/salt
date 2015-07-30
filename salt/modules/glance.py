@@ -242,9 +242,9 @@ def image_create(name, location=None, profile=None, visibility=None,
                'raw', 'qcow2', 'vdi', 'iso']
     # 'location' and 'visibility' are the parameters used in
     # Glance API v2. For now we have to use v1 for now (see below)
-    # but this modules interface will change in Boron.
+    # but this modules interface will change in Carbon.
     if copy_from is not None or is_public is not None:
-        warn_until('Boron', 'The parameters \'copy_from\' and '
+        warn_until('Carbon', 'The parameters \'copy_from\' and '
             '\'is_public\' are deprecated and will be removed. '
             'Use \'location\' and \'visibility\' instead.')
     if is_public is not None and visibility is not None:
