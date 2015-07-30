@@ -73,6 +73,11 @@ append a ``%`` to the ID:
           - '*':
             - 'pkg.*'
 
+.. warning::
+    All users that have external authentication privileges are allowed to run
+    :mod:`saltutil.findjob <salt.modules.saltutil.find_job>`. Be aware
+    that this could inadvertently expose some data such as minion IDs.
+
 .. _salt-token-generation:
 
 Tokens
