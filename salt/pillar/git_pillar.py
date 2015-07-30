@@ -207,12 +207,12 @@ def __virtual__():
     return False
 
 
-def ext_pillar(minion_id, repo, pillar_dirs):
+def ext_pillar(minion_id, pillar, repo, pillar_dirs):
     '''
     Execute a command and read the output as YAML
     '''
     if isinstance(repo, six.string_types):
-        return _legacy_git_pillar(minion_id, repo, pillar_dirs)
+        return _legacy_git_pillar(minion_id, pillar, repo, pillar_dirs)
     else:
         opts = copy.deepcopy(__opts__)
         opts['pillar_roots'] = {}
@@ -222,7 +222,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         ret = {}
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             opts['pillar_roots'] = {env: [pillar_dir]}
-            local_pillar = Pillar(opts, __grains__, minion_id, env)
+            local_pillar = Pillar(opts, __grains__, minion_id, env, pillar=pillar)
             ret.update(local_pillar.compile_pillar(ext=False))
         return ret
 
@@ -391,7 +391,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     opts['pillar_roots'][environment] = [pillar_dir]
 
-    pil = Pillar(opts, __grains__, minion_id, branch)
+    pil = Pillar(opts, __grains__, minion_id, branch, pillar=pillar)
 
     return pil.compile_pillar()
 
