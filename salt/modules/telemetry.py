@@ -95,8 +95,9 @@ def _retrieve_channel_id(email):
 
 
 def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="telemetry"):
-    """ Get all alert definitions associated with a given deployment or if metric_name
-        is specified, obtain the specific alert config
+    '''
+    Get all alert definitions associated with a given deployment or if metric_name
+    is specified, obtain the specific alert config
 
     Returns dictionary or list of dictionaries.
 
@@ -104,7 +105,7 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
 
         salt myminion telemetry.get_alert_config rs-ds033197 currentConnections profile=telemetry
         salt myminion telemetry.get_alert_config rs-ds033197 profile=telemetry
-    """
+    '''
 
     auth = _auth(profile=profile)
     alert = False
@@ -136,7 +137,7 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
     return [alert['_id'] for alert in alerts if '_id' in alert]
 
 
-def get_notification_channel(notify_channel, profile="telemetry"):
+def get_notification_channel_id(notify_channel, profile="telemetry"):
     '''
     Given an email address, creates a notification-channels
     if one is not found and also returns the corresponsing
@@ -146,10 +147,14 @@ def get_notification_channel(notify_channel, profile="telemetry"):
         Email escalation policy
     profile
         A dict of telemetry config information.
+
+    CLI Example:
+
+        salt myminion telemetry.get_notification_channel_id userx@company.com profile=telemetry
     '''
+
     # This helper is used to procure the channel ids
     # used to notify when the alarm threshold is violated
-
     auth = _auth(profile=profile)
 
     notification_channel_id = _retrieve_channel_id(notify_channel)
@@ -177,7 +182,8 @@ def get_notification_channel(notify_channel, profile="telemetry"):
 
 
 def get_alarms(deployment_id, profile="telemetry"):
-    """ get all the alarms set up against the current deployment
+    '''
+    get all the alarms set up against the current deployment
 
     Returns dictionary of alarm information
 
@@ -185,7 +191,7 @@ def get_alarms(deployment_id, profile="telemetry"):
 
         salt myminion telemetry.get_alarms rs-ds033197 profile=telemetry
 
-    """
+    '''
     auth = _auth(profile=profile)
 
     try:
@@ -207,7 +213,8 @@ def get_alarms(deployment_id, profile="telemetry"):
 
 
 def create_alarm(deployment_id, metric_name, data, api_key=None, profile="telemetry"):
-    """"create an telemetry alarms.
+    '''
+    create an telemetry alarms.
 
     data is a dict of alert configuration data.
 
@@ -217,7 +224,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
         salt myminion telemetry.create_alarm rs-ds033197 {} profile=telemetry
 
-    """
+    '''
 
     auth = _auth(api_key, profile)
     request_uri = _get_telemetry_base(profile) + "/alerts"
@@ -228,7 +235,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     post_body = {
         "deployment": deployment_id,
         "filter": data.get('filter'),
-        "notificationChannel": get_notification_channel(data.get('escalate_to')).split(),
+        "notificationChannel": get_notification_channel_id(data.get('escalate_to')).split(),
         "condition": {
             "metric": metric_name,
             "max": data.get('max'),
@@ -255,9 +262,8 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
 
 def update_alarm(deployment_id, metric_name, data, api_key=None, profile="telemetry"):
-    """"update an telemetry alarms.
-
-    data is a dict of alert configuration data.
+    '''
+    update an telemetry alarms. data is a dict of alert configuration data.
 
     Returns (bool success, str message) tuple.
 
@@ -265,7 +271,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
         salt myminion telemetry.update_alarm rs-ds033197 {} profile=telemetry
 
-    """
+    '''
     auth = _auth(api_key, profile)
     alert = get_alert_config(deployment_id, metric_name, api_key, profile)
 
@@ -278,7 +284,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     post_body = {
         "deployment": deployment_id,
         "filter": data.get('filter'),
-        "notificationChannel": get_notification_channel(data.get('escalate_to')).split(),
+        "notificationChannel": get_notification_channel_id(data.get('escalate_to')).split(),
         "condition": {
             "metric": metric_name,
             "max": data.get('max'),
@@ -305,7 +311,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
 
 
 def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, profile='telemetry'):
-    """ delete an alert specified by alert_id or if not specified blows away all the alerts
+    '''delete an alert specified by alert_id or if not specified blows away all the alerts
          in the current deployment.
 
     Returns (bool success, str message) tuple.
@@ -314,7 +320,7 @@ def delete_alarms(deployment_id, alert_id=None, metric_name=None, api_key=None, 
 
         salt myminion telemetry.delete_alarms rs-ds033197 profile=telemetry
 
-    """
+    '''
     auth = _auth(profile=profile)
 
     if alert_id is None:

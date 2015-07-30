@@ -79,7 +79,7 @@ def present(name, deployment_id, metric_name, alert_config, api_key=None, profil
     post_body = {
         "deployment": deployment_id,
         "filter": alert_config.get('filter'),
-        "notificationChannel":  __salt__['telemetry.get_notification_channel'](alert_config.get('escalate_to')).split(),
+        "notificationChannel":  __salt__['telemetry.get_notification_channel_id'](alert_config.get('escalate_to')).split(),
         "condition": {
         "metric": metric_name,
         "max": alert_config.get('max'),
