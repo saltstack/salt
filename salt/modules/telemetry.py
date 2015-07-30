@@ -79,27 +79,32 @@ def _update_cache(deployment_id, metric_name, alert):
     return __context__.get(key, [])
 
 
-def retrieve_channel_id(email, profile='telemetry'):
+def _retrieve_channel_id(email):
+    '''
+    Given an email address, checks the local
+    cache if corresponding email address: channel_id
+    mapping exists
+
+    email
+        Email escalation policy
+    profile
+        A dict of telemetry config information.
+    '''
     key = "telemetry.channels"
-    auth = _auth(profile=profile)
-
-    if key not in __context__:
-        get_url = _get_telemetry_base(profile) + "/notification-channels?_type=EmailNotificationChannel"
-        response = requests.get(get_url, headers=auth)
-
-        if response.status_code == 200:
-            cache_result = {}
-            for index, alert in enumerate(response.json()):
-                cache_result[alert.get('email')] = alert.get('_id', 'false')
-
-            __context__[key] = cache_result
-
     return __context__[key].get(email, False)
 
 
 def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="telemetry"):
-    # Helper used to identify alert id associated with metric name
-    # in a deployment
+    """ Get all alert definitions associated with a given deployment or if metric_name
+        is specified, obtain the specific alert config
+
+    Returns dictionary or list of dictionaries.
+
+    CLI Example:
+
+        salt myminion telemetry.get_alert_config rs-ds033197 currentConnections profile=telemetry
+        salt myminion telemetry.get_alert_config rs-ds033197 profile=telemetry
+    """
 
     auth = _auth(profile=profile)
     alert = False
@@ -132,12 +137,22 @@ def get_alert_config(deployment_id, metric_name=None, api_key=None, profile="tel
 
 
 def get_notification_channel(notify_channel, profile="telemetry"):
+    '''
+    Given an email address, creates a notification-channels
+    if one is not found and also returns the corresponsing
+    notification channel id.
+
+    notify_channel
+        Email escalation policy
+    profile
+        A dict of telemetry config information.
+    '''
     # This helper is used to procure the channel ids
     # used to notify when the alarm threshold is violated
 
     auth = _auth(profile=profile)
 
-    notification_channel_id = retrieve_channel_id(notify_channel)
+    notification_channel_id = _retrieve_channel_id(notify_channel)
 
     if not notification_channel_id:
         log.info("{0} channel does not exist, creating.".format(notify_channel))
