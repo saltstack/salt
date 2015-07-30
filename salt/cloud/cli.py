@@ -175,7 +175,7 @@ class SaltCloud(parsers.SaltCloudParser):
                           'Please choose to delete either the entire map file or individual ' \
                           'instances.'.format(map_file, names)
                     self.handle_exception(msg, SaltCloudSystemExit)
-                    
+
                 log.info('Applying map from \'{0}\'.'.format(map_file))
                 matching = mapper.delete_map(query='list_nodes')
             else:
