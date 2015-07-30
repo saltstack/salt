@@ -931,14 +931,17 @@ def image_clone(call=None, kwargs=None):
         The name of the new image.
 
     image_id
-        The ID of the image to be cloned.
+        The ID of the image to be cloned. Can be used instead of image_bame.
+
+    image_name
+        The name of the image to be cloned. Can be used instead of image_id.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f image_clone opennebula name=my-new-image image_id=10
-
+        salt-cloud -f image_clone opennebula name=my-new-image image_name=my-image-to-clone
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -950,6 +953,15 @@ def image_clone(call=None, kwargs=None):
 
     name = kwargs.get('name', None)
     image_id = kwargs.get('image_id', None)
+    image_name = kwargs.get('image_name', None)
+
+    if image_id is None:
+        if image_name is None:
+            raise SaltCloudSystemExit(
+                'The image_allocate function requires either an \'image_id\' or an '
+                '\'image_name\' to be provided.'
+            )
+        image_id = get_image_id(kwargs={'name': image_name})
 
     if not name or not image_id:
         raise SaltCloudSystemExit(
@@ -1092,14 +1104,14 @@ def image_persistent(call=None, kwargs=None):
         A boolean value to set the image as persistent or not. Set to true
         for persistent, false for non-persisent.
 
-    template_id
+    image_id
         The ID of the image to set.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -f image_persistent opennebula name=my-image
+        salt-cloud -f image_persistent opennebula name=my-image persist=True
         salt-cloud --function image_persistent opennebula image_id=5
     '''
     if call != 'function':
@@ -1151,7 +1163,12 @@ def image_snapshot_delete(call=None, kwargs=None):
     .. versionadded:: Boron
 
     image_id
-        The ID of the image from which to delete the snapshot.
+        The ID of the image from which to delete the snapshot. Can be used instead of
+        image_name.
+
+    image_name
+        The name of the image from which to delete the snapshot. Can be used instead
+        of image_id.
 
     snapshot_id
         The ID of the snapshot to delete.
@@ -1161,6 +1178,7 @@ def image_snapshot_delete(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_snapshot_delete vm_id=106 snapshot_id=45
+        salt-cloud -f image_snapshot_delete vm_name=my-vm snapshot_id=111
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1171,12 +1189,20 @@ def image_snapshot_delete(call=None, kwargs=None):
         kwargs = {}
 
     image_id = kwargs.get('image_id', None)
+    image_name = kwargs.get('image_name', None)
     snapshot_id = kwargs.get('snapshot_id', None)
 
-    if image_id is None or snapshot_id is None:
+    if image_id is None:
+        if image_name is None:
+            raise SaltCloudSystemExit(
+                'The image_snapshot_delete function requires either an \'image_id\' '
+                'or a \'image_name\' to be provided.'
+            )
+        image_id = get_image_id(kwargs={'name': image_name})
+
+    if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_stanpshot_delete function requires a \'image_id\' and a \'snapshot_id\' '
-            'to be provided.'
+            'The image_stanpshot_delete function requires a \'snapshot_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1200,7 +1226,10 @@ def image_snapshot_revert(call=None, kwargs=None):
     .. versionadded:: Boron
 
     image_id
-        The ID of the image to revert.
+        The ID of the image to revert. Can be used instead of image_name.
+
+    image_name
+        The name of the image to revery. Can be used instead of image_id.
 
     snapshot_id
         The ID of the snapshot to which the image will be reverted.
@@ -1220,12 +1249,20 @@ def image_snapshot_revert(call=None, kwargs=None):
         kwargs = {}
 
     image_id = kwargs.get('image_id', None)
+    image_name = kwargs.get('image_name', None)
     snapshot_id = kwargs.get('snapshot_id', None)
 
-    if image_id is None or snapshot_id is None:
+    if image_id is None:
+        if image_name is None:
+            raise SaltCloudSystemExit(
+                'The image_snapshot_revert function requires either an \'image_id\' or '
+                'an \'image_name\' to be provided.'
+            )
+        image_id = get_image_id(kwargs={'name': image_name})
+
+    if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_stanpshot_revert function requires a \'image_id\' and a \'snapshot_id\' '
-            'to be provided.'
+            'The image_stanpshot_revert function requires a \'snapshot_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1249,7 +1286,10 @@ def image_snapshot_flatten(call=None, kwargs=None):
     .. versionadded:: Boron
 
     image_id
-        The ID of the image.
+        The ID of the image. Can be used instead of image_name.
+
+    image_name
+        The name of the image. Can be used instead of image_id.
 
     snapshot_id
         The ID of the snapshot to flatten.
@@ -1269,12 +1309,20 @@ def image_snapshot_flatten(call=None, kwargs=None):
         kwargs = {}
 
     image_id = kwargs.get('image_id', None)
+    image_name = kwargs.get('image_name', None)
     snapshot_id = kwargs.get('snapshot_id', None)
 
-    if image_id is None or snapshot_id is None:
+    if image_id is None:
+        if image_name is None:
+            raise SaltCloudSystemExit(
+                'The image_snapshot_flatten function requires either an '
+                '\'image_id\' or an \'image_name\' to be provided.'
+            )
+        image_id = get_image_id(kwargs={'name': image_name})
+
+    if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_stanpshot_flatten function requires a \'image_id\' and a \'snapshot_id\' '
-            'to be provided.'
+            'The image_stanpshot_flatten function requires a \'snapshot_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1298,7 +1346,10 @@ def image_update(call=None, kwargs=None):
     .. versionadded:: Boron
 
     image_id
-        The ID of the image to update.
+        The ID of the image to update. Can be used instead of image_name.
+
+    image_name
+        The name of the image to update. Can be used instead of image_id.
 
     path
         The path to a file containing the template of the image. Syntax within the
@@ -1323,14 +1374,22 @@ def image_update(call=None, kwargs=None):
         kwargs = {}
 
     image_id = kwargs.get('image_id', None)
+    image_name = kwargs.get('image_name', None)
     path = kwargs.get('path', None)
     update_type = kwargs.get('update_type', None)
     update_args = ['replace', 'merge']
 
-    if not image_id or not path or not update_type:
+    if image_id is None:
+        if image_name is None:
+            raise SaltCloudSystemExit(
+                'The image_update function requires either an \'image_id\' or an '
+                '\'image_name\' to be provided.'
+            )
+        image_id = get_image_id(kwargs={'name': image_name})
+
+    if path is None or update_type is None:
         raise SaltCloudSystemExit(
-            'The image_update function requires an \'image_id\', a file \'path\', '
-            'and an \'update_type\' to be provided.'
+            'The image_update function requires a file \'path\' and an \'update_type\' to be provided.'
         )
 
     if update_type == update_args[0]:
@@ -3070,7 +3129,7 @@ def vn_delete(call=None, kwargs=None):
     auth = ':'.join([user, password])
 
     if name and not vn_id:
-        vn_id = get_image_id(kwargs={'name': name})
+        vn_id = get_vn_id(kwargs={'name': name})
 
     response = server.one.image.delete(auth, int(vn_id))
 
