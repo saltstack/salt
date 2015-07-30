@@ -1,3 +1,9 @@
+salt (2015.5-1) unstable; urgency=low
+
+  * Bump to 2015.5
+
+ -- Manuel Torrinha <mtorrinha86@gmail.com>  Thu, 30 Jul 2015 18:31:00 -0000
+
 salt (2014.7.1-1) unstable; urgency=low
 
   * Bump to 2014.7.1
