@@ -558,6 +558,12 @@ def runner(name, **kwargs):
         The name of the function to run
     kwargs
         Any keyword arguments to pass to the runner function
+
+    .. code-block:: yaml
+
+         run-manage-up:
+          salt.runner:
+            - name: manage.up
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     out = __salt__['saltutil.runner'](name, **kwargs)
