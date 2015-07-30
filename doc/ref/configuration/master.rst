@@ -935,7 +935,7 @@ Default: ``False``
 
 Send progress events as each function in a state run completes execution
 by setting to ``True``. Progress events are in the format
-``salt/job/<job_id>/prog/<minion_id>/<run_num>``.
+``salt/job/<JID>/prog/<MID>/<RUN NUM>``.
 
 .. code-block:: yaml
 
