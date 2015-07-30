@@ -22,7 +22,6 @@ import salt.utils
 
 # pylint: disable=import-error
 
-
 __virtualname__ = 'pkgbuild'
 
 
@@ -129,7 +128,7 @@ def _get_src(tree_base, source, saltenv='base'):
     sbase = os.path.basename(source)
     dest = os.path.join(tree_base, sbase)
     if parsed.scheme:
-        lsrc = __salt__['cp.get_url'](source, dest, saltenv=saltenv)
+        __salt__['cp.get_url'](source, dest, saltenv=saltenv)
     else:
         shutil.copy(source, dest)
 
@@ -148,18 +147,34 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     '''
     _create_pbuilders()
     tree_base = _mk_tree()
+    ret = []
+    if not os.path.isdir(dest_dir):
+        os.makedirs(dest_dir)
+
     spec_pathfile = _get_spec(tree_base, spec, template, saltenv)
+
+    # build salt equivalents from scratch
     if isinstance(sources, str):
         sources = sources.split(',')
     for src in sources:
         _get_src(tree_base, src, saltenv)
 
+    #.dsc then assumes sources already build
+    if spec_pathfile.endswith('.dsc'):
+        for efile in os.listdir(tree_base):
+            full = os.path.join(tree_base, efile)
+            trgt = os.path.join(dest_dir, efile)
+            shutil.copy(full, trgt)
+            ret.append(trgt)
+
+        trgt = os.path.join(dest_dir, os.path.basename(spec_pathfile))
+        shutil.copy(spec_pathfile, trgt)
+        ret.append(trgt)
+
+        return ret
+
     # obtain name of 'python setup.py sdist' generated tarball, extract the version
     # and manipulate the name for debian use (convert minix and add '+ds')
-    ret = []
-    if not os.path.isdir(dest_dir):
-        os.makedirs(dest_dir)
-
     salttarball = None
     for afile in os.listdir(tree_base):
         if afile.startswith('salt-') and afile.endswith('.tar.gz'):
@@ -206,7 +221,7 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
+def build(runas, tgt, dest_dir, spec, sources, deps, template, saltenv='base'):
     '''
     Given the package destination directory, the tarball containing debian files (e.g. control)
     and package sources, use pbuilder to safely build the platform package
@@ -232,8 +247,7 @@ def build(runas, tgt, dest_dir, spec, sources, template, saltenv='base'):
     for dsc in dscs:
         afile = os.path.basename(dsc)
         adist = os.path.join(dest_dir, afile)
-        if afile != os.path.basename(spec):
-            shutil.copy(dsc, adist)
+        shutil.copy(dsc, adist)
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
