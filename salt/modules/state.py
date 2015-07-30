@@ -13,14 +13,14 @@ states themselves.
 
 # Import python libs
 from __future__ import absolute_import
-import os
-import json
 import copy
-import shutil
-import time
+import json
 import logging
+import os
+import shutil
 import tarfile
 import tempfile
+import time
 
 # Import salt libs
 import salt.config
