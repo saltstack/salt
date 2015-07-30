@@ -14,6 +14,7 @@ EX_THIN_PYTHON_OLD = 10
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
+EX_SCP_NOT_FOUND = 14
 
 # The os.EX_* exit codes are Unix only so in the interest of cross-platform
 # compatiblility define them explicitly here.
