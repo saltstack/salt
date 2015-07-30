@@ -67,17 +67,23 @@ subsequent retry until reaching `acceptance_wait_time_max`.
 
 Too many minions re-authing
 ---------------------------
-This is most likely to happen in the testing phase, when all minion keys have
-already been accepted, the framework is being tested and parameters change
-frequently in the masters configuration file.
+This is most likely to happen in the testing phase of a salt deployment, when
+all minion keys have already been accepted, but the framework is being tested
+and parameters are frequently changed in the salt master's configuration
+file(s).
 
-In a few cases (master restart, remove minion key, etc.) the salt-master generates
-a new AES-key to encrypt its publications with. The minions aren't notified of
-this but will realize this on the next pub job they receive. When the minion
-receives such a job it will then re-auth with the master. Since Salt does minion-side
-filtering this means that all the minions will re-auth on the next command published
-on the master-- causing another "thundering herd". This can be avoided by
-setting the
+The salt master generates a new AES key to encrypt its publications at certain
+events such as a master restart or the removal of a minion key.  If you are
+encountering this problem of too many minions re-authing against the master,
+you will need to recalibrate your setup to reduce the rate of events like a
+master restart or minion key removal (``salt-key -d``).
+
+When the master generates a new AES key, the minions aren't notified of this
+but will discover it on the next pub job they receive. When the minion
+receives such a job it will then re-auth with the master. Since Salt does
+minion-side filtering this means that all the minions will re-auth on the next
+command published on the master-- causing another "thundering herd". This can
+be avoided by setting the
 
 .. code-block:: yaml
 
