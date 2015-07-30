@@ -906,6 +906,41 @@ If set to 'changes', the output will be full unless the state didn't change.
 
     state_output: full
 
+.. conf_master:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for mod_aggregate by
+setting to ``True``. Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+.. conf_master:: state_events
+
+``state_events``
+----------------
+
+Default: ``False``
+
+Send progress events as each function in a state run completes execution
+by setting to ``True``. Progress events are in the format
+``salt/job/<job_id>/prog/<minion_id>/<run_num>``.
+
+.. code-block:: yaml
+
+    state_events: True
+
 .. conf_master:: yaml_utf8
 
 ``yaml_utf8``
