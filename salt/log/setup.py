@@ -790,9 +790,7 @@ def __process_multiprocessing_logging_queue(queue):
             # logging handlers
             logger = logging.getLogger(record.name)
             logger.handle(record)
-        except (KeyboardInterrupt, SystemExit):
-            break
-        except EOFError:
+        except (EOFError, KeyboardInterrupt, SystemExit):
             break
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warn(
