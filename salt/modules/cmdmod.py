@@ -10,6 +10,7 @@ from __future__ import absolute_import
 # Import python libs
 import functools
 import glob
+import json
 import logging
 import os
 import shlex
@@ -2531,9 +2532,8 @@ def powershell(cmd,
         python_shell=python_shell,
         **kwargs)
 
-    # Convert the response string to a data structure, returning a dict
-    import ast
     try:
-        return ast.literal_eval(response)
+        return json.loads(response)
     except:
-        return "{}"
+        log.error("Error converting PowerShell JSON return", exc_info=True)
+        return {}
