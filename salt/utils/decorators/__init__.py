@@ -62,7 +62,6 @@ class Depends(object):
         and determine which module and function name it is to store in the
         class wide depandancy_dict
         '''
-
         module = sys._current_frames().values()[0].f_back
         # module name is something like salt.loaded.int.modules.test
         kind = module.f_globals['__name__'].rsplit('.', 2)[1]
