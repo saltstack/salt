@@ -10,9 +10,9 @@ import logging
 
 # Import salt libs
 import salt.loader
-import salt.utils
-import salt.state
 import salt.runner
+import salt.state
+import salt.utils
 from salt.utils.doc import strip_rst as _strip_rst
 
 # Import 3rd-party libs
