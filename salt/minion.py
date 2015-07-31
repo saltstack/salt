@@ -484,7 +484,7 @@ class MultiMinion(MinionBase):
     def __init__(self, opts):
         super(MultiMinion, self).__init__(opts)
         self.auth_wait = self.opts['acceptance_wait_time']
-        self.max_wait = self.opts['acceptance_wait_time_max']
+        self.max_auth_wait = self.opts['acceptance_wait_time_max']
 
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
 
@@ -1984,6 +1984,9 @@ class MultiSyndic(MinionBase):
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get('syndic_mode', 'sync')
+
+        self.auth_wait = self.opts['acceptance_wait_time']
+        self.max_auth_wait = self.opts['acceptance_wait_time_max']
 
         self._has_master = threading.Event()
         self.jid_forward_cache = set()
