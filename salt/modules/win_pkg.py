@@ -44,16 +44,6 @@ def __virtual__():
     return False
 
 
-def normalize_name(name):
-    '''
-    This function needed for the pkg state module
-    :param str name:
-    :return: name
-    :rtype str:
-    '''
-    return name
-
-
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
