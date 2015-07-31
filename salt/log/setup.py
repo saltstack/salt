@@ -158,7 +158,7 @@ class SaltColorLogRecord(logging.LogRecord):
         # pylint: enable=E1321
 
 
-_log_record_factory = SaltLogRecord
+_LOG_RECORD_FACTORY = SaltLogRecord
 
 
 def set_log_record_factory(factory):
@@ -168,8 +168,8 @@ def set_log_record_factory(factory):
     :param factory: A callable which will be called to instantiate
     a log record.
     '''
-    global _log_record_factory
-    _log_record_factory = factory
+    global _LOG_RECORD_FACTORY
+    _LOG_RECORD_FACTORY = factory
 
 
 def get_log_record_factory():
@@ -177,7 +177,7 @@ def get_log_record_factory():
     Return the factory to be used when instantiating a log record.
     '''
 
-    return _log_record_factory
+    return _LOG_RECORD_FACTORY
 
 
 set_log_record_factory(SaltLogRecord)
@@ -293,11 +293,11 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
             _msg = msg
 
         if six.PY3:
-            logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
-                                          exc_info, func, sinfo)
+            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, args,
+                                            exc_info, func, sinfo)
         else:
-            logrecord = _log_record_factory(name, level, fn, lno, _msg, args,
-                                          exc_info, func)
+            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, args,
+                                            exc_info, func)
 
         if extra is not None:
             for key in extra:
