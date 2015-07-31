@@ -15,6 +15,7 @@ import salt.state
 import salt.utils
 import salt.utils.schema as S
 from salt.utils.doc import strip_rst as _strip_rst
+from salt.ext.six.moves import zip
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -845,7 +846,7 @@ def _argspec_to_schema(mod, spec):
     defaults = spec['defaults'] or []
 
     args_req = args[:len(args) - len(defaults)]
-    args_defaults = zip(args[-len(defaults):], defaults)
+    args_defaults = list(zip(args[-len(defaults):], defaults))
 
     types = {
         'title': mod,
