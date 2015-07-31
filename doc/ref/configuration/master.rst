@@ -2089,10 +2089,21 @@ master, specify the higher level master with this configuration value.
 
     syndic_master: masterofmasters
 
+You can optionally connect a syndic to multiple higher level masters by
+setting the 'syndic_master' value to a list:
+
+.. code-block:: yaml
+
+    syndic_master:
+      - masterofmasters1
+      - masterofmasters2
+
+Each higher level master must be set up in a multimaster configuration.
+
 .. conf_master:: syndic_master_port
 
 ``syndic_master_port``
------------------------
+----------------------
 
 Default: ``4506``
 
