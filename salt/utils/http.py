@@ -13,6 +13,7 @@ import logging
 import os.path
 import pprint
 import socket
+import urllib
 
 import ssl
 try:
