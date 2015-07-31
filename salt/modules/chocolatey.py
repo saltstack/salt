@@ -334,7 +334,8 @@ def install(name,
             force=False,
             install_args=None,
             override_args=False,
-            force_x86=False):
+            force_x86=False,
+            package_args=None):
     '''
     Instructs Chocolatey to install a package.
 
@@ -363,6 +364,9 @@ def install(name,
     force_x86
         Force x86 (32bit) installation on 64 bit systems. Defaults to false.
 
+    package_args
+        A list of arguments you want to pass to the package
+
     CLI Example:
 
     .. code-block:: bash
@@ -386,6 +390,8 @@ def install(name,
         cmd.extend(['-OverrideArguments'])
     if force_x86:
         cmd.extend(['-forcex86'])
+    if package_args:
+        cmd.extend(['-PackageParameters', package_args])
     cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
