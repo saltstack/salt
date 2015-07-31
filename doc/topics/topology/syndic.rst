@@ -67,6 +67,26 @@ connected directly to it.
     Each Syndic must provide its own ``file_roots`` directory. Files will not
     be automatically transferred from the Master node.
 
+Configuring the Syndic with Multimaster
+=======================================
+
+.. versionadded:: 2015.5.0
+
+Syndic with Multimaster lets you connect a syndic to multiple masters to provide
+an additional layer of redundancy in a syndic configuration.
+
+Higher level masters should first be configured in a multimaster configuration.
+See :doc:`Multimaster Tutorial </topics/tutorials/multimaster>`.
+
+On the syndic, the :conf_master:`syndic_master` option is populated with
+a list of the higher level masters.
+
+Since each syndic is connected to each master, jobs sent from any master are
+forwarded to minions that are connected to each syndic. If the ``master_id`` value
+is set in the master config on the higher level masters, job results are returned
+to the master that originated the request in a best effort fashion. Events/jobs
+without a ``master_id`` are returned to any available master.
+
 Running the Syndic
 ==================
 
