@@ -1818,14 +1818,17 @@ def template_clone(call=None, kwargs=None):
         The name of the new template.
 
     template_id
-        The ID of the template to be cloned.
+        The ID of the template to be cloned. Can be used instead of template_name.
+
+    template_name
+        The name of the template to be cloned. Can be used instead of template_id.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -f template_clone opennebula name=my-cloned-template template_id=0
-
+        salt-cloud -f template_clone opennebula name=my-new-template template_id=0
+        salt-cloud -f template_clone opennebula name=my-new-template template_name=my-template
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -1837,11 +1840,19 @@ def template_clone(call=None, kwargs=None):
 
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
+    template_name = kwargs.get('template_name', None)
 
-    if not name or not template_id:
+    if template_id is None:
+        if template_name is None:
+            raise SaltCloudSystemExit(
+                'The template_clone function requires either a \'template_id\' '
+                'or a \'template_name\' to be provided.'
+            )
+        template_id = get_template_id(kwargs={'name': template_name})
+
+    if name is None:
         raise SaltCloudSystemExit(
-            'The template_clone function requires a name and a template_id '
-            'to be provided.'
+            'The template_clone function requires a name to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1868,10 +1879,10 @@ def template_delete(call=None, kwargs=None):
     .. versionadded:: Boron
 
     name
-        The name of the template to delete.
+        The name of the template to delete. Can be used instead of template_id.
 
     template_id
-        The ID of the template to delete.
+        The ID of the template to delete. Can be used instead of name.
 
     CLI Example:
 
@@ -1930,7 +1941,12 @@ def template_instantiate(call=None, kwargs=None):
         Name for the new VM instance.
 
     template_id
-        The ID of the template from which the VM will be created.
+        The ID of the template from which the VM will be created. Can be used instead
+        of template_name
+
+    template_name
+        The name of the template from which the VM will be created. Can be used instead
+        of template_id.
 
     CLI Example:
 
@@ -1949,11 +1965,19 @@ def template_instantiate(call=None, kwargs=None):
 
     vm_name = kwargs.get('vm_name', None)
     template_id = kwargs.get('template_id', None)
+    template_name = kwargs.get('template_name', None)
 
-    if not vm_name or not template_id:
+    if template_id is None:
+        if template_name is None:
+            raise SaltCloudSystemExit(
+                'The template_instantiate function requires either a \'template_id\' '
+                'or a \'template_name\' to be provided.'
+            )
+        template_id = get_template_id(kwargs={'name': template_name})
+
+    if vm_name is None:
         raise SaltCloudSystemExit(
-            'The template_instantiate function requires a vm_name and a template_id '
-            'to be provided.'
+            'The template_instantiate function requires a vm_name to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -3428,7 +3452,10 @@ def template_update(call=None, kwargs=None):
     .. versionadded:: Boron
 
     template_id
-        The ID of the template to update.
+        The ID of the template to update. Can be used instead of template_name.
+
+    template_name
+        The name of the template to update. Can be used instead of template_id.
 
     path
         The path to a file containing the elements of the template to be updated.
@@ -3455,14 +3482,23 @@ def template_update(call=None, kwargs=None):
         kwargs = {}
 
     template_id = kwargs.get('template_id', None)
+    template_name = kwargs.get('template_name', None)
     path = kwargs.get('path', None)
     update_type = kwargs.get('update_type', None)
     update_args = ['replace', 'merge']
 
-    if not template_id or not path or not update_type:
+    if template_id is None:
+        if template_name is None:
+            raise SaltCloudSystemExit(
+                'The template_update function requires either a \'template_id\' '
+                'or a \'template_name\' to be provided.'
+            )
+        template_id = get_template_id(kwargs={'name': template_name})
+
+    if path is None or update_type is None:
         raise SaltCloudSystemExit(
-            'The template_update function requires a \'template_id\', a file \'path\', '
-            'and an \'update_type\' to be provided.'
+            'The template_update function requires a file \'path\' and an '
+            '\'update_type\' to be provided.'
         )
 
     if update_type == update_args[0]:
