@@ -8,16 +8,16 @@ access to the master root execution access to all salt minions.
 from __future__ import absolute_import
 
 # Import python libs
-import time
 import functools
 import glob
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+import time
 import traceback
-import shlex
 from salt.utils import vt
 
 # Import salt libs
