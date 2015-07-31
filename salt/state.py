@@ -205,8 +205,8 @@ def format_log(ret):
                         for pkg in chg:
                             old = chg[pkg]['old'] or 'absent'
                             new = chg[pkg]['new'] or 'absent'
-                            msg += '{0} changed from {1} to ' \
-                                   '{2}\n'.format(pkg, old, new)
+                            msg += '{0!r} changed from {1!r} to ' \
+                                   '{2!r}\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
