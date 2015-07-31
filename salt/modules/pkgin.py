@@ -41,7 +41,7 @@ def _check_pkgin():
                 ppath = '{0}/bin/pkgin'.format(localbase)
                 if not os.path.exists(ppath):
                     return None
-        except:
+        except CommandExecutionError:
             return None
     return ppath
 
