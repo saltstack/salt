@@ -29,11 +29,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
     '''
     def __init__(self, opts):
         multiprocessing.Process.__init__(self)
-        salt.state.Compiler.__init__(self, opts)
-
-        local_minion_opts = self.opts.copy()
+        local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
+        salt.state.Compiler.__init__(self, opts, self.minion.rend)
 
     def render_reaction(self, glob_ref, tag, data):
         '''
