@@ -161,6 +161,34 @@ def avail_sizes():
     return {}
 
 
+def list_clusters(call=None):
+    '''
+    Returns a list of clusters in OpenNebula.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_clusters opennebula
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_clusters function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    cluster_pool = server.one.clusterpool.info(auth)[1]
+
+    clusters = {}
+    for cluster in etree.XML(cluster_pool):
+        clusters[cluster.find('NAME').text] = _xml_to_dict(cluster)
+
+    return clusters
+
+
 def list_datastores(call=None):
     '''
     Returns a list of data stores on OpenNebula.
@@ -441,6 +469,35 @@ def stop(name, call=None):
     log.info('Stopping node {0}'.format(name))
 
     return vm_action(name, kwargs={'action': 'stop'}, call=call)
+
+
+def get_cluster_id(kwargs=None, call=None):
+    '''
+    Returns a cluster's ID from the given cluster name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_cluster_id opennebula name=my-cluster-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_cluster_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_cluster_id function requires a name.'
+        )
+
+    return list_clusters()[name]['id']
 
 
 def get_datastore_id(kwargs=None, call=None):
@@ -2333,7 +2390,7 @@ def vm_deploy(name, kwargs=None, call=None):
             )
         host_id = get_host_id(kwargs={'name': host_name})
 
-    if datastore_name is None:
+    if datastore_name is not None:
         datastore_id = int(get_datastore_id(kwargs={'name': datastore_name}))
 
     server, user, password = _get_xml_rpc()
@@ -3171,8 +3228,14 @@ def vn_allocate(call=None, kwargs=None):
         Syntax within the file can be the usual attribute=value or XML.
 
     cluster_id
-        The ID of the cluster for which to add the new virtual network. If not provided,
+        The ID of the cluster for which to add the new virtual network. Can be used
+        instead of cluster_name. If neither cluster_id nor cluster_name are provided,
         the virtual network won’t be added to any cluster.
+
+    cluster_name
+        The name of the cluster for which to add the new virtula network. Can be used
+        instead of cluster_id. If neither cluster_name nor cluster_id are provided, the
+        virtual network won't be added to any cluster.
 
     CLI Example:
 
@@ -3189,11 +3252,15 @@ def vn_allocate(call=None, kwargs=None):
         kwargs = {}
 
     cluster_id = kwargs.get('cluster_id', '-1')
+    cluster_name = kwargs.get('cluster_name', None)
     path = kwargs.get('path', None)
-    if not path:
+    if path is None:
         raise SaltCloudSystemExit(
             'The vn_allocate function requires a file \'path\' to be provided.'
         )
+
+    if cluster_name is not None:
+        cluster_id = get_cluster_id(kwargs={'name': cluster_name})
 
     file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
