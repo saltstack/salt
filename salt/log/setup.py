@@ -22,7 +22,9 @@ import types
 import socket
 import logging
 import logging.handlers
+import threading
 import traceback
+import multiprocessing
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -36,7 +38,11 @@ QUIET = logging.QUIET = 1000
 
 # Import salt libs
 from salt.textformat import TextFormat
-from salt.log.handlers import TemporaryLoggingHandler, StreamHandler, SysLogHandler, WatchedFileHandler
+from salt.log.handlers import (TemporaryLoggingHandler,
+                               StreamHandler,
+                               SysLogHandler,
+                               WatchedFileHandler,
+                               QueueHandler)
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
 
@@ -95,6 +101,11 @@ __CONSOLE_CONFIGURED = False
 __LOGFILE_CONFIGURED = False
 __TEMP_LOGGING_CONFIGURED = False
 __EXTERNAL_LOGGERS_CONFIGURED = False
+__MP_LOGGING_LISTENER_CONFIGURED = False
+__MP_LOGGING_CONFIGURED = False
+__MP_LOGGING_QUEUE = None
+__MP_LOGGING_QUEUE_THREAD = None
+__MP_LOGGING_QUEUE_HANDLER = None
 
 
 def is_console_configured():
@@ -111,6 +122,14 @@ def is_logging_configured():
 
 def is_temp_logging_configured():
     return __TEMP_LOGGING_CONFIGURED
+
+
+def is_mp_logging_listener_configured():
+    return __MP_LOGGING_LISTENER_CONFIGURED
+
+
+def is_mp_logging_configured():
+    return __MP_LOGGING_LISTENER_CONFIGURED
 
 
 def is_extended_logging_configured():
@@ -307,8 +326,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS
 
         if extra is not None:
             for key in extra:
-                if (key in ['message', 'asctime']) \
-                        or (key in logrecord.__dict__):
+                if (key in ['message', 'asctime']) or (key in logrecord.__dict__):
                     raise KeyError(
                         'Attempt to overwrite {0!r} in LogRecord'.format(key)
                     )
@@ -710,6 +728,48 @@ def setup_extended_logging(opts):
     __EXTERNAL_LOGGERS_CONFIGURED = True
 
 
+def get_multiprocessing_logging_queue():
+    return __MP_LOGGING_QUEUE
+
+
+def setup_multiprocessing_logging_listener(queue=None):
+    global __MP_LOGGING_QUEUE
+    if queue is not None:
+        __MP_LOGGING_QUEUE = queue
+    else:
+        __MP_LOGGING_QUEUE = multiprocessing.Queue()
+
+    global __MP_LOGGING_QUEUE_THREAD
+    __MP_LOGGING_QUEUE_THREAD = threading.Thread(
+        target=__process_multiprocessing_logging_queue,
+        args=(__MP_LOGGING_QUEUE,)
+    )
+    __MP_LOGGING_QUEUE_THREAD.start()
+    global __MP_LOGGING_LISTENER_CONFIGURED
+    __MP_LOGGING_LISTENER_CONFIGURED = True
+
+
+def setup_multiprocessing_logging(queue):
+    '''
+    This code should be called from within a running multiprocessing
+    process instance.
+    '''
+    # Let's add a queue handler to the logging root handlers
+    logging.root.addHandler(QueueHandler(queue))
+    # Set the logging root level to the lowest to get all messages
+    logging.root.setLevel(logging.GARBAGE)
+
+    global __MP_LOGGING_CONFIGURED
+    __MP_LOGGING_CONFIGURED = True
+
+
+def shutdown_multiprocessing_logging_listener():
+    # Sent None sentinel to stop the logging processing queue
+    __MP_LOGGING_QUEUE.put(None)
+    # Let's join the multiprocessing logging handle thread
+    __MP_LOGGING_QUEUE_THREAD.join()
+
+
 def set_logger_level(logger_name, log_level='error'):
     '''
     Tweak a specific logger's logging level
@@ -717,6 +777,29 @@ def set_logger_level(logger_name, log_level='error'):
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
     )
+
+
+def __process_multiprocessing_logging_queue(queue):
+    while True:
+        try:
+            record = queue.get()
+            if record is None:
+                # A sentinel to stop processing the queue
+                break
+            # Just log everything, filtering will happen on the main process
+            # logging handlers
+            logger = logging.getLogger(record.name)
+            logger.handle(record)
+        except (KeyboardInterrupt, SystemExit):
+            break
+        except EOFError:
+            break
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.getLogger(__name__).warn(
+                'An exception occurred in the multiprocessing logging '
+                'queue thread: {0}'.format(exc),
+                exc_info_on_loglevel=logging.DEBUG
+            )
 
 
 def __remove_null_logging_handler():
