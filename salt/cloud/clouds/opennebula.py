@@ -189,6 +189,34 @@ def list_datastores(call=None):
     return datastores
 
 
+def list_hosts(call=None):
+    '''
+    Returns a list of hosts on OpenNebula.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_hosts opennebula
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_hosts function must be called with -f or --function.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join(['user, password'])
+    host_pool = server.one.hostpool.info(auth)[1]
+
+    hosts = {}
+    for host in etree.XML(host_pool):
+        hosts[host.find('NAME').text] = _xml_to_dict(host)
+
+    return hosts
+
+
 def list_nodes(call=None):
     '''
     Return a list of VMs on OpenNebubla.
@@ -442,6 +470,35 @@ def get_datastore_id(kwargs=None, call=None):
         )
 
     return list_datastores(call=call)[name]['id']
+
+
+def get_host_id(kwargs=None, call=None):
+    '''
+    Returns a host's ID from the given host name.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f get_host_id opennebula name=my-host-name
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The get_host_id function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_host_id function requires a name.'
+        )
+
+    return list_hosts()[name]['id']
 
 
 def get_image(vm_):
@@ -2224,7 +2281,12 @@ def vm_deploy(name, kwargs=None, call=None):
         The name of the VM to deploy.
 
     host_id
-        The ID of the target host where the VM will be deployed.
+        The ID of the target host where the VM will be deployed. Can be used instead
+        of host_name.
+
+    host_name
+        The name of the target host where the VM will be deployed. Can be used instead
+        of host_id.
 
     capacity_maintained
         True to enforce the Host capacity is not over-committed. This parameter is only
@@ -2247,8 +2309,8 @@ def vm_deploy(name, kwargs=None, call=None):
 
         salt-cloud -a vm_deploy my-vm host_id=0
         salt-cloud -a vm_deploy my-vm host_id=1 capacity_maintained=False
-        salt-cloud -a vm_deploy my-vm host_id=0 datastore_id=1
-        salt-cloud -a vm_deploy my-vm host_id=8 datastore_name=default
+        salt-cloud -a vm_deploy my-vm host_name=host01 datastore_id=1
+        salt-cloud -a vm_deploy my-vm host_name=host01 datastore_name=default
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2259,14 +2321,17 @@ def vm_deploy(name, kwargs=None, call=None):
         kwargs = {}
 
     host_id = kwargs.get('host_id', None)
+    host_name = kwargs.get('host_name', None)
     capacity_maintained = kwargs.get('capacity_maintained', True)
     datastore_id = int(kwargs.get('datastore_id', '-1'))
     datastore_name = kwargs.get('datastore_name', None)
 
     if host_id is None:
-        raise SaltCloudSystemExit(
-            'The vm_deploy function requires a \'host_id\' to be provided.'
-        )
+        if host_name is None:
+            raise SaltCloudSystemExit(
+                'The vm_deploy function requires a \'host_id\' or a \'host_name\' to be provided.'
+            )
+        host_id = get_host_id(kwargs={'name': host_name})
 
     if datastore_name is None:
         datastore_id = int(get_datastore_id(kwargs={'name': datastore_name}))
@@ -2662,7 +2727,12 @@ def vm_migrate(name, kwargs=None, call=None):
         The name of the VM to migrate.
 
     host_id
-        The ID of the host to which the VM will be migrated.
+        The ID of the host to which the VM will be migrated. Can be used instead
+        of host_name.
+
+    host_name
+        The name of the host to which the VM will be migrated. Can be used instead
+        of host_id.
 
     live_migration
         If set to ``True``, a live-migration will be performed. Default is ``False``.
@@ -2685,6 +2755,7 @@ def vm_migrate(name, kwargs=None, call=None):
 
         salt-cloud -a vm_migrate my-vm host_id=0 datastore_id=1
         salt-cloud -a vm_migrate my-vm host_id=0 datastore_id=1 live_migration=True
+        salt-cloud -a vm_migrate my-vm host_name=host01 datastore_name=default
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2695,6 +2766,7 @@ def vm_migrate(name, kwargs=None, call=None):
         kwargs = {}
 
     host_id = kwargs.get('host_id', None)
+    host_name = kwargs.get('host_name', None)
     live_migration = kwargs.get('live_migration', False)
     capactiy_maintained = kwargs.get('capacity_maintained', True)
     datastore_id = kwargs.get('datastore_id', None)
@@ -2708,10 +2780,13 @@ def vm_migrate(name, kwargs=None, call=None):
             )
         datastore_id = get_datastore_id(kwargs={'name': datastore_name})
 
-    if host_id is None and datastore_id is None:
-        raise SaltCloudSystemExit(
-            'The vm_migrate function requires a \'host_id\' to be provided.'
-        )
+    if host_id is None:
+        if host_name is None:
+            raise SaltCloudSystemExit(
+                'The vm_migrate function requires either a \'host_id\' '
+                'or a \'host_name\' to be provided.'
+            )
+        host_id = get_host_id(kwargs={'name': host_name})
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
