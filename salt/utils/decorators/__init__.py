@@ -86,7 +86,7 @@ class Depends(object):
                 if dependency is True:
                     log.trace(
                         'Dependency for {0}.{1} exists, not unloading'.format(
-                            module.__name__.split('.')[-1],
+                            module.f_globals['__name__'].split('.')[-1],
                             func.__name__,
                         )
                     )
@@ -97,7 +97,7 @@ class Depends(object):
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
                             dependency,
-                            module.__name__.split('.')[-1]
+                            module.f_globals['__name__'].split('.')[-1]
                         )
                     )
                     continue
