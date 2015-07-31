@@ -1747,13 +1747,18 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
                                           'defining all arguments.\n')
+                    # parse the args and kwargs before sending to the publish
+                    # interface
+                    for i in range(len(self.config['arg'])):
+                        self.config['arg'][i] = salt.utils.args.parse_input(
+                                self.config['arg'][i])
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
-
-                # parse the args and kwargs before sending to the publish interface
-                self.config['arg'] = \
-                    salt.utils.args.parse_input(self.config['arg'])
+                    # parse the args and kwargs before sending to the publish
+                    # interface
+                    self.config['arg'] = \
+                        salt.utils.args.parse_input(self.config['arg'])
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
