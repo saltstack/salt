@@ -976,7 +976,7 @@ _OS_FAMILY_MAP = {
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',
     'Devuan': 'Debian',
-    'NILinuxRT' : 'NILinuxRT'
+    'NILinuxRT': 'NILinuxRT'
 }
 
 
