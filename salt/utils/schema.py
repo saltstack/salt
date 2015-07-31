@@ -466,6 +466,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
     def __new__(mcs, name, bases, attrs):
         # Register the class as an item class
         attrs['__item__'] = True
+        attrs['__item_name__'] = None
         # Instantiate an empty list to store the config item attribute names
         attributes = []
         for base in reversed(bases):
@@ -474,6 +475,8 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                 # but skip "self"
                 for argname in inspect.getargspec(base.__init__).args:
                     if argname == 'self' or argname in attributes:
+                        continue
+                    if argname == 'name':
                         continue
                     attributes.append(argname)
             except TypeError:
@@ -495,6 +498,10 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
         for key in kwargs.keys():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
+            if key == 'name':
+                # This is the item name to override the class attribute name
+                instance.__item_name__ = kwargs.pop(key)
+                continue
             if key not in instance._attributes:
                 instance._attributes.append(key)
         # Init the class
@@ -549,6 +556,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         cls.after_items_update = []
         for name in cls._order:
             skip_order = False
+            item_name = None
             if name in cls._sections:
                 section = cls._sections[name]
                 serialized_section = section.serialize(None if section.__flatten__ is True else name)
@@ -569,22 +577,27 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
 
             if name in cls._items:
                 config = cls._items[name]
+                item_name = config.__item_name__ or name
                 # Handle the configuration items defined in the class instance
                 if config.__flatten__ is True:
                     serialized_config = config.serialize()
                     cls.after_items_update.append(serialized_config)
                     skip_order = True
                 else:
-                    properties[name] = config.serialize()
+                    properties[item_name] = config.serialize()
 
                 if config.required:
                     # If it's a required item, add it to the required list
-                    required.append(name)
+                    required.append(item_name)
 
             if skip_order is False:
                 # Store the order of the item
-                if name not in ordering:
-                    ordering.append(name)
+                if item_name is not None:
+                    if item_name not in ordering:
+                        ordering.append(item_name)
+                else:
+                    if name not in ordering:
+                        ordering.append(name)
 
         if properties:
             serialized['properties'] = properties
