@@ -8,14 +8,16 @@
 
     Object Oriented Configuration - JSON Schema compatible generator
 
-    This code was inspired by `jsl`__, "A Python DSL for describing JSON schemas".
+    This code was inspired by `jsl`__, "A Python DSL for describing JSON
+    schemas".
 
     .. __: http://jsl.readthedocs.org/
 
 
-    A configuration document or configuration document section is defined using the
-    py:class:`Schema`, the configuration items are defined by any of the subclasses
-    of py:class:`BaseSchemaItem` as attributes of a subclass of py:class:`Schema` class.
+    A configuration document or configuration document section is defined using
+    the py:class:`Schema`, the configuration items are defined by any of the
+    subclasses of py:class:`BaseSchemaItem` as attributes of a subclass of
+    py:class:`Schema` class.
 
     As an example:
 
@@ -100,8 +102,8 @@
         }
 
 
-    The serialized version of the configuration block can be used to validate a configuration dictionary using
-    the `python jsonschema library`__.
+    The serialized version of the configuration block can be used to validate a
+    configuration dictionary using the `python jsonschema library`__.
 
     .. __: https://pypi.python.org/pypi/jsonschema
 
@@ -252,9 +254,10 @@
             -1
         >>>
 
-    If however, you just want to use the configuration blocks for readability and do not desire the nested
-    dictionaries serialization, you can pass ``flatten=True`` when defining a configuration section as a
-    configuration subclass attribute:
+    If however, you just want to use the configuration blocks for readability
+    and do not desire the nested dictionaries serialization, you can pass
+    ``flatten=True`` when defining a configuration section as a configuration
+    subclass attribute:
 
     .. code-block:: python
 
