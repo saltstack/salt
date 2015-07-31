@@ -405,6 +405,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
         # Mark the instance as a configuration document/section
         attrs['__config__'] = True
         attrs['__flatten__'] = False
+        attrs['__config_name__'] = None
 
         # Let's record the configuration items/sections
         items = {}
@@ -421,6 +422,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
 
         # Iterate through attrs to discover items/config sections
         for key, value in six.iteritems(attrs):
+            entry_name = None
             if not hasattr(value, '__item__') and not hasattr(value, '__config__'):
                 continue
             if hasattr(value, '__item__'):
@@ -429,10 +431,12 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
                     # It's an item instance without a title, make the title
                     # it's name
                     value.title = key
-                items[key] = value
+                entry_name = value.__item_name__ or key
+                items[entry_name] = value
             if hasattr(value, '__config__'):
-                sections[key] = value
-            order.append(key)
+                entry_name = value.__config_name__ or key
+                sections[entry_name] = value
+            order.append(entry_name)
 
         attrs['_order'] = order
         attrs['_items'] = items
@@ -441,6 +445,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
 
     def __call__(cls, flatten=False, allow_additional_items=False, **kwargs):
         instance = object.__new__(cls)
+        instance.__config_name__ = kwargs.pop('name', None)
         if flatten is True:
             # This configuration block is to be treated as a part of the
             # configuration for which it was defined as an attribute, not as
