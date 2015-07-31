@@ -1353,6 +1353,7 @@ def image_snapshot_revert(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_snapshot_revert vm_id=106 snapshot_id=45
+        salt-cloud -f image_snapshot_revert vm_name=my-vm snapshot_id=120
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1413,6 +1414,7 @@ def image_snapshot_flatten(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_snapshot_flatten vm_id=106 snapshot_id=45
+        salt-cloud -f image_snapshot_flatten vm_name=my-vm snapshot_id=45
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3173,7 +3175,12 @@ def vn_add_ar(call=None, kwargs=None):
     .. versionadded:: Boron
 
     vn_id
-        The ID of the virtual network to add the address range.
+        The ID of the virtual network to add the address range. Can be used
+        instead of vn_name.
+
+    vn_name
+        The name of the virtual network to add the address range. Can be used
+        instead of vn_id.
 
     path
         The path to a file containing the template of the address range to add.
@@ -3194,12 +3201,20 @@ def vn_add_ar(call=None, kwargs=None):
         kwargs = {}
 
     vn_id = kwargs.get('vn_id', None)
+    vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
 
-    if not vn_id and not path:
+    if vn_id is None:
+        if vn_name is None:
+            raise SaltCloudSystemExit(
+                'The vn_add_ar function requires a \'vn_id\' and a \'vn_name\' to '
+                'be provided.'
+            )
+        vn_id = get_vn_id(kwargs={'name': vn_name})
+
+    if path is None:
         raise SaltCloudSystemExit(
-            'The vn_add_ar function requires a \'vn_id\' and a file \'path\' to '
-            'be provided.'
+            'The vn_add_ar function requires a file \'path\' to be provided.'
         )
 
     file_data = salt.utils.fopen(path, mode='r').read()
@@ -3285,10 +3300,10 @@ def vn_delete(call=None, kwargs=None):
     .. versionadded:: Boron
 
     name
-        The name of the virtual network to delete.
+        The name of the virtual network to delete. Can be used instead of vn_id.
 
     vn_id
-        The ID of the virtual network to delete.
+        The ID of the virtual network to delete. Can be used instead of name.
 
     CLI Example:
 
@@ -3308,7 +3323,7 @@ def vn_delete(call=None, kwargs=None):
     name = kwargs.get('name', None)
     vn_id = kwargs.get('vn_id', None)
 
-    if not name and not vn_id:
+    if name is None and vn_id is None:
         raise SaltCloudSystemExit(
             'The vn_delete function requires a name or a vn_id '
             'to be provided.'
@@ -3317,7 +3332,7 @@ def vn_delete(call=None, kwargs=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    if name and not vn_id:
+    if name and vn_id is None:
         vn_id = get_vn_id(kwargs={'name': name})
 
     response = server.one.image.delete(auth, int(vn_id))
@@ -3340,6 +3355,11 @@ def vn_free_ar(call=None, kwargs=None):
 
     vn_id
         The ID of the virtual network from which to free an address range.
+        Can be used instead of vn_name.
+
+    vn_name
+        The name of the virtual network from which to free an address range.
+        Can be used instead of vn_id.
 
     ar_id
         The ID of the address range to free.
@@ -3349,6 +3369,7 @@ def vn_free_ar(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f vn_free_ar opennebula vn_id=3 ar_id=1
+        salt-cloud -f vn_free_ar opennebula vn_name=my-vn ar_id=1
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3359,12 +3380,20 @@ def vn_free_ar(call=None, kwargs=None):
         kwargs = {}
 
     vn_id = kwargs.get('vn_id', None)
+    vn_name = kwargs.get('vn_name', None)
     ar_id = kwargs.get('ar_id', None)
 
-    if not vn_id or not ar_id:
+    if vn_id is None:
+        if vn_name is None:
+            raise SaltCloudSystemExit(
+                'The vn_free_ar function requires a \'vn_id\' or a \'vn_name\' to '
+                'be provided.'
+            )
+        vn_id = get_vn_id(kwargs={'name': vn_name})
+
+    if ar_id is None:
         raise SaltCloudSystemExit(
-            'The vn_free_ar function requires a vn_id and an rn_id '
-            'to be provided.'
+            'The vn_free_ar function requires an \'rn_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -3388,7 +3417,12 @@ def vn_hold(call=None, kwargs=None):
     .. versionadded:: Boron
 
     vn_id
-        The ID of the virtual network from which to hold the lease.
+        The ID of the virtual network from which to hold the lease. Can be used
+        instead of vn_name.
+
+    vn_name
+        The name of the virtula network from which to hold the lease. Can be used
+        instead of vn_id.
 
     path
         The path to a file defining the template of the lease to hold.
@@ -3409,12 +3443,20 @@ def vn_hold(call=None, kwargs=None):
         kwargs = {}
 
     vn_id = kwargs.get('vn_id', None)
+    vn_name = kwargs.get('vn_name'. None)
     path = kwargs.get('path', None)
 
-    if not vn_id or not path:
+    if vn_id is None:
+        if vn_name is None:
+            raise SaltCloudSystemExit(
+                'The vn_hold function requires a \'vn_id\' or a \'vn_name\' to '
+                'be provided.'
+            )
+        vn_id = get_vn_id(kwargs={'name': vn_name})
+
+    if path is None:
         raise SaltCloudSystemExit(
-            'The vn_hold function requires a \'vn_id\' and a \'path\' '
-            'to be provided.'
+            'The vn_hold function requires a \'path\' to be provided.'
         )
 
     file_data = salt.utils.fopen(path, mode='r').read()
@@ -3462,16 +3504,16 @@ def vn_info(call=None, kwargs=None):
     name = kwargs.get('name', None)
     vn_id = kwargs.get('vn_id', None)
 
-    if not name and not vn_id:
+    if name is None and vn_id is None:
         raise SaltCloudSystemExit(
-            'The vn_info function requires either a name or a vn_id '
+            'The vn_info function requires either a \'name\' or a \'vn_id\' '
             'to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    if name and not vn_id:
+    if name and vn_id is None:
         vn_id = get_vn_id(kwargs={'name': name})
 
     response = server.one.vn.info(auth, int(vn_id))
@@ -3492,7 +3534,12 @@ def vn_release(call=None, kwargs=None):
     .. versionadded:: Boron
 
     vn_id
-        The ID of the virtual network from which to release the lease.
+        The ID of the virtual network from which to release the lease. Can be
+        used instead of vn_name.
+
+    vn_name
+        The name of the virtual network from which to release the lease.
+        Can be used instead of vn_id.
 
     path
         The path to a file defining the template of the lease to release.
@@ -3513,12 +3560,20 @@ def vn_release(call=None, kwargs=None):
         kwargs = {}
 
     vn_id = kwargs.get('vn_id', None)
+    vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
 
-    if not vn_id or not path:
+    if vn_id is None:
+        if vn_name is None:
+            raise SaltCloudSystemExit(
+                'The vn_release function requires a \'vn_id\' or a \'vn_name\' to '
+                'be provided.'
+            )
+        vn_id = get_vn_id(kwargs={'name': vn_name})
+
+    if path is None:
         raise SaltCloudSystemExit(
-            'The vn_release function requires a \'vn_id\' and a \'path\' '
-            'to be provided.'
+            'The vn_release function requires a \'path\' to be provided.'
         )
 
     file_data = salt.utils.fopen(path, mode='r').read()
@@ -3543,7 +3598,12 @@ def vn_reserve(call=None, kwargs=None):
     .. versionadded:: Boron
 
     vn_id
-        The ID of the virtual network from which to reserve addresses.
+        The ID of the virtual network from which to reserve addresses. Can be used
+        instead of vn_name.
+
+    vn_name
+        The name of the virtual network from which to reserve addresses. Can be
+        used instead of vn_id.
 
     path
         The path to a file defining the template of the address reservation.
@@ -3564,12 +3624,20 @@ def vn_reserve(call=None, kwargs=None):
         kwargs = {}
 
     vn_id = kwargs.get('vn_id', None)
+    vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
 
-    if not vn_id or not path:
+    if vn_id is None:
+        if vn_name is None:
+            raise SaltCloudSystemExit(
+                'The vn_reserve function requires a \'vn_id\' or a \'vn_name\' to '
+                'be provided.'
+            )
+        vn_id = get_vn_id(kwargs={'name': vn_name})
+
+    if path is None:
         raise SaltCloudSystemExit(
-            'The vn_reserve function requires a \'vn_id\' and a \'path\' '
-            'to be provided.'
+            'The vn_reserve function requires a \'path\' to be provided.'
         )
 
     file_data = salt.utils.fopen(path, mode='r').read()
