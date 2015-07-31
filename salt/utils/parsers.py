@@ -36,6 +36,7 @@ import salt.utils.jid
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+from salt.ext.six.moves import range
 
 
 def _sorted(mixins_or_funcs):
