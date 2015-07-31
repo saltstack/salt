@@ -5,6 +5,7 @@ Helpful decorators module writing
 
 # Import python libs
 from __future__ import absolute_import
+import sys
 import inspect
 import logging
 from functools import wraps
@@ -61,9 +62,10 @@ class Depends(object):
         and determine which module and function name it is to store in the
         class wide depandancy_dict
         '''
-        module = inspect.getmodule(inspect.stack()[1][0])
+
+        module = sys._current_frames().values()[0].f_back
         # module name is something like salt.loaded.int.modules.test
-        kind = module.__name__.rsplit('.', 2)[1]
+        kind = module.f_globals['__name__'].rsplit('.', 2)[1]
         for dep in self.dependencies:
             self.dependency_dict[kind][dep].add(
                 (module, function, self.fallback_function)
@@ -115,7 +117,7 @@ class Depends(object):
                     except (AttributeError, KeyError):
                         func_name = func.__name__
 
-                    mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
+                    mod_key = '{0}.{1}'.format(module.f_globals['__name__'].split('.')[-1],
                                                func_name)
 
                     # if we don't have this module loaded, skip it!
