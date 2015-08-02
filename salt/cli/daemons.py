@@ -150,7 +150,12 @@ class Master(parsers.MasterOptionParser):
         self.prepare()
         if check_user(self.config['user']):
             logger.info('The salt master is starting up')
-            self.master.start()
+            try:
+                self.master.start()
+            except KeyboardInterrupt:
+                logger.warn('The salt master is shutting down')
+            finally:
+                self.shutdown()
 
     def shutdown(self):
         '''

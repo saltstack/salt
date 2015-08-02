@@ -335,8 +335,13 @@ class ProcessManager(object):
                         )
                     p_map['Process'].terminate()
         else:
-            for p_map in six.itervalues(self._process_map):
-                p_map['Process'].terminate()
+            for pid, p_map in six.iteritems(self._process_map.copy()):
+                try:
+                    p_map['Process'].terminate()
+                except OSError as exc:
+                    if exc.errno != 3:
+                        raise
+                    del self._process_map[pid]
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
