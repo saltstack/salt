@@ -22,7 +22,6 @@ import types
 import socket
 import logging
 import logging.handlers
-import threading
 import traceback
 import multiprocessing
 
@@ -104,8 +103,9 @@ __EXTERNAL_LOGGERS_CONFIGURED = False
 __MP_LOGGING_LISTENER_CONFIGURED = False
 __MP_LOGGING_CONFIGURED = False
 __MP_LOGGING_QUEUE = None
-__MP_LOGGING_QUEUE_THREAD = None
+__MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
+__PREVIOUS_SIGTERM_HANDLER = None
 
 
 def is_console_configured():
@@ -739,12 +739,13 @@ def setup_multiprocessing_logging_listener(queue=None):
     else:
         __MP_LOGGING_QUEUE = multiprocessing.Queue()
 
-    global __MP_LOGGING_QUEUE_THREAD
-    __MP_LOGGING_QUEUE_THREAD = threading.Thread(
+    global __MP_LOGGING_QUEUE_PROCESS
+    __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
         args=(__MP_LOGGING_QUEUE,)
     )
-    __MP_LOGGING_QUEUE_THREAD.start()
+    __MP_LOGGING_QUEUE_PROCESS.start()
+
     global __MP_LOGGING_LISTENER_CONFIGURED
     __MP_LOGGING_LISTENER_CONFIGURED = True
 
@@ -754,6 +755,9 @@ def setup_multiprocessing_logging(queue):
     This code should be called from within a running multiprocessing
     process instance.
     '''
+    if __MP_LOGGING_CONFIGURED:
+        return
+
     # Let's add a queue handler to the logging root handlers
     logging.root.addHandler(QueueHandler(queue))
     # Set the logging root level to the lowest to get all messages
@@ -764,10 +768,15 @@ def setup_multiprocessing_logging(queue):
 
 
 def shutdown_multiprocessing_logging_listener():
+    logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
     # Sent None sentinel to stop the logging processing queue
     __MP_LOGGING_QUEUE.put(None)
     # Let's join the multiprocessing logging handle thread
-    __MP_LOGGING_QUEUE_THREAD.join()
+    __MP_LOGGING_QUEUE_PROCESS.join(1)
+    if __MP_LOGGING_QUEUE_PROCESS.is_alive():
+        # Process is still alive!?
+        __MP_LOGGING_QUEUE_PROCESS.terminate()
+    logging.getLogger(__name__).debug('Stopped the multiprocessing logging queue listener')
 
 
 def set_logger_level(logger_name, log_level='error'):
@@ -866,10 +875,14 @@ def __remove_temp_logging_handler():
 
 def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
     '''
-    This function will log all python exceptions.
+    This function will log all un-handled python exceptions.
     '''
-    # Do not log the exception or display the traceback on Keyboard Interrupt
-    if exc_type.__name__ != "KeyboardInterrupt":
+    if exc_type.__name__ == "KeyboardInterrupt":
+        # Do not log the exception or display the traceback on Keyboard Interrupt
+        # Stop the logging queue listener thread
+        if is_mp_logging_listener_configured():
+            shutdown_multiprocessing_logging_listener()
+    else:
         # Log the exception
         logging.getLogger(__name__).error(
             'An un-handled exception was caught by salt\'s global exception '
