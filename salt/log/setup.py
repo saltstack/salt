@@ -755,6 +755,8 @@ def setup_multiprocessing_logging(queue):
     This code should be called from within a running multiprocessing
     process instance.
     '''
+    global __MP_LOGGING_CONFIGURED
+
     if __MP_LOGGING_CONFIGURED:
         return
 
@@ -763,7 +765,6 @@ def setup_multiprocessing_logging(queue):
     # Set the logging root level to the lowest to get all messages
     logging.root.setLevel(logging.GARBAGE)
 
-    global __MP_LOGGING_CONFIGURED
     __MP_LOGGING_CONFIGURED = True
 
 
