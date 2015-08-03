@@ -105,7 +105,6 @@ __MP_LOGGING_CONFIGURED = False
 __MP_LOGGING_QUEUE = None
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
-__PREVIOUS_SIGTERM_HANDLER = None
 
 
 def is_console_configured():
@@ -144,6 +143,10 @@ LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 
 # Store a reference to the "storing" logging handler
 LOGGING_STORE_HANDLER = TemporaryLoggingHandler()
+
+
+class SaltLogQueueHandler(QueueHandler):
+    pass
 
 
 class SaltLogRecord(logging.LogRecord):
@@ -757,27 +760,37 @@ def setup_multiprocessing_logging(queue):
     '''
     global __MP_LOGGING_CONFIGURED
 
-    if __MP_LOGGING_CONFIGURED:
+    if __MP_LOGGING_CONFIGURED is True:
         return
 
+    # Let's set it to true as fast as possible
+    __MP_LOGGING_CONFIGURED = True
+
+    for handler in logging.root.handlers:
+        if isinstance(handler, SaltLogQueueHandler):
+            return
+
     # Let's add a queue handler to the logging root handlers
-    logging.root.addHandler(QueueHandler(queue))
+    logging.root.addHandler(SaltLogQueueHandler(queue))
     # Set the logging root level to the lowest to get all messages
     logging.root.setLevel(logging.GARBAGE)
-
-    __MP_LOGGING_CONFIGURED = True
+    logging.getLogger(__name__).debug(
+        'Multiprocessing queue logging configured for the process running '
+        'under PID: {0}'.format(os.getpid())
+    )
 
 
 def shutdown_multiprocessing_logging_listener():
-    logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
-    # Sent None sentinel to stop the logging processing queue
-    __MP_LOGGING_QUEUE.put(None)
-    # Let's join the multiprocessing logging handle thread
-    __MP_LOGGING_QUEUE_PROCESS.join(1)
-    if __MP_LOGGING_QUEUE_PROCESS.is_alive():
-        # Process is still alive!?
-        __MP_LOGGING_QUEUE_PROCESS.terminate()
-    logging.getLogger(__name__).debug('Stopped the multiprocessing logging queue listener')
+    if get_multiprocessing_logging_queue() is not None:
+        logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
+        # Sent None sentinel to stop the logging processing queue
+        __MP_LOGGING_QUEUE.put(None)
+        # Let's join the multiprocessing logging handle thread
+        __MP_LOGGING_QUEUE_PROCESS.join(1)
+        if __MP_LOGGING_QUEUE_PROCESS.is_alive():
+            # Process is still alive!?
+            __MP_LOGGING_QUEUE_PROCESS.terminate()
+        logging.getLogger(__name__).debug('Stopped the multiprocessing logging queue listener')
 
 
 def set_logger_level(logger_name, log_level='error'):
