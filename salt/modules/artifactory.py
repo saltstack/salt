@@ -259,7 +259,7 @@ def __save_artifact(artifact_url, target_file):
     }
 
     if os.path.isfile(target_file):
-        log.debug("File %s already exists, checking checksum...")
+        log.debug("File {0} already exists, checking checksum...".format(target_file))
         checksum_url = artifact_url + ".sha1"
 
         checksum_success, artifact_sum, checksum_comment = __download(checksum_url)
