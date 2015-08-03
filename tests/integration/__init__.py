@@ -57,6 +57,7 @@ import salt.output
 import salt.version
 import salt.utils
 import salt.utils.process
+import salt.log.setup as salt_log_setup
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
@@ -178,6 +179,9 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
+        # Setup the multiprocessing logging queue listener
+        salt_log_setup.setup_multiprocessing_logging_listener()
+
         # Set up PATH to mockbin
         self._enter_mockbin()
 

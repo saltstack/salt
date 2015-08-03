@@ -13,7 +13,6 @@ import time
 import errno
 import logging
 import tempfile
-import multiprocessing
 
 # Import third party libs
 import zmq
@@ -65,6 +64,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
+from salt.utils.process import MultiprocessingProcess
 
 try:
     import resource
@@ -125,7 +125,7 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(multiprocessing.Process):
+class Maintenance(MultiprocessingProcess):
     '''
     A generalized maintenance process which performances maintenance
     routines.
@@ -515,10 +515,10 @@ class Master(SMaster):
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             process_manager.kill_children()
-            raise SystemExit('\nExiting on Ctrl-c')
+            log.warn('Exiting on Ctrl-c')
 
 
-class Halite(multiprocessing.Process):
+class Halite(MultiprocessingProcess):
     '''
     Manage the Halite server
     '''
@@ -604,7 +604,10 @@ class ReqServer(object):
                                                    req_channels,
                                                    ),
                                              )
-        self.process_manager.run()
+        try:
+            self.process_manager.run()
+        except (KeyboardInterrupt, SystemExit):
+            self.process_manager.kill_children()
 
     def run(self):
         '''
@@ -613,7 +616,7 @@ class ReqServer(object):
         try:
             self.__bind()
         except KeyboardInterrupt:
-            log.warn('Stopping the Salt Master')
+            log.warn('Stopping the Salt Maste ReqServer')
             raise SystemExit('\nExiting on Ctrl-c')
 
     def destroy(self):
@@ -633,7 +636,7 @@ class ReqServer(object):
         self.destroy()
 
 
-class MWorker(multiprocessing.Process):
+class MWorker(MultiprocessingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.
@@ -653,7 +656,7 @@ class MWorker(multiprocessing.Process):
         :rtype: MWorker
         :return: Master worker
         '''
-        multiprocessing.Process.__init__(self)
+        MultiprocessingProcess.__init__(self)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -667,7 +670,7 @@ class MWorker(multiprocessing.Process):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        multiprocessing.Process.__init__(self)
+        MultiprocessingProcess.__init__(self)
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
@@ -692,7 +695,10 @@ class MWorker(multiprocessing.Process):
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            self.io_loop.add_callback(self.io_loop.stop)
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):

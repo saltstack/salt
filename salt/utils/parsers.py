@@ -125,6 +125,9 @@ class OptionParser(optparse.OptionParser, object):
     # Private attributes
     _mixin_prio_ = 100
 
+    # Setup multiprocessing logging queue listener
+    _setup_mp_logging_listener_ = False
+
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('version', '%prog {0}'.format(self.VERSION))
         kwargs.setdefault('usage', self.usage)
@@ -229,6 +232,12 @@ class OptionParser(optparse.OptionParser, object):
     def print_versions_report(self, file=sys.stdout):
         print('\n'.join(version.versions_report()), file=file)
         self.exit(salt.defaults.exitcodes.EX_OK)
+
+    def exit(self, status=0, msg=None):
+        if self._setup_mp_logging_listener_ is True:
+            # Stop the logging queue listener process
+            log.shutdown_multiprocessing_logging_listener()
+        optparse.OptionParser.exit(self, status, msg)
 
 
 class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
@@ -548,6 +557,8 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
         # Setup extended logging right before the last step
         self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
+        # Setup the multiprocessing log queue listener if enabled
+        self._mixin_after_parsed_funcs.append(self.__setup_mp_logging_listener)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -743,6 +754,15 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
 
     def __setup_extended_logging(self, *args):
         log.setup_extended_logging(self.config)
+
+    def _get_mp_logging_listener_queue(self):
+        return log.get_multiprocessing_logging_queue()
+
+    def __setup_mp_logging_listener(self, *args):
+        if self._setup_mp_logging_listener_:
+            log.setup_multiprocessing_logging_listener(
+                self._get_mp_logging_listener_queue()
+            )
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
@@ -1472,6 +1492,7 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
+    _setup_mp_logging_listener_ = True
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
@@ -1487,6 +1508,7 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _config_filename_ = 'minion'
     # LogLevelMixIn attributes
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'minion')
+    _setup_mp_logging_listener_ = True
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
@@ -1512,6 +1534,7 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
     _config_filename_ = 'master'
     # LogLevelMixIn attributes
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'master')
+    _setup_mp_logging_listener_ = True
 
     def setup_config(self):
         return config.syndic_config(

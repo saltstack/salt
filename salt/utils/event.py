@@ -379,6 +379,8 @@ class SaltEvent(object):
                 # Please do not use non-blocking mode here. Reliability is
                 # more important than pure speed on the event bus.
                 ret = self.get_event_block()
+            except KeyboardInterrupt:
+                return {'tag': 'salt/event/exit', 'data': {}}
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
@@ -916,6 +918,10 @@ class EventReturn(multiprocessing.Process):
                     self.flush_events()
                 if self.stop:
                     break
+        except KeyboardInterrupt:
+            if self.event_queue:
+                self.flush_events()
+            self.stop = True
         except zmq.error.ZMQError as exc:
             if exc.errno != errno.EINTR:  # Outside interrupt is a normal shutdown case
                 raise
