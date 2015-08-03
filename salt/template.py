@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.utils.odict import OrderedDict
 from salt._compat import string_io
 from salt.ext.six import string_types
 
@@ -78,10 +79,13 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        try:
-            input_data.seek(0)
-        except Exception as exp:
-            log.error('error: {0}'.format(exp))
+        # For GPG renderer, input_data can be an OrderedDict. Repress the
+        # error.
+        if not isinstance(input_data, OrderedDict):
+            try:
+                input_data.seek(0)
+            except Exception as exp:
+                log.error('error: {0}'.format(exp))
 
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)

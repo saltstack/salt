@@ -574,8 +574,9 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     # TODO: ACK the publish through IPC
     @tornado.gen.coroutine
     def publish_payload(self, payload, _):
-        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
         log.debug('TCP PubServer sending payload: {0}'.format(payload))
+        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
+
         to_remove = []
         for item in self.clients:
             client, address = item

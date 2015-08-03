@@ -307,6 +307,9 @@ VALID_OPTS = {
     # Specify the format for state outputs. See highstate outputter for additional details.
     'state_output': str,
 
+    # Tells the highstate outputter to only report diffs of states that changed
+    'state_output_diff': bool,
+
     # When true, states run in the order defined in an SLS file, unless requisites re-order them
     'state_auto_order': bool,
 
@@ -700,6 +703,7 @@ VALID_OPTS = {
     # Used by salt-api for master requests timeout
     'rest_timeout': int,
 
+    # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': str,
 }
 
@@ -815,6 +819,7 @@ DEFAULT_MINION_OPTS = {
     'cython_enable': False,
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -1018,6 +1023,7 @@ DEFAULT_MASTER_OPTS = {
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
