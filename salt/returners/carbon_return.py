@@ -23,6 +23,17 @@ the pickle protocol, set ``carbon.mode`` to ``pickle``:
 
     carbon.mode: pickle
 
+You can also specify the pattern used for the metric base path (except for virt modules metrics):
+    carbon.metric_base_pattern: carbon.[minion_id].[module].[function]
+
+These tokens can used :
+    [module]: salt module
+    [function]: salt function
+    [minion_id]: minion id
+
+Default is :
+    carbon.metric_base_pattern: [module].[function].[minion_id]
+
 Carbon settings may also be configured as:
 
 .. code-block:: yaml
@@ -32,6 +43,7 @@ Carbon settings may also be configured as:
       port: <carbon port>
       skip_on_error: True
       mode: (pickle|text)
+      metric_base_pattern: <pattern> | [module].[function].[minion_id]
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -209,6 +221,7 @@ def returner(ret):
     host = _options.get('host')
     port = _options.get('port')
     skip = _options.get('skip')
+    metric_base_pattern = _options.get('carbon.metric_base_pattern')
     if 'mode' in _options:
         mode = _options.get('mode').lower()
 
@@ -232,7 +245,13 @@ def returner(ret):
     # module since then we will get stable metric bases even if the VM is
     # migrate from host to host
     if not metric_base.startswith('virt.'):
-        metric_base += '.' + ret['id'].replace('.', '_')
+        minion_id = ret['id'].replace('.', '_')
+        if metric_base_pattern is not None:
+            [module, function] = ret['fun'].split('.')
+            metric_base = metric_base_pattern.replace("[module]", module).replace("[function]", function).replace("[minion_id]", minion_id)
+        else:
+            metric_base += '.' + minion_id
+        log.debug('Carbon metric_base : %s', metric_base)
 
     metrics = []
     _walk(metric_base, saltdata, metrics, timestamp, skip)
