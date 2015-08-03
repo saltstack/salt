@@ -689,6 +689,8 @@ class TestDaemon(object):
             pass
         self._exit_mockbin()
         self._exit_ssh()
+        # Shutdown the multiprocessing logging queue listener
+        salt_log_setup.shutdown_multiprocessing_logging_listener()
 
     def pre_setup_minions(self):
         '''
