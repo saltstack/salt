@@ -45,7 +45,7 @@ def active(outputter=None, display_progress=False):
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         active_ = client.cmd('*', 'saltutil.running', timeout=__opts__['timeout'])
-    except SaltClientError as client_error:
+    except six.SaltClientError as client_error:
         print(client_error)
         return ret
 

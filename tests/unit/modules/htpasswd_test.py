@@ -52,7 +52,7 @@ class HtpasswdTestCase(TestCase):
                                                   'larry', 'badpassword'),
                                  {'out': 'Salt'})
 
-    # 'userdel' function tests: 2
+    # 'userdel' function tests: 1
 
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_userdel(self):
@@ -64,13 +64,6 @@ class HtpasswdTestCase(TestCase):
             self.assertEqual(htpasswd.userdel('/etc/httpd/htpasswd',
                                               'larry'), ['Salt'])
 
-    @patch('os.path.exists', MagicMock(return_value=False))
-    def test_userdel_missing_htpasswd(self):
-        '''
-        Test if it returns error when no htpasswd file exists
-        '''
-        self.assertEqual(htpasswd.userdel('/etc/httpd/htpasswd', 'larry'),
-                         'Error: The specified htpasswd file does not exist')
 
 if __name__ == '__main__':
     from integration import run_tests
