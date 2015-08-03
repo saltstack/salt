@@ -781,7 +781,7 @@ def setup_multiprocessing_logging(queue):
 
 
 def shutdown_multiprocessing_logging_listener():
-    if get_multiprocessing_logging_queue() is not None:
+    if __MP_LOGGING_QUEUE_PROCESS.is_alive():
         logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
         # Sent None sentinel to stop the logging processing queue
         __MP_LOGGING_QUEUE.put(None)
