@@ -3315,9 +3315,11 @@ def get_managed(
                 return '', {}, 'Source file {0} not found'.format(source)
         # if its a local file
         elif urlparsed_source.scheme == 'file':
-            source_sum = get_hash(urlparsed_source.path)
+            file_sum = get_hash(urlparsed_source.path, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         elif source.startswith('/'):
-            source_sum = get_hash(source)
+            file_sum = get_hash(source, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         elif source_hash:
             protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3')
             if _urlparse(source_hash).scheme in protos:

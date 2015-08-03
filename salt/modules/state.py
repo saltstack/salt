@@ -103,9 +103,9 @@ def _wait(jid):
 
 def running(concurrent=False):
     '''
-    Return a dict of state return data if a state function is already running.
-    This function is used to prevent multiple state calls from being run at
-    the same time.
+    Return a list of strings that contain state return data if a state function is
+    already running. This function is used to prevent multiple state calls from being
+    run at the same time.
 
     CLI Example:
 

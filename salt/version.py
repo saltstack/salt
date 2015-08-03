@@ -552,6 +552,7 @@ def dependency_information(include_salt_cloud=False):
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
+        ('timelib', 'timelib', 'version'),
     ]
 
     if include_salt_cloud:
