@@ -106,6 +106,13 @@ class OptionParserMeta(MixInMeta):
         return instance
 
 
+class CustomOption(optparse.Option, object):
+    def take_action(self, action, dest, *args, **kwargs):
+        # see https://github.com/python/cpython/blob/master/Lib/optparse.py#L786
+        self.explicit = True
+        return optparse.Option.take_action(self, action, dest, *args, **kwargs)
+
+
 class OptionParser(optparse.OptionParser, object):
     VERSION = version.__saltstack_version__.formatted_version
 
@@ -131,6 +138,13 @@ class OptionParser(optparse.OptionParser, object):
 
         if self.epilog and '%prog' in self.epilog:
             self.epilog = self.epilog.replace('%prog', self.get_prog_name())
+
+    option_class = CustomOption
+
+    def add_option_group(self, *args, **kwargs):
+        option_group = optparse.OptionParser.add_option_group(self, *args, **kwargs)
+        option_group.option_class = CustomOption
+        return option_group
 
     def parse_args(self, args=None, values=None):
         options, args = optparse.OptionParser.parse_args(self, args, values)
@@ -254,10 +268,11 @@ class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
                 if value is not None:
                     # There's an actual value, add it to the config
                     self.config[option.dest] = value
-            elif value is not None and value != default:
-                # Only set the value in the config file IF it's not the default
-                # value, this makes it possible to tweak settings on the
-                # configuration files bypassing the shell option flags
+            elif value is not None and getattr(option, "explicit", False):
+                # Only set the value in the config file IF it was explicitly
+                # specified by the user, this makes it possible to tweak settings
+                # on the configuration files bypassing the shell option flags'
+                # defaults
                 self.config[option.dest] = value
             elif option.dest in self.config:
                 # Let's update the option value with the one from the
@@ -278,11 +293,11 @@ class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
                     if value is not None:
                         # There's an actual value, add it to the config
                         self.config[option.dest] = value
-                elif value is not None and value != default:
-                    # Only set the value in the config file IF it's not the
-                    # default value, this makes it possible to tweak settings
-                    # on the configuration files bypassing the shell option
-                    # flags
+                elif value is not None and getattr(option, "explicit", False):
+                    # Only set the value in the config file IF it was explicitly
+                    # specified by the user, this makes it possible to tweak
+                    # settings on the configuration files bypassing the shell
+                    # option flags' defaults
                     self.config[option.dest] = value
                 elif option.dest in self.config:
                     # Let's update the option value with the one from the
