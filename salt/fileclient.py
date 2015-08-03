@@ -563,7 +563,9 @@ class Client(object):
                                     service_url=self.opts.get('s3.service_url',
                                                               None),
                                     verify_ssl=self.opts.get('s3.verify_ssl',
-                                                             True))
+                                                              True),
+                                    location=self.opts.get('s3.location',
+                                                              None))
                 return dest
             except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))

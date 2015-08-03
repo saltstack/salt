@@ -1582,7 +1582,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             '-p', '--progress',
             default=False,
             action='store_true',
-            help=('Display a progress graph')
+            help=('Display a progress graph. [Requires `progressbar` python package.]')
         )
         self.add_option(
             '--failhard',

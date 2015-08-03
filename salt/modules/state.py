@@ -734,6 +734,7 @@ def sls(mods,
 def top(topfn,
         test=None,
         queue=False,
+        saltenv=None,
         **kwargs):
     '''
     Execute a specific top file instead of the default
@@ -770,6 +771,8 @@ def top(topfn,
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
+    if saltenv:
+        st_.opts['state_top_saltenv'] = saltenv
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),

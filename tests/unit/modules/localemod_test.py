@@ -114,7 +114,7 @@ class LocalemodTestCase(TestCase):
         '''
         Tests the return of successful gen_locale on Debian system without a charmap
         '''
-        def file_search(search, pattern):
+        def file_search(search, pattern, flags):
             '''
             mock file.search
             '''
@@ -164,7 +164,7 @@ class LocalemodTestCase(TestCase):
         '''
         Tests the return of successful gen_locale on Gentoo system without a charmap
         '''
-        def file_search(search, pattern):
+        def file_search(search, pattern, flags):
             '''
             mock file.search
             '''
