@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Windows Package Repository
+
+.. note::
+
+    This state only loads on minions that have the ``roles: salt-master`` grain
+    set.
 '''
 from __future__ import absolute_import
 
@@ -30,8 +35,14 @@ def genrepo(name, force=False, allow_empty=False):
     '''
     Refresh the winrepo.p file of the repository (salt-run winrepo.genrepo)
 
-    if force is True no checks will be made and the repository will be generated
-    if allow_empty is True then the state will not return an error if there are 0 packages
+    If ``force`` is ``True`` no checks will be made and the repository will be
+    generated if ``allow_empty`` is ``True`` then the state will not return an
+    error if there are 0 packages,
+
+    .. note::
+
+        This state only loads on minions that have the ``roles: salt-master``
+        grain set.
 
     Example:
 

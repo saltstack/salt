@@ -162,6 +162,8 @@ VALID_OPTS = {
     # Allows a user to provide an alternate name for top.sls
     'state_top': str,
 
+    'state_top_saltenv': str,
+
     # States to run when a minion starts up
     'startup_states': str,
 
@@ -738,6 +740,7 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'extension_modules': '',
     'state_top': 'top.sls',
+    'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
@@ -986,6 +989,7 @@ DEFAULT_MASTER_OPTS = {
     'renderer': 'yaml_jinja',
     'failhard': False,
     'state_top': 'top.sls',
+    'state_top_saltenv': None,
     'master_tops': {},
     'order_masters': False,
     'job_cache': True,

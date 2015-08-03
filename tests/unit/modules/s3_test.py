@@ -33,7 +33,7 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl')):
+                                        'verify_ssl', 'location')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.delete('bucket'), 'A')
 
@@ -44,7 +44,7 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl')):
+                                        'verify_ssl', 'location')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.get(), 'A')
 
@@ -54,7 +54,7 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl')):
+                                        'verify_ssl', 'location')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.head('bucket'), 'A')
 
@@ -64,7 +64,7 @@ class S3TestCase(TestCase):
         '''
         with patch.object(s3, '_get_key',
                           return_value=('key', 'keyid', 'service_url',
-                                        'verify_ssl')):
+                                        'verify_ssl', 'location')):
             with patch.object(salt.utils.s3, 'query', return_value='A'):
                 self.assertEqual(s3.put('bucket'), 'A')
 
