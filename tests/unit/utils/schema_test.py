@@ -1880,6 +1880,61 @@ class ConfigTestCase(TestCase):
             jsonschema.validate({'item': [False]}, TestConf.serialize())
         self.assertIn('is not allowed for', excinfo.exception.message)
 
+    def test_item_name_override_class_attrname(self):
+        class TestConf(schema.Schema):
+            item = schema.BooleanItem(name='hungry', title='Hungry', description='Are you hungry?')
+
+        expected = {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "hungry": {
+                    "type": "boolean",
+                    "description": "Are you hungry?",
+                    "title": "Hungry"
+                }
+            },
+            "x-ordering": [
+                "hungry"
+            ],
+            "additionalProperties": False
+        }
+        self.assertDictEqual(TestConf.serialize(), expected)
+
+    def test_config_name_override_class_attrname(self):
+        class TestConf(schema.Schema):
+            item = schema.BooleanItem(title='Hungry', description='Are you hungry?')
+
+        class TestConf2(schema.Schema):
+            a_name = TestConf(name='another_name')
+
+        expected = {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "another_name": {
+                    "id": "https://non-existing.saltstack.com/schemas/another_name.json#",
+                    "type": "object",
+                    "properties": {
+                        "item": {
+                            "type": "boolean",
+                            "description": "Are you hungry?",
+                            "title": "Hungry"
+                        }
+                    },
+                    "x-ordering": [
+                        "item"
+                    ],
+                    "additionalProperties": False
+                }
+            },
+            "x-ordering": [
+                "another_name"
+            ],
+            "additionalProperties": False
+        }
+        self.assertDictEqual(TestConf2.serialize(), expected)
+
 
 if __name__ == '__main__':
     from integration import run_tests
