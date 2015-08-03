@@ -84,6 +84,14 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Minimum versions for backend providers
+GITPYTHON_MINVER = '0.3'
+PYGIT2_MINVER = '0.20.3'
+LIBGIT2_MINVER = '0.20.0'
+# dulwich.__version__ is a versioninfotuple so we can compare tuples
+# instead of using distutils.version.LooseVersion
+DULWICH_MINVER = (0, 9, 4)
+
 
 def failhard(role):
     '''
@@ -1785,15 +1793,14 @@ class GitBase(object):
 
         # pylint: disable=no-member
         gitver = distutils.version.LooseVersion(git.__version__)
-        minver_str = '0.3.0'
-        minver = distutils.version.LooseVersion(minver_str)
+        minver = distutils.version.LooseVersion(GITPYTHON_MINVER)
         # pylint: enable=no-member
         errors = []
         if gitver < minver:
             errors.append(
                 'Git fileserver backend is enabled in master config file, but '
                 'the GitPython version is earlier than {0}. Version {1} '
-                'detected.'.format(minver_str, git.__version__)
+                'detected.'.format(GITPYTHON_MINVER, git.__version__)
             )
         if not salt.utils.which('git'):
             errors.append(
@@ -1837,12 +1844,10 @@ class GitBase(object):
 
         # pylint: disable=no-member
         pygit2ver = distutils.version.LooseVersion(pygit2.__version__)
-        pygit2_minver_str = '0.20.3'
-        pygit2_minver = distutils.version.LooseVersion(pygit2_minver_str)
+        pygit2_minver = distutils.version.LooseVersion(PYGIT2_MINVER)
 
         libgit2ver = distutils.version.LooseVersion(pygit2.LIBGIT2_VERSION)
-        libgit2_minver_str = '0.20.0'
-        libgit2_minver = distutils.version.LooseVersion(libgit2_minver_str)
+        libgit2_minver = distutils.version.LooseVersion(LIBGIT2_MINVER)
         # pylint: enable=no-member
 
         errors = []
@@ -1850,13 +1855,13 @@ class GitBase(object):
             errors.append(
                 'Git fileserver backend is enabled in master config file, but '
                 'pygit2 version is earlier than {0}. Version {1} detected.'
-                .format(pygit2_minver_str, pygit2.__version__)
+                .format(PYGIT2_MINVER, pygit2.__version__)
             )
         if libgit2ver < libgit2_minver:
             errors.append(
                 'Git fileserver backend is enabled in master config file, but '
                 'libgit2 version is earlier than {0}. Version {1} detected.'
-                .format(libgit2_minver_str, pygit2.LIBGIT2_VERSION)
+                .format(LIBGIT2_MINVER, pygit2.LIBGIT2_VERSION)
             )
         if not salt.utils.which('git'):
             errors.append(
@@ -1896,16 +1901,13 @@ class GitBase(object):
         elif 'dulwich' not in self.valid_providers:
             return False
 
-        dulwich_version = dulwich.__version__
-        dulwich_min_version = (0, 9, 4)
-
         errors = []
 
-        if dulwich_version < dulwich_min_version:
+        if dulwich.__version__ < DULWICH_MINVER:
             errors.append(
                 'Git fileserver backend is enabled in the master config file, but '
                 'the installed version of Dulwich is earlier than {0}. Version {1} '
-                'detected.'.format(dulwich_min_version, dulwich_version)
+                'detected.'.format(DULWICH_MINVER, dulwich.__version__)
             )
 
         if errors:
