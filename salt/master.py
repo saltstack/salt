@@ -13,7 +13,6 @@ import time
 import errno
 import logging
 import tempfile
-import multiprocessing
 
 # Import third party libs
 import zmq
@@ -65,6 +64,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
+from salt.utils.process import MultiprocessingProcess
 
 try:
     import resource
@@ -125,7 +125,7 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(multiprocessing.Process):
+class Maintenance(MultiprocessingProcess):
     '''
     A generalized maintenance process which performances maintenance
     routines.
@@ -518,7 +518,7 @@ class Master(SMaster):
             log.warn('Exiting on Ctrl-c')
 
 
-class Halite(multiprocessing.Process):
+class Halite(MultiprocessingProcess):
     '''
     Manage the Halite server
     '''
@@ -636,7 +636,7 @@ class ReqServer(object):
         self.destroy()
 
 
-class MWorker(multiprocessing.Process):
+class MWorker(MultiprocessingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.
@@ -656,7 +656,7 @@ class MWorker(multiprocessing.Process):
         :rtype: MWorker
         :return: Master worker
         '''
-        multiprocessing.Process.__init__(self)
+        MultiprocessingProcess.__init__(self)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -670,7 +670,7 @@ class MWorker(multiprocessing.Process):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        multiprocessing.Process.__init__(self)
+        MultiprocessingProcess.__init__(self)
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
