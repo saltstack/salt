@@ -46,7 +46,7 @@ def add(overlay):
     ret = list()
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
-    __salt__['cmd.retcode'](cmd, python_shell=False)
+    __salt__['cmd.retcode'](cmd, python_shell=False, stdin='y')
     new_overlays = list_local()
 
     # If we did not have any overlays before and we successfully added
