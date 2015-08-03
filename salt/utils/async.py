@@ -19,6 +19,21 @@ import contextlib
 import weakref
 
 
+class Any(tornado.concurrent.Future):
+    '''
+    Future that wraps other futures to "block" until one is done
+    '''
+    def __init__(self, futures):  # pylint: disable=E1002
+        super(Any, self).__init__()
+        for future in futures:
+            future.add_done_callback(self.done_callback)
+
+    def done_callback(self, future):
+        # Any is completed once one is done, we don't set for the rest
+        if not self.done():
+            self.set_result(future)
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     '''

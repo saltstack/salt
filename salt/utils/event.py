@@ -65,6 +65,7 @@ from collections import MutableMapping
 
 # Import third party libs
 import salt.ext.six as six
+import tornado.ioloop
 try:
     import zmq
     import zmq.eventloop.ioloop
@@ -84,6 +85,7 @@ import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.process
 import salt.utils.zeromq
+import salt.transport.ipc
 
 log = logging.getLogger(__name__)
 
@@ -174,8 +176,6 @@ class SaltEvent(object):
     '''
     def __init__(self, node, sock_dir=None, opts=None, listen=True):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
-        self.context = zmq.Context()
-        self.poller = zmq.Poller()
         self.cpub = False
         self.cpush = False
         if opts is None:
@@ -275,11 +275,12 @@ class SaltEvent(object):
         '''
         Establish the publish connection
         '''
-        self.sub = self.context.socket(zmq.SUB)
-        self.sub.connect(self.puburi)
-        self.poller.register(self.sub, zmq.POLLIN)
-        self.sub.setsockopt_string(zmq.SUBSCRIBE, u'')
-        self.sub.setsockopt(zmq.LINGER, 5000)
+        self.sub = salt.utils.async.SyncWrapper(
+            salt.transport.ipc.IPCMessageClient,
+            (self.puburi,)
+        )
+        self.sub.subscribe()
+        self.sub.connect_async()
         self.cpub = True
 
     def connect_pull(self, timeout=1000):
@@ -288,9 +289,11 @@ class SaltEvent(object):
         Set the linger timeout of the socket options to timeout (in milliseconds)
         Default timeout is 1000 ms
         '''
-        self.push = self.context.socket(zmq.PUSH)
-        self.push.setsockopt(zmq.LINGER, timeout)
-        self.push.connect(self.pulluri)
+        self.push = salt.utils.async.SyncWrapper(
+            salt.transport.ipc.IPCMessageClient,
+            (self.pulluri,)
+        )
+        self.push.connect_async()
         self.cpush = True
 
     @classmethod
@@ -371,19 +374,11 @@ class SaltEvent(object):
         timeout_at = start + wait
         while not wait or time.time() <= timeout_at:
             try:
-                # convert to milliseconds
-                socks = dict(self.poller.poll(wait * 1000))
-                if socks.get(self.sub) != zmq.POLLIN:
-                    continue
-
-                # Please do not use non-blocking mode here. Reliability is
-                # more important than pure speed on the event bus.
-                ret = self.get_event_block()
-            except zmq.ZMQError as ex:
-                if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                    continue
-                else:
-                    raise
+                recv_timeout = (timeout_at - time.time()) if wait > 0 else None
+                raw = self.sub.recv(timeout=recv_timeout)
+                ret = self._deserialize_event(raw)
+            except Exception as ex:  # TODO: more specific exception
+                continue
 
             if not match_func(ret['tag'], tag):     # tag not match
                 if any(match_func(ret['tag'], ptag) for ptag in pending_tags):
@@ -448,6 +443,10 @@ class SaltEvent(object):
         else:
             return ret['data']
 
+    def _deserialize_event(self, raw):
+        mtag, data = self.unpack(raw, self.serial)
+        return {'data': data, 'tag': mtag}
+
     def get_event_noblock(self):
         '''Get the raw event without blocking or any other niceties
         '''
@@ -503,7 +502,7 @@ class SaltEvent(object):
         log.debug('Sending event - data = {0}'.format(data))
         event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
         try:
-            self.push.send(salt.utils.to_bytes(event, 'utf-8'))
+            self.push.publish(salt.utils.to_bytes(event, 'utf-8'))
         except Exception as ex:
             log.debug(ex)
             raise
@@ -532,31 +531,6 @@ class SaltEvent(object):
             self.sub.close()
         if self.cpush is True and self.push.closed is False:
             self.push.close()
-        # If sockets are not unregistered from a poller, nothing which touches
-        # that poller gets garbage collected. The Poller itself, its
-        # registered sockets and the Context
-        if isinstance(self.poller.sockets, dict):
-            for socket in six.iterkeys(self.poller.sockets):
-                if socket.closed is False:
-                    socket.setsockopt(zmq.LINGER, linger)
-                    socket.close()
-                self.poller.unregister(socket)
-        else:
-            for socket in self.poller.sockets:
-                if socket[0].closed is False:
-                    socket[0].setsockopt(zmq.LINGER, linger)
-                    socket[0].close()
-                self.poller.unregister(socket[0])
-        if self.context.closed is False:
-            self.context.term()
-
-        # Hardcore destruction
-        if hasattr(self.context, 'destroy'):
-            self.context.destroy(linger=1)
-
-        # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
-        # Assertion failed: get_load () == 0 (poller_base.cpp:32)
-        time.sleep(0.025)
 
     def fire_ret_load(self, load):
         '''
@@ -657,7 +631,6 @@ class AsyncEventPublisher(object):
         self.publish_handler = publish_handler
 
         self.io_loop = io_loop or zmq.eventloop.ioloop.ZMQIOLoop()
-        self.context = zmq.Context()
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         # Only use the first 10 chars to keep longer hashes from exceeding the
@@ -675,8 +648,6 @@ class AsyncEventPublisher(object):
         )
         if os.path.exists(epull_sock_path):
             os.unlink(epull_sock_path)
-
-        self.epub_sock = self.context.socket(zmq.PUB)
 
         if self.opts.get('ipc_mode', '') == 'tcp':
             epub_uri = 'tcp://127.0.0.1:{0}'.format(
@@ -700,6 +671,17 @@ class AsyncEventPublisher(object):
             '{0} PULL socket URI: {1}'.format(
                 self.__class__.__name__, epull_uri
             )
+        )
+
+        self.epub_sock = salt.transport.ipc.IPCMessageServer(
+            epub_uri,
+            io_loop=self.io_loop,
+        )
+
+        self.epull_sock = salt.transport.ipc.IPCMessageServer(
+            epull_uri,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_publish,
         )
 
         # Check to make sure the sock_dir is available, create if not
@@ -729,31 +711,24 @@ class AsyncEventPublisher(object):
                     # Let's stop at this stage
                     raise
 
-        # Create the pull socket
-        self.epull_sock = self.context.socket(zmq.PULL)
-
         # Securely bind the event sockets
         if self.opts.get('ipc_mode', '') != 'tcp':
             old_umask = os.umask(0o177)
         try:
             log.info('Starting pub socket on {0}'.format(epub_uri))
-            self.epub_sock.bind(epub_uri)
+            self.epub_sock.start()
             log.info('Starting pull socket on {0}'.format(epull_uri))
-            self.epull_sock.bind(epull_uri)
+            self.epull_sock.start()
         finally:
             if self.opts.get('ipc_mode', '') != 'tcp':
                 os.umask(old_umask)
 
-        self.stream = zmq.eventloop.zmqstream.ZMQStream(self.epull_sock, io_loop=self.io_loop)
-        self.stream.on_recv(self.handle_publish)
-
-    def handle_publish(self, package):
+    def handle_publish(self, package, _):
         '''
         Get something from epull, publish it out epub, and return the package (or None)
         '''
-        package = package[0]
         try:
-            self.epub_sock.send(package)
+            self.epub_sock.publish(package)
             self.io_loop.spawn_callback(self.publish_handler, package)
             return package
         # Add an extra fallback in case a forked process leeks through
@@ -796,13 +771,8 @@ class EventPublisher(multiprocessing.Process):
         Bind the pub and pull sockets for events
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
-        linger = 5000
-        # Set up the context
-        self.context = zmq.Context(1)
-        # Prepare the master event publisher
-        self.epub_sock = self.context.socket(zmq.PUB)
-        # Prepare master event pull socket
-        self.epull_sock = self.context.socket(zmq.PULL)
+        self.io_loop = tornado.ioloop.IOLoop()
+
         if self.opts.get('ipc_mode', '') == 'tcp':
             epub_uri = 'tcp://127.0.0.1:{0}'.format(
                 self.opts.get('tcp_master_pub_port', 4512)
@@ -820,38 +790,42 @@ class EventPublisher(multiprocessing.Process):
                 )
             salt.utils.zeromq.check_ipc_path_max_len(epull_uri)
 
-        # Start the master event publisher
-        old_umask = os.umask(0o177)
+        self.epub_sock = salt.transport.ipc.IPCMessageServer(
+            epub_uri,
+            io_loop=self.io_loop,
+        )
+        self.epull_sock = salt.transport.ipc.IPCMessageServer(
+            epull_uri,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_publish,
+        )
+
+        self.epub_sock.start()
+        self.epull_sock.start()
         try:
-            self.epull_sock.bind(epull_uri)
-            self.epub_sock.bind(epub_uri)
-            if (self.opts.get('ipc_mode', '') != 'tcp' and (
-                    self.opts.get('client_acl') or
-                    self.opts.get('external_auth'))):
-                os.chmod(os.path.join(
-                    self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
-        finally:
-            os.umask(old_umask)
-        try:
-            while True:
-                # Catch and handle EINTR from when this process is sent
-                # SIGUSR1 gracefully so we don't choke and die horribly
-                try:
-                    package = self.epull_sock.recv()
-                    self.epub_sock.send(package)
-                except zmq.ZMQError as exc:
-                    if exc.errno == errno.EINTR:
-                        continue
-                    raise exc
+            self.io_loop.start()
         except KeyboardInterrupt:
-            if self.epub_sock.closed is False:
-                self.epub_sock.setsockopt(zmq.LINGER, linger)
-                self.epub_sock.close()
-            if self.epull_sock.closed is False:
-                self.epull_sock.setsockopt(zmq.LINGER, linger)
-                self.epull_sock.close()
-            if self.context.closed is False:
-                self.context.term()
+            self.epub_sock.close()
+            self.epull_sock.close()
+
+    def handle_publish(self, package, _):
+        '''
+        Get something from epull, publish it out epub, and return the package (or None)
+        '''
+        try:
+            self.epub_sock.publish(package)
+            return package
+        # Add an extra fallback in case a forked process leeks through
+        except zmq.ZMQError as exc:
+            # The interrupt caused by python handling the
+            # SIGCHLD. Throws this error with errno == EINTR.
+            # Nothing to receive on the zmq socket throws this error
+            # with EAGAIN.
+            # Both are safe to ignore
+            if exc.errno != errno.EAGAIN and exc.errno != errno.EINTR:
+                log.critical('Unexpected ZMQError while polling minion',
+                             exc_info=True)
+            return None
 
 
 class EventReturn(multiprocessing.Process):
