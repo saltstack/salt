@@ -221,7 +221,7 @@ def returner(ret):
     host = _options.get('host')
     port = _options.get('port')
     skip = _options.get('skip')
-    metric_base_pattern = options.get('carbon.metric_base_pattern')
+    metric_base_pattern = _options.get('carbon.metric_base_pattern')
     if 'mode' in _options:
         mode = _options.get('mode').lower()
 
