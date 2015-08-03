@@ -45,6 +45,7 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
+            pip_ignore_installed=False,
             proxy=None,
             use_vt=False,
             env_vars=None):
@@ -58,6 +59,13 @@ def managed(name,
         the file will be transferred from the master file server.
     cwd
         Path to the working directory where "pip install" is executed.
+    user
+        The user under which to run virtualenv and pip
+    no_chown: False
+        When user is given, do not attempt to copy and chown
+        a requirements file (needed if the requirements file refers to other
+        files via relative paths, as the copy-and-chown procedure does not
+        account for such files)
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
     no_deps: False
@@ -194,6 +202,7 @@ def managed(name,
             no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
+            ignore_installed=pip_ignore_installed,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,

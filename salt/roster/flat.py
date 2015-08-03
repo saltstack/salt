@@ -27,7 +27,10 @@ def targets(tgt, tgt_type='glob', **kwargs):
 
     rend = salt.loader.render(__opts__, {})
     raw = compile_template(template, rend, __opts__['renderer'], **kwargs)
-    rmatcher = RosterMatcher(raw, tgt, tgt_type, 'ipv4')
+    conditioned_raw = {}
+    for minion in raw:
+        conditioned_raw[str(minion)] = raw[minion]
+    rmatcher = RosterMatcher(conditioned_raw, tgt, tgt_type, 'ipv4')
     return rmatcher.targets()
 
 

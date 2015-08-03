@@ -128,8 +128,9 @@ log = logging.getLogger(__name__)
 available = True
 
 # prefer C bindings over python when available
+# CSafeDumper causes test failures under python3
 BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -241,8 +242,10 @@ class Loader(BaseLoader):  # pylint: disable=W0232
         Build the SLSString.
         '''
 
-        # Ensure obj must be str not unicode
-        obj = self.construct_scalar(node).encode('utf-8')
+        # Ensure obj is str, not py2 unicode or py3 bytes
+        obj = self.construct_scalar(node)
+        if six.PY2:
+            obj = obj.encode('utf-8')
         return SLSString(obj)
 
     def construct_sls_int(self, node):
@@ -355,7 +358,7 @@ class SLSString(str):
         >>> print 'foo'
         foo
 
-        >>> sls_scalar = SLSMap(scalar)
+        >>> sls_scalar = SLSString(scalar)
         >>> print sls_scalar
         "foo"
 
@@ -384,15 +387,15 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
         return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
-Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
-try:
+if six.PY2:
+    Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-except AttributeError:
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
+else:
+    Dumper.add_multi_representer(six.binary_type, Dumper.represent_binary)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
-if six.PY2:
-    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
 Dumper.add_multi_representer(float, Dumper.represent_float)
 Dumper.add_multi_representer(list, Dumper.represent_list)
 Dumper.add_multi_representer(tuple, Dumper.represent_list)

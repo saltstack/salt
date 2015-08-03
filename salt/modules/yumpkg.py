@@ -33,6 +33,12 @@ try:
 except ImportError:
     from salt.ext.six.moves import configparser
     HAS_YUM = False
+
+try:
+    import rpmUtils.miscutils
+    HAS_RPMUTILS = True
+except ImportError:
+    HAS_RPMUTILS = False
 # pylint: enable=import-error
 
 # Import salt libs
@@ -444,6 +450,42 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
+def version_cmp(pkg1, pkg2):
+    '''
+    .. versionadded:: 2015.5.4
+
+    Do a cmp-style comparison on two packages. Return -1 if pkg1 < pkg2, 0 if
+    pkg1 == pkg2, and 1 if pkg1 > pkg2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    if HAS_RPMUTILS:
+        try:
+            cmp_result = rpmUtils.miscutils.compareEVR(
+                rpmUtils.miscutils.stringToVersion(pkg1),
+                rpmUtils.miscutils.stringToVersion(pkg2)
+            )
+            if cmp_result not in (-1, 0, 1):
+                raise Exception(
+                    'cmp result \'{0}\' is invalid'.format(cmp_result)
+                )
+            return cmp_result
+        except Exception as exc:
+            log.warning(
+                'Failed to compare version \'{0}\' to \'{1}\' using '
+                'rpmUtils: {2}'.format(pkg1, pkg2, exc)
+            )
+    # Fall back to distutils.version.LooseVersion (should only need to do
+    # this for RHEL5, or if an exception is raised when attempting to compare
+    # using rpmUtils)
+    return salt.utils.version_cmp(pkg1, pkg2)
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
     List the packages currently installed in a dict::
@@ -785,7 +827,7 @@ def install(name=None,
         ``yum reinstall`` will only be used if the installed version
         matches the requested version.
 
-        Works with sources when the package header of the source can be
+        Works with ``sources`` when the package header of the source can be
         matched to the name and version of an installed package.
 
         .. versionadded:: 2014.7.0
@@ -845,11 +887,11 @@ def install(name=None,
 
             salt '*' pkg.install sources='[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
 
-    normalize
-        Normalize the package name by removing the architecture.  Default is True.
-        This is useful for poorly created packages which might include the
-        architecture as an actual part of the name such as kernel modules
-        which match a specific kernel version.
+    normalize : True
+        Normalize the package name by removing the architecture. This is useful
+        for poorly created packages which might include the architecture as an
+        actual part of the name such as kernel modules which match a specific
+        kernel version.
 
         .. code-block:: bash
 
@@ -959,11 +1001,13 @@ def install(name=None,
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
-                                                    ver2=cver):
+                                                    ver2=cver,
+                                                    cmp_func=version_cmp):
                 to_reinstall[pkgname] = pkgstr
             elif not cver or salt.utils.compare_versions(ver1=version_num,
                                                          oper='>=',
-                                                         ver2=cver):
+                                                         ver2=cver,
+                                                         cmp_func=version_cmp):
                 targets.append(pkgstr)
             else:
                 downgrade.append(pkgstr)
@@ -1174,9 +1218,12 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.hold <package name>
         salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
-    if 'yum-plugin-versionlock' not in list_pkgs():
+
+    on_redhat_5 = __grains__.get('osmajorrelease', None) == '5'
+    lock_pkg = 'yum-versionlock' if on_redhat_5 else 'yum-plugin-versionlock'
+    if lock_pkg not in list_pkgs():
         raise SaltInvocationError(
-            'Packages cannot be held, yum-plugin-versionlock is not installed.'
+            'Packages cannot be held, {0} is not installed.'.format(lock_pkg)
         )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
@@ -1267,9 +1314,12 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         salt '*' pkg.unhold <package name>
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
-    if 'yum-plugin-versionlock' not in list_pkgs():
+
+    on_redhat_5 = __grains__.get('osmajorrelease', None) == '5'
+    lock_pkg = 'yum-versionlock' if on_redhat_5 else 'yum-plugin-versionlock'
+    if lock_pkg not in list_pkgs():
         raise SaltInvocationError(
-            'Packages cannot be unheld, yum-plugin-versionlock is not installed.'
+            'Packages cannot be unheld, {0} is not installed.'.format(lock_pkg)
         )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
@@ -1352,9 +1402,9 @@ def get_locked_packages(pattern=None, full=True):
             _pat = r'\d\:({0}\-\S+)'.format(pattern)
     else:
         if full:
-            _pat = r'(\d\:\w+\-\S+)'
+            _pat = r'(\d\:\w+(?:[\.\-][^\-]+)*-\S+)'
         else:
-            _pat = r'\d\:(\w+\-\S+)'
+            _pat = r'\d\:(\w+(?:[\.\-][^\-]+)*-\S+)'
     pat = re.compile(_pat)
 
     current_locks = []

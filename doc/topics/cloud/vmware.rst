@@ -2,7 +2,7 @@
 Getting Started With VMware
 ===========================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.5.4
 
 **Author**: Nitin Madhok <nmadhok@clemson.edu>
 
@@ -33,19 +33,19 @@ set up in the cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      provider: vmware
+      driver: vmware
       user: "DOMAIN\user"
       password: "verybadpass"
       url: "vcenter01.domain.com"
 
     vmware-vcenter02:
-      provider: vmware
+      driver: vmware
       user: "DOMAIN\user"
       password: "verybadpass"
       url: "vcenter02.domain.com"
 
     vmware-vcenter03:
-      provider: vmware
+      driver: vmware
       user: "DOMAIN\user"
       password: "verybadpass"
       url: "vcenter03.domain.com"

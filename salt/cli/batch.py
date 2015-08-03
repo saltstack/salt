@@ -162,8 +162,11 @@ class Batch(object):
                             continue
                         if self.opts.get('raw'):
                             parts.update({part['id']: part})
+                            minion_tracker[queue]['minions'].remove(part['id'])
                         else:
                             parts.update(part)
+                            for id in part.keys():
+                                minion_tracker[queue]['minions'].remove(id)
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive
@@ -181,7 +184,8 @@ class Batch(object):
                                 parts[minion]['ret'] = {}
 
             for minion, data in six.iteritems(parts):
-                active.remove(minion)
+                if minion in active:
+                    active.remove(minion)
                 if self.opts.get('raw'):
                     yield data
                 else:

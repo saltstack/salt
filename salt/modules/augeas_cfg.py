@@ -130,7 +130,8 @@ def execute(context=None, lens=None, commands=()):
 
         try:
             if method == 'set':
-                path, value, remainder = re.split('([^\'" ]+|"[^"]+"|\'[^\']+\')$', arg, 1)
+                path, value, remainder = re.split('([^\'" ]+|"[^"]*"|\'[^\']*\')$', arg, 1)
+                path = path.rstrip()
                 if context:
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 value = value.strip('"').strip("'")

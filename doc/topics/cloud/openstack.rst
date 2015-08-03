@@ -41,7 +41,7 @@ Configuration
       # tenant is the project name
       tenant: myproject
 
-      provider: openstack
+      driver: openstack
 
       # skip SSL certificate validation (default false)
       insecure: false

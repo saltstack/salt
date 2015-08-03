@@ -33,6 +33,7 @@ def __virtual__():
         'Gentoo',
         'Ubuntu',
         'Debian',
+        'Devuan',
         'Arch',
         'Arch ARM',
         'ALT',

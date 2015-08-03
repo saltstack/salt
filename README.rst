@@ -65,4 +65,4 @@ Reporting Issues
 
 To report an issue with Salt, please follow the guidelines for filing bug reports:
 
-* http://docs.saltstack.com/en/latest/topics/development/reporting_bugs.html
+* http://docs.saltstack.com/en/develop/topics/development/reporting_bugs.html

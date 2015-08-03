@@ -22,6 +22,7 @@ import fnmatch
 import logging
 import datetime
 import traceback
+import re
 
 # Import salt libs
 import salt.utils
@@ -66,7 +67,6 @@ STATE_REQUISITE_IN_KEYWORDS = frozenset([
     'listen_in',
     ])
 STATE_RUNTIME_KEYWORDS = frozenset([
-    'name',  # name of the highstate running
     'fun',
     'state',
     'check_cmd',
@@ -631,9 +631,11 @@ class State(object):
         of a state package that has a mod_init function, then execute the
         mod_init function in the state module.
         '''
+        # ensure that the module is loaded
+        self.states['{0}.{1}'.format(low['state'], low['fun'])]  # pylint: disable=W0106
         minit = '{0}.mod_init'.format(low['state'])
         if low['state'] not in self.mod_init:
-            if minit in self.states:
+            if minit in self.states._dict:
                 mret = self.states[minit](low)
                 if not mret:
                     return
@@ -859,6 +861,9 @@ class State(object):
                         data['__sls__']
                         )
                     )
+                reason = self.states.missing_fun_string(full)
+                if reason:
+                    errors.append('Reason: {0}'.format(reason))
             else:
                 errors.append(
                         'Specified state \'{0}\' was not found'.format(
@@ -1213,32 +1218,24 @@ class State(object):
                     for arg in run:
                         update = False
                         for hind in range(len(high[name][state])):
-                            if (isinstance(arg, six.string_types) and
-                            isinstance(high[name][state][hind], six.string_types)):
+                            if isinstance(arg, six.string_types) and isinstance(high[name][state][hind], six.string_types):
                                 # replacing the function, replace the index
                                 high[name][state].pop(hind)
                                 high[name][state].insert(hind, arg)
                                 update = True
                                 continue
-                            if (isinstance(arg, dict) and
-                                    isinstance(high[name][state][hind], dict)):
+                            if isinstance(arg, dict) and isinstance(high[name][state][hind], dict):
                                 # It is an option, make sure the options match
                                 argfirst = next(iter(arg))
-                                if (argfirst ==
-                                    next(iter(high[name][state][hind]))):
-                                    # They match, check if the option is a
-                                    # watch or require, append, otherwise
-                                    # replace
-                                    if (argfirst == 'require' or
-                                        argfirst == 'watch'):
-                                        # Extend the list
-                                        (high[name][state][hind][argfirst]
-                                         .extend(arg[argfirst]))
-                                        update = True
+                                if argfirst == next(iter(high[name][state][hind])):
+                                    # If argfirst is a requisite then we must merge
+                                    # our requisite with that of the target state
+                                    if argfirst in STATE_REQUISITE_KEYWORDS:
+                                        high[name][state][hind][argfirst].extend(arg[argfirst])
+                                    # otherwise, its not a requisite and we are just extending (replacing)
                                     else:
-                                        # Replace the value
                                         high[name][state][hind] = arg
-                                        update = True
+                                    update = True
                                 if (argfirst == 'name' and
                                     next(iter(high[name][state][hind])) == 'names'):
                                     # If names are overwritten by name use the name
@@ -1747,7 +1744,9 @@ class State(object):
                 if r_state == 'onchanges':
                     if not run_dict[tag]['changes']:
                         fun_stats.add('onchanges')
-                        continue
+                    else:
+                        fun_stats.add('onchangesmet')
+                    continue
                 if r_state == 'watch' and run_dict[tag]['changes']:
                     fun_stats.add('change')
                     continue
@@ -1769,7 +1768,7 @@ class State(object):
                 status = 'pre'
         elif 'onfail' in fun_stats:
             status = 'onfail'
-        elif 'onchanges' in fun_stats:
+        elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
             status = 'change'
@@ -1993,7 +1992,7 @@ class State(object):
         elif status == 'onchanges':
             running[tag] = {'changes': {},
                             'result': True,
-                            'comment': 'State was not run because onchanges req did not change',
+                            'comment': 'State was not run because none of the onchanges reqs changed',
                             '__run_num__': self.__run_num,
                             '__sls__': low['__sls__']}
             self.__run_num += 1
@@ -2635,11 +2634,21 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
+                        levels, include = \
+                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
-                            inc_sls = sls + inc_sls
-                        else:
-                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
+                            p_comps.append('init')
+                        if level_count > len(p_comps):
+                            msg = ('Attempted relative include of {0!r} '
+                                   'within SLS \'{1}:{2}\' '
+                                   'goes beyond top level package '
+                                   .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
+                        inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment

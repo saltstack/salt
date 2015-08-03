@@ -325,6 +325,59 @@ def get_gid(group=None):
     return result
 
 
+def _win_user_token_is_admin(user_token):
+    '''
+    Using the win32 api, determine if the user with token 'user_token' has
+    administrator rights.
+
+    See MSDN entry here:
+        http://msdn.microsoft.com/en-us/library/aa376389(VS.85).aspx
+    '''
+    class SID_IDENTIFIER_AUTHORITY(ctypes.Structure):
+        _fields_ = [
+            ("byte0", ctypes.c_byte),
+            ("byte1", ctypes.c_byte),
+            ("byte2", ctypes.c_byte),
+            ("byte3", ctypes.c_byte),
+            ("byte4", ctypes.c_byte),
+            ("byte5", ctypes.c_byte),
+        ]
+    nt_authority = SID_IDENTIFIER_AUTHORITY()
+    nt_authority.byte5 = 5
+
+    SECURITY_BUILTIN_DOMAIN_RID = 0x20
+    DOMAIN_ALIAS_RID_ADMINS = 0x220
+    administrators_group = ctypes.c_void_p()
+    if ctypes.windll.advapi32.AllocateAndInitializeSid(
+            ctypes.byref(nt_authority),
+            2,
+            SECURITY_BUILTIN_DOMAIN_RID,
+            DOMAIN_ALIAS_RID_ADMINS,
+            0, 0, 0, 0, 0, 0,
+            ctypes.byref(administrators_group)) == 0:
+        raise Exception("AllocateAndInitializeSid failed")
+
+    try:
+        is_admin = ctypes.wintypes.BOOL()
+        if ctypes.windll.advapi32.CheckTokenMembership(
+                user_token,
+                administrators_group,
+                ctypes.byref(is_admin)) == 0:
+            raise Exception("CheckTokenMembership failed")
+        return is_admin.value != 0
+
+    finally:
+        ctypes.windll.advapi32.FreeSid(administrators_group)
+
+
+def _win_current_user_is_admin():
+    '''
+    ctypes.windll.shell32.IsUserAnAdmin() is intentionally avoided due to this
+    function being deprecated.
+    '''
+    return _win_user_token_is_admin(0)
+
+
 def get_specific_user():
     '''
     Get a user name for publishing. If you find the user is "root" attempt to be
@@ -332,7 +385,7 @@ def get_specific_user():
     '''
     user = get_user()
     if is_windows():
-        if ctypes.windll.shell32.IsUserAnAdmin() != 0:
+        if _win_current_user_is_admin():
             return 'sudo_{0}'.format(user)
     else:
         env_vars = ('SUDO_USER',)
@@ -488,19 +541,6 @@ def which(exe=None):
             return False
 
         search_path = search_path.split(os.pathsep)
-        if not is_windows():
-            # Add any dirs in the default_path which are not in search_path. If
-            # there was no PATH variable found in os.environ, then this will be
-            # a no-op. This ensures that all dirs in the default_path are
-            # searched, which lets salt.utils.which() work well when invoked by
-            # salt-call running from cron (which, depending on platform, may
-            # have a severely limited PATH).
-            search_path.extend(
-                [
-                    x for x in default_path.split(os.pathsep)
-                    if x not in search_path
-                ]
-            )
         for path in search_path:
             full_path = os.path.join(path, exe)
             if _is_executable_file_or_link(full_path):
@@ -1150,19 +1190,6 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # Remove lock from kwargs if present
-    lock = kwargs.pop('lock', False)
-
-    if lock is True:
-        warn_until(
-            'Beryllium',
-            'The \'lock\' keyword argument is deprecated and will be '
-            'removed in Salt Beryllium. Please use '
-            '\'salt.utils.flopen()\' for file locking while calling '
-            '\'salt.utils.fopen()\'.'
-        )
-        return flopen(*args, **kwargs)
-
     # ensure 'binary' mode is always used on windows
     if kwargs.pop('binary', True):
         if is_windows():
@@ -1895,7 +1922,7 @@ def get_hash(path, form='md5', chunk_size=65536):
     '''
     try:
         hash_type = getattr(hashlib, form)
-    except AttributeError:
+    except (AttributeError, TypeError):
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
@@ -2174,7 +2201,6 @@ def version_cmp(pkg1, pkg2):
         elif distutils.version.LooseVersion(pkg1) > \
                 distutils.version.LooseVersion(pkg2):
             return 1
-        # pylint: disable=no-member
     except Exception as exc:
         log.exception(exc)
     return None
@@ -2713,3 +2739,10 @@ def to_unicode(s, encoding=None):
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
         return unicode(s)  # pylint: disable=incompatible-py3-code
+
+
+def is_list(value):
+    '''
+    Check if a variable is a list.
+    '''
+    return isinstance(value, list)

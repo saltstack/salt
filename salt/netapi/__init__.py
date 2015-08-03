@@ -141,10 +141,6 @@ class NetapiClient(object):
         :return: Returns the result from the runner module
         '''
         kwargs['fun'] = fun
-        if 'kwargs' not in kwargs:
-            kwargs['kwargs'] = {}
-        if 'args' not in kwargs:
-            kwargs['args'] = []
         runner = salt.runner.RunnerClient(self.opts)
         return runner.cmd_sync(kwargs, timeout=timeout)
 
@@ -160,10 +156,6 @@ class NetapiClient(object):
         :return: event data and a job ID for the executed function.
         '''
         kwargs['fun'] = fun
-        if 'kwargs' not in kwargs:
-            kwargs['kwargs'] = {}
-        if 'args' not in kwargs:
-            kwargs['args'] = []
         runner = salt.runner.RunnerClient(self.opts)
         return runner.cmd_async(kwargs)
 

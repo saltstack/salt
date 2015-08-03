@@ -12,35 +12,22 @@ and fast enough to communicate with those servers in *seconds*.
 Salt delivers a dynamic communication bus for infrastructures that can be used
 for orchestration, remote execution, configuration management and much more.
 
-.. seealso:: Other Documentation
-
-    Download an offline copy of the latest Salt documentation:
-
-    * `PDF`_ builds of the docs for each Salt release can usually be found on
-      the corresponding release page on GitHub.
-
-    Watch announcements, demonstrations, and video tutorials on the `SaltStack
-    YouTube channel`_.
-
-.. _`PDF`: https://github.com/saltstack/salt/releases/latest
-.. _`SaltStack YouTube channel`: http://www.youtube.com/saltstack
-
 Download
 ========
 
 Salt source releases are available for download via the following PyPI link:
 
-    https://pypi.python.org/pypi/salt
+* https://pypi.python.org/pypi/salt
 
 The installation document, found in the following link,  outlines where to
 obtain packages and installation specifics for platforms:
 
-    :doc:`Installation </topics/installation/index>`
+* :doc:`Installation </topics/installation/index>`
 
 The Salt Bootstrap project, found in the following repository, is a single
 shell script, which automates the install correctly on  multiple platforms:
 
-    https://github.com/saltstack/salt-bootstrap
+* https://github.com/saltstack/salt-bootstrap
 
 Get Started
 ===============
@@ -73,7 +60,7 @@ Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
 
 Running Salt without root access in userland:
-    - :doc:`Salt Usermode <topics/tutorials/rooted>`
+    :doc:`Salt Usermode <topics/tutorials/rooted>`
 
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`

@@ -120,7 +120,7 @@ class Serial(object):
         '''
         try:
             return msgpack.dumps(msg)
-        except OverflowError:
+        except (OverflowError, msgpack.exceptions.PackValueError):
             # msgpack can't handle the very long Python longs for jids
             # Convert any very long longs to strings
             # We borrow the technique used by TypeError below
@@ -193,7 +193,7 @@ class Serial(object):
                     return obj
                 return obj
             return msgpack.dumps(odict_encoder(msg))
-        except SystemError as exc:
+        except (SystemError, TypeError) as exc:
             log.critical('Unable to serialize message! Consider upgrading msgpack. '
                          'Message which failed was {failed_message} '
                          'with exception {exception_message}').format(msg, exc)

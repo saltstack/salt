@@ -234,7 +234,7 @@ def gen_locale(locale, **kwargs):
         __salt__['file.replace'](
             '/etc/locale.gen',
             r'^\s*#\s*{0}\s*$'.format(locale),
-            '{0}'.format(locale),
+            '{0}\\n'.format(locale),
             append_if_not_found=True
         )
     elif on_ubuntu:
@@ -252,8 +252,7 @@ def gen_locale(locale, **kwargs):
         cmd = ['locale-gen']
         if on_gentoo:
             cmd.append('--generate')
-        if not on_ubuntu:
-            cmd.append(locale)
+        cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
         cmd = ['localedef', '--force',
                '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']),

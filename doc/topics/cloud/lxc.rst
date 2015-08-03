@@ -17,7 +17,7 @@ In other words, Salt will connect to a minion, then from that minion:
     - :mod:`seed <salt.modules.config>` 
 
 Limitations
-------------
+-----------
 
 - You can only act on one minion and one provider at a time.
 - Listing images must be targeted to a particular LXC provider (nothing will be
@@ -60,7 +60,7 @@ Here is a simple provider configuration:
     # /etc/salt/cloud.providers.d/ directory.
     devhost10-lxc:
       target: devhost10
-      provider: lxc
+      driver: lxc
 
 Profile configuration
 ---------------------

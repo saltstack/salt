@@ -130,10 +130,6 @@ Glossary
         A formatter for defining the characteristics of output data from a Salt
         command. *See also*: :ref:`list of outputters <all-salt.output>`.
 
-    Overstate
-        A system by which a Master can issue function calls to minions in a
-        deterministic order. *See also*: :ref:`overstate <states-overstate>`.
-
     Peer Communication
         The ability for minions to communicate directly with other minions
         instead of brokering commands through the Salt master. *See also*:

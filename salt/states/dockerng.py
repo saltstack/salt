@@ -2,7 +2,7 @@
 '''
 Management of Docker containers
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 
 This is the state module to accompany the :mod:`dockerng
@@ -428,7 +428,7 @@ def image_present(name,
         ret['result'] = True
         ret['comment'] = 'Image \'{0}\' already present'.format(name)
         return ret
-    elif force:
+    elif image in all_tags and force:
         try:
             image_info = __salt__['dockerng.inspect_image'](name)
         except Exception as exc:

@@ -17,6 +17,13 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import modjk
+import salt.ext.six as six
+
+
+if six.PY2:
+    LIST_NOT_STR = "workers should be a list not a <type 'str'>"
+else:
+    LIST_NOT_STR = "workers should be a list not a <class 'str'>"
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -37,8 +44,7 @@ class ModjkTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ("workers should be a list not a <type 'str'>")
-        ret.update({'comment': comt})
+        ret.update({'comment': LIST_NOT_STR})
         self.assertDictEqual(modjk.worker_stopped(name, 'app1'), ret)
 
     # 'worker_activated' function tests: 1
@@ -54,8 +60,7 @@ class ModjkTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ("workers should be a list not a <type 'str'>")
-        ret.update({'comment': comt})
+        ret.update({'comment': LIST_NOT_STR})
         self.assertDictEqual(modjk.worker_activated(name, 'app1'), ret)
 
     # 'worker_disabled' function tests: 1
@@ -71,8 +76,7 @@ class ModjkTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ("workers should be a list not a <type 'str'>")
-        ret.update({'comment': comt})
+        ret.update({'comment': LIST_NOT_STR})
         self.assertDictEqual(modjk.worker_disabled(name, 'app1'), ret)
 
     # 'worker_recover' function tests: 1
@@ -88,8 +92,7 @@ class ModjkTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        comt = ("workers should be a list not a <type 'str'>")
-        ret.update({'comment': comt})
+        ret.update({'comment': LIST_NOT_STR})
         self.assertDictEqual(modjk.worker_recover(name, 'app1'), ret)
 
 

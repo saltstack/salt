@@ -22,9 +22,9 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
-try:
+if six.PY3:
     import ipaddress
-except ImportError:
+else:
     import salt.ext.ipaddress as ipaddress
 
 
@@ -75,9 +75,13 @@ def ping(host, timeout=False, return_boolean=False):
 
     Return a True or False instead of ping output.
 
+    .. code-block:: bash
+
         salt '*' network.ping archlinux.org return_boolean=True
 
     Set the time to wait for a response in seconds.
+
+    .. code-block:: bash
 
         salt '*' network.ping archlinux.org timeout=3
     '''
@@ -667,7 +671,7 @@ def interface_ip(iface):
     return salt.utils.network.interface_ip(iface)
 
 
-def subnets():
+def subnets(interfaces=None):
     '''
     Returns a list of IPv4 subnets to which the host belongs
 
@@ -676,8 +680,9 @@ def subnets():
     .. code-block:: bash
 
         salt '*' network.subnets
+        salt '*' network.subnets interfaces=eth1
     '''
-    return salt.utils.network.subnets()
+    return salt.utils.network.subnets(interfaces)
 
 
 def subnets6():
@@ -732,7 +737,7 @@ def calc_net(ip_addr, netmask=None):
         salt '*' network.calc_net 172.17.0.5 255.255.255.240
         salt '*' network.calc_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     return salt.utils.network.calc_net(ip_addr, netmask)
 
@@ -956,10 +961,12 @@ def is_private(ip_addr):
     Check if the given IP address is a private address
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         IPv6 support
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.is_private 10.0.0.3
     '''
@@ -971,10 +978,12 @@ def is_loopback(ip_addr):
     Check if the given IP address is a loopback address
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         IPv6 support
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.is_loopback 127.0.0.1
     '''
@@ -985,7 +994,7 @@ def reverse_ip(ip_addr):
     '''
     Returns the reversed IP address
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         IPv6 support
 
     CLI Example:
@@ -1029,7 +1038,9 @@ def get_bufsize(iface):
     '''
     Return network buffer sizes as a dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.getbufsize
     '''
@@ -1073,7 +1084,9 @@ def mod_bufsize(iface, *args, **kwargs):
     '''
     Modify network interface buffers (currently linux only)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.getBuffers
     '''
@@ -1088,7 +1101,9 @@ def routes(family=None):
     '''
     Return currently configured routes from routing table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.routes
     '''
@@ -1117,7 +1132,9 @@ def default_route(family=None):
     '''
     Return default route(s) from routing table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.default_route
     '''
@@ -1147,3 +1164,30 @@ def default_route(family=None):
                 ret.append(route)
 
     return ret
+
+
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2015.5.3
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+
+    if __grains__['kernel'] == 'Linux':
+        cmd = 'ip route get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:]+)\s+.*src\s+(?P<source>[\w\.:]+)')
+        m = regexp.search(out.splitlines()[0])
+        ret = {
+            'destination': ip,
+            'gateway': m.group('gateway'),
+            'interface': m.group('interface'),
+            'source': m.group('source')}
+
+        return ret
+    else:
+        raise CommandExecutionError('Not yet supported on this platform')

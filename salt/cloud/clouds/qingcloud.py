@@ -3,7 +3,7 @@
 QingCloud Cloud Module
 ======================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The QingCloud cloud module is used to control access to the QingCloud.
 http://www.qingcloud.com/
@@ -17,7 +17,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-qingcloud:
-      provider: qingcloud
+      driver: qingcloud
       access_key_id: AKIDMRTGYONNLTFFRBQJ
       secret_access_key: clYwH21U5UOmcov4aNV2V2XocaHCG3JZGcxEczFu
       zone: pek2
@@ -638,6 +638,20 @@ def create(vm_):
         salt-cloud -p qingcloud-ubuntu-c1m1 hostname1
         salt-cloud -m /path/to/mymap.sls -P
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'qingcloud',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -645,7 +659,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -719,7 +733,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

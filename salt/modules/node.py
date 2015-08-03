@@ -45,11 +45,16 @@ def _(module):
     :return:
     '''
 
-    # importlib is unavailable on python 2.6
-    if module == 'collector':
-        mod = salt.modules.inspectlib.collector
-    elif module == 'query':
-        mod = salt.modules.inspectlib.query
+    mod = None
+    # pylint: disable=E0598
+    try:
+        # importlib is in Python 2.7+ and 3+
+        import importlib
+        mod = importlib.import_module("salt.modules.inspectlib.{0}".format(module))
+    except ImportError as err:
+        # No importlib around (2.6)
+        mod = getattr(__import__("salt.modules.inspectlib", globals(), locals(), fromlist=[str(module)]), module)
+    # pylint: enable=E0598
 
     mod.__grains__ = __grains__
     mod.__pillar__ = __pillar__

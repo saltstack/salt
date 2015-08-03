@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Cloud Formation
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.5.0
 
 :configuration: This module accepts explicit AWS credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
@@ -71,8 +71,6 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a stack exists.
 
-    .. versionadded:: Beryllium
-
     CLI example::
 
         salt myminion boto_cfn.exists mystack region=us-east-1
@@ -93,7 +91,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
     '''
     Describe a stack.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI example::
 
@@ -109,7 +107,7 @@ def describe(name, region=None, key=None, keyid=None, profile=None):
             log.debug('Found VPC: {0}'.format(stack.stack_id))
             keys = ('stack_id', 'description', 'stack_status', 'stack_status_reason')
 
-            ret = dict([(k, getattr(stack, k)) for k in keys])
+            ret = dict([(k, getattr(stack, k)) for k in keys if hasattr(stack, k)])
             o = getattr(stack, 'outputs')
             outputs = {}
             for i in o:
@@ -130,8 +128,6 @@ def create(name, template_body=None, template_url=None, parameters=None, notific
            stack_policy_url=None, region=None, key=None, keyid=None, profile=None):
     '''
     Create a CFN stack.
-
-    .. versionadded:: Beryllium
 
     CLI example to create a stack::
 
@@ -157,7 +153,7 @@ def update_stack(name, template_body=None, template_url=None, parameters=None, n
     '''
     Update a CFN stack.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI example to update a stack::
 
@@ -184,8 +180,6 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a CFN stack.
 
-    .. versionadded:: Beryllium
-
     CLI example to delete a stack::
 
         salt myminion boto_cfn.delete mystack region=us-east-1
@@ -204,8 +198,6 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 def get_template(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if attributes are set on a CFN stack.
-
-    .. versionadded:: Beryllium
 
     CLI example::
 
@@ -228,7 +220,7 @@ def validate_template(template_body=None, template_url=None, region=None, key=No
     '''
     Validate cloudformation template
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI example::
 

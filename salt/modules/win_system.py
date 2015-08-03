@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 import re
 import datetime
+import time
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -33,17 +34,32 @@ def __virtual__():
     return __virtualname__
 
 
-def halt(timeout=5):
+def _convert_minutes_seconds(timeout, in_seconds=False):
+    '''
+    convert timeout to seconds
+    '''
+    return timeout if in_seconds else timeout*60
+
+
+def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system
+
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.halt
+        salt '*' system.halt 5
     '''
-    return shutdown(timeout)
+    return shutdown(timeout, in_seconds)
 
 
 def init(runlevel):
@@ -66,45 +82,87 @@ def init(runlevel):
     return 'Not implemented on Windows at this time.'
 
 
-def poweroff(timeout=5):
+def poweroff(timeout=5, in_seconds=False):
     '''
     Poweroff a running system
 
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.poweroff
+        salt '*' system.poweroff 5
     '''
-    return shutdown(timeout)
+    return shutdown(timeout, in_seconds)
 
 
-def reboot(timeout=5):
+def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
     '''
     Reboot the system
 
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
+
+        The amount of seconds to wait before rebooting
+
+    wait_for_reboot
+
+        .. versionadded:: Beryllium
+
+        Sleeps for timeout + 30 seconds after reboot has been initiated.
+        This is useful for use in a highstate for example where
+        you have many states that could be ran after this one. Which you don't want
+        to start until after the restart i.e You could end up with a half finished state.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.reboot
+        salt '*' system.reboot 5
+        salt '*' system.reboot 5 True
     '''
-    cmd = ['shutdown', '/r', '/t', '{0}'.format(timeout)]
+    seconds = _convert_minutes_seconds(timeout, in_seconds)
+    cmd = ['shutdown', '/r', '/t', '{0}'.format(seconds)]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
+
+    if wait_for_reboot:
+        time.sleep(seconds + 30)
+
     return ret
 
 
-def shutdown(timeout=5):
+def shutdown(timeout=5, in_seconds=False):
     '''
     Shutdown a running system
+
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.shutdown
+        salt '*' system.shutdown 5
     '''
-    cmd = ['shutdown', '/s', '/t', '{0}'.format(timeout)]
+    seconds = _convert_minutes_seconds(timeout, in_seconds)
+    cmd = ['shutdown', '/s', '/t', '{0}'.format(seconds)]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 

@@ -50,7 +50,7 @@ driver.
       ssh_key_name: yourkey
       ssh_key_file: /path/to/key/yourkey.priv
 
-      provider: openstack
+      driver: openstack
 
 
 Authentication
@@ -80,9 +80,9 @@ profile will build an Ubuntu 12.04 LTS `nb.2G` instance.
 .. code-block:: yaml
 
     vh_ubuntu1204_2G:
-        provider: vexxhost
-        image: 4051139f-750d-4d72-8ef0-074f2ccc7e5a
-        size: nb.2G
+      provider: vexxhost
+      image: 4051139f-750d-4d72-8ef0-074f2ccc7e5a
+      size: nb.2G
 
 Provision an instance
 =====================

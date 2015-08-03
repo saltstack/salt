@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# coding: utf-8
 '''
 Test the RSA ANSI X9.31 signer and verifier
 '''

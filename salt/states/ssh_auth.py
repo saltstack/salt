@@ -189,6 +189,7 @@ def _absent_test(user, name, enc, comment, options, source, config):
         comment = ('Key {0} for user {1} is set for removal').format(name, user)
     else:
         comment = ('Key is already absent')
+        result = True
 
     return result, comment
 
@@ -380,7 +381,7 @@ def absent(name,
         in standard "authorized_keys" format. If this is set, comment, enc and
         options will be ignored.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     config
         The location of the authorized keys file relative to the user's home

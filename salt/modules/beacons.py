@@ -2,7 +2,7 @@
 '''
 Module for managing the Salt beacons on a minion
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 '''
 
@@ -26,8 +26,6 @@ __func_alias__ = {
 def list_(return_yaml=True):
     '''
     List the beacons currently configured on the minion
-
-    .. versionadded:: Beryllium
 
     :param return_yaml:     Whether to return YAML formatted output, default True
     :return:                List of currently configured Beacons.
@@ -69,8 +67,6 @@ def list_(return_yaml=True):
 def add(name, beacon_data, **kwargs):
     '''
     Add a beacon on the minion
-
-    .. versionadded:: Beryllium
 
     :param name:            Name of the beacon to configure
     :param beacon_data:     Dictionary or list containing configuration for beacon.
@@ -134,8 +130,6 @@ def add(name, beacon_data, **kwargs):
 def modify(name, beacon_data, **kwargs):
     '''
     Modify an existing beacon
-
-    .. versionadded:: Beryllium
 
     :param name:            Name of the beacon to configure
     :param beacon_data:     Dictionary or list containing updated configuration for beacon.
@@ -217,8 +211,6 @@ def delete(name, **kwargs):
     '''
     Delete a beacon item
 
-    .. versionadded:: Beryllium
-
     :param name:            Name of the beacon to delete
     :return:                Boolean and status message on success or failure of delete.
 
@@ -260,8 +252,6 @@ def save():
     '''
     Save all beacons on the minion
 
-    .. versionadded:: Beryllium
-
     :return:                Boolean and status message on success or failure of save.
 
     CLI Example:
@@ -298,8 +288,6 @@ def save():
 def enable(**kwargs):
     '''
     Enable all beacons on the minion
-
-    .. versionadded:: Beryllium
 
     :return:                Boolean and status message on success or failure of enable.
 
@@ -340,8 +328,6 @@ def disable(**kwargs):
     '''
     Disable all beaconsd jobs on the minion
 
-    .. versionadded:: Beryllium
-
     :return:                Boolean and status message on success or failure of disable.
 
     CLI Example:
@@ -381,8 +367,6 @@ def disable(**kwargs):
 def enable_beacon(name, **kwargs):
     '''
     Enable beacon on the minion
-
-    .. versionadded:: Beryllium
 
     :name:                  Name of the beacon to enable.
     :return:                Boolean and status message on success or failure of enable.
@@ -431,8 +415,6 @@ def enable_beacon(name, **kwargs):
 def disable_beacon(name, **kwargs):
     '''
     Disable beacon on the minion
-
-    .. versionadded:: Beryllium
 
     :name:                  Name of the beacon to enable.
     :return:                Boolean and status message on success or failure of disable.

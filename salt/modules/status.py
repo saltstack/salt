@@ -7,6 +7,7 @@ These data can be useful for compiling into stats later.
 
 # Import python libs
 from __future__ import absolute_import
+import datetime
 import os
 import re
 import fnmatch
@@ -812,3 +813,26 @@ def master(master=None, connected=True):
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
             event.fire_event({'master': master}, '__master_connected')
+
+
+def time(format='%A, %d. %B %Y %I:%M%p'):
+    '''
+    .. versionadded:: Boron
+
+    Return the current time on the minion,
+    formated based on the format parameter.
+
+    Default date format: Monday, 27. July 2015 07:55AM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.time
+
+        salt '*' status.time '%s'
+
+    '''
+
+    dt = datetime.datetime.today()
+    return dt.strftime(format)

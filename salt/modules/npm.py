@@ -119,10 +119,13 @@ def install(pkg=None,
     elif pkgs:
         cmd += ' "{0}"'.format('" "'.join(pkgs))
 
+    if env is None:
+        env = {}
+
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas, env=env)
 
@@ -188,10 +191,13 @@ def uninstall(pkg,
 
     '''
 
+    if env is None:
+        env = {}
+
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
     cmd = 'npm uninstall'
 
@@ -245,10 +251,13 @@ def list_(pkg=None,
 
     '''
 
+    if env is None:
+        env = {}
+
     if runas:
         uid = salt.utils.get_uid(runas)
         if uid:
-            env.update({'SUDO_UID': uid, 'SUDO_USER': ''})
+            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
     cmd = 'npm list --silent --json'
 

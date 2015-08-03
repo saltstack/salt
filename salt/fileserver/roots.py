@@ -131,7 +131,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.split(':', 1)
@@ -201,7 +201,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:

@@ -106,7 +106,7 @@ def present(
         The zone to create the record in.
 
     record_type
-        The record type. Currently supported values: A, CNAME, MX
+        The record type (A, NS, MX, TXT, etc.)
 
     ttl
         The time to live for the record.
@@ -232,6 +232,9 @@ def absent(
 
     zone
         The zone to delete the record from.
+
+    record_type
+        The record type (A, NS, MX, TXT, etc.)
 
     identifier
         An identifier to match for deletion.

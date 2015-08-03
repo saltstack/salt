@@ -91,6 +91,7 @@ def _format_host(host, data):
             __opts__.get('color_theme'))
     tabular = __opts__.get('state_tabular', False)
     rcounts = {}
+    rdurations = []
     hcolor = colors['GREEN']
     hstrs = []
     nchanges = 0
@@ -130,6 +131,7 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
+            rdurations.append(ret.get('duration', 0))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
@@ -246,6 +248,16 @@ def _format_host(host, data):
                     comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
+            # If there is a data attribute, append it to the comment
+            if 'data' in ret:
+                if isinstance(ret['data'], list):
+                    for item in ret['data']:
+                        comment = '{0} {1}'.format(comment, item)
+                elif isinstance(ret['data'], dict):
+                    for key, value in ret['data'].items():
+                        comment = '{0}\n\t\t{1}: {2}'.format(comment, key, value)
+                else:
+                    comment = '{0} {1}'.format(comment, ret['data'])
             for detail in ['start_time', 'duration']:
                 ret.setdefault(detail, u'')
             if ret['duration'] != '':
@@ -352,11 +364,21 @@ def _format_host(host, data):
                     colors
                 )
             )
-
         totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
                                                sum(six.itervalues(rcounts)) - rcounts.get('warnings', 0),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
+
+        sum_duration = sum(rdurations)
+        duration_unit = 'ms'
+        # convert to seconds if duration is 1000ms or more
+        if sum_duration > 999:
+            sum_duration /= 1000
+            duration_unit = 's'
+        total_duration = u'Total run time: {0} {1}'.format(
+            '{:.3f}'.format(sum_duration).rjust(line_max_len - 5),
+            duration_unit)
+        hstrs.append(colorfmt.format(colors['CYAN'], total_duration, colors))
 
     if strip_colors:
         host = salt.output.strip_esc_sequence(host)
@@ -413,14 +435,24 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     elif ret['result'] is None:
         result = u'Differs'
     if tabular is True:
-        fmt_string = u'{0}'
+        fmt_string = ''
+        if 'warnings' in ret:
+            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}\n'.format(
+                c=colors, w='\n'.join(ret['warnings'])
+            )
+        fmt_string += u'{0}'
         if __opts__.get('state_output_profile', False):
             fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
         fmt_string = tabular
     else:
-        fmt_string = u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
+        fmt_string = ''
+        if 'warnings' in ret:
+            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}'.format(
+                c=colors, w='\n'.join(ret['warnings'])
+            )
+        fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
         if __opts__.get('state_output_profile', False):
             fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
         fmt_string += u'{5}'

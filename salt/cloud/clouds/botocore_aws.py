@@ -25,7 +25,7 @@ If this driver is still needed, set up the cloud configuration at
       securitygroup: ssh_open
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
-      provider: aws
+      driver: aws
 
 '''
 from __future__ import absolute_import
@@ -145,6 +145,9 @@ def __virtual__():
     list_nodes_select = namespaced_function(
         list_nodes_select, globals(), (conn,)
     )
+
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
 
     return 'aws'
 

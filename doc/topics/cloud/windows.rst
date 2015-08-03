@@ -89,7 +89,7 @@ Setting the installer in ``/etc/salt/cloud.providers``:
 .. code-block:: yaml
 
     my-softlayer:
-      provider: softlayer
+      driver: softlayer
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
       minion:

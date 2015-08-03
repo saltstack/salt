@@ -20,7 +20,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # aliyun Access Key Secret
       key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
-      provider: aliyun
+      driver: aliyun
 
 :depends: requests
 '''
@@ -69,6 +69,8 @@ ALIYUN_LOCATIONS = {
 DEFAULT_LOCATION = 'cn-hangzhou'
 
 DEFAULT_ALIYUN_API_VERSION = '2013-01-10'
+
+__virtualname__ = 'aliyun'
 
 
 # Only load in this module if the aliyun configurations are in place
@@ -566,6 +568,20 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'aliyun',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -573,7 +589,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -658,7 +674,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -748,7 +764,6 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    #print content
 
     result = json.loads(content, object_hook=salt.utils.decode_dict)
     if 'Code' in result:

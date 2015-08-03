@@ -93,7 +93,9 @@ NSTATES = {
     3: 'pending',
 }
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:\ *$', re.M)
+SSH_PASSWORD_PROMP_SUDO_RE = \
+    re.compile(r'(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:', re.M)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -315,8 +317,14 @@ def bootstrap(vm_, opts):
         if stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode):
             has_ssh_agent = True
 
-    if key_filename is None and ('password' not in vm_
-                                 or not vm_['password']) and ('win_password' not in vm_ or not vm_['win_password']) and has_ssh_agent is False:
+    if (key_filename is None and
+            salt.config.get_cloud_config_value(
+                'password', vm_, opts, default=None
+            ) is None and
+            salt.config.get_cloud_config_value(
+                'win_password', vm_, opts, default=None
+            ) is None and
+            has_ssh_agent is False):
         raise SaltCloudSystemExit(
             'Cannot deploy Salt in a VM if the \'key_filename\' setting '
             'is not set and there is no password set for the VM. '
@@ -640,8 +648,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         return True
     # Let the user know that his gateway is good!
     log.debug(
-        'Gateway {0} on port {1} '
-        'is reachable.'.format(
+        'Gateway {0} on port {1} is reachable.'.format(
             test_ssh_host, test_ssh_port
         )
     )
@@ -828,7 +835,9 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'password_retries': maxtries,
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output,
-                      'known_hosts_file': known_hosts_file}
+                      'known_hosts_file': known_hosts_file,
+                      'ssh_timeout': ssh_timeout,
+                      'hard_timeout': ssh_timeout}
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
@@ -1643,7 +1652,7 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
 
 def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
     if error_msg is None:
-        error_msg = 'A wrong password has been issued while establishing ssh session'
+        error_msg = 'A wrong password has been issued while establishing ssh session.'
     password_retries = kwargs.get('password_retries', 3)
     try:
         stdout, stderr = None, None
@@ -1656,17 +1665,34 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
+        is_not_checked = True
         while proc.has_unread_data:
             stdout, stderr = proc.recv()
-            if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
-                if (
-                            kwargs.get('password', None)
-                        and (sent_password < password_retries)
-                ):
-                    sent_password += 1
-                    proc.sendline(kwargs['password'])
-                else:
-                    raise SaltCloudPasswordError(error_msg)
+            if stdout and is_not_checked:
+                if SSH_PASSWORD_PROMP_RE.search(stdout.split('\n')[0]):
+                    # if authenticating with an SSH key and 'sudo' is found
+                    # in the password prompt
+                    if ('key_filename' in kwargs and kwargs['key_filename']
+                        and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
+                    ):
+                        # do nothing, as command already has adjustments to
+                        # echo out the sudo password as part of the ssh command
+                        # keep waiting for proc output
+                        continue
+                    # elif authenticating via password and haven't exhausted our
+                    # password_retires
+                    elif (
+                                kwargs.get('password', None)
+                            and (sent_password < password_retries)
+                    ):
+                        sent_password += 1
+                        proc.sendline(kwargs['password'])
+                    # else raise an error as we are not authenticating properly
+                    #  * not authenticating with an SSH key
+                    #  * not authenticating with a Password
+                    else:
+                        raise SaltCloudPasswordError(error_msg)
+                is_not_checked = False
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:
@@ -1960,6 +1986,8 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             # Also, specify the location of the key file
             '-i {0}'.format(kwargs['key_filename'])
         ])
+    if 'ssh_timeout' in kwargs:
+        ssh_args.extend(['-oConnectTimeout={0}'.format(kwargs['ssh_timeout'])])
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -2002,6 +2030,10 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
+
+    if 'hard_timeout' in kwargs:
+        cmd = 'timeout {0} {1}'.format(kwargs['timeout'], cmd)
+
     log.debug('SSH command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
@@ -2012,7 +2044,7 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
     '''
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.SaltEvent('master', sock_dir, listen=True)
     starttime = time.mktime(time.localtime())
     newtimeout = timeout
     log.debug(
@@ -2145,7 +2177,7 @@ def wait_for_ip(update_callback,
     duration = timeout
     while True:
         log.debug(
-            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
+            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}.'.format(
                 int(timeout // 60),
                 int(timeout % 60)
             )
@@ -2153,21 +2185,23 @@ def wait_for_ip(update_callback,
         data = update_callback(*update_args, **update_kwargs)
         if data is False:
             log.debug(
-                'update_callback has returned False which is considered a '
-                'failure. Remaining Failures: {0}'.format(max_failures)
+                '\'update_callback\' has returned \'False\', which is '
+                'considered a failure. Remaining Failures: {0}.'.format(
+                    max_failures
+                )
             )
             max_failures -= 1
             if max_failures <= 0:
                 raise SaltCloudExecutionFailure(
-                    'Too much failures occurred while waiting for '
-                    'the IP address'
+                    'Too many failures occurred while waiting for '
+                    'the IP address.'
                 )
         elif data is not None:
             return data
 
         if timeout < 0:
             raise SaltCloudExecutionTimeout(
-                'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
+                'Unable to get IP for 00:{0:02d}:{1:02d}.'.format(
                     int(duration // 60),
                     int(duration % 60)
                 )
@@ -2180,7 +2214,7 @@ def wait_for_ip(update_callback,
             if interval > timeout:
                 interval = timeout + 1
             log.info('Interval multiplier in effect; interval is '
-                     'now {0}s'.format(interval))
+                     'now {0}s.'.format(interval))
 
 
 def simple_types_filter(data):
@@ -2905,3 +2939,22 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None,
         time.sleep(5)
 
     return True
+
+
+def get_salt_interface(vm_, opts):
+    '''
+    Return the salt_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    salt_host = salt.config.get_cloud_config_value(
+        'salt_interface', vm_, opts, default=False,
+        search_global=False
+    )
+
+    if salt_host is False:
+        salt_host = salt.config.get_cloud_config_value(
+            'ssh_interface', vm_, opts, default='public_ips',
+            search_global=False
+        )
+
+    return salt_host

@@ -56,7 +56,7 @@ def __virtual__():
 
 def cpuload():
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return the processor load as a percentage
 
@@ -83,7 +83,7 @@ def cpuload():
 
 def diskusage(human_readable=False, path=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return the disk usage for this minion
 
@@ -131,7 +131,7 @@ def procs(count=False):
     count : False
         If ``True``, this function will simply return the number of processes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -158,7 +158,7 @@ def procs(count=False):
 
 def saltmem(human_readable=False):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Returns the amount of memory that salt is using
 
@@ -186,7 +186,7 @@ def saltmem(human_readable=False):
 
 def uptime(human_readable=False):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return the system uptime for this machine in seconds
 
@@ -256,8 +256,8 @@ def _get_process_info(proc):
     '''
     Return  process information
     '''
-    cmd = (proc.CommandLine or '').encode('utf-8')
-    name = proc.Name.encode('utf-8')
+    cmd = salt.utils.to_str(proc.CommandLine or '')
+    name = salt.utils.to_str(proc.Name)
     info = dict(
         cmd=cmd,
         name=name,
@@ -271,13 +271,13 @@ def _get_process_owner(process):
     domain, error_code, user = None, None, None
     try:
         domain, error_code, user = process.GetOwner()
-        owner['user'] = user.encode('utf-8')
-        owner['user_domain'] = domain.encode('utf-8')
+        owner['user'] = salt.utils.to_str(user)
+        owner['user_domain'] = salt.utils.to_str(domain)
     except Exception as exc:
         pass
     if not error_code and all((user, domain)):
-        owner['user'] = user.encode('utf-8')
-        owner['user_domain'] = domain.encode('utf-8')
+        owner['user'] = salt.utils.to_str(user)
+        owner['user_domain'] = salt.utils.to_str(domain)
     elif process.ProcessId in [0, 4] and error_code == 2:
         # Access Denied for System Idle Process and System
         owner['user'] = 'SYSTEM'

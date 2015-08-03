@@ -296,3 +296,9 @@ salt-api
 .. toctree::
 
     salt-api
+
+spm
+===
+.. toctree::
+
+    spm

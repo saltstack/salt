@@ -83,10 +83,10 @@ class SaltStackVersion(object):
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
-        'Beryllium'     : (MAX_SIZE - 105, 0),
+        'Beryllium'     : (2015, 8),
         'Boron'         : (MAX_SIZE - 104, 0),
         'Carbon'        : (MAX_SIZE - 103, 0),
-        #'Nitrogen'     : (MAX_SIZE - 102, 0),
+        'Nitrogen'      : (MAX_SIZE - 102, 0),
         #'Oxygen'       : (MAX_SIZE - 101, 0),
         #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
@@ -247,7 +247,8 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        match = cls.git_describe_regex.match(version_string.decode())
+        s = version_string.decode() if isinstance(version_string, bytes) else version_string
+        match = cls.git_describe_regex.match(s)
         if not match:
             raise ValueError(
                 'Unable to parse version string: {0!r}'.format(version_string)
@@ -550,6 +551,7 @@ def dependency_information(include_salt_cloud=False):
         ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
+        ('Tornado', 'tornado', 'version'),
     ]
 
     if include_salt_cloud:

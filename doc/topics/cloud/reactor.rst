@@ -109,7 +109,7 @@ related to the profile or provider config, and any default values that could
 have been changed in the profile or provider, but weren't.
 
 salt/cloud/<minion_id>/created
--------------------------------
+------------------------------
 
 The deploy sequence has completed, and the instance is now available, Salted,
 and ready for use. This event is the final task for Salt Cloud, before returning
@@ -123,7 +123,7 @@ Configuring the Event Reactor
 =============================
 
 The Event Reactor is built into the Salt Master process, and as such is
-configured via the master configuration file. Normally this will will be a YAML
+configured via the master configuration file. Normally this will be a YAML
 file located at ``/etc/salt/master``. Additionally, master configuration items
 can be stored, in YAML format, inside the ``/etc/salt/master.d/`` directory.
 

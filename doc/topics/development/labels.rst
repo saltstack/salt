@@ -4,284 +4,292 @@
 GitHub Labels and Milestones
 ============================
 
-SaltStack uses several labeling schemes, as well as applying milestones, to triage incoming issues and pull requests in
-the GitHub Issue Tracker. Most of the labels and milestones are used for internal tracking, but the following
-definitions might prove useful for the community to discover the best issues to help resolve.
+SaltStack uses several label categories, as well as milestones, to triage incoming issues and pull requests in the
+GitHub issue tracker.  Labels are used to sort issues by type, priority, severity, status, functional area, functional
+group, and targeted release and pull requests by status, functional area, functional group, type of change, and test
+status.  Milestones are used to indicate whether an issue is fully triaged or is scheduled to be fixed by SaltStack in
+an upcoming sprint.
 
 Milestones
 ==========
 
-Milestones are most often applied to issues, as a milestone is assigned to every issue that has been triaged. However,
-milestones can also be applied to pull requests. SaltStack uses milestones to track bugs or features that should be
-included in the next major feature release, or even the next bug-fix release, as well as what issues are ready to be
-worked on or what might be blocked. All incoming issues must have a milestone associated with them.
+All issues are assigned to a milestone, whereas pull requests are almost never assigned to a milestone as the mean
+lifetime of pull requests is short enough that there is no need to track them temporally.
 
-Approved
-    Used to indicate that this issue has all of the needed information and is ready to be worked on.
+SaltStack uses milestones to indicate which issues are blocked on submitter or upstream actions, are approved, or are
+scheduled to be fixed or implemented in an upcoming sprint.  If an issue is not attached to a sprint milestone, you are
+welcome to work on it at your own desire and convenience.  If it is attached to a sprint milestone and you have already
+begun working on it or have a solution in mind or have other ideas related to the issue, you are encouraged to
+coordinate with the assignee via the GitHub issue tracker to create the best possible solution or implementation.
 
-Blocked
-    Used to indicate that the issue is not ready to be worked on yet. This typically applies to issues that have been
-    labeled with “Info Needed”, “Question”, “Expected Behavior”, “Won’t Fix for Now”, etc.
+``Approved``
+    The issue has been validated and has all necessary information.
 
-Dot or Bug-fix Release
-    Used to help filter/identify what issues must be fixed before the release such as 2014.7.4 or 2015.2.3. This
-    milestone is often used in conjunction with the ``Blocker`` label, but not always.
+``Blocked``
+    The issue is waiting on actions by parties outside of SaltStack, such as receiving more information from the
+    submitter or resolution of an upstream issue.  This milestone is usually applied in conjunction with the labels
+    ``Info Needed``, ``Question``, ``Expected Behavior``, ``Won't Fix For Now``, or ``Upstream Bug``.
 
-Feature Release
-    Similar to the Dot or Bug-fix Release milestone, but for upcoming feature releases such as Boron, Carbon, etc.
-    This milestone is often used in conjunction with the ``Blocker`` label, but not always.
+``Under Review``
+    The issue is having further validation done by a SaltStack engineer.
+
+``<Sprint>``
+    The issue is being actively worked on by a SaltStack engineer.  Sprint milestones names are constructed from the
+    chemical symbol of the next release's codename and the number of sprints until that release is made.  For example,
+    if the next release codename is ``Neon`` and there are five sprints until that release, the corresponding sprint
+    milestone will be called ``Ne 5``.  See :doc:`<topics/releases/version_numbers>` for a discussion of Salt's release
+    codenames.
 
 Labels
 ======
 
-Labels are used to facilitate the resolution of new pull requests and open issues. Most labels are confined to being
-applied to either issues or pull requests, though some labels may be applied to both.
+Labels are used to sort and describe issues and pull requests.  Some labels are usually reserved for one or the other,
+though most labels may be applied to both.
 
-Issue Labels
-------------
+New issues will receive at least one label and a milestone, and new pull requests will receive at least one label.
+Except for the :ref:`functional area <functional-area-labels>` and :ref:`functional group <functional-group-labels>`
+label categories, issues will generally receive only up to one label per category.
 
-All incoming issues should be triaged with at least one label and a milestone. When a new issue comes in, it should be
-determined if the issue is a bug or a feature request, and either of those labels should be applied accordingly. Bugs
-and Feature Requests have differing labeling schemes, detailed below, where other labels are applied to them to further
-help contributors find issues to fix or implement.
+Type
+----
 
-There are some labels, such as ``Question`` or some of the "Status" labels that may be applied as "stand alone" labels
-in which more information may be needed or a decision must be reached on how to proceed. (See the "Bug Status Labels"
-section below.)
+Issues are categorized into one of several types.  Type labels are almost never used for pull requests.  GitHub treats
+pull requests like issues in many ways, so a pull request could be considered an issue with an implicit ``Pull Request``
+type label applied.
 
-Features
-~~~~~~~~
+``Feature``
+    The issue is a request for new functionality including changes, enhancements, refactors, etc.
 
-The ``Feature`` label should be applied when a user is requesting entirely new functionality. This can include new
-functions, modules, states, modular systems, flags for existing functions, etc. Features *do not* receive severity
-or priority labels, as those labels are only used for bugs. However, they may receive "Functional Area" labels or "ZD".
+``Bug``
+    The issue documents broken, incorrect, or confusing behavior.  This label is always accompanied by a :ref:`severity
+    label <bug-severity-labels>`.
 
-Feature request issues will be prioritized on an "as-needed" basis using milestones during SaltStack's feature release
-and sprint planning processes.
+``Duplicate``
+    The issue is a duplicate of another feature request or bug report.
 
-Bugs
-~~~~
+``Upstream Bug``
+    The issue is a result of an upstream issue.
 
-All bugs should have the ``Bug`` label as well as a severity, priority, functional area, and a status, as applicable.
+``Question``
+    The issue is more of a question than a request for new features or a report of broken features, but can sometimes
+    lead to further discussion or changes of confusing or incongruous behavior or documentation.
 
-Severity
-^^^^^^^^
-
-How severe is the bug? SaltStack uses four labels to determine the severity of a bug: ``Blocker``, ``Critical``,
-``High``, and ``Medium``. This scale is intended to make the bug-triage process as objective as possible.
-
-Blocker
-    Should be used sparingly to indicate must-have fixes for the impending release.
-
-Critical
-    Applied to bugs that have data loss, crashes, hanging, unresponsive system, etc.
-
-High Severity
-    Any bug report that contains incorrect functionality, bad functionality, a confusing user experience, etc.
-
-Medium Severity
-    Applied to bugs that are about cosmetic items, spelling, spacing, colors, etc.
+``Expected Behavior``
+    The issue is a bug report of intended functionality.
 
 Priority
-^^^^^^^^
+--------
 
-In addition to using a bug severity to classify issues, a priority is also assigned to each bug to give further
-granularity in searching for bugs to fix. In this way, a bug's priority is defined as follows:
+An issue's priority is relative to its :ref:`functional area <functional-area-labels>`.  If a bug report, for example,
+about ``gitfs`` indicates that all users of ``gitfs`` will encounter this bug, then a ``P1`` label will be applied, even
+though users who are not using ``gitfs`` will not encounter the bug.  If a feature is requested by many users, it may be
+given a high priority.
 
-P1
-    Very likely. Everyone will see the bug.
+``P1``
+    The issue will be seen by all users.
 
-P2
-    Somewhat likely. Most will see the bug, but a few will not.
+``P2``
+    The issue will be seen by most users.
 
-P3
-    Half will see the bug, about half will not.
+``P3``
+    The issue will be seen by about half of users.
 
-P4
-    Most will not see the bug. Usually a very specific use case or corner case.
+``P4``
+    The issue will not be seen by most users.  Usually the issue is a very specific use case or corner case.
 
-.. note::
+.. _bug-severity-labels:
 
-    A bug's priority is relative to its functional area. If a bug report, for example, about ``gitfs`` includes details
-    indicating that everyone who ``gitfs`` will run into this bug, then a ``P1`` label will be applied, even though
-    Salt users who are not enabling ``gitfs`` will see the bug.
+Severity
+--------
 
-Functional Areas
-^^^^^^^^^^^^^^^^
+Severity labels are almost always only applied to issues labeled ``Bug``.
 
-All bugs should receive a "Functional Area" label to indicate what region of Salt the bug is mainly seen in. This will
-help internal developers as well as community members identify areas of expertise to find issues that can be fixed more
-easily. Functional Area labels can also be applied to Feature Requests.
+``Blocker``
+    The issue is blocking an impending release.
 
-Functional Area Labels, in alphabetical order, include:
+``Critical``
+    The issue causes data loss, crashes or hangs salt processes, makes the system unresponsive, etc.
 
-* Core
-* Documentation
-* Execution Module
-* File Servers
-* Multi-Master
-* Packaging
-* Pillar
-* Platform Mgmt.
-* RAET
-* Returners
-* Salt-API
-* Salt-Cloud
-* Salt-SSH
-* Salt-Syndic
-* State Module
-* Windows
-* ZMQ
+``High Severity``
+    The issue reports incorrect functionality, bad functionality, a confusing user experience, etc.
 
-Bug Status Labels
-^^^^^^^^^^^^^^^^^
+``Medium Severity``
+    The issue reports cosmetic items, formatting, spelling, colors, etc.
 
-Status lables are used to define and track the state a bug is in at any given time. Not all bugs will have a status
-label, but if a SaltStack employee is able to apply a status label, he or she will. Status labels are somewhat unique
-in the fact that they might be the only label on an issue, such as ``Pending Discussion``, ``Info Needed``, or
-``Expected Behavior`` until further action can be taken.
+.. _functional-area-labels:
 
-Cannot Reproduce
-    Someone from the SaltStack team has tried to reproduce the bug with the given information but they are unable to
-    replicate the problem. More information will need to be provided from the original issue-filer before proceeding.
+Functional Area
+---------------
 
-Confirmed
-    A SaltStack engineer has confirmed the reported bug and provided a simple way to reproduce the failure.
+Many major components of Salt have corresponding GitHub labels.  These labels are applied to all issues and pull
+requests as is reasonably appropriate.  They are useful in organizing issues and pull requests according to the source
+code relevant to issues or the source code changed by pull requests.
 
-Duplicate
-    The issue has been reported already in another report. A link to the other bug report must be provided. At that
-    point the new issue can be closed. Usually, the earliest bug on file is kept as that typically has the most
-    discussion revolving around the issue, though not always. (This can be a "stand-alone" label.)
+* ``Execution Module``
+* ``File Servers``
+* ``Grains``
+* ``Multi-Master``
+* ``Packaging``  Related to packaging of Salt, not Salt's support for package management.
+* ``Pillar``
+* ``RAET``
+* ``Returners``
+* ``Runners``
+* ``Salt-API``
+* ``Salt-Cloud``
+* ``Salt-SSH``
+* ``Salt-Syndic``
+* ``State Module``
+* ``Tests``
+* ``Transport``
+* ``Windows``
+* ``ZMQ``
 
-Expected Behavior
-    The issue reported is expected behavior and nothing needs to be fixed. (This can be a "stand-alone" label.)
+.. _functional-group-labels:
 
-Fixed Pending Verification
-    The bug has been fixed and a link to the applicable pull request(s) has been provided, but confirmation is being
-    sought from the community member(s) involved in the bug to test and confirm the fix.
+Functional Group
+----------------
 
-Info Needed
-    More information about the issue is needed before proceeding such as a versions report, a sample state, the command
-    the user was running, or the operating system the error was occurring on, etc. (This can be a "stand-alone" label.)
+These labels sort issues and pull requests according to the internal SaltStack engineering teams.
 
-Upstream Bug
-    The reported bug is something that cannot be fixed in the Salt code base but is instead a bug in another library
-    such a bug in ZMQ or Python. When an issue is labeled with ``Upstream Bug`` then a bug report in the upstream
-    project must be filed (or found if a report already exists) and a link to the report must be provided to the issue
-    in Salt for tracking purposes. (This can be a stand-alone label.)
+``Core``
+    The issue or pull request relates to code that is central or existential to Salt itself.
 
-Won't Fix for Now
-    The SaltStack team has acknowledged the issue at hand is legitimate, but made the call that it’s not something
-    they’re able or willing to fix at this time. These issues may be revisited in the future.
+``Platform``
+    The issue or pull request relates to support and integration with various platforms like traditional operating
+    systems as well as containers, platform-based utilities like filesystems, command schedulers, etc., and
+    system-based applications like webservers, databases, etc.
 
-Other
-~~~~~
+``RIoT``
+    The issue or pull request relates to support and integration with various abstract systems like cloud providers,
+    hypervisors, API-based services, etc.
 
-There are a couple of other labels that are helpful in categorizing bugs that are not included in the categories above.
-These labels can either stand on their own such as ``Question`` or can be applied to bugs or feature requests as
-applicable.
+``Console``
+    The issue or pull request relates to the SaltStack enterprise console.
 
-Low Hanging Fruit
-    Applied to bugs that should be easy to fix. This is useful for new contributors to know where some simple things
-    are to get involved in contributing to salt.
+``Documentation``
+    The issue or pull request relates to documentation.
 
-Question
-    Used when the issue isn’t a bug nor a feature, but the user has a question about expected behavior, how something
-    works, is misunderstanding a concept, etc. This label is typically applied on its own with ``Blocked`` milestone.
+Status
+------
 
-Regression
-    Helps with additional filtering for bug fixing. If something previously worked and now does not work, as opposed to
-    something that never worked in the first place, the issue should be treated with greater urgency.
+Status labels are used to define and track the state of issues and pull requests.  Not all potential statuses correspond
+to a label, but some statuses are common enough that labels have been created for them.  If an issue has not been moved
+beyond the ``Blocked`` milestone, it is very likely that it will only have a status label.
 
-ZD
-    Stands for “Zendesk” and is used to help track bugs that customers are seeing as well as community members. Bugs
-    with this label should be treated with greater urgency.
+``Bugfix - back-port``
+    The pull request needs to be back-ported to an older release branch.  This is done by :ref:`recreating the pull
+    request <backporting-pull-requests>` against that branch.  Once the back-port is completed, this label is replaced
+    with a ``Bugfix - [Done] back-ported`` label.  Normally, new features should go into the develop and bug fixes into
+    the oldest supported release branch, see :ref:`<which-salt-branch>`.
 
-Pull Request Labels
--------------------
+``Bugfix - [Done] back-ported``
+    The pull request has been back-ported to an older branch.
 
-SaltStack also applies various labels to incoming pull requests. These are mainly used to help SaltStack engineers
-easily identify the nature the changes presented in a pull request and whether or not that pull request is ready to be
-reviewed and merged into the Salt codebase.
+``Cannot Reproduce``
+    The issue is a bug and has been reviewed by a SaltStack engineer, but it cannot be replicated with the provided
+    information and context.  Those involved with the bug will need to work through additional ideas until the bug can
+    be isolated and verified.
+
+``Confirmed``
+    The issue is a bug and has been confirmed by a SaltStack engineer, who often documents a minimal working example
+    that reproduces the bug.
+
+``Fixed Pending Verification``
+    The issue is a bug and has been fixed by one or more pull requests, which should link to the issue.  Closure of the
+    issue is contingent upon confirmation of resolution from the submitter.  If the submitter reports a negative
+    confirmation, this label is removed.  If no response is given after a few weeks, then the issue will be assumed
+    fixed and closed.
+
+``Info Needed``
+    The issue needs more information before it can be verified and resolved.  For a feature request this may include a
+    description of the use cases.  Almost all bug reports need to include at least the versions of salt and its
+    dependencies, the system type and version, commands used, debug logs, error messages, and relevant configs.
+
+``Pending Changes``
+    The pull request needs additional changes before it can be merged.
+
+``Pending Discussion``
+    The issue or pull request needs more discussion before it can be closed or merged.  The status of the issue or pull
+    request is not clear or apparent enough for definite action to be taken, or additional input from SaltStack, the
+    submitter, or another party has been requested.
+
+    If the issue is not a pull request, once the discussion has arrived at a cogent conclusion, this label will be
+    removed and the issue will be accepted.  If it is a pull request, the results of the discussion may require
+    additional changes and thus, a ``Pending Changes`` label.
+
+``Won't Fix for Now``
+    The issue is legitimate, but it is not something the SaltStack team is currently able or willing to fix or
+    implement.  Issues having this label may be revisited in the future.
 
 Type of Change
 ~~~~~~~~~~~~~~
 
-A "* Change" label is applied to each incoming pull request. The type of change label that is applied to a pull request
-is based on a scale that encompasses the number of lines affected by the change in conjunction with the area of code
-the change touches (i.e. core code areas vs. execution or state modules).
+Every pull request should receive a change label.  These labels measure the quantity of change as well as the
+significance of the change.  The amount of change and the importance of the code area changed are considered, but often
+the depth of secondary code review required and the potential repercussions of the change may also advise the label
+choice.
 
-The conditions given for these labels are recommendations, as the pull request reviewer will also consult their
-intuition and experience regarding the magnitude of the impact of the proposed changes in the pull request.
+Core code areas include: state compiler, crypto engine, master and minion and syndic daemons, transport, pillar
+rendering, loader, transport layer, event system, salt.utils, client, cli, logging, netapi, runner engine, templating
+engine, top file compilation, file client, file server, mine, salt-ssh, test runner, etc.
 
-Core code areas include: state compiler, crypto engine, master and minion, transport, pillar rendering, loader,
-transport layer, event system, salt.utils, client, cli, logging, netapi, runner engine, templating engine, top file
-compilation, file client, file server, mine, salt-ssh, test runner, etc.
+Non-core code usually constitutes the specific set of plugins for each of the several plugin layers of Salt: execution
+modules, states, runners, returners, clouds, etc.
 
-* Minor Change
+``Minor Change``
     * Less than 64 lines changed, or
     * Less than 8 core lines changed
-* Medium Change
+``Medium Change``
     * Less than 256 lines changed, or
     * Less than 64 core lines changed
-* Master Change
+``Master Change``
     * More than 256 lines changed, or
     * More than 64 core lines changed
-* Expert Change
+``Expert Change``
     * Needs specialized, in-depth review
 
-Back-port Labels
-~~~~~~~~~~~~~~~~
+Test Status
+-----------
 
-There are two labels that are used to keep track of what pull requests need to be back-ported to an older release branch
-and which pull requests have already been back-ported.
+These labels relate to the status of the automated tests that run on pull requests.  If the tests on a pull request fail
+and are not overridden by one of these labels, the pull request submitter needs to update the code and/or tests so that
+the tests pass and the pull request can be merged.
 
-Bugfix - back-port
-    Indicates a pull request that needs to be back-ported. Once the back-port is completed, the back-porting pull request
-    is linked to the original pull request and this label is removed.
+``Lint``
+    The pull request has passed all tests except for the code lint checker.
 
-Bugfix - [Done] back-ported
-    Indicates a pull request that has been back-ported to another branch. The pull request that is responsible for the
-    backport should be linked to this original pull request.
+``Tests Passed``
+    The pull request has passed all tests even though some test results are negative.  Sometimes the automated testing
+    infrastructure will encounter internal errors unrelated to the code change in the pull request that cause test runs
+    to fail.  These errors can be caused by cloud provider and network issues and also Jenkins issues like erroneously
+    accumulating workspace artifacts, resource exhaustion, and bugs that arise from long running Jenkins processes.
 
-Testing Labels
-~~~~~~~~~~~~~~
+Other
+-----
 
-There are a couple of labels that the QA team uses to indicate the mergability of a pull request. If the pull request is
-legitimately passing or failing tests, then one or more of these labels may be applied.
+These labels indicate miscellaneous issue types or statuses that are common or important enough to be tracked and sorted
+with labels.
 
-Lint
-    If a pull request fails the test run, but the only failures are related pylint errors, this label will be applied to
-    indicate that pylint needs to be fixed before proceeding.
+``Awesome``
+    The pull request implements an especially well crafted solution, or a very difficult but necessary change.
 
-Pending Changes
-    Indicates that additional commits should be added to the original pull request before the pull request is merged
-    into the codebase. These changes are unrelated to fixing tests and are generally needed to round out any unfinished
-    pull requests.
+``Low Hanging Fruit``
+    The issue is trivial or almost trivial to implement or fix.  Issues having this label should be a good starting
+    place for new contributors to Salt.
 
-Tests Passed
-    Sometimes the Jenkins test run encounters problems, either tests that are known to have reliability issues or a
-    test VM failed to build, but the problems are not related to the code changed in the pull request. This label is
-    used to indicate that someone has reviewed the test failures and has deemed the failures to be non-pertinent.
+``Needs Testcase``
+    The issue or pull request relates to a feature that needs test coverage.  The pull request containing the tests
+    should reference the issue or pull request having this label, whereupon the label should be removed.
 
-Other Pull Request Labels
-~~~~~~~~~~~~~~~~~~~~~~~~~
+``Regression``
+    The issue is a bug that breaks functionality known to work in previous releases.
 
-Awesome
-    Applied to pull requests that implemented a cool new feature or fixed a bug in an excellent way.
+``Story``
+    The issue is used by a SaltStack engineer to track progress on multiple related issues in a single place.
 
-Labels that Bridge Issues and Pull Requests
-===========================================
+``ZD``
+    The issue is related to a Zendesk customer support ticket.
 
-Needs Testcase
-    Used by SaltStack's QA team to realize where pain points are and to bring special attention to where some test
-    coverage needs to occur, especially in areas that have regressed. This label can apply to issues or pull requests,
-    which can also be open or closed. Once tests are written, the pull request containing the tests should be linked to
-    the issue or pull request that originally had the ``Needs Testcase`` label. At this point, the ``Needs Testcase``
-    label must be removed to indicate that tests no longer need to be written.
-
-Pending Discussion
-    If this label is applied to an issue, the issue may or may not be a bug. Enough information was provided about the
-    issue, but some other opinions on the issue are desirable before proceeding. (This can be a "stand-alone" label.)
-    If the label is applied to a pull request, this is used to signal that further discussion must occur before a
-    decision is made to either merge the pull request into the code base or to close it all together.
+``<Release>``
+    The issue is scheduled to be implemented by ``<Release>``.  See :doc:`<topics/releases/version_numbers>` for a
+    discussion of Salt's release codenames.

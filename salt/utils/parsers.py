@@ -32,9 +32,11 @@ import salt.utils as utils
 import salt.version as version
 import salt.utils.args
 import salt.utils.xdg
+import salt.utils.jid
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
+from salt.ext.six.moves import range
 
 
 def _sorted(mixins_or_funcs):
@@ -310,7 +312,10 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
             # If we're here, no one passed a Saltfile either to the CLI tool or
             # as an environment variable.
             # Is there a Saltfile in the current directory?
-            saltfile = os.path.join(os.getcwd(), 'Saltfile')
+            try:  # cwd may not exist if it was removed but salt was run from it
+                saltfile = os.path.join(os.getcwd(), 'Saltfile')
+            except OSError:
+                saltfile = ''
             if os.path.isfile(saltfile):
                 self.options.saltfile = saltfile
         else:
@@ -1743,13 +1748,18 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                         if len(self.config['fun']) != len(self.config['arg']):
                             self.exit(42, 'Cannot execute compound command without '
                                           'defining all arguments.\n')
+                    # parse the args and kwargs before sending to the publish
+                    # interface
+                    for i in range(len(self.config['arg'])):
+                        self.config['arg'][i] = salt.utils.args.parse_input(
+                                self.config['arg'][i])
                 else:
                     self.config['fun'] = self.args[1]
                     self.config['arg'] = self.args[2:]
-
-                # parse the args and kwargs before sending to the publish interface
-                self.config['arg'] = \
-                    salt.utils.args.parse_input(self.config['arg'])
+                    # parse the args and kwargs before sending to the publish
+                    # interface
+                    self.config['arg'] = \
+                        salt.utils.args.parse_input(self.config['arg'])
             except IndexError:
                 self.exit(42, '\nIncomplete options passed.\n\n')
 
@@ -2443,6 +2453,21 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help=('Select a random temp dir to deploy on the remote system. '
                   'The dir will be cleaned after the execution.'))
+        self.add_option(
+            '--python2-bin',
+            default='python2',
+            help='Path to a python2 binary which has salt installed'
+        )
+        self.add_option(
+            '--python3-bin',
+            default='python3',
+            help='Path to a python3 binary which has salt installed'
+        )
+        self.add_option(
+            '--jid',
+            default=None,
+            help='Pass a JID to be used instead of generating one'
+        )
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
@@ -2460,7 +2485,15 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help='By default ssh host keys are honored and connections will '
-                 'ask for approval'
+                 'ask for approval. Use this option to disable '
+                 'StrictHostKeyChecking.'
+        )
+        auth_group.add_option(
+            '--no-host-keys',
+            dest='no_host_keys',
+            default=False,
+            action='store_true',
+            help='Removes all host key checking functionality from SSH session.'
         )
         auth_group.add_option(
             '--user',
@@ -2545,6 +2578,11 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
 
+    def process_jid(self):
+        if self.options.jid is not None:
+            if not salt.utils.jid.is_jid(self.options.jid):
+                self.error('\'{0}\' is not a valid JID'.format(self.options.jid))
+
 
 class SaltCloudParser(six.with_metaclass(OptionParserMeta,
                                          OptionParser,
@@ -2598,3 +2636,44 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
             return config.cloud_config(self.get_config_file_path())
         except salt.exceptions.SaltCloudConfigError as exc:
             self.error(exc)
+
+
+class SPMParser(six.with_metaclass(OptionParserMeta,
+                                   OptionParser,
+                                   ConfigDirMixIn,
+                                   LogLevelMixIn,
+                                   MergeConfigMixIn)):
+    '''
+    The cli parser object used to fire up the salt spm system.
+    '''
+    description = 'SPM is used to manage 3rd party formulas and other Salt components'
+
+    usage = '%prog [options] <function> [arguments]'
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'spm'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'spm')
+
+    def _mixin_setup(self):
+        self.add_option(
+            '-y', '--assume-yes',
+            default=False,
+            action='store_true',
+            help='Default yes in answer to all confirmation questions.'
+        )
+        self.add_option(
+            '-f', '--force',
+            default=False,
+            action='store_true',
+            help='Default yes in answer to all confirmation questions.'
+        )
+
+    def _mixin_after_parsed(self):
+        # spm needs arguments
+        if len(self.args) <= 1:
+            self.print_help()
+            self.exit(salt.defaults.exitcodes.EX_USAGE)
+
+    def setup_config(self):
+        return salt.config.spm_config(self.get_config_file_path())

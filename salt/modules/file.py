@@ -357,7 +357,7 @@ def set_mode(path, mode):
     '''
     path = os.path.expanduser(path)
 
-    mode = str(mode).lstrip('0')
+    mode = str(mode).lstrip('0Oo')
     if not mode:
         mode = '0'
     if not os.path.exists(path):
@@ -984,13 +984,12 @@ def uncomment(path,
 
         salt '*' file.uncomment /etc/hosts.deny 'ALL: PARANOID'
     '''
-    # Largely inspired by Fabric's contrib.files.uncomment()
-
-    return sed(path,
-               before=r'^([[:space:]]*){0}'.format(char),
-               after=r'\1',
-               limit=regex.lstrip('^'),
-               backup=backup)
+    pattern = '^{0}{1}'.format(char, regex.lstrip('^').rstrip('$'))
+    repl = "{0}".format(regex.lstrip('^').rstrip('$'))
+    return replace(path=path,
+                   pattern=pattern,
+                   repl=repl,
+                   backup=backup)
 
 
 def comment(path,
@@ -1028,17 +1027,11 @@ def comment(path,
 
         salt '*' file.comment /etc/modules pcspkr
     '''
-    # Largely inspired by Fabric's contrib.files.comment()
-
-    regex = '{0}({1}){2}'.format(
-            '^' if regex.startswith('^') else '',
-            regex.lstrip('^').rstrip('$'),
-            '$' if regex.endswith('$') else '')
-
-    return sed(path,
-               before=regex,
-               after=r'{0}\1'.format(char),
-               backup=backup)
+    repl = "{0}{1}".format(char, regex.lstrip('^').rstrip('$'))
+    return replace(path=path,
+                   pattern=regex,
+                   repl=repl,
+                   backup=backup)
 
 
 def _get_flags(flags):
@@ -1235,7 +1228,7 @@ def line(path, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
          quiet=False, indent=True):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Edit a line in the configuration file.
 
@@ -1554,14 +1547,14 @@ def replace(path,
             (the original version and the edited version) in order to generate the
             diff.
     ignore_if_missing
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
         When this parameter is ``True``, ``file.replace`` will return ``False`` if the
         file doesn't exist. When this parameter is ``False``, ``file.replace`` will
         throw an error if the file doesn't exist.
         Default is ``False`` (to maintain compatibility with prior behaviour).
     preserve_inode
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
         Preserve the inode of the file, so that any hard links continue to share the
         inode with the original filename. This works by *copying* the file, reading
@@ -1658,8 +1651,13 @@ def replace(path,
         with salt.utils.fopen(path,
                               mode='r',
                               buffering=bufsize) as r_file:
+            count_replaced = 0
             for line in r_file:
-                result, nrepl = re.subn(cpattern, repl, line, count)
+                if count == 0 or count_replaced <= count:
+                    result, nrepl = re.subn(cpattern, repl, line, count)
+                    count_replaced += nrepl
+                else:
+                    break
 
                 # found anything? (even if no change)
                 if nrepl > 0:
@@ -1707,9 +1705,15 @@ def replace(path,
                     with salt.utils.fopen(temp_file,
                                           mode='r',
                                           buffering=bufsize) as r_file:
+                        count_replaced = 0
                         for line in r_file:
                             result, nrepl = re.subn(cpattern, repl,
                                                     line, count)
+                            if count == 0 or count_replaced <= count:
+                                result, nrepl = re.subn(cpattern, repl, line, count)
+                                count_replaced += nrepl
+                            else:
+                                result = line
                             try:
                                 w_file.write(result)
                             except (OSError, IOError) as exc:
@@ -2022,7 +2026,7 @@ def search(path,
         If true, inserts 'MULTILINE' into ``flags`` and sets ``bufsize`` to
         'file'.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -2900,7 +2904,7 @@ def remove(path):
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError('File path must be absolute.')
+        raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
     try:
         if os.path.isfile(path) or os.path.islink(path):
@@ -3151,8 +3155,63 @@ def get_managed(
     # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
+    # if we have a source defined, lets figure out what the hash is
+    if source:
+        urlparsed_source = _urlparse(source)
+        if urlparsed_source.scheme == 'salt':
+            source_sum = __salt__['cp.hash_file'](source, saltenv)
+            if not source_sum:
+                return '', {}, 'Source file {0} not found'.format(source)
+        # if its a local file
+        elif urlparsed_source.scheme == 'file':
+            file_sum = get_hash(urlparsed_source.path, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif source.startswith('/'):
+            file_sum = get_hash(source, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif source_hash:
+            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3')
+            if _urlparse(source_hash).scheme in protos:
+                # The source_hash is a file on a server
+                hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
+                if not hash_fn:
+                    return '', {}, 'Source hash file {0} not found'.format(
+                        source_hash)
+                source_sum = extract_hash(hash_fn, '', name)
+                if source_sum is None:
+                    return '', {}, ('Source hash file {0} contains an invalid '
+                        'hash format, it must be in the format <hash type>=<hash>.'
+                        ).format(source_hash)
+
+            else:
+                # The source_hash is a hash string
+                comps = source_hash.split('=')
+                if len(comps) < 2:
+                    return '', {}, ('Source hash file {0} contains an '
+                                    'invalid hash format, it must be in '
+                                    'the format <hash type>=<hash>'
+                                    ).format(source_hash)
+                source_sum['hsum'] = comps[1].strip()
+                source_sum['hash_type'] = comps[0].strip()
+        else:
+            return '', {}, ('Unable to determine upstream hash of'
+                            ' source file {0}').format(source)
+
+    # if the file is a template we need to actually template the file to get
+    # a checksum, but we can cache the template itself, but only if there is
+    # a template source (it could be a templated contents)
     if template and source:
-        sfn = __salt__['cp.cache_file'](source, saltenv)
+        # check if we have the template cached
+        template_dest = __salt__['cp.is_cached'](source, saltenv)
+        if template_dest and source_hash:
+            comps = source_hash.split('=')
+            cached_template_sum = get_hash(template_dest, form=source_sum['hash_type'])
+            if cached_template_sum == source_sum['hsum']:
+                sfn = template_dest
+        # if we didn't have the template file, lets get it
+        if not sfn:
+            sfn = __salt__['cp.cache_file'](source, saltenv)
+
         # exists doesn't play nice with sfn as bool
         # but if cache failed, sfn == False
         if not sfn or not os.path.exists(sfn):
@@ -3191,40 +3250,7 @@ def get_managed(
         else:
             __clean_tmp(sfn)
             return sfn, {}, data['data']
-    else:
-        # Copy the file down if there is a source
-        if source:
-            if _urlparse(source).scheme == 'salt':
-                source_sum = __salt__['cp.hash_file'](source, saltenv)
-                if not source_sum:
-                    return '', {}, 'Source file {0!r} not found'.format(source)
-            elif source_hash:
-                protos = ['salt', 'http', 'https', 'ftp', 'swift', 's3']
-                if _urlparse(source_hash).scheme in protos:
-                    # The source_hash is a file on a server
-                    hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
-                    if not hash_fn:
-                        return '', {}, 'Source hash file {0} not found'.format(
-                            source_hash)
-                    source_sum = extract_hash(hash_fn, '', name)
-                    if source_sum is None:
-                        return '', {}, ('Source hash file {0} contains an invalid '
-                            'hash format, it must be in the format <hash type>=<hash>.'
-                            ).format(source_hash)
 
-                else:
-                    # The source_hash is a hash string
-                    comps = source_hash.split('=')
-                    if len(comps) < 2:
-                        return '', {}, ('Source hash file {0} contains an '
-                                        'invalid hash format, it must be in '
-                                        'the format <hash type>=<hash>'
-                                        ).format(source_hash)
-                    source_sum['hsum'] = comps[1].strip()
-                    source_sum['hash_type'] = comps[0].strip()
-            else:
-                return '', {}, ('Unable to determine upstream hash of'
-                                ' source file {0}').format(source)
     return sfn, source_sum, ''
 
 
@@ -3580,7 +3606,7 @@ def check_file_meta(
     if contents is not None:
         # Write a tempfile with the static contents
         tmp = salt.utils.mkstemp(text=True)
-        with salt.utils.fopen(tmp, 'w') as tmp_:
+        with salt.utils.fopen(tmp, 'wb') as tmp_:
             tmp_.write(str(contents))
         # Compare the static contents with the named file
         with contextlib.nested(
@@ -3694,6 +3720,9 @@ def manage_file(name,
         This file is then grabbed and if it has template set, it renders the file to be placed
         into the correct place on the system using salt.files.utils.copyfile()
 
+    ret
+        The initial state return data structure. Pass in ``None`` to use the default structure.
+
     source
         file reference on the master
 
@@ -3750,11 +3779,13 @@ def manage_file(name,
             real_name = name
 
         # Only test the checksums on files with managed contents
-        if source:
+        if source and not (not follow_symlinks and os.path.islink(real_name)):
             name_sum = get_hash(real_name, source_sum['hash_type'])
+        else:
+            name_sum = None
 
         # Check if file needs to be replaced
-        if source and source_sum['hsum'] != name_sum:
+        if source and (source_sum['hsum'] != name_sum or name_sum is None):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
@@ -4211,7 +4242,7 @@ def mknod_chrdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFCHR,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFCHR,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4286,7 +4317,7 @@ def mknod_blkdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFBLK,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFBLK,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4357,7 +4388,7 @@ def mknod_fifo(name,
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
-            if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
+            if os.mkfifo(name, int(str(mode).lstrip('0Oo'), 8)) is None:
                 ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:

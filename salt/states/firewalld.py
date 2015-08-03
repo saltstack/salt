@@ -2,7 +2,7 @@
 '''
 Management of firewalld
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The following example applies changes to the public zone, blocks echo-reply
 and echo-request packets, does not set the zone to be the default, enables

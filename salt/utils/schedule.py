@@ -175,7 +175,7 @@ scheduler to skip this first run and wait until the next scheduled run.
 The scheduler also supports scheduling jobs using a cron like format.
 This requires the python-croniter library.
 
-    ... versionadded:: Beryllium
+    ... versionadded:: 2015.8.0
 
     schedule:
       job1:
@@ -193,7 +193,7 @@ will not run once the specified time has passed.  Time should be specified
 in a format support by the dateutil library.
 This requires the python-dateutil library.
 
-    ... versionadded:: Beryllium
+    ... versionadded:: 2015.8.0
 
     schedule:
       job1:
@@ -225,18 +225,16 @@ The default for maxrunning is 1.
           jid_include: True
           maxrunning: 1
 
-By default, data about jobs runs from the Salt scheduler is not returned to the
-master.  Because of this information for these jobs will not be listed in the
-:py:func:`jobs.list_jobs <salt.runners.jobs.list_jobs>` runner.  The
-``return_job`` parameter will return the data back to the Salt master, making
-the job available in this list.
+By default, data about jobs runs from the Salt scheduler is returned to the
+master.  Setting the ``return_job`` parameter to False will prevent the data
+from being sent back to the Salt master.
 
 .. versionadded:: 2015.5.0
 
     schedule:
       job1:
           function: scheduled_job_function
-          return_job: True
+          return_job: False
 
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
@@ -263,7 +261,6 @@ import datetime
 import itertools
 import multiprocessing
 import threading
-import sys
 import logging
 import errno
 import random
@@ -321,7 +318,7 @@ class Schedule(object):
         self.time_offset = self.functions.get('timezone.get_offset', lambda: '0000')()
         self.schedule_returner = self.option('schedule_returner')
         # Keep track of the lowest loop interval needed in this variable
-        self.loop_interval = sys.maxint
+        self.loop_interval = six.MAXSIZE
         clean_proc_dir(opts)
 
     def option(self, opt):
@@ -340,13 +337,14 @@ class Schedule(object):
                 salt.syspaths.CONFIG_DIR,
                 'minion.d',
                 '_schedule.conf')
+        log.debug('Persisting schedule')
         try:
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
                 fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule')
 
-    def delete_job(self, name, where=None):
+    def delete_job(self, name, persist=True, where=None):
         '''
         Deletes a job from the scheduler.
         '''
@@ -363,7 +361,7 @@ class Schedule(object):
             schedule = self.opts['pillar']['schedule']
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_delete_complete')
 
@@ -371,7 +369,10 @@ class Schedule(object):
         if name in self.intervals:
             del self.intervals[name]
 
-    def add_job(self, data):
+        if persist:
+            self.persist()
+
+    def add_job(self, data, persist=True):
         '''
         Adds a new job to the scheduler. The format is the same as required in
         the configuration file. See the docs on how YAML is interpreted into
@@ -396,13 +397,14 @@ class Schedule(object):
         self.opts['schedule'].update(data)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_add_complete')
 
-        self.persist()
+        if persist:
+            self.persist()
 
-    def enable_job(self, name, where=None):
+    def enable_job(self, name, persist=True, where=None):
         '''
         Enable a job in the scheduler.
         '''
@@ -414,13 +416,16 @@ class Schedule(object):
             schedule = self.opts['schedule']
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_enabled_job_complete')
 
         log.info('Enabling job {0} in scheduler'.format(name))
 
-    def disable_job(self, name, where=None):
+        if persist:
+            self.persist()
+
+    def disable_job(self, name, persist=True, where=None):
         '''
         Disable a job in the scheduler.
         '''
@@ -432,24 +437,30 @@ class Schedule(object):
             schedule = self.opts['schedule']
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_disabled_job_complete')
 
         log.info('Disabling job {0} in scheduler'.format(name))
 
-    def modify_job(self, name, schedule, where=None):
+        if persist:
+            self.persist()
+
+    def modify_job(self, name, schedule, persist=True, where=None):
         '''
         Modify a job in the scheduler.
         '''
         if where == 'pillar':
             if name in self.opts['pillar']['schedule']:
-                self.delete_job(name, where=where)
+                self.delete_job(name, persist, where=where)
             self.opts['pillar']['schedule'][name] = schedule
         else:
             if name in self.opts['schedule']:
-                self.delete_job(name, where=where)
+                self.delete_job(name, persist, where=where)
             self.opts['schedule'][name] = schedule
+
+        if persist:
+            self.persist()
 
     def run_job(self, name):
         '''
@@ -496,7 +507,7 @@ class Schedule(object):
         self.opts['schedule']['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_enabled_complete')
 
@@ -507,7 +518,7 @@ class Schedule(object):
         self.opts['schedule']['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_disabled_complete')
 
@@ -543,9 +554,20 @@ class Schedule(object):
                 schedule.update(self.opts['pillar']['schedule'])
 
         # Fire the complete event back along with the list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_list_complete')
+
+    def save_schedule(self):
+        '''
+        Save the current schedule
+        '''
+        self.persist()
+
+        # Fire the complete event back along with the list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True},
+                       tag='/salt/minion/minion_schedule_saved')
 
     def handle_func(self, func, data):
         '''
@@ -671,7 +693,9 @@ class Schedule(object):
                             )
                         )
 
-            if 'return_job' in data and data['return_job']:
+            if 'return_job' in data and not data['return_job']:
+                pass
+            else:
                 # Send back to master so the job is included in the job list
                 mret = ret.copy()
                 mret['jid'] = 'req'

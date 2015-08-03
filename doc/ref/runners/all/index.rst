@@ -30,8 +30,10 @@ Full list of runner modules
     pillar
     pkg
     queue
+    reactor
     sdb
     search
+    ssh
     state
     survey
     test

@@ -121,11 +121,11 @@ class MockNeutron(object):
         return network
 
     @staticmethod
-    def create_network(name, router_ext):
+    def create_network(name, admin_state_up, router_ext, network_type, physical_network, segmentation_id, shared):
         """
         Mock of create_network method
         """
-        return (name, router_ext)
+        return (name, admin_state_up, router_ext, network_type, physical_network, segmentation_id, shared)
 
     @staticmethod
     def update_network(network, name):

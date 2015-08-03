@@ -84,7 +84,7 @@ parameters are discussed in more detail below.
       # Optionally add an IAM profile
       iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
 
-      provider: ec2
+      driver: ec2
 
 
     my-ec2-southeast-private-ips:
@@ -144,7 +144,7 @@ parameters are discussed in more detail below.
       # Optionally add an IAM profile
       iam_profile: 'my other profile name'
 
-      provider: ec2
+      driver: ec2
 
 
 Access Credentials
@@ -340,7 +340,7 @@ The following settings are always required for EC2:
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: ec2
+      driver: ec2
 
 
 Optional Settings
@@ -982,6 +982,10 @@ the network interfaces of your virtual machines, for example:-
           # both the primary private ip address and each of the secondary ones
           #
           allocate_new_eips: True
+
+          # Uncomment this if you're creating NAT instances. Allows an instance
+          # to accept IP packets with destinations other than itself.
+          # SourceDestCheck: False
 
 Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
 profile where the interfaces are manually configured like this. These are both

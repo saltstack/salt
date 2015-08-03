@@ -75,7 +75,7 @@ def execution():
         print(exc)  # pylint: disable=W1698
         return []
 
-    i = itertools.chain.from_iterable([six.iteritems(i) for i in six.itervalues(docs)])
+    i = itertools.chain.from_iterable([six.iteritems(docs['ret'])])
     ret = dict(list(i))
 
     return ret

@@ -1,6 +1,6 @@
-==============================
+=============================
 Getting Started With HP Cloud
-==============================
+=============================
 
 HP Cloud is a major public cloud platform and uses the libcloud
 `openstack` driver. The current version of OpenStack that HP Cloud
@@ -45,7 +45,7 @@ provider configuration file as in the example shown below:
       ssh_key_name: yourkey
       ssh_key_file: /path/to/key/yourkey.priv
 
-      provider: openstack
+      driver: openstack
 
 
 The subsequent example that follows is using the openstack driver.

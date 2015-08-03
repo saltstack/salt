@@ -158,7 +158,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
         Show minions being in specific state that is one of 'available', 'joined',
         'allowed', 'alived' or 'reaped'.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -204,7 +204,7 @@ def list_not_state(subset=None, show_ipv4=False, state=None):
         Show minions being in specific state that is one of 'available', 'joined',
         'allowed', 'alived' or 'reaped'.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -237,7 +237,7 @@ def present(subset=None, show_ipv4=False):
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
@@ -245,7 +245,7 @@ def present(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -267,7 +267,7 @@ def not_present(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -289,7 +289,7 @@ def joined(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -311,7 +311,7 @@ def not_joined(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -333,7 +333,7 @@ def allowed(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -355,7 +355,7 @@ def not_allowed(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -377,7 +377,7 @@ def alived(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -399,7 +399,7 @@ def not_alived(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -421,7 +421,7 @@ def reaped(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -443,7 +443,7 @@ def not_reaped(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 

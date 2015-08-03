@@ -63,7 +63,9 @@ class WinServermanagerTestCase(TestCase):
         Test if it install a feature.
         '''
         with patch.dict(win_servermanager.__salt__, {'cmd.run': self._m_run()}):
-            self.assertDictEqual(win_servermanager.install('Telnet-Client'), {})
+            self.assertDictEqual(win_servermanager.install('Telnet-Client'), {
+                'message': ''
+            })
 
     # 'remove' function tests: 1
 
@@ -72,7 +74,9 @@ class WinServermanagerTestCase(TestCase):
         Test if it remove an installed feature.
         '''
         with patch.dict(win_servermanager.__salt__, {'cmd.run': self._m_run()}):
-            self.assertDictEqual(win_servermanager.remove('Telnet-Client'), {})
+            self.assertDictEqual(win_servermanager.remove('Telnet-Client'), {
+                'message': ''
+            })
 
 
 if __name__ == '__main__':

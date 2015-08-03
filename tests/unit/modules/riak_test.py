@@ -10,7 +10,6 @@ from salttesting import skipIf, TestCase
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
-    MagicMock,
     patch)
 
 from salttesting.helpers import ensure_in_syspath
@@ -33,51 +32,59 @@ class RiakTestCase(TestCase):
         '''
         Test for start Riak
         '''
-        with patch.dict(riak.__salt__, {'cmd.retcode':
-                                        MagicMock(return_value=False)}):
-            self.assertTrue(riak.start())
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.start(), {'success': True, 'comment': 'success'}
+            )
 
     def test_stop(self):
         '''
         Test for stop Riak
         '''
-        with patch.dict(riak.__salt__, {'cmd.retcode':
-                                        MagicMock(return_value=False)}):
-            self.assertTrue(riak.stop())
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.stop(), {'success': True, 'comment': 'success'}
+            )
 
     def test_cluster_join(self):
         '''
         Test for Join a Riak cluster
         '''
-        self.assertFalse(riak.cluster_join())
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.cluster_join('A', 'B'), {'success': True, 'comment': 'success'}
+            )
 
-        with patch.dict(riak.__salt__, {'cmd.retcode':
-                                        MagicMock(return_value=False)}):
-            self.assertTrue(riak.cluster_join('A', 'B'))
+    def test_cluster_leave(self):
+        '''
+        Test for leaving a Riak cluster
+        '''
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.cluster_leave('A', 'B'), {'success': True, 'comment': 'success'}
+            )
 
     def test_cluster_plan(self):
         '''
         Test for Review Cluster Plan
         '''
-        with patch.dict(riak.__salt__, {'cmd.run':
-                                        MagicMock(return_value=False)}):
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
             self.assertTrue(riak.cluster_plan())
 
     def test_cluster_commit(self):
         '''
         Test for Commit Cluster Changes
         '''
-        with patch.dict(riak.__salt__, {'cmd.retcode':
-                                        MagicMock(return_value=False)}):
-            self.assertTrue(riak.cluster_commit())
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.cluster_commit(), {'success': True, 'comment': 'success'}
+            )
 
     def test_member_status(self):
         '''
         Test for Get cluster member status
         '''
-        with patch.dict(riak.__salt__,
-                        {'cmd.run':
-                         MagicMock(return_value='A:a/B:b\nC:c/D:d')}):
+        with patch.object(riak, '__execute_cmd', return_value={'stdout': 'A:a/B:b\nC:c/D:d'}):
             self.assertDictEqual(riak.member_status(),
                                  {'membership': {},
                                   'summary': {'A': 'a', 'C': 'c', 'B': 'b',
@@ -85,6 +92,32 @@ class RiakTestCase(TestCase):
                                               'Valid': 0, 'Leaving': 0,
                                               'Joining': 0}})
 
+    def test_status(self):
+        '''
+        Test status information
+        '''
+        ret = {'stdout': 'vnode_map_update_time_95 : 0\nvnode_map_update_time_99 : 0'}
+
+        with patch.object(riak, '__execute_cmd', return_value=ret):
+            self.assertEqual(
+                riak.status(), {'vnode_map_update_time_95': '0', 'vnode_map_update_time_99': '0'}
+            )
+
+    def test_test(self):
+        '''
+        Test the Riak test
+        '''
+        with patch.object(riak, '__execute_cmd', return_value={'retcode': 0, 'stdout': 'success'}):
+            self.assertEqual(
+                riak.test(), {'success': True, 'comment': 'success'}
+            )
+
+    def test_services(self):
+        '''
+        Test Riak Service List
+        '''
+        with patch.object(riak, '__execute_cmd', return_value={'stdout': '[a,b,c]'}):
+            self.assertEqual(riak.services(), ['a', 'b', 'c'])
 
 if __name__ == '__main__':
     from integration import run_tests

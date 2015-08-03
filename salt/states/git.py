@@ -358,6 +358,13 @@ def latest(name,
         if os.path.isdir(target):
             # git clone is required, target exists but force is turned on
             if force:
+                if __opts__['test']:
+                    return _neutral_test(
+                        ret,
+                        'Repository {0} is about to be cloned to {1}.'
+                        'Since force option is in use, deleting.'.format(
+                            name, target))
+
                 log.debug(('target {0} found, but not a git repository. Since '
                            'force option is in use, deleting.').format(target))
                 if os.path.islink(target):

@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
 Management of PostgreSQL tablespace
-==================================
+===================================
 The postgres_tablespace module is used to create and manage Postgres
 tablespaces.
+
 Tablespaces can be set as either absent or present.
+
 .. code-block:: yaml
     ssd-tablespace:
       postgres_tablespace.present:
         - name: indexes
         - directory: /mnt/ssd-data
-.. versionadded:: Beryllium
+
+.. versionadded:: 2015.8.0
+
 '''
 from __future__ import absolute_import
 
@@ -34,7 +38,8 @@ def present(name,
             db_user=None):
     '''
     Ensure that the named tablespace is present with the specified properties.
-    For more information about all of these options see man create_tablespace(1)
+    For more information about all of these options see man create_tablespace(1).
+
     name
         The name of the tablespace to create/manage.
     directory
@@ -58,7 +63,6 @@ def present(name,
     user
         System user all operations should be performed on behalf of
 
-        .. versionadded:: Beryllium
     '''
     ret = {'name': name,
            'changes': {},
@@ -132,7 +136,8 @@ def absent(name,
            db_port=None,
            db_user=None):
     '''
-    Ensure that the named database is absent
+    Ensure that the named database is absent.
+
     name
         The name of the database to remove
     db_user
@@ -145,7 +150,6 @@ def absent(name,
         Database port if different from config or default
     user
         System user all operations should be performed on behalf of
-        .. versionadded:: Beryllium
     '''
     ret = {'name': name,
            'changes': {},

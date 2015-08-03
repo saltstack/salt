@@ -3,7 +3,7 @@
 VMware Cloud Module
 ===================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.5.4
 
 The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 
@@ -27,19 +27,19 @@ cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      provider: vmware
+      driver: vmware
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter01.domain.com"
 
     vmware-vcenter02:
-      provider: vmware
+      driver: vmware
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter02.domain.com"
 
     vmware-vcenter03:
-      provider: vmware
+      driver: vmware
       user: "DOMAIN\\user"
       password: "verybadpass"
       url: "vcenter03.domain.com"
@@ -1010,7 +1010,7 @@ def _format_instance_info(vm):
         'mac_address': mac_addresses,
         'networks': network_full_info,
         'path': str(vm["config.files.vmPathName"]),
-        'tools_status': str(vm["guest.toolsStatus"]),
+        'tools_status': str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
     }
 
     return vm_full_info
@@ -2038,6 +2038,20 @@ def create(vm_):
 
         salt-cloud -p vmware-centos6.5 vmname
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'vmware',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -2045,7 +2059,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -2198,7 +2212,7 @@ def create(vm_):
                     err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
                     log.error(err_msg)
                     return {'Error': err_msg}
-            except ValueError:
+            except (TypeError, ValueError):
                 memory_mb = int(memory)
             log.debug("Setting memory to: {0} MB".format(memory_mb))
             config_spec.memoryMB = memory_mb
@@ -2313,7 +2327,7 @@ def create(vm_):
             {
                 'name': vm_['name'],
                 'profile': vm_['profile'],
-                'provider': vm_['provider'],
+                'provider': vm_['driver'],
             },
             transport=__opts__['transport']
         )

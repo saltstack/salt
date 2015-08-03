@@ -236,10 +236,10 @@ def present(
     listeners
         A list of listener lists; example::
 
-            [
-                ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
-                ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
-            ]
+        [
+            ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
+            ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
+        ]
 
     subnets
         A list of subnet IDs in your VPC to attach to your LoadBalancer.
@@ -362,7 +362,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     Add instance/s to load balancer
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     .. code-block:: yaml
 

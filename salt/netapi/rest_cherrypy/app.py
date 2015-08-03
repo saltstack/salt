@@ -7,13 +7,14 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
-:depends:   
-    - CherryPy Python module. Versions 3.2.{2,3,4} are strongly
-      recommended due to a known `SSL error
-      <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
+:depends:
+    - CherryPy Python module. Version 3.2.3 is currently recommended when
+      SSL is enabled, since this version worked the best with SSL in
+      internal testing. Versions 3.2.3 - 4.x can be used if SSL is not enabled.
+      Be aware that there is a known
+      `SSL error <https://bitbucket.org/cherrypy/cherrypy/issue/1298/ssl-not-working>`_
       introduced in version 3.2.5. The issue was reportedly resolved with
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
-    - salt-api package
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
     - Java: https://github.com/SUSE/saltstack-netapi-client-java
@@ -328,6 +329,73 @@ def salt_token_tool():
     # X-Auth-Token header trumps session cookie
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
+
+
+def salt_api_acl_tool(username, request):
+    '''
+    ..versionadded:: Boron
+
+    Verifies user requests against the API whitelist. (User/IP pair)
+    in order to provide whitelisting for the API similar to the
+    master, but over the API.
+
+    ..code-block:: yaml
+
+        rest_cherrypy:
+            api_acl:
+                users:
+                    '*':
+                        - 1.1.1.1
+                        - 1.1.1.2
+                    foo:
+                        - 8.8.4.4
+
+    :param username: Username to check against the API.
+    :type username: str
+    :param request: Cherrypy request to check against the API.
+    :type request: cherrypy.request
+    '''
+    failure_str = ("[api_acl] Authentication failed for "
+                   "user {0} from IP {1}")
+    success_str = ("[api_acl] Authentication sucessful for "
+                   "user {0} from IP {1}")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user {0} from IP {1}")
+
+    acl = None
+    # Salt Configuration
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        # Cherrypy Config.
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            # ACL Config.
+            acl = cherrypy_conf.get('api_acl', None)
+
+    ip = request.remote.ip
+    if acl:
+        users = acl.get('users', {})
+        if users:
+            if username in users:
+                if ip in users[username]:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            elif username not in users and '*' in users:
+                if ip in users['*']:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            else:
+                logger.info(failure_str.format(username, ip))
+                return False
+    else:
+        logger.info(pass_str.format(username, ip))
+        return True
 
 
 def salt_ip_verify_tool():
@@ -989,7 +1057,7 @@ class Jobs(LowDataAdapter):
         'tools.salt_auth.on': True,
     })
 
-    def GET(self, jid=None):
+    def GET(self, jid=None, timeout=''):
         '''
         A convenience URL for getting lists of previously run jobs or getting
         the return from a single job
@@ -1421,6 +1489,12 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
+        username = creds.get('username', None)
+        # Validate against the whitelist.
+        if not salt_api_acl_tool(username, cherrypy.request):
+            raise cherrypy.HTTPError(401)
+
+        # Mint token.
         token = self.auth.mk_token(creds)
         if 'token' not in token:
             raise cherrypy.HTTPError(401,
@@ -1780,7 +1854,8 @@ class Events(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1953,7 +2028,8 @@ class WebsocketEndpoint(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:

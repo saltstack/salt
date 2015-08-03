@@ -61,6 +61,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         '''
         Only create one instance of channel per __key()
         '''
+
         # do we have any mapping for this io_loop
         io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
@@ -78,7 +79,17 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             loop_instance_map[key] = new_obj
         else:
             log.debug('Re-using AsyncZeroMQReqChannel for {0}'.format(key))
-        return loop_instance_map[key]
+        try:
+            return loop_instance_map[key]
+        except KeyError:
+            # In iterating over the loop_instance_map, we may have triggered
+            # garbage collection. Therefore, the key is no longer present in
+            # the map. Re-gen and add to map.
+            log.debug('Initializing new AsyncZeroMQReqChannel due to GC for {0}'.format(key))
+            new_obj = object.__new__(cls)
+            new_obj.__singleton_init__(opts, **kwargs)
+            loop_instance_map[key] = new_obj
+            return loop_instance_map[key]
 
     @classmethod
     def __key(cls, opts, **kwargs):
@@ -118,7 +129,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         Since the message_client creates sockets and assigns them to the IOLoop we have to
         specifically destroy them, since we aren't the only ones with references to the FDs
         '''
-        self.message_client.destroy()
+        if hasattr(self, 'message_client'):
+            self.message_client.destroy()
+        else:
+            log.debug('No message_client attr for AsyncZeroMQReqChannel found. Not destroying sockets.')
 
     @property
     def master_uri(self):
@@ -480,7 +494,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
-            log.error('payload and load must be a dict')
+            log.error('payload and load must be a dict. Payload was: {0} and load was {1}'.format(payload, payload.get('load')))
             stream.send(self.serial.dumps('payload and load must be a dict'))
             raise tornado.gen.Return()
 
@@ -702,8 +716,10 @@ class AsyncReqMessageClient(object):
     def destroy(self):
         if hasattr(self, 'stream'):
             # TODO: Optionally call stream.close() on newer pyzmq? It is broken on some.
-            self.stream.io_loop.remove_handler(self.stream.socket)
             self.stream.socket.close()
+            self.stream.io_loop.remove_handler(self.stream.socket)
+            # set this to None, more hacks for messed up pyzmq
+            self.stream.socket = None
             self.socket.close()
         self.context.term()
 

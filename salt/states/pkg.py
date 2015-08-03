@@ -87,6 +87,8 @@ if salt.utils.is_windows():
     from salt.modules.win_pkg import get_repo_data
     from salt.modules.win_pkg import _get_latest_pkg_version
     from salt.modules.win_pkg import _reverse_cmp_pkg_versions
+    from salt.modules.win_pkg import _get_local_repo_dir
+    _get_local_repo_dir = _namespaced_function(_get_local_repo_dir, globals())
     _get_package_info = _namespaced_function(_get_package_info, globals())
     get_repo_data = _namespaced_function(get_repo_data, globals())
     _get_latest_pkg_version = \
@@ -148,11 +150,12 @@ def _fulfills_version_spec(versions, oper, desired_version):
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
+    cmp_func = __salt__.get('pkg.version_cmp')
     for ver in versions:
         if salt.utils.compare_versions(ver1=ver,
                                        oper=oper,
                                        ver2=desired_version,
-                                       cmp_func=__salt__.get('version_cmp')):
+                                       cmp_func=cmp_func):
             return True
     return False
 
@@ -343,7 +346,12 @@ def _find_install_targets(name=None,
         # enforced. Takes extra time. Disable for improved performance
         if not skip_suggestions:
             # Perform platform-specific pre-flight checks
-            problems = _preflight_check(desired, **kwargs)
+            not_installed = dict([
+                (name, version)
+                for name, version in desired.items()
+                if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
+            ])
+            problems = _preflight_check(not_installed, **kwargs)
             comments = []
             if problems.get('no_suggest'):
                 comments.append(
@@ -1136,14 +1144,15 @@ def installed(
 
     if modified_hold:
         for i in modified_hold:
-            comment.append(i['comment'])
             change_name = i['name']
-            if len(changes[change_name]['new']) > 0:
-                changes[change_name]['new'] += '\n'
-            changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
-            if len(changes[change_name]['old']) > 0:
-                changes[change_name]['old'] += '\n'
-            changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
+            if change_name in changes:
+                comment.append(i['comment'])
+                if len(changes[change_name]['new']) > 0:
+                    changes[change_name]['new'] += '\n'
+                changes[change_name]['new'] += '{0}'.format(i['changes']['new'])
+                if len(changes[change_name]['old']) > 0:
+                    changes[change_name]['old'] += '\n'
+                changes[change_name]['old'] += '{0}'.format(i['changes']['old'])
 
     # Any requested packages that were not targeted for install or reinstall
     if not_modified:
@@ -1251,6 +1260,7 @@ def latest(
         fromrepo=None,
         skip_verify=False,
         pkgs=None,
+        watch_flags=True,
         **kwargs):
     '''
     Ensure that the named package is installed and the latest available
@@ -1367,19 +1377,37 @@ def latest(
 
     targets = {}
     problems = []
-    cmp_func = __salt__.get('pkg.version_cmp', __salt__.get('version_cmp'))
-    for pkg in desired_pkgs:
-        if not avail[pkg]:
-            if not cur[pkg]:
-                msg = 'No information found for \'{0}\'.'.format(pkg)
+    cmp_func = __salt__.get('pkg.version_cmp')
+    minion_os = __salt__['grains.item']('os')['os']
+
+    if minion_os == 'Gentoo' and watch_flags:
+        for pkg in desired_pkgs:
+            if not avail[pkg] and not cur[pkg]:
+                msg = 'No information found for {0!r}.'.format(pkg)
                 log.error(msg)
                 problems.append(msg)
-        elif not cur[pkg] \
-                or salt.utils.compare_versions(ver1=cur[pkg],
-                                               oper='<',
-                                               ver2=avail[pkg],
-                                               cmp_func=cmp_func):
-            targets[pkg] = avail[pkg]
+            else:
+                if salt.utils.compare_versions(ver1=cur[pkg],
+                    oper='!=',
+                    ver2=avail[pkg],
+                    cmp_func=cmp_func):
+                    targets[pkg] = avail[pkg]
+                else:
+                    if __salt__['portage_config.is_changed_uses'](pkg):
+                        targets[pkg] = avail[pkg]
+    else:
+        for pkg in desired_pkgs:
+            if not avail[pkg]:
+                if not cur[pkg]:
+                    msg = 'No information found for \'{0}\'.'.format(pkg)
+                    log.error(msg)
+                    problems.append(msg)
+            elif not cur[pkg] \
+                    or salt.utils.compare_versions(ver1=cur[pkg],
+                                                   oper='<',
+                                                   ver2=avail[pkg],
+                                                   cmp_func=cmp_func):
+                targets[pkg] = avail[pkg]
 
     if problems:
         return {'name': name,
@@ -1625,7 +1653,7 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
         part of the name, such as kernel modules which match a specific kernel
         version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     Multiple Package Options:
 
@@ -1666,7 +1694,7 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
         part of the name, such as kernel modules which match a specific kernel
         version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     Multiple Package Options:
 
@@ -1749,7 +1777,7 @@ def uptodate(name, refresh=False, **kwargs):
 
 def group_installed(name, skip=None, include=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Ensure that an entire package group is installed. This state is only
     supported for the :mod:`yum <salt.modules.yumpkg>` package manager.

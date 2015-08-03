@@ -279,7 +279,7 @@ def sync_modules(saltenv=None, refresh=True):
 
         If this function is executed using a :py:func:`module.run
         <salt.states.module.run>` state, the SLS file will not have access to
-        newly synced execution modules unless a ``reload_modules`` argument is
+        newly synced execution modules unless a ``refresh`` argument is
         added to the state, like so:
 
         .. code-block:: yaml
@@ -287,7 +287,7 @@ def sync_modules(saltenv=None, refresh=True):
             load_my_custom_module:
               module.run:
                 - name: saltutil.sync_modules
-                - reload_modules: True
+                - refresh: True
 
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
@@ -423,7 +423,7 @@ def sync_utils(saltenv=None, refresh=True):
 
 def sync_log_handlers(saltenv=None, refresh=True):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Sync utility source files from the _log_handlers directory on the salt master file
     server. This function is environment aware, pass the desired environment
@@ -448,13 +448,13 @@ def sync_all(saltenv=None, refresh=True):
     environment
 
     refresh : True
-        Also refresh the execution modules available to the minion.
+        Also refresh the execution modules and pillar data available to the minion.
 
     .. important::
 
         If this function is executed using a :py:func:`module.run
         <salt.states.module.run>` state, the SLS file will not have access to
-        newly synced execution modules unless a ``reload_modules`` argument is
+        newly synced execution modules unless a ``refresh`` argument is
         added to the state, like so:
 
         .. code-block:: yaml
@@ -463,7 +463,6 @@ def sync_all(saltenv=None, refresh=True):
               module.run:
                 - name: saltutil.sync_all
                 - refresh: True
-                - reload_modules: True
 
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
@@ -487,6 +486,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
     if refresh:
         refresh_modules()
+        refresh_pillar()
     return ret
 
 
@@ -547,7 +547,7 @@ def refresh_modules(async=True):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
             # Wait for the finish event to fire
             log.trace('refresh_modules waiting for module refresh to complete')

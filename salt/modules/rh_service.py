@@ -58,7 +58,7 @@ def __virtual__():
     ))
     if __grains__['os'] in enable:
         if __grains__['os'] == 'SUSE':
-            if __grains__['osrelease'].startswith('11'):
+            if str(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
                 return False

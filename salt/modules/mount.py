@@ -388,6 +388,7 @@ def set_fstab(
         # Try to guess right criteria for auto....
         # NOTE: missing some special fstypes here
         specialFSes = frozenset([
+            'none',
             'tmpfs',
             'sysfs',
             'proc',

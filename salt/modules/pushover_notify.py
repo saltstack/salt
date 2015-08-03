@@ -22,16 +22,12 @@ import logging
 
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
-import salt.ext.six.moves.http_client
+from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
-try:
-    import requests
-    from requests.exceptions import ConnectionError
-    ENABLED = True
-except ImportError:
-    ENABLED = False
+# Import salt libs
+from salt.exceptions import SaltInvocationError
+import salt.utils.pushover
 
 log = logging.getLogger(__name__)
 __virtualname__ = 'pushover'
@@ -43,160 +39,7 @@ def __virtual__():
 
     :return: The virtual name of the module.
     '''
-    if not ENABLED:
-        return False
     return __virtualname__
-
-
-def _query(function,
-           token=None,
-           api_version='1',
-           method='POST',
-           data=None,
-           query_params=None):
-    '''
-    PushOver object method function to construct and execute on the API URL.
-
-    :param token:       The PushOver api key.
-    :param api_version: The PushOver API version to use, defaults to version 1.
-    :param function:    The PushOver api function to perform.
-    :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
-    :return:            The json response from the API call or False.
-    '''
-    headers = {}
-
-    if query_params is None:
-        query_params = {}
-
-    if data is None:
-        data = {}
-
-    ret = {'message': '',
-           'res': True}
-
-    pushover_functions = {
-        'message': {
-            'request': 'messages.json',
-            'response': 'status',
-        },
-        'validate_user': {
-            'request': 'users/validate.json',
-            'response': 'status',
-        },
-        'validate_sound': {
-            'request': 'sounds.json',
-            'response': 'status',
-        },
-    }
-
-    if not token:
-        try:
-            options = __salt__['config.option']('pushover')
-            if not token:
-                token = options.get('token')
-        except (NameError, KeyError, AttributeError):
-            log.error('No PushOver token found.')
-            ret['message'] = 'No PushOver token found.'
-            ret['res'] = False
-            return ret
-
-    api_url = 'https://api.pushover.net'
-    base_url = _urljoin(api_url, api_version + '/')
-    path = pushover_functions.get(function).get('request')
-    url = _urljoin(base_url, path, False)
-
-    try:
-        result = requests.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=query_params,
-            data=data,
-            verify=True,
-        )
-    except ConnectionError as e:
-        ret['message'] = e
-        ret['res'] = False
-        return ret
-
-    if result.status_code == salt.ext.six.moves.http_client.OK:
-        result = result.json()
-        response = pushover_functions.get(function).get('response')
-        if response in result and result[response] == 0:
-            ret['res'] = False
-        ret['message'] = result
-        return ret
-    else:
-        try:
-            result = result.json()
-            if response in result and result[response] == 0:
-                ret['res'] = False
-            ret['message'] = result
-            return ret
-        except ValueError:
-            ret['res'] = False
-            ret['message'] = result
-            return ret
-
-
-def _validate_sound(sound,
-                    token):
-    '''
-    Send a message to a Pushover user or group.
-    :param sound:       The sound that we want to verify
-    :param token:       The PushOver token.
-    '''
-    parameters = dict()
-    parameters['token'] = token
-
-    response = _query(function='validate_sound',
-                      method='GET',
-                      query_params=parameters)
-
-    if response['res']:
-        if 'message' in response:
-            _message = response.get('message', '')
-            if 'status' in _message:
-                if _message.get('status', '') == 1:
-                    sounds = _message.get('sounds', '')
-                    if sound in sounds:
-                        return True
-                    else:
-                        log.info('Warning: {0} not a valid sound.'.format(sound))
-                        return False
-                else:
-                    log.info('Error: {0}'.format(''.join(_message.get('errors'))))
-    return False
-
-
-def _validate_user(user,
-                   device,
-                   token):
-    '''
-    Send a message to a Pushover user or group.
-    :param user:        The user or group name, either will work.
-    :param device:      The device for the user.
-    :param token:       The PushOver token.
-    '''
-    parameters = dict()
-    parameters['user'] = user
-    parameters['token'] = token
-    parameters['device'] = device
-
-    response = _query(function='validate_user',
-                      method='POST',
-                      data=parameters)
-
-    if response['res']:
-        if 'message' in response:
-            _message = response.get('message', '')
-            if 'status' in _message:
-                if _message.get('status', '') == 1:
-                    return True
-                else:
-                    log.info('Error: {0}'.format(''.join(_message.get('errors'))))
-    return False
 
 
 def post_message(user=None,
@@ -234,16 +77,26 @@ def post_message(user=None,
     '''
 
     if not token:
-        log.error('token is a required argument.')
+        token = __salt__['config.get']('pushover.token') or \
+                __salt__['config.get']('pushover:token')
+        if not token:
+            raise SaltInvocationError('Pushover token is unavailable.')
 
     if not user:
-        log.error('user is a required argument.')
+        user = __salt__['config.get']('pushover.user') or \
+               __salt__['config.get']('pushover:user')
+        if not user:
+            raise SaltInvocationError('Pushover user key is unavailable.')
 
     if not message:
-        log.error('message is a required argument.')
+        raise SaltInvocationError('Required paramter "message" is missing.')
 
-    if not _validate_user(user, device, token):
-        return
+    user_validate = salt.utils.pushover.validate_user(user, device, token)
+    if not user_validate['result']:
+        return user_validate
+
+    if not title:
+        title = 'Message from SaltStack'
 
     parameters = dict()
     parameters['user'] = user
@@ -255,12 +108,14 @@ def post_message(user=None,
     parameters['retry'] = retry
     parameters['message'] = message
 
-    if sound and _validate_sound(sound, token):
+    if sound and salt.utils.pushover.validate_sound(sound, token)['res']:
         parameters['sound'] = sound
 
-    result = _query(function='message',
-                    method='POST',
-                    data=parameters)
+    result = salt.utils.pushover.query(function='message',
+                                       method='POST',
+                                       header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                                       data=_urlencode(parameters),
+                                       opts=__opts__)
 
     if result['res']:
         return True

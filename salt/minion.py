@@ -178,6 +178,24 @@ def resolve_dns(opts):
     return ret
 
 
+def prep_ip_port(opts):
+    ret = {}
+    if opts['master_uri_format'] == 'ip_only':
+        ret['master'] = opts['master']
+    else:
+        ip_port = opts['master'].rsplit(":", 1)
+        if len(ip_port) == 1:
+            # e.g. master: mysaltmaster
+            ret['master'] = ip_port[0]
+        else:
+            # e.g. master: localhost:1234
+            # e.g. master: 127.0.0.1:1234
+            # e.g. master: ::1:1234
+            ret['master'] = ip_port[0]
+            ret['master_port'] = ip_port[1]
+    return ret
+
+
 def get_proc_dir(cachedir, **kwargs):
     '''
     Given the cache directory, return the directory that process data is
@@ -242,7 +260,7 @@ def parse_args_and_kwargs(func, args, data=None):
     return load_args_and_kwargs(func, args, data=data)
 
 
-def load_args_and_kwargs(func, args, data=None):
+def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     '''
     Detect the args and kwargs that need to be passed to a function call, and
     check them against what was passed.
@@ -296,7 +314,7 @@ def load_args_and_kwargs(func, args, data=None):
         else:
             _args.append(arg)
 
-    if invalid_kwargs:
+    if invalid_kwargs and not ignore_invalid:
         raise SaltInvocationError(
             'The following keyword arguments are not valid: {0}'
             .format(', '.join(invalid_kwargs))
@@ -361,7 +379,7 @@ class SMinion(object):
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv')
+            pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -612,7 +630,7 @@ class Minion(MinionBase):
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            self.opts.get('pillarenv')
+            pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
@@ -637,7 +655,7 @@ class Minion(MinionBase):
                     'jid_include': True,
                     'maxrunning': 2
                 }
-            })
+            }, persist=True)
 
         # add master_alive job if enabled
         if self.opts['master_alive_interval'] > 0:
@@ -651,7 +669,7 @@ class Minion(MinionBase):
                     'kwargs': {'master': self.opts['master'],
                                'connected': True}
                 }
-            })
+            }, persist=True)
 
         self.grains_cache = self.opts['grains']
 
@@ -724,7 +742,7 @@ class Minion(MinionBase):
                 elif isinstance(opts['master'], str) and ('master_list' not in opts):
                     # We have a string, but a list was what was intended. Convert.
                     # See issue 23611 for details
-                    opts['master'] = list(opts['master'])
+                    opts['master'] = [opts['master']]
                 elif opts['__role'] == 'syndic':
                     log.info('Syndic setting master_syndic to \'{0}\''.format(opts['master']))
 
@@ -744,6 +762,13 @@ class Minion(MinionBase):
                            '{0}'.format(type(opts['master'])))
                     log.error(msg)
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
+                # See issue 21082 for details
+                if opts['retry_dns']:
+                    msg = ('\'master_type\' set to \'failover\' but \'retry_dns\' is not 0. '
+                           'Setting \'retry_dns\' to 0 to failover to the next master on DNS errors.')
+                    log.critical(msg)
+                    opts['retry_dns'] = 0
             else:
                 msg = ('Invalid keyword \'{0}\' for variable '
                        '\'master_type\''.format(opts['master_type']))
@@ -759,6 +784,7 @@ class Minion(MinionBase):
 
             for master in local_masters:
                 opts['master'] = master
+                opts.update(prep_ip_port(opts))
                 opts.update(resolve_dns(opts))
                 super(Minion, self).__init__(opts)  # TODO: only run init once?? This will run once per attempt
 
@@ -788,11 +814,13 @@ class Minion(MinionBase):
                        'the minions connection attempt.')
                 log.error(msg)
             else:
+                self.tok = pub_channel.auth.gen_token('salt')
                 self.connected = True
                 raise tornado.gen.Return((opts['master'], pub_channel))
 
         # single master sign in
         else:
+            opts.update(prep_ip_port(opts))
             opts.update(resolve_dns(opts))
             pub_channel = salt.transport.client.AsyncPubChannel.factory(self.opts,
                                                                         timeout=timeout,
@@ -1322,7 +1350,7 @@ class Minion(MinionBase):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv')
+                pillarenv=self.opts.get('pillarenv'),
             ).compile_pillar()
         except SaltClientError:
             # Do not exit if a pillar refresh fails.
@@ -1339,27 +1367,30 @@ class Minion(MinionBase):
         name = data.get('name', None)
         schedule = data.get('schedule', None)
         where = data.get('where', None)
+        persist = data.get('persist', None)
 
         if func == 'delete':
-            self.schedule.delete_job(name)
+            self.schedule.delete_job(name, persist)
         elif func == 'add':
-            self.schedule.add_job(schedule)
+            self.schedule.add_job(schedule, persist)
         elif func == 'modify':
-            self.schedule.modify_job(name, schedule, where)
+            self.schedule.modify_job(name, schedule, persist, where)
         elif func == 'enable':
             self.schedule.enable_schedule()
         elif func == 'disable':
             self.schedule.disable_schedule()
         elif func == 'enable_job':
-            self.schedule.enable_job(name, where)
+            self.schedule.enable_job(name, persist, where)
         elif func == 'run_job':
             self.schedule.run_job(name)
         elif func == 'disable_job':
-            self.schedule.disable_job(name, where)
+            self.schedule.disable_job(name, persist, where)
         elif func == 'reload':
             self.schedule.reload(schedule)
         elif func == 'list':
             self.schedule.list(where)
+        elif func == 'save_schedule':
+            self.schedule.save_schedule()
 
     def manage_beacons(self, package):
         '''
@@ -2477,7 +2508,7 @@ class ProxyMinion(Minion):
             opts['grains'],
             opts['id'],
             opts['environment'],
-            pillarenv=opts.get('pillarenv')
+            pillarenv=opts.get('pillarenv'),
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)

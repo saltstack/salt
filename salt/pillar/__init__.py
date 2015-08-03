@@ -68,8 +68,8 @@ def get_async_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=
         saltenv = env
     ptype = {
         'remote': AsyncRemotePillar,
-        #'local': AsyncPillar  # TODO: implement
-    }.get(opts['file_client'], Pillar)
+        'local': AsyncPillar,
+    }.get(opts['file_client'], AsyncPillar)
     return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 
@@ -246,7 +246,7 @@ class Pillar(object):
         opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = saltenv
-        if pillarenv not in opts:
+        if 'pillarenv' not in opts:
             opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
@@ -567,17 +567,10 @@ class Pillar(object):
 
         return pillar, errors
 
-    def _external_pillar_data(self,
-                             pillar,
-                             val,
-                             pillar_dirs,
-                             key):
+    def _external_pillar_data(self, pillar, val, pillar_dirs, key):
         '''
-        Builds actual pillar data structure
-        and update
-        the variable ``pillar``
+        Builds actual pillar data structure and updates the ``pillar`` variable
         '''
-
         ext = None
 
         # try the new interface, which includes the minion ID
@@ -585,7 +578,14 @@ class Pillar(object):
         if isinstance(val, dict):
             ext = self.ext_pillars[key](self.opts['id'], pillar, **val)
         elif isinstance(val, list):
-            ext = self.ext_pillars[key](self.opts['id'], pillar, *val)
+            if key == 'git':
+                ext = self.ext_pillars[key](self.opts['id'],
+                                            val,
+                                            pillar_dirs)
+            else:
+                ext = self.ext_pillars[key](self.opts['id'],
+                                            pillar,
+                                            *val)
         else:
             if key == 'git':
                 ext = self.ext_pillars[key](self.opts['id'],
@@ -688,3 +688,12 @@ class Pillar(object):
                 log.critical('Pillar render error: {0}'.format(error))
             pillar['_errors'] = errors
         return pillar
+
+
+# TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
+# ext_pillar etc.
+class AsyncPillar(Pillar):
+    @tornado.gen.coroutine
+    def compile_pillar(self, ext=True, pillar_dirs=None):
+        ret = super(AsyncPillar, self).compile_pillar(ext=ext, pillar_dirs=pillar_dirs)
+        raise tornado.gen.Return(ret)

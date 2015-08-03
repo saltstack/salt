@@ -217,6 +217,7 @@ class SaltClientsMixIn(object):
                 'local_batch': local_client.cmd_batch,
                 'local_async': local_client.run_job,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
+                'runner_async': None,  # empty, since we use the same client as `runner`
                 }
         return SaltClientsMixIn.__saltclients
 
@@ -258,7 +259,9 @@ class EventListener(object):
             'master',
             opts['sock_dir'],
             opts['transport'],
-            opts=opts)
+            opts=opts,
+            listen=True,
+        )
 
         self.event.subscribe()  # start listening for events immediately
 
@@ -268,10 +271,13 @@ class EventListener(object):
         # request_obj -> list of (tag, future)
         self.request_map = defaultdict(list)
 
-        self.timeout_map = {}  # map of future -> timeout_callback
+        # map of future -> timeout_callback
+        self.timeout_map = {}
 
-        self.stream = zmqstream.ZMQStream(self.event.sub,
-                                          io_loop=tornado.ioloop.IOLoop.current())
+        self.stream = zmqstream.ZMQStream(
+            self.event.sub,
+            io_loop=tornado.ioloop.IOLoop.current(),
+        )
         self.stream.on_recv(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
@@ -281,7 +287,14 @@ class EventListener(object):
         if request not in self.request_map:
             return
         for tag, future in self.request_map[request]:
+            # timeout the future
             self._timeout_future(tag, future)
+            # remove the timeout
+            if future in self.timeout_map:
+                tornado.ioloop.IOLoop.current().remove_timeout(self.timeout_map[future])
+                del self.timeout_map[future]
+
+        del self.request_map[request]
 
     def get_event(self,
                   request,
@@ -292,6 +305,13 @@ class EventListener(object):
         '''
         Get an event (async of course) return a future that will get it later
         '''
+        # if the request finished, no reason to allow event fetching, since we
+        # can't send back to the client
+        if request._finished:
+            future = Future()
+            future.set_exception(TimeoutException())
+            return future
+
         future = Future()
         if callback is not None:
             def handle_future(future):
@@ -375,6 +395,17 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             self.set_status(400)
             self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
+
+    def initialize(self):
+        '''
+        Initialize the handler before requests are called
+        '''
+        if not hasattr(self.application, 'event_listener'):
+            logger.critical('init a listener')
+            self.application.event_listener = EventListener(
+                self.application.mod_opts,
+                self.application.opts,
+            )
 
     @property
     def token(self):
@@ -689,7 +720,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             Content-Type: application/json
             Content-Legnth: 83
 
-            {"clients": ["local", "local_batch", "local_async","runner"], "return": "Welcome"}
+            {"clients": ["local", "local_batch", "local_async", "runner", "runner_async"], "return": "Welcome"}
         '''
         ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
@@ -1002,6 +1033,15 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             raise tornado.gen.Return(event['data']['return'])
         except TimeoutException:
             raise tornado.gen.Return('Timeout waiting for runner to execute')
+
+    @tornado.gen.coroutine
+    def _disbatch_runner_async(self, chunk):
+        '''
+        Disbatch runner client_async commands
+        '''
+        f_call = {'args': [chunk['fun'], chunk]}
+        pub_data = self.saltclients['runner'](chunk['fun'], chunk)
+        raise tornado.gen.Return(pub_data)
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
@@ -1569,7 +1609,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             'master',
             self.application.opts['sock_dir'],
             self.application.opts['transport'],
-            opts=self.application.opts)
+            opts=self.application.opts,
+            listen=False)
 
         ret = self.event.fire_event({
             'post': self.raw_data,

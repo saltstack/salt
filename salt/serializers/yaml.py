@@ -102,10 +102,11 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 Dumper.add_multi_representer(str, Dumper.represent_str)
-Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
+if six.PY2:
+    Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
+    Dumper.add_multi_representer(int, Dumper.represent_long)
 Dumper.add_multi_representer(bool, Dumper.represent_bool)
 Dumper.add_multi_representer(int, Dumper.represent_int)
-Dumper.add_multi_representer(int, Dumper.represent_long)
 Dumper.add_multi_representer(float, Dumper.represent_float)
 Dumper.add_multi_representer(list, Dumper.represent_list)
 Dumper.add_multi_representer(tuple, Dumper.represent_list)

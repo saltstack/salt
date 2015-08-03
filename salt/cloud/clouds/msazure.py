@@ -6,7 +6,7 @@ Azure Cloud Module
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/0.9.0>`_
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/0.9.0>`_ >= 0.11.1
     * python-requests, for Python < 2.7.9
 :configuration:
     Required provider parameters:
@@ -31,7 +31,7 @@ Example ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-azure-config:
-      provider: azure
+      driver: azure
       subscription_id: 3287abc8-f98a-c678-3bde-326766fd3617
       certificate_path: /etc/salt/azure.pem
       management_host: management.core.windows.net
@@ -78,7 +78,7 @@ log = logging.getLogger(__name__)
 # Only load in this module if the AZURE configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for Azure configurations.
+    Check for Azure configurations.
     '''
     if not HAS_LIBS:
         return False
@@ -214,8 +214,7 @@ def list_nodes(conn=None, call=None):
     nodes = list_nodes_full(conn, call)
     for node in nodes:
         ret[node] = {}
-        for prop in ('id', 'image', 'size', 'state', 'private_ips',
-                     'public_ips'):
+        for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node][prop]
     return ret
 
@@ -400,6 +399,20 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'azure',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -407,7 +420,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -487,6 +500,12 @@ def create(vm_):
         'role_size': vm_['size'],
         'network_config': network_config,
     }
+
+    if 'virtual_network_name' in vm_:
+        vm_kwargs['virtual_network_name'] = vm_['virtual_network_name']
+        if 'subnet_name' in vm_:
+            network_config.subnet_names.append(vm_['subnet_name'])
+
     log.debug('vm_kwargs: {0}'.format(vm_kwargs))
 
     event_kwargs = {'service_kwargs': service_kwargs.copy(),
@@ -598,122 +617,11 @@ def create(vm_):
         log.error('Failed to get a value for the hostname.')
         return False
 
-    hostname = hostname.replace('http://', '').replace('/', '')
-
-    ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    )
-    ssh_password = config.get_cloud_config_value(
+    vm_['ssh_host'] = hostname.replace('http://', '').replace('/', '')
+    vm_['password'] = config.get_cloud_config_value(
         'ssh_password', vm_, __opts__
     )
-
-    ret = {}
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': hostname,
-            'port': int(ssh_port),
-            'username': ssh_username,
-            'password': ssh_password,
-            'script': deploy_script,
-            'name': vm_['name'],
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value(
-                'script_env', vm_, __opts__
-            ),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_),
-            'has_ssh_agent': False
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     # Attaching volumes
     volumes = config.get_cloud_config_value(
@@ -760,7 +668,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -777,6 +685,9 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             'The create_attach_volumes action must be called with '
             '-a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -868,6 +779,9 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             'The create_attach_volumes action must be called with '
             '-a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -1130,6 +1044,9 @@ def get_operation_status(kwargs=None, conn=None, call=None):
             'The show_instance function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'id' not in kwargs:
         raise SaltCloudSystemExit('A request ID must be specified as "id"')
 
@@ -1153,7 +1070,7 @@ def get_operation_status(kwargs=None, conn=None, call=None):
 
 def list_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List storage accounts associated with the account
 
@@ -1181,7 +1098,7 @@ def list_storage(kwargs=None, conn=None, call=None):
 
 def show_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List storage service properties
 
@@ -1199,6 +1116,9 @@ def show_storage(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1214,7 +1134,7 @@ get_storage = show_storage
 
 def show_storage_keys(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show storage account keys
 
@@ -1231,6 +1151,9 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1254,7 +1177,7 @@ get_storage_keys = show_storage_keys
 
 def create_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a new storage account
 
@@ -1268,6 +1191,9 @@ def create_storage(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_storage function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if not conn:
         conn = get_conn()
@@ -1303,7 +1229,7 @@ def create_storage(kwargs=None, conn=None, call=None):
 
 def update_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update a storage account's properties
 
@@ -1321,6 +1247,9 @@ def update_storage(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1337,7 +1266,7 @@ def update_storage(kwargs=None, conn=None, call=None):
 
 def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Regenerate storage account keys. Requires a key_type ("primary" or
     "secondary") to be specified.
@@ -1355,6 +1284,9 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1374,7 +1306,7 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
 
 def delete_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific storage account
 
@@ -1388,6 +1320,9 @@ def delete_storage(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_storage function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1404,7 +1339,7 @@ def delete_storage(kwargs=None, conn=None, call=None):
 
 def list_services(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List hosted services associated with the account
 
@@ -1432,7 +1367,7 @@ def list_services(kwargs=None, conn=None, call=None):
 
 def show_service(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List hosted service properties
 
@@ -1450,6 +1385,9 @@ def show_service(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1463,7 +1401,7 @@ def show_service(kwargs=None, conn=None, call=None):
 
 def create_service(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a new hosted service
 
@@ -1480,6 +1418,9 @@ def create_service(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1507,7 +1448,7 @@ def create_service(kwargs=None, conn=None, call=None):
 
 def delete_service(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific service associated with the account
 
@@ -1521,6 +1462,9 @@ def delete_service(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_service function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1537,7 +1481,7 @@ def delete_service(kwargs=None, conn=None, call=None):
 
 def list_disks(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List disks associated with the account
 
@@ -1564,7 +1508,7 @@ def list_disks(kwargs=None, conn=None, call=None):
 
 def show_disk(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a disk
 
@@ -1582,6 +1526,9 @@ def show_disk(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1595,7 +1542,7 @@ get_disk = show_disk
 
 def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Cleans up all disks associated with the account, which are not attached.
     *** CAUTION *** This is a destructive function with no undo button, and no
@@ -1613,6 +1560,9 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
             'The delete_disk function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     disks = list_disks(kwargs=kwargs, conn=conn, call='function')
     for disk in disks:
         if disks[disk]['attached_to'] is None:
@@ -1627,7 +1577,7 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
 
 def delete_disk(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific disk associated with the account
 
@@ -1642,6 +1592,9 @@ def delete_disk(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_disk function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1658,7 +1611,7 @@ def delete_disk(kwargs=None, conn=None, call=None):
 
 def update_disk(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update a disk's properties
 
@@ -1677,6 +1630,9 @@ def update_disk(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -1694,7 +1650,7 @@ def update_disk(kwargs=None, conn=None, call=None):
 
 def list_service_certificates(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List certificates associated with the service
 
@@ -1708,6 +1664,9 @@ def list_service_certificates(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The list_service_certificates function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "name"')
@@ -1724,7 +1683,7 @@ def list_service_certificates(kwargs=None, conn=None, call=None):
 
 def show_service_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a service certificate
 
@@ -1742,6 +1701,9 @@ def show_service_certificate(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "name"')
@@ -1766,7 +1728,7 @@ get_service_certificate = show_service_certificate
 
 def add_service_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Add a new service certificate
 
@@ -1784,6 +1746,9 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1811,7 +1776,7 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
 
 def delete_service_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific certificate associated with the service
 
@@ -1826,6 +1791,9 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_service_certificate function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -1852,7 +1820,7 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
 
 def list_management_certificates(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List management certificates associated with the subscription
 
@@ -1879,7 +1847,7 @@ def list_management_certificates(kwargs=None, conn=None, call=None):
 
 def show_management_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a management_certificate
 
@@ -1898,6 +1866,9 @@ def show_management_certificate(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'thumbprint' not in kwargs:
         raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
 
@@ -1911,7 +1882,7 @@ get_management_certificate = show_management_certificate
 
 def add_management_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Add a new management certificate
 
@@ -1929,6 +1900,9 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'public_key' not in kwargs:
         raise SaltCloudSystemExit('A public_key must be specified as "public_key"')
@@ -1952,7 +1926,7 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
 
 def delete_management_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific certificate associated with the management
 
@@ -1967,6 +1941,9 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_management_certificate function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'thumbprint' not in kwargs:
         raise SaltCloudSystemExit('A thumbprint must be specified as "thumbprint"')
@@ -1983,7 +1960,7 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
 
 def list_virtual_networks(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List input endpoints associated with the deployment
 
@@ -2005,7 +1982,7 @@ def list_virtual_networks(kwargs=None, conn=None, call=None):
 
 def list_input_endpoints(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List input endpoints associated with the deployment
 
@@ -2019,6 +1996,9 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The list_input_endpoints function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'service' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "service"')
@@ -2046,7 +2026,7 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
 
 def show_input_endpoint(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show an input endpoint associated with the deployment
 
@@ -2062,6 +2042,9 @@ def show_input_endpoint(kwargs=None, conn=None, call=None):
             'The show_input_endpoint function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An endpoint name must be specified as "name"')
 
@@ -2075,7 +2058,7 @@ get_input_endpoint = show_input_endpoint
 
 def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update an input endpoint associated with the deployment. Please note that
     there may be a delay before the changes show up.
@@ -2093,6 +2076,9 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
         raise SaltCloudSystemExit(
             'The update_input_endpoint function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'service' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "service"')
@@ -2186,7 +2172,7 @@ xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
 
 def add_input_endpoint(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Add an input endpoint to the deployment. Please note that
     there may be a delay before the changes show up.
@@ -2210,7 +2196,7 @@ def add_input_endpoint(kwargs=None, conn=None, call=None):
 
 def delete_input_endpoint(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete an input endpoint from the deployment. Please note that
     there may be a delay before the changes show up.
@@ -2232,7 +2218,7 @@ def delete_input_endpoint(kwargs=None, conn=None, call=None):
 
 def show_deployment(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a deployment
 
@@ -2249,6 +2235,9 @@ def show_deployment(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'service_name' not in kwargs:
         raise SaltCloudSystemExit('A service name must be specified as "service_name"')
@@ -2269,7 +2258,7 @@ get_deployment = show_deployment
 
 def list_affinity_groups(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List input endpoints associated with the deployment
 
@@ -2296,7 +2285,7 @@ def list_affinity_groups(kwargs=None, conn=None, call=None):
 
 def show_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show an affinity group associated with the account
 
@@ -2315,6 +2304,9 @@ def show_affinity_group(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An affinity group name must be specified as "name"')
 
@@ -2328,7 +2320,7 @@ get_affinity_group = show_affinity_group
 
 def create_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a new affinity group
 
@@ -2345,6 +2337,9 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
 
     if not conn:
         conn = get_conn()
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -2369,7 +2364,7 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
 
 def update_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update an affinity group's properties
 
@@ -2387,6 +2382,9 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
     if not conn:
         conn = get_conn()
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
@@ -2403,7 +2401,7 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
 
 def delete_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific affinity group associated with the account
 
@@ -2417,6 +2415,9 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit(
             'The delete_affinity_group function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
@@ -2433,7 +2434,7 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
 
 def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return a storage_conn object for the storage account
     '''
@@ -2457,7 +2458,7 @@ def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
 
 def make_blob_url(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Creates the URL to access a blob
 
@@ -2486,6 +2487,9 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
             'The make_blob_url function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('A container name must be specified as "container"')
 
@@ -2510,7 +2514,7 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
 
 def list_storage_containers(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List containers associated with the storage account
 
@@ -2537,7 +2541,7 @@ def list_storage_containers(kwargs=None, storage_conn=None, call=None):
 
 def create_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a storage container
 
@@ -2579,7 +2583,7 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
 
 def show_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a container associated with the storage account
 
@@ -2596,6 +2600,9 @@ def show_storage_container(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_storage_container function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
@@ -2616,7 +2623,7 @@ get_storage_container = show_storage_container
 
 def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a storage container's metadata
 
@@ -2637,6 +2644,9 @@ def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
             'The show_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2656,7 +2666,7 @@ get_storage_container_metadata = show_storage_container_metadata
 
 def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Set a storage container's metadata
 
@@ -2681,6 +2691,9 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
             'The create_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2704,7 +2717,7 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 
 def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a storage container's acl
 
@@ -2725,6 +2738,9 @@ def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
             'The show_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2744,7 +2760,7 @@ get_storage_container_acl = show_storage_container_acl
 
 def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Set a storage container's acl
 
@@ -2786,7 +2802,7 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
 
 def delete_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a container associated with the storage account
 
@@ -2809,6 +2825,9 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
             'The delete_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2825,7 +2844,7 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
 
 def lease_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Lease a container associated with the storage account
 
@@ -2866,6 +2885,9 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
             'The lease_storage_container function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "name"')
 
@@ -2901,7 +2923,7 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
 
 def list_blobs(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List blobs associated with the container
 
@@ -2960,6 +2982,9 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
             'The list_blobs function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('An storage container name must be specified as "container"')
 
@@ -2971,7 +2996,7 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
 
 def show_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a blob's service properties
 
@@ -3001,7 +3026,7 @@ get_blob_service_properties = show_blob_service_properties
 
 def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Sets the properties of a storage account's Blob service, including
     Windows Azure Storage Analytics. You can also use this operation to
@@ -3024,6 +3049,9 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
             'The set_blob_service_properties function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'properties' not in kwargs:
         raise SaltCloudSystemExit('The blob service properties name must be specified as "properties"')
 
@@ -3039,7 +3067,7 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
 
 def show_blob_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Returns all user-defined metadata, standard HTTP properties, and
     system properties for the blob.
@@ -3061,6 +3089,9 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The show_blob_properties function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The container name must be specified as "container"')
@@ -3089,7 +3120,7 @@ get_blob_properties = show_blob_properties
 
 def set_blob_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Set a blob's properties
 
@@ -3129,6 +3160,9 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
             'The set_blob_properties function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
 
@@ -3155,7 +3189,7 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
 
 def put_blob(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Upload a blob
 
@@ -3207,6 +3241,9 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
             'The put_blob function must be called with -f or --function.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')
 
@@ -3227,7 +3264,7 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
 
 def get_blob(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Download a blob
 
@@ -3273,6 +3310,9 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
         raise SaltCloudSystemExit(
             'The get_blob function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     if 'container' not in kwargs:
         raise SaltCloudSystemExit('The blob container name must be specified as "container"')

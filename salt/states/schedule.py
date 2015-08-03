@@ -62,7 +62,7 @@ Management of the Salt scheduler
         - args:
           - httpd
         - kwargs:
-          test: True
+            test: True
         - when:
             - Monday 5:00pm
             - Tuesday 3:00pm
@@ -166,6 +166,8 @@ def present(name,
     return_config
         The alternative configuration to use for returner configuration options.
 
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
     '''
 
     ret = {'name': name,
@@ -227,10 +229,9 @@ def absent(name, **kwargs):
     name
         The unique name that is given to the scheduled job.
 
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {'name': name,
            'result': True,
@@ -265,10 +266,10 @@ def enabled(name, **kwargs):
     name
         The unique name that is given to the scheduled job.
 
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
+
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {'name': name,
            'result': True,
@@ -303,10 +304,10 @@ def disabled(name, **kwargs):
     name
         The unique name that is given to the scheduled job.
 
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
+
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {'name': name,
            'result': True,

@@ -162,7 +162,7 @@ project = 'Salt'
 copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.5.1'  # latest release
+latest_release = '2015.5.3'  # latest release
 previous_release = '2014.7.6'  # latest release from previous branch
 previous_release_dir = '2014.7'  # path on web server for previous branch
 build_type = 'develop'  # latest, previous, develop
@@ -224,7 +224,7 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
-""".format(release=latest_release)
+""".format(release=release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
@@ -382,6 +382,7 @@ man_pages = [
     ('ref/cli/salt-cloud', 'salt-cloud', 'Salt Cloud Command', authors, 1),
     ('ref/cli/salt-api', 'salt-api', 'salt-api Command', authors, 1),
     ('ref/cli/salt-unity', 'salt-unity', 'salt-unity Command', authors, 1),
+    ('ref/cli/spm', 'spm', 'Salt Package Manager Command', authors, 1),
 ]
 
 

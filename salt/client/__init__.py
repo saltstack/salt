@@ -139,7 +139,7 @@ class LocalClient(object):
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,
-                listen=not self.opts.get('__worker', False))
+                listen=False)
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -978,7 +978,7 @@ class LocalClient(object):
                         self.opts['sock_dir'],
                         self.opts['transport'],
                         opts=self.opts,
-                        listen=not self.opts.get('__worker', False))
+                        listen=False)
                 # start listening for new events, before firing off the pings
                 event.connect_pub()
                 # since this is a new ping, no one has responded yet
@@ -1578,7 +1578,7 @@ class Caller(object):
     ``Caller`` is the same interface used by the :command:`salt-call`
     command-line tool on the Salt Minion.
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
         Added the ``cmd`` method for consistency with the other Salt clients.
         The existing ``function`` and ``sminion.functions`` interfaces still
         exist but have been removed from the docs.
@@ -1623,7 +1623,7 @@ class Caller(object):
         '''
         Call an execution module with the given arguments and keword arguments
 
-        .. versionchanged:: Beryllium
+        .. versionchanged:: 2015.8.0
             Added the ``cmd`` method for consistency with the other Salt clients.
             The existing ``function`` and ``sminion.functions`` interfaces still
             exist but have been removed from the docs.

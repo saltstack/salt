@@ -37,7 +37,7 @@ done when the VM is an OpenVZ container rather than a KVM virtual machine.
       # Set the access URL for your PROXMOX provider
       #
       url: your.proxmox.host
-      provider: proxmox
+      driver: proxmox
 
 
 
@@ -93,7 +93,7 @@ The following settings are always required for PROXMOX:
 .. code-block:: yaml
 
     my-proxmox-config:
-      provider: proxmox
+      driver: proxmox
       user: saltcloud@pve
       password: xyzzy
       url: your.proxmox.host

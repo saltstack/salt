@@ -2,7 +2,7 @@
 Salt 2015.5.2 Release Notes
 ===========================
 
-:release: TBA
+:release: 2015-06-10
 
 Version 2015.5.2 is a bugfix release for :doc:`2015.5.0
 </topics/releases/2015.5.0>`.

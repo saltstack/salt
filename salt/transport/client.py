@@ -36,6 +36,32 @@ class ReqChannel(object):
         raise NotImplementedError()
 
 
+class PushChannel(object):
+    '''
+    Factory class to create Sync channel for push side of push/pull IPC
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        sync = SyncWrapper(AsyncPushChannel.factory, (opts,), kwargs)
+        return sync
+
+    def send(self, load, tries=3, timeout=60):
+        '''
+        Send load across IPC push
+        '''
+        raise NotImplementedError()
+
+
+class PullChannel(object):
+    '''
+    Factory class to create Sync channel for pull side of push/pull IPC
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        sync = SyncWrapper(AsyncPullChannel.factory, (opts,), kwargs)
+        return sync
+
+
 # TODO: better doc strings
 class AsyncChannel(object):
     '''
@@ -149,5 +175,35 @@ class AsyncPubChannel(AsyncChannel):
         When jobs are recieved pass them (decoded) to callback
         '''
         raise NotImplementedError()
+
+
+class AsyncPushChannel(object):
+    '''
+    Factory class to create IPC Push channels
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        '''
+        If we have additional IPC transports other than UxD and TCP, add them here
+        '''
+        # FIXME for now, just UXD
+        # Obviously, this makes the factory approach pointless, but we'll extend later
+        import salt.transport.ipc
+        return salt.transport.ipc.IPCMessageClient(opts, **kwargs)
+
+
+class AsyncPullChannel(object):
+    '''
+    Factory class to create IPC pull channels
+    '''
+    @staticmethod
+    def factory(opts, **kwargs):
+        '''
+        If we have additional IPC transports other than UXD and TCP, add them here
+        '''
+        import salt.transport.ipc
+        return salt.transport.ipc.IPCMessageServer(opts, **kwargs)
+
+## Additional IPC messaging patterns should provide interfaces here, ala router/dealer, pub/sub, etc
 
 # EOF

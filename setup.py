@@ -103,7 +103,6 @@ SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
-SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'cloud.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 
 # Salt SSH Packaging Detection
@@ -410,6 +409,8 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
+        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
+                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -452,6 +453,7 @@ class Install(install):
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
+        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
@@ -711,6 +713,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-run.1',
+                                 'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])
@@ -733,8 +736,7 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_extras_require(self):
         if self.ssh_packaging:
             return {}
-        return {'RAET': _parse_requirements_file(SALT_RAET_REQS),
-                'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)}
+        return {'RAET': _parse_requirements_file(SALT_RAET_REQS)}
 
     @property
     def _property_scripts(self):
@@ -744,7 +746,7 @@ class SaltDistribution(distutils.dist.Distribution):
             scripts.append('scripts/salt-ssh')
             if IS_WINDOWS_PLATFORM:
                 return scripts
-            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run'])
+            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run', 'scripts/spm'])
             return scripts
 
         if IS_WINDOWS_PLATFORM:
@@ -764,7 +766,8 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-run',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
-                        'scripts/salt-unity'])
+                        'scripts/salt-unity',
+                        'scripts/spm'])
         return scripts
 
     @property
@@ -782,7 +785,8 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['salt-cp = salt.scripts:salt_cp',
                             'salt-minion = salt.scripts:salt_minion',
-                            'salt-unity = salt.scripts:salt_unity'])
+                            'salt-unity = salt.scripts:salt_unity',
+                            'spm = salt.scripts:salt_spm'])
             return {'console_scripts': scripts}
 
         # *nix, so, we need all scripts
@@ -796,7 +800,8 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-run = salt.scripts:salt_run',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
-                        'salt-unity = salt.scripts:salt_unity'])
+                        'salt-unity = salt.scripts:salt_unity',
+                        'spm = salt.scripts:salt_spm'])
         return {'console_scripts': scripts}
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 

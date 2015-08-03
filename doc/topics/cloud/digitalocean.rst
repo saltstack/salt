@@ -19,7 +19,7 @@ under the "SSH Keys" section.
     # /etc/salt/cloud.providers.d/ directory.
 
     my-digitalocean-config:
-      provider: digital_ocean
+      driver: digital_ocean
       personal_access_token: xxx
       ssh_key_file: /path/to/ssh/key/file
       ssh_key_names: my-key-name,my-key-name-2

@@ -22,6 +22,18 @@
 # If only one master is listed, this setting is ignored and a warning will be logged.
 #random_master: False
 
+# Minions can connect to multiple masters simultaneously (all masters
+# are "hot"), or can be configured to failover if a master becomes
+# unavailable.  Multiple hot masters are configured by setting this
+# value to "standard".  Failover masters can be requested by setting
+# to "failover".  MAKE SURE TO SET master_alive_interval if you are
+# using failover.
+# master_type: str
+
+# Poll interval in seconds for checking if the master is still there.  Only
+# respected if master_type above is "failover".
+# master_alive_interval: 30
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
@@ -35,6 +47,12 @@
 
 # The user to run salt.
 #user: root
+
+# Setting sudo_user will cause salt to run all execution modules under an sudo
+# to the user given in sudo_user.  The user under which the salt minion process
+# itself runs will still be that provided in the user config above, but all
+# execution modules run by the minion will be rerouted through sudo.
+#sudo_user: saltdev
 
 # Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
@@ -614,7 +632,7 @@
 #tcp_keepalive_intvl: -1
 
 
-######      Windows Software settings ######
+######   Windows Software settings    ######
 ############################################
 # Location of the repository cache file on the master:
 #win_repo_cachefile: 'salt://win/repo/winrepo.p'

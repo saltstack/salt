@@ -33,7 +33,7 @@ def _pecl(command, defaults=False):
     '''
     cmdline = 'pecl {0}'.format(command)
     if salt.utils.is_true(defaults):
-        cmdline = 'yes ' + r"$'\n'" + ' | ' + cmdline
+        cmdline = 'yes ' "''" + ' | ' + cmdline
 
     ret = __salt__['cmd.run_all'](cmdline, python_shell=True)
 

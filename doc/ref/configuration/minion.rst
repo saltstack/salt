@@ -82,10 +82,24 @@ The option can can also be set to a list of masters, enabling
 
 .. versionadded:: 2014.7.0
 
-Default: ``str``
+Default: ``standard``
 
-The type of the :conf_minion:`master` variable. Can be either ``func`` or
-``failover``.
+The type of the :conf_minion:`master` variable. Can be ``standard``, ``failover`` or
+``func``.
+
+.. code-block:: yaml
+
+    master_type: failover
+
+If this option is set to ``failover``, :conf_minion:`master` must be a list of
+master addresses. The minion will then try each master in the order specified
+in the list until it successfully connects.  :conf_minion:`master_alive_interval`
+must also be set, this determines how often the minion will verify the presence
+of the master.
+
+.. code-block:: yaml
+
+    master_type: func
 
 If the master needs to be dynamically assigned by executing a function instead
 of reading in the static master value, set this to ``func``. This can be used
@@ -93,19 +107,16 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+``master_alive_interval``
+-------------------------
 
 .. code-block:: yaml
 
-    master_type: func
+    master_alive_interval: 30
 
-If this option is set to ``failover``, :conf_minion:`master` must be a list of
-master addresses. The minion will then try each master in the order specified
-in the list until it successfully connects.
-
-
-.. code-block:: yaml
-
-    master_type: failover
+Configures how often, in seconds, the minion will verify that the current
+master is alive and responding.  The minion will try to establish a connection
+to the next master in the list if it finds the existing one is dead.
 
 ``master_shuffle``
 ------------------
@@ -184,6 +195,21 @@ need to be changed to the ownership of the new user.
 
     sudo_user: root
 
+.. conf_minion:: sudo_user
+
+``sudo_user``
+--------
+
+Default: ``''``
+
+Setting ``sudo_user`` will cause salt to run all execution modules under an
+sudo to the user given in ``sudo_user``.  The user under which the salt minion
+process itself runs will still be that provided in :conf_minion:`user` above,
+but all execution modules run by the minion will be rerouted through sudo.
+
+.. code-block:: yaml
+
+    sudo_user: saltadm
 
 .. conf_minion:: pidfile
 
@@ -326,7 +352,7 @@ to enable set grains_cache to ``True``.
 
 .. code-block:: yaml
 
-    cache_jobs: False
+    grains_cache: False
 
 
 .. conf_minion:: sock_dir
@@ -454,21 +480,6 @@ behavior is to have time-frame within all minions try to reconnect.
 .. code-block:: yaml
 
     recon_randomize: True
-
-.. conf_minion:: dns_check
-
-``dns_check``
--------------
-
-Default: ``True``
-
-When healing, a dns_check is run. This is to make sure that the originally
-resolved dns has not changed. If this is something that does not happen in your
-environment, set this value to ``False``.
-
-.. code-block:: yaml
-
-    dns_check: True
 
 .. conf_minion:: cache_sreqs
 

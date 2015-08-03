@@ -176,9 +176,9 @@ class WinServiceTestCase(TestCase):
         '''
             Test to return the sid for this windows service
         '''
-        mock = MagicMock(side_effect=["SERVICE SID:2", "SERVICE SID"])
+        mock = MagicMock(side_effect=["SERVICE SID:S-1-5-80-1956725871-603941828-2318551034-3950094706-3826225633", "SERVICE SID"])
         with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_service.getsid("salt"), '2')
+            self.assertEqual(win_service.getsid("salt"), 'S-1-5-80-1956725871-603941828-2318551034-3950094706-3826225633')
 
             self.assertEqual(win_service.getsid("salt"), None)
 

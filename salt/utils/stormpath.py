@@ -2,7 +2,7 @@
 '''
 Support for Stormpath
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 # Import python libs
@@ -25,7 +25,7 @@ def query(action=None,
     '''
     Make a web call to Stormpath
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     if opts is None:
         opts = {}

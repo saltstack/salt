@@ -2,7 +2,7 @@
 '''
 Manage X509 certificates
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 '''
 

@@ -206,9 +206,6 @@ def latest_version(*names, **kwargs):
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
-
     CLI Example:
 
     .. code-block:: bash
@@ -232,12 +229,7 @@ def latest_version(*names, **kwargs):
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
         if avail:
-            if not installed \
-                    or salt.utils.compare_versions(ver1=installed,
-                                                   oper='<',
-                                                   ver2=avail,
-                                                   cmp_func=version_cmp):
-                ret[name] = avail
+            ret[name] = avail
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -312,7 +304,7 @@ def list_upgrades(refresh=True, backtrack=3):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: Beryllium
+        .. versionadded: 2015.8.0
 
     CLI Example:
 
@@ -437,6 +429,25 @@ def refresh_db():
         if salt.utils.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+
+
+def _flags_changed(inst_flags, conf_flags):
+    '''
+    @type inst_flags: list
+    @param inst_flags: list of use flags which were used
+        when package was installed
+    @type conf_flags: list
+    @param conf_flags: list of use flags form portage/package.use
+    @rtype: bool
+    @return: True, if lists have changes
+    '''
+    conf_flags = conf_flags[:]
+    for i in inst_flags:
+        try:
+            conf_flags.remove(i)
+        except ValueError:
+            return True
+    return True if conf_flags else False
 
 
 def install(name=None,
@@ -627,9 +638,20 @@ def install(name=None,
                     target = target[:target.rfind('[')] + '"'
 
                 if keyword is not None:
-                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
+                    __salt__['portage_config.append_to_package_conf']('accept_keywords',
+                                                                        target[1:-1],
+                                                                        ['~ARCH'])
                     changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 
+                if not changes:
+                    inst_v = version(param)
+
+                    if latest_version(param) == inst_v:
+                        all_uses = __salt__['portage_config.get_cleared_flags'](param)
+                        if _flags_changed(*all_uses):
+                            changes[param] = {'version': inst_v,
+                                                'old': {'use': all_uses[0]},
+                                                'new': {'use': all_uses[1]}}
                 targets.append(target)
     else:
         targets = pkg_params
@@ -718,7 +740,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: Beryllium
+        .. versionadded: 2015.8.0
 
     Return a dict containing the new package names and versions::
 
