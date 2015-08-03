@@ -125,8 +125,7 @@ from salt.ext.six import string_types
 import salt.utils
 from salt.modules.cron import (
     _needs_change,
-    _cron_matched,
-    SALT_CRON_NO_IDENTIFIER
+    _cron_matched
 )
 
 
@@ -258,7 +257,7 @@ def present(name,
     '''
     name = ' '.join(name.strip().split())
     if not identifier:
-        identifier = SALT_CRON_NO_IDENTIFIER
+        identifier = name
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -336,7 +335,7 @@ def absent(name,
 
     name = ' '.join(name.strip().split())
     if not identifier:
-        identifier = SALT_CRON_NO_IDENTIFIER
+        identifier = name
     ret = {'name': name,
            'result': True,
            'changes': {},
