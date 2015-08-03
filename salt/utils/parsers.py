@@ -323,7 +323,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
     def _mixin_setup(self):
         self.add_option(
             '--saltfile', default=None,
-            help='Specify the path to a Saltfile. If not passed, on will be '
+            help='Specify the path to a Saltfile. If not passed, one will be '
                  'searched for in the current working directory'
         )
 
