@@ -151,7 +151,7 @@ def latest(name,
 
         git-website-staging:
           git.latest:
-            - name: git@gitlab.example.com:user/website.git
+            - name: ssh://git@gitlab.example.com:user/website.git
             - rev: gh-pages
             - target: /usr/share/nginx/staging
             - identity: /root/.ssh/website_id_rsa
@@ -161,7 +161,7 @@ def latest(name,
 
         git-website-prod:
           git.latest:
-            - name: git@gitlab.example.com:user/website.git
+            - name: ssh://git@gitlab.example.com:user/website.git
             - rev: gh-pages-prod
             - target: /usr/share/nginx/prod
             - identity: /root/.ssh/website_id_rsa
