@@ -832,6 +832,24 @@ class Key(object):
             else self.dict_match(matches)
         )
 
+    def delete_den(self):
+        '''
+        Delete all denied keys
+        '''
+        keys = self.list_keys()
+        for status, keys in six.iteritems(self.list_keys()):
+            for key in keys[self.DEN]:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                                 'act': 'delete',
+                                 'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
+        self.check_minion_cache()
+        return self.list_keys()
+
     def delete_all(self):
         '''
         Delete all keys
