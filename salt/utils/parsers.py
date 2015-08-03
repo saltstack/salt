@@ -2710,8 +2710,9 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         # spm needs arguments
         if len(self.args) <= 1:
-            self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            if self.args[0] not in ('update_repo',):
+                self.print_help()
+                self.exit(salt.defaults.exitcodes.EX_USAGE)
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())

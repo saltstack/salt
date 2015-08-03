@@ -2452,7 +2452,6 @@ Examples:
     log_file: udp://loghost:10514
 
 
-
 .. conf_master:: log_level
 
 ``log_level``
@@ -2465,8 +2464,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 .. code-block:: yaml
 
     log_level: warning
-
-
 
 
 .. conf_master:: log_level_logfile
@@ -2485,7 +2482,6 @@ it will inherit the level set by :conf_log:`log_level` option.
     log_level_logfile: warning
 
 
-
 .. conf_master:: log_datefmt
 
 ``log_datefmt``
@@ -2499,8 +2495,6 @@ The date and time format used in console log messages. See also
 .. code-block:: yaml
 
     log_datefmt: '%H:%M:%S'
-
-
 
 
 .. conf_master:: log_datefmt_logfile
@@ -2518,7 +2512,6 @@ The date and time format used in log file messages. See also
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 
-
 .. conf_master:: log_fmt_console
 
 ``log_fmt_console``
@@ -2529,10 +2522,27 @@ Default: ``[%(levelname)-8s] %(message)s``
 The format of the console logging messages. See also
 :conf_log:`log_fmt_console`.
 
+.. note::
+    Log colors are enabled in ``log_fmt_console`` rather than the
+    :conf_master:`color` config since the logging system is loaded before the
+    master config.
+
+    Console log colors are specified by these additional formatters:
+
+    %(colorlevel)s
+    %(colorname)s
+    %(colorprocess)s
+    %(colormsg)s
+
+    Since it is desirable to include the surrounding brackets, '[' and ']', in
+    the coloring of the messages, these color formatters also include padding
+    as well.  Color LogRecord attributes are only available for console
+    logging.
+
 .. code-block:: yaml
 
+    log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
-
 
 
 .. conf_master:: log_fmt_logfile
@@ -2548,7 +2558,6 @@ The format of the log file logging messages. See also
 .. code-block:: yaml
 
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
-
 
 
 .. conf_master:: log_granular_levels
