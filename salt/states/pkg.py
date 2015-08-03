@@ -198,8 +198,6 @@ def _find_remove_targets(name=None,
             __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
         to_remove = {_normalize_name(name): version}
 
-        cver = cur_pkgs.get(name, [])
-
     version_spec = False
     # Find out which packages will be targeted in the call to pkg.remove
     # Check current versions against specified versions
@@ -346,7 +344,12 @@ def _find_install_targets(name=None,
         # enforced. Takes extra time. Disable for improved performance
         if not skip_suggestions:
             # Perform platform-specific pre-flight checks
-            problems = _preflight_check(desired, **kwargs)
+            not_installed = dict([
+                (name, version)
+                for name, version in desired.items()
+                if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
+            ])
+            problems = _preflight_check(not_installed, **kwargs)
             comments = []
             if problems.get('no_suggest'):
                 comments.append(
@@ -552,14 +555,61 @@ def installed(
     Ensure that the package is installed, and that it is the correct version
     (if specified).
 
-    name
+    :param str name:
         The name of the package to be installed. This parameter is ignored if
         either "pkgs" or "sources" is used. Additionally, please note that this
         option can only be used to install packages from a software repository.
         To install a package file manually, use the "sources" option detailed
         below.
 
-    fromrepo
+    :param str version:
+        Install a specific version of a package. This option is ignored if
+        either "pkgs" or "sources" is used. Currently, this option is supported
+        for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
+        :mod:`ebuild <salt.modules.ebuild>`,
+        :mod:`pacman <salt.modules.pacman>`,
+        :mod:`yumpkg <salt.modules.yumpkg>`, and
+        :mod:`zypper <salt.modules.zypper>`. The version number includes the
+        release designation where applicable, to allow Salt to target a
+        specific release of a given version. When in doubt, using the
+        ``pkg.latest_version`` function for an uninstalled package will tell
+        you the version available.
+
+        .. code-block:: bash
+
+            # salt myminion pkg.latest_version httpd
+            myminion:
+                2.2.15-30.el6.centos
+
+        Also, while this function is not yet implemented for all pkg frontends,
+        :mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` will
+        show all versions available in the various repositories for a given
+        package, irrespective of whether or not it is installed.
+
+        .. code-block:: bash
+
+            # salt myminion pkg.list_repo_pkgs httpd
+            myminion:
+                ----------
+                base:
+                    |_
+                      ----------
+                      httpd:
+                          2.2.15-29.el6.centos
+                updates:
+                    |_
+                      ----------
+                      httpd:
+                          2.2.15-30.el6.centos
+
+        The version strings returned by either of these functions can be used
+        as version specifiers in pkg states.
+
+    :param bool refresh:
+        Update the repo database of available packages prior to installing the
+        requested package.
+
+    :param str fromrepo:
         Specify a repository from which to install
 
         .. note::
@@ -613,68 +663,101 @@ def installed(
             **4:0.8.10-0ubuntu0.12.04.1** either ``precise-updates`` or
             ``precise-security`` could be used for the ``fromrepo`` value.
 
-    skip_verify
+    :param bool skip_verify:
         Skip the GPG verification check for the package to be installed
 
-    skip_suggestions
+    :param bool skip_suggestions:
         Force strict package naming. Disables lookup of package alternatives.
 
         .. versionadded:: 2014.1.1
 
-    version
-        Install a specific version of a package. This option is ignored if
-        either "pkgs" or "sources" is used. Currently, this option is supported
-        for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
+    :param list pkgs:
+        A list of packages to install from a software repository. All packages
+        listed under ``pkgs`` will be installed via a single command.
+
+        Example:
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar
+                  - baz
+                - hold: True
+
+        ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
-        :mod:`pacman <salt.modules.pacman>`,
-        :mod:`yumpkg <salt.modules.yumpkg>`, and
-        :mod:`zypper <salt.modules.zypper>`. The version number includes the
-        release designation where applicable, to allow Salt to target a
-        specific release of a given version. When in doubt, using the
-        ``pkg.latest_version`` function for an uninstalled package will tell
-        you the version available.
+        :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
+        and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
+        in the ``pkgs`` argument. For example:
 
-        .. code-block:: bash
+        .. code-block:: yaml
 
-            # salt myminion pkg.latest_version httpd
-            myminion:
-                2.2.15-30.el6.centos
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
 
-        Also, while this function is not yet implemented for all pkg frontends,
-        :mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` will
-        show all versions available in the various repositories for a given
-        package, irrespective of whether or not it is installed.
+        Additionally, :mod:`ebuild <salt.modules.ebuild>`,
+        :mod:`pacman <salt.modules.pacman>` and
+        :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
+        ``>`` operators for more control over what versions will be installed. For
 
-        .. code-block:: bash
+        Example:
 
-            # salt myminion pkg.list_repo_pkgs httpd
-            myminion:
-                ----------
-                base:
-                    |_
-                      ----------
-                      httpd:
-                          2.2.15-29.el6.centos
-                updates:
-                    |_
-                      ----------
-                      httpd:
-                          2.2.15-30.el6.centos
+        .. code-block:: yaml
 
-        The version strings returned by either of these functions can be used
-        as version specifiers in pkg states.
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar: '>=1.2.3-4'
+                  - baz
 
-    refresh
-        Update the repo database of available packages prior to installing the
-        requested package.
+        ``NOTE:`` When using comparison operators, the expression must be enclosed
+        in quotes to avoid a YAML render error.
 
-    hold
-        Force the package to be held at the current installed version.
-        Currently works with YUM & APT-based systems.
+        With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a
+        use flag list and/or if the given packages should be in
+        package.accept_keywords file and/or the overlay from which you want the
+        package to be installed.
 
-        .. versionadded:: 2014.7.0
+        For example:
 
-    allow_updates
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo: '~'
+                  - bar: '~>=1.2:slot::overlay[use,-otheruse]'
+                  - baz
+
+        **Multiple Package Installation Options: (not supported in Windows or
+        pkgng)**
+
+    :param list sources:
+        A list of packages to install, along with the source URI or local path
+        from which to install each package. In the example below, ``foo``,
+        ``bar``, ``baz``, etc. refer to the name of the package, as it would
+        appear in the output of the ``pkg.version`` or ``pkg.list_pkgs`` salt
+        CLI commands.
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.installed:
+                - sources:
+                  - foo: salt://rpms/foo.rpm
+                  - bar: http://somesite.org/bar.rpm
+                  - baz: ftp://someothersite.org/baz.rpm
+                  - qux: /minion/path/to/qux.rpm
+
+    :param bool allow_updates:
         Allow the package to be updated outside Salt's control (e.g. auto
         updates on Windows). This means a package on the Minion can have a
         newer version than the latest available in the repository without
@@ -682,20 +765,22 @@ def installed(
 
         .. versionadded:: 2014.7.0
 
-    Example:
+        Example:
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        httpd:
-          pkg.installed:
-            - fromrepo: mycustomrepo
-            - skip_verify: True
-            - skip_suggestions: True
-            - version: 2.0.6~ubuntu3
-            - refresh: True
-            - hold: False
+            httpd:
+              pkg.installed:
+                - fromrepo: mycustomrepo
+                - skip_verify: True
+                - skip_suggestions: True
+                - version: 2.0.6~ubuntu3
+                - refresh: True
+                - allow_updates: True
+                - hold: False
 
-    pkg_verify
+    :param bool pkg_verify:
+
         .. versionadded:: 2014.7.0
 
         For requested packages that are already installed and would not be
@@ -706,27 +791,27 @@ def installed(
         below). Currently, this option is supported for the following pkg
         providers: :mod:`yumpkg <salt.modules.yumpkg>`.
 
-    Examples:
+        Examples:
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        httpd:
-          pkg.installed:
-            - version: 2.2.15-30.el6.centos
-            - pkg_verify: True
+            httpd:
+              pkg.installed:
+                - version: 2.2.15-30.el6.centos
+                - pkg_verify: True
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        mypkgs:
-          pkg.installed:
-            - pkgs:
-              - foo
-              - bar: 1.2.3-4
-              - baz
-            - pkg_verify:
-              - ignore_types: [config,doc]
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
+                - pkg_verify:
+                  - ignore_types: [config,doc]
 
-    normalize : True
+    :param bool normalize:
         Normalize the package name by removing the architecture, if the
         architecture of the package is different from the architecture of the
         operating system. The ability to disable this behavior is useful for
@@ -736,133 +821,64 @@ def installed(
 
         .. versionadded:: 2014.7.0
 
-    Example:
+        Example:
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
-          pkg.installed:
-            - normalize: False
+            gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
+              pkg.installed:
+                - normalize: False
 
-    **Multiple Package Installation Options: (not supported in Windows or
-    pkgng)**
+    :param kwargs:
+        These are specific to each OS. If it does not apply to the execution
+        module for your OS, it is ignored.
 
-    pkgs
-        A list of packages to install from a software repository. All packages
-        listed under ``pkgs`` will be installed via a single command.
+        :param bool hold:
+            Force the package to be held at the current installed version.
+            Currently works with YUM & APT based systems.
 
-    Example:
+            .. versionadded:: 2014.7.0
 
-    .. code-block:: yaml
+        :param list names:
+            A list of packages to install from a software repository. Each package
+            will be installed individually by the package manager.
 
-        mypkgs:
-          pkg.installed:
-            - pkgs:
-              - foo
-              - bar
-              - baz
-            - hold: True
+            .. warning::
 
-    ``NOTE:`` For :mod:`apt <salt.modules.aptpkg>`,
-    :mod:`ebuild <salt.modules.ebuild>`,
-    :mod:`pacman <salt.modules.pacman>`, :mod:`yumpkg <salt.modules.yumpkg>`,
-    and :mod:`zypper <salt.modules.zypper>`, version numbers can be specified
-    in the ``pkgs`` argument. For example:
+                Unlike ``pkgs``, the ``names`` parameter cannot specify a version.
+                In addition, it makes a separate call to the package management
+                frontend to install each package, whereas ``pkgs`` makes just a
+                single call. It is therefore recommended to use ``pkgs`` instead of
+                ``names`` to install multiple packages, both for the additional
+                features and the performance improvement that it brings.
 
-    .. code-block:: yaml
+        :param bool install_recommends:
+            Whether to install the packages marked as recommended. Default is
+            ``True``. Currently only works with APT-based systems.
 
-        mypkgs:
-          pkg.installed:
-            - pkgs:
-              - foo
-              - bar: 1.2.3-4
-              - baz
+            .. versionadded:: 2015.5.0
 
-    Additionally, :mod:`ebuild <salt.modules.ebuild>`,
-    :mod:`pacman <salt.modules.pacman>` and
-    :mod:`zypper <salt.modules.zypper>` support the ``<``, ``<=``, ``>=``, and
-    ``>`` operators for more control over what versions will be installed. For
-    example:
+            .. code-block:: yaml
 
-    .. code-block:: yaml
+                httpd:
+                  pkg.installed:
+                    - install_recommends: False
 
-        mypkgs:
-          pkg.installed:
-            - pkgs:
-              - foo
-              - bar: '>=1.2.3-4'
-              - baz
+        :param bool only_upgrade:
+            Only upgrade the packages, if they are already installed. Default is
+            ``False``. Currently only works with APT-based systems.
 
-    ``NOTE:`` When using comparison operators, the expression must be enclosed
-    in quotes to avoid a YAML render error.
+            .. versionadded:: 2015.5.0
 
-    With :mod:`ebuild <salt.modules.ebuild>` is also possible to specify a use
-    flag list and/or if the given packages should be in package.accept_keywords
-    file and/or the overlay from which you want the package to be installed.
-    For example:
+            .. code-block:: yaml
 
-    .. code-block:: yaml
+                httpd:
+                  pkg.installed:
+                    - only_upgrade: True
 
-        mypkgs:
-          pkg.installed:
-            - pkgs:
-              - foo: '~'
-              - bar: '~>=1.2:slot::overlay[use,-otheruse]'
-              - baz
-
-    names
-        A list of packages to install from a software repository. Each package
-        will be installed individually by the package manager.
-
-        .. warning::
-
-            Unlike ``pkgs``, the ``names`` parameter cannot specify a version.
-            In addition, it makes a separate call to the package management
-            frontend to install each package, whereas ``pkgs`` makes just a
-            single call. It is therefore recommended to use ``pkgs`` instead of
-            ``names`` to install multiple packages, both for the additional
-            features and the performance improvement that it brings.
-
-    sources
-        A list of packages to install, along with the source URI or local path
-        from which to install each package. In the example below, ``foo``,
-        ``bar``, ``baz``, etc. refer to the name of the package, as it would
-        appear in the output of the ``pkg.version`` or ``pkg.list_pkgs`` salt
-        CLI commands.
-
-    .. code-block:: yaml
-
-        mypkgs:
-          pkg.installed:
-            - sources:
-              - foo: salt://rpms/foo.rpm
-              - bar: http://somesite.org/bar.rpm
-              - baz: ftp://someothersite.org/baz.rpm
-              - qux: /minion/path/to/qux.rpm
-
-    install_recommends
-        Whether to install the packages marked as recommended. Default is
-        ``True``. Currently only works with APT-based systems.
-
-        .. versionadded:: 2015.5.0
-
-    .. code-block:: yaml
-
-        httpd:
-          pkg.installed:
-            - install_recommends: False
-
-    only_upgrade
-        Only upgrade the packages, if they are already installed. Default is
-        ``False``. Currently only works with APT-based systems.
-
-        .. versionadded:: 2015.5.0
-
-    .. code-block:: yaml
-
-        httpd:
-          pkg.installed:
-            - only_upgrade: True
+    :return:
+        A dictionary containing the state of the software installation
+    :rtype dict:
 
     '''
     if isinstance(pkgs, list) and len(pkgs) == 0:

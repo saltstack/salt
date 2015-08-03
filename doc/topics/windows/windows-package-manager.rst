@@ -170,6 +170,20 @@ Add ``cache_dir: True`` when the installer requires multiple source files. The
 directory containing the installer file will be recursively cached on the minion.
 Only applies to salt: installer URLs.
 
+Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file.
+
+.. code-block:: yaml
+
+    7zip:
+      9.20.00.0:
+        installer: salt://win/repo/7zip/7z920-x64.msi
+        full_name: 7-Zip 9.20 (x64 edition)
+        reboot: False
+        install_flags: '/qn /norestart'
+        msiexec: True
+        uninstaller: salt://win/repo/7zip/7z920-x64.msi
+        uninstall_flags: '/qn /norestart'
+
 .. code-block:: yaml
 
     sqlexpress:
