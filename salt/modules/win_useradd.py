@@ -15,6 +15,11 @@ NOTE: This currently only works with local user accounts, not domain accounts
 '''
 from __future__ import absolute_import
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except:  # pylint: disable=W0702
+    from pipes import quote as _cmd_quote
+
 # Import salt libs
 import salt.utils
 from salt.ext.six import string_types
