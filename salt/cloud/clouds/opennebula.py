@@ -980,7 +980,13 @@ def image_allocate(call=None, kwargs=None):
 
     path
         The path to a file containing the template of the image to allocate.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be
+        used instead of ``data``.
+
+    data
+        The data containing the template of the image to allocate. Syntax can be the
+        usual attribute=value or XML. The data provided must be wrapped in double
+        quotes. Can be used instead of ``path``.
 
     datastore_id
         The ID of the data-store to be used for the new image.
@@ -994,6 +1000,9 @@ def image_allocate(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_allocate opennebula file=/path/to/image_file.txt datastore_id=1
+        salt-cloud -f image_allocate opennebula datatstore_id=default \
+            data="NAME = 'Ubuntu-Dev' PATH = /home/one_user/images/ubuntu_desktop.img \
+            DESCRIPTION = 'Ubuntu 14.04 for development.'"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1004,6 +1013,7 @@ def image_allocate(call=None, kwargs=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     datastore_id = kwargs.get('datastore_id', None)
     datastore_name = kwargs.get('datastore_name', None)
 
@@ -1015,24 +1025,26 @@ def image_allocate(call=None, kwargs=None):
             )
         datastore_id = get_datastore_id(kwargs={'name': datastore_name})
 
-    if not path:
-        raise SaltCloudSystemExit(
-            'The image_allocate function requires a file \'path\' to be provided.'
-        )
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The image_allocate function requires either a file \'path\' or \'data\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.image.allocate(auth, file_data, int(datastore_id))
+    response = server.one.image.allocate(auth, data, int(datastore_id))
 
-    data = {
+    ret = {
         'action': 'image.allocate',
         'allocated': response[0],
         'image_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def image_clone(call=None, kwargs=None):
@@ -1469,7 +1481,12 @@ def image_update(call=None, kwargs=None):
 
     path
         The path to a file containing the template of the image. Syntax within the
-        file can be the usual attribute=value or XML.
+        file can be the usual attribute=value or XML. Can be used instead of ``data``.
+
+    data
+        Contains the template of the image. Syntax can be the usual attribute=value
+        or XML. Data provided must be wrapped in double quotes. Can be used instead
+        of ``path``.
 
     update_type
         There are two ways to update an image: ``replace`` the whole template
@@ -1480,6 +1497,9 @@ def image_update(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_update opennebula image_id=0 file=/path/to/image_update_file.txt update_type=replace
+        salt-cloud -f image_update opennebula image_name="Ubuntu 14" update_type=merge \
+            data="NAME = 'Ubuntu-Dev' PATH = /home/one_user/images/ubuntu_desktop.img \
+            DESCRIPTION = 'Ubuntu 14.04 for development.'"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1492,6 +1512,7 @@ def image_update(call=None, kwargs=None):
     image_id = kwargs.get('image_id', None)
     image_name = kwargs.get('image_name', None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     update_type = kwargs.get('update_type', None)
     update_args = ['replace', 'merge']
 
@@ -1503,9 +1524,17 @@ def image_update(call=None, kwargs=None):
             )
         image_id = get_image_id(kwargs={'name': image_name})
 
-    if path is None or update_type is None:
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The image_update function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
+
+    if update_type is None:
         raise SaltCloudSystemExit(
-            'The image_update function requires a file \'path\' and an \'update_type\' to be provided.'
+            'The image_update function requires an \'update_type\' to be provided.'
         )
 
     if update_type == update_args[0]:
@@ -1522,17 +1551,16 @@ def image_update(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    file_data = salt.utils.fopen(path, mode='r').read()
-    response = server.one.image.update(auth, int(image_id), file_data, int(update_number))
+    response = server.one.image.update(auth, int(image_id), data, int(update_number))
 
-    data = {
+    ret = {
         'action': 'image.update',
         'updated': response[0],
         'image_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def script(vm_):
@@ -1590,13 +1618,21 @@ def secgroup_allocate(call=None, kwargs=None):
 
     path
         The path to a file containing the template of the security group. Syntax
-        within the file can be the usual attribute=value or XML.
+        within the file can be the usual attribute=value or XML. Can be used
+        instead of ``data``.
+
+    data
+        The template data of the security group. Syntax can be the usual
+        attribute=value or XML. Data provided must be wrapped in double quotes.
+        Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f secgroup_allocate opennebula file=/path/to/secgroup_file.txt
+        salt-cloud -f secgroup_allocate opennebula \
+            data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, RANGE = 1000:2000]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1607,26 +1643,27 @@ def secgroup_allocate(call=None, kwargs=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
-    if not path:
-        raise SaltCloudSystemExit(
-            'The secgroup_allocate function requires a file path to be provided.'
-        )
-
-    data = salt.utils.fopen(path, mode='r').read()
+    data = kwargs.get('data', None)
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The secgroup_allocate function requires either \'data\' or a file '
+                '\'path\' to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-
     response = server.one.secgroup.allocate(auth, data)
 
-    data = {
+    ret = {
         'action': 'secgroup.allocate',
         'allocated': response[0],
         'secgroup_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def secgroup_clone(call=None, kwargs=None):
@@ -1810,7 +1847,13 @@ def secgroup_update(call=None, kwargs=None):
 
     path
         The path to a file containing the template of the security group. Syntax
-        within the file can be the usual attribute=value or XML.
+        within the file can be the usual attribute=value or XML. Can be used instead
+        of ``data``.
+
+    data
+        The template data of the security group. Syntax can be the usual attribute=value
+        or XML. Data provided must be wrapped in double quotes. Can be used instead of
+        ``path``.
 
     update_type
         There are two ways to update a security group: ``replace`` the whole template
@@ -1823,6 +1866,8 @@ def secgroup_update(call=None, kwargs=None):
         salt-cloud --function secgroup_update opennebula secgroup_id=100 \
             file=/path/to/secgroup_update_file.txt \
             update_type=replace
+        salt-cloud -f secgroup_update opennebula secgroup_name=my-secgroup update_type=merge \
+            data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, RANGE = 1000:2000]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1835,6 +1880,7 @@ def secgroup_update(call=None, kwargs=None):
     secgroup_id = kwargs.get('secgroup_id', None)
     secgroup_name = kwargs.get('secgroup_name', None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     update_type = kwargs.get('update_type', None)
     update_args = ['replace', 'merge']
 
@@ -1846,10 +1892,17 @@ def secgroup_update(call=None, kwargs=None):
             )
         secgroup_id = get_secgroup_id(kwargs={'name': secgroup_name})
 
-    if path is None or update_type is None:
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The secgroup_update function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
+
+    if update_type is None:
         raise SaltCloudSystemExit(
-            'The secgroup_update function requires a file \'path\' and an \'update_type\' '
-            'to be provided.'
+            'The secgroup_update function requires an \'update_type\' to be provided.'
         )
 
     if update_type == update_args[0]:
@@ -1866,17 +1919,16 @@ def secgroup_update(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    file_data = salt.utils.fopen(path, mode='r').read()
-    response = server.one.secgroup.update(auth, int(secgroup_id), file_data, int(update_number))
+    response = server.one.secgroup.update(auth, int(secgroup_id), data, int(update_number))
 
-    data = {
+    ret = {
         'action': 'secgroup.update',
         'updated': response[0],
         'secgroup_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def template_allocate(call=None, kwargs=None):
@@ -1887,13 +1939,24 @@ def template_allocate(call=None, kwargs=None):
 
     path
         The path to a file containing the elements of the template to be allocated.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be used
+        instead of ``data``.
+
+    data
+        Contains the elements of the template to be allocated. Syntax can be the usual
+        attribute=value or XML. Data provided must be wrapped in double quotes. Can be
+        used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f template_allocate opennebula path=/path/to/template_file.txt
+        salt-cloud -f template_allocate opennebula \
+            data="CPU='1.0' DISK=[IMAGE='Ubuntu-14.04'] GRAPHICS=[LISTEN='0.0.0.0',TYPE='vnc'] \
+            MEMORY='1024' NETWORK='yes' NIC=[NETWORK='192net',NETWORK_UNAME='oneadmin'] \
+            OS=[ARCH='x86_64'] SUNSTONE_CAPACITY_SELECT='YES' SUNSTONE_NETWORK_SELECT='YES' \
+            VCPU='1'"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1904,24 +1967,28 @@ def template_allocate(call=None, kwargs=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
-    if not path:
-        raise SaltCloudSystemExit(
-            'The template_allocate function requires a file path to be provided.'
-        )
+    data = kwargs.get('data', None)
 
-    path_data = salt.utils.fopen(path, mode='r').read()
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The template_allocate function requires either \'data\' or a file '
+                '\'path\' to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
+
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.template.allocate(auth, path_data)
+    response = server.one.template.allocate(auth, data)
 
-    data = {
+    ret = {
         'action': 'template.allocate',
         'allocated': response[0],
         'template_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def template_clone(call=None, kwargs=None):
@@ -2186,6 +2253,12 @@ def vm_allocate(call=None, kwargs=None):
     path
         The path to a file defining the template of the VM to allocate.
         Syntax within the file can be the usual attribute=value or XML.
+        Can be used instead of ``data``.
+
+    data
+        Contains the template definitions of the VM to allocate. Syntax can
+        be the usual attribute=value or XML. Data provided must be wrapped
+        in double quotes. Can be used instead of ``path``.
 
     hold
         If this parameter is set to ``True``, the VM will be created in
@@ -2208,26 +2281,29 @@ def vm_allocate(call=None, kwargs=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     hold = kwargs.get('hold', None)
 
-    if not path:
-        raise SaltCloudSystemExit(
-            'The vm_allocate function requires a file \'path\' to be provided.'
-        )
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vm_allocate function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vm.allocate(auth, file_data, is_true(hold))
+    response = server.one.vm.allocate(auth, data, is_true(hold))
 
-    data = {
+    ret = {
         'action': 'vm.allocate',
         'allocated': response[0],
         'vm_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vm_attach(name, kwargs=None, call=None):
@@ -2240,14 +2316,21 @@ def vm_attach(name, kwargs=None, call=None):
         The name of the VM for which to attach the new disk.
 
     path
-        The path to a file containing a single DISK vector attribute.
+        The path to a file containing a single disk vector attribute.
         Syntax within the file can be the usual attribute=value or XML.
+        Can be used instead of ``data``.
+
+    data
+        Contains the data needed to attach a single disk vector attribute.
+        Syntax can be the usual attribute=value or XML. Data provided
+        must be wrapped in double quotes. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a vm_attach my-vm path=/path/to/disk_file.txt
+        salt-cloud -a vm_attach my-vm data="DISK=[DISK_ID=1]"
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2258,26 +2341,30 @@ def vm_attach(name, kwargs=None, call=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
-    if not path:
-        raise SaltCloudSystemExit(
-            'The vm_attach function requires a file \'path\' to be provided.'
-        )
+    data = kwargs.get('data', None)
+
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vm_attach function requires either \'data\' or a file '
+                '\'path\' to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    file_data = salt.utils.fopen(path, mode='r').read()
 
-    response = server.one.vm.attachnic(auth, vm_id, file_data)
+    response = server.one.vm.attachnic(auth, vm_id, data)
 
-    data = {
+    ret = {
         'action': 'vm.attach',
         'attached': response[0],
         'vm_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vm_attachnic(name, kwargs=None, call=None):
@@ -2291,13 +2378,20 @@ def vm_attachnic(name, kwargs=None, call=None):
 
     path
         The path to a file containing a single NIC vector attribute.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can
+        be used instead of ``data``.
+
+    data
+        Contains the single NIC vector attribute to attach to the VM.
+        Syntax can be the usual attribute=value or XML. Data provided
+        must be wrapped in double quotes. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -a vm_attachnic my-vm path=/path/to/nic_file.txt
+        salt-cloud -a vm_attachnic my-vm data="NIC=[NETWORK_ID=1]"
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2308,26 +2402,30 @@ def vm_attachnic(name, kwargs=None, call=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
-    if not path:
-        raise SaltCloudSystemExit(
-            'The vm_attachnic function requires a file \'path\' to be provided.'
-        )
+    data = kwargs.get('data', None)
+
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vm_attachnic function requires either \'data\' or a file '
+                '\'path\' to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    file_data = salt.utils.fopen(path, mode='r').read()
 
-    response = server.one.vm.attach(auth, vm_id, file_data)
+    response = server.one.vm.attach(auth, vm_id, data)
 
-    data = {
+    ret = {
         'action': 'vm.attachnic',
         'nic_attached': response[0],
         'vm_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vm_deploy(name, kwargs=None, call=None):
@@ -2920,8 +3018,14 @@ def vm_resize(name, kwargs=None, call=None):
 
     path
         The path to a file containing new capacity elements CPU, VCPU, MEMORY. If one
-        of them is not present, or its value is 0, it will not be resized. Syntax within
-        the file can be the usual attribute=value or XML.
+        of them is not present, or its value is 0, the VM will not be re-sized. Syntax
+        within the file can be the usual attribute=value or XML. Can be used instead
+        of ``data``.
+
+    data
+        Contains the new capacity elements CPU, VCPU, and MEMORY. If one of them is not
+        present, or its value is 0, the VM will not be re-sized. Data provided must be
+        wrapped in double quotes. Can be used instead of ``path``.
 
     capacity_maintained
         True to enforce the Host capacity is not over-committed. This parameter is only
@@ -2934,6 +3038,7 @@ def vm_resize(name, kwargs=None, call=None):
 
         salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt
         salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt capacity_maintained=False
+        satl-cloud -a vm_resize my-vm data="CPU=1 VCPU=1 MEMORY=1024"
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -2944,27 +3049,31 @@ def vm_resize(name, kwargs=None, call=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     capacity_maintained = kwargs.get('capacity_maintained', True)
-    if not path:
-        raise SaltCloudSystemExit(
-            'The vm_resize function requires a file \'path\' to be provided.'
-        )
+
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vm_resize function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    file_data = salt.utils.fopen(path, mode='r').read()
 
-    response = server.one.vm.resize(auth, vm_id, file_data, is_true(capacity_maintained))
+    response = server.one.vm.resize(auth, vm_id, data, is_true(capacity_maintained))
 
-    data = {
+    ret = {
         'action': 'vm.resize',
         'resized': response[0],
         'vm_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vm_snapshot_create(vm_name, kwargs=None, call=None):
@@ -2979,7 +3088,7 @@ def vm_snapshot_create(vm_name, kwargs=None, call=None):
     snapshot_name
         The name of the snapshot to be created.
 
-    CLI Exmampe:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3026,7 +3135,7 @@ def vm_snapshot_delete(vm_name, kwargs=None, call=None):
     snapshot_id
         The ID of the snapshot to be deleted.
 
-    CLI Exmampe:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3073,7 +3182,7 @@ def vm_snapshot_revert(vm_name, kwargs=None, call=None):
     snapshot_id
         The snapshot ID.
 
-    CLI Exmampe:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -3119,7 +3228,12 @@ def vm_update(name, kwargs=None, call=None):
 
     path
         The path to a file containing new user template contents. Syntax within the
-        file can be the usual attribute=value or XML.
+        file can be the usual attribute=value or XML. Can be used instead of ``data``.
+
+    data
+        Contains the new user template contents. Syntax can be the usual attribute=value
+        or XML. Data provided must be wrapped in double quotes. Can be used instead of
+        ``path``.
 
     update_type
         There are two ways to update a VM: ``replace`` the whole template
@@ -3129,7 +3243,7 @@ def vm_update(name, kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_update my-vm /path/to/user_template_file.txt 'replace'
+        salt-cloud -a vm_update my-vm path=/path/to/user_template_file.txt update_type='replace'
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3140,11 +3254,20 @@ def vm_update(name, kwargs=None, call=None):
         kwargs = {}
 
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     update_type = kwargs.get('update_type', None)
-    if not path and not update_type:
+
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vm_update function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
+
+    if update_type is None:
         raise SaltCloudSystemExit(
-            'The vm_update function requires a file \'path\' and an \'update_type\' '
-            'to be provided.'
+            'The vm_update function requires an \'update_type\' to be provided.'
         )
 
     update_number = 0
@@ -3154,18 +3277,17 @@ def vm_update(name, kwargs=None, call=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-    file_data = salt.utils.fopen(path, mode='r').read()
 
-    response = server.one.vm.update(auth, vm_id, file_data, update_number)
+    response = server.one.vm.update(auth, vm_id, data, update_number)
 
-    data = {
+    ret = {
         'action': 'vm.update',
         'updated': response[0],
         'resource_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vn_add_ar(call=None, kwargs=None):
@@ -3184,13 +3306,20 @@ def vn_add_ar(call=None, kwargs=None):
 
     path
         The path to a file containing the template of the address range to add.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be
+        used instead of ``data``.
+
+    data
+        Contains the template of the address range to add. Syntax can be the
+        usual attribute=value or XML. Data provided must be wrapped in double
+        quotes. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -f vn_add_ar opennbula vn_id=3 path=/path/to/address_range.txt
+        salt-cloud -f vn_add_ar opennebula vn_id=3 path=/path/to/address_range.txt
+        salt-cloud -f vn_add_ar opennebula vn_name=my-vn data="AR=[TYPE=IP4, IP=192.168.0.5, SIZE=10]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3203,6 +3332,7 @@ def vn_add_ar(call=None, kwargs=None):
     vn_id = kwargs.get('vn_id', None)
     vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
 
     if vn_id is None:
         if vn_name is None:
@@ -3212,24 +3342,26 @@ def vn_add_ar(call=None, kwargs=None):
             )
         vn_id = get_vn_id(kwargs={'name': vn_name})
 
-    if path is None:
-        raise SaltCloudSystemExit(
-            'The vn_add_ar function requires a file \'path\' to be provided.'
-        )
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vn_add_ar function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vn.add_ar(auth, int(vn_id), file_data)
+    response = server.one.vn.add_ar(auth, int(vn_id), data)
 
-    data = {
+    ret = {
         'action': 'vn.add_ar',
         'address_range_added': response[0],
         'resource_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vn_allocate(call=None, kwargs=None):
@@ -3240,7 +3372,13 @@ def vn_allocate(call=None, kwargs=None):
 
     path
         The path to a file containing the template of the virtual network to allocate.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be used
+        instead of ``data``.
+
+    data
+        Contains the template of the virtual network to allocate. Syntax can be the
+        usual attribute=value or XML. Data provided must be wrapped in double quotes.
+        Can be used instead of ``path``.
 
     cluster_id
         The ID of the cluster for which to add the new virtual network. Can be used
@@ -3248,7 +3386,7 @@ def vn_allocate(call=None, kwargs=None):
         the virtual network won’t be added to any cluster.
 
     cluster_name
-        The name of the cluster for which to add the new virtula network. Can be used
+        The name of the cluster for which to add the new virtual network. Can be used
         instead of cluster_id. If neither cluster_name nor cluster_id are provided, the
         virtual network won't be added to any cluster.
 
@@ -3269,27 +3407,31 @@ def vn_allocate(call=None, kwargs=None):
     cluster_id = kwargs.get('cluster_id', '-1')
     cluster_name = kwargs.get('cluster_name', None)
     path = kwargs.get('path', None)
-    if path is None:
-        raise SaltCloudSystemExit(
-            'The vn_allocate function requires a file \'path\' to be provided.'
-        )
+    data = kwargs.get('data', None)
+
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vn_allocate function requires either \'data\' or a file \'path\' '
+                'to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
     if cluster_name is not None:
         cluster_id = get_cluster_id(kwargs={'name': cluster_name})
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vn.allocate(auth, file_data, int(cluster_id))
+    response = server.one.vn.allocate(auth, data, int(cluster_id))
 
-    data = {
+    ret = {
         'action': 'vn.allocate',
         'allocated': response[0],
         'vn_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vn_delete(call=None, kwargs=None):
@@ -3421,18 +3563,25 @@ def vn_hold(call=None, kwargs=None):
         instead of vn_name.
 
     vn_name
-        The name of the virtula network from which to hold the lease. Can be used
+        The name of the virtual network from which to hold the lease. Can be used
         instead of vn_id.
 
     path
         The path to a file defining the template of the lease to hold.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be
+        used instead of ``data``.
+
+    data
+        Contains the template of the lease to hold. Syntax can be the usual
+        attribute=value or XML. Data provided must be wrapped in double quotes.
+        Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f vn_hold opennebula vn_id=3 path=/path/to/vn_hold_file.txt
+        salt-cloud -f vn_hold opennebula vn_name=my-vn data="LEASES=[IP=192.168.0.5]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3445,6 +3594,7 @@ def vn_hold(call=None, kwargs=None):
     vn_id = kwargs.get('vn_id', None)
     vn_name = kwargs.get('vn_name'. None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
 
     if vn_id is None:
         if vn_name is None:
@@ -3454,24 +3604,26 @@ def vn_hold(call=None, kwargs=None):
             )
         vn_id = get_vn_id(kwargs={'name': vn_name})
 
-    if path is None:
-        raise SaltCloudSystemExit(
-            'The vn_hold function requires a \'path\' to be provided.'
-        )
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vn_hold function requires either \'data\' or a \'path\' to '
+                'be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vn.hold(auth, int(vn_id), file_data)
+    response = server.one.vn.hold(auth, int(vn_id), data)
 
-    data = {
+    ret = {
         'action': 'vn.hold',
         'held': response[0],
         'resource_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vn_info(call=None, kwargs=None):
@@ -3543,13 +3695,20 @@ def vn_release(call=None, kwargs=None):
 
     path
         The path to a file defining the template of the lease to release.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be
+        used instead of ``data``.
+
+    data
+        Contains the template defining the lease to release. Syntax can be the
+        usual attribute=value or XML. Data provided must be wrapped in double
+        quotes. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f vn_release opennebula vn_id=3 path=/path/to/vn_release_file.txt
+        salt-cloud =f vn_release opennebula vn_name=my-vn data="LEASES=[IP=192.168.0.5]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3562,6 +3721,7 @@ def vn_release(call=None, kwargs=None):
     vn_id = kwargs.get('vn_id', None)
     vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
 
     if vn_id is None:
         if vn_name is None:
@@ -3571,24 +3731,26 @@ def vn_release(call=None, kwargs=None):
             )
         vn_id = get_vn_id(kwargs={'name': vn_name})
 
-    if path is None:
-        raise SaltCloudSystemExit(
-            'The vn_release function requires a \'path\' to be provided.'
-        )
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vn_release function requires either \'data\' or a \'path\' to '
+                'be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vn.release(auth, int(vn_id), file_data)
+    response = server.one.vn.release(auth, int(vn_id), data)
 
-    data = {
+    ret = {
         'action': 'vn.release',
         'released': response[0],
         'resource_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def vn_reserve(call=None, kwargs=None):
@@ -3607,13 +3769,20 @@ def vn_reserve(call=None, kwargs=None):
 
     path
         The path to a file defining the template of the address reservation.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be used
+        instead of ``data``.
+
+    data
+        Contains the template defining the address reservation. Syntax can be the
+        usual attribute=value or XML. Data provided must be wrapped in double
+        quotes. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f vn_reserve opennebula vn_id=3 path=/path/to/vn_reserve_file.txt
+        salt-cloud -f vn_reserve opennebula vn_name=my-vn data="SIZE=10 AR_ID=8 NETWORK_ID=1"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3626,6 +3795,7 @@ def vn_reserve(call=None, kwargs=None):
     vn_id = kwargs.get('vn_id', None)
     vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
 
     if vn_id is None:
         if vn_name is None:
@@ -3635,24 +3805,25 @@ def vn_reserve(call=None, kwargs=None):
             )
         vn_id = get_vn_id(kwargs={'name': vn_name})
 
-    if path is None:
-        raise SaltCloudSystemExit(
-            'The vn_reserve function requires a \'path\' to be provided.'
-        )
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The vn_reserve function requires a \'path\' to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
 
-    file_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.vn.reserve(auth, int(vn_id), file_data)
+    response = server.one.vn.reserve(auth, int(vn_id), data)
 
-    data = {
+    ret = {
         'action': 'vn.reserve',
         'reserved': response[0],
         'resource_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 def template_update(call=None, kwargs=None):
@@ -3669,7 +3840,13 @@ def template_update(call=None, kwargs=None):
 
     path
         The path to a file containing the elements of the template to be updated.
-        Syntax within the file can be the usual attribute=value or XML.
+        Syntax within the file can be the usual attribute=value or XML. Can be
+        used instead of ``data``.
+
+    data
+        Contains the elements of the template to be updated. Syntax can be the
+        usual attribute=value or XML. Data provided my be wrapped in double
+        quotes. Can be used instead of ``path``.
 
     update_type
         There are two ways to update a template: ``replace`` the whole template
@@ -3679,9 +3856,13 @@ def template_update(call=None, kwargs=None):
 
     .. code-block:: bash
 
-        salt-cloud --function template_update opennebula template_id=1 \
-            path=/path/to/template_update_file.txt \
-            update_type=replace
+        salt-cloud --function template_update opennebula template_id=1 update_type=replace \
+            path=/path/to/template_update_file.txt
+        salt-cloud -f template_update opennebula template_name=my-template update_type=merge \
+            data="CPU='1.0' DISK=[IMAGE='Ubuntu-14.04'] GRAPHICS=[LISTEN='0.0.0.0',TYPE='vnc'] \
+            MEMORY='1024' NETWORK='yes' NIC=[NETWORK='192net',NETWORK_UNAME='oneadmin'] \
+            OS=[ARCH='x86_64'] SUNSTONE_CAPACITY_SELECT='YES' SUNSTONE_NETWORK_SELECT='YES' \
+            VCPU='1'"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3694,6 +3875,7 @@ def template_update(call=None, kwargs=None):
     template_id = kwargs.get('template_id', None)
     template_name = kwargs.get('template_name', None)
     path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
     update_type = kwargs.get('update_type', None)
     update_args = ['replace', 'merge']
 
@@ -3705,10 +3887,17 @@ def template_update(call=None, kwargs=None):
             )
         template_id = get_template_id(kwargs={'name': template_name})
 
-    if path is None or update_type is None:
+    if data is None:
+        if path is None:
+            raise SaltCloudSystemExit(
+                'The template_update function requires either \'data\' or a file '
+                '\'path\' to be provided.'
+            )
+        data = salt.utils.fopen(path, mode='r').read()
+
+    if update_type is None:
         raise SaltCloudSystemExit(
-            'The template_update function requires a file \'path\' and an '
-            '\'update_type\' to be provided.'
+            'The template_update function requires an \'update_type\' to be provided.'
         )
 
     if update_type == update_args[0]:
@@ -3723,19 +3912,18 @@ def template_update(call=None, kwargs=None):
             )
         )
 
-    path_data = salt.utils.fopen(path, mode='r').read()
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.template.update(auth, int(template_id), path_data, int(update_number))
+    response = server.one.template.update(auth, int(template_id), data, int(update_number))
 
-    data = {
+    ret = {
         'action': 'template.update',
         'updated': response[0],
         'template_id': response[1],
         'error_code': response[2],
     }
 
-    return data
+    return ret
 
 
 # Helper Functions
