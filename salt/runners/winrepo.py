@@ -63,16 +63,15 @@ def genrepo():
                 if config:
                     revmap = {}
                     for pkgname, versions in six.iteritems(config):
-                        log.info(
+                        log.debug(
                             'Compiling winrepo data for package \'{0}\''
                             .format(pkgname)
                         )
                         for version, repodata in six.iteritems(versions):
-                            log.info(
+                            log.debug(
                                 'Compiling winrepo data for {0} version {1}'
                                 .format(pkgname, version)
                             )
-                            log.info(repodata)
                             if not isinstance(version, six.string_types):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
