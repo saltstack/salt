@@ -6,7 +6,10 @@ master to the minion and vice-versa.
 from __future__ import absolute_import
 # Import Python libs
 import collections
+import logging
 import os
+import sys
+import traceback
 
 # Import salt libs
 import salt.crypt
@@ -16,6 +19,7 @@ import salt.transport
 import salt.ext.six as six
 
 __proxyenabled__ = ['*']
+log = logging.getLogger(__name__)
 
 
 def _dict_subset(keys, master_dict):
@@ -71,6 +75,9 @@ def fire_master(data, tag, preload=None):
             return salt.utils.event.MinionEvent(__opts__).fire_event(
                 {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
         except Exception:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            log.debug(lines)
             return False
 
 
@@ -93,6 +100,9 @@ def fire(data, tag):
 
         return event.fire_event(data, tag)
     except Exception:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        log.debug(lines)
         return False
 
 
