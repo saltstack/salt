@@ -1472,6 +1472,8 @@ def managed(name,
         log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
+    tmp_filename = None
+
     if check_cmd:
         tmp_filename = salt.utils.mkstemp()
 
@@ -1559,7 +1561,8 @@ def managed(name,
             log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
         finally:
-            os.remove(tmp_filename)
+            if tmp_filename:
+                os.remove(tmp_filename)
 
 
 def directory(name,
