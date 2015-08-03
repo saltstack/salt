@@ -212,15 +212,15 @@ class GitProvider(object):
             log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
             failhard(self.role)
 
-    def check_pillar_root(self):
+    def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
         remote. Return the full path to that relative root if it does exist,
         otherwise return None.
         '''
-        pillar_root = os.path.join(self.cachedir, self.root)
-        if os.path.isdir(pillar_root):
-            return pillar_root
+        root_dir = os.path.join(self.cachedir, self.root).rstrip('/')
+        if os.path.isdir(root_dir):
+            return root_dir
         log.error(
             'Root path \'{0}\' not present in {1} remote \'{2}\', '
             'skipping.'.format(self.root, self.role, self.id)
@@ -394,7 +394,7 @@ class GitPython(GitProvider):
                 self.repo.git.checkout(ref)
             except Exception:
                 continue
-            return self.check_pillar_root()
+            return self.check_root()
         log.error(
             'Failed to checkout {0} from {1} remote \'{2}\': remote ref does '
             'not exist'.format(self.branch, self.role, self.id)
@@ -646,10 +646,10 @@ class Pygit2(GitProvider):
                 self.repo.checkout(local_ref)
                 # Reset HEAD to the commit id of the remote ref
                 self.repo.reset(oid, pygit2.GIT_RESET_HARD)
-                return self.check_pillar_root()
+                return self.check_root()
             elif tag_ref in refs:
                 self.repo.checkout(tag_ref)
-                return self.check_pillar_root()
+                return self.check_root()
         except Exception as exc:
             log.error(
                 'Failed to checkout {0} from {1} remote \'{2}\': {3}'.format(
@@ -1437,11 +1437,14 @@ class GitBase(object):
     '''
     Base class for gitfs/git_pillar
     '''
-    def __init__(self, opts, valid_providers=VALID_PROVIDERS):
+    def __init__(self, opts, valid_providers=VALID_PROVIDERS, cache_root=None):
         self.opts = opts
         self.valid_providers = valid_providers
         self.get_provider()
-        self.cache_root = os.path.join(self.opts['cachedir'], self.role)
+        if cache_root is not None:
+            self.cache_root = cache_root
+        else:
+            self.cache_root = os.path.join(self.opts['cachedir'], self.role)
         self.env_cache = os.path.join(self.cache_root, 'envs.p')
         self.hash_cachedir = os.path.join(
             self.cache_root, self.role, 'hash')
@@ -2218,7 +2221,6 @@ class GitPillar(GitBase):
                 else:
                     base_branch = self.opts['{0}_branch'.format(self.role)]
                     env = 'base' if repo.branch == base_branch else repo.branch
-                log.critical(env)
                 self.pillar_dirs[cachedir] = env
 
     def update(self):
@@ -2232,3 +2234,27 @@ class GitPillar(GitBase):
         and just run pillar.fetch_remotes() there.
         '''
         return self.fetch_remotes()
+
+
+class WinRepo(GitBase):
+    '''
+    Functionality specific to the winrepo runner
+    '''
+    def __init__(self, opts):
+        self.role = 'win_repo'
+        # Dulwich has no function to check out a branch/tag, so this will be
+        # limited to GitPython and Pygit2 for the forseeable future.
+        GitBase.__init__(self,
+                         opts,
+                         valid_providers=('gitpython', 'pygit2'),
+                         cache_root=opts['win_repo'])
+
+    def checkout(self):
+        '''
+        Checkout the targeted branches/tags from the win_repo remotes
+        '''
+        self.win_repo_dirs = {}
+        for repo in self.remotes:
+            cachedir = repo.checkout()
+            if cachedir is not None:
+                self.win_repo_dirs[repo.url] = cachedir
