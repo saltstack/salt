@@ -740,9 +740,14 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     def __setup_extended_logging(self, *args):
         log.setup_extended_logging(self.config)
 
+    def _get_mp_logging_listener_queue(self):
+        return log.get_multiprocessing_logging_queue()
+
     def __setup_mp_logging_listener(self, *args):
         if self._setup_mp_logging_listener_:
-            log.setup_multiprocessing_logging_listener()
+            log.setup_multiprocessing_logging_listener(
+                self._get_mp_logging_listener_queue()
+            )
 
     def __setup_console_logger(self, *args):
         # If daemon is set force console logger to quiet
