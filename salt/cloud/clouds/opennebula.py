@@ -8,6 +8,7 @@ The OpenNebula cloud module is used to control access to an OpenNebula cloud.
 .. versionadded:: 2014.7.0
 
 :depends: lxml
+:depends: OpenNebula installation running version ``4.12``.
 
 Use of this module requires the ``xml_rpc``, ``user``, and ``password``
 parameters to be set.
@@ -247,7 +248,7 @@ def list_hosts(call=None):
 
 def list_nodes(call=None):
     '''
-    Return a list of VMs on OpenNebubla.
+    Return a list of VMs on OpenNebula.
 
     call
         Optional type of call to use with this function such as ``function``.
@@ -272,7 +273,7 @@ def list_nodes(call=None):
 
 def list_nodes_full(call=None):
     '''
-    Return a list of the VMs that are on the provider.
+    Return a list of the VMs on OpenNebula.
 
     call
         Optional type of call to use with this function such as ``function``.
@@ -1000,7 +1001,7 @@ def image_allocate(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_allocate opennebula file=/path/to/image_file.txt datastore_id=1
-        salt-cloud -f image_allocate opennebula datatstore_id=default \
+        salt-cloud -f image_allocate opennebula datastore_id=default \
             data="NAME = 'Ubuntu-Dev' PATH = /home/one_user/images/ubuntu_desktop.img \
             DESCRIPTION = 'Ubuntu 14.04 for development.'"
     '''
@@ -1228,7 +1229,7 @@ def image_persistent(call=None, kwargs=None):
 
     persist
         A boolean value to set the image as persistent or not. Set to true
-        for persistent, false for non-persisent.
+        for persistent, false for non-persistent.
 
     image_id
         The ID of the image to set.
@@ -1328,7 +1329,7 @@ def image_snapshot_delete(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_stanpshot_delete function requires a \'snapshot_id\' to be provided.'
+            'The image_snapshot_delete function requires a \'snapshot_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1389,7 +1390,7 @@ def image_snapshot_revert(call=None, kwargs=None):
 
     if snapshot_id is None:
         raise SaltCloudSystemExit(
-            'The image_stanpshot_revert function requires a \'snapshot_id\' to be provided.'
+            'The image_snapshot_revert function requires a \'snapshot_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -1679,7 +1680,7 @@ def secgroup_clone(call=None, kwargs=None):
         The ID of the security group to be cloned. Can be used instead of secgroup_name.
 
     secgroup_name
-        The name of the security groupe to be cloned. Can be used instead of secgroup_id.
+        The name of the security group to be cloned. Can be used instead of secgroup_id.
 
     CLI Example:
 
@@ -2355,7 +2356,7 @@ def vm_attach(name, kwargs=None, call=None):
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
 
-    response = server.one.vm.attachnic(auth, vm_id, data)
+    response = server.one.vm.attach(auth, vm_id, data)
 
     ret = {
         'action': 'vm.attach',
@@ -2367,7 +2368,7 @@ def vm_attach(name, kwargs=None, call=None):
     return ret
 
 
-def vm_attachnic(name, kwargs=None, call=None):
+def vm_attach_nic(name, kwargs=None, call=None):
     '''
     Attaches a new network interface to the given virtual machine.
 
@@ -2390,12 +2391,12 @@ def vm_attachnic(name, kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_attachnic my-vm path=/path/to/nic_file.txt
-        salt-cloud -a vm_attachnic my-vm data="NIC=[NETWORK_ID=1]"
+        salt-cloud -a vm_attach_nic my-vm path=/path/to/nic_file.txt
+        salt-cloud -a vm_attach_nic my-vm data="NIC=[NETWORK_ID=1]"
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The vm_attachnic action must be called with -a or --action.'
+            'The vm_attach_nic action must be called with -a or --action.'
         )
 
     if kwargs is None:
@@ -2407,7 +2408,7 @@ def vm_attachnic(name, kwargs=None, call=None):
     if data is None:
         if path is None:
             raise SaltCloudSystemExit(
-                'The vm_attachnic function requires either \'data\' or a file '
+                'The vm_attach_nic function requires either \'data\' or a file '
                 '\'path\' to be provided.'
             )
         data = salt.utils.fopen(path, mode='r').read()
@@ -2416,7 +2417,7 @@ def vm_attachnic(name, kwargs=None, call=None):
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
 
-    response = server.one.vm.attach(auth, vm_id, data)
+    response = server.one.vm.attachnic(auth, vm_id, data)
 
     ret = {
         'action': 'vm.attachnic',
@@ -2555,7 +2556,7 @@ def vm_detach(name, kwargs=None, call=None):
     return data
 
 
-def vm_detachnic(name, kwargs=None, call=None):
+def vm_detach_nic(name, kwargs=None, call=None):
     '''
     Detaches a disk from a virtual machine.
 
@@ -2571,11 +2572,11 @@ def vm_detachnic(name, kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_detachnic my-vm nic_id=1
+        salt-cloud -a vm_detach_nic my-vm nic_id=1
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
-            'The vm_detachnic action must be called with -a or --action.'
+            'The vm_detach_nic action must be called with -a or --action.'
         )
 
     if kwargs is None:
@@ -2584,7 +2585,7 @@ def vm_detachnic(name, kwargs=None, call=None):
     nic_id = kwargs.get('nic_id', None)
     if not nic_id:
         raise SaltCloudSystemExit(
-            'The vm_detachnic function requires a \'nic_id\' to be provided.'
+            'The vm_detach_nic function requires a \'nic_id\' to be provided.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -2631,7 +2632,7 @@ def vm_disk_save(name, kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -a vm_disk_save my-vm disk_id=1 image_name=my-new-image
-        salt-cloud -a vm_disk_save my-vm disk_id=1 image_name=my-new-image image_tyep=CONTEXT snapshot_id=10
+        salt-cloud -a vm_disk_save my-vm disk_id=1 image_name=my-new-image image_type=CONTEXT snapshot_id=10
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
