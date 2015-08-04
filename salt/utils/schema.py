@@ -610,6 +610,15 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         return serialized
 
     @classmethod
+    def defaults(cls):
+        serialized = cls.serialize()
+        defaults = {}
+        for name, details in serialized['properties'].items():
+            if 'default' in details:
+                defaults[name] = details['default']
+        return defaults
+
+    @classmethod
     def as_requirements_item(cls):
         serialized_schema = cls.serialize()
         required = serialized_schema.get('required', [])
