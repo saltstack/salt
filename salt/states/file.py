@@ -1505,7 +1505,8 @@ def managed(name,
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
-            os.remove(tmp_filename)
+            if os.path.isfile(tmp_filename):
+                os.remove(tmp_filename)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -1523,7 +1524,8 @@ def managed(name,
             cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
-                os.remove(tmp_filename)
+                if os.path.isfile(tmp_filename):
+                    os.remove(tmp_filename)
                 return ret
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
@@ -1561,7 +1563,7 @@ def managed(name,
             log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
         finally:
-            if tmp_filename:
+            if tmp_filename and os.path.isfile(tmp_filename):
                 os.remove(tmp_filename)
 
 
