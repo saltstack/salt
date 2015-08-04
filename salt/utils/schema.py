@@ -616,6 +616,12 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         for name, details in serialized['properties'].items():
             if 'default' in details:
                 defaults[name] = details['default']
+                continue
+            if 'properties' in details:
+                for sname, sdetails in details['properties'].items():
+                    if 'default' in sdetails:
+                        defaults.setdefault(name, {})[sname] = sdetails['default']
+                continue
         return defaults
 
     @classmethod
