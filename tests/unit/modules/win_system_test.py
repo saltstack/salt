@@ -23,10 +23,10 @@ from salt.modules import win_system
 
 # Import 3rd Party Libs
 try:
-    import win32net
-    import win32api
-    import pywintypes
-    from ctypes import windll
+    import win32net  # pylint: disable=E0611
+    import win32api  # pylint: disable=E0611
+    import pywintypes  # pylint: disable=E0611
+    from ctypes import windll  # pylint: disable=E0611
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
