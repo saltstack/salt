@@ -821,7 +821,7 @@ def validate_windows_cred(host, username='Administrator', password=None, retries
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
                     trysleep=1, display_ssh_output=True, gateway=None,
-                    known_hosts_file='/dev/null'):
+                    known_hosts_file='/dev/null', hard_timeout=None):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -837,7 +837,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'display_ssh_output': display_ssh_output,
                       'known_hosts_file': known_hosts_file,
                       'ssh_timeout': ssh_timeout,
-                      'hard_timeout': ssh_timeout}
+                      'hard_timeout': hard_timeout}
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
@@ -1126,6 +1126,7 @@ def deploy_script(host,
     log.debug('Deploying {0} at {1}'.format(host, starttime))
 
     known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+    hard_timeout = opts.get('hard_timeout', None)
 
     if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
@@ -1135,7 +1136,7 @@ def deploy_script(host,
                            ssh_timeout=ssh_timeout,
                            display_ssh_output=display_ssh_output,
                            gateway=gateway, known_hosts_file=known_hosts_file,
-                           maxtries=maxtries):
+                           maxtries=maxtries, hard_timeout=hard_timeout):
 
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
@@ -2031,8 +2032,9 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
         ' '.join(ssh_args), kwargs, pipes.quote(command)
     )
 
-    if 'hard_timeout' in kwargs:
-        cmd = 'timeout {0} {1}'.format(kwargs['timeout'], cmd)
+    if kwargs.get('hard_timeout', None) is not None:
+        if kwargs['hard_timeout'] == int(kwargs['hard_timeout']):
+            cmd = 'timeout {0} {1}'.format(kwargs['hard_timeout'], cmd)
 
     log.debug('SSH command: {0!r}'.format(cmd))
     retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)

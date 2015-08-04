@@ -249,6 +249,13 @@ def create(vm_):
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
+    __opts__['hard_timeout'] = config.get_cloud_config_value(
+        'hard_timeout',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=15,
+    )
 
     # Bootstrap
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
