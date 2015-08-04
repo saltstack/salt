@@ -159,7 +159,7 @@ class TestSaltEvent(TestCase):
             )
         )
 
-    def test_event_subscription(self):
+    def test_event_single(self):
         '''Test a single event is received'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
@@ -189,26 +189,36 @@ class TestSaltEvent(TestCase):
             evt = me.get_event(tag='evt2', wait=0)
             self.assertGotEvent(evt, {'data': 'foo2'})
 
-    def test_event_subscription_matching(self):
-        '''Test a subscription startswith matching'''
+    def test_event_matching(self):
+        '''Test a startswith match'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
-            evt1 = me.get_event(tag='evt1')
+            evt1 = me.get_event(tag='ev')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    def test_event_subscription_matching_all(self):
-        '''Test a subscription matching'''
+    def test_event_matching_regex(self):
+        '''Test a regex match'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
-            evt1 = me.get_event(tag='')
+            evt1 = me.get_event(tag='not', tags_regex=['^ev'])
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_matching_all(self):
+        '''Test an all match'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.subscribe()
+            with eventsender_process({'data': 'foo1'}, 'evt1', 5):
+                me.fire_event({'data': 'foo1'}, 'evt2')
+                evt1 = me.get_event(tag='evt1', wait=10)
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_not_subscribed(self):
-        '''Test get event ignores non-subscribed events'''
+        '''Test get_event drops non-subscribed events'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
             me.subscribe()
@@ -217,18 +227,8 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(tag='evt1', wait=10)
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    def test_event_multiple_subscriptions(self):
-        '''Test multiple subscriptions do not interfere'''
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
-            with eventsender_process({'data': 'foo1'}, 'evt1', 5):
-                me.fire_event({'data': 'foo1'}, 'evt2')
-                evt1 = me.get_event(tag='evt1', wait=10)
-            self.assertGotEvent(evt1, {'data': 'foo1'})
-
-    def test_event_multiple_clients(self):
-        '''Test event is received by multiple clients'''
+    def test_event_subscription_cache(self):
+        '''Test subscriptions cache a message until requested'''
         with eventpublisher_process():
             me1 = event.MasterEvent(SOCK_DIR, listen=True)
             me1.subscribe()
@@ -237,25 +237,18 @@ class TestSaltEvent(TestCase):
             me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
-            # Can't replicate this failure in the wild, need to fix the
-            # test system bug here
-            #evt2 = me2.get_event(tag='evt1')
-            #self.assertGotEvent(evt2, {'data': 'foo1'})
 
-    def test_event_nested_subs(self):
-        '''Test nested event subscriptions do not drop events, issue #8580'''
+    def test_event_subscriptions_cache_regex(self):
+        '''Test regex subscriptions cache a message until requested'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
             me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
-            # Since we now drop unrelated events to avoid memory leaks, see http://goo.gl/2n3L09 commit bcbc5340ef, the
-            # calls below will return None and will drop the unrelated events
             evt2 = me.get_event(tag='evt2')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt2, {'data': 'foo2'})
-            # This one will be None because we're dripping unrelated events
-            self.assertIsNone(evt1)
+            self.assertGotEvent(evt1, {'data': 'foo1'})
 
             # Fire events again
             me.fire_event({'data': 'foo3'}, 'evt3')
