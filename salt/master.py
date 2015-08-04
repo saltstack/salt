@@ -165,7 +165,7 @@ class Maintenance(multiprocessing.Process):
                                                      returners=self.returners)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Init any values needed by the git ext pillar
         self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Set up search object
@@ -782,7 +782,7 @@ class AESFuncs(object):
         :returns: Instance for handling AES operations
         '''
         self.opts = opts
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
@@ -1417,7 +1417,7 @@ class ClearFuncs(object):
         self.opts = opts
         self.key = key
         # Create the event manager
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Make an minion checker object

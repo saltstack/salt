@@ -362,7 +362,7 @@ class Schedule(object):
             log.warn('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_delete_complete')
 
@@ -398,7 +398,7 @@ class Schedule(object):
         self.opts['schedule'].update(data)
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_add_complete')
 
@@ -417,7 +417,7 @@ class Schedule(object):
             schedule = self.opts['schedule']
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_enabled_job_complete')
 
@@ -438,7 +438,7 @@ class Schedule(object):
             schedule = self.opts['schedule']
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_disabled_job_complete')
 
@@ -508,7 +508,7 @@ class Schedule(object):
         self.opts['schedule']['enabled'] = True
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_enabled_complete')
 
@@ -519,7 +519,7 @@ class Schedule(object):
         self.opts['schedule']['enabled'] = False
 
         # Fire the complete event back along with updated list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self.opts['schedule']},
                        tag='/salt/minion/minion_schedule_disabled_complete')
 
@@ -555,7 +555,7 @@ class Schedule(object):
                 schedule.update(self.opts['pillar']['schedule'])
 
         # Fire the complete event back along with the list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': schedule},
                        tag='/salt/minion/minion_schedule_list_complete')
 
@@ -566,7 +566,7 @@ class Schedule(object):
         self.persist()
 
         # Fire the complete event back along with the list of schedule
-        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True},
                        tag='/salt/minion/minion_schedule_saved')
 

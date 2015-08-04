@@ -146,7 +146,7 @@ class SyncClientMixin(object):
                 'eauth': 'pam',
             })
         '''
-        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=True)
         job = self.master_call(**low)
         ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 

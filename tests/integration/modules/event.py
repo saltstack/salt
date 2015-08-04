@@ -29,7 +29,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MasterEvent(self.master_opts['sock_dir'])
+            me = event.MasterEvent(self.master_opts['sock_dir'], listen=True)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )
@@ -62,7 +62,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MinionEvent(self.minion_opts)
+            me = event.MinionEvent(self.minion_opts, listen=True)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )
@@ -91,7 +91,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MinionEvent(self.sub_minion_opts)
+            me = event.MinionEvent(self.sub_minion_opts, listen=True)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )

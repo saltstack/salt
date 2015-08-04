@@ -546,7 +546,7 @@ def refresh_modules(async=True):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
             # Wait for the finish event to fire
             log.trace('refresh_modules waiting for module refresh to complete')

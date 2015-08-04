@@ -72,7 +72,7 @@ def fire_master(data, tag, preload=None):
         # Usually, we can send the event via the minion, which is faster
         # because it is already authenticated
         try:
-            return salt.utils.event.MinionEvent(__opts__).fire_event(
+            return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
                 {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
