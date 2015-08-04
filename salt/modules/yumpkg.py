@@ -1056,7 +1056,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
+def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -1072,6 +1072,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
     .. code-block:: bash
 
         salt '*' pkg.upgrade
+        salt '*' pkg.upgrade openssl
 
     Repository Options:
 
@@ -1091,7 +1092,38 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         Disable exclude from main, for a repo or for everything.
         (e.g., ``yum --disableexcludes='main'``)
 
-        .. versionadded:: 2014.7.0
+        .. versionadded:: 2014.7
+    name
+        The name of the package to be upgraded. Note that this parameter is
+        ignored if "pkgs" is passed.
+
+        32-bit packages can be upgraded on 64-bit systems by appending the
+        architecture designation (``.i686``, ``.i586``, etc.) to the end of the
+        package name.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install <package name>
+
+        .. versionadded:: 2015.?
+    pkgs
+        A list of packages to upgrade from a software repository. Must be
+        passed as a python list. A specific version number can be specified
+        by using a single-element dict representing the package and its
+        version. If the package was not already installed on the system,
+        it will not be installed.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.upgrade pkgs='["foo", "bar"]'
+            salt '*' pkg.upgrade pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
+
+        .. versionadded:: 2015.?
+
     '''
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
@@ -1101,11 +1133,26 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         refresh_db(branch_arg, repo_arg, exclude_arg)
 
     old = list_pkgs()
-    cmd = 'yum -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
+    try:
+        pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
+            name, pkgs, sources=None, normalize=normalize, **kwargs
+        )
+    except MinionError as exc:
+        raise CommandExecutionError(exc)
+
+    pkg_params_items = six.iteritems(pkg_params)
+    targets = []
+    for pkg_item_list in pkg_params_items:
+        pkgname, version_num = pkg_item_list
+        targets.append(pkgname)
+
+    cmd = 'yum -q -y {repo} {exclude} {branch} {gpgcheck} upgrade {pkgs}'.format(
         repo=repo_arg,
         exclude=exclude_arg,
         branch=branch_arg,
-        gpgcheck='--nogpgcheck' if skip_verify else '')
+        gpgcheck='--nogpgcheck' if skip_verify else '',
+        pkgs=' '.join(pkgs)
+        )
 
     __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
