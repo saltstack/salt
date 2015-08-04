@@ -42,9 +42,6 @@ def update(dest, upd, recursive_update=True):
                     and isinstance(val, collections.Mapping):
                 ret = update(dest_subkey, val)
                 dest[key] = ret
-            elif isinstance(dest_subkey, list) \
-                     and isinstance(val, list):
-                dest[key] = dest.get(key, []) + val
             else:
                 dest[key] = upd[key]
         return dest
