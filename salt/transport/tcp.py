@@ -82,6 +82,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     @classmethod
     def __key(cls, opts, **kwargs):
+        opts.update(kwargs)
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
                 opts['master_uri'],  # master ID
