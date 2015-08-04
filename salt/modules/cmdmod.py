@@ -8,16 +8,17 @@ access to the master root execution access to all salt minions.
 from __future__ import absolute_import
 
 # Import python libs
-import time
 import functools
 import glob
+import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+import time
 import traceback
-import shlex
 from salt.utils import vt
 
 # Import salt libs
@@ -2461,3 +2462,78 @@ def shells():
         except OSError:
             log.error("File '{0}' was not found".format(shells_fn))
     return ret
+
+
+def powershell(cmd,
+        cwd=None,
+        stdin=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        env=None,
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        output_loglevel='debug',
+        quiet=False,
+        timeout=None,
+        reset_system_locale=True,
+        ignore_retcode=False,
+        saltenv='base',
+        use_vt=False,
+        **kwargs):
+    '''
+    Execute the passed PowerShell command and return the output as a string.
+
+    .. versionadded:: Boron
+
+    .. warning ::
+
+        This passes the cmd argument directly to PowerShell
+        without any further processing! Be absolutely sure that you
+        have properly santized the command passed to this function
+        and do not use untrusted inputs.
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    CLI Example:
+
+    .. code-block:: powershell
+
+        salt '*' cmd.powershell "$PSVersionTable.CLRVersion"
+    '''
+    if 'python_shell' in kwargs:
+        python_shell = kwargs.pop('python_shell')
+    else:
+        python_shell = True
+
+    # Append PowerShell Object formatting
+    cmd = "%s | ConvertTo-Json -Depth 32" % cmd
+
+    # Retrieve the response, while overriding shell with 'powershell'
+    response = run(cmd,
+        cwd=cwd,
+        stdin=stdin,
+        runas=runas,
+        shell='powershell',
+        env=env,
+        clean_env=clean_env,
+        template=template,
+        rstrip=rstrip,
+        umask=umask,
+        output_loglevel=output_loglevel,
+        quiet=quiet,
+        timeout=timeout,
+        reset_system_locale=reset_system_locale,
+        ignore_retcode=ignore_retcode,
+        saltenv=saltenv,
+        use_vt=use_vt,
+        python_shell=python_shell,
+        **kwargs)
+
+    try:
+        return json.loads(response)
+    except:
+        log.error("Error converting PowerShell JSON return", exc_info=True)
+        return {}
