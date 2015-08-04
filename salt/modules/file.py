@@ -1519,7 +1519,7 @@ def replace(path,
         .. versionadded:: 2014.7.0
 
         If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
+        then, the content will be prepended to the file.
         Default is ``False``
     not_found_content
         .. versionadded:: 2014.7.0
