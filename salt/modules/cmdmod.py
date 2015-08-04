@@ -2509,7 +2509,7 @@ def powershell(cmd,
         python_shell = True
 
     # Append PowerShell Object formatting
-    cmd = "%s | ConvertTo-Json -Depth 32" % cmd
+    cmd = '{0} | ConvertTo-Json -Depth 32'.format(cmd)
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -2534,6 +2534,6 @@ def powershell(cmd,
 
     try:
         return json.loads(response)
-    except:
+    except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
