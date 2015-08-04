@@ -61,12 +61,13 @@ class Depends(object):
         and determine which module and function name it is to store in the
         class wide depandancy_dict
         '''
-        module = inspect.getmodule(inspect.stack()[1][0])
+        frame = inspect.stack()[1][0]
+        # due to missing *.py files under esky we cannot use inspect.getmodule
         # module name is something like salt.loaded.int.modules.test
-        kind = module.__name__.rsplit('.', 2)[1]
+        kind = frame.f_globals['__name__'].rsplit('.', 2)[1]
         for dep in self.dependencies:
             self.dependency_dict[kind][dep].add(
-                (module, function, self.fallback_function)
+                (frame, function, self.fallback_function)
             )
         return function
 
@@ -80,42 +81,42 @@ class Depends(object):
         '''
         for dependency, dependent_set in six.iteritems(cls.dependency_dict[kind]):
             # check if dependency is loaded
-            for module, func, fallback_function in dependent_set:
+            for frame, func, fallback_function in dependent_set:
                 # check if you have the dependency
                 if dependency is True:
                     log.trace(
                         'Dependency for {0}.{1} exists, not unloading'.format(
-                            module.__name__.split('.')[-1],
+                            frame.f_globals['__name__'].split('.')[-1],
                             func.__name__,
                         )
                     )
                     continue
 
-                if dependency in dir(module):
+                if dependency in dir(frame):
                     log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
                             dependency,
-                            module.__name__.split('.')[-1]
+                            frame.f_globals['__name__'].split('.')[-1]
                         )
                     )
                     continue
                 log.trace(
                     'Unloading {0}.{1} because dependency ({2}) is not '
                     'imported'.format(
-                        module,
+                        frame.f_globals['__name__'],
                         func,
                         dependency
                     )
                 )
                 # if not, unload dependent_set
-                if module:
+                if frame:
                     try:
-                        func_name = module.__func_alias__[func.__name__]
+                        func_name = frame.f_globals['__func_alias__'][func.__name__]
                     except (AttributeError, KeyError):
                         func_name = func.__name__
 
-                    mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
+                    mod_key = '{0}.{1}'.format(frame.f_globals['__name__'].split('.')[-1],
                                                func_name)
 
                     # if we don't have this module loaded, skip it!

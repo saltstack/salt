@@ -30,8 +30,8 @@ DEFAULT_LOCATION = 'us-east-1'
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
-          verify_ssl=True, location=DEFAULT_LOCATION, full_headers=False,
-          kms_keyid=None):
+          verify_ssl=True, full_headers=False, kms_keyid=None,
+          location=DEFAULT_LOCATION):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -39,7 +39,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A service_url may also be specified in the configuration::
+    If keyid or key is not specified, an attempt to fetch them from EC2 IAM
+    metadata service will be made.
+
+    A service_url may also be specified in the configuration:
 
         s3.service_url: s3.amazonaws.com
 
@@ -59,6 +62,13 @@ def query(key, keyid, method='GET', params=None, headers=None,
     This is required if using S3 bucket names that contain a period, as
     these will not match Amazon's S3 wildcard certificates. Certificate
     verification is enabled by default.
+
+    A region may be specified:
+
+        s3.location: eu-central-1
+
+    If region is not specified, an attempt to fetch the region from EC2 IAM
+    metadata service will be made. Failing that, default is us-east-1
     '''
     if not HAS_REQUESTS:
         log.error('There was an error: requests is required for s3 access')
@@ -78,12 +88,15 @@ def query(key, keyid, method='GET', params=None, headers=None,
         endpoint = service_url
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
-    token = None
     if not key or not keyid:
         iam_creds = iam.get_iam_metadata()
         key = iam_creds['secret_key']
         keyid = iam_creds['access_key']
-        token = iam_creds['security_token']
+
+    if not location:
+        location = iam.get_iam_region()
+    if not location:
+        location = DEFAULT_LOCATION
 
     if kms_keyid is not None and method in ('PUT', 'POST'):
         headers['x-amz-server-side-encryption'] = 'aws:kms'

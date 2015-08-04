@@ -172,7 +172,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         ret = {}
                         for progress in cmd_func(**kwargs):
                             out = 'progress'
-                            self._progress_ret(progress, out)
+                            try:
+                                self._progress_ret(progress, out)
+                            except salt.exceptions.LoaderError as exc:
+                                raise salt.exceptions.SaltSystemExit(exc)
                             if 'return_count' not in progress:
                                 ret.update(progress)
                         self._progress_end(out)
@@ -274,7 +277,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         import salt.output
         # Get the progress bar
         if not hasattr(self, 'progress_bar'):
-            self.progress_bar = salt.output.get_progress(self.config, out, progress)
+            try:
+                self.progress_bar = salt.output.get_progress(self.config, out, progress)
+            except Exception as exc:
+                raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
+                                                  'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
     def _output_ret(self, ret, out):

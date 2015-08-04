@@ -44,17 +44,30 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         # try each of the identities, independently
         for id_file in identity:
             env = {
-                'GIT_SSH': os.path.join(utils.templates.TEMPLATE_DIRNAME,
-                                        'git/ssh-id-wrapper'),
                 'GIT_IDENTITY': id_file
             }
 
-            result = __salt__['cmd.run_all'](cmd,
-                                             cwd=cwd,
-                                             runas=runas,
-                                             env=env,
-                                             python_shell=False,
-                                             **kwargs)
+            # copy wrapper to area accessible by ``runas`` user
+            # currently no suppport in windows for wrapping git ssh
+            if not utils.is_windows():
+                ssh_id_wrapper = os.path.join(utils.templates.TEMPLATE_DIRNAME,
+                                              'git/ssh-id-wrapper')
+                tmp_file = utils.mkstemp()
+                utils.files.copyfile(ssh_id_wrapper, tmp_file)
+                os.chmod(tmp_file, 0o500)
+                os.chown(tmp_file, __salt__['file.user_to_uid'](runas), -1)
+                env['GIT_SSH'] = tmp_file
+
+            try:
+                result = __salt__['cmd.run_all'](cmd,
+                                                 cwd=cwd,
+                                                 runas=runas,
+                                                 env=env,
+                                                 python_shell=False,
+                                                 **kwargs)
+            finally:
+                if 'GIT_SSH' in env:
+                    os.remove(env['GIT_SSH'])
 
             # if the command was successful, no need to try additional IDs
             if result['retcode'] == 0:

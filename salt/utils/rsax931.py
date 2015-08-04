@@ -29,6 +29,12 @@ def _load_libcrypto():
             'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
+        if not lib and salt.utils.is_smartos():
+            # smartos does not have libraries in std location
+            lib = glob.glob(os.path.join(
+                '/opt/local/lib',
+                'libcrypto.so*'))
+            lib = lib[0] if len(lib) > 0 else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
