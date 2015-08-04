@@ -1056,7 +1056,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None, **kwargs):
+def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None, normalize=True, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -1124,6 +1124,18 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None
 
         .. versionadded:: 2015.?
 
+    normalize : True
+        Normalize the package name by removing the architecture. This is useful
+        for poorly created packages which might include the architecture as an
+        actual part of the name such as kernel modules which match a specific
+        kernel version.
+
+        .. code-block:: bash
+
+            salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
+
+        .. versionadded:: 2014.7.0
+
     '''
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
@@ -1135,7 +1147,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None
     old = list_pkgs()
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
-            name, pkgs, sources=None, normalize=normalize, **kwargs
+            name=name, pkgs=pkgs, sources=None, normalize=normalize, **kwargs
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1151,7 +1163,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None
         exclude=exclude_arg,
         branch=branch_arg,
         gpgcheck='--nogpgcheck' if skip_verify else '',
-        pkgs=' '.join(pkgs)
+        pkgs=' '.join(targets)
         )
 
     __salt__['cmd.run'](cmd, output_loglevel='trace')
