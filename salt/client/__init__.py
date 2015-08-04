@@ -202,6 +202,9 @@ class LocalClient(object):
                                 timeout=timeout,
                                )
 
+        if 'jid' in pub_data:
+            self.event.subscribe(pub_data['jid'])
+
         return pub_data
 
     def _check_pub_data(self, pub_data):
@@ -233,6 +236,10 @@ class LocalClient(object):
                 print('No minions matched the target. '
                       'No command was sent, no jid was assigned.')
                 return {}
+        else:
+            self.event.subscribe_regex('^syndic/.*/{0}'.format(pub_data['jid']))
+
+        self.event.subscribe('salt/job/{0}'.format(pub_data['jid']))
 
         return pub_data
 
@@ -262,9 +269,6 @@ class LocalClient(object):
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
         arg = salt.utils.args.condition_input(arg, kwarg)
-
-        # Subscribe to all events and subscribe as early as possible
-        self.event.subscribe(jid)
 
         try:
             pub_data = self.pub(
@@ -797,8 +801,6 @@ class LocalClient(object):
     def get_returns_no_block(
             self,
             jid,
-            event=None,
-            gather_errors=False,
             tags_regex=None
            ):
         '''
@@ -806,48 +808,16 @@ class LocalClient(object):
 
         Yield either the raw event data or None
 
-       Pass a list of additional regular expressions as `tags_regex` to search
-       the event bus for non-return data, such as minion lists returned from
-       syndics.
+        Pass a list of additional regular expressions as `tags_regex` to search
+        the event bus for non-return data, such as minion lists returned from
+        syndics.
         '''
-        if event is None:
-            event = self.event
 
-        jid_tag = 'salt/job/{0}'.format(jid)
-        jid_tag_regex = '^salt/job/{0}'.format(jid)
-
-        tag_search = []
-        tag_search.append(re.compile(jid_tag_regex))
-        if isinstance(tags_regex, str):
-            tag_search.append(re.compile(tags_regex))
-        elif isinstance(tags_regex, list):
-            for tag in tags_regex:
-                tag_search.append(re.compile(tag))
         while True:
-            if self.opts.get('transport') == 'zeromq':
-                try:
-                    raw = event.get_event_noblock()
-                    if gather_errors:
-                        if (raw and
-                                (raw.get('tag', '').startswith('_salt_error') or
-                                any([tag.search(raw.get('tag', '')) for tag in tag_search]))):
-                            yield raw
-                    else:
-                        if raw and raw.get('tag', '').startswith(jid_tag):
-                            yield raw
-                        else:
-                            yield None
-                except zmq.ZMQError as ex:
-                    if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
-                        yield None
-                    else:
-                        raise
-            else:
-                raw = event.get_event_noblock()
-                if raw and raw.get('tag', '').startswith(jid_tag):
-                    yield raw
-                else:
-                    yield None
+            # TODO(driskell): This was previously completely nonblocking.
+            #                 Should get_event have a nonblock option?
+            raw = self.event.get_event(wait=0.01, tag='salt/job/{0}'.format(jid), tags_regex=tags_regex, full=True)
+            yield raw
 
     def get_iter_returns(
             self,
@@ -857,7 +827,6 @@ class LocalClient(object):
             tgt='*',
             tgt_type='glob',
             expect_minions=False,
-            gather_errors=True,
             block=True,
             **kwargs):
         '''
@@ -894,9 +863,9 @@ class LocalClient(object):
         # iterator for this job's return
         if self.opts['order_masters']:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, tags_regex='^syndic/.*/{0}'.format(jid))
+            ret_iter = self.get_returns_no_block(jid, tags_regex=['^syndic/.*/{0}'.format(jid)])
         else:
-            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
+            ret_iter = self.get_returns_no_block(jid)
         # iterator for the info of this job
         jinfo_iter = []
         timeout_at = time.time() + timeout
@@ -915,10 +884,6 @@ class LocalClient(object):
                 # if we got None, then there were no events
                 if raw is None:
                     break
-                if gather_errors:
-                    if raw['tag'] == '_salt_error':
-                        ret = {raw['data']['id']: raw['data']['data']}
-                        yield ret
                 if 'minions' in raw.get('data', {}):
                     minions.update(raw['data']['minions'])
                     continue
@@ -965,15 +930,6 @@ class LocalClient(object):
             # if the jinfo has timed out and some minions are still running the job
             # re-do the ping
             if time.time() > timeout_at and minions_running:
-                # need our own event listener, so we don't clobber the class one
-                event = salt.utils.event.get_event(
-                        'master',
-                        self.opts['sock_dir'],
-                        self.opts['transport'],
-                        opts=self.opts,
-                        listen=not self.opts.get('__worker', False))
-                # start listening for new events, before firing off the pings
-                event.connect_pub()
                 # since this is a new ping, no one has responded yet
                 jinfo = self.gather_job_info(jid, tgt, tgt_type)
                 minions_running = False
@@ -982,7 +938,7 @@ class LocalClient(object):
                 if 'jid' not in jinfo:
                     jinfo_iter = []
                 else:
-                    jinfo_iter = self.get_returns_no_block(jinfo['jid'], event=event)
+                    jinfo_iter = self.get_returns_no_block(jinfo['jid'])
                 timeout_at = time.time() + self.opts['gather_job_timeout']
                 # if you are a syndic, wait a little longer
                 if self.opts['order_masters']:
@@ -1044,8 +1000,7 @@ class LocalClient(object):
             self,
             jid,
             minions,
-            timeout=None,
-            pending_tags=None):
+            timeout=None):
         '''
         Get the returns for the command line interface via the event system
         '''
