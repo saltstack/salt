@@ -162,6 +162,7 @@ class Master(parsers.MasterOptionParser):
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt master is shut down')
+        self.exit(0)
 
 
 class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
@@ -314,6 +315,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt minion is shut down')
+        self.exit(0)
 
 
 class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
@@ -425,6 +427,7 @@ class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
         if 'proxy' in self.minion.opts:
             self.minion.opts['proxyobject'].shutdown(self.minion.opts)
         logger.info('The proxy minion is shut down')
+        self.exit(0)
 
 
 class Syndic(parsers.SyndicOptionParser):
@@ -505,3 +508,4 @@ class Syndic(parsers.SyndicOptionParser):
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt syndic is shut down')
+        self.exit(0)
