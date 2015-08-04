@@ -268,6 +268,7 @@ Full list of builtin execution modules
     solarispkg
     solr
     splay
+    splunk
     splunk_search
     sqlite3
     ssh
@@ -285,6 +286,7 @@ Full list of builtin execution modules
     system
     system_profiler
     systemd
+    telemetry
     temp
     test
     test_virtual
