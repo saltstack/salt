@@ -725,7 +725,7 @@ def install(name=None,
         opts += 'U'
     if salt.utils.is_true(dryrun):
         opts += 'n'
-    if not salt.utils.is_true(dryrun) and pkg_type != 'file':
+    if not salt.utils.is_true(dryrun):
         opts += 'y'
     if salt.utils.is_true(quiet):
         opts += 'q'
