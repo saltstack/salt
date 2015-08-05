@@ -81,9 +81,6 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
             ret['comment'] = useradd_ret['stderr']
             return ret
 
-    if __opts__['test']:
-        ret['result'] = None
-    else:
-        ret['result'] = True
+    ret['result'] = True
     ret['comment'] = 'User already known'
     return ret
