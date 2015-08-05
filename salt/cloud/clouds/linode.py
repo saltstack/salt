@@ -515,17 +515,16 @@ if HAS_LINODEPY:
             # No, let's try to match it against the full
             # name and the abbreviation and return the id
             for key in locations:
-                if str(loc).lower() in (key,
+                if str(loc).lower() in (str(key).lower(),
                                         str(locations[key]['id']).lower(),
-                                        str(locations[key]['abbreviation']).
-                                          lower()):
+                                        str(locations[key]['abbreviation']).lower()):
                     return locations[key]['id']
         else:
             return loc
 
-        # No match.  Return None, cloud provider will
-        # use a default or throw an exception
-        return None
+        # No match. Return default Linode data center location, which is Dallas
+        # Dallas is represented by '2' in the Linode API.
+        return 2
 
     def get_disk_size(vm_, size, swap):
         '''
