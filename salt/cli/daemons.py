@@ -6,7 +6,6 @@ Make me some salt!
 # Import python libs
 from __future__ import absolute_import
 import os
-import sys
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
@@ -169,6 +168,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
+    # pylint: disable=no-member
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt minion.
@@ -316,12 +316,14 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
         '''
         logger.info('The salt minion is shut down')
         self.exit(exitcode, exitmsg)
+    # pylint: enable=no-member
 
 
 class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
+    # pylint: disable=no-member
     def prepare(self, proxydetails):
         '''
         Run the preparation sequence required to start a salt minion.
@@ -428,6 +430,7 @@ class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
             self.minion.opts['proxyobject'].shutdown(self.minion.opts)
         logger.info('The proxy minion is shut down')
         self.exit(exitcode, exitmsg)
+    # pylint: enable=no-member
 
 
 class Syndic(parsers.SyndicOptionParser):
