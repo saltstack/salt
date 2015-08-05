@@ -611,6 +611,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                     err
                 )
             )
+            shutdown_multiprocessing_logging_listener()
             sys.exit(2)
     else:
         try:
