@@ -217,6 +217,11 @@ rst_prolog = """\
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
 .. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
+.. |windownload| raw:: html
+
+     <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-2-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe.md5"><strong>md5</strong></a>
+
 """.format(release=release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
