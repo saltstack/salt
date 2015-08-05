@@ -36,7 +36,6 @@ import time
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
-    SaltCloudException,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
     SaltCloudNotFound,
