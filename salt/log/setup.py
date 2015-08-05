@@ -789,7 +789,6 @@ def shutdown_multiprocessing_logging_listener():
         try:
             # Sent None sentinel to stop the logging processing queue
             __MP_LOGGING_QUEUE.put(None)
-                raise
             # Let's join the multiprocessing logging handle thread
             __MP_LOGGING_QUEUE_PROCESS.join(1)
         except IOError:
