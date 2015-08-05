@@ -1597,7 +1597,7 @@ def del_repo_key(name=None, **kwargs):
             owner_name, ppa_name = name[4:].split('/')
             ppa_info = _get_ppa_info_from_launchpad(
                 owner_name, ppa_name)
-            keyid = ppa_info['signing_key_fingerprint']
+            keyid = ppa_info['signing_key_fingerprint'][-8:]
         else:
             raise SaltInvocationError(
                 'keyid_ppa requires that a PPA be passed'
