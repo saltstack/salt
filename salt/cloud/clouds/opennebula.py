@@ -37,7 +37,6 @@ import time
 import salt.config as config
 from salt.exceptions import (
     SaltCloudConfigError,
-    SaltCloudException,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout,
     SaltCloudNotFound,
@@ -138,7 +137,7 @@ def avail_locations(call=None):
     if call == 'action':
         raise SaltCloudSystemExit(
             'The avail_locations function must be called with '
-            '-f or --function, or with the --list-locations option'
+            '-f or --function, or with the --list-locations option.'
         )
 
     server, user, password = _get_xml_rpc()
@@ -152,13 +151,22 @@ def avail_locations(call=None):
     return locations
 
 
-def avail_sizes():
+def avail_sizes(call=None):
     '''
     Because sizes are built into templates with OpenNebula, there will be no sizes to
     return here.
     '''
-    log.info('Because sizes are built into templates with OpenNebula, '
-             'there are no sizes to return.')
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option.'
+        )
+
+    log.warn(
+        'Because sizes are built into templates with OpenNebula, there are no sizes '
+        'to return.'
+    )
+
     return {}
 
 
@@ -235,15 +243,7 @@ def list_hosts(call=None):
             'The list_hosts function must be called with -f or --function.'
         )
 
-    server, user, password = _get_xml_rpc()
-    auth = ':'.join(['user, password'])
-    host_pool = server.one.hostpool.info(auth)[1]
-
-    hosts = {}
-    for host in etree.XML(host_pool):
-        hosts[host.find('NAME').text] = _xml_to_dict(host)
-
-    return hosts
+    return avail_locations()
 
 
 def list_nodes(call=None):
@@ -259,12 +259,12 @@ def list_nodes(call=None):
 
         salt-cloud -Q
         salt-cloud --query
-        salt-cloud --fuction list_nodes opennebula
+        salt-cloud --function list_nodes opennebula
         salt-cloud -f list_nodes opennebula
 
     '''
     if call == 'action':
-        raise SaltCloudException(
+        raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
         )
 
@@ -325,7 +325,7 @@ def list_security_groups(call=None):
 
         salt-cloud -f list_security_groups opennebula
     '''
-    if call != 'function':
+    if call == 'action':
         raise SaltCloudSystemExit(
             'The list_security_groups function must be called with -f or --function.'
         )
@@ -353,7 +353,7 @@ def list_templates(call=None):
 
         salt-cloud -f list_templates opennebula
     '''
-    if call != 'function':
+    if call == 'action':
         raise SaltCloudSystemExit(
             'The list_templates function must be called with -f or --function.'
         )
@@ -381,7 +381,7 @@ def list_vns(call=None):
 
         salt-cloud -f list_vns opennebula
     '''
-    if call != 'function':
+    if call == 'action':
         raise SaltCloudSystemExit(
             'The list_vns function must be called with -f or --function.'
         )
@@ -527,7 +527,7 @@ def get_datastore_id(kwargs=None, call=None):
             'The get_datastore_id function requires a name.'
         )
 
-    return list_datastores(call=call)[name]['id']
+    return list_datastores()[name]['id']
 
 
 def get_host_id(kwargs=None, call=None):
@@ -556,7 +556,7 @@ def get_host_id(kwargs=None, call=None):
             'The get_host_id function requires a name.'
         )
 
-    return list_hosts()[name]['id']
+    return avail_locations()[name]['id']
 
 
 def get_image(vm_):
@@ -604,7 +604,7 @@ def get_image_id(kwargs=None, call=None):
             'The get_image_id function requires a name.'
         )
 
-    return avail_images(call=call)[name]['id']
+    return avail_images()[name]['id']
 
 
 def get_location(vm_):
@@ -654,8 +654,12 @@ def get_secgroup_id(kwargs=None, call=None):
         kwargs = {}
 
     name = kwargs.get('name', None)
+    if name is None:
+        raise SaltCloudSystemExit(
+            'The get_secgroup_id function requires a \'name\'.'
+        )
 
-    return list_security_groups(call=call)[name]['id']
+    return list_security_groups()[name]['id']
 
 
 def get_template_id(kwargs=None, call=None):
@@ -684,7 +688,7 @@ def get_template_id(kwargs=None, call=None):
             'The get_template_id function requires a \'name\'.'
         )
 
-    return list_templates(call=call)[name]['id']
+    return list_templates()[name]['id']
 
 
 def get_vm_id(kwargs=None, call=None):
@@ -713,7 +717,7 @@ def get_vm_id(kwargs=None, call=None):
             'The get_vm_id function requires a name.'
         )
 
-    return list_nodes(call=call)[name]['id']
+    return list_nodes()[name]['id']
 
 
 def get_vn_id(kwargs=None, call=None):
@@ -742,7 +746,7 @@ def get_vn_id(kwargs=None, call=None):
             'The get_vn_id function requires a name.'
         )
 
-    return list_vns(call=call)[name]['id']
+    return list_vns()[name]['id']
 
 
 def create(vm_):
