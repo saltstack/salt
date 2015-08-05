@@ -665,7 +665,12 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         log.error(err)
         raise CommandExecutionError(err)
 
-    cmd = [choc_path, 'version', name]
+    if _LooseVersion(chocolatey_version()) >= _LooseVersion('0.9.9'):
+        choco_cmd = "list"
+    else:
+        choco_cmd = "version"
+
+    cmd = [choc_path, choco_cmd, name]
     if not salt.utils.is_true(check_remote):
         cmd.append('-LocalOnly')
     if salt.utils.is_true(pre_versions):
@@ -687,13 +692,13 @@ def version(name, check_remote=False, source=None, pre_versions=False):
     # pairs is shown in rows...
     if not salt.utils.is_true(check_remote):
         ver_re = re.compile(r'(\S+)\s+(.+)')
-        for line in result['stdout'].split('\n'):
+        for line in result['stdout'].split('\n')[:-1]:
             for name, ver in ver_re.findall(line):
                 ret['name'] = name
                 ret['found'] = ver
     else:
         ver_re = re.compile(r'(\S+)\s+:\s*(.*)')
-        for line in result['stdout'].split('\n'):
+        for line in result['stdout'].split('\n')[:-1]:
             for key, value in ver_re.findall(line):
                 ret[key] = value
 
