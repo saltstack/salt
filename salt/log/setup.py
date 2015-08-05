@@ -611,6 +611,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                     err
                 )
             )
+            shutdown_multiprocessing_logging_listener()
             sys.exit(2)
     else:
         try:
@@ -785,10 +786,15 @@ def shutdown_multiprocessing_logging_listener():
         return
     if __MP_LOGGING_QUEUE_PROCESS.is_alive():
         logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
-        # Sent None sentinel to stop the logging processing queue
-        __MP_LOGGING_QUEUE.put(None)
-        # Let's join the multiprocessing logging handle thread
-        __MP_LOGGING_QUEUE_PROCESS.join(1)
+        try:
+            # Sent None sentinel to stop the logging processing queue
+            __MP_LOGGING_QUEUE.put(None)
+            # Let's join the multiprocessing logging handle thread
+            __MP_LOGGING_QUEUE_PROCESS.join(1)
+        except IOError:
+            # We were unable to deliver the sentinel to the queue
+            # carry on...
+            pass
         if __MP_LOGGING_QUEUE_PROCESS.is_alive():
             # Process is still alive!?
             __MP_LOGGING_QUEUE_PROCESS.terminate()
