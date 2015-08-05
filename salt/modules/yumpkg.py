@@ -1058,7 +1058,8 @@ def install(name=None,
 
 def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None, normalize=True, **kwargs):
     '''
-    Run a full system upgrade, a yum upgrade
+    Run a full system upgrade - a yum upgrade, or upgrade specified packages. If the packages aren't installed,
+    they will not be installed.
 
     .. versionchanged:: 2014.7.0
 
