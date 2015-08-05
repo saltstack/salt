@@ -93,8 +93,25 @@ A State Module must return a dict containing the following keys/values:
   containing the old/new values. For example, the pkg state's **changes** dict
   has one key for each package changed, with the "old" and "new" keys in its
   sub-dict containing the old and new versions of the package.
-- **result:** A boolean value. *True* if the action was successful, otherwise
-  *False*.
+- **result:** A tristate value.  ``True`` if the action was successful,
+  ``False`` if it was not, or ``None`` if the state was run in test mode,
+  ``test=True``, and changes would have been made if the state was not run in
+  test mode.
+
+  +--------------------+-----------+-----------+
+  |                    | live mode | test mode |
+  +====================+===========+===========+
+  | no changes         | ``True``  | ``True``  |
+  +--------------------+-----------+-----------+
+  | successful changes | ``True``  | ``None``  |
+  +--------------------+-----------+-----------+
+  | failed changes     | ``False`` | ``None``  |
+  +--------------------+-----------+-----------+
+
+  .. note::
+
+      Test mode does not predict if the changes will be successful or not.
+
 - **comment:** A string containing a summary of the result.
 
 Test State
