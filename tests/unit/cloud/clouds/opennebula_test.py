@@ -19,8 +19,8 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Import Third Party Libs
 try:
-    import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611
-    from lxml import etree
+    import salt.ext.six.moves.xmlrpc_client  # pylint: disable=E0611,W0611
+    from lxml import etree  # pylint: disable=W0611
     HAS_XML_LIBS = True
 except ImportError:
     HAS_XML_LIBS = False
