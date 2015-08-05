@@ -63,3 +63,12 @@ of Masters" nodes can control multiple segments underneath them.
 
 Syndics are covered in depth in :doc:`Salt Syndic </topics/topology/syndic>`.
 
+Syndic with Multimaster
+=======================
+
+.. versionadded:: 2015.5.0
+
+Syndic with Multimaster lets you connect a syndic to multiple masters to provide
+an additional layer of redundancy in a syndic configuration.
+
+Syndics are covered in depth in :doc:`Salt Syndic </topics/topology/syndic>`.

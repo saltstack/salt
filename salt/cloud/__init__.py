@@ -1681,11 +1681,11 @@ class Map(Cloud):
             return {}
 
         if not os.path.isfile(self.opts['map']):
-            raise SaltCloudNotFound(
-                'The specified map file does not exist: {0}\n'.format(
-                    self.opts['map']
-                )
+            log.error(
+                'The specified map file does not exist: \'{0}\''.format(
+                    self.opts['map'])
             )
+            raise SaltCloudNotFound()
         try:
             renderer = self.opts.get('renderer', 'yaml_jinja')
             rend = salt.loader.render(self.opts, {})

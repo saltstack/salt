@@ -908,6 +908,41 @@ If set to 'changes', the output will be full unless the state didn't change.
 
     state_output: full
 
+.. conf_master:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for mod_aggregate by
+setting to ``True``. Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+.. conf_master:: state_events
+
+``state_events``
+----------------
+
+Default: ``False``
+
+Send progress events as each function in a state run completes execution
+by setting to ``True``. Progress events are in the format
+``salt/job/<JID>/prog/<MID>/<RUN NUM>``.
+
+.. code-block:: yaml
+
+    state_events: True
+
 .. conf_master:: yaml_utf8
 
 ``yaml_utf8``
@@ -2308,10 +2343,21 @@ master, specify the higher level master with this configuration value.
 
     syndic_master: masterofmasters
 
+You can optionally connect a syndic to multiple higher level masters by
+setting the 'syndic_master' value to a list:
+
+.. code-block:: yaml
+
+    syndic_master:
+      - masterofmasters1
+      - masterofmasters2
+
+Each higher level master must be set up in a multimaster configuration.
+
 .. conf_master:: syndic_master_port
 
 ``syndic_master_port``
------------------------
+----------------------
 
 Default: ``4506``
 
