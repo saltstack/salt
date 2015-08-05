@@ -1108,7 +1108,7 @@ def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None
 
             salt '*' pkg.install <package name>
 
-        .. versionadded:: 2015.?
+        .. versionadded:: Boron
     pkgs
         A list of packages to upgrade from a software repository. Must be
         passed as a python list. A specific version number can be specified
@@ -1123,7 +1123,7 @@ def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None
             salt '*' pkg.upgrade pkgs='["foo", "bar"]'
             salt '*' pkg.upgrade pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
 
-        .. versionadded:: 2015.?
+        .. versionadded:: Boron
 
     normalize : True
         Normalize the package name by removing the architecture. This is useful
@@ -1135,7 +1135,7 @@ def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None
 
             salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
 
-        .. versionadded:: 2014.7.0
+        .. versionadded:: Boron
 
     '''
     repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
