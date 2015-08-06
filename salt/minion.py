@@ -749,7 +749,6 @@ class Minion(MinionBase):
                 if pid > 0:
                     continue
                 else:
-                    reinit_crypto()
                     log.debug('---------- making object')
                     proxyminion = salt.cli.daemons.ProxyMinion()
                     log.debug('---------- object made')
@@ -2933,18 +2932,22 @@ class ProxyMinion(Minion):
         opts['master'] = self.eval_master(opts,
                                           timeout,
                                           safe)
-
-        fq_proxyname = 'proxy.'+opts['proxy']['proxytype']
+        fq_proxyname = opts['proxy']['proxytype']
         log.debug('------------------ proxy module --------')
         log.debug('{}'.format(opts['proxy']))
-        self.proxymodule = salt.loader.proxy(opts, fq_proxyname)
+        # Need to match the function signature of the other loader fns
+        # which is def proxy(opts, functions, whitelist=None, loaded_base_name=None)
+        # 'functions' for other loaders is a LazyLoader object
+        # but since we are not needing to merge functions into another fn dictionary
+        # we will pass 'None' in
+        self.proxymodule = salt.loader.proxy(opts, None, loaded_base_name=fq_proxyname)
         log.debug('------------------ proxy module init --------')
         log.debug('{}'.format(self.proxymodule.keys()))
         log.debug('{0}'.format(self.proxymodule))
         # log.debug('{0}'.format(self.proxymodule['init']))
         opts['proxymodule'] = self.proxymodule
         opts['grains'] = salt.loader.grains(opts)
-        opts['id'] = opts['proxymodule']['junos.id'](opts)
+        opts['id'] = opts['proxymodule'][fq_proxyname+'.id']()
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
@@ -2955,6 +2958,7 @@ class ProxyMinion(Minion):
             opts['environment'],
             pillarenv=opts.get('pillarenv'),
         ).compile_pillar()
+        opts['proxymodule'][fq_proxyname+'.init']()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()

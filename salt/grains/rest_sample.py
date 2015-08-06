@@ -13,6 +13,11 @@ def __virtual__():
     else:
         return __virtualname__
 
+def kernel():
+    return {'kernel':'proxy'}
+
+def os():
+    return {'os':'proxy'}
 
 def location():
     return {'location': 'In this darn virtual machine.  Let me out!'}
@@ -23,4 +28,4 @@ def os_family():
 
 
 def os_data():
-    return __opts__['proxyobject'].grains()
+    return {'os_data': 'funkyHttp release 1.0.a.4.g'}
