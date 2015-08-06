@@ -626,7 +626,10 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
             uninstaller = pkginfo[version].get('installer')
         if not uninstaller:
             return 'Error: No installer or uninstaller configured for package {0}'.format(name)
-        if uninstaller.startswith('salt:'):
+        if uninstaller.startswith('salt:') \
+                or uninstaller.startswith('http:') \
+                or uninstaller.startswith('https:') \
+                or uninstaller.startswith('ftp:'):
             cached_pkg = \
                 __salt__['cp.is_cached'](uninstaller)
             if not cached_pkg:
