@@ -741,22 +741,20 @@ class Minion(MinionBase):
         # matches this way we can avoid collisions
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
         if 'proxy' in self.opts['pillar']:
-            log.debug('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
-                                                                                 self.opts['pillar']['proxy']))
+            log.info('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
+                                                                                self.opts['pillar']['proxy']))
             for p in self.opts['pillar']['proxy']:
-                log.debug('Starting {0} proxy.'.format(p))
+                log.info('Starting {0} proxy.'.format(p))
                 pid = os.fork()
                 if pid > 0:
                     continue
                 else:
-                    log.debug('---------- making object')
                     proxyminion = salt.cli.daemons.ProxyMinion()
-                    log.debug('---------- object made')
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
-            log.debug('I am {0} and I am not supposed to start any proxies. '
-                      '(Likely not a problem)'.format(self.opts['id']))
+            log.info('I am {0} and I am not supposed to start any proxies. '
+                     '(Likely not a problem)'.format(self.opts['id']))
 
         # __init__() from MinionBase is called in Minion.eval_master()
 
@@ -2933,18 +2931,12 @@ class ProxyMinion(Minion):
                                           timeout,
                                           safe)
         fq_proxyname = opts['proxy']['proxytype']
-        log.debug('------------------ proxy module --------')
-        log.debug('{}'.format(opts['proxy']))
         # Need to match the function signature of the other loader fns
         # which is def proxy(opts, functions, whitelist=None, loaded_base_name=None)
         # 'functions' for other loaders is a LazyLoader object
         # but since we are not needing to merge functions into another fn dictionary
         # we will pass 'None' in
         self.proxymodule = salt.loader.proxy(opts, None, loaded_base_name=fq_proxyname)
-        log.debug('------------------ proxy module init --------')
-        log.debug('{}'.format(self.proxymodule.keys()))
-        log.debug('{0}'.format(self.proxymodule))
-        # log.debug('{0}'.format(self.proxymodule['init']))
         opts['proxymodule'] = self.proxymodule
         opts['grains'] = salt.loader.grains(opts)
         opts['id'] = opts['proxymodule'][fq_proxyname+'.id'](opts)
