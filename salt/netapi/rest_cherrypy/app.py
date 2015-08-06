@@ -1432,19 +1432,18 @@ class Login(LowDataAdapter):
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
 
+            # Get sum of '*' perms, user-specific perms, and group-specific perms
+            perms = eauth.get(token['name'], [])
+            perms.extend(eauth.get('*', []))
+
             if 'groups' in token:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
-                perms = []
                 for group in user_groups & eauth_groups:
                     perms.extend(eauth['{0}%'.format(group)])
 
-                perms = perms or None
-            else:
-                perms = eauth.get(token['name'], eauth.get('*'))
-
-            if perms is None:
+            if not perms:
                 raise ValueError("Eauth permission list not found.")
         except (AttributeError, IndexError, KeyError, ValueError):
             logger.debug("Configuration for external_auth malformed for "
