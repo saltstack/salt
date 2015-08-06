@@ -1784,10 +1784,9 @@ class ClearFuncs(object):
                         break
             except KeyError:
                 pass
-            finally:
-                if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
-                    log.warning('Authentication failure of type "token" occurred.')
-                    return ''
+            if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
 
             # Compile list of authorized actions for the user
             auth_list = []
