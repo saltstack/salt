@@ -17,8 +17,10 @@ def __virtual__():
 def kernel():
     return {'kernel': 'proxy'}
 
+
 def os():
     return {'os': 'proxy'}
+
 
 def location():
     return {'location': 'In this darn virtual machine.  Let me out!'}
