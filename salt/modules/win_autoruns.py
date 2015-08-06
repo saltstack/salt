@@ -31,6 +31,23 @@ def __virtual__():
     return False
 
 
+def _get_dirs(user_dir, startup_dir):
+    '''
+    Return a list of startup dirs
+    '''
+    try:
+        users = os.listdir(user_dir)
+    except WindowsError:  # pylint: disable=E0602
+        users = []
+
+    full_dirs = []
+    for user in users:
+        full_dir = os.path.join(user_dir, user, startup_dir)
+        if os.path.exists(full_dir):
+            full_dirs.append(full_dir)
+    return full_dirs
+
+
 def list_():
     '''
     Get a list of automatically running programs
@@ -56,21 +73,18 @@ def list_():
                 autoruns[key].append(line)
 
     # Find autoruns in user's startup folder
-    if os.path.exists('C:\\Documents and Settings\\'):
-        user_dir = 'C:\\Documents and Settings\\'
-        startup_dir = '\\Start Menu\\Programs\\Startup'
-    else:
+    user_dir = 'C:\\Documents and Settings\\'
+    startup_dir = '\\Start Menu\\Programs\\Startup'
+    full_dirs = _get_dirs(user_dir, startup_dir)
+    if not full_dirs:
         user_dir = 'C:\\Users\\'
         startup_dir = '\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup'
+        full_dirs = _get_dirs(user_dir, startup_dir)
 
-    for user in os.listdir(user_dir):
-        try:
-            full_dir = user_dir + user + startup_dir
-            files = os.listdir(full_dir)
-            autoruns[full_dir] = []
-            for afile in files:
-                autoruns[full_dir].append(afile)
-        except Exception:
-            pass
+    for full_dir in full_dirs:
+        files = os.listdir(full_dir)
+        autoruns[full_dir] = []
+        for single_file in files:
+            autoruns[full_dir].append(single_file)
 
     return autoruns
