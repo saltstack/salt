@@ -957,7 +957,7 @@ def build_routes(iface, **settings):
     '''
 
     template = 'rh6_route_eth.jinja'
-    if __grains__['osmajorrelease'] < 6:
+    if __grains__['osrelease'][0] < 6:
         template = 'route_eth.jinja'
     log.debug('Template name: ' + template)
 
