@@ -1036,9 +1036,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         #
         # Render modules and state modules are OK though
         if 'proxy' in self.opts:
-            log.debug('self.tag is {}'.format(self.tag))
-            # import pydevd
-            # pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
             if self.tag not in ['render', 'states']:
                 if not hasattr(mod, '__proxyenabled__') or \
                         (self.opts['proxy']['proxytype'] not in mod.__proxyenabled__ and

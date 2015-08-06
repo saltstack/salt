@@ -2947,7 +2947,7 @@ class ProxyMinion(Minion):
         # log.debug('{0}'.format(self.proxymodule['init']))
         opts['proxymodule'] = self.proxymodule
         opts['grains'] = salt.loader.grains(opts)
-        opts['id'] = opts['proxymodule'][fq_proxyname+'.id']()
+        opts['id'] = opts['proxymodule'][fq_proxyname+'.id'](opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
@@ -2958,7 +2958,7 @@ class ProxyMinion(Minion):
             opts['environment'],
             pillarenv=opts.get('pillarenv'),
         ).compile_pillar()
-        opts['proxymodule'][fq_proxyname+'.init']()
+        opts['proxymodule'][fq_proxyname+'.init'](opts)
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
