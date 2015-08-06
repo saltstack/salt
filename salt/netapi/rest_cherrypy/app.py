@@ -349,6 +349,8 @@ def salt_api_acl_tool(username, request):
                         - 1.1.1.2
                     foo:
                         - 8.8.4.4
+                    bar:
+                        - '*'
 
     :param username: Username to check against the API.
     :type username: str
@@ -377,14 +379,14 @@ def salt_api_acl_tool(username, request):
         users = acl.get('users', {})
         if users:
             if username in users:
-                if ip in users[username]:
+                if ip in users[username] or '*' in users[username]:
                     logger.info(success_str.format(username, ip))
                     return True
                 else:
                     logger.info(failure_str.format(username, ip))
                     return False
             elif username not in users and '*' in users:
-                if ip in users['*']:
+                if ip in users['*'] or '*' in users['*']:
                     logger.info(success_str.format(username, ip))
                     return True
                 else:
