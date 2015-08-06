@@ -66,7 +66,7 @@ def system_info():
 
     .. code-block:: bash
 
-        salt dell drac.getsysinfo
+        salt dell drac.system_info
     '''
     cmd = __salt__['cmd.run_all']('racadm getsysinfo')
 
@@ -84,7 +84,7 @@ def network_info():
 
     .. code-block:: bash
 
-        salt dell drac.getniccfg
+        salt dell drac.network_info
     '''
 
     cmd = __salt__['cmd.run_all']('racadm getniccfg')

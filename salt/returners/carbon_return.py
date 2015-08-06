@@ -23,6 +23,17 @@ the pickle protocol, set ``carbon.mode`` to ``pickle``:
 
     carbon.mode: pickle
 
+You can also specify the pattern used for the metric base path (except for virt modules metrics):
+    carbon.metric_base_pattern: carbon.[minion_id].[module].[function]
+
+These tokens can used :
+    [module]: salt module
+    [function]: salt function
+    [minion_id]: minion id
+
+Default is :
+    carbon.metric_base_pattern: [module].[function].[minion_id]
+
 Carbon settings may also be configured as:
 
 .. code-block:: yaml
@@ -32,6 +43,7 @@ Carbon settings may also be configured as:
       port: <carbon port>
       skip_on_error: True
       mode: (pickle|text)
+      metric_base_pattern: <pattern> | [module].[function].[minion_id]
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -208,6 +220,7 @@ def _send(saltdata, metric_base, opts):
     host = opts.get('host')
     port = opts.get('port')
     skip = opts.get('skip')
+    metric_base_pattern = opts.get('carbon.metric_base_pattern')
     if 'mode' in opts:
         mode = opts.get('mode').lower()
 
