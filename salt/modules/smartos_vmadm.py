@@ -41,7 +41,7 @@ def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if __grains__['os'] == "SmartOS" and _check_vmadm():
+    if salt.utils.is_smartos_globalzone() and _check_vmadm():
         return __virtualname__
     return False
 
