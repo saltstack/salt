@@ -40,7 +40,7 @@ class TestRvmModule(TestCase):
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(rvm.__salt__, {'cmd.run_all': mock}):
             rvm.install()
-            mock.assert_called_once_with('curl -Ls https://raw.githubusercontent.com/wayneeseguin/rvm/master/binscripts/rvm-installer | bash -s stable', runas=None, python_shell=True)
+            mock.assert_called_once_with('curl -Ls https://get.rvm.io | bash -s stable', runas=None, python_shell=True)
 
     def test_install_ruby_nonroot(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout'})
