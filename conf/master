@@ -423,8 +423,8 @@
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from
 # being merged together and instead to only use the top file from the
-# requested environment, set this value to False
-# top_file_merge: True
+# requested environment, set this value to 'same'. 
+# top_file_merging_strategy: merge
 
 # To specify the order in which environments are merged, set the ordering
 # in the env_order option. Given a conflict, the last matching value will
