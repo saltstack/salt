@@ -33,12 +33,14 @@ def __virtual__():
     log.debug('rest_sample proxy __virtual__() called...')
     return True
 
-# Every proxy module needs an 'init', though you can 
-# just put a 'pass' here if it doesn't need to do anything.
 def init(opts):
+    '''
+    Every proxy module needs an 'init', though you can
+    just put a 'pass' here if it doesn't need to do anything.
+    '''
     log.debug('rest_sample proxy init() called...')
 
-    # Save the REST URL 
+    # Save the REST URL
     DETAILS['url'] = opts['proxy']['url']
 
     # Make sure the REST URL ends with a '/'
@@ -49,7 +51,7 @@ def init(opts):
 def id(opts):
     '''
     Return a unique ID for this proxy minion.  This ID MUST NOT CHANGE.
-    If it changes while the proxy is running the salt-master will get 
+    If it changes while the proxy is running the salt-master will get
     really confused and may stop talking to this minion
     '''
     r = salt.utils.http.query(opts['proxy']['url']+'id', decode_type='json', decode=True)
@@ -168,4 +170,3 @@ def shutdown(opts):
     For this proxy shutdown is a no-op
     '''
     log.debug('rest_sample proxy shutdown() called...')
-    pass

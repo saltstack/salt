@@ -336,7 +336,7 @@ class SMinion(object):
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
+        self.functions = salt.loader.minion_mods(self.opts,
                                                  include_errors=True)
         self.proxy = salt.loader.proxy(self.opts, None)
         # TODO: remove

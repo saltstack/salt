@@ -55,11 +55,13 @@ def id(opts):
     '''
     return thisproxy['conn'].facts['hostname']
 
+
 def ping():
     '''
     Ping?  Pong!
     '''
     thisproxy['conn'].connected
+
 
 def shutdown(opts):
     '''
