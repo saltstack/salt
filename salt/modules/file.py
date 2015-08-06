@@ -1089,7 +1089,7 @@ def comment_line(path,
                 regex.lstrip('^').rstrip('$'),
                 '$' if regex.endswith('$') else '')
     else:
-        regex = '^{0}({1}){2}'.format(
+        regex = r'^{0}\s*({1}){2}'.format(
                 char,
                 regex.lstrip('^').rstrip('$'),
                 '$' if regex.endswith('$') else '')
