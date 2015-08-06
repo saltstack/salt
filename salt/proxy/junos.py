@@ -22,17 +22,17 @@ thisproxy = {}
 
 log = logging.getLogger(__name__)
 
-def __init__(opts):
-    '''
-    Open the connection to the Junos device, login, and bind to the
-    Resource class
-    '''
-    log.debug('Opening connection to junos')
-    thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
-                                            host=opts['proxy']['host'],
-                                            password=opts['proxy']['passwd'])
-    thisproxy['conn'].open()
-    thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+# def __init__(opts):
+#     '''
+#     Open the connection to the Junos device, login, and bind to the
+#     Resource class
+#     '''
+#     log.debug('Opening connection to junos')
+#     thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
+#                                             host=opts['proxy']['host'],
+#                                             password=opts['proxy']['passwd'])
+#     thisproxy['conn'].open()
+#     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
 
 def conn():
     return thisproxy['conn']
