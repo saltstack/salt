@@ -923,7 +923,7 @@ class LocalClient(object):
                 if raw is None:
                     break
                 if gather_errors:
-                    if raw['tag'] == '_salt_error':
+                    if raw['tag'] == '_salt_error' and 'id' in raw['data']:
                         ret = {raw['data']['id']: raw['data']['data']}
                         yield ret
                 if 'minions' in raw.get('data', {}):
