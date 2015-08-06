@@ -13,11 +13,12 @@ def __virtual__():
     else:
         return __virtualname__
 
+
 def kernel():
-    return {'kernel':'proxy'}
+    return {'kernel': 'proxy'}
 
 def os():
-    return {'os':'proxy'}
+    return {'os': 'proxy'}
 
 def location():
     return {'location': 'In this darn virtual machine.  Let me out!'}

@@ -55,8 +55,10 @@ def facts_refresh():
 
     return __opts__['proxymodule']['junos.refresh']()
 
+
 def call_rpc():
     return __opts__['proxymodule']['junos.rpc']()
+
 
 def set_hostname(hostname=None, commit_change=True):
 
@@ -130,4 +132,3 @@ def ping():
     ret = dict()
     ret['message'] = conn.probe()
     ret['out'] = True
-
