@@ -3762,7 +3762,7 @@ def vn_delete(call=None, kwargs=None):
 
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
-    response = server.one.image.delete(auth, int(vn_id))
+    response = server.one.vn.delete(auth, int(vn_id))
 
     data = {
         'action': 'vn.delete',
@@ -3883,7 +3883,7 @@ def vn_hold(call=None, kwargs=None):
         kwargs = {}
 
     vn_id = kwargs.get('vn_id', None)
-    vn_name = kwargs.get('vn_name'. None)
+    vn_name = kwargs.get('vn_name', None)
     path = kwargs.get('path', None)
     data = kwargs.get('data', None)
 
