@@ -159,11 +159,11 @@ class FileTestCase(TestCase):
         mock_ret = MagicMock(return_value=target)
         mock_user = MagicMock(return_value=user)
         mock_grp = MagicMock(return_value=group)
-        mock_file = MagicMock(side_effect=[OSError, True])
+        mock_file = MagicMock(side_effect=[OSError, True, False, True, True])
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
-                                             'file.is_link': mock_if,
+                                             'file.is_link': mock_f,
                                              'file.readlink': mock_ret,
                                              'file.get_user': mock_user,
                                              'file.get_group': mock_grp,
@@ -189,67 +189,63 @@ class FileTestCase(TestCase):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     comt = ('Directory /etc for symlink is not present')
-                    ret.update({'comment': comt, 'result': False, 'pchanges': {}})
+                    ret.update({'comment': comt, 'result': False, 'pchanges': {'new': '/etc/grub.conf'}})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)
 
                 with patch.object(os.path, 'isdir', mock_t):
                     comt = ('Directory exists where the symlink /etc/grub.conf should be')
-                    ret.update({'comment': comt, 'result': False})
+                    ret.update({'comment': comt, 'result': False, 'pchanges': {'new': '/etc/grub.conf'}})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)
 
-                with patch.object(os.path, 'isdir', mock_dir):
-                    with patch.object(os.path, 'lexists', mock_t):
-                        comt = ('File exists where the backup target SALT'
-                                ' should go')
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT'),
-                                             ret)
+#                with patch.object(os.path, 'isdir', mock_dir):
+                with patch.object(os.path, 'lexists', mock_t):
+                    comt = ('Unable to create new symlink /etc/grub.conf -> /boot/grub/grub.conf: ')
+                    ret.update({'comment': comt, 'result': False})
+                    self.assertDictEqual(filestate.symlink
+                                         (name, target, user=user,
+                                          group=group, backupname='SALT'),
+                                         ret)
 
-                        comt = ('Something exists where the backup target'
-                                ' SALTshould go')
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                            (name, target, user=user,
-                                            group=group, backupname='SALT',
-                                            force=True), ret)
+                    comt = ('Created new symlink /etc/grub.conf -> /boot/grub/grub.conf')
+                    ret.update({'comment': comt, 'result': True, 'changes': {'new': '/etc/grub.conf'}})
+                    self.assertDictEqual(filestate.symlink
+                                        (name, target, user=user,
+                                        group=group, backupname='SALT',
+                                        force=True), ret)
 
-                    with patch.object(os.path, 'isfile', mock_t):
-                        comt = ('File exists where the symlink {0} should be'
-                                .format(name))
-                        ret.update({'comment': comt, 'result': False})
+                with patch.object(os.path, 'isfile', mock_t):
+                    comt = ('File exists where the symlink {0} should be'
+                            .format(name))
+                    ret.update({'comment': comt, 'result': False, 'changes': {}})
+                    self.assertDictEqual(filestate.symlink
+                                         (name, target, user=user,
+                                          group=group), ret)
+
+                with patch.object(os.path, 'isfile', mock_f):
+                    comt = ('Created new symlink /etc/grub.conf -> /boot/grub/grub.conf')
+                    ret.update({'comment': comt, 'result': True, 'changes': {'new': '/etc/grub.conf'}})
+                    self.assertDictEqual(filestate.symlink
+                                         (name, target, user=user,
+                                          group=group), ret)
+
+                    with patch.object(os.path, 'exists', mock_f):
+                        comt = ('Created new symlink /etc/grub.conf -> /boot/grub/grub.conf')
+                        ret.update({'comment': comt, 'result': True})
                         self.assertDictEqual(filestate.symlink
                                              (name, target, user=user,
                                               group=group), ret)
 
-                    with patch.object(os.path, 'isfile', mock_f):
-                        comt = ('Directory exists where the symlink {0}'
-                                ' should be'.format(name))
-                        ret.update({'comment': comt, 'result': False})
+                        comt = ('Created new symlink {0} -> '
+                                '{1}'.format(name, target))
+                        ret.update({'comment': comt, 'result': True,
+                                    'changes': {'new': name}})
                         self.assertDictEqual(filestate.symlink
                                              (name, target, user=user,
                                               group=group), ret)
-
-                        with patch.object(os.path, 'exists', mock_f):
-                            comt = ('Unable to create new symlink {0} -> '
-                                    '{1}: '.format(name, target))
-                            ret.update({'comment': comt, 'result': False})
-                            self.assertDictEqual(filestate.symlink
-                                                 (name, target, user=user,
-                                                  group=group), ret)
-
-                            comt = ('Created new symlink {0} -> '
-                                    '{1}'.format(name, target))
-                            ret.update({'comment': comt, 'result': True,
-                                        'changes': {'new': name}})
-                            self.assertDictEqual(filestate.symlink
-                                                 (name, target, user=user,
-                                                  group=group), ret)
 
     # 'absent' function tests: 1
     @patch.object(os.path, 'islink', MagicMock(return_value=False))
@@ -548,7 +544,7 @@ class FileTestCase(TestCase):
                                                   check_cmd='A'), ret)
 
                             comt = ('check_cmd execution failed')
-                            ret.update({'comment': True})
+                            ret.update({'comment': True, 'pchanges': {}})
                             ret.pop('skip_watch', None)
                             self.assertDictEqual(filestate.managed
                                                  (name, user=user, group=group),
