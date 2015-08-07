@@ -10,9 +10,9 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-import jnpr.junos
-import jnpr.junos.utils
-import jnpr.junos.utils.config
+# import jnpr.junos
+# import jnpr.junos.utils
+# import jnpr.junos.utils.config
 import json
 HAS_JUNOS = True
 
