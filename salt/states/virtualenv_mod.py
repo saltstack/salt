@@ -30,7 +30,6 @@ def managed(name,
             system_site_packages=False,
             distribute=False,
             use_wheel=False,
-            no_use_wheel=False,
             clear=False,
             python=None,
             extra_search_dir=None,
@@ -49,7 +48,8 @@ def managed(name,
             pip_ignore_installed=False,
             proxy=None,
             use_vt=False,
-            env_vars=None):
+            env_vars=None,
+            no_use_wheel=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
