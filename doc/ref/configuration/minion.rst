@@ -553,7 +553,7 @@ be able to execute a certain module. The sys module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion, as all modules are loaded into ram
-disabling modules will lover the minion's ram footprint.
+disabling modules will lower the minion's ram footprint.
 
 .. code-block:: yaml
 

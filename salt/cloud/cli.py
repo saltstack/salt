@@ -84,7 +84,11 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(salt.defaults.exitcodes.EX_OK)
 
         log.info('salt-cloud starting')
-        mapper = salt.cloud.Map(self.config)
+        try:
+            mapper = salt.cloud.Map(self.config)
+        except SaltCloudException as exc:
+            msg = 'There was an error generating the mapper.'
+            self.handle_exception(msg, exc)
 
         names = self.config.get('names', None)
         if names is not None:
@@ -163,12 +167,21 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.destroy and (self.config.get('names', None) or
                                        self.config.get('map', None)):
-            if self.config.get('map', None):
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+            map_file = self.config.get('map', None)
+            names = self.config.get('names', ())
+            if map_file is not None:
+                if names != ():
+                    msg = 'Supplying a mapfile, \'{0}\', in addition to instance names {1} ' \
+                          'with the \'--destroy\' or \'-d\' function is not supported. ' \
+                          'Please choose to delete either the entire map file or individual ' \
+                          'instances.'.format(map_file, names)
+                    self.handle_exception(msg, SaltCloudSystemExit)
+
+                log.info('Applying map from \'{0}\'.'.format(map_file))
                 matching = mapper.delete_map(query='list_nodes')
             else:
                 matching = mapper.get_running_by_names(
-                    self.config.get('names', ()),
+                    names,
                     profile=self.options.profile
                 )
 

@@ -299,7 +299,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
         if __opts__['test']:
-            ret['result'] = None
+            ret['result'] = True
             return ret
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
@@ -392,7 +392,7 @@ def dead(name, enable=None, sig=None, **kwargs):
                 ret.update(_disable(name, None, **kwargs))
             return ret
         else:
-            ret['result'] = None
+            ret['result'] = True
         return ret
 
     if __opts__['test']:

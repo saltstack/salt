@@ -23,6 +23,14 @@ Salt Cloud Changes
   a page was changed from 20 (default) to 200 to reduce the number of API calls
   to Digital Ocean.
 
+New Docker State/Module
+=======================
+
+A new docker :mod:`state <salt.states.dockerng>` and :mod:`execution module
+<salt.modules.dockerng>` have been added. They will eventually take the place
+of the existing state and execution module, but for now will exist alongside
+them.
+
 Git Pillar Rewritten
 ====================
 
@@ -30,6 +38,25 @@ The Git external pillar has been rewritten to bring it up to feature parity
 with :mod:`gitfs <salt.fileserver.gitfs>`. See :mod:`here
 <salt.pillar.git_pillar>` for more information on the new git_pillar
 functionality.
+
+Windows Software Repo Changes
+=============================
+
+The :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
+runner has been updated to use either GitPython_ or pygit2_ to checkout the git
+repositories containing repo data. Existing winrepo git checkouts should be
+removed before starting up the salt-master after upgrading, if GitPython_ or
+pygit2_ is installed, to allow them to be checked out again.
+
+This enhancement also brings new functionality, see the :mod:`winrepo runner
+<salt.runners.winrepo>` documentation for more information.
+
+If neither GitPython_ nor pygit2_ are installed, then Salt will fall back to
+the pre-existing behavior for :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>`.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
 
 JBoss 7 State
 =============

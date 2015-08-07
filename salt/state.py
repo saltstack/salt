@@ -217,8 +217,8 @@ def format_log(ret):
                             new = chg[pkg]['new']
                             if not new and new not in (False, None):
                                 new = 'absent'
-                            msg += '{0} changed from {1} to ' \
-                                   '{2}\n'.format(pkg, old, new)
+                            msg += '{0!r} changed from {1!r} to ' \
+                                   '{2!r}\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
@@ -257,9 +257,9 @@ class Compiler(object):
     '''
     Class used to compile and manage the High Data structure
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, renderers):
         self.opts = opts
-        self.rend = salt.loader.render(self.opts, {})
+        self.rend = renderers
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' contains a function reference which is not picklable.

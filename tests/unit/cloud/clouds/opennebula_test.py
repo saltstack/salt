@@ -387,6 +387,98 @@ class OpenNebulaTestCase(TestCase):
         self.assertEqual(opennebula.get_vn_id(mock_kwargs, 'foo'),
                          mock_id)
 
+    # TODO: Write tests for create function
+
+    def test_destroy_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.destroy, 'my-vm', 'function')
+
+    def test_image_allocate_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_allocate, 'foo')
+
+    def test_image_allocate_no_name_or_datastore_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when a neither a datastore_id
+        nor a datastore_name is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_allocate, 'function')
+
+    def test_image_allocate_no_path_or_data(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when neither the path nor data args
+        are provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_allocate,
+                          'function',
+                          kwargs={'datastore_id': '5'})
+
+    def test_image_clone_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_clone, 'foo')
+
+    def test_image_clone_no_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when a name isn't provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_clone, 'function')
+
+    def test_image_clone_no_image_id_or_image_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when neither the image_id nor
+        the image_name args are provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_clone,
+                          'function',
+                          kwargs={'name': 'test'})
+
+    def test_image_delete_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_delete, 'foo')
+
+    def test_image_delete_no_name_or_image_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when a neither an image_id
+        nor a name is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_delete, 'function')
+
+    def test_image_persist_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_persistent, 'foo')
+
+    def test_image_persist_no_persist(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the persist kwarg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit, opennebula.image_persistent, 'function')
+
+    def test_image_persist_no_name_or_image_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when a neither an image_id
+        nor a name is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_delete,
+                          'function',
+                          kwargs={'persist': False})
+
 
 if __name__ == '__main__':
     from integration import run_tests
