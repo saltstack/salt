@@ -82,6 +82,7 @@ import salt.utils.schedule
 import salt.utils.error
 import salt.utils.zeromq
 import salt.defaults.exitcodes
+import salt.cli.daemons
 
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.six import string_types
@@ -334,7 +335,10 @@ class SMinion(object):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
-        self.functions = salt.loader.minion_mods(self.opts, include_errors=True)
+        self.utils = salt.loader.utils(self.opts)
+        self.functions = salt.loader.minion_mods(self.opts,
+                                                 include_errors=True)
+        self.proxy = salt.loader.proxy(self.opts, None)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.returners = salt.loader.returners(self.opts, self.functions)
@@ -736,22 +740,21 @@ class Minion(MinionBase):
         # store your hexid to subscribe to zmq, hash since zmq filters are prefix
         # matches this way we can avoid collisions
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
-
         if 'proxy' in self.opts['pillar']:
-            log.debug('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
-                                                                                 self.opts['pillar']['proxy']))
+            log.info('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
+                                                                                self.opts['pillar']['proxy'].keys()))
             for p in self.opts['pillar']['proxy']:
-                log.debug('Starting {0} proxy.'.format(p))
+                log.info('Starting {0} proxy.'.format(p))
                 pid = os.fork()
                 if pid > 0:
                     continue
                 else:
-                    proxyminion = salt.ProxyMinion()
+                    proxyminion = salt.cli.daemons.ProxyMinion()
                     proxyminion.start(self.opts['pillar']['proxy'][p])
                     self.clean_die(signal.SIGTERM, None)
         else:
-            log.debug('I am {0} and I am not supposed to start any proxies. '
-                      '(Likely not a problem)'.format(self.opts['id']))
+            log.info('I am {0} and I am not supposed to start any proxies. '
+                     '(Likely not a problem)'.format(self.opts['id']))
 
         # __init__() from MinionBase is called in Minion.eval_master()
 
@@ -2897,12 +2900,14 @@ class ProxyMinion(Minion):
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
     '''
-    def __init__(self, opts, timeout=60, safe=True):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
-
         self._running = None
+        self.win_proc = []
+        self.loaded_base_name = loaded_base_name
+
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
             try:
@@ -2922,11 +2927,19 @@ class ProxyMinion(Minion):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        # print opts['proxymodule']
-        fq_proxyname = 'proxy.'+opts['proxy']['proxytype']
-        self.proxymodule = salt.loader.proxy(opts, fq_proxyname)
-        opts['proxyobject'] = self.proxymodule[opts['proxy']['proxytype']+'.Proxyconn'](opts['proxy'])
-        opts['id'] = opts['proxyobject'].id(opts)
+        opts['master'] = self.eval_master(opts,
+                                          timeout,
+                                          safe)
+        fq_proxyname = opts['proxy']['proxytype']
+        # Need to match the function signature of the other loader fns
+        # which is def proxy(opts, functions, whitelist=None, loaded_base_name=None)
+        # 'functions' for other loaders is a LazyLoader object
+        # but since we are not needing to merge functions into another fn dictionary
+        # we will pass 'None' in
+        self.proxymodule = salt.loader.proxy(opts, None, loaded_base_name=fq_proxyname)
+        opts['proxymodule'] = self.proxymodule
+        opts['grains'] = salt.loader.grains(opts)
+        opts['id'] = opts['proxymodule'][fq_proxyname+'.id'](opts)
         opts.update(resolve_dns(opts))
         self.opts = opts
         self.authenticate(timeout, safe)
@@ -2937,6 +2950,7 @@ class ProxyMinion(Minion):
             opts['environment'],
             pillarenv=opts.get('pillarenv'),
         ).compile_pillar()
+        opts['proxymodule'][fq_proxyname+'.init'](opts)
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
@@ -2947,7 +2961,26 @@ class ProxyMinion(Minion):
             self.opts,
             self.functions,
             self.returners)
+
+        # add default scheduling jobs to the minions scheduler
+        if 'mine.update' in self.functions:
+            log.info('Added mine.update to scheduler')
+            self.schedule.add_job({
+                '__mine_interval':
+                    {
+                        'function': 'mine.update',
+                        'minutes': opts['mine_interval'],
+                        'jid_include': True,
+                        'maxrunning': 2
+                    }
+            })
+
         self.grains_cache = self.opts['grains']
+
+        # store your hexid to subscribe to zmq, hash since zmq filters are prefix
+        # matches this way we can avoid collisions
+        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
+
         # self._running = True
 
     def _prep_mod_opts(self):
