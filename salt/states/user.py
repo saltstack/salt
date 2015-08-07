@@ -360,10 +360,14 @@ def present(name,
         A brief description of the purpose of the users account.
     .. versionchanged:: 2015.8.0
 '''
-    fullname = salt.utils.locales.sdecode(fullname)
-    roomnumber = salt.utils.locales.sdecode(roomnumber)
-    workphone = salt.utils.locales.sdecode(workphone)
-    homephone = salt.utils.locales.sdecode(homephone)
+    if fullname is not None:
+        fullname = salt.utils.locales.sdecode(fullname)
+    if roomnumber is not None:
+        roomnumber = salt.utils.locales.sdecode(roomnumber)
+    if workphone is not None:
+        workphone = salt.utils.locales.sdecode(workphone)
+    if homephone is not None:
+        homephone = salt.utils.locales.sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},
