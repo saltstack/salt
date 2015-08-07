@@ -464,8 +464,8 @@
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 
-# Fingerprint of the master public key to validate the identity of your Salt Master
-# before the initial key exchange. the master fingerprint can be found by running
+# Fingerprint of the master public key to validate the identity of your Salt master
+# before the initial key exchange. The master fingerprint can be found by running
 # "salt-key -F master" on the Salt master.
 #master_finger: ''
 
