@@ -498,7 +498,14 @@ def get_cluster_id(kwargs=None, call=None):
             'The get_cluster_id function requires a name.'
         )
 
-    return list_clusters()[name]['id']
+    try:
+        ret = list_clusters()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The cluster \'{0}\' could not be found'.format(name)
+        )
+
+    return ret
 
 
 def get_datastore_id(kwargs=None, call=None):
@@ -527,7 +534,14 @@ def get_datastore_id(kwargs=None, call=None):
             'The get_datastore_id function requires a name.'
         )
 
-    return list_datastores()[name]['id']
+    try:
+        ret = list_datastores()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The datastore \'{0}\' could not be found.'.format(name)
+        )
+
+    return ret
 
 
 def get_host_id(kwargs=None, call=None):
@@ -556,7 +570,14 @@ def get_host_id(kwargs=None, call=None):
             'The get_host_id function requires a name.'
         )
 
-    return avail_locations()[name]['id']
+    try:
+        ret = avail_locations()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The host \'{0}\' could not be found'.format(name)
+        )
+
+    return ret
 
 
 def get_image(vm_):
@@ -604,7 +625,14 @@ def get_image_id(kwargs=None, call=None):
             'The get_image_id function requires a name.'
         )
 
-    return avail_images()[name]['id']
+    try:
+        ret = avail_images()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The image \'{0}\' could not be found'.format(name)
+        )
+
+    return ret
 
 
 def get_location(vm_):
@@ -659,7 +687,14 @@ def get_secgroup_id(kwargs=None, call=None):
             'The get_secgroup_id function requires a \'name\'.'
         )
 
-    return list_security_groups()[name]['id']
+    try:
+        ret = list_security_groups()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The security group \'{0}\' could not be found.'.format(name)
+        )
+
+    return ret
 
 
 def get_template_id(kwargs=None, call=None):
@@ -688,7 +723,14 @@ def get_template_id(kwargs=None, call=None):
             'The get_template_id function requires a \'name\'.'
         )
 
-    return list_templates()[name]['id']
+    try:
+        ret = list_templates()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The template \'{0}\' could not be foound.'.format(name)
+        )
+
+    return ret
 
 
 def get_vm_id(kwargs=None, call=None):
@@ -717,7 +759,14 @@ def get_vm_id(kwargs=None, call=None):
             'The get_vm_id function requires a name.'
         )
 
-    return list_nodes()[name]['id']
+    try:
+        ret = list_nodes()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The VM \'{0}\' could not be found.'.format(name)
+        )
+
+    return ret
 
 
 def get_vn_id(kwargs=None, call=None):
@@ -746,7 +795,14 @@ def get_vn_id(kwargs=None, call=None):
             'The get_vn_id function requires a name.'
         )
 
-    return list_vns()[name]['id']
+    try:
+        ret = list_vns()[name]['id']
+    except KeyError:
+        raise SaltCloudSystemExit(
+            'The VN \'{0}\' could not be found.'.format(name)
+        )
+
+    return ret
 
 
 def create(vm_):
@@ -1271,7 +1327,7 @@ def image_persistent(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_persistent opennebula name=my-image persist=True
-        salt-cloud --function image_persistent opennebula image_id=5
+        salt-cloud --function image_persistent opennebula image_id=5 persist=False
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1577,6 +1633,18 @@ def image_update(call=None, kwargs=None):
             'The image_update function requires an \'update_type\' to be provided.'
         )
 
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
+        )
+
     if image_id:
         if image_name:
             log.warning(
@@ -1603,18 +1671,6 @@ def image_update(call=None, kwargs=None):
         raise SaltCloudSystemExit(
             'The image_update function requires either \'data\' or a file \'path\' '
             'to be provided.'
-        )
-
-    if update_type == update_args[0]:
-        update_number = 0
-    elif update_type == update_args[1]:
-        update_number = 1
-    else:
-        raise SaltCloudSystemExit(
-            'The update_type argument must be either {0} or {1}.'.format(
-                update_args[0],
-                update_args[1]
-            )
         )
 
     server, user, password = _get_xml_rpc()
@@ -1763,9 +1819,9 @@ def secgroup_clone(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f secgroup_clone opennebula name=my-cloned-secgroup secgroup_id=0
-
+        salt-cloud -f secgroup_clone opennebula name=my-cloned-secgroup secgroup_name=my-secgroup
     '''
-    if call == 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
             'The secgroup_clone function must be called with -f or --function.'
         )
@@ -1832,7 +1888,7 @@ def secgroup_delete(call=None, kwargs=None):
         salt-cloud -f secgroup_delete opennebula name=my-secgroup
         salt-cloud --function secgroup_delete opennebula secgroup_id=100
     '''
-    if call == 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
             'The secgroup_delete function must be called with -f or --function.'
         )
@@ -1893,7 +1949,7 @@ def secgroup_info(call=None, kwargs=None):
         salt-cloud -f secgroup_info opennebula name=my-secgroup
         salt-cloud --function secgroup_info opennebula secgroup_id=5
     '''
-    if call == 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
             'The secgroup_info function must be called with -f or --function.'
         )
@@ -1987,6 +2043,18 @@ def secgroup_update(call=None, kwargs=None):
             'The secgroup_update function requires an \'update_type\' to be provided.'
         )
 
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
+        )
+
     if secgroup_id:
         if secgroup_name:
             log.warning(
@@ -2013,18 +2081,6 @@ def secgroup_update(call=None, kwargs=None):
         raise SaltCloudSystemExit(
             'The secgroup_update function requires either \'data\' or a file \'path\' '
             'to be provided.'
-        )
-
-    if update_type == update_args[0]:
-        update_number = 0
-    elif update_type == update_args[1]:
-        update_number = 1
-    else:
-        raise SaltCloudSystemExit(
-            'The update_type argument must be either {0} or {1}.'.format(
-                update_args[0],
-                update_args[1]
-            )
         )
 
     server, user, password = _get_xml_rpc()
@@ -2129,7 +2185,7 @@ def template_clone(call=None, kwargs=None):
         salt-cloud -f template_clone opennebula name=my-new-template template_id=0
         salt-cloud -f template_clone opennebula name=my-new-template template_name=my-template
     '''
-    if call == 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
             'The template_clone function must be called with -f or --function.'
         )
@@ -2196,7 +2252,7 @@ def template_delete(call=None, kwargs=None):
         salt-cloud -f template_delete opennebula name=my-template
         salt-cloud --function template_delete opennebula template_id=5
     '''
-    if call == 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
             'The template_delete function must be called with -f or --function.'
         )
@@ -2206,12 +2262,6 @@ def template_delete(call=None, kwargs=None):
 
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
-
-    if not name and not template_id:
-        raise SaltCloudSystemExit(
-            'The template_delete function requires either a \'name\' or a \'template_id\' '
-            'to be provided.'
-        )
 
     if template_id:
         if name:
@@ -2270,7 +2320,7 @@ def template_instantiate(call=None, kwargs=None):
         salt-cloud -f template_instantiate opennebula vm_name=my-new-vm template_id=0
 
     '''
-    if call == 'action':
+    if call != 'function':
         raise SaltCloudSystemExit(
             'The template_instantiate function must be called with -f or --function.'
         )
