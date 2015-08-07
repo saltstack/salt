@@ -170,6 +170,13 @@ the state into QA by copying the state file into `/srv/salt/qa`.
 Choosing an Environment to Target
 =================================
 
+The top file is used to assign a minion to an environment unless overridden
+using the methods described below. The environment in the top file must match
+an environment in :conf_master:`file_roots` in order for any states to be
+applied to that minion. The states that will be applied to a minion in a given
+environment can be viewed using the :py:func:`state.show_top
+<salt.modules.state.show_top>` execution function.
+
 Minions may be pinned to a particular environment by setting the `environment`
 value in the minion configuration file. In doing so, a minion will only
 request files from the environment to which it is assigned.
