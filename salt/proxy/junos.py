@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 #     thisproxy['conn'].open()
 #     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
 
+
 def conn():
     return thisproxy['conn']
 
