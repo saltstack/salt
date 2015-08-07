@@ -590,7 +590,8 @@ class FileTestCase(TestCase):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.stats': mock_f,
-                                             'file.check_perms': mock_perms}):
+                                             'file.check_perms': mock_perms,
+                                             'file.mkdir': MagicMock()}):
             comt = ('User salt is not available Group saltstack'
                     ' is not available')
             ret.update({'comment': comt, 'name': name})
@@ -663,7 +664,7 @@ class FileTestCase(TestCase):
                                                  ret)
 
                         with patch.object(os.path, 'isdir',
-                                          MagicMock(side_effect=[True, False])):
+                                          MagicMock(side_effect=[True, False, True, True])):
                             comt = ('Failed to create directory {0}'
                                     .format(name))
                             ret.update({'comment': comt, 'result': False})
