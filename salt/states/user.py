@@ -359,7 +359,7 @@ def present(name,
     win_description (Windows Only)
         A brief description of the purpose of the users account.
     .. versionchanged:: 2015.8.0
-'''
+    '''
     if fullname is not None:
         fullname = salt.utils.locales.sdecode(fullname)
     if roomnumber is not None:
