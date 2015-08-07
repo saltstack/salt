@@ -2683,7 +2683,7 @@ def vm_deploy(name, kwargs=None, call=None):
     host_id = kwargs.get('host_id', None)
     host_name = kwargs.get('host_name', None)
     capacity_maintained = kwargs.get('capacity_maintained', True)
-    datastore_id = int(kwargs.get('datastore_id', None))
+    datastore_id = kwargs.get('datastore_id', None)
     datastore_name = kwargs.get('datastore_name', None)
 
     if host_id:
@@ -2705,7 +2705,7 @@ def vm_deploy(name, kwargs=None, call=None):
             log.warning(
                 'Both the \'datastore_id\' and \'datastore_name\' arguments were provided. '
                 '\'datastore_id\' will take precedence.'
-             )
+            )
     elif datastore_name:
         datastore_id = get_datastore_id(kwargs={'name': datastore_name})
     else:
@@ -2864,7 +2864,7 @@ def vm_disk_save(name, kwargs=None, call=None):
         kwargs = {}
 
     disk_id = kwargs.get('disk_id', None)
-    image_name = kwargs.get('image_name', False)
+    image_name = kwargs.get('image_name', None)
     image_type = kwargs.get('image_type', '')
     snapshot_id = int(kwargs.get('snapshot_id', '-1'))
 
@@ -3399,7 +3399,7 @@ def vm_snapshot_delete(vm_name, kwargs=None, call=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': vm_name}))
-    response = server.one.vm.snapshotcreate(auth, vm_id, int(snapshot_id))
+    response = server.one.vm.snapshotdelete(auth, vm_id, int(snapshot_id))
 
     data = {
         'action': 'vm.snapshotdelete',
@@ -3427,7 +3427,7 @@ def vm_snapshot_revert(vm_name, kwargs=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -a vm_snapshot_create my-vm snapshot_name=my-new-snapshot
+        salt-cloud -a vm_snapshot_revert my-vm snapshot_id=42
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3497,10 +3497,23 @@ def vm_update(name, kwargs=None, call=None):
     path = kwargs.get('path', None)
     data = kwargs.get('data', None)
     update_type = kwargs.get('update_type', None)
+    update_args = ['replace', 'merge']
 
     if update_type is None:
         raise SaltCloudSystemExit(
             'The vm_update function requires an \'update_type\' to be provided.'
+        )
+
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
         )
 
     if data:
@@ -3517,15 +3530,10 @@ def vm_update(name, kwargs=None, call=None):
             'to be provided.'
         )
 
-    update_number = 0
-    if update_type == 'merge':
-        update_number = 1
-
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
     vm_id = int(get_vm_id(kwargs={'name': name}))
-
-    response = server.one.vm.update(auth, vm_id, data, update_number)
+    response = server.one.vm.update(auth, vm_id, data, int(update_number))
 
     ret = {
         'action': 'vm.update',
