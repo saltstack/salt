@@ -1566,7 +1566,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
                     'comment': 'File {0} updated'.format(test_file),
-                    'diff': 'Replace binary file with text file'
+                    'diff': '--- \n+++ \n@@ -1 +1,3\n+{0}\n {1}\n+{2}\n'.format(
+                                korean_utf8_2, korean_utf8_1, korean_utf8_3),
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
