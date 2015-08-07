@@ -3955,7 +3955,7 @@ def manage_file(name,
                     ret, 'Source file {0!r} not found'.format(source))
             # If the downloaded file came from a non salt server or local source
             #  verify that it matches the intended sum value
-            if _urlparse(source).scheme not in ('salt','') :
+            if _urlparse(source).scheme not in ('salt', ''):
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
                     ret['comment'] = ('File sum set for file {0} of {1} does '
