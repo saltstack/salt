@@ -376,7 +376,7 @@ class FileTestCase(TestCase):
         mock_f = MagicMock(return_value=False)
 
         comt = ('Must provide name to file.missing')
-        ret.update({'comment': comt, 'name': ''})
+        ret.update({'comment': comt, 'name': '', 'pchanges': {}})
         self.assertDictEqual(filestate.missing(''), ret)
 
         with patch.object(os.path, 'exists', mock_t):
@@ -576,6 +576,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.directory')
@@ -700,6 +701,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ("'mode' is not allowed in 'file.recurse'."
@@ -782,7 +784,7 @@ class FileTestCase(TestCase):
                'changes': {}}
 
         comt = ('Must provide name to file.replace')
-        ret.update({'comment': comt, 'name': ''})
+        ret.update({'comment': comt, 'name': '', 'pchanges': {}})
         self.assertDictEqual(filestate.replace('', pattern, repl), ret)
 
         mock_t = MagicMock(return_value=True)
@@ -816,6 +818,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.blockreplace')
@@ -834,7 +837,8 @@ class FileTestCase(TestCase):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('Changes would be made')
                     ret.update({'comment': comt, 'result': None,
-                                'changes': {'diff': True}})
+                                'changes': {'diff': True},
+                                'pchanges': {'diff': True}})
                     self.assertDictEqual(filestate.blockreplace(name), ret)
 
     # 'comment' function tests: 1
@@ -849,6 +853,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.comment')
@@ -881,7 +886,7 @@ class FileTestCase(TestCase):
                              'file.comment': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/fstab': 'updated'}})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
@@ -902,6 +907,7 @@ class FileTestCase(TestCase):
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
+               'pchanges': {},
                'result': False,
                'comment': '',
                'changes': {}}
@@ -934,7 +940,7 @@ class FileTestCase(TestCase):
 
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/fstab': 'updated'}, })
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
@@ -958,6 +964,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.append')
@@ -982,13 +989,13 @@ class FileTestCase(TestCase):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
                         ' directory - new\n')
-                ret.update({'comment': comt, 'name': name})
+                ret.update({'comment': comt, 'name': name, 'pchanges': {'/etc': {'directory': 'new'}}})
                 self.assertDictEqual(filestate.append(name, makedirs=True), ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
                         .format(name))
-                ret.update({'comment': comt})
+                ret.update({'comment': comt, 'pchanges': {}})
                 self.assertDictEqual(filestate.append(name), ret)
 
             with patch.object(os.path, 'isabs', mock_t):
@@ -1038,6 +1045,7 @@ class FileTestCase(TestCase):
         ret = {'name': name,
                'result': False,
                'comment': '',
+               'pchanges': {},
                'changes': {}}
 
         comt = ('Must provide name to file.prepend')
@@ -1062,19 +1070,20 @@ class FileTestCase(TestCase):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
                         ' directory - new\n')
-                ret.update({'comment': comt, 'name': name})
+                ret.update({'comment': comt, 'name': name, 'pchanges': {'/etc': {'directory': 'new'}}})
                 self.assertDictEqual(filestate.prepend(name, makedirs=True),
                                      ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
                         .format(name))
-                ret.update({'comment': comt})
+                ret.update({'comment': comt, 'pchanges': {}})
                 self.assertDictEqual(filestate.prepend(name), ret)
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.object(os.path, 'exists', mock_t):
                     comt = ("Failed to load template file {0}".format(source))
+                    ret.pop('pchanges')
                     ret.update({'comment': comt, 'name': source, 'data': []})
                     self.assertDictEqual(filestate.prepend(name, source=source),
                                          ret)
@@ -1089,7 +1098,7 @@ class FileTestCase(TestCase):
                                 comt = ('File {0} is set to be updated'
                                         .format(name))
                                 ret.update({'comment': comt, 'result': None,
-                                            'changes': change})
+                                    'changes': change, 'pchanges': {}})
                                 self.assertDictEqual(filestate.prepend
                                                      (name, text=text), ret)
 
