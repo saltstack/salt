@@ -197,7 +197,6 @@ def save_load(jid, clear_load):
             log.debug('Job cache write failure: {0}'.format(exc))
 
 
-
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
