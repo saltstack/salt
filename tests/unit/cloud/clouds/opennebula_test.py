@@ -1254,6 +1254,207 @@ class OpenNebulaTestCase(TestCase):
                           call='action',
                           kwargs={'update_type': 'merge'})
 
+    def test_vn_add_ar_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_add_ar,
+                          call='foo')
+
+    def test_vn_add_ar_no_vn_id_or_vn_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_add_ar,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_add_ar_no_path_or_data(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the path and data
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_add_ar,
+                          call='function',
+                          kwargs={'vn_id': '0'})
+
+    def test_vn_allocate_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_allocate,
+                          call='foo')
+
+    def test_vn_allocate_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the path and data
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_allocate,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_delete_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_delete,
+                          call='foo')
+
+    def test_vn_delete_no_vn_id_or_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_delete,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_free_ar_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_free_ar,
+                          call='foo')
+
+    def test_vn_free_ar_no_ar_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the ar_id is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_free_ar,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_free_ar_no_vn_id_or_vn_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_free_ar,
+                          call='function',
+                          kwargs={'ar_id': '0'})
+
+    def test_vn_hold_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_hold,
+                          call='foo')
+
+    def test_vn_hold_no_vn_id_or_vn_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_hold,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_hold_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and path
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_hold,
+                          call='function',
+                          kwargs={'vn_id': '0'})
+
+    def test_vn_info_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_info,
+                          call='foo')
+
+    def test_vn_info_no_vn_id_or_vn_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_info,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_release_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_release,
+                          call='foo')
+
+    def test_vn_release_no_vn_id_or_vn_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_release,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_release_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and path
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_release,
+                          call='function',
+                          kwargs={'vn_id': '0'})
+
+    def test_vn_reserve_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_reserve,
+                          call='foo')
+
+    def test_vn_reserve_no_vn_id_or_vn_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the vn_id and vn_name
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_reserve,
+                          call='function',
+                          kwargs=None)
+
+    def test_vn_reserve_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and path
+        args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vn_reserve,
+                          call='function',
+                          kwargs={'vn_id': '0'})
+
 
 if __name__ == '__main__':
     from integration import run_tests
