@@ -48,7 +48,8 @@ def managed(name,
             pip_ignore_installed=False,
             proxy=None,
             use_vt=False,
-            env_vars=None):
+            env_vars=None,
+            no_use_wheel=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -68,6 +69,8 @@ def managed(name,
         account for such files)
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
+    no_use_wheel : False
+        Force to not use wheel archives (requires pip>=1.4)
     no_deps: False
         Pass `--no-deps` to `pip`.
     pip_exists_action: None
@@ -186,6 +189,18 @@ def managed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
+                              'in pip {0} and newer. The version of pip '
+                              'detected was {1}.').format(min_version,
+                                                          cur_version)
+            return ret
+
     # Populate the venv via a requirements file
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
@@ -193,6 +208,7 @@ def managed(name,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
+            no_use_wheel=no_use_wheel,
             user=user,
             cwd=cwd,
             index_url=index_url,
