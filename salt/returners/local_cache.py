@@ -168,6 +168,17 @@ def save_load(jid, clear_load):
 
     serial = salt.payload.Serial(__opts__)
 
+    # Save the invocation information
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+        serial.dump(
+            clear_load,
+            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
+            )
+    except IOError as exc:
+        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load:
         ckminions = salt.utils.minions.CkMinions(__opts__)
@@ -182,19 +193,9 @@ def save_load(jid, clear_load):
                 minions,
                 salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
                 )
-        except IOError:
+        except IOError as exc:
             log.warning('Could not write job cache file for minions: {0}'.format(minions))
-
-    # Save the invocation information
-    try:
-        if not os.path.exists(jid_dir):
-            os.makedirs(jid_dir)
-        serial.dump(
-            clear_load,
-            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
-            )
-    except IOError as exc:
-        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+            log.debug('Job cache write failure: {0}'.format(exc))
 
 
 def get_load(jid):
