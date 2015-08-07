@@ -673,8 +673,11 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
         salt myminion git.rebase /path/to/repo origin/master opts='--onto newbranch'
     '''
     _check_abs(cwd)
+    opts = _format_opts(opts)
+    if any(x for x in opts if x in ('-i', '--interactive')):
+        raise SaltInvocationError('Interactive rebases are not supported')
     command = ['git', 'rebase']
-    command.extend(_format_opts(opts))
+    command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
     command.extend(shlex.split(rev))
