@@ -8,6 +8,7 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase
+from salttesting.mock import patch, MagicMock
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
@@ -144,11 +145,13 @@ class TopFileMergeTestCase(TestCase):
         Test to see if the merger respects environment
         ordering
         '''
+        import pudb; pu.db
         config = self._make_default_config()
         config['top_file_merging_strategy'] = 'merge'
         config['env_order'] = ['b', 'a', 'c']
-        highstate = HighState(config)
-        ret = highstate.get_tops()
+        with patch('salt.fileclient.FSClient.envs', MagicMock(return_value=['a', 'b', 'c'])):
+            highstate = HighState(config)
+            ret = highstate.get_tops()
         self.assertEqual(ret, OrderedDict([('b', [{}]), ('a', [{}]), ('c', [{}])]))
 
 
