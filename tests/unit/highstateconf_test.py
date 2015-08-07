@@ -145,7 +145,6 @@ class TopFileMergeTestCase(TestCase):
         Test to see if the merger respects environment
         ordering
         '''
-        import pudb; pu.db
         config = self._make_default_config()
         config['top_file_merging_strategy'] = 'merge'
         config['env_order'] = ['b', 'a', 'c']
