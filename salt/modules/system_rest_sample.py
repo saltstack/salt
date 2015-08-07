@@ -5,9 +5,6 @@ Provide the service module for the proxy-minion REST sample
 # Import python libs
 from __future__ import absolute_import
 import logging
-import os
-import re
-import salt.ext.six as six
 
 __proxyenabled__ = ['rest_sample']
 
@@ -28,6 +25,7 @@ def __virtual__():
     if __grains__['kernel'] == 'proxy':
         return __virtualname__
     return False
+
 
 def get_all():
     '''
@@ -99,10 +97,9 @@ def status(name, sig):
         salt '*' service.status <service name>
     '''
 
-    proxy_fn = 'rest_sample'+ '.service_status'
-    resp =  __opts__['proxymodule'][proxy_fn](name)
+    proxy_fn = 'rest_sample' + '.service_status'
+    resp = __opts__['proxymodule'][proxy_fn](name)
     if resp['comment'] == 'stopped':
-        return { name: False }
+        return {name: False}
     if resp['comment'] == 'running':
-        return { name: True }
-
+        return {name: True}
