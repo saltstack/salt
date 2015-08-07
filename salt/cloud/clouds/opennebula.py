@@ -2366,6 +2366,118 @@ def template_instantiate(call=None, kwargs=None):
     return data
 
 
+def template_update(call=None, kwargs=None):
+    '''
+    Replaces the template contents.
+
+    .. versionadded:: Boron
+
+    template_id
+        The ID of the template to update. Can be used instead of ``template_name``.
+
+    template_name
+        The name of the template to update. Can be used instead of ``template_id``.
+
+    path
+        The path to a file containing the elements of the template to be updated.
+        Syntax within the file can be the usual attribute=value or XML. Can be
+        used instead of ``data``.
+
+    data
+        Contains the elements of the template to be updated. Syntax can be the
+        usual attribute=value or XML. Data provided my be wrapped in double
+        quotes. Can be used instead of ``path``.
+
+    update_type
+        There are two ways to update a template: ``replace`` the whole template
+        or ``merge`` the new template with the existing one.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --function template_update opennebula template_id=1 update_type=replace \
+            path=/path/to/template_update_file.txt
+        salt-cloud -f template_update opennebula template_name=my-template update_type=merge \
+            data="CPU='1.0' DISK=[IMAGE='Ubuntu-14.04'] GRAPHICS=[LISTEN='0.0.0.0',TYPE='vnc'] \
+            MEMORY='1024' NETWORK='yes' NIC=[NETWORK='192net',NETWORK_UNAME='oneadmin'] \
+            OS=[ARCH='x86_64'] SUNSTONE_CAPACITY_SELECT='YES' SUNSTONE_NETWORK_SELECT='YES' \
+            VCPU='1'"
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The template_update function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    template_id = kwargs.get('template_id', None)
+    template_name = kwargs.get('template_name', None)
+    path = kwargs.get('path', None)
+    data = kwargs.get('data', None)
+    update_type = kwargs.get('update_type', None)
+    update_args = ['replace', 'merge']
+
+    if update_type is None:
+        raise SaltCloudSystemExit(
+            'The template_update function requires an \'update_type\' to be provided.'
+        )
+
+    if update_type == update_args[0]:
+        update_number = 0
+    elif update_type == update_args[1]:
+        update_number = 1
+    else:
+        raise SaltCloudSystemExit(
+            'The update_type argument must be either {0} or {1}.'.format(
+                update_args[0],
+                update_args[1]
+            )
+        )
+
+    if template_id:
+        if template_name:
+            log.warning(
+                'Both the \'template_id\' and \'template_name\' arguments were provided. '
+                '\'template_id\' will take precedence.'
+            )
+    elif template_name:
+        template_id = get_template_id(kwargs={'name': template_name})
+    else:
+        raise SaltCloudSystemExit(
+            'The template_update function requires either a \'template_id\' '
+            'or a \'template_name\' to be provided.'
+        )
+
+    if data:
+        if path:
+            log.warning(
+                'Both the \'data\' and \'path\' arguments were provided. '
+                '\'data\' will take precedence.'
+            )
+    elif path:
+        data = salt.utils.fopen(path, mode='r').read()
+    else:
+        raise SaltCloudSystemExit(
+            'The template_update function requires either \'data\' or a file '
+            '\'path\' to be provided.'
+        )
+
+    server, user, password = _get_xml_rpc()
+    auth = ':'.join([user, password])
+    response = server.one.template.update(auth, int(template_id), data, int(update_number))
+
+    ret = {
+        'action': 'template.update',
+        'updated': response[0],
+        'template_id': response[1],
+        'error_code': response[2],
+    }
+
+    return ret
+
+
 def vm_action(name, kwargs=None, call=None):
     '''
     Submits an action to be performed on a given virtual machine.
@@ -4153,118 +4265,6 @@ def vn_reserve(call=None, kwargs=None):
         'action': 'vn.reserve',
         'reserved': response[0],
         'resource_id': response[1],
-        'error_code': response[2],
-    }
-
-    return ret
-
-
-def template_update(call=None, kwargs=None):
-    '''
-    Replaces the template contents.
-
-    .. versionadded:: Boron
-
-    template_id
-        The ID of the template to update. Can be used instead of ``template_name``.
-
-    template_name
-        The name of the template to update. Can be used instead of ``template_id``.
-
-    path
-        The path to a file containing the elements of the template to be updated.
-        Syntax within the file can be the usual attribute=value or XML. Can be
-        used instead of ``data``.
-
-    data
-        Contains the elements of the template to be updated. Syntax can be the
-        usual attribute=value or XML. Data provided my be wrapped in double
-        quotes. Can be used instead of ``path``.
-
-    update_type
-        There are two ways to update a template: ``replace`` the whole template
-        or ``merge`` the new template with the existing one.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud --function template_update opennebula template_id=1 update_type=replace \
-            path=/path/to/template_update_file.txt
-        salt-cloud -f template_update opennebula template_name=my-template update_type=merge \
-            data="CPU='1.0' DISK=[IMAGE='Ubuntu-14.04'] GRAPHICS=[LISTEN='0.0.0.0',TYPE='vnc'] \
-            MEMORY='1024' NETWORK='yes' NIC=[NETWORK='192net',NETWORK_UNAME='oneadmin'] \
-            OS=[ARCH='x86_64'] SUNSTONE_CAPACITY_SELECT='YES' SUNSTONE_NETWORK_SELECT='YES' \
-            VCPU='1'"
-    '''
-    if call != 'function':
-        raise SaltCloudSystemExit(
-            'The template_update function must be called with -f or --function.'
-        )
-
-    if kwargs is None:
-        kwargs = {}
-
-    template_id = kwargs.get('template_id', None)
-    template_name = kwargs.get('template_name', None)
-    path = kwargs.get('path', None)
-    data = kwargs.get('data', None)
-    update_type = kwargs.get('update_type', None)
-    update_args = ['replace', 'merge']
-
-    if update_type is None:
-        raise SaltCloudSystemExit(
-            'The template_update function requires an \'update_type\' to be provided.'
-        )
-
-    if template_id:
-        if template_name:
-            log.warning(
-                'Both the \'template_id\' and \'template_name\' arguments were provided. '
-                '\'template_id\' will take precedence.'
-            )
-    elif template_name:
-        template_id = get_template_id(kwargs={'name': template_name})
-    else:
-        raise SaltCloudSystemExit(
-            'The template_update function requires either a \'template_id\' '
-            'or a \'template_name\' to be provided.'
-        )
-
-    if data:
-        if path:
-            log.warning(
-                'Both the \'data\' and \'path\' arguments were provided. '
-                '\'data\' will take precedence.'
-            )
-    elif path:
-        data = salt.utils.fopen(path, mode='r').read()
-    else:
-        raise SaltCloudSystemExit(
-            'The template_update function requires either \'data\' or a file '
-            '\'path\' to be provided.'
-        )
-
-    if update_type == update_args[0]:
-        update_number = 0
-    elif update_type == update_args[1]:
-        update_number = 1
-    else:
-        raise SaltCloudSystemExit(
-            'The update_type argument must be either {0} or {1}.'.format(
-                update_args[0],
-                update_args[1]
-            )
-        )
-
-    server, user, password = _get_xml_rpc()
-    auth = ':'.join([user, password])
-    response = server.one.template.update(auth, int(template_id), data, int(update_number))
-
-    ret = {
-        'action': 'template.update',
-        'updated': response[0],
-        'template_id': response[1],
         'error_code': response[2],
     }
 

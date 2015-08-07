@@ -718,8 +718,8 @@ class OpenNebulaTestCase(TestCase):
 
     def test_secgroup_update_bad_update_type_value(self):
         '''
-        Tests that a SaltCloudSystemExit is raised when the secgroup_id and
-        secgroup_name kwargs are missing.
+        Tests that a SaltCloudSystemExit is raised when the update_type contains
+        an invalid value.
         '''
         self.assertRaises(SaltCloudSystemExit,
                           opennebula.secgroup_update,
@@ -822,6 +822,46 @@ class OpenNebulaTestCase(TestCase):
                           opennebula.template_instantiate,
                           'function',
                           kwargs={'vm_name': 'test'})
+
+    def test_template_update_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.template_update,
+                          call='foo')
+
+    def test_template_update_bad_update_type_value(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the update_type contains
+        and invalid value.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.template_update,
+                          call='function',
+                          kwargs={'update_type': 'foo'})
+
+    def test_template_update_no_template_id_or_template_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the template_id and the
+        template_name args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.template_update,
+                          call='function',
+                          kwargs={'update_type': 'merge'})
+
+    def test_template_update_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and the
+        path args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.template_update,
+                          call='function',
+                          kwargs={'update_type': 'merge',
+                                  'template_id': '0'})
 
     def test_vm_action_error(self):
         '''
