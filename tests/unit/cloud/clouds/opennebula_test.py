@@ -20,6 +20,7 @@ from salt.exceptions import SaltCloudSystemExit
 # Global Variables
 opennebula.__active_provider_name__ = ''
 opennebula.__opts__ = {}
+VM_NAME = 'my-vm'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -827,13 +828,19 @@ class OpenNebulaTestCase(TestCase):
         Tests that a SaltCloudSystemExit is raised when something other than
         --action or -a is provided.
         '''
-        self.assertRaises(SaltCloudSystemExit, opennebula.vm_action, 'foo')
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_action,
+                          VM_NAME,
+                          call='foo')
 
     def test_vm_action_no_action(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the action arg is missing
         '''
-        self.assertRaises(SaltCloudSystemExit, opennebula.vm_action, 'action')
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_action,
+                          VM_NAME,
+                          call='action')
 
     def test_vm_allocate_function_error(self):
         '''
@@ -848,6 +855,404 @@ class OpenNebulaTestCase(TestCase):
         path kwargs are missing.
         '''
         self.assertRaises(SaltCloudSystemExit, opennebula.vm_allocate, 'function')
+
+    def test_vm_attach_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_attach,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_attach_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and
+        path kwargs are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_attach,
+                          VM_NAME,
+                          call='action')
+
+    def test_vm_attach_nic_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_attach_nic,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_attach_nic_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and
+        path kwargs are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_attach_nic,
+                          VM_NAME,
+                          call='action')
+
+    def test_vm_deploy_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_deploy,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_deploy_no_host_id_or_host_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the host_id and the
+        host_name args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_deploy,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_detach_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_detach,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_detach_no_disk_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the disk_id ar is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_detach,
+                          VM_NAME,
+                          call='action')
+
+    def test_vm_detach_nic_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_detach_nic,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_detach_nic_no_nic_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the nic_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_detach_nic,
+                          VM_NAME,
+                          call='action')
+
+    def test_vm_disk_save_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_save,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_disk_save_no_disk_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_save,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'image_name': 'foo'})
+
+    def test_vm_disk_save_no_image_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the image_name arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_save,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'disk_id': '0'})
+
+    def test_vm_disk_snapshot_create_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_create,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_disk_snapshot_create_no_disk_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_create,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'description': 'foo'})
+
+    def test_vm_disk_snapshot_create_no_description(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the image_name arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_create,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'disk_id': '0'})
+
+    def test_vm_disk_snapshot_delete_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_delete,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_disk_snapshot_delete_no_disk_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_delete,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'snapshot_id': '0'})
+
+    def test_vm_disk_snapshot_delete_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_delete,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'disk_id': '0'})
+
+    def test_vm_disk_snapshot_revert_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_revert,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_disk_snapshot_revert_no_disk_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the disk_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_revert,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'snapshot_id': '0'})
+
+    def test_vm_disk_snapshot_revert_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id arg is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_disk_snapshot_revert,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'disk_id': '0'})
+
+    def test_vm_info_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_info,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_migrate_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_migrate,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_migrate_no_datastore_id_or_datastore_name(self):
+        '''
+        Tests that a SaltCLoudSystemExit is raised when the datastore_id and the
+        datastore_name args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_migrate,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_migrate_no_host_id_or_host_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the the host_id and the
+        host_name args are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_migrate,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'datastore_id': '0'})
+
+    def test_vm_monitoring_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_monitoring,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_resize_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_resize,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_resize_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and path args
+        are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_resize,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_snapshot_create_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_snapshot_create,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_snapshot_create_no_snapshot_name(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_name arg
+        is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_snapshot_create,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_snapshot_delete_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_snapshot_delete,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_snapshot_delete_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id arg
+        is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_snapshot_delete,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_snapshot_revert_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_snapshot_revert,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_snapshot_revert_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id arg
+        is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_snapshot_revert,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_update_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_update,
+                          VM_NAME,
+                          call='foo')
+
+    def test_vm_update_no_update_type(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the update_type arg
+        is missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_update,
+                          VM_NAME,
+                          call='action',
+                          kwargs=None)
+
+    def test_vm_update_bad_update_type_value(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the update_type kwarg is
+        not a valid value.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_update,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'update_type': 'foo'})
+
+    def test_vm_update_no_data_or_path(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the data and path args
+        are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.vm_update,
+                          VM_NAME,
+                          call='action',
+                          kwargs={'update_type': 'merge'})
 
 
 if __name__ == '__main__':
