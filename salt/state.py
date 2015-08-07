@@ -2323,7 +2323,14 @@ class BaseHighState(object):
         env_order = self.opts.get('env_order', [])
         client_envs = self.client.envs()
         if env_order and client_envs:
-            return set(env_order).intersection(self.client.envs())
+            client_env_list = self.client.envs()
+            env_intersection = set(env_order).intersection(client_env_list)
+            final_list = []
+            for ord_env in env_order:
+                if ord_env in env_intersection:
+                    final_list.append(ord_env)
+            return final_list
+
         elif env_order:
             return env_order
         else:
