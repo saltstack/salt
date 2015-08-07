@@ -33,6 +33,8 @@ def _remove_complex_types(dictionary):
         elif hasattr(v, 'to_eng_string'):
             dictionary[k] = v.to_eng_string()
 
+    return dictionary
+
 
 def defaults():
     return {'os': 'proxy', 'kernel': 'unknown', 'osrelease': 'proxy'}
@@ -47,4 +49,3 @@ def facts():
 
 def os_family():
     return {'os_family': 'junos'}
-

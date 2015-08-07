@@ -33,6 +33,7 @@ def __virtual__():
     log.debug('rest_sample proxy __virtual__() called...')
     return True
 
+
 def init(opts):
     '''
     Every proxy module needs an 'init', though you can

@@ -37,17 +37,21 @@ log = logging.getLogger(__name__)
 def conn():
     return thisproxy['conn']
 
+
 def facts():
     return thisproxy['conn'].facts
 
+
 def refresh():
     return thisproxy['conn'].facts_refresh()
+
 
 def proxytype():
     '''
     Returns the name of this proxy
     '''
     return 'junos'
+
 
 def id(opts):
     '''
@@ -60,7 +64,7 @@ def ping():
     '''
     Ping?  Pong!
     '''
-    thisproxy['conn'].connected
+    return thisproxy['conn'].connected
 
 
 def shutdown(opts):
@@ -74,6 +78,7 @@ def shutdown(opts):
         thisproxy['conn'].close()
     except Exception:
         pass
+
 
 def rpc():
     return json.dumps(thisproxy['conn'].rpc.get_software_information())
