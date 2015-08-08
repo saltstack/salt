@@ -129,6 +129,8 @@ def _find_remove_targets(name=None,
     Inspect the arguments to pkg.removed and discover what packages need to
     be removed. Return a dict of packages to remove.
     '''
+    if __grains__['os'] == 'FreeBSD':
+        kwargs['with_origin'] = True
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if pkgs:
         to_remove = _repack_pkgs(pkgs)
@@ -149,8 +151,15 @@ def _find_remove_targets(name=None,
     # Check current versions against specified versions
     targets = []
     problems = []
-    for pkgname, pkgver in to_remove.items():
-        cver = cur_pkgs.get(pkgname, [])
+    for pkgname, pkgver in six.iteritems(to_remove):
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
+        origin = bool(re.search('/', pkgname))
+
+        if __grains__['os'] == 'FreeBSD' and origin:
+            cver = [k for k, v in six.iteritems(cur_pkgs) if v['origin'] == pkgname]
+        else:
+            cver = cur_pkgs.get(pkgname, [])
+
         # Package not installed, no need to remove
         if not cver:
             continue
@@ -228,6 +237,9 @@ def _find_install_targets(name=None,
     else:
         ignore_types = []
 
+    if __grains__['os'] == 'FreeBSD':
+        kwargs['with_origin'] = True
+
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if any((pkgs, sources)):
         if pkgs:
@@ -264,7 +276,14 @@ def _find_install_targets(name=None,
 
         to_unpurge = _find_unpurge_targets(desired)
 
-        cver = cur_pkgs.get(name, [])
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
+        origin = bool(re.search('/', name))
+
+        if __grains__['os'] == 'FreeBSD' and origin:
+            cver = [k for k, v in six.iteritems(cur_pkgs) if v['origin'] == name]
+        else:
+            cver = cur_pkgs.get(name, [])
+
         if name not in to_unpurge:
             if version and version in cver and not pkg_verify:
                 # The package is installed and is the correct version
@@ -405,7 +424,14 @@ def _verify_install(desired, new_pkgs):
     ok = []
     failed = []
     for pkgname, pkgver in desired.items():
-        cver = new_pkgs.get(pkgname)
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
+        origin = bool(re.search('/', pkgname))
+
+        if __grains__['os'] == 'FreeBSD' and origin:
+            cver = [k for k, v in six.iteritems(new_pkgs) if v['origin'] == pkgname]
+        else:
+            cver = new_pkgs.get(pkgname)
+
         if not cver:
             failed.append(pkgname)
             continue
@@ -1021,6 +1047,8 @@ def installed(
         not_modified = [x for x in desired if x not in targets and x not in to_reinstall]
         failed = [x for x in targets if x not in modified]
     else:
+        if __grains__['os'] == 'FreeBSD':
+            kwargs['with_origin'] = True
         ok, failed = \
             _verify_install(
                 desired, __salt__['pkg.list_pkgs'](
