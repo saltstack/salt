@@ -776,7 +776,7 @@ repository:
       - git: master https://domain.com/pillar.git root=subdirectory
 
 More information on the git external pillar can be found in the
-:mod:`salt.pillar.get_pillar docs <salt.pillar.git_pillar>`.
+:mod:`salt.pillar.git_pillar docs <salt.pillar.git_pillar>`.
 
 
 .. _faq-gitfs-bug:
