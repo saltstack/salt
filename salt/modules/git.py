@@ -51,11 +51,13 @@ def _git_run(command, cwd=None, runas=None, identity=None,
 
             # copy wrapper to area accessible by ``runas`` user
             # currently no suppport in windows for wrapping git ssh
-            if not utils.is_windows():
-                ssh_id_wrapper = os.path.join(utils.templates.TEMPLATE_DIRNAME,
-                                              'git/ssh-id-wrapper')
-                tmp_file = utils.mkstemp()
-                utils.files.copyfile(ssh_id_wrapper, tmp_file)
+            if not salt.utils.is_windows():
+                ssh_id_wrapper = os.path.join(
+                    salt.utils.templates.TEMPLATE_DIRNAME,
+                    'git/ssh-id-wrapper'
+                )
+                tmp_file = salt.utils.mkstemp()
+                salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
                 os.chmod(tmp_file, 0o500)
                 os.chown(tmp_file, __salt__['file.user_to_uid'](runas), -1)
                 env['GIT_SSH'] = tmp_file
