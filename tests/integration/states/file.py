@@ -1758,10 +1758,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 context={'foo': 'Hello world!'}
             )
             self.assertSaltFalseReturn(ret)
-            self.assertEqual(
+            self.assertIn(
+                ('Source file cannot be the same as destination'),
                 ret[next(iter(ret))]['comment'],
-                ('Unable to manage file: Source file cannot be the same as '
-                    'destination')
             )
         finally:
             os.remove(source)
