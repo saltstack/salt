@@ -109,16 +109,43 @@ Server configuration values and their defaults:
 
 .. code-block:: yaml
 
+    # Server to auth against
     auth.ldap.server: localhost
+
+    # Port to connect via
     auth.ldap.port: 389
+
+    # Use TLS when connecting
     auth.ldap.tls: False
+
+    # LDAP scope level, almost always 2
     auth.ldap.scope: 2
-    auth.ldap.uri: ''
-    auth.ldap.tls: False
+
+    # Server specified in URI format
+    auth.ldap.uri: ''    # Overrides .ldap.server, .ldap.port, .ldap.tls above
+
+    # Verify server's TLS certificate
     auth.ldap.no_verify: False
+
+    # Bind to LDAP anonymously to determine group membership
+    # Active Directory does not allow anonymous binds without special configuration
     auth.ldap.anonymous: False
+
+    # FOR TESTING ONLY, this is a VERY insecure setting.
+    # If this is True, the LDAP bind password will be ignored and
+    # access will be determined by group membership alone with
+    # the group memberships being retrieved via anonymous bind
+    auth.ldap.auth_by_group_membership_only: False
+
+    # Require authenticating user to be part of this Organizational Unit
+    # This can be blank if your LDAP schema does not use this kind of OU
     auth.ldap.groupou: 'Groups'
+
+    # Object Class for groups.  An LDAP search will be done to find all groups of this
+    # class to which the authenticating user belongs.
     auth.ldap.groupclass: 'posixGroup'
+
+    # Unique ID attribute name for the user
     auth.ldap.accountattributename: 'memberUid'
 
     # These are only for Active Directory
@@ -133,7 +160,7 @@ the DN to bind to:
     auth.ldap.basedn: dc=saltstack,dc=com
     auth.ldap.binddn: cn=admin,dc=saltstack,dc=com
 
-To bind to a DN, a password is required
+To bind to a DN, a password is required unless anonymous is True above (not recommended)
 
 .. code-block:: yaml
 
