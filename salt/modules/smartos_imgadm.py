@@ -95,16 +95,17 @@ def avail(search=None):
     cmd = '{0} avail'.format(imgadm)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
+    result = []
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
     if search:
         for line in res['stdout'].splitlines():
             if search in line:
-                ret = line
+                result.append(line)
     else:
-        ret = res['stdout'].splitlines()
-    return ret
+        result = res['stdout'].splitlines()
+    return result
 
 
 def list_installed():
