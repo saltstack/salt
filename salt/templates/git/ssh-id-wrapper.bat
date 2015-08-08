@@ -1,7 +1,6 @@
 @echo off
-set opts="-oStrictHostKeyChecking=no -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no -oChallengeResponseAuthentication=no"
+set opts=-oStrictHostKeyChecking=no -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no -oChallengeResponseAuthentication=no
 if "%GIT_IDENTITY%" == "" goto NOIDENT
-set opts="%opts% -i %GIT_IDENTITY%"
+set ident=-oIdentityFile='%GIT_IDENTITY%'
 :NOIDENT
-
-%GIT_SSH% %opts% %*
+"%GIT_SSH_EXE%" %opts% %ident% %*

@@ -5,6 +5,7 @@ Support for the Git SCM
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import os
 import shlex
 
@@ -14,6 +15,8 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -51,11 +54,27 @@ def _git_run(command, cwd=None, runas=None, identity=None,
 
             # copy wrapper to area accessible by ``runas`` user
             # currently no suppport in windows for wrapping git ssh
-            if not salt.utils.is_windows():
-                ssh_id_wrapper = os.path.join(
-                    salt.utils.templates.TEMPLATE_DIRNAME,
-                    'git/ssh-id-wrapper'
-                )
+            ssh_id_wrapper = os.path.join(
+                salt.utils.templates.TEMPLATE_DIRNAME,
+                'git/ssh-id-wrapper'
+            )
+            if salt.utils.is_windows():
+                for suffix in ('', ' (x86)'):
+                    ssh_exe = (
+                        'C:\\Program Files{0}\\Git\\bin\\ssh.exe'
+                        .format(suffix)
+                    )
+                    if os.path.isfile(ssh_exe):
+                        env['GIT_SSH_EXE'] = ssh_exe
+                        break
+                else:
+                    raise CommandExecutionError(
+                        'Failed to find ssh.exe, unable to use identity file'
+                    )
+                # Use the windows batch file instead of the bourne shell script
+                ssh_id_wrapper += '.bat'
+                env['GIT_SSH'] = ssh_id_wrapper
+            else:
                 tmp_file = salt.utils.mkstemp()
                 salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
                 os.chmod(tmp_file, 0o500)
@@ -71,7 +90,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                                                  ignore_retcode=ignore_retcode,
                                                  **kwargs)
             finally:
-                if 'GIT_SSH' in env:
+                if not salt.utils.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
 
             # if the command was successful, no need to try additional IDs
@@ -135,7 +154,8 @@ def _format_opts(opts):
             # time _format_opts() is invoked.
             return opts[:-1]
     except IndexError:
-        return opts
+        pass
+    return opts
 
 
 def _add_http_basic_auth(url, https_user=None, https_pass=None):
@@ -575,7 +595,7 @@ def fetch(cwd,
         remote = str(remote)
     if remote:
         command.append(remote)
-    command.extend(format_opts(opts))
+    command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -743,8 +763,8 @@ def checkout(cwd, rev, force=False, opts='', user=None, ignore_retcode=False):
         command.append('--force')
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(shlex.split(rev))
     command.extend(_format_opts(opts))
+    command.append(rev)
     # Checkout message goes to stderr
     return _git_run(command,
                     cwd=cwd,

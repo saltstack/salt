@@ -69,6 +69,25 @@ def _parse_fetch(output):
     return ret
 
 
+def _get_local_rev(target, user):
+    '''
+    Return the local revision for before/after comparisons
+    '''
+    log.debug('Checking local revision for {0}'.format(target))
+    try:
+        return __salt__['git.revision'](target, user=user, ignore_retcode=True)
+    except CommandExecutionError:
+        log.debug('No local revision for {0}'.format(target))
+        return None
+
+
+def _strip_exc(exc):
+    '''
+    Strip the actual command that was run
+    '''
+    return re.sub('^Command [\'"].+[\'"] failed: ', '', exc.strerror)
+
+
 def _fail(ret, comment):
     ret['result'] = False
     ret['comment'] = comment
@@ -289,13 +308,7 @@ def latest(name,
     if os.path.isdir(gitdir) or __salt__['git.is_worktree'](target):
         # Target directory is a git repository or git worktree
         try:
-            log.debug('Checking local revision for {0}'.format(target))
-            try:
-                local_rev = __salt__['git.revision'](
-                    target, user=user, ignore_retcode=True)
-            except CommandExecutionError:
-                log.debug('No local revision for {0}'.format(target))
-                local_rev = None
+            local_rev = _get_local_rev(target, user)
 
             log.debug('Checking local branch for {0}'.format(target))
             try:
@@ -327,7 +340,7 @@ def latest(name,
                 # that rev doesn't exist on the remote repo.
                 return _fail(
                     ret,
-                    'local checkout of repository is empty and no revision '
+                    'Local checkout of repository is empty and no revision '
                     'matching \'{0}\' exists in the remote repository'
                     .format(rev)
                 )
@@ -347,13 +360,6 @@ def latest(name,
                 # the same value as local_rev and don't make any changes.
                 new_rev = local_rev
             else:
-                if __opts__['test']:
-                    return _neutral_test(
-                        ret,
-                        'Git checkout at {0} would be updated from {0} to {1}'
-                        .format(target, local_rev, remote_rev)
-                    )
-
                 # If always_fetch is set to True, then we definitely need to
                 # fetch. Otherwise, we'll rely on the logic below to turn on
                 # fetch_needed if a fetch is required.
@@ -448,6 +454,7 @@ def latest(name,
                         if fetch_changes:
                             ret['changes']['fetch'] = fetch_changes
 
+                    log.debug('checkout_opts = {0}'.format(checkout_opts))
                     __salt__['git.checkout'](target,
                                              checkout_rev,
                                              force=force_checkout,
@@ -527,7 +534,11 @@ def latest(name,
                 'Unexpected exception in git.latest state',
                 exc_info=True
             )
-            return _fail(ret, str(exc))
+            if isinstance(exc, CommandExecutionError):
+                comment = _strip_exc(exc)
+            else:
+                comment = str(exc)
+            return _fail(ret, comment)
 
         if local_rev != new_rev:
             log.info(
@@ -536,6 +547,8 @@ def latest(name,
             )
             ret['comment'] = 'Repository {0} updated'.format(target)
             ret['changes']['revision'] = {'old': local_rev, 'new': new_rev}
+        else:
+            ret['comment'] = 'Repository {0} is up-to-date'.format(target)
     else:
         if os.path.isdir(target):
             if force:
@@ -587,6 +600,8 @@ def latest(name,
                     )
                 )
         try:
+            local_rev = _get_local_rev(target, user)
+
             clone_opts = ['--mirror'] if mirror else ['--bare'] if bare else []
             if remote != 'origin':
                 clone_opts.extend(['--origin', remote])
@@ -645,7 +660,11 @@ def latest(name,
                 'Unexpected exception in git.latest state',
                 exc_info=True
             )
-            return _fail(ret, str(exc))
+            if isinstance(exc, CommandExecutionError):
+                comment = _strip_exc(exc)
+            else:
+                comment = str(exc)
+            return _fail(ret, comment)
 
         message = 'Repository {0} cloned to {1}'.format(name, target)
         log.info(message)
