@@ -119,18 +119,21 @@ def _format_opts(opts):
         return []
     elif isinstance(opts, list):
         if any(x for x in opts if not isinstance(x, six.string_types)):
-            return [str(x) for x in opts]
+            opts = [str(x) for x in opts]
+    else:
+        if not isinstance(opts, six.string_types):
+            opts = [str(opts)]
+        else:
+            opts = shlex.split(opts)
+    try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
             # it'll be added back (if necessary) in the calling function.
             # Putting this check here keeps it from having to be repeated every
             # time _format_opts() is invoked.
             return opts[:-1]
+    except IndexError:
         return opts
-    else:
-        if not isinstance(opts, six.string_types):
-            return [str(opts)]
-        return shlex.split(opts)
 
 
 def _add_http_basic_auth(url, https_user=None, https_pass=None):
