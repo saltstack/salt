@@ -81,7 +81,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 stderrs.append(result['stderr'])
 
         # we've tried all IDs and still haven't passed, so error out
-        raise CommandExecutionError("\n\n".join(stderrs))
+        raise CommandExecutionError('\n\n'.join(stderrs))
 
     else:
         result = __salt__['cmd.run_all'](command,
