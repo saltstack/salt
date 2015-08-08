@@ -207,7 +207,8 @@ def query(url,
         else:
             auth = None
     else:
-        (username, password) = auth
+        if not username and not password and isinstance(auth, tuple):
+            (username, password) = auth
 
     if requests_lib is True:
         sess = requests.Session()
