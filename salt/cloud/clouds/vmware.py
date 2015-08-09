@@ -27,23 +27,25 @@ cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      driver: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter01.domain.com"
+      provider: vmware
+      user: 'DOMAIN\\user'
+      password: 'verybadpass'
+      url: '10.20.30.40'
 
-    vmware-vcenter02:
-      driver: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter02.domain.com"
+    vcenter01:
+      provider: vmware
+      user: 'DOMAIN\\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
 
-    vmware-vcenter03:
-      driver: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter03.domain.com"
-      protocol: "http"
+    vcenter02:
+      provider: vmware
+      user: 'DOMAIN\\user'
+      password: 'verybadpass'
+      url: 'vcenter02.domain.com'
+      protocol: 'http'
       port: 80
 
 .. note::
@@ -202,11 +204,13 @@ def _get_si():
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            except:
-                err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            except Exception as exc:
+                err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
+                log.debug(exc)
                 raise SaltCloudSystemExit(err_msg)
         else:
-            err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
+            log.debug(exc)
             raise SaltCloudSystemExit(err_msg)
 
     atexit.register(Disconnect, si)
@@ -865,10 +869,9 @@ def _format_instance_info_select(vm, selection):
     if 'tools_status' in selection:
         vm_select_info['tools_status'] = str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
 
-    if ('private_ips' or 'mac_address' or 'networks') in selection:
+    if 'private_ips' in selection or 'networks' in selection:
         network_full_info = {}
         ip_addresses = []
-        mac_addresses = []
 
         if "guest.net" in vm:
             for net in vm["guest.net"]:
@@ -878,48 +881,63 @@ def _format_instance_info_select(vm, selection):
                     'mac_address': net.macAddress
                 }
                 ip_addresses.extend(net.ipAddress)
-                mac_addresses.append(net.macAddress)
 
         if 'private_ips' in selection:
             vm_select_info['private_ips'] = ip_addresses
 
-        if 'mac_address' in selection:
-            vm_select_info['mac_address'] = mac_addresses
-
         if 'networks' in selection:
             vm_select_info['networks'] = network_full_info
 
-    if 'devices' in selection:
+    if 'devices' in selection or 'mac_addresses' in selection:
         device_full_info = {}
+        device_mac_addresses = []
         if "config.hardware.device" in vm:
             for device in vm["config.hardware.device"]:
-                device_full_info[device.deviceInfo.label] = {
-                    'key': device.key,
-                    'label': device.deviceInfo.label,
-                    'summary': device.deviceInfo.summary,
-                    'type': type(device).__name__.rsplit(".", 1)[1],
-                    'unitNumber': device.unitNumber
-                }
+                device_full_info[device.deviceInfo.label] = {}
+                if 'devices' in selection:
+                    device_full_info[device.deviceInfo.label]['key'] = device.key,
+                    device_full_info[device.deviceInfo.label]['label'] = device.deviceInfo.label,
+                    device_full_info[device.deviceInfo.label]['summary'] = device.deviceInfo.summary,
+                    device_full_info[device.deviceInfo.label]['type'] = type(device).__name__.rsplit(".", 1)[1]
 
-                if hasattr(device.backing, 'network'):
-                    device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+                    if device.unitNumber:
+                        device_full_info[device.deviceInfo.label]['unitNumber'] = device.unitNumber
+
+                    if hasattr(device, 'connectable') and device.connectable:
+                        device_full_info[device.deviceInfo.label]['startConnected'] = device.connectable.startConnected
+                        device_full_info[device.deviceInfo.label]['allowGuestControl'] = device.connectable.allowGuestControl
+                        device_full_info[device.deviceInfo.label]['connected'] = device.connectable.connected
+                        device_full_info[device.deviceInfo.label]['status'] = device.connectable.status
+
+                    if hasattr(device, 'controllerKey') and device.controllerKey:
+                        device_full_info[device.deviceInfo.label]['controllerKey'] = device.controllerKey
+
+                    if hasattr(device, 'addressType'):
+                        device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+
+                    if hasattr(device, 'busNumber'):
+                        device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+                    if hasattr(device, 'device'):
+                        device_full_info[device.deviceInfo.label]['deviceKeys'] = device.device
+
+                    if hasattr(device, 'videoRamSizeInKB'):
+                        device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+                    if isinstance(device, vim.vm.device.VirtualDisk):
+                        device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+                        device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+                        device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+
+                if hasattr(device, 'macAddress'):
                     device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+                    device_mac_addresses.append(device.macAddress)
 
-                if hasattr(device, 'busNumber'):
-                    device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+        if 'devices' in selection:
+            vm_select_info['devices'] = device_full_info
 
-                if hasattr(device, 'device'):
-                    device_full_info[device.deviceInfo.label]['devices'] = device.device
-
-                if hasattr(device, 'videoRamSizeInKB'):
-                    device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
-
-                if isinstance(device, vim.vm.device.VirtualDisk):
-                    device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
-                    device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
-                    device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
-
-        vm_select_info['devices'] = device_full_info
+        if 'mac_addresses' in selection:
+            vm_select_info['mac_addresses'] = device_mac_addresses
 
     if 'storage' in selection:
         storage_full_info = {
@@ -946,26 +964,40 @@ def _format_instance_info_select(vm, selection):
 
 def _format_instance_info(vm):
     device_full_info = {}
-
+    device_mac_addresses = []
     if "config.hardware.device" in vm:
         for device in vm["config.hardware.device"]:
             device_full_info[device.deviceInfo.label] = {
                 'key': device.key,
                 'label': device.deviceInfo.label,
                 'summary': device.deviceInfo.summary,
-                'type': type(device).__name__.rsplit(".", 1)[1],
-                'unitNumber': device.unitNumber
+                'type': type(device).__name__.rsplit(".", 1)[1]
             }
 
-            if hasattr(device.backing, 'network'):
+            if device.unitNumber:
+                device_full_info[device.deviceInfo.label]['unitNumber'] = device.unitNumber
+
+            if hasattr(device, 'connectable') and device.connectable:
+                device_full_info[device.deviceInfo.label]['startConnected'] = device.connectable.startConnected
+                device_full_info[device.deviceInfo.label]['allowGuestControl'] = device.connectable.allowGuestControl
+                device_full_info[device.deviceInfo.label]['connected'] = device.connectable.connected
+                device_full_info[device.deviceInfo.label]['status'] = device.connectable.status
+
+            if hasattr(device, 'controllerKey') and device.controllerKey:
+                device_full_info[device.deviceInfo.label]['controllerKey'] = device.controllerKey
+
+            if hasattr(device, 'addressType'):
                 device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+
+            if hasattr(device, 'macAddress'):
                 device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+                device_mac_addresses.append(device.macAddress)
 
             if hasattr(device, 'busNumber'):
                 device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
 
             if hasattr(device, 'device'):
-                device_full_info[device.deviceInfo.label]['devices'] = device.device
+                device_full_info[device.deviceInfo.label]['deviceKeys'] = device.device
 
             if hasattr(device, 'videoRamSizeInKB'):
                 device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
@@ -993,7 +1025,6 @@ def _format_instance_info(vm):
 
     network_full_info = {}
     ip_addresses = []
-    mac_addresses = []
     if "guest.net" in vm:
         for net in vm["guest.net"]:
             network_full_info[net.network] = {
@@ -1002,7 +1033,6 @@ def _format_instance_info(vm):
                 'mac_address': net.macAddress
             }
             ip_addresses.extend(net.ipAddress)
-            mac_addresses.append(net.macAddress)
 
     cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
     ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
@@ -1018,7 +1048,7 @@ def _format_instance_info(vm):
         'files': file_full_info,
         'guest_id': str(vm["config.guestId"]) if "config.guestId" in vm else "N/A",
         'hostname': str(vm["object"].guest.hostName),
-        'mac_address': mac_addresses,
+        'mac_addresses': device_mac_addresses,
         'networks': network_full_info,
         'path': str(vm["config.files.vmPathName"]) if "config.files.vmPathName" in vm else "N/A",
         'tools_status': str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
@@ -1531,10 +1561,10 @@ def list_nodes_select(call=None):
     if 'state' in selection:
         vm_properties.append("summary.runtime.powerState")
 
-    if ('private_ips' or 'mac_address' or 'networks') in selection:
+    if 'private_ips' in selection or 'networks' in selection:
         vm_properties.append("guest.net")
 
-    if 'devices' in selection:
+    if 'devices' in selection or 'mac_addresses' in selection:
         vm_properties.append("config.hardware.device")
 
     if 'storage' in selection:
@@ -2059,7 +2089,7 @@ def create(vm_):
             return False
     except AttributeError:
         pass
-
+    
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
     if 'provider' in vm_:
@@ -3219,17 +3249,17 @@ def add_host(kwargs=None, call=None):
 
         .. code-block:: yaml
 
-            vmware-vcenter01:
+            vcenter01:
               provider: vmware
-              user: "DOMAIN\\user"
-              password: "verybadpass"
-              url: "vcenter01.domain.com"
+              user: 'DOMAIN\\user'
+              password: 'verybadpass'
+              url: 'vcenter01.domain.com'
 
               # Required when adding a host system
-              esxi_host_user: "root"
-              esxi_host_password: "myhostpassword"
+              esxi_host_user: 'root'
+              esxi_host_password: 'myhostpassword'
               # Optional fields that can be specified when adding a host system
-              esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+              esxi_host_ssl_thumbprint: '12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD'
 
         The SSL thumbprint of the host system can be optionally specified by setting
         ``esxi_host_ssl_thumbprint`` under your provider configuration. To get the SSL
