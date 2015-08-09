@@ -217,7 +217,7 @@ def get(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
+    ret = json.loads(res['stdout'])
     return ret
 
 
