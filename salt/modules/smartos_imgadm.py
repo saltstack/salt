@@ -71,7 +71,7 @@ def update_installed():
 
     .. code-block:: bash
 
-        salt '*' imgadm.update_installed()
+        salt '*' imgadm.update_installed
     '''
     imgadm = _check_imgadm()
     if imgadm:
