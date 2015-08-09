@@ -946,7 +946,7 @@ def _format_instance_info_select(vm, selection):
 
 def _format_instance_info(vm):
     device_full_info = {}
-
+    device_mac_addresses = []
     if "config.hardware.device" in vm:
         for device in vm["config.hardware.device"]:
             device_full_info[device.deviceInfo.label] = {
@@ -957,9 +957,12 @@ def _format_instance_info(vm):
                 'unitNumber': device.unitNumber
             }
 
-            if hasattr(device.backing, 'network'):
+            if hasattr(device, 'addressType'):
                 device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+
+            if hasattr(device, 'macAddress'):
                 device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+                device_mac_addresses.append(device.macAddress)
 
             if hasattr(device, 'busNumber'):
                 device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
@@ -1003,6 +1006,9 @@ def _format_instance_info(vm):
             }
             ip_addresses.extend(net.ipAddress)
             mac_addresses.append(net.macAddress)
+
+    if len(mac_addresses) == 0:
+        mac_addresses = device_mac_addresses
 
     cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
     ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
