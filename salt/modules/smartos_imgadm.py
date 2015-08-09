@@ -262,6 +262,9 @@ def delete(uuid=None):
     '''
     Remove an installed image
 
+    uuid : string
+        Specifies uuid to import
+
     CLI Example:
 
     .. code-block:: bash
@@ -279,8 +282,13 @@ def delete(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
-    return ret
+    # output: Deleted image d5b3865c-0804-11e5-be21-dbc4ce844ddc
+    result = []
+    for image in res['stdout'].splitlines():
+        image = [var for var in image.split(" ") if var]
+        result.append(image[2])
+
+    return result
 
 
 def vacuum(verbose=False):
