@@ -284,7 +284,7 @@ class FileTestCase(TestCase):
         with patch.object(os.path, 'isfile', mock_t):
             with patch.dict(filestate.__opts__, {'test': True}):
                 comt = ('File {0} is set for removal'.format(name))
-                ret.update({'comment': comt, 'name': name, 'result': None, 'pchanges': {'removed': '/fake/file.conf'} })
+                ret.update({'comment': comt, 'name': name, 'result': None, 'pchanges': {'removed': '/fake/file.conf'}})
                 self.assertDictEqual(filestate.absent(name), ret)
 
             with patch.dict(filestate.__opts__, {'test': False}):
