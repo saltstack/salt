@@ -3215,17 +3215,17 @@ def add_host(kwargs=None, call=None):
 
         .. code-block:: yaml
 
-            vmware-vcenter01:
+            vcenter01:
               provider: vmware
-              user: "DOMAIN\\user"
-              password: "verybadpass"
-              url: "vcenter01.domain.com"
+              user: 'DOMAIN\user'
+              password: 'verybadpass'
+              url: 'vcenter01.domain.com'
 
               # Required when adding a host system
-              esxi_host_user: "root"
-              esxi_host_password: "myhostpassword"
+              esxi_host_user: 'root'
+              esxi_host_password: 'myhostpassword'
               # Optional fields that can be specified when adding a host system
-              esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+              esxi_host_ssl_thumbprint: '12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD'
 
         The SSL thumbprint of the host system can be optionally specified by setting
         ``esxi_host_ssl_thumbprint`` under your provider configuration. To get the SSL
