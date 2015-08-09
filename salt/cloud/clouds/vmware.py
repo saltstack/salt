@@ -28,13 +28,13 @@ cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: 'DOMAIN\user'
+      user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: '10.20.30.40'
 
     vcenter01:
       provider: vmware
-      user: 'DOMAIN\user'
+      user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter01.domain.com'
       protocol: 'https'
@@ -42,7 +42,7 @@ cloud configuration at
 
     vcenter02:
       provider: vmware
-      user: 'DOMAIN\user'
+      user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter02.domain.com'
       protocol: 'http'
@@ -3237,7 +3237,7 @@ def add_host(kwargs=None, call=None):
 
             vcenter01:
               provider: vmware
-              user: 'DOMAIN\user'
+              user: 'DOMAIN\\user'
               password: 'verybadpass'
               url: 'vcenter01.domain.com'
 
