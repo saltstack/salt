@@ -230,15 +230,18 @@ def delete(uuid=None):
     return ret
 
 
-def vacuum():
+def vacuum(verbose=False):
     '''
     Remove unused images
+
+    verbose : boolean (False)
+        Specifies verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.vacuum
+        salt '*' imgadm.vacuum [True]
     '''
     ret = {}
     imgadm = _check_imgadm()
@@ -256,7 +259,10 @@ def vacuum():
             'name': image[3][1:image[3].index('@')],
             'version': image[3][image[3].index('@')+1:-1]
         }
-    return result
+    if verbose:
+        return result
+    else:
+        return list(result.keys())
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
