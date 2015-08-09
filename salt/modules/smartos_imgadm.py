@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import json
 
 # Import Salt libs
 import salt.utils
@@ -34,6 +35,27 @@ def _exit_status(retcode):
            2: 'Usage error.',
            3: 'Image not installed.'}[retcode]
     return ret
+
+
+def _parse_image_meta(image=None, detail=False):
+    if not image:
+        return {}
+
+    if detail:
+        return {
+            'name': image['manifest']['name'],
+            'version': image['manifest']['version'],
+            'os': image['manifest']['os'],
+            'description': image['manifest']['description'],
+            'published': image['manifest']['published_at'],
+            'source': image['source']
+        }
+    else:
+        return '{name}@{version} [{date}]'.format(
+                name=image['manifest']['name'],
+                version=image['manifest']['version'],
+                date=image['manifest']['published_at'],
+            )
 
 
 def __virtual__():
@@ -83,31 +105,40 @@ def update(uuid=''):
     return {}
 
 
-def avail(search=None):
+def avail(search=None, verbose=False):
     '''
     Return a list of available images
+
+    search : string
+        Specifies search keyword
+    verbose : boolean (False)
+        Specifies verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' imgadm.avail [percona]
+        salt '*' imgadm.avail verbose=True
     '''
     ret = {}
     imgadm = _check_imgadm()
-    cmd = '{0} avail'.format(imgadm)
+    cmd = '{0} avail -j'.format(imgadm)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    result = []
+    result = {}
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    if search:
-        for line in res['stdout'].splitlines():
-            if search in line:
-                result.append(line)
-    else:
-        result = res['stdout'].splitlines()
+
+    for image in json.loads(res['stdout']):
+        if image['manifest']['disabled'] or not image['manifest']['public']:
+            continue
+        if search and search not in image['manifest']['name']:
+            # we skip if we are searching but don't have a match
+            continue
+        result[image['manifest']['uuid']] = _parse_image_meta(image, verbose)
+
     return result
 
 
