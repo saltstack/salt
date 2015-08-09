@@ -1,3 +1,4 @@
+.. _windows-package-manager:
 ===========================
 Windows Software Repository
 ===========================
