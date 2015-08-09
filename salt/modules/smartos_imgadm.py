@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 # Function aliases
 __func_alias__ = {
     'list_installed': 'list',
-    'update_installed': update,
+    'update_installed': 'update',
     'import_image': 'import'
 }
 
