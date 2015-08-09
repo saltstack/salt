@@ -142,26 +142,33 @@ def avail(search=None, verbose=False):
     return result
 
 
-def list_installed():
+def list(verbose=False):
     '''
     Return a list of installed images
+
+    verbose : boolean (False)
+        Specifies verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.list_installed
+        salt '*' imgadm.list [verbose=True]
     '''
     ret = {}
     imgadm = _check_imgadm()
-    cmd = '{0} list'.format(imgadm)
+    cmd = '{0} list -j'.format(imgadm)
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
+    result = {}
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret = res['stdout'].splitlines()
-    return ret
+
+    for image in json.loads(res['stdout']):
+        result[image['manifest']['uuid']] = _parse_image_meta(image, verbose)
+
+    return result
 
 
 def show(uuid=None):
@@ -275,7 +282,7 @@ def vacuum(verbose=False):
 
     .. code-block:: bash
 
-        salt '*' imgadm.vacuum [True]
+        salt '*' imgadm.vacuum [verbose=True]
     '''
     ret = {}
     imgadm = _check_imgadm()
