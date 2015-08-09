@@ -28,22 +28,24 @@ cloud configuration at
 
     my-vmware-config:
       provider: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter01.domain.com"
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: '10.20.30.40'
 
-    vmware-vcenter02:
+    vcenter01:
       provider: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter02.domain.com"
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
 
-    vmware-vcenter03:
+    vcenter02:
       provider: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter03.domain.com"
-      protocol: "http"
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter02.domain.com'
+      protocol: 'http'
       port: 80
 
 .. note::
