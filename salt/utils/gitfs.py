@@ -226,7 +226,7 @@ class GitProvider(object):
         remote. Return the full path to that relative root if it does exist,
         otherwise return None.
         '''
-        root_dir = os.path.join(self.cachedir, self.root).rstrip('/')
+        root_dir = os.path.join(self.cachedir, self.root).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -358,10 +358,10 @@ class GitProvider(object):
         '''
         Examine self.id and assign self.url (and self.branch, for git_pillar)
         '''
-        if self.role == 'git_pillar':
-            # With git_pillar, the remote is specified in the format
-            # "<branch> <url>", so that we can get a unique identifier to
-            # hash for each remote.
+        if self.role in ('git_pillar', 'winrepo'):
+            # With winrepo and git_pillar, the remote is specified in the
+            # format '<branch> <url>', so that we can get a unique identifier
+            # to hash for each remote.
             try:
                 self.branch, self.url = self.id.split(None, 1)
             except ValueError:
@@ -2243,20 +2243,33 @@ class WinRepo(GitBase):
     Functionality specific to the winrepo runner
     '''
     def __init__(self, opts):
-        self.role = 'win_repo'
+        self.role = 'winrepo'
         # Dulwich has no function to check out a branch/tag, so this will be
         # limited to GitPython and Pygit2 for the forseeable future.
+        if 'win_repo' in opts:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_repo\' config option is deprecated, please use '
+                '\'winrepo_dir\' instead.'
+            )
+            winrepo_dir = opts['win_repo']
+        else:
+            winrepo_dir = opts['winrepo_dir']
+        # The 'root' option is not available in winrepo, but we still need to
+        # have this option present in the opts dict because the provider code
+        # depends on it. Just make it an empty string.
+        opts['winrepo_root'] = ''
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'),
-                         cache_root=opts['win_repo'])
+                         cache_root=winrepo_dir)
 
     def checkout(self):
         '''
-        Checkout the targeted branches/tags from the win_repo remotes
+        Checkout the targeted branches/tags from the winrepo remotes
         '''
-        self.win_repo_dirs = {}
+        self.winrepo_dirs = {}
         for repo in self.remotes:
             cachedir = repo.checkout()
             if cachedir is not None:
-                self.win_repo_dirs[repo.url] = cachedir
+                self.winrepo_dirs[repo.url] = cachedir
