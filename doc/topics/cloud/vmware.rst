@@ -2,7 +2,7 @@
 Getting Started With VMware
 ===========================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.5.4
 
 **Author**: Nitin Madhok <nmadhok@clemson.edu>
 
@@ -33,23 +33,25 @@ set up in the cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      driver: vmware
-      user: "DOMAIN\user"
-      password: "verybadpass"
-      url: "vcenter01.domain.com"
+      provider: vmware
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: '10.20.30.40'
 
-    vmware-vcenter02:
-      driver: vmware
-      user: "DOMAIN\user"
-      password: "verybadpass"
-      url: "vcenter02.domain.com"
+    vcenter01:
+      provider: vmware
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
 
-    vmware-vcenter03:
-      driver: vmware
-      user: "DOMAIN\user"
-      password: "verybadpass"
-      url: "vcenter03.domain.com"
-      protocol: "http"
+    vcenter02:
+      provider: vmware
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter02.domain.com'
+      protocol: 'http'
       port: 80
 
 .. note::
@@ -68,7 +70,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     vmware-centos6.5:
-      provider: vmware-vcenter01
+      provider: vcenter01
       clonefrom: test-vm
 
       ## Optional arguments
