@@ -2089,7 +2089,7 @@ def create(vm_):
             return False
     except AttributeError:
         pass
-    
+
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
     if 'provider' in vm_:
