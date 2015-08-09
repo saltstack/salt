@@ -27,13 +27,13 @@ cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: '10.20.30.40'
 
     vcenter01:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter01.domain.com'
@@ -41,7 +41,7 @@ cloud configuration at
       port: 443
 
     vcenter02:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter02.domain.com'
@@ -3250,7 +3250,7 @@ def add_host(kwargs=None, call=None):
         .. code-block:: yaml
 
             vcenter01:
-              provider: vmware
+              driver: vmware
               user: 'DOMAIN\\user'
               password: 'verybadpass'
               url: 'vcenter01.domain.com'
