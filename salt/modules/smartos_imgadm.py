@@ -230,4 +230,33 @@ def delete(uuid=None):
     return ret
 
 
+def vacuum():
+    '''
+    Remove unused images
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' imgadm.vacuum
+    '''
+    ret = {}
+    imgadm = _check_imgadm()
+    cmd = '{0} vacuum -f'.format(imgadm)
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = _exit_status(retcode)
+        return ret
+    # output: Deleted image d5b3865c-0804-11e5-be21-dbc4ce844ddc (lx-centos-6@20150601)
+    result = {}
+    for image in res['stdout'].splitlines():
+        image = [var for var in image.split(" ") if var]
+        result[image[2]] = {
+            'name': image[3][1:image[3].index('@')],
+            'version': image[3][image[3].index('@')+1:-1]
+        }
+    return result
+
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
