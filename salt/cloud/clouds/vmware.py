@@ -888,7 +888,7 @@ def _format_instance_info_select(vm, selection):
         if 'networks' in selection:
             vm_select_info['networks'] = network_full_info
 
-    if 'devices' in selection or 'mac_addresses' in selection:
+    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
         device_full_info = {}
         device_mac_addresses = []
         if "config.hardware.device" in vm:
@@ -936,7 +936,7 @@ def _format_instance_info_select(vm, selection):
         if 'devices' in selection:
             vm_select_info['devices'] = device_full_info
 
-        if 'mac_addresses' in selection:
+        if 'mac_address' in selection or 'mac_addresses' in selection:
             vm_select_info['mac_addresses'] = device_mac_addresses
 
     if 'storage' in selection:
@@ -1564,7 +1564,7 @@ def list_nodes_select(call=None):
     if 'private_ips' in selection or 'networks' in selection:
         vm_properties.append("guest.net")
 
-    if 'devices' in selection or 'mac_addresses' in selection:
+    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
         vm_properties.append("config.hardware.device")
 
     if 'storage' in selection:
