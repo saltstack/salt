@@ -1687,24 +1687,6 @@ def image_update(call=None, kwargs=None):
     return ret
 
 
-def script(vm_):
-    '''
-    Return the script deployment object.
-
-    vm_
-        The VM for which to deploy a script.
-    '''
-    deploy_script = salt.utils.cloud.os_script(
-        config.get_cloud_config_value('script', vm_, __opts__),
-        vm_,
-        __opts__,
-        salt.utils.cloud.salt_config_to_yaml(
-            salt.utils.cloud.minion_config(__opts__, vm_)
-        )
-    )
-    return deploy_script
-
-
 def show_instance(name, call=None):
     '''
     Show the details from OpenNebula concerning a named VM.
