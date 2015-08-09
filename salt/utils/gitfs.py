@@ -183,6 +183,12 @@ class GitProvider(object):
             self.id = remote
             self.get_url()
 
+        # Winrepo doesn't support the 'root' option, but it still must be part
+        # of the GitProvider object because other code depends on it. Add it as
+        # an empty string.
+        if 'root' not in repo_conf:
+            repo_conf['root'] = ''
+
         # Set all repo config params as attributes
         for key, val in six.iteritems(repo_conf):
             setattr(self, key, val)
@@ -2255,10 +2261,6 @@ class WinRepo(GitBase):
             winrepo_dir = opts['win_repo']
         else:
             winrepo_dir = opts['winrepo_dir']
-        # The 'root' option is not available in winrepo, but we still need to
-        # have this option present in the opts dict because the provider code
-        # depends on it. Just make it an empty string.
-        opts['winrepo_root'] = ''
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'),
