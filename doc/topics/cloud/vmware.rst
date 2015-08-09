@@ -70,7 +70,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     vmware-centos6.5:
-      provider: vmware-vcenter01
+      provider: vcenter01
       clonefrom: test-vm
 
       ## Optional arguments
