@@ -63,19 +63,22 @@ def version():
     return ret[-1]
 
 
-def update_installed():
+def update(uuid=''):
     '''
-    Gather info on unknown images (locally installed)
+    Gather info on unknown image(s) (locally installed)
+
+    uuid : string
+        Specifies uuid of image
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.update_installed
+        salt '*' imgadm.update [uuid]
     '''
     imgadm = _check_imgadm()
     if imgadm:
-        cmd = '{0} update'.format(imgadm)
+        cmd = '{0} update {1}'.format(imgadm, uuid).rstrip()
         __salt__['cmd.run'](cmd)
     return {}
 
