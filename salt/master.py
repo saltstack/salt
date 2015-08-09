@@ -2126,21 +2126,21 @@ class ClearFuncs(object):
         try:
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                    ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            eauth_config = self.opts['external_auth'][clear_load['eauth']]
+            if '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
-                    if "{0}%".format(group) in self.opts['external_auth'][clear_load['eauth']]:
+                    if "{0}%".format(group) in eauth_config:
                         found = True
                         break
                 if not found:
                     log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
-                else:
-                    clear_load['groups'] = groups
             if not self.loadauth.time_auth(clear_load):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
+
+            clear_load['groups'] = groups
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
             log.error(
@@ -2209,43 +2209,45 @@ class ClearFuncs(object):
                     )
                 )
                 return ''
-            if not token:
+
+            # Bail if the token is empty or if the eauth type specified is not allowed
+            if not token or token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if token['eauth'] not in self.opts['external_auth']:
-                log.warning('Authentication failure of type "token" occurred.')
-                return ''
-            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
-                    ('*' in self.opts['external_auth'][token['eauth']])):
-                found = False
-                for group in token['groups']:
-                    if "{0}%".format(group) in self.opts['external_auth'][token['eauth']]:
-                        found = True
-                        break
-                if not found:
-                    log.warning('Authentication failure of type "token" occurred.')
-                    return ''
 
-            group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][token['eauth']])  # The configured auth groups
+            # Fetch eauth config and collect users and groups configured for access
+            eauth_config = self.opts['external_auth'][token['eauth']]
+            eauth_users = []
+            eauth_groups = []
+            for entry in eauth_config:
+                if entry.endswith('%'):
+                    eauth_groups.append(entry.rstrip('%'))
+                else:
+                    eauth_users.append(entry)
 
-            # First we need to know if the user is allowed to proceed via any of their group memberships.
+            # If there are groups in the token, check if any of them are listed in the eauth config
             group_auth_match = False
-            for group_config in group_perm_keys:
-                group_config = group_config.rstrip('%')
+            try:
                 for group in token['groups']:
-                    if group == group_config:
+                    if group in eauth_groups:
                         group_auth_match = True
+                        break
+            except KeyError:
+                pass
+            if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
 
+            # Compile list of authorized actions for the user
             auth_list = []
-
-            if '*' in self.opts['external_auth'][token['eauth']]:
-                auth_list.extend(self.opts['external_auth'][token['eauth']]['*'])
-            if token['name'] in self.opts['external_auth'][token['eauth']]:
-                auth_list.extend(self.opts['external_auth'][token['eauth']][token['name']])
+            # Add permissions for '*' or user-specific to the auth list
+            for user_key in ('*', token['name']):
+                auth_list.extend(eauth_config.get(user_key, []))
+            # Add any add'l permissions allowed by group membership
             if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][token['eauth']], token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
 
-            log.trace("compiled auth_list: {0}".format(auth_list))
+            log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
                 auth_list,
