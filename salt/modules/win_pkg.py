@@ -93,9 +93,9 @@ def latest_version(*names, **kwargs):
             latest_installed = sorted(installed_pkgs[name], cmp=_reverse_cmp_pkg_versions).pop()
             log.debug('Latest installed version of package {0} is {1}'.format(name, latest_installed))
 
-        # get latest available (from win_repo) version of package
+        # get latest available (from winrepo_dir) version of package
         pkg_info = _get_package_info(name)
-        log.trace('Raw win_repo pkg_info for {0} is {1}'.format(name, pkg_info))
+        log.trace('Raw winrepo pkg_info for {0} is {1}'.format(name, pkg_info))
         latest_available = _get_latest_pkg_version(pkg_info)
         if latest_available:
             log.debug('Latest available version of package {0} is {1}'.format(name, latest_available))
@@ -371,25 +371,47 @@ def refresh_db(saltenv='base'):
         salt '*' pkg.refresh_db
     '''
     __context__.pop('winrepo.data', None)
-    repo = __opts__['win_repo_source_dir']
-    cached_files = __salt__['cp.cache_dir'](repo, saltenv, include_pat='*.sls')
+    if 'win_repo_source_dir' in __opts__:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo_source_dir\' config option is deprecated, please '
+            'use \'winrepo_source_dir\' instead.'
+        )
+        winrepo_source_dir = __opts__['win_repo_source_dir']
+    else:
+        winrepo_source_dir = __opts__['winrepo_source_dir']
+
+    cached_files = __salt__['cp.cache_dir'](
+        winrepo_source_dir,
+        saltenv,
+        include_pat='*.sls'
+    )
     genrepo(saltenv=saltenv)
     return cached_files
 
 
 def _get_local_repo_dir(saltenv='base'):
-    master_repo_src = __opts__['win_repo_source_dir']
+    if 'win_repo_source_dir' in __opts__:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo_source_dir\' config option is deprecated, please '
+            'use \'winrepo_source_dir\' instead.'
+        )
+        winrepo_source_dir = __opts__['win_repo_source_dir']
+    else:
+        winrepo_source_dir = __opts__['winrepo_source_dir']
+
     dirs = []
     dirs.append(salt.syspaths.CACHE_DIR)
     dirs.extend(['minion', 'files'])
     dirs.append(saltenv)
-    dirs.extend(master_repo_src[7:].strip('/').split('/'))
+    dirs.extend(winrepo_source_dir[7:].strip('/').split('/'))
     return os.sep.join(dirs)
 
 
 def genrepo(saltenv='base'):
     '''
-    Generate win_repo_cachefile based on sls files in the win_repo
+    Generate winrepo_cachefile based on sls files in the winrepo
 
     CLI Example:
 
