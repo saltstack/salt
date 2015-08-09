@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 
 # Function aliases
 __func_alias__ = {
+    'list_installed': 'list',
+    'update_installed': update,
     'import_image': 'import'
 }
 
@@ -90,7 +92,7 @@ def version():
     return ret[-1]
 
 
-def update(uuid=''):
+def update_installed(uuid=''):
     '''
     Gather info on unknown image(s) (locally installed)
 
@@ -147,7 +149,7 @@ def avail(search=None, verbose=False):
     return result
 
 
-def list(verbose=False):
+def list_installed(verbose=False):
     '''
     Return a list of installed images
 
