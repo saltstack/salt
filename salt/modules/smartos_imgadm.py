@@ -253,7 +253,7 @@ def import_image(uuid=None, verbose=False):
         ret['Error'] = _exit_status(retcode)
         return ret
 
-    return _parse_image_meta(get(uuid), verbose)
+    return {uuid: _parse_image_meta(get(uuid), verbose)}
 
 
 def delete(uuid=None):
