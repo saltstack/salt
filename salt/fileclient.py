@@ -102,10 +102,10 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
-        dest = os.path.join(self.opts['cachedir'],
-                            'files',
-                            saltenv,
-                            path)
+        dest = salt.utils.path_join(self.opts['cachedir'],
+                                    'files',
+                                    saltenv,
+                                    path)
         destdir = os.path.dirname(dest)
         cumask = os.umask(63)
         if not os.path.isdir(destdir):
