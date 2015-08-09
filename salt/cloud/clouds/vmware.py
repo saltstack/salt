@@ -735,11 +735,10 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_vmware_tools(vm_ref, max_wait_minute):
+def _wait_for_vmware_tools(vm_ref, max_wait):
     time_counter = 0
     starttime = time.time()
-    max_wait_second = int(max_wait_minute * 60)
-    while time_counter < max_wait_second:
+    while time_counter < max_wait:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
         if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
@@ -748,21 +747,20 @@ def _wait_for_vmware_tools(vm_ref, max_wait_minute):
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds".format(vm_ref.name, max_wait))
     return False
 
 
-def _wait_for_ip(vm_ref, max_wait_minute):
-    max_wait_minute_vmware_tools = max_wait_minute - 5
-    max_wait_minute_ip = max_wait_minute - max_wait_minute_vmware_tools
-    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
+def _wait_for_ip(vm_ref, max_wait):
+    max_wait_vmware_tools = max_wait
+    max_wait_ip = max_wait
+    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
         return False
 
     time_counter = 0
     starttime = time.time()
-    max_wait_second = int(max_wait_minute_ip * 60)
-    while time_counter < max_wait_second:
+    while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
@@ -779,7 +777,7 @@ def _wait_for_ip(vm_ref, max_wait_minute):
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} minutes".format(vm_ref.name, max_wait_minute_ip))
+    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
     return False
 
 
@@ -2122,6 +2120,9 @@ def create(vm_):
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, search_global=False, default=True
     )
+    wait_for_ip_timeout = config.get_cloud_config_value(
+        'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
+    )
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
     )
@@ -2321,7 +2322,7 @@ def create(vm_):
 
         # If it a template or if it does not need to be powered on then do not wait for the IP
         if not template and power:
-            ip = _wait_for_ip(new_vm_ref, 20)
+            ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
             if ip:
                 log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
                 # ssh or smb using ip and install salt only if deploy is True
