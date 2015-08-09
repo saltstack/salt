@@ -14,6 +14,11 @@ import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
+# Function aliases
+__func_alias__ = {
+    'import_image': 'import'
+}
+
 # Define the module's virtual name
 __virtualname__ = 'imgadm'
 
@@ -217,19 +222,24 @@ def get(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
+    ret = json.loads(res['stdout'])
     return ret
 
 
-def import_image(uuid=None):
+def import_image(uuid=None, verbose=False):
     '''
     Import an image from the repository
+
+    uuid : string
+        Specifies uuid to import
+    verbose : boolean (False)
+        Specifies verbose output
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' imgadm.import_image e42f8c84-bbea-11e2-b920-078fab2aab1f
+        salt '*' imgadm.import e42f8c84-bbea-11e2-b920-078fab2aab1f [verbose=True]
     '''
     ret = {}
     if not uuid:
@@ -242,8 +252,8 @@ def import_image(uuid=None):
     if retcode != 0:
         ret['Error'] = _exit_status(retcode)
         return ret
-    ret[uuid] = res['stdout'].splitlines()
-    return ret
+
+    return _parse_image_meta(get(uuid), verbose)
 
 
 def delete(uuid=None):
