@@ -1566,7 +1566,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
                     'comment': 'File {0} updated'.format(test_file),
-                    'diff': '--- \n+++ \n@@ -1 +1,3 @@\n+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n' 
+                    'diff': '--- \n+++ \n@@ -1 +1,3 @@\n+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
@@ -1758,10 +1758,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 context={'foo': 'Hello world!'}
             )
             self.assertSaltFalseReturn(ret)
-            self.assertEqual(
+            self.assertIn(
+                ('Source file cannot be the same as destination'),
                 ret[next(iter(ret))]['comment'],
-                ('Unable to manage file: Source file cannot be the same as '
-                    'destination')
             )
         finally:
             os.remove(source)
