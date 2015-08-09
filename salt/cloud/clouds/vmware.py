@@ -202,11 +202,13 @@ def _get_si():
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            except:
-                err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            except Exception as exc:
+                err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
+                log.debug(exc)
                 raise SaltCloudSystemExit(err_msg)
         else:
-            err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
+            log.debug(exc)
             raise SaltCloudSystemExit(err_msg)
 
     atexit.register(Disconnect, si)
