@@ -1207,3 +1207,75 @@ have other services that need to go with it.
 .. code-block:: yaml
 
     update_restart_services: ['salt-minion']
+
+
+Windows Software Repo Settings
+==============================
+
+.. important::
+    To use these config options, the minion must be running in masterless mode
+    (set :conf_minion:`file_client` to ``local``).
+
+.. conf_minion:: winrepo_dir
+.. conf_minion:: win_repo
+
+``winrepo_dir``
+---------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo`` to ``winrepo_dir``
+
+Default: ``c:\\salt\\file_roots\\winrepo``
+
+Location on the minion where the :conf_minion:`winrepo_remotes` are checked
+out.
+
+.. code-block:: yaml
+
+    winrepo_dir: /srv/salt/win/repo
+
+.. conf_minion:: winrepo_cachefile
+
+``winrepo_cachefile``
+---------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
+
+Default: ``winrepo.p``
+
+Path relative to :conf_minion:`winrepo_dir` where the winrepo cache should be
+created.
+
+.. code-block:: yaml
+
+    winrepo_cachefile: winrepo.p
+
+.. conf_minion:: winrepo_remotes
+.. conf_minion:: win_gitrepos
+
+``winrepo_remotes``
+-------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``['https://github.com/saltstack/salt-winrepo.git']``
+
+List of git repositories to checkout and include in the winrepo
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://github.com/saltstack/salt-winrepo.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
