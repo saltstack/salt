@@ -34,6 +34,7 @@ __defopts__ = {'auth.ldap.uri': '',
                'auth.ldap.scope': 2,
                'auth.ldap.groupou': 'Groups',
                'auth.ldap.accountattributename': 'memberUid',
+               'auth.ldap.groupattribute': 'memberOf',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
@@ -203,6 +204,7 @@ def _bind(username, password):
 
     # Update connection dictionary with the user's password
     connargs['bindpw'] = password
+
     # Attempt bind with user dn and password
     log.debug('Attempting LDAP bind with user dn: {0}'.format(connargs['binddn']))
     try:
@@ -251,6 +253,7 @@ def groups(username, **kwargs):
     group_list = []
 
     bind = _bind(username, kwargs['password'])
+
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
 
@@ -289,10 +292,11 @@ def groups(username, **kwargs):
                                            ldap.SCOPE_SUBTREE,
                                            '(&({0}={1})(objectClass={2}))'.format(_config('accountattributename'),
                                                                                   username, _config('groupclass')),
-                                           [_config('accountattributename'), 'cn'])
-            for _, entry in search_results:
-                if username in entry[_config('accountattributename')]:
-                    group_list.append(entry['cn'][0])
+                                           [_config('groupattribute'), 'cn'])
+            for user, entry in search_results:
+                if username == user.split(',')[0].split('=')[-1]:
+                    for group in entry[_config('groupattribute')]:
+                        group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
     else:
         log.error('ldap bind to determine group membership FAILED!')
