@@ -826,6 +826,13 @@ class Minion(MinionBase):
                            '{0}'.format(type(opts['master'])))
                     log.error(msg)
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
+                # See issue 21082 for details
+                if opts['retry_dns']:
+                    msg = ('\'master_type\' set to \'failover\' but \'retry_dns\' is not 0. '
+                           'Setting \'retry_dns\' to 0 to failover to the next master on DNS errors.')
+                    log.critical(msg)
+                    opts['retry_dns'] = 0
             else:
                 msg = ('Invalid keyword \'{0}\' for variable '
                        '\'master_type\''.format(opts['master_type']))
