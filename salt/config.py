@@ -2459,12 +2459,20 @@ def is_profile_configured(opts, provider, profile_name):
     .. versionadded:: 2015.8.0
     '''
     # Standard dict keys required by all drivers.
-    required_keys = ['image', 'provider']
+    required_keys = ['provider']
     alias, driver = provider.split(':')
+
+    # Most drivers need an image to be specified, but some do not.
+    non_image_drivers = ['vmware']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'scaleway', 'softlayer',
                         'softlayer_hw', 'vmware', 'vsphere']
+
+    if driver not in non_image_drivers:
+        required_keys.append('image')
+    elif driver == 'vmware':
+        required_keys.append('clonefrom')
 
     if driver not in non_size_drivers:
         required_keys.append('size')
