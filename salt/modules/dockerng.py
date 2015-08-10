@@ -656,6 +656,11 @@ def _get_client(timeout=None):
             # Check if the DOCKER_HOST environment variable has been set
             client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
+        if 'version' not in client_kwargs:
+            # Let docker-py auto detect docker version incase
+            # it's not defined by user.
+            client_kwargs['version'] = 'auto'
+
         __context__['docker.client'] = docker.Client(**client_kwargs)
 
     # Set a new timeout if one was passed
