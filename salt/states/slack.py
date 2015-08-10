@@ -10,7 +10,7 @@ This state is useful for sending messages to Slack during state runs.
 .. code-block:: yaml
 
     slack-message:
-      slack.send_message:
+      slack.post_message:
         - channel: '#general'
         - from_name: SuperAdmin
         - message: 'This state was executed successfully.'
@@ -44,7 +44,7 @@ def post_message(name,
     .. code-block:: yaml
 
         slack-message:
-          slack.send_message:
+          slack.post_message:
             - channel: '#general'
             - from_name: SuperAdmin
             - message: 'This state was executed successfully.'
