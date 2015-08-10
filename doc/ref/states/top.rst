@@ -13,7 +13,7 @@ in concert with each other to create an application stack.
 
 To effectively manage those groups of machines, an administrator needs to
 be able to create roles for those groups. For example, a group of machines
-that serve front-end web traffic might have a roles which indicate that
+that serve front-end web traffic might have roles which indicate that
 those machines should all have the Apache webserver package installed and
 that the Apache service should always be running.
 
@@ -21,9 +21,9 @@ In Salt, the file which contains a mapping between groups of machines on a
 network and the configuration roles that should be applied to them is
 called a `top file`.
 
-Top files are always named `top.sls` and they are so-named because they
-always exist in the "top" of a directory hiearchy that contains state files.
-That directory hiearchy is called a `state tree`.
+Top files are named `top.sls` by default and they are so-named because they
+always exist in the "top" of a directory hierarchy that contains state files.
+That directory hierarchy is called a `state tree`.
 
 A Basic Example
 ===============
@@ -64,7 +64,7 @@ to them:
 Environments
 ============
 
-Environments are directory hiearchies which contain a top files and a set
+Environments are directory hierarchies which contain a top files and a set
 of state files.
 
 Environments can be used in many ways, however there is no requirement that
@@ -157,7 +157,7 @@ Our top file references the environments:
       'db*':
         - db
 
-As seen above, the top file now declares the three enviornments and for each,
+As seen above, the top file now declares the three environments and for each,
 targets are defined to map globs of minion IDs to state files. For example,
 all minions which have an ID beginning with the string `webserver` will have the
 webserver state from the requested environment assigned to it.
@@ -169,6 +169,13 @@ the state into QA by copying the state file into `/srv/salt/qa`.
 
 Choosing an Environment to Target
 =================================
+
+The top file is used to assign a minion to an environment unless overridden
+using the methods described below. The environment in the top file must match
+an environment in :conf_master:`file_roots` in order for any states to be
+applied to that minion. The states that will be applied to a minion in a given
+environment can be viewed using the :py:func:`state.show_top
+<salt.modules.state.show_top>` execution function.
 
 Minions may be pinned to a particular environment by setting the `environment`
 value in the minion configuration file. In doing so, a minion will only
@@ -298,7 +305,7 @@ of matches you can perform:
 How Top Files Are Compiled
 ==========================
 
-When using multiple enviornments, it is not necessary to create a top file for
+When using multiple environments, it is not necessary to create a top file for
 each environment. The most common approach, and the easiest to maintain, is
 to use a single top file placed in only one environment.
 
@@ -306,7 +313,7 @@ However, some workflows do call for multiple top files. In this case, top
 files may be merged together to create `high data` for the state compiler
 to use as a source to compile states on a minion.
 
-For the following discussion of top file compliation, assume the following
+For the following discussion of top file compilation, assume the following
 configuration:
 
 
@@ -335,7 +342,7 @@ The astute reader will ask how the state compiler resolves which should be
 an obvious conflict if a minion is not pinned to a particular environment
 and if no environment argument is passed into a state function.
 
-Given the above, it is initally unclear whether `first.sls` will be applied
+Given the above, it is initially unclear whether `first.sls` will be applied
 or whether `second.sls` will be applied in a `salt '*' state.highstate` command.
 
 When conflicting keys arise, there are several configuration options which
