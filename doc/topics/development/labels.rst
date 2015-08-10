@@ -261,7 +261,7 @@ the tests pass and the pull request can be merged.
 ``Tests Passed``
     The pull request has passed all tests even though some test results are negative.  Sometimes the automated testing
     infrastructure will encounter internal errors unrelated to the code change in the pull request that cause test runs
-    to fail.  These errors can be caused by cloud provider and network issues and also Jenkins issues like erroneously
+    to fail.  These errors can be caused by cloud host and network issues and also Jenkins issues like erroneously
     accumulating workspace artifacts, resource exhaustion, and bugs that arise from long running Jenkins processes.
 
 Other

@@ -2,7 +2,7 @@
 Getting Started With Joyent
 ===========================
 
-Joyent is a public cloud provider supporting SmartOS, Linux, FreeBSD, and
+Joyent is a public cloud host that supports SmartOS, Linux, FreeBSD, and
 Windows.
 
 
@@ -30,6 +30,14 @@ send the provisioning commands up to the freshly created virtual machine.
       private_key: /root/mykey.pem
       keyname: mykey
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========

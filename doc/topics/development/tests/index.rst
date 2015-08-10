@@ -108,7 +108,7 @@ the default cloud provider configuration file for DigitalOcean looks like this:
 .. code-block:: yaml
 
     digitalocean-config:
-      provider: digital_ocean
+      driver: digital_ocean
       client_key: ''
       api_key: ''
       location: New York 1
@@ -119,7 +119,7 @@ must be provided:
 .. code-block:: yaml
 
     digitalocean-config:
-      provider: digital_ocean
+      driver: digital_ocean
       client_key: wFGEwgregeqw3435gDger
       api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: New York 1
