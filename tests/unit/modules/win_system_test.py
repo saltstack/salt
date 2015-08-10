@@ -73,6 +73,7 @@ class WinSystemTestCase(TestCase):
             self.assertEqual(win_system.reboot(), 'salt')
             mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_reboot_with_timeout_in_minutes(self):
         '''
             Test to reboot the system with a timeout
@@ -82,6 +83,7 @@ class WinSystemTestCase(TestCase):
             self.assertEqual(win_system.reboot(5, in_seconds=False), 'salt')
             mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_reboot_with_timeout_in_seconds(self):
         '''
             Test to reboot the system with a timeout
@@ -91,6 +93,7 @@ class WinSystemTestCase(TestCase):
             self.assertEqual(win_system.reboot(5, in_seconds=True), 'salt')
             mock.assert_called_once_with(['shutdown', '/r', '/t', '5'], python_shell=False)
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_reboot_with_wait(self):
         '''
             Test to reboot the system with a timeout and
