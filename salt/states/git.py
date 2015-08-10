@@ -178,9 +178,13 @@ def latest(name,
             must be used.
 
     always_fetch : False
-        If a tag or branch name is used as the rev a fetch will not occur
-        until the tag or branch name changes. Setting this to true will force
-        a fetch to occur. Only applies when ``rev`` is set.
+        If a tag or branch name is used as the rev a fetch will not occur until
+        the tag or branch name changes. Setting this to ``True`` will force a
+        fetch to occur. Only applies when ``rev`` is set.
+
+    fetch_tags : True
+        If ``True``, then when a fetch is performed all tags will be fetched,
+        even those which are not reachable by any branch on the remote.
 
     depth
         Defines depth in history when git a clone is needed in order to ensure
@@ -256,6 +260,9 @@ def latest(name,
         )
         remote = remote_name
 
+    if not remote:
+        return _fail(ret, '\'remote\' option is required')
+
     if not target:
         return _fail(ret, '\'target\' option is required')
 
@@ -302,6 +309,11 @@ def latest(name,
     if isinstance(cret, dict):
         ret.update(cret)
         return ret
+
+    fetch_opts = [
+        'refs/heads/*:refs/remotes/{0}/*'.format(remote),
+        '+refs/tags/*:refs/tags/*'
+    ] if fetch_tags else []
 
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
@@ -448,6 +460,7 @@ def latest(name,
                         output = __salt__['git.fetch'](
                             target,
                             remote=remote,
+                            opts=fetch_opts,
                             user=user,
                             identity=identity)
                         fetch_changes = _parse_fetch(output)
@@ -506,6 +519,7 @@ def latest(name,
                         output = __salt__['git.fetch'](
                             target,
                             remote=remote,
+                            opts=fetch_opts,
                             user=user,
                             identity=identity)
                         fetch_changes = _parse_fetch(output)
