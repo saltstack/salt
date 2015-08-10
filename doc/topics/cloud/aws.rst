@@ -5,9 +5,9 @@ Getting Started With AWS EC2
 Amazon EC2 is a very widely used public cloud platform and one of the core
 platforms Salt Cloud has been built to support.
 
-Previously, the suggested provider for AWS EC2 was the ``aws`` provider. This
-has been deprecated in favor of the ``ec2`` provider. Configuration using the
-old ``aws`` provider will still function, but that driver is no longer in
+Previously, the suggested driver for AWS EC2 was the ``aws`` driver. This
+has been deprecated in favor of the ``ec2`` driver. Configuration using the
+old ``aws`` driver will still function, but that driver is no longer in
 active development.
 
 
@@ -146,6 +146,14 @@ parameters are discussed in more detail below.
 
       driver: ec2
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================

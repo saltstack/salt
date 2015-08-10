@@ -2,7 +2,7 @@
 Getting Started With GoGrid
 ===========================
 
-GoGrid is a public cloud provider supporting Linux and Windows.
+GoGrid is a public cloud host that supports Linux and Windows.
 
 
 Configuration
@@ -32,6 +32,14 @@ in the configuration file to enable interfacing with GoGrid:
     with the GoGrid driver. Map files will work with GoGrid, but the ``-P``
     argument should not be used on maps referencing GoGrid instances.
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
