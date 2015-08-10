@@ -3,6 +3,10 @@
 Manage and query NPM packages.
 '''
 from __future__ import absolute_import
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Import python libs
 import json
@@ -44,7 +48,7 @@ def _check_valid_version(salt):
     '''
     # pylint: disable=no-member
     npm_version = distutils.version.LooseVersion(
-        salt['cmd.run']('npm --version'))
+        salt['cmd.run']('npm --version', python_shell=True))
     valid_version = distutils.version.LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
@@ -105,19 +109,31 @@ def install(pkg=None,
         salt '*' npm.install coffee-script@1.0.1
 
     '''
+    # Protect against injection
+    if pkg:
+        pkg = _cmd_quote(pkg)
+    if pkgs:
+        pkg_list = []
+        for item in pkgs:
+            pkg_list.append(_cmd_quote(item))
+        pkgs = pkg_list
+    if registry:
+        registry = _cmd_quote(registry)
 
-    cmd = 'npm install --silent --json'
+    cmd = ['npm', 'install', '--silent', '--json']
 
     if dir is None:
-        cmd += ' --global'
+        cmd.append(' --global')
 
     if registry:
-        cmd += ' --registry="{0}"'.format(registry)
+        cmd.append(' --registry="{0}"'.format(registry))
 
     if pkg:
-        cmd += ' "{0}"'.format(pkg)
+        cmd.append(pkg)
     elif pkgs:
-        cmd += ' "{0}"'.format('" "'.join(pkgs))
+        cmd.extend(pkgs)
+    else:
+        return 'No package name specified'
 
     if env is None:
         env = {}
@@ -127,7 +143,8 @@ def install(pkg=None,
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas, env=env)
+    cmd = ' '.join(cmd)
+    result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
 
     if result['retcode'] != 0:
         raise CommandExecutionError(result['stderr'])
@@ -190,6 +207,9 @@ def uninstall(pkg,
         salt '*' npm.uninstall coffee-script
 
     '''
+    # Protect against injection
+    if pkg:
+        pkg = _cmd_quote(pkg)
 
     if env is None:
         env = {}
@@ -206,7 +226,7 @@ def uninstall(pkg,
 
     cmd += ' "{0}"'.format(pkg)
 
-    result = __salt__['cmd.run_all'](cmd, python_shell=False, cwd=dir, runas=runas, env=env)
+    result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
 
     if result['retcode'] != 0:
         log.error(result['stderr'])
@@ -250,6 +270,9 @@ def list_(pkg=None,
         salt '*' npm.list
 
     '''
+    # Protect against injection
+    if pkg:
+        pkg = _cmd_quote(pkg)
 
     if env is None:
         env = {}
@@ -272,7 +295,7 @@ def list_(pkg=None,
             cwd=dir,
             runas=runas,
             env=env,
-            python_shell=False,
+            python_shell=True,
             ignore_retcode=True)
 
     # npm will return error code 1 for both no packages found and an actual
