@@ -58,31 +58,33 @@ def genrepo(name, force=False, allow_empty=False):
            'changes': {},
            'comment': ''}
 
-    if 'win_repo' in __opts__:
+    master_config = salt.config.master_config(
+        os.path.join(salt.syspaths.CONFIG_DIR, 'master')
+    )
+
+    if 'win_repo' in master_config:
         salt.utils.warn_until(
             'Nitrogen',
             'The \'win_repo\' config option is deprecated, please use '
             '\'winrepo_dir\' instead.'
         )
-        winrepo_dir = __opts__['win_repo']
+        winrepo_dir = master_config['win_repo']
     else:
-        winrepo_dir = __opts__['winrepo_dir']
+        winrepo_dir = master_config['winrepo_dir']
 
-    if 'win_repo_mastercachefile' in __opts__:
+    if 'win_repo_mastercachefile' in master_config:
         salt.utils.warn_until(
             'Nitrogen',
             'The \'win_repo_mastercachefile\' config option is deprecated, '
             'please use \'winrepo_cachefile\' instead.'
         )
-        winrepo_cachefile = __opts__['win_repo_mastercachefile']
+        winrepo_cachefile = master_config['win_repo_mastercachefile']
     else:
-        winrepo_cachefile = __opts__['winrepo_cachefile']
+        winrepo_cachefile = master_config['winrepo_cachefile']
 
     # We're actually looking for the full path to the cachefile here, so
     # prepend the winrepo_dir
     winrepo_cachefile = os.path.join(winrepo_dir, winrepo_cachefile)
-
-    master_config = salt.config.master_config(os.path.join(salt.syspaths.CONFIG_DIR, 'master'))
 
     # Check if the winrepo directory exists
     # if not search for a file with a newer mtime than the winrepo_cachefile file
