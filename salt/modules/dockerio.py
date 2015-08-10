@@ -252,7 +252,7 @@ def _valid(m, id_=NOTSET, comment=VALID_RESPONSE, out=None):
     return _set_status(m, status=True, id_=id_, comment=comment, out=out)
 
 
-def _get_client(version=None, timeout=None):
+def _get_client(timeout=None):
     '''
     Get a connection to a docker API (socket or URL)
     based on config.get mechanism (pillar -> grains)
@@ -279,14 +279,16 @@ def _get_client(version=None, timeout=None):
         # only if defined by user.
         kwargs['timeout'] = timeout
 
+    if 'version' not in kwargs:
+        # Let docker-py auto detect docker version incase
+        # it's not defined by user.
+        kwargs['version'] = 'auto'
+
     if 'base_url' not in kwargs and 'DOCKER_HOST' in os.environ:
         # Check if the DOCKER_HOST environment variable has been set
         kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
     client = docker.Client(**kwargs)
-    if not version:
-        # set version that match docker daemon
-        client._version = client.version()['ApiVersion']
 
     # try to authenticate the client using credentials
     # found in pillars
