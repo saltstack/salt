@@ -201,10 +201,14 @@ def query(url,
             continue
         header_dict[comps[0].strip()] = comps[1].strip()
 
-    if username and password:
-        auth = (username, password)
+    if not auth:
+        if username and password:
+            auth = (username, password)
+        else:
+            auth = None
     else:
-        auth = None
+        if not username and not password and isinstance(auth, tuple):
+            (username, password) = auth  # pylint: disable=W0633
 
     if requests_lib is True:
         sess = requests.Session()
@@ -214,6 +218,11 @@ def query(url,
         sess_cookies = sess.cookies
         sess.verify = verify_ssl
     else:
+        if auth:
+            password_mgr = urllib_request.HTTPPasswordMgrWithDefaultRealm()
+            password_mgr.add_password(None, url, username, password)
+        else:
+            password_mgr = None
         sess_cookies = None
 
     if cookies is not None:
@@ -275,6 +284,8 @@ def query(url,
             urllib_request.HTTPHandler,
             urllib_request.HTTPCookieProcessor(sess_cookies)
         ]
+        if password_mgr:
+            handlers.append(urllib_request.HTTPBasicAuthHandler(password_mgr))
 
         if url.startswith('https') or port == 443:
             if not HAS_MATCHHOSTNAME:
