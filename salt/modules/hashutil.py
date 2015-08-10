@@ -18,8 +18,8 @@ def base64_b64encode(instr):
     '''
     Encode a string as base64 using the "modern" Python interface.
 
-    Among other possible differences, the "modern" encoder does not include newline ('\n') characters in
-    the encoded output.
+    Among other possible differences, the "modern" encoder does not include 
+    newline ('\\n') characters in the encoded output.
 
     .. versionadded:: Boron
 
@@ -63,7 +63,7 @@ def base64_encodestring(instr):
     Encode a string as base64 using the "legacy" Python interface.
 
     Among other possible differences, the "legacy" encoder includes
-    a newline ('\n') character after every 76 characters and always
+    a newline ('\\n') character after every 76 characters and always
     at the end of the encoded string.
 
     .. versionadded:: 2014.7.0
