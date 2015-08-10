@@ -1145,7 +1145,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, so we don't continue pre/appending
                     # the content if it's been pre/appended in a previous run.
-                    if re.search('^{0}$'.format(content), line):
+                    if re.search('^{0}$'.format(re.escape(content)), line):
                         # Content was found, so set found.
                         found = True
 
