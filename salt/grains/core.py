@@ -473,30 +473,29 @@ def _virtual(osdata):
     skip_cmds = ('AIX',)
 
     # list of commands to be executed to determine the 'virtual' grain
-    _cmds = set()
-
+    _cmds = []
     # test first for virt-what, which covers most of the desired functionality
     # on most platforms
     if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.which('virt-what'):
-            _cmds = (['virt-what'])
+            _cmds = ['virt-what']
         else:
             log.debug(
                 'Please install \'virt-what\' to improve results of the '
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    elif __opts__.get('enable_lspci', True) is False:
-        _cmds = (['dmidecode', 'dmesg'])
+    if __opts__.get('enable_lspci', True) is False:
+        _cmds += ['dmidecode', 'dmesg']
     elif osdata['kernel'] in skip_cmds:
         _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg')
+            _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg']
         else:
-            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
-                     'dmesg')
+            _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
+                     'dmesg']
 
     failed_commands = set()
     for command in _cmds:
