@@ -203,14 +203,14 @@ def add_host(zone, name, ttl, ip, keyname, keyfile, nameserver):
     # Iterate over possible reverse zones
     while i > 1:
         p = parts.pop(0)
-        i-=1
+        i -= 1
         popped.append(p)
 
         zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
         name = '.'.join(popped)
         rev_fqdn = '{0}.{1}'.format(name, zone)
         ret = create(zone, name, ttl, 'PTR', "{0}.".format(fqdn), keyname, keyfile, nameserver)
-        
+
         if "Created" in ret[rev_fqdn]:
             res.append(ret[rev_fqdn])
             return {fqdn: res}
@@ -254,7 +254,7 @@ def delete_host(zone, name, keyname, keyfile, nameserver):
         # Iterate over possible reverse zones
         while i > 1:
             p = parts.pop(0)
-            i-=1
+            i -= 1
             popped.append(p)
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)

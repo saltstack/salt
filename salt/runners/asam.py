@@ -213,7 +213,7 @@ def remove_platform(name, server_url):
     )
 
     try:
-        html_content =  _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=False)
     except Exception as exc:
         err_msg = "Failed to look up existing platforms on {0}".format(server_url)
         log.error("{0}:\n{1}".format(err_msg, exc))
@@ -229,7 +229,7 @@ def remove_platform(name, server_url):
         data['postType'] = 'platformRemove'
         data['Submit'] = 'Yes'
         try:
-            html_content =  _make_post_request(url, data, auth, verify=False)
+            html_content = _make_post_request(url, data, auth, verify=False)
         except Exception as exc:
             err_msg = "Failed to delete platform from {1}".format(server_url)
             log.error("{0}:\n{1}".format(err_msg, exc))
@@ -271,7 +271,7 @@ def list_platforms(server_url):
     )
 
     try:
-        html_content =  _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=False)
     except Exception as exc:
         err_msg = "Failed to look up existing platforms"
         log.error("{0}:\n{1}".format(err_msg, exc))
@@ -281,7 +281,7 @@ def list_platforms(server_url):
     platform_list = _get_platforms(parser.data)
 
     if platform_list:
-         return {server_url: platform_list}
+        return {server_url: platform_list}
     else:
         return {server_url: "No existing platforms found"}
 
@@ -312,7 +312,7 @@ def list_platform_sets(server_url):
     )
 
     try:
-        html_content =  _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=False)
     except Exception as exc:
         err_msg = "Failed to look up existing platform sets"
         log.error("{0}:\n{1}".format(err_msg, exc))
@@ -322,7 +322,7 @@ def list_platform_sets(server_url):
     platform_set_list = _get_platform_sets(parser.data)
 
     if platform_set_list:
-         return {server_url: platform_set_list}
+        return {server_url: platform_set_list}
     else:
         return {server_url: "No existing platform sets found"}
 
@@ -367,7 +367,7 @@ def add_platform(name, platform_set, server_url):
     )
 
     try:
-        html_content =  _make_post_request(url, data, auth, verify=False)
+        html_content = _make_post_request(url, data, auth, verify=False)
     except Exception as exc:
         err_msg = "Failed to add platform on {0}".format(server_url)
         log.error("{0}:\n{1}".format(err_msg, exc))
