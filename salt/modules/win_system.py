@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 import re
 import datetime
+import time
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -50,7 +51,7 @@ def halt(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -91,7 +92,7 @@ def poweroff(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -102,7 +103,7 @@ def poweroff(timeout=5, in_seconds=False):
     return shutdown(timeout, in_seconds)
 
 
-def reboot(timeout=5, in_seconds=False):
+def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
     '''
     Reboot the system
 
@@ -112,17 +113,33 @@ def reboot(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
+        .. versionadded:: 2015.8.0
+
+        The amount of seconds to wait before rebooting
+
+    wait_for_reboot
+
         .. versionadded:: Beryllium
+
+        Sleeps for timeout + 30 seconds after reboot has been initiated.
+        This is useful for use in a highstate for example where
+        you have many states that could be ran after this one. Which you don't want
+        to start until after the restart i.e You could end up with a half finished state.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' system.reboot 5
+        salt '*' system.reboot 5 True
     '''
     seconds = _convert_minutes_seconds(timeout, in_seconds)
     cmd = ['shutdown', '/r', '/t', '{0}'.format(seconds)]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
+
+    if wait_for_reboot:
+        time.sleep(seconds + 30)
+
     return ret
 
 
@@ -136,7 +153,7 @@ def shutdown(timeout=5, in_seconds=False):
     in_seconds
         Whether to treat timeout as seconds or minutes.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 

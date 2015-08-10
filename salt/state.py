@@ -22,6 +22,7 @@ import fnmatch
 import logging
 import datetime
 import traceback
+import re
 
 # Import salt libs
 import salt.utils
@@ -216,8 +217,8 @@ def format_log(ret):
                             new = chg[pkg]['new']
                             if not new and new not in (False, None):
                                 new = 'absent'
-                            msg += '{0} changed from {1} to ' \
-                                   '{2}\n'.format(pkg, old, new)
+                            msg += '{0!r} changed from {1!r} to ' \
+                                   '{2!r}\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
@@ -256,9 +257,9 @@ class Compiler(object):
     '''
     Class used to compile and manage the High Data structure
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, renderers):
         self.opts = opts
-        self.rend = salt.loader.render(self.opts, {})
+        self.rend = renderers
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' contains a function reference which is not picklable.
@@ -381,7 +382,7 @@ class Compiler(object):
                             # Add the requires to the reqs dict and check them
                             # all for recursive requisites.
                             argfirst = next(iter(arg))
-                            if argfirst in ('require', 'watch', 'prereq'):
+                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
                                     ' statement in state {1!r} in SLS {2!r} '
@@ -631,7 +632,10 @@ class State(object):
         mod_init function in the state module.
         '''
         # ensure that the module is loaded
-        self.states['{0}.{1}'.format(low['state'], low['fun'])]  # pylint: disable=W0106
+        try:
+            self.states['{0}.{1}'.format(low['state'], low['fun'])]  # pylint: disable=W0106
+        except KeyError:
+            return
         minit = '{0}.mod_init'.format(low['state'])
         if low['state'] not in self.mod_init:
             if minit in self.states._dict:
@@ -991,7 +995,7 @@ class State(object):
                                         'formed as a list'
                                         .format(name, body['__sls__'])
                                     )
-                            if argfirst in ('require', 'watch', 'prereq'):
+                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
                                         'The {0} statement in state {1!r} in '
@@ -2295,6 +2299,7 @@ class BaseHighState(object):
                 opts['state_top'] = salt.utils.url.create(mopts['state_top'][1:])
             else:
                 opts['state_top'] = salt.utils.url.create(mopts['state_top'])
+            opts['state_top_saltenv'] = mopts.get('state_top_saltenv', None)
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
                 'state_auto_order',
@@ -2341,7 +2346,8 @@ class BaseHighState(object):
             ]
         else:
             found = 0
-            for saltenv in self._get_envs():
+            if self.opts.get('state_top_saltenv', False):
+                saltenv = self.opts['state_top_saltenv']
                 contents = self.client.cache_file(
                     self.opts['state_top'],
                     saltenv
@@ -2359,6 +2365,25 @@ class BaseHighState(object):
                         saltenv=saltenv
                     )
                 )
+            else:
+                for saltenv in self._get_envs():
+                    contents = self.client.cache_file(
+                        self.opts['state_top'],
+                        saltenv
+                    )
+                    if contents:
+                        found = found + 1
+                    else:
+                        log.debug('No contents loaded for env: {0}'.format(saltenv))
+
+                    tops[saltenv].append(
+                        compile_template(
+                            contents,
+                            self.state.rend,
+                            self.state.opts['renderer'],
+                            saltenv=saltenv
+                        )
+                    )
 
         if found == 0:
             log.error('No contents found in top file')
@@ -2633,11 +2658,21 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
+                        levels, include = \
+                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
-                            inc_sls = sls + inc_sls
-                        else:
-                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
+                            p_comps.append('init')
+                        if level_count > len(p_comps):
+                            msg = ('Attempted relative include of {0!r} '
+                                   'within SLS \'{1}:{2}\' '
+                                   'goes beyond top level package '
+                                   .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
+                        inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         # Resolve inc_sls in the specified environment

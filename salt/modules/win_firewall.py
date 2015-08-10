@@ -79,7 +79,7 @@ def enable(profile='allprofiles'):
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
-def get_rule(name="all"):
+def get_rule(name='all'):
     '''
     .. versionadded:: 2015.5.0
 
@@ -89,19 +89,19 @@ def get_rule(name="all"):
 
     .. code-block:: bash
 
-        salt '*' firewall.get_rule "MyAppPort"
+        salt '*' firewall.get_rule 'MyAppPort'
     '''
     ret = {}
     cmd = ['netsh', 'advfirewall', 'firewall', 'show', 'rule', 'name={0}'.format(name)]
     ret[name] = __salt__['cmd.run'](cmd, python_shell=False)
 
-    if ret[name].strip() == "No rules match the specified criteria.":
+    if ret[name].strip() == 'No rules match the specified criteria.':
         ret = False
 
     return ret
 
 
-def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
+def add_rule(name, localport, protocol='tcp', action='allow', dir='in'):
     '''
     .. versionadded:: 2015.5.0
 
@@ -111,7 +111,7 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
 
     .. code-block:: bash
 
-        salt '*' firewall.add_rule "test" "8080" "tcp"
+        salt '*' firewall.add_rule 'test' '8080' 'tcp'
     '''
     cmd = ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
            'name={0}'.format(name),
@@ -122,7 +122,7 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
     return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
 
 
-def delete_rule(name, localport, protocol, dir):
+def delete_rule(name, localport, protocol='tcp', dir='in'):
     '''
     Delete an existing firewall rule
 
@@ -130,7 +130,7 @@ def delete_rule(name, localport, protocol, dir):
 
     .. code-block:: bash
 
-        salt '*' firewall.delete_rule "test" "8080" "tcp" "in"
+        salt '*' firewall.delete_rule 'test' '8080' 'tcp' 'in'
     '''
     cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
            'name={0}'.format(name),

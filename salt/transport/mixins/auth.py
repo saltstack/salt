@@ -38,6 +38,7 @@ class AESPubClientMixin(object):
     @tornado.gen.coroutine
     def _decode_payload(self, payload):
         # we need to decrypt it
+        log.trace('Decoding payload: {0}'.format(payload))
         if payload['enc'] == 'aes':
             self._verify_master_signature(payload)
             try:
@@ -70,7 +71,7 @@ class AESReqServerMixin(object):
 
         # other things needed for _auth
         # Create the event manager
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
 
         # only create a con_cache-client if the con_cache is active

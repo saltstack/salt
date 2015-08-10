@@ -4,7 +4,8 @@ A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
 
-:depends:   - PyOpenSSL Python module (0.14 or later)
+:depends:   - PyOpenSSL Python module (0.10 or later, 0.14 or later for
+    X509 extension support)
 :configuration: Add the following values in /etc/salt/minion for the CA module
     to function properly::
 
@@ -14,16 +15,16 @@ or use Self-Signed certificates.
 CLI Example #1
 Creating a CA, a server request and its signed certificate:
 
-    .. code-block:: bash
+.. code-block:: bash
 
     # salt-call tls.create_ca my_little \
-      days=5 \
-      CN='My Little CA' \
-      C=US \
-      ST=Utah \
-      L=Salt Lake City \
-      O=Saltstack \
-      emailAddress=pleasedontemail@thisisnot.coms
+    days=5 \
+    CN='My Little CA' \
+    C=US \
+    ST=Utah \
+    L=Salt Lake City \
+    O=Saltstack \
+    emailAddress=pleasedontemail@thisisnot.coms
 
     Created Private Key: "/etc/pki/my_little/my_little_ca_cert.key"
     Created CA "my_little_ca": "/etc/pki/my_little_ca/my_little_ca_cert.crt"
@@ -38,7 +39,7 @@ Creating a CA, a server request and its signed certificate:
 CLI Example #2:
 Creating a client request and its signed certificate
 
-    .. code-block:: bash
+.. code-block:: bash
 
     # salt-call tls.create_csr my_little CN=DBReplica_No.1 cert_type=client
     Created Private Key: "/etc/pki/my_little/certs//DBReplica_No.1.key."
@@ -50,7 +51,8 @@ Creating a client request and its signed certificate
 CLI Example #3:
 Creating both a server and client req + cert for the same CN
 
-    .. code-block:: bash
+.. code-block:: bash
+
     # salt-call tls.create_csr my_little CN=MasterDBReplica_No.2  \
         cert_type=client
     Created Private Key: "/etc/pki/my_little/certs/MasterDBReplica_No.2.key."
@@ -83,7 +85,7 @@ Creating both a server and client req + cert for the same CN
 CLI Example #4:
 Create a server req + cert with non-CN filename for the cert
 
-    .. code-block:: bash
+.. code-block:: bash
 
     # salt-call tls.create_csr my_little CN=www.anothersometh.ing \
         cert_type=server type_ext=True
@@ -93,7 +95,6 @@ Create a server req + cert with non-CN filename for the cert
     # salt-call tls_create_ca_signed_cert my_little CN=www.anothersometh.ing \
         cert_type=server cert_filename="something_completely_different"
     Created Certificate for "www.anothersometh.ing": /etc/pki/my_little/certs/something_completely_different.crt
-
 '''
 from __future__ import absolute_import
 # pylint: disable=C0103
@@ -113,6 +114,7 @@ from distutils.version import LooseVersion
 import re
 
 HAS_SSL = False
+X509_EXT_ENABLED = True
 try:
     import OpenSSL
     HAS_SSL = True
@@ -133,9 +135,15 @@ def __virtual__():
     '''
     Only load this module if the ca config options are set
     '''
-    if HAS_SSL and OpenSSL_version >= LooseVersion('0.14'):
-        if OpenSSL_version <= LooseVersion('0.15'):
-            log.warn('You should upgrade pyOpenSSL to at least 0.15.1')
+    global X509_EXT_ENABLED
+    if HAS_SSL and OpenSSL_version >= LooseVersion('0.10'):
+        if OpenSSL_version < LooseVersion('0.14'):
+            X509_EXT_ENABLED = False
+            log.error('You should upgrade pyOpenSSL to at least 0.14.1 '
+                     'to enable the use of X509 extensions')
+        elif OpenSSL_version <= LooseVersion('0.15'):
+            log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
+                     'to enable the full use of X509 extensions')
         # never EVER reactivate this code, this has been done too many times.
         # not having configured a cert path in the configuration does not
         # mean that users cant use this module as we provide methods
@@ -147,9 +155,9 @@ def __virtual__():
         #     return False
         return True
     else:
-        return False, ['PyOpenSSL version 0.14 or later'
-                       ' must be installed before '
-                       ' this module can be used.']
+        X509_EXT_ENABLED = False
+        return False, ['PyOpenSSL version 0.10 or later must be installed '
+                       'before this module can be used.']
 
 
 def cert_base_path(cacert_path=None):
@@ -686,20 +694,21 @@ def create_ca(ca_name,
     ca.set_issuer(ca.get_subject())
     ca.set_pubkey(key)
 
-    ca.add_extensions([
-        OpenSSL.crypto.X509Extension('basicConstraints', True,
-                                     'CA:TRUE, pathlen:0'),
-        OpenSSL.crypto.X509Extension('keyUsage', True,
-                                     'keyCertSign, cRLSign'),
-        OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False, 'hash',
-                                     subject=ca)])
+    if X509_EXT_ENABLED:
+        ca.add_extensions([
+            OpenSSL.crypto.X509Extension('basicConstraints', True,
+                                         'CA:TRUE, pathlen:0'),
+            OpenSSL.crypto.X509Extension('keyUsage', True,
+                                         'keyCertSign, cRLSign'),
+            OpenSSL.crypto.X509Extension('subjectKeyIdentifier', False,
+                                         'hash', subject=ca)])
 
-    ca.add_extensions([
-        OpenSSL.crypto.X509Extension(
-            'authorityKeyIdentifier',
-            False,
-            'issuer:always,keyid:always',
-            issuer=ca)])
+        ca.add_extensions([
+            OpenSSL.crypto.X509Extension(
+                'authorityKeyIdentifier',
+                False,
+                'issuer:always,keyid:always',
+                issuer=ca)])
     ca.sign(key, digest)
 
     # alway backup existing keys in case
@@ -741,7 +750,7 @@ def get_extensions(cert_type):
     Fetch X509 and CSR extension definitions from tls:extensions:
     (common|server|client) or set them to standard defaults.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type:
         The type of certificate such as ``server`` or ``client``.
@@ -753,6 +762,10 @@ def get_extensions(cert_type):
         salt '*' tls.get_extensions client
 
     '''
+
+    assert X509_EXT_ENABLED, ('X509 extensions are not supported in '
+                              'pyOpenSSL prior to version 0.15.1. Your '
+                              'version: {0}'.format(OpenSSL_version))
 
     ext = {}
     if cert_type == '':
@@ -882,7 +895,7 @@ def create_csr(ca_name,
                 requests to https://1.2.3.4 will fail from python's
                 requests library w/out the second entry in the above list
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type
         Specify the general certificate type. Can be either `server` or
@@ -974,21 +987,36 @@ def create_csr(ca_name,
     req.get_subject().CN = CN
     req.get_subject().emailAddress = emailAddress
 
-    extensions = get_extensions(cert_type)['csr']
-    extension_adds = []
+    try:
+        extensions = get_extensions(cert_type)['csr']
 
-    for ext, value in extensions.items():
-        extension_adds.append(OpenSSL.crypto.X509Extension(ext, False, value))
+        extension_adds = []
+
+        for ext, value in extensions.items():
+            extension_adds.append(OpenSSL.crypto.X509Extension(ext, False,
+                                                               value))
+
+    except AssertionError as err:
+        log.error(err)
+        extensions = []
 
     if subjectAltName:
-        if isinstance(subjectAltName, str):
-            subjectAltName = [subjectAltName]
+        if X509_EXT_ENABLED:
+            if isinstance(subjectAltName, str):
+                subjectAltName = [subjectAltName]
 
-        extension_adds.append(
-            OpenSSL.crypto.X509Extension(
-                'subjectAltName', False, ", ".join(subjectAltName)))
+            extension_adds.append(
+                OpenSSL.crypto.X509Extension(
+                    'subjectAltName', False, ", ".join(subjectAltName)))
+        else:
+            raise ValueError('subjectAltName cannot be set as X509 '
+                             'extensions are not supported in pyOpenSSL '
+                             'prior to version 0.15.1. Your '
+                             'version: {0}.'.format(OpenSSL_version))
 
-    req.add_extensions(extension_adds)
+    if X509_EXT_ENABLED:
+        req.add_extensions(extension_adds)
+
     req.set_pubkey(key)
     req.sign(key, digest)
 
@@ -1344,8 +1372,6 @@ def create_ca_signed_cert(ca_name,
     exts = []
     try:
         exts.extend(req.get_extensions())
-        log.debug('req.get_extensions() supported in pyOpenSSL {0}'.format(
-            OpenSSL.__dict__.get('__version__', '')))
     except AttributeError:
         try:
             # see: http://bazaar.launchpad.net/~exarkun/pyopenssl/master/revision/189
@@ -1353,9 +1379,9 @@ def create_ca_signed_cert(ca_name,
             # so we mimic the newly get_extensions method present in ultra
             # recent pyopenssl distros
             log.info('req.get_extensions() not supported in pyOpenSSL versions '
-                     'prior to 0.15. Switching to Dark Magic(tm) '
+                     'prior to 0.15. Processing extensions internally. '
                      ' Your version: {0}'.format(
-                         OpenSSL.__dict__.get('__version__', 'pre-2014')))
+                         OpenSSL_version))
 
             native_exts_obj = OpenSSL._util.lib.X509_REQ_get_extensions(
                 req._req)
@@ -1369,10 +1395,9 @@ def create_ca_signed_cert(ca_name,
                 exts.append(ext)
         except Exception:
             log.error('X509 extensions are unsupported in pyOpenSSL '
-                      'versions prior to 0.14. Upgrade required. Current '
-                      'version: {0}'.format(
-                          OpenSSL.__dict__.get('__version__', 'pre-2014'))
-                      )
+                      'versions prior to 0.14. Upgrade required to '
+                      'use extensions. Current version: {0}'.format(
+                          OpenSSL_version))
 
     cert = OpenSSL.crypto.X509()
     cert.set_version(2)
@@ -1563,7 +1588,7 @@ def create_empty_crl(
     '''
     Create an empty Certificate Revocation List.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         name of the CA
@@ -1639,7 +1664,7 @@ def revoke_cert(
     '''
     Revoke a certificate.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         Name of the CA.

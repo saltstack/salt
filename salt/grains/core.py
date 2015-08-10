@@ -453,6 +453,10 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif 'Parallels Software' in osdata.get('manufacturer'):
         grains['virtual'] = 'Parallels'
+    # Apache CloudStack
+    elif 'CloudStack KVM Hypervisor' in osdata.get('productname', ''):
+        grains['virtual'] = 'kvm'
+        grains['virtual_subtype'] = 'cloudstack'
     return grains
 
 
@@ -925,7 +929,8 @@ _OS_NAME_MAP = {
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
     'scientific': 'ScientificLinux',
-    'synology': 'Synology'
+    'synology': 'Synology',
+    'nilrt': 'NILinuxRT'
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -970,7 +975,8 @@ _OS_FAMILY_MAP = {
     'elementary OS': 'Debian',
     'ScientificLinux': 'RedHat',
     'Raspbian': 'Debian',
-    'Devuan': 'Debian'
+    'Devuan': 'Debian',
+    'NILinuxRT': 'NILinuxRT'
 }
 
 
@@ -1066,31 +1072,38 @@ def os_data():
             os.stat('/run/systemd/system')
             grains['init'] = 'systemd'
         except OSError:
-            with salt.utils.fopen('/proc/1/cmdline') as fhr:
-                init_cmdline = fhr.read().replace('\x00', ' ').split()
-                init_bin = salt.utils.which(init_cmdline[0])
-                supported_inits = ('upstart', 'sysvinit', 'systemd')
-                edge_len = max(len(x) for x in supported_inits) - 1
-                buf_size = __opts__['file_buffer_size']
-                try:
-                    with open(init_bin, 'rb') as fp_:
-                        buf = True
-                        edge = ''
-                        buf = fp_.read(buf_size).lower()
-                        while buf:
-                            buf = edge + buf
-                            for item in supported_inits:
-                                if item in buf:
-                                    grains['init'] = item
-                                    buf = ''
-                                    break
-                            edge = buf[-edge_len:]
-                            buf = fp_.read(buf_size).lower()
-                except (IOError, OSError) as exc:
-                    log.error(
-                        'Unable to read from init_bin ({0}): {1}'
-                        .format(init_bin, exc)
-                    )
+            if os.path.exists('/proc/1/cmdline'):
+                with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                    init_cmdline = fhr.read().replace('\x00', ' ').split()
+                    init_bin = salt.utils.which(init_cmdline[0])
+                    if init_bin is not None:
+                        supported_inits = ('upstart', 'sysvinit', 'systemd')
+                        edge_len = max(len(x) for x in supported_inits) - 1
+                        buf_size = __opts__['file_buffer_size']
+                        try:
+                            with open(init_bin, 'rb') as fp_:
+                                buf = True
+                                edge = ''
+                                buf = fp_.read(buf_size).lower()
+                                while buf:
+                                    buf = edge + buf
+                                    for item in supported_inits:
+                                        if item in buf:
+                                            grains['init'] = item
+                                            buf = ''
+                                            break
+                                    edge = buf[-edge_len:]
+                                    buf = fp_.read(buf_size).lower()
+                        except (IOError, OSError) as exc:
+                            log.error(
+                                'Unable to read from init_bin ({0}): {1}'
+                                .format(init_bin, exc)
+                            )
+                    else:
+                        log.error(
+                            'Could not determine init location from command line: ({0})'
+                            .format(' '.join(init_cmdline))
+                        )
 
         # Add lsb grains on any distro with lsb-release
         try:
@@ -1299,6 +1312,15 @@ def os_data():
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
     elif grains.get('os') == 'Fedora':
         osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
+    elif grains.get('os_family') == 'NILinuxRT':
+        archinfo = {}
+        for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
+            if line.startswith('arch'):
+                _, arch, priority = line.split()
+                archinfo[arch.strip()] = int(priority.strip())
+
+        # Return osarch in priority order (higher to lower)
+        osarch = sorted(archinfo, key=archinfo.get, reverse=True)
     else:
         osarch = grains['cpuarch']
     grains['osarch'] = osarch

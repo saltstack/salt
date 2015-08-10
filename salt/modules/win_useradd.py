@@ -3,7 +3,6 @@
 Module for managing Windows Users
 
 :depends:
-        - os
         - pywintypes
         - win32api
         - win32net
@@ -16,6 +15,11 @@ NOTE: This currently only works with local user accounts, not domain accounts
 '''
 from __future__ import absolute_import
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except:  # pylint: disable=W0702
+    from pipes import quote as _cmd_quote
+
 # Import salt libs
 import salt.utils
 from salt.ext.six import string_types
@@ -25,7 +29,6 @@ import logging
 log = logging.getLogger(__name__)
 
 try:
-    import os
     import pywintypes
     import win32api
     import win32net
@@ -127,8 +130,7 @@ def add(name,
            profile=profile,
            fullname=fullname)
 
-    if groups:
-        ret = chgroups(name, groups)
+    ret = chgroups(name, groups) if groups else True
 
     return ret
 
@@ -298,22 +300,14 @@ def delete(name,
 
     # Remove the User Profile directory
     if purge:
-        # If the profile is not defined, get the profile from the registry
-        if user_info['profile'] == '':
-            profiles_dir = __salt__['reg.read_key'](hkey='HKEY_LOCAL_MACHINE',
-                                                    path='SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList',
-                                                    key='ProfilesDirectory')
-            profiles_dir = profiles_dir.replace('%SystemDrive%', os.environ['SystemDrive'])
-            user_info['profile'] = r'{0}\{1}'.format(profiles_dir, name)
-
-        # Make sure the profile exists before deleting it
-        # Otherwise this will throw an error
-        if os.path.exists(user_info['profile']):
+        try:
             sid = getUserSid(name)
-            try:
-                win32profile.DeleteProfile(sid)
-            except pywintypes.error as exc:
-                (number, context, message) = exc
+            win32profile.DeleteProfile(sid)
+        except pywintypes.error as exc:
+            (number, context, message) = exc
+            if number == 2:  # Profile Folder Not Found
+                pass
+            else:
                 log.error('Failed to remove profile for {0}'.format(name))
                 log.error('nbr: {0}'.format(number))
                 log.error('ctx: {0}'.format(context))
@@ -366,14 +360,18 @@ def addgroup(name, group):
 
         salt '*' user.addgroup username groupname
     '''
+    name = _cmd_quote(name)
+    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+
     user = info(name)
     if not user:
         return False
     if group in user['groups']:
         return True
-    ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /add'.format(group, name)
-    )
+
+    cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+
     return ret['retcode'] == 0
 
 
@@ -387,6 +385,9 @@ def removegroup(name, group):
 
         salt '*' user.removegroup username groupname
     '''
+    name = _cmd_quote(name)
+    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+
     user = info(name)
 
     if not user:
@@ -395,9 +396,9 @@ def removegroup(name, group):
     if group not in user['groups']:
         return True
 
-    ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /delete'.format(group, name)
-    )
+    cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+
     return ret['retcode'] == 0
 
 
@@ -461,10 +462,10 @@ def chfullname(name, fullname):
     return update(name=name, fullname=fullname)
 
 
-def chgroups(name, groups, append=False):
+def chgroups(name, groups, append=True):
     '''
-    Change the groups this user belongs to, add append to append the specified
-    groups
+    Change the groups this user belongs to, add append=False to make the user a
+    member of only the specified groups
 
     CLI Example:
 
@@ -480,17 +481,22 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
 
+    name = _cmd_quote(name)
+
     if not append:
         for group in ugrps:
+            group = _cmd_quote(group).lstrip('\'').rstrip('\'')
             if group not in groups:
-                __salt__['cmd.retcode'](
-                        'net localgroup {0} {1} /delete'.format(group, name))
+                cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+                __salt__['cmd.run_all'](cmd, python_shell=True)
 
     for group in groups:
         if group in ugrps:
             continue
-        __salt__['cmd.retcode'](
-                'net localgroup {0} {1} /add'.format(group, name))
+        group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+        cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+        __salt__['cmd.run_all'](cmd, python_shell=True)
+
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
 

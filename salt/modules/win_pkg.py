@@ -437,12 +437,28 @@ def genrepo(saltenv='base'):
 
 def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     '''
-    Install the passed package
+    Install the passed package from the winrepo
 
-    Return a dict containing the new package names and versions::
+    :param name: The name of the package to install
+    :type name: str or None
 
-        {'<package>': {'old': '<old-version>',
-                       'new': '<new-version>'}}
+    :param bool refresh: Boolean value representing whether or not to refresh
+        the winrepo db
+
+    :param pkgs: A list of packages to install from a software repository.
+        All packages listed under ``pkgs`` will be installed via a single
+        command.
+    :type pkgs: list or None
+
+    :param str saltenv: The salt environment to use. Default is ``base``.
+
+    :param dict kwargs: Any additional argument that may be passed from the
+        state module. If they don't apply, they are ignored.
+
+    :return: Return a dict containing the new package names and versions::
+
+            {'<package>': {'old': '<old-version>',
+                           'new': '<new-version>'}}
 
     CLI Example:
 
@@ -507,6 +523,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
                 cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
+            if not cached_pkg:
+                return 'Unable to cache file {0} from saltenv: {1}'\
+                    .format(installer, saltenv)
             if __salt__['cp.hash_file'](installer, saltenv) != \
                                           __salt__['cp.hash_file'](cached_pkg):
                 cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
@@ -516,6 +535,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cached_pkg = cached_pkg.replace('/', '\\')
         cache_path, _ = os.path.split(cached_pkg)
         msiexec = pkginfo[version_num].get('msiexec')
+        allusers = pkginfo[version_num].get('allusers')
+        if allusers is None:
+            allusers = True
         install_flags = '{0} {1}'.format(pkginfo[version_num]['install_flags'], options and options.get('extra_install_flags') or "")
 
         cmd = []
@@ -523,6 +545,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
         cmd.extend(install_flags.split())
+        if msiexec and allusers:
+            cmd.append('ALLUSERS="1"')
 
         __salt__['cmd.run'](cmd, cache_path, output_loglevel='trace', python_shell=False)
 
@@ -701,7 +725,11 @@ def _get_name_map():
     '''
     Return a reverse map of full pkg names to the names recognized by winrepo.
     '''
-    return get_repo_data().get('name_map', {})
+    u_name_map = {}
+    name_map = get_repo_data().get('name_map', {})
+    for k in name_map.keys():
+        u_name_map[k.decode('utf-8')] = name_map[k]
+    return u_name_map
 
 
 def _get_package_info(name):

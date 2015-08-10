@@ -2,7 +2,7 @@
 '''
 Return data to an influxdb server.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 To enable this returner the minion will need the python client for influxdb
 installed and the following values configured in the minion or master

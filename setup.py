@@ -411,6 +411,8 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
+        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
+                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -453,6 +455,7 @@ class Install(install):
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
+        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
@@ -717,6 +720,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-run.1',
+                                 'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])

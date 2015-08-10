@@ -55,7 +55,7 @@ def pack_sources(sources, normalize=True):
         part of the name, such as kernel modules which match a specific kernel
         version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -139,12 +139,12 @@ def parse_targets(name=None,
                 # append the cached path.
                 srcinfo.append(__salt__['cp.cache_file'](pkg_src, saltenv))
             else:
-                # Package file local to the minion, just append the tuple from
-                # the pack_sources() return data.
+                # Package file local to the minion, just append the path to the
+                # package file.
                 if not os.path.isabs(pkg_src):
                     raise SaltInvocationError(
                         'Path {0} for package {1} is either not absolute or '
-                        'an invalid protocol'.format(pkg_src[0], pkg_name)
+                        'an invalid protocol'.format(pkg_src, pkg_name)
                     )
                 srcinfo.append(pkg_src)
 

@@ -253,7 +253,7 @@ def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
     '''
     Ensure ElastiCache subnet group exists.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     name
         The name for the ElastiCache subnet group. This value is stored as a lowercase string.

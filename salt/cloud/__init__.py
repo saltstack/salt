@@ -1658,11 +1658,18 @@ class Map(Cloud):
         for alias, drivers in six.iteritems(query_map):
             for driver, vms in six.iteritems(drivers):
                 for vm_name, vm_details in six.iteritems(vms):
-                    if (vm_details != 'Absent') and \
-                        (
-                            vm_details['state'].lower() in
-                            matching_states[action]
-                            ):
+                    # Only certain actions are support in to use in this case. Those actions are the
+                    # "Global" salt-cloud actions defined in the "matching_states" dictionary above.
+                    # If a more specific action is passed in, we shouldn't stack-trace - exit gracefully.
+                    try:
+                        state_action = matching_states[action]
+                    except KeyError:
+                        log.error(
+                            'The use of \'{0}\' as an action is not supported in this context. '
+                            'Only \'start\', \'stop\', and \'reboot\' are supported options.'.format(action)
+                        )
+                        raise SaltCloudException()
+                    if (vm_details != 'Absent') and (vm_details['state'].lower() in state_action):
                         vm_names.append(vm_name)
         return vm_names
 
@@ -1674,11 +1681,11 @@ class Map(Cloud):
             return {}
 
         if not os.path.isfile(self.opts['map']):
-            raise SaltCloudNotFound(
-                'The specified map file does not exist: {0}\n'.format(
-                    self.opts['map']
-                )
+            log.error(
+                'The specified map file does not exist: \'{0}\''.format(
+                    self.opts['map'])
             )
+            raise SaltCloudNotFound()
         try:
             renderer = self.opts.get('renderer', 'yaml_jinja')
             rend = salt.loader.render(self.opts, {})
@@ -2211,7 +2218,7 @@ def create_multiprocessing(parallel_data, queue=None):
         )
         return {parallel_data['name']: {'Error': str(exc)}}
 
-    if parallel_data['opts'].get('show_deploy_args', False) is False:
+    if parallel_data['opts'].get('show_deploy_args', False) is False and isinstance(output, dict):
         output.pop('deploy_kwargs', None)
 
     return {

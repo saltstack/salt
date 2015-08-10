@@ -27,13 +27,13 @@ cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: '10.20.30.40'
 
     vcenter01:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter01.domain.com'
@@ -41,7 +41,7 @@ cloud configuration at
       port: 443
 
     vcenter02:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter02.domain.com'
@@ -739,11 +739,10 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_vmware_tools(vm_ref, max_wait_minute):
+def _wait_for_vmware_tools(vm_ref, max_wait):
     time_counter = 0
     starttime = time.time()
-    max_wait_second = int(max_wait_minute * 60)
-    while time_counter < max_wait_second:
+    while time_counter < max_wait:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
         if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
@@ -752,21 +751,20 @@ def _wait_for_vmware_tools(vm_ref, max_wait_minute):
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds".format(vm_ref.name, max_wait))
     return False
 
 
-def _wait_for_ip(vm_ref, max_wait_minute):
-    max_wait_minute_vmware_tools = max_wait_minute - 5
-    max_wait_minute_ip = max_wait_minute - max_wait_minute_vmware_tools
-    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
+def _wait_for_ip(vm_ref, max_wait):
+    max_wait_vmware_tools = max_wait
+    max_wait_ip = max_wait
+    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
         return False
 
     time_counter = 0
     starttime = time.time()
-    max_wait_second = int(max_wait_minute_ip * 60)
-    while time_counter < max_wait_second:
+    while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
@@ -783,7 +781,7 @@ def _wait_for_ip(vm_ref, max_wait_minute):
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} minutes".format(vm_ref.name, max_wait_minute_ip))
+    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
     return False
 
 
@@ -888,7 +886,7 @@ def _format_instance_info_select(vm, selection):
         if 'networks' in selection:
             vm_select_info['networks'] = network_full_info
 
-    if 'devices' in selection or 'mac_addresses' in selection:
+    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
         device_full_info = {}
         device_mac_addresses = []
         if "config.hardware.device" in vm:
@@ -936,7 +934,7 @@ def _format_instance_info_select(vm, selection):
         if 'devices' in selection:
             vm_select_info['devices'] = device_full_info
 
-        if 'mac_addresses' in selection:
+        if 'mac_address' in selection or 'mac_addresses' in selection:
             vm_select_info['mac_addresses'] = device_mac_addresses
 
     if 'storage' in selection:
@@ -1564,7 +1562,7 @@ def list_nodes_select(call=None):
     if 'private_ips' in selection or 'networks' in selection:
         vm_properties.append("guest.net")
 
-    if 'devices' in selection or 'mac_addresses' in selection:
+    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
         vm_properties.append("config.hardware.device")
 
     if 'storage' in selection:
@@ -2081,6 +2079,20 @@ def create(vm_):
 
         salt-cloud -p vmware-centos6.5 vmname
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'vmware',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -2088,7 +2100,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -2137,6 +2149,9 @@ def create(vm_):
     )
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, search_global=False, default=True
+    )
+    wait_for_ip_timeout = config.get_cloud_config_value(
+        'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
     )
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
@@ -2337,7 +2352,7 @@ def create(vm_):
 
         # If it a template or if it does not need to be powered on then do not wait for the IP
         if not template and power:
-            ip = _wait_for_ip(new_vm_ref, 20)
+            ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
             if ip:
                 log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
                 # ssh or smb using ip and install salt only if deploy is True
@@ -2356,7 +2371,7 @@ def create(vm_):
             {
                 'name': vm_['name'],
                 'profile': vm_['profile'],
-                'provider': vm_['provider'],
+                'provider': vm_['driver'],
             },
             transport=__opts__['transport']
         )
@@ -3236,7 +3251,7 @@ def add_host(kwargs=None, call=None):
         .. code-block:: yaml
 
             vcenter01:
-              provider: vmware
+              driver: vmware
               user: 'DOMAIN\\user'
               password: 'verybadpass'
               url: 'vcenter01.domain.com'

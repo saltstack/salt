@@ -362,7 +362,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     '''
     Add instance/s to load balancer
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     .. code-block:: yaml
 

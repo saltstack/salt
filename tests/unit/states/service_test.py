@@ -58,7 +58,7 @@ class ServiceTestCase(TestCase):
                 'result': True},
                {'changes': {},
                 'comment': 'The service salt is already running',
-                'name': 'salt', 'result': None}]
+                'name': 'salt', 'result': True}]
 
         tmock = MagicMock(return_value=True)
         fmock = MagicMock(return_value=False)
@@ -153,7 +153,7 @@ class ServiceTestCase(TestCase):
                 'result': True},
                {'changes': {},
                 'comment': 'The service salt is already dead', 'name': 'salt',
-                'result': None}]
+                'result': True}]
 
         mock = MagicMock(return_value="salt")
         with patch.object(service, '_enabled_used_error', mock):

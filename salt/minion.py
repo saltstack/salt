@@ -260,7 +260,7 @@ def parse_args_and_kwargs(func, args, data=None):
     return load_args_and_kwargs(func, args, data=data)
 
 
-def load_args_and_kwargs(func, args, data=None):
+def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     '''
     Detect the args and kwargs that need to be passed to a function call, and
     check them against what was passed.
@@ -314,7 +314,7 @@ def load_args_and_kwargs(func, args, data=None):
         else:
             _args.append(arg)
 
-    if invalid_kwargs:
+    if invalid_kwargs and not ignore_invalid:
         raise SaltInvocationError(
             'The following keyword arguments are not valid: {0}'
             .format(', '.join(invalid_kwargs))
@@ -379,7 +379,7 @@ class SMinion(object):
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv')
+            pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
@@ -484,7 +484,7 @@ class MultiMinion(MinionBase):
     def __init__(self, opts):
         super(MultiMinion, self).__init__(opts)
         self.auth_wait = self.opts['acceptance_wait_time']
-        self.max_wait = self.opts['acceptance_wait_time_max']
+        self.max_auth_wait = self.opts['acceptance_wait_time_max']
 
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
 
@@ -630,7 +630,7 @@ class Minion(MinionBase):
             self.opts['grains'],
             self.opts['id'],
             self.opts['environment'],
-            self.opts.get('pillarenv')
+            pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
@@ -713,7 +713,7 @@ class Minion(MinionBase):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'str':
+        if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
@@ -762,6 +762,13 @@ class Minion(MinionBase):
                            '{0}'.format(type(opts['master'])))
                     log.error(msg)
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+                # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
+                # See issue 21082 for details
+                if opts['retry_dns']:
+                    msg = ('\'master_type\' set to \'failover\' but \'retry_dns\' is not 0. '
+                           'Setting \'retry_dns\' to 0 to failover to the next master on DNS errors.')
+                    log.critical(msg)
+                    opts['retry_dns'] = 0
             else:
                 msg = ('Invalid keyword \'{0}\' for variable '
                        '\'master_type\''.format(opts['master_type']))
@@ -807,6 +814,7 @@ class Minion(MinionBase):
                        'the minions connection attempt.')
                 log.error(msg)
             else:
+                self.tok = pub_channel.auth.gen_token('salt')
                 self.connected = True
                 raise tornado.gen.Return((opts['master'], pub_channel))
 
@@ -1342,7 +1350,7 @@ class Minion(MinionBase):
                 self.opts['grains'],
                 self.opts['id'],
                 self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv')
+                pillarenv=self.opts.get('pillarenv'),
             ).compile_pillar()
         except SaltClientError:
             # Do not exit if a pillar refresh fails.
@@ -1477,8 +1485,12 @@ class Minion(MinionBase):
         channel = salt.transport.Channel.factory(self.opts)
         load = salt.utils.event.SaltEvent.unpack(package)[1]
         load['tok'] = self.tok
-        ret = channel.send(load)
-        return ret
+        try:
+            ret = channel.send(load)
+            return ret
+        except SaltReqTimeoutError:
+            log.warning('Unable to send mine data to master.')
+            return None
 
     @tornado.gen.coroutine
     def handle_event(self, package):
@@ -1611,16 +1623,18 @@ class Minion(MinionBase):
         # Properly exit if a SIGTERM is signalled
         signal.signal(signal.SIGTERM, self.clean_die)
 
-        log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
-
-        if start:
-            self.sync_connect_master()
-
+        # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.utils.event.AsyncEventPublisher(
             self.opts,
             self.handle_event,
             io_loop=self.io_loop,
         )
+
+        log.debug('Minion {0!r} trying to tune in'.format(self.opts['id']))
+
+        if start:
+            self.sync_connect_master()
+
         self._fire_master_minion_start()
         log.info('Minion is ready to receive requests!')
 
@@ -1970,6 +1984,9 @@ class MultiSyndic(MinionBase):
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get('syndic_mode', 'sync')
+
+        self.auth_wait = self.opts['acceptance_wait_time']
+        self.max_auth_wait = self.opts['acceptance_wait_time_max']
 
         self._has_master = threading.Event()
         self.jid_forward_cache = set()
@@ -2500,7 +2517,7 @@ class ProxyMinion(Minion):
             opts['grains'],
             opts['id'],
             opts['environment'],
-            pillarenv=opts.get('pillarenv')
+            pillarenv=opts.get('pillarenv'),
         ).compile_pillar()
         self.functions, self.returners, self.function_errors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)

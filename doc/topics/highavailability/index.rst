@@ -28,7 +28,7 @@ A tutorial on setting up multimaster with "hot" masters is here:
 Multimaster with Failover
 =========================
 
-Changing the ``master_type`` parameter from ``standard`` to ``failover`` will
+Changing the ``master_type`` parameter from ``str`` to ``failover`` will
 cause minions to connect to the first responding master in the list of masters.
 Every ``master_alive_check`` seconds the minions will check to make sure
 the current master is still responding.  If the master does not respond,
@@ -63,3 +63,12 @@ of Masters" nodes can control multiple segments underneath them.
 
 Syndics are covered in depth in :doc:`Salt Syndic </topics/topology/syndic>`.
 
+Syndic with Multimaster
+=======================
+
+.. versionadded:: 2015.5.0
+
+Syndic with Multimaster lets you connect a syndic to multiple masters to provide
+an additional layer of redundancy in a syndic configuration.
+
+Syndics are covered in depth in :doc:`Salt Syndic </topics/topology/syndic>`.

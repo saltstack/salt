@@ -11,6 +11,7 @@ NO_PYOPENSSL = False
 import shutil
 import tempfile
 import os
+from distutils.version import LooseVersion
 try:
     # We're not going to actually use OpenSSL, we just want to check that
     # it's installed.
@@ -187,7 +188,6 @@ class TLSAddTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
-    @patch('salt.utils.fopen', mock_open(read_data=_TLS_TEST_DATA['ca_cert']))
     def test_get_ca_text(self):
         '''
         Test get_ca text
@@ -195,9 +195,11 @@ class TLSAddTestCase(TestCase):
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
         mock_opt = MagicMock(return_value=ca_path)
-        with patch.dict(tls.__salt__, {'config.option': mock_opt}):
-            self.assertEqual(tls.get_ca(ca_name, as_text=True),
-                             _TLS_TEST_DATA['ca_cert'])
+        with patch('salt.utils.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            with patch.dict(tls.__salt__, {'config.option': mock_opt}):
+                self.assertEqual(tls.get_ca(ca_name, as_text=True),
+                                 _TLS_TEST_DATA['ca_cert'])
 
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
@@ -219,7 +221,6 @@ class TLSAddTestCase(TestCase):
     @patch('os.path.exists', MagicMock(return_value=True))
     @patch('salt.modules.tls.maybe_fix_ssl_version',
            MagicMock(return_value=True))
-    @patch('salt.utils.fopen', mock_open(read_data=_TLS_TEST_DATA['ca_cert']))
     def test_cert_info(self):
         '''
         Test cert info
@@ -270,7 +271,9 @@ class TLSAddTestCase(TestCase):
                 del source['signature_algorithm']
             if 'extensions' not in reference:
                 del source['extensions']
-        result = ignore_extensions(tls.cert_info(certp))
+        with patch('salt.utils.fopen',
+                   mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
+            result = ignore_extensions(tls.cert_info(certp))
         remove_not_in_result(ret, result)
         self.assertEqual(result, ret)
 
@@ -638,6 +641,160 @@ class TLSAddTestCase(TestCase):
                                               'password',
                                               replace=True),
                             ret)
+        finally:
+            if os.path.isdir(ca_path):
+                shutil.rmtree(ca_path)
+
+    def test_pyOpenSSL_version(self):
+        '''
+        Test extension logic with different pyOpenSSL versions
+        '''
+        pillarval = {'csr': {'extendedKeyUsage': 'serverAuth'}}
+        mock_pgt = MagicMock(return_value=pillarval)
+        with patch.dict(tls.__dict__, {
+                        'OpenSSL_version': LooseVersion('0.1.1'),
+                        'X509_EXT_ENABLED': False}):
+            self.assertEqual(tls.__virtual__(),
+                             (False, ['PyOpenSSL version 0.10 or later must be installed '
+                                      'before this module can be used.']))
+            with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
+                self.assertRaises(AssertionError, tls.get_extensions, 'server')
+                self.assertRaises(AssertionError, tls.get_extensions, 'client')
+        with patch.dict(tls.__dict__, {
+                        'OpenSSL_version': LooseVersion('0.14.1'),
+                        'X509_EXT_ENABLED': True}):
+            self.assertTrue(tls.__virtual__())
+            with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
+                self.assertEqual(tls.get_extensions('server'), pillarval)
+                self.assertEqual(tls.get_extensions('client'), pillarval)
+        with patch.dict(tls.__dict__, {
+                        'OpenSSL_version': LooseVersion('0.15.1'),
+                        'X509_EXT_ENABLED': True}):
+            self.assertTrue(tls.__virtual__())
+            with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
+                self.assertEqual(tls.get_extensions('server'), pillarval)
+                self.assertEqual(tls.get_extensions('client'), pillarval)
+
+    @destructiveTest
+    def test_pyOpenSSL_version_destructive(self):
+        '''
+        Test extension logic with different pyOpenSSL versions
+        '''
+        pillarval = {'csr': {'extendedKeyUsage': 'serverAuth'}}
+        mock_pgt = MagicMock(return_value=pillarval)
+        ca_path = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
+        ca_name = 'test_ca'
+        certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+            ca_path,
+            ca_name,
+            ca_name)
+        certk = '{0}/{1}/{2}_ca_cert.key'.format(
+            ca_path,
+            ca_name,
+            ca_name)
+        ret = 'Created Private Key: "{0}." Created CA "{1}": "{2}."'.format(
+            certk, ca_name, certp)
+        mock_opt = MagicMock(return_value=ca_path)
+        mock_ret = MagicMock(return_value=0)
+        try:
+            with patch.dict(tls.__salt__, {
+                            'config.option': mock_opt,
+                            'cmd.retcode': mock_ret}):
+                with patch.dict(tls.__opts__, {
+                                'hash_type': 'sha256',
+                                'cachedir': ca_path}):
+                    with patch.dict(_TLS_TEST_DATA['create_ca'],
+                                    {'replace': True}):
+                        with patch.dict(tls.__dict__, {
+                                        'OpenSSL_version':
+                                            LooseVersion('0.1.1'),
+                                        'X509_EXT_ENABLED': False}):
+                            self.assertEqual(
+                                tls.create_ca(
+                                    ca_name,
+                                    days=365,
+                                    fixmode=False,
+                                    **_TLS_TEST_DATA['create_ca']),
+                                ret)
+                        with patch.dict(tls.__dict__, {
+                                        'OpenSSL_version':
+                                            LooseVersion('0.14.1'),
+                                        'X509_EXT_ENABLED': True}):
+                            self.assertEqual(
+                                tls.create_ca(
+                                    ca_name,
+                                    days=365,
+                                    fixmode=False,
+                                    **_TLS_TEST_DATA['create_ca']),
+                                ret)
+                        with patch.dict(tls.__dict__, {
+                                        'OpenSSL_version':
+                                            LooseVersion('0.15.1'),
+                                        'X509_EXT_ENABLED': True}):
+                            self.assertEqual(
+                                tls.create_ca(
+                                    ca_name,
+                                    days=365,
+                                    fixmode=False,
+                                    **_TLS_TEST_DATA['create_ca']),
+                                ret)
+        finally:
+            if os.path.isdir(ca_path):
+                shutil.rmtree(ca_path)
+
+        try:
+            certp = '{0}/{1}/certs/{2}.csr'.format(
+                ca_path,
+                ca_name,
+                _TLS_TEST_DATA['create_ca']['CN'])
+            certk = '{0}/{1}/certs/{2}.key'.format(
+                ca_path,
+                ca_name,
+                _TLS_TEST_DATA['create_ca']['CN'])
+            ret = ('Created Private Key: "{0}." '
+                   'Created CSR for "{1}": "{2}."').format(
+                       certk, _TLS_TEST_DATA['create_ca']['CN'], certp)
+            with patch.dict(tls.__salt__, {
+                            'config.option': mock_opt,
+                            'cmd.retcode': mock_ret,
+                            'pillar.get': mock_pgt}):
+                with patch.dict(tls.__opts__, {'hash_type': 'sha256',
+                                               'cachedir': ca_path}):
+                    with patch.dict(_TLS_TEST_DATA['create_ca'], {
+                                    'subjectAltName': 'DNS:foo.bar',
+                                    'replace': True}):
+                        with patch.dict(tls.__dict__, {
+                                        'OpenSSL_version':
+                                            LooseVersion('0.1.1'),
+                                        'X509_EXT_ENABLED': False}):
+                            tls.create_ca(ca_name)
+                            tls.create_csr(ca_name)
+                            self.assertRaises(ValueError,
+                                              tls.create_csr,
+                                              ca_name,
+                                              **_TLS_TEST_DATA['create_ca'])
+                        with patch.dict(tls.__dict__, {
+                                        'OpenSSL_version':
+                                            LooseVersion('0.14.1'),
+                                        'X509_EXT_ENABLED': True}):
+                            tls.create_ca(ca_name)
+                            tls.create_csr(ca_name)
+                            self.assertEqual(
+                                tls.create_csr(
+                                    ca_name,
+                                    **_TLS_TEST_DATA['create_ca']),
+                                ret)
+                        with patch.dict(tls.__dict__, {
+                                        'OpenSSL_version':
+                                            LooseVersion('0.15.1'),
+                                        'X509_EXT_ENABLED': True}):
+                            tls.create_ca(ca_name)
+                            tls.create_csr(ca_name)
+                            self.assertEqual(
+                                tls.create_csr(
+                                    ca_name,
+                                    **_TLS_TEST_DATA['create_ca']),
+                                ret)
         finally:
             if os.path.isdir(ca_path):
                 shutil.rmtree(ca_path)

@@ -19,6 +19,44 @@ Salt Cloud Changes
 
 - Modified the Linode Salt Cloud driver to use Linode's native API instead of
   depending on apache-libcloud or linode-python.
+- When querying for VMs in ``ditigal_ocean.py``, the number of VMs to include in
+  a page was changed from 20 (default) to 200 to reduce the number of API calls
+  to Digital Ocean.
+
+New Docker State/Module
+=======================
+
+A new docker :mod:`state <salt.states.dockerng>` and :mod:`execution module
+<salt.modules.dockerng>` have been added. They will eventually take the place
+of the existing state and execution module, but for now will exist alongside
+them.
+
+Git Pillar Rewritten
+====================
+
+The Git external pillar has been rewritten to bring it up to feature parity
+with :mod:`gitfs <salt.fileserver.gitfs>`. See :mod:`here
+<salt.pillar.git_pillar>` for more information on the new git_pillar
+functionality.
+
+Windows Software Repo Changes
+=============================
+
+The :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
+runner has been updated to use either GitPython_ or pygit2_ to checkout the git
+repositories containing repo data. Existing winrepo git checkouts should be
+removed before starting up the salt-master after upgrading, if GitPython_ or
+pygit2_ is installed, to allow them to be checked out again.
+
+This enhancement also brings new functionality, see the :mod:`winrepo runner
+<salt.runners.winrepo>` documentation for more information.
+
+If neither GitPython_ nor pygit2_ are installed, then Salt will fall back to
+the pre-existing behavior for :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>`.
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
 
 JBoss 7 State
 =============
@@ -79,3 +117,18 @@ the Nitrogen release of Salt. Example provider file:
       keyname: my_test_key
       securitygroup: default
       driver: ec2
+
+- The use of ``lock`` has been deprecated and from ``salt.utils.fopen``.
+``salt.utils.flopen`` should be used instead.
+
+- The following args have been deprecated from the ``rabbitmq_vhost.present``
+state: ``user``, ``owner``, ``conf``, ``write``, ``read``, and ``runas``.
+
+- The use of ``runas`` has been deprecated from the ``rabbitmq_vhost.absent``
+state.
+
+- Support for ``output`` in ``mine.get`` was removed. ``--out`` should be used
+instead.
+
+- The use of ``delim`` was removed from the following functions in the ``match``
+execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,

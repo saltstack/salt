@@ -82,9 +82,9 @@ The option can can also be set to a list of masters, enabling
 
 .. versionadded:: 2014.7.0
 
-Default: ``standard``
+Default: ``str``
 
-The type of the :conf_minion:`master` variable. Can be ``standard``, ``failover`` or
+The type of the :conf_minion:`master` variable. Can be ``str``, ``failover`` or
 ``func``.
 
 .. code-block:: yaml
@@ -145,7 +145,7 @@ the master hostname if name resolution fails. Defaults to 30 seconds.
 Set to zero if the minion should shutdown and not retry.
 
 .. code-block:: yaml
-    
+
     retry_dns: 30
 
 .. conf_minion:: master_port
@@ -352,7 +352,7 @@ to enable set grains_cache to ``True``.
 
 .. code-block:: yaml
 
-    cache_jobs: False
+    grains_cache: False
 
 
 .. conf_minion:: sock_dir
@@ -553,7 +553,7 @@ be able to execute a certain module. The sys module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion, as all modules are loaded into ram
-disabling modules will lover the minion's ram footprint.
+disabling modules will lower the minion's ram footprint.
 
 .. code-block:: yaml
 
@@ -994,7 +994,6 @@ Examples:
     log_file: udp://loghost:10514
 
 
-
 .. conf_minion:: log_level
 
 ``log_level``
@@ -1007,8 +1006,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 .. code-block:: yaml
 
     log_level: warning
-
-
 
 
 .. conf_minion:: log_level_logfile
@@ -1027,7 +1024,6 @@ it will inherit the level set by :conf_log:`log_level` option.
     log_level_logfile: warning
 
 
-
 .. conf_minion:: log_datefmt
 
 ``log_datefmt``
@@ -1041,8 +1037,6 @@ The date and time format used in console log messages. See also
 .. code-block:: yaml
 
     log_datefmt: '%H:%M:%S'
-
-
 
 
 .. conf_minion:: log_datefmt_logfile
@@ -1060,7 +1054,6 @@ The date and time format used in log file messages. See also
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 
-
 .. conf_minion:: log_fmt_console
 
 ``log_fmt_console``
@@ -1071,10 +1064,27 @@ Default: ``[%(levelname)-8s] %(message)s``
 The format of the console logging messages. See also
 :conf_log:`log_fmt_console`.
 
+.. note::
+    Log colors are enabled in ``log_fmt_console`` rather than the
+    :conf_minion:`color` config since the logging system is loaded before the
+    minion config.
+
+    Console log colors are specified by these additional formatters:
+
+    %(colorlevel)s
+    %(colorname)s
+    %(colorprocess)s
+    %(colormsg)s
+
+    Since it is desirable to include the surrounding brackets, '[' and ']', in
+    the coloring of the messages, these color formatters also include padding
+    as well.  Color LogRecord attributes are only available for console
+    logging.
+
 .. code-block:: yaml
 
+    log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
-
 
 
 .. conf_minion:: log_fmt_logfile
@@ -1092,7 +1102,6 @@ The format of the log file logging messages. See also
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
-
 .. conf_minion:: log_granular_levels
 
 ``log_granular_levels``
@@ -1104,7 +1113,6 @@ This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
 
-
 .. conf_minion:: failhard
 
 ``failhard``
@@ -1114,7 +1122,6 @@ Default: ``False``
 
 Set the global failhard flag, this informs all states to stop running states
 at the moment a single state fails
-
 
 
 .. code-block:: yaml

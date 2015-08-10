@@ -22,20 +22,15 @@ import salt.crypt
 import salt.utils
 import salt.utils.verify
 import salt.utils.event
+import salt.utils.async
 import salt.payload
 import salt.exceptions
+import salt.transport.frame
+import salt.transport.ipc
 import salt.transport.client
 import salt.transport.server
 import salt.transport.mixins.auth
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
-
-# for IPC (for now)
-import zmq
-import zmq.eventloop.ioloop
-# support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
-if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
-    zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-import zmq.eventloop.zmqstream
 
 # Import Tornado Libs
 import tornado
@@ -49,59 +44,6 @@ import tornado.netutil
 from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
-
-
-def frame_msg(body, header=None, raw_body=False):
-    '''
-    Frame the given message with our wire protocol
-    '''
-    framed_msg = {}
-    if header is None:
-        header = {}
-
-    # if the body wasn't already msgpacked-- lets do that.
-    if not raw_body:
-        body = msgpack.dumps(body)
-
-    framed_msg['head'] = header
-    framed_msg['body'] = body
-    framed_msg_packed = msgpack.dumps(framed_msg)
-    return '{0} {1}'.format(len(framed_msg_packed), framed_msg_packed)
-
-
-def socket_frame_recv(s, recv_size=4096):
-    '''
-    Retrieve a frame from socket
-    '''
-    # get the header size
-    recv_buf = ''
-    while ' ' not in recv_buf:
-        data = s.recv(recv_size)
-        if data == '':
-            raise socket.error('Empty response!')
-        else:
-            recv_buf += data
-    # once we have a space, we know how long the rest is
-    header_len, buf = recv_buf.split(' ', 1)
-    header_len = int(header_len)
-    while len(buf) < header_len:
-        data = s.recv(recv_size)
-        if data == '':
-            raise socket.error('msg stopped, we are missing some data!')
-        else:
-            buf += data
-
-    header = msgpack.loads(buf[:header_len])
-    msg_len = int(header['msgLen'])
-    buf = buf[header_len:]
-    while len(buf) < msg_len:
-        data = s.recv(recv_size)
-        if data == '':
-            raise socket.error('msg stopped, we are missing some data!')
-        else:
-            buf += data
-
-    return buf
 
 
 # TODO: move serial down into message library
@@ -140,6 +82,8 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     @classmethod
     def __key(cls, opts, **kwargs):
+        if 'master_uri' in kwargs:
+            opts['master_uri'] = kwargs['master_uri']
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
                 opts['master_uri'],  # master ID
@@ -335,18 +279,20 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         try:
             payload = self._decode_payload(payload)
         except Exception:
-            stream.write(frame_msg('bad load', header=header))
+            stream.write(salt.transport.frame.frame_msg('bad load', header=header))
             raise tornado.gen.Return()
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
-            yield stream.write(frame_msg('payload and load must be a dict', header=header))
+            yield stream.write(salt.transport.frame.frame_msg(
+                'payload and load must be a dict', header=header))
             raise tornado.gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
-            yield stream.write(frame_msg(self._auth(payload['load']), header=header))
+            yield stream.write(salt.transport.frame.frame_msg(
+                self._auth(payload['load']), header=header))
             raise tornado.gen.Return()
 
         # TODO: test
@@ -361,11 +307,11 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         req_fun = req_opts.get('fun', 'send')
         if req_fun == 'send_clear':
-            stream.write(frame_msg(ret, header=header))
+            stream.write(salt.transport.frame.frame_msg(ret, header=header))
         elif req_fun == 'send':
-            stream.write(frame_msg(self.crypticle.dumps(ret), header=header))
+            stream.write(salt.transport.frame.frame_msg(self.crypticle.dumps(ret), header=header))
         elif req_fun == 'send_private':
-            stream.write(frame_msg(self._encrypt_private(ret,
+            stream.write(salt.transport.frame.frame_msg(self._encrypt_private(ret,
                                                          req_opts['key'],
                                                          req_opts['tgt'],
                                                          ), header=header))
@@ -422,6 +368,8 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
             self.clients.remove(item)
 
 
+# TODO consolidate with IPCClient
+# TODO: limit in-flight messages.
 # TODO: singleton? Something to not re-create the tcp connection so much
 class SaltMessageClient(object):
     '''
@@ -609,7 +557,7 @@ class SaltMessageClient(object):
         # if we don't have a send queue, we need to spawn the callback to do the sending
         if len(self.send_queue) == 0:
             self.io_loop.spawn_callback(self._stream_send)
-        self.send_queue.append((message_id, frame_msg(msg, header=header)))
+        self.send_queue.append((message_id, salt.transport.frame.frame_msg(msg, header=header)))
         return future
 
 
@@ -625,15 +573,17 @@ class PubServer(tornado.tcpserver.TCPServer, object):
         log.trace('Subscriber at {0} connected'.format(address))
         self.clients.append((stream, address))
 
+    # TODO: ACK the publish through IPC
     @tornado.gen.coroutine
-    def publish_payload(self, package):
-        log.trace('TCP PubServer starting to publish payload')
-        package = package[0]  # ZMQ (The IPC calling us) ism :/
-        payload = frame_msg(salt.payload.unpackage(package)['payload'], raw_body=True)
+    def publish_payload(self, payload, _):
+        log.debug('TCP PubServer sending payload: {0}'.format(payload))
+        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
+
         to_remove = []
         for item in self.clients:
             client, address = item
             try:
+                # Write the packed str
                 f = client.write(payload)
                 self.io_loop.add_future(f, lambda f: True)
             except tornado.iostream.StreamClosedError:
@@ -647,9 +597,10 @@ class PubServer(tornado.tcpserver.TCPServer, object):
 
 
 class TCPPubServerChannel(salt.transport.server.PubServerChannel):
-    def __init__(self, opts):
+    def __init__(self, opts, io_loop=None):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
     def _publish_daemon(self):
         '''
@@ -657,35 +608,28 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
 
-        # Set up the context
-        context = zmq.Context(1)
-        # Prepare minion pull socket
-        pull_sock = context.socket(zmq.PULL)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull_tcp.ipc')
+        # Spin up the publisher
+        pub_server = PubServer(io_loop=self.io_loop)
+        pub_server.listen(int(self.opts['publish_port']), address=self.opts['interface'])
+
+        # Set up Salt IPC server
+        pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        pull_sock = salt.transport.ipc.IPCMessageServer(
+            pull_uri,
+            io_loop=self.io_loop,
+            payload_handler=pub_server.publish_payload,
         )
-        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
 
         # Securely create socket
         log.info('Starting the Salt Puller on {0}'.format(pull_uri))
         old_umask = os.umask(0o177)
         try:
-            pull_sock.bind(pull_uri)
+            pull_sock.start()
         finally:
             os.umask(old_umask)
 
-        # load up the IOLoop
-        io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-        # add the publisher
-        pub_server = PubServer(io_loop=io_loop)
-        pub_server.listen(int(self.opts['publish_port']), address=self.opts['interface'])
-
-        # add our IPC
-        stream = zmq.eventloop.zmqstream.ZMQStream(pull_sock, io_loop=io_loop)
-        stream.on_recv(pub_server.publish_payload)
-
         # run forever
-        io_loop.start()
+        self.io_loop.start()
 
     def pre_fork(self, process_manager):
         '''
@@ -707,17 +651,20 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             master_pem_path = os.path.join(self.opts['pki_dir'], 'master.pem')
             log.debug("Signing data packet")
             payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
-        # Send 0MQ to the publisher
-        context = zmq.Context(1)
-        pub_sock = context.socket(zmq.PUSH)
-        pull_uri = 'ipc://{0}'.format(
-            os.path.join(self.opts['sock_dir'], 'publish_pull_tcp.ipc')
-            )
-        pub_sock.connect(pull_uri)
+        # Use the Salt IPC server
+        pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        # TODO: switch to the actual async interface
+        #pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
+        pub_sock = salt.utils.async.SyncWrapper(
+            salt.transport.ipc.IPCMessageClient,
+            (pull_uri,)
+        )
+        pub_sock.connect()
+
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
-
-        pub_sock.send(self.serial.dumps(int_payload))
+        # Send it over IPC!
+        pub_sock.send(int_payload)

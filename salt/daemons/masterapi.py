@@ -58,31 +58,41 @@ def init_git_pillar(opts):
     '''
     Clear out the ext pillar caches, used when the master starts
     '''
-    pillargitfs = []
+    ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            try:
-                import git
-            except ImportError:
-                return pillargitfs
-            parts = opts_dict['git'].strip().split()
-            try:
-                br = parts[0]
-                loc = parts[1]
-            except IndexError:
-                log.critical(
-                    'Unable to extract external pillar data: {0}'
-                    .format(opts_dict['git'])
-                )
-            else:
-                pillargitfs.append(
-                    git_pillar.GitPillar(
-                        br,
-                        loc,
-                        opts
+            if isinstance(opts_dict['git'], six.string_types):
+                # Legacy git pillar code
+                try:
+                    import git
+                except ImportError:
+                    return ret
+                parts = opts_dict['git'].strip().split()
+                try:
+                    br = parts[0]
+                    loc = parts[1]
+                except IndexError:
+                    log.critical(
+                        'Unable to extract external pillar data: {0}'
+                        .format(opts_dict['git'])
                     )
+                else:
+                    ret.append(
+                        git_pillar.LegacyGitPillar(
+                            br,
+                            loc,
+                            opts
+                        )
+                    )
+            else:
+                # New git_pillar code
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_PARAMS
                 )
-    return pillargitfs
+                ret.append(pillar)
+    return ret
 
 
 def clean_fsbackend(opts):
@@ -470,6 +480,7 @@ class RemoteFuncs(object):
         mopts['renderer'] = self.opts['renderer']
         mopts['failhard'] = self.opts['failhard']
         mopts['state_top'] = self.opts['state_top']
+        mopts['state_top_saltenv'] = self.opts['state_top_saltenv']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
@@ -739,6 +750,8 @@ class RemoteFuncs(object):
         '''
         Handle the return data sent from the minions
         '''
+        # Generate EndTime
+        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
@@ -756,6 +769,11 @@ class RemoteFuncs(object):
         self.event.fire_ret_load(load)
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
+
+        fstr = '{0}.update_endtime'.format(self.opts['master_job_cache'])
+        if (self.opts.get('job_cache_store_endtime')
+                and fstr in self.mminion.returners):
+            self.mminion.returners[fstr](load['jid'], endtime)
 
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
         self.mminion.returners[fstr](load)

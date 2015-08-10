@@ -146,7 +146,7 @@ class SyncClientMixin(object):
                 'eauth': 'pam',
             })
         '''
-        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=True)
         job = self.master_call(**low)
         ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 
@@ -282,10 +282,12 @@ class SyncClientMixin(object):
         try:
             verify_fun(self.functions, fun)
 
-            # Inject some useful globals to *all* the funciton's global
+            # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            for mod_name in six.iterkeys(self.functions):
+            _functions = copy.deepcopy(self.functions)
+
+            for mod_name in six.iterkeys(_functions):
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)
@@ -334,12 +336,15 @@ class SyncClientMixin(object):
 
             data['return'] = self.functions[fun](*args, **kwargs)
             data['success'] = True
-        except (Exception, SystemExit):
-            data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                            self.client,
-                            fun,
-                            traceback.format_exc(),
-                            )
+        except (Exception, SystemExit) as ex:
+            if isinstance(ex, salt.exceptions.NotImplemented):
+                data['return'] = str(ex)
+            else:
+                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
+                                self.client,
+                                fun,
+                                traceback.format_exc(),
+                                )
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
@@ -453,7 +458,16 @@ class AsyncClientMixin(object):
         if suffix in ('new',):
             return
 
-        outputter = self.opts.get('output', event.get('outputter', None))
+        try:
+            outputter = self.opts.get('output', event.get('outputter', None) or event.get('return').get('outputter'))
+        except AttributeError:
+            outputter = None
+
+        try:
+            if event.get('return').get('outputter'):
+                event['return'].pop('outputter')
+        except AttributeError:
+            pass
         # if this is a ret, we have our own set of rules
         if suffix == 'ret':
             # Check if ouputter was passed in the return data. If this is the case,

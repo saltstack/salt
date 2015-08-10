@@ -13,6 +13,7 @@ import logging
 import os.path
 import pprint
 import socket
+import urllib
 
 import ssl
 try:
@@ -119,6 +120,7 @@ def query(url,
           stream=False,
           handle=False,
           agent=USERAGENT,
+          hide_fields=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -174,9 +176,21 @@ def query(url,
             data_file, data_render, data_renderer, template_dict, opts
         )
 
-    log.debug('Requesting URL {0} using {1} method'.format(url_full, method))
+    # Make sure no secret fields show up in logs
+    log_url = sanitize_url(url_full, hide_fields)
+
+    log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
     if method == 'POST':
-        log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
+        # Make sure no secret fields show up in logs
+        if isinstance(data, dict):
+            log_data = data.copy()
+            for item in data:
+                for field in hide_fields:
+                    if item == field:
+                        log_data[item] = 'XXXXXXXXXX'
+            log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+        else:
+            log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
 
     if header_file is not None:
         header_tpl = _render(
@@ -204,12 +218,12 @@ def query(url,
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.fopen(session_cookie_jar, 'r') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
                 msgpack.dump('', fh_)
 
     for header in header_list:
@@ -285,7 +299,7 @@ def query(url,
         if stream is True or handle is True:
             return {'handle': result}
 
-        log.debug('Final URL location of Response: {0}'.format(result.url))
+        log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
 
         result_status_code = result.status_code
         result_headers = result.headers
@@ -385,6 +399,9 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
+        if isinstance(data, dict):
+            data = urllib.urlencode(data)
+
         try:
             result = HTTPClient().fetch(
                 url_full,
@@ -394,6 +411,7 @@ def query(url,
                 auth_password=password,
                 body=data,
                 validate_cert=verify_ssl,
+                allow_nonstandard_methods=True,
                 **req_kwargs
             )
         except tornado.httpclient.HTTPError as exc:
@@ -444,7 +462,7 @@ def query(url,
     if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
-            with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
                     msgpack.dump({'Cookie': session_cookies}, fh_)
@@ -748,3 +766,23 @@ def parse_cookie_header(header):
         ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
+
+
+def sanitize_url(url, hide_fields):
+    '''
+    Make sure no secret fields show up in logs
+    '''
+    if isinstance(hide_fields, list):
+        url_comps = urllib.splitquery(url)
+        log_url = url_comps[0]
+        if len(url_comps) > 1:
+            log_url += '?'
+        for pair in url_comps[1:]:
+            for field in hide_fields:
+                if pair.startswith('{0}='.format(field)):
+                    log_url += '{0}=XXXXXXXXXX&'.format(field)
+                else:
+                    log_url += '{0}&'.format(pair)
+        return log_url.rstrip('&')
+    else:
+        return str(url)

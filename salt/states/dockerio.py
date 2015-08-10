@@ -71,7 +71,7 @@ Available Functions
           - container: mysuperdocker
           - image: corp/mysuperdocker_img
           - ports:
-              "5000/tcp":
+            - "5000/tcp":
                   HostIp: ""
                   HostPort: "5000"
 
@@ -1095,7 +1095,7 @@ def running(name,
         This state will ask nginx to reload (instead of restart)
         each time the /etc/nginx/nginx.conf is modified.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     For other parameters, see salt.modules.dockerio execution module

@@ -44,7 +44,6 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
-from salt.utils import warn_until
 
 # Import Third Party Libs
 try:
@@ -80,21 +79,11 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    configuration = config.is_provider_configured(
+    return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or 'digital_ocean',
         ('personal_access_token',)
     )
-
-    if configuration:
-        warn_until(
-            'Beryllium',
-            'The digital_ocean driver is deprecated and will be removed in Salt Beryllium. '
-            'Please convert your digital ocean provider configs to use the digital_ocean_v2 '
-            'driver.'
-        )
-
-    return configuration
 
 
 def avail_locations(call=None):
@@ -133,7 +122,7 @@ def avail_images(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='images', command='?page=' + str(page))
+        items = query(method='images', command='?page=' + str(page) + '&per_page=200')
 
         for image in items['images']:
             ret[image['id']] = {}
@@ -183,7 +172,7 @@ def list_nodes(call=None):
     ret = {}
 
     while fetch:
-        items = query(method='droplets', command='?page=' + str(page))
+        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             ret[node['name']] = {
                 'id': node['id'],
@@ -215,7 +204,7 @@ def list_nodes_full(call=None, forOutput=True):
     ret = {}
 
     while fetch:
-        items = query(method='droplets', command='?page=' + str(page))
+        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             ret[node['name']] = {}
             for item in six.iterkeys(node):
@@ -306,11 +295,14 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'digital_ocean',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'digital_ocean',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -791,7 +783,7 @@ def show_pricing(kwargs=None, call=None):
     Show pricing for a particular profile. This is only an estimate, based on
     unofficial pricing sources.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Examples:
 

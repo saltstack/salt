@@ -320,8 +320,12 @@ def _get_s3_key():
     verify_ssl = __opts__['s3.verify_ssl'] \
         if 's3.verify_ssl' in __opts__ \
         else None
+    kms_keyid = __opts__['aws.kmw.keyid'] if 'aws.kms.keyid' in __opts__ else None
+    location = __opts__['s3.location'] \
+        if 's3.location' in __opts__ \
+        else None
 
-    return key, keyid, service_url, verify_ssl
+    return key, keyid, service_url, verify_ssl, kms_keyid, location
 
 
 def _init():
@@ -391,7 +395,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url, verify_ssl = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -399,9 +403,11 @@ def _refresh_buckets_cache_file(cache_file):
         return s3.query(
                 key=key,
                 keyid=keyid,
+                kms_keyid=keyid,
                 bucket=bucket,
                 service_url=service_url,
                 verify_ssl=verify_ssl,
+                location=location,
                 return_bin=False)
 
     if _is_env_per_bucket():
@@ -582,7 +588,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     '''
-    key, keyid, service_url, verify_ssl = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
@@ -613,22 +619,24 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                     ret = s3.query(
                         key=key,
                         keyid=keyid,
+                        kms_keyid=keyid,
                         method='HEAD',
                         bucket=bucket_name,
                         service_url=service_url,
                         verify_ssl=verify_ssl,
+                        location=location,
                         path=_quote(path),
-                        local_file=cached_file_path
+                        local_file=cached_file_path,
+                        full_headers=True
                     )
                     if ret is not None:
-                        for header in ret['headers']:
-                            name, value = header.split(':', 1)
-                            name = name.strip()
-                            value = value.strip()
-                            if name == 'Last-Modified':
+                        for header_name, header_value in ret['headers'].items():
+                            name = header_name.strip()
+                            value = header_value.strip()
+                            if name == 'Last-Modified'.lower():
                                 s3_file_mtime = datetime.datetime.strptime(
                                     value, '%a, %d %b %Y %H:%M:%S %Z')
-                            elif name == 'Content-Length':
+                            elif name == 'Content-Length'.lower():
                                 s3_file_size = int(value)
                         if (cached_file_size == s3_file_size and
                                 cached_file_mtime > s3_file_mtime):
@@ -642,9 +650,11 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     s3.query(
         key=key,
         keyid=keyid,
+        kms_keyid=keyid,
         bucket=bucket_name,
         service_url=service_url,
         verify_ssl=verify_ssl,
+        location=location,
         path=_quote(path),
         local_file=cached_file_path
     )

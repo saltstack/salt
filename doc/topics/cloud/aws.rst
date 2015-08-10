@@ -983,6 +983,10 @@ the network interfaces of your virtual machines, for example:-
           #
           allocate_new_eips: True
 
+          # Uncomment this if you're creating NAT instances. Allows an instance
+          # to accept IP packets with destinations other than itself.
+          # SourceDestCheck: False
+
 Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
 profile where the interfaces are manually configured like this. These are both
 really properties of each network interface, not of the machine itself.

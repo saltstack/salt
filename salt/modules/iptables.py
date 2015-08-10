@@ -218,7 +218,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
 
     if 'connstate' in kwargs:
         if '-m state' not in rule:
-            rule += '-m state '
+            rule.append('-m state')
 
         rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
 
@@ -766,6 +766,9 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
@@ -816,6 +819,9 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
             position = 1
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
             _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)

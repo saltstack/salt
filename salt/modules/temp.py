@@ -4,7 +4,7 @@ Simple module for creating temporary directories and files
 
 This is a thin wrapper around Pythons tempfile module
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 '''
 from __future__ import absolute_import

@@ -110,7 +110,7 @@ def raw(key=None):
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Attempt to retrieve a list of keys from the named value from the pillar.
 

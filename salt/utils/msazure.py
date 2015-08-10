@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Utilities for accessing storage container blogs on Azure
 '''
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 def get_storage_conn(storage_account=None, storage_key=None, opts=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return a storage_conn object for the storage account
     '''
@@ -43,7 +43,7 @@ def get_storage_conn(storage_account=None, storage_key=None, opts=None):
 
 def list_blobs(storage_conn=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List blobs associated with the container
     '''
@@ -73,7 +73,7 @@ def list_blobs(storage_conn=None, **kwargs):
 
 def put_blob(storage_conn=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Upload a blob
     '''
@@ -123,7 +123,7 @@ def put_blob(storage_conn=None, **kwargs):
 
 def get_blob(storage_conn=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Download a blob
     '''
@@ -170,7 +170,7 @@ def get_blob(storage_conn=None, **kwargs):
 
 def object_to_dict(obj):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Convert an object to a dictionary
     '''

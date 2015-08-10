@@ -56,7 +56,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             test,
             exclude,
             pillar=pillar)
-    ret = {minion.opts['id']: running}
+    ret = {minion.opts['id']: running, 'outputter': 'highstate'}
     return ret
 
 # Aliases for orchestrate runner
@@ -264,7 +264,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
             'master',
             sock_dir or __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     while True:
         ret = sevent.get_event(full=True)

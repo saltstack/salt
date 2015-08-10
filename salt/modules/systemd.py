@@ -60,7 +60,7 @@ def _systemctl_cmd(action, name):
     Build a systemctl command line. Treat unit names without one
     of the valid suffixes as a service.
     '''
-    return 'systemctl {0} {1}'.format(action, _canonical_unit_name(name))
+    return 'systemctl -n 0 {0} {1}'.format(action, _canonical_unit_name(name))
 
 
 def _get_all_units():
@@ -140,7 +140,7 @@ def _unit_file_changed(name):
     Returns True if systemctl reports that the unit file has changed, otherwise
     returns False.
     '''
-    return 'warning: unit file changed on disk' in \
+    return "'systemctl daemon-reload'" in \
         __salt__['cmd.run'](_systemctl_cmd('status', name)).lower()
 
 
@@ -350,6 +350,8 @@ def available(name):
         salt '*' service.available sshd
     '''
     name = _canonical_template_unit_name(name)
+    if name.endswith('.service'):
+        name = name[:-8]  # len('.service') is 8
     units = get_all()
     if name in units:
         return True

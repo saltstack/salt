@@ -121,6 +121,26 @@ def list_(show_all=False, where=None, return_yaml=True):
         return {'schedule': {}}
 
 
+def is_enabled(name):
+    '''
+    List a Job only if its enabled
+
+    .. versionadded:: 2015.5.3
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' schedule.is_enabled name=job_name
+    '''
+
+    current_schedule = __salt__['schedule.list'](show_all=False, return_yaml=False)
+    if name in current_schedule:
+        return current_schedule[name]
+    else:
+        return {}
+
+
 def purge(**kwargs):
     '''
     Purge all the jobs currently scheduled on the minion
@@ -322,7 +342,7 @@ def add(name, **kwargs):
 
         salt '*' schedule.add job1 function='test.ping' seconds=3600
         # If function have some arguments, use job_args
-        salt '*' schedule.add job2 function='cmd.run' job_args=['date >> /tmp/date.log'] seconds=60
+        salt '*' schedule.add job2 function='cmd.run' job_args="['date >> /tmp/date.log']" seconds=60
     '''
 
     ret = {'comment': 'Failed to add job {0} to schedule.'.format(name),

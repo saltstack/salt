@@ -4,7 +4,7 @@
 Manage etcd Keys
 ================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 :depends:  - python-etcd
 

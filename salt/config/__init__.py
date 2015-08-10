@@ -14,6 +14,7 @@ import time
 import codecs
 import logging
 from copy import deepcopy
+import types
 
 # Import third party libs
 import yaml
@@ -162,6 +163,8 @@ VALID_OPTS = {
     # Allows a user to provide an alternate name for top.sls
     'state_top': str,
 
+    'state_top_saltenv': str,
+
     # States to run when a minion starts up
     'startup_states': str,
 
@@ -306,6 +309,9 @@ VALID_OPTS = {
     # Specify the format for state outputs. See highstate outputter for additional details.
     'state_output': str,
 
+    # Tells the highstate outputter to only report diffs of states that changed
+    'state_output_diff': bool,
+
     # When true, states run in the order defined in an SLS file, unless requisites re-order them
     'state_auto_order': bool,
 
@@ -425,7 +431,17 @@ VALID_OPTS = {
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
 
-
+    'git_pillar_base': str,
+    'git_pillar_branch': str,
+    'git_pillar_env': str,
+    'git_pillar_root': str,
+    'git_pillar_ssl_verify': bool,
+    'git_pillar_user': str,
+    'git_pillar_password': str,
+    'git_pillar_insecure_auth': bool,
+    'git_pillar_privkey': str,
+    'git_pillar_pubkey': str,
+    'git_pillar_passphrase': str,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -438,6 +454,7 @@ VALID_OPTS = {
     'gitfs_passphrase': str,
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
+    'gitfs_ssl_verify': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -515,6 +532,9 @@ VALID_OPTS = {
     # Specify a returner for the master to use as a backend storage system to cache jobs returns
     # that it receives
     'master_job_cache': str,
+
+    # Specify whether the master should store end times for jobs as returns come in
+    'job_cache_store_endtime': bool,
 
     # The minion data cache is a cache of information about the minions stored on the master.
     # This information is primarily the pillar and grains data. The data is cached in the master
@@ -685,6 +705,7 @@ VALID_OPTS = {
     # Used by salt-api for master requests timeout
     'rest_timeout': int,
 
+    # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': str,
 }
 
@@ -720,6 +741,7 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'extension_modules': '',
     'state_top': 'top.sls',
+    'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
@@ -739,6 +761,17 @@ DEFAULT_MINION_OPTS = {
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -751,6 +784,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -788,6 +822,7 @@ DEFAULT_MINION_OPTS = {
     'cython_enable': False,
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -875,6 +910,17 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
     'file_client': 'local',
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -887,6 +933,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -943,11 +990,13 @@ DEFAULT_MASTER_OPTS = {
     'renderer': 'yaml_jinja',
     'failhard': False,
     'state_top': 'top.sls',
+    'state_top_saltenv': None,
     'master_tops': {},
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
     'master_job_cache': 'local_cache',
+    'job_cache_store_endtime': False,
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
@@ -978,6 +1027,7 @@ DEFAULT_MASTER_OPTS = {
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -2316,10 +2366,13 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
 
     if name and vm_ and name in vm_:
         # The setting name exists in VM configuration.
-        if isinstance(value, dict):
-            value.update(vm_[name].copy())
+        if isinstance(vm_[name], types.GeneratorType):
+            value = next(vm_[name], '')
         else:
-            value = deepcopy(vm_[name])
+            if isinstance(value, dict):
+                value.update(vm_[name].copy())
+            else:
+                value = deepcopy(vm_[name])
 
     return value
 
@@ -2386,12 +2439,30 @@ def is_profile_configured(opts, provider, profile_name):
     Check if the requested profile contains the minimum required parameters for
     a profile.
 
-    Required parameters include image, provider, and size keys.
+    Required parameters include image and provider for all drivers, while some
+    drivers also require size keys.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
-    required_keys = ['image', 'provider', 'size']
+    # Standard dict keys required by all drivers.
+    required_keys = ['provider']
     alias, driver = provider.split(':')
+
+    # Most drivers need an image to be specified, but some do not.
+    non_image_drivers = ['vmware']
+
+    # Most drivers need a size, but some do not.
+    non_size_drivers = ['opennebula', 'parallels', 'scaleway', 'softlayer',
+                        'softlayer_hw', 'vmware', 'vsphere']
+
+    if driver not in non_image_drivers:
+        required_keys.append('image')
+    elif driver == 'vmware':
+        required_keys.append('clonefrom')
+
+    if driver not in non_size_drivers:
+        required_keys.append('size')
+
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
@@ -2794,7 +2865,7 @@ def spm_config(path):
     Read in the salt master config file and add additional configs that
     need to be stubbed out for spm
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     # Let's grab a copy of salt's master default opts
     defaults = DEFAULT_MASTER_OPTS

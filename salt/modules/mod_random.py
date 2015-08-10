@@ -151,7 +151,7 @@ def seed(range=10, hash=None):
     Returns a random number within a range. Optional hash argument can
     be any hashable object. If hash is omitted or None, the id of the minion is used.
 
-    .. versionadded: Beryllium
+    .. versionadded: 2015.8.0
 
     hash: None
         Any hashable object.

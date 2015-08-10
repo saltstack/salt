@@ -30,7 +30,7 @@ def present(name,
             lvname=None,
             path=None):
     '''
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
 
         The :mod:`lxc.created <salt.states.lxc.created>` state has been renamed
         to ``lxc.present``, and the :mod:`lxc.cloned <salt.states.lxc.cloned>`
@@ -45,7 +45,7 @@ def present(name,
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     running : False
@@ -54,7 +54,7 @@ def present(name,
         * If ``None``, do nothing with regards to the running state of the
           container
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     clone_from
         Create named container as a clone of the specified container
@@ -335,7 +335,7 @@ def absent(name, stop=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     .. code-block:: yaml
@@ -390,7 +390,7 @@ def running(name, restart=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     restart : False
         Restart container if it is already running
@@ -487,7 +487,7 @@ def frozen(name, start=True, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     start : True
@@ -575,7 +575,7 @@ def stopped(name, kill=False, path=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     kill : False
         Do not wait for the container to stop, kill all tasks in the container.
@@ -730,7 +730,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
         path to the container parent
         default: /var/lib/lxc (system default)
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     .. code-block:: bash

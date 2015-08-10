@@ -304,7 +304,7 @@ def list_upgrades(refresh=True, backtrack=3):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: Beryllium
+        .. versionadded: 2015.8.0
 
     CLI Example:
 
@@ -740,7 +740,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
         calculation fails due to a conflict or an unsatisfied dependency
         (default: ´3´).
 
-        .. versionadded: Beryllium
+        .. versionadded: 2015.8.0
 
     Return a dict containing the new package names and versions::
 

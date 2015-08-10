@@ -44,7 +44,8 @@ def _list_mounts():
 
     for line in mounts.split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
-        ret[comps[2]] = comps[0]
+        if len(comps) >= 3:
+            ret[comps[2]] = comps[0]
     return ret
 
 
@@ -388,6 +389,7 @@ def set_fstab(
         # Try to guess right criteria for auto....
         # NOTE: missing some special fstypes here
         specialFSes = frozenset([
+            'none',
             'tmpfs',
             'sysfs',
             'proc',

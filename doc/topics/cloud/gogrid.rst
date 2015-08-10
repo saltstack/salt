@@ -106,7 +106,7 @@ command:
 Assigning IPs
 =============
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The GoGrid API allows IP addresses to be manually assigned. Salt Cloud supports
 this functionality by allowing an IP address to be specified using the

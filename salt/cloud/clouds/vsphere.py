@@ -228,11 +228,14 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'vsphere',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'vsphere',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -884,7 +887,7 @@ def snapshot_list(kwargs=None, call=None):
     '''
     List virtual machines with snapshots
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -940,7 +943,7 @@ def create_snapshot(kwargs=None, call=None):
     @description: Description of the snapshot (optional)
     @memory: Dump of the internal state of the virtual machine (optional)
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -994,7 +997,7 @@ def delete_snapshot(kwargs=None, call=None):
     '''
     Delete snapshot
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 

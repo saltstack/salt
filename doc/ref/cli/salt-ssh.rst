@@ -55,8 +55,15 @@ Options
 
 .. option:: -i, --ignore-host-keys
 
-    Ignore the ssh host keys which by default are honored and connections
-    would ask for approval.
+    Disables StrictHostKeyChecking to relax acceptance of new and unknown
+    host keys. 
+
+.. option:: --no-host-keys
+
+    Fully ignores ssh host keys which by default are honored and connections
+    would ask for approval. Useful if the host key of a remote server has 
+    changed and would still error with --ignore-host-keys.
+
 
 .. option:: --passwd
 

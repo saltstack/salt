@@ -136,7 +136,7 @@ def _obfuscate_inner(var):
 
 def obfuscate(*args):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Same as :py:func:`items`, but replace pillar values with a simple type indication.
 
@@ -168,7 +168,7 @@ def obfuscate(*args):
 # identifier rule.
 def ls(*args):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Calls the master for a fresh pillar, generates the pillar data on the
     fly (same as :py:func:`items`), but only shows the available main keys.
@@ -281,7 +281,7 @@ def ext(external, pillar=None):
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Attempt to retrieve a list of keys from the named value from the pillar.
 

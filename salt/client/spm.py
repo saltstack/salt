@@ -2,7 +2,7 @@
 '''
 This module provides the point of entry to SPM, the Salt Package Manager
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 # Import Python libs
@@ -57,7 +57,7 @@ class SPMClient(object):
         elif command == 'build':
             self._build(args)
         elif command == 'update_repo':
-            self._download_repo_metadata()
+            self._download_repo_metadata(args)
         elif command == 'create_repo':
             self._create_repo(args)
         elif command == 'files':
@@ -235,7 +235,7 @@ class SPMClient(object):
         formula_tar.close()
         conn.close()
 
-    def _traverse_repos(self, callback):
+    def _traverse_repos(self, callback, repo_name=None):
         '''
         Traverse through all repo files and apply the functionality provided in
         the callback to them
@@ -260,9 +260,11 @@ class SPMClient(object):
                 for repo in repo_data:
                     if repo_data[repo].get('enabled', True) is False:
                         continue
+                    if repo_name is not None and repo != repo_name:
+                        continue
                     callback(repo, repo_data[repo])
 
-    def _download_repo_metadata(self):
+    def _download_repo_metadata(self, args):
         '''
         Connect to all repos and download metadata
         '''
@@ -273,10 +275,8 @@ class SPMClient(object):
                 with salt.utils.fopen(dl_path, 'r') as rpm:
                     metadata = yaml.safe_load(rpm)
             else:
-                response = http.query(
-                    '{0}/SPM-METADATA'.format(dl_path),
-                )
-                metadata = response.get('dict', {})
+                response = http.query(dl_path, text=True)
+                metadata = response.get('text', {})
             cache_path = '{0}/{1}.p'.format(
                 self.opts['spm_cache_dir'],
                 repo
@@ -285,7 +285,8 @@ class SPMClient(object):
             with salt.utils.fopen(cache_path, 'w') as cph:
                 msgpack.dump(metadata, cph)
 
-        self._traverse_repos(_update_metadata)
+        repo_name = args[1] if len(args) > 1 else None
+        self._traverse_repos(_update_metadata, repo_name)
 
     def _get_repo_metadata(self):
         '''

@@ -106,7 +106,7 @@ def getval(key):
     '''
     Get a value from the minion datastore
 
-    .. deprecated:: Beryllium
+    .. deprecated:: Boron
          Use ``get`` instead
 
     CLI Example:
@@ -115,6 +115,11 @@ def getval(key):
 
         salt '*' data.getval <key>
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'getval\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'get\' instead.'
+    )
     return get(key)
 
 
@@ -122,7 +127,7 @@ def getvals(*keylist):
     '''
     Get values from the minion datastore
 
-    .. deprecated:: Beryllium
+    .. deprecated:: Boron
          Use ``get`` instead
 
     CLI Example:
@@ -131,6 +136,11 @@ def getvals(*keylist):
 
         salt '*' data.getvals <key> [<key> ...]
     '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'getvals\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'get\' instead.'
+    )
     return get(keylist)
 
 
@@ -178,7 +188,7 @@ def get(key, default=None):
     '''
     Get a (list of) value(s) from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -200,7 +210,7 @@ def keys():
     '''
     Get all keys from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -216,7 +226,7 @@ def values():
     '''
     Get values from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -232,7 +242,7 @@ def items():
     '''
     Get items from the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -248,7 +258,7 @@ def has_key(key):
     '''
     Check if key is in the minion datastore
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 

@@ -356,12 +356,12 @@
 # If this is set to True the first newline after a Jinja block is removed
 # (block, not variable tag!). Defaults to False, corresponds to the Jinja
 # environment init variable "trim_blocks".
-# jinja_trim_blocks: False
+#jinja_trim_blocks: False
 #
 # If this is set to True leading spaces and tabs are stripped from the start
 # of a line to a block. Defaults to False, corresponds to the Jinja
 # environment init variable "lstrip_blocks".
-# jinja_lstrip_blocks: False
+#jinja_lstrip_blocks: False
 
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
@@ -381,13 +381,18 @@
 #state_output: full
 
 # Automatically aggregate all states that have support for mod_aggregate by
-# setting to True. Or pass a list of state module names to automatically
+# setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
 #
 # state_aggregate:
 #   - pkg
 #
 #state_aggregate: False
+
+# Send progress events as each function in a state run completes execution
+# by setting to 'True'. Progress events are in the format
+# 'salt/job/<JID>/prog/<MID>/<RUN NUM>'.
+#state_events: False
 
 #####      File Server settings      #####
 ##########################################
@@ -696,7 +701,9 @@
 # the coloring of the messages, these color formatters also include padding as
 # well.  Color LogRecord attributes are only available for console logging.
 #
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This

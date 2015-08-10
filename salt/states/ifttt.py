@@ -5,7 +5,7 @@ Trigger an event in IFTTT
 
 This state is useful for trigging events in IFTTT.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 .. code-block:: yaml
 

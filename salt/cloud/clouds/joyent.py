@@ -242,11 +242,14 @@ def create(vm_):
 
         salt-cloud -p profile_name vm_name
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'joyent',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'joyent',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -690,10 +693,14 @@ def reformat_node(item=None, full=False):
             item[key] = None
 
     # remove all the extra key value pairs to provide a brief listing
+    to_del = []
     if not full:
         for key in six.iterkeys(item):  # iterate over a copy of the keys
             if key not in desired_keys:
-                del item[key]
+                to_del.append(key)
+
+    for key in to_del:
+        del item[key]
 
     if 'state' in item:
         item['state'] = joyent_node_state(item['state'])

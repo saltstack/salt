@@ -1096,6 +1096,17 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
         finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        try:
+            # Parent directory exists but file does not and makedirs is False
+            ret = self.run_state(
+                'file.append', name=name, text='cheese'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
             shutil.rmtree(
                 os.path.join(integration.TMP, 'issue_1864'),
                 ignore_errors=True
@@ -1555,7 +1566,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
                     'comment': 'File {0} updated'.format(test_file),
-                    'diff': 'Replace binary file with text file'
+                    'diff': '--- \n+++ \n@@ -1 +1,3 @@\n+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
@@ -1747,13 +1758,29 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 context={'foo': 'Hello world!'}
             )
             self.assertSaltFalseReturn(ret)
-            self.assertEqual(
+            self.assertIn(
+                ('Source file cannot be the same as destination'),
                 ret[next(iter(ret))]['comment'],
-                ('Unable to manage file: Source file cannot be the same as '
-                    'destination')
             )
         finally:
             os.remove(source)
+
+    def test_issue_25250_force_copy_deletes(self):
+        '''
+        ensure force option in copy state does not delete target file
+        '''
+        dest = os.path.join(integration.TMP, 'dest')
+        source = os.path.join(integration.TMP, 'source')
+        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), source)
+        shutil.copyfile(os.path.join(integration.FILES, 'file/base/cheese'), dest)
+
+        self.run_state('file.copy', name=dest, source=source, force=True)
+        self.assertTrue(os.path.exists(dest))
+        self.assertTrue(filecmp.cmp(source, dest))
+
+        os.remove(source)
+        os.remove(dest)
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -12,11 +12,16 @@ import os
 import shutil
 import time
 import hashlib
+import bisect
 
 # Import salt libs
 import salt.payload
 import salt.utils
 import salt.utils.jid
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +33,8 @@ MINIONS_P = '.minions.p'
 RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
+# endtime is the end time for a job, not stored as msgpack
+ENDTIME = 'endtime'
 
 
 def _job_dir():
@@ -42,8 +49,10 @@ def _jid_dir(jid):
     '''
     Return the jid_dir for the given job id
     '''
-    jid = str(jid)
-    jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
+    if six.PY3:
+        jhash = getattr(hashlib, __opts__['hash_type'])(jid.encode('utf-8')).hexdigest()
+    else:
+        jhash = getattr(hashlib, __opts__['hash_type'])(str(jid)).hexdigest()
     return os.path.join(_job_dir(),
                         jhash[:2],
                         jhash[2:])
@@ -93,7 +102,10 @@ def prep_jid(nocache=False, passed_jid=None):
             return prep_jid(nocache=nocache)
 
     with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
-        fn_.write(jid)
+        if six.PY2:
+            fn_.write(jid)
+        else:
+            fn_.write(bytes(jid, 'utf-8'))
     if nocache:
         with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
             fn_.write('')
@@ -253,6 +265,35 @@ def get_jids():
     ret = {}
     for jid, job, _, _ in _walk_through(_job_dir()):
         ret[jid] = salt.utils.jid.format_jid_instance(jid, job)
+
+        if __opts__.get('job_cache_store_endtime'):
+            endtime = get_endtime(jid)
+            if endtime:
+                ret[jid]['EndTime'] = endtime
+
+    return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all jobs information filtered by the given criteria.
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    keys = []
+    ret = []
+    for jid, job, _, _ in _walk_through(_job_dir()):
+        job = salt.utils.jid.format_jid_instance_ext(jid, job)
+        if filter_find_job and job['Function'] == 'saltutil.find_job':
+            continue
+        i = bisect.bisect(keys, jid)
+        if len(keys) == count and i == 0:
+            continue
+        keys.insert(i, jid)
+        ret.insert(i, job)
+        if len(keys) > count:
+            del keys[0]
+            del ret[0]
     return ret
 
 
@@ -280,3 +321,34 @@ def clean_old_jobs():
                     hours_difference = (cur - jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs']:
                         shutil.rmtree(f_path)
+
+
+def update_endtime(jid, time):
+    '''
+    Update (or store) the end time for a given job
+
+    Endtime is stored as a plain text string
+    '''
+    jid_dir = _jid_dir(jid)
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+        with salt.utils.fopen(os.path.join(jid_dir, ENDTIME), 'w') as etfile:
+            etfile.write(time)
+    except IOError as exc:
+        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+
+
+def get_endtime(jid):
+    '''
+    Retrieve the stored endtime for a given job
+
+    Returns False if no endtime is present
+    '''
+    jid_dir = _jid_dir(jid)
+    etpath = os.path.join(jid_dir, ENDTIME)
+    if not os.path.exists(etpath):
+        return False
+    with salt.utils.fopen(etpath, 'r') as etfile:
+        endtime = etfile.read().strip('\n')
+    return endtime

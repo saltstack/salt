@@ -94,7 +94,7 @@ def _get_options(ret):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db',
-             'username': 'username',
+             'user': 'user',
              'password': 'password'}
 
     _options = salt.returners.get_returner_options(__virtualname__,

@@ -32,9 +32,11 @@ Full list of runner modules
     pillar
     pkg
     queue
+    reactor
     sdb
     search
     spacewalk
+    ssh
     state
     survey
     test

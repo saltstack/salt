@@ -2,7 +2,7 @@
 '''
 Management of Docker containers
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 
 This is the state module to accompany the :mod:`dockerng

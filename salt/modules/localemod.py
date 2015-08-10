@@ -208,12 +208,18 @@ def gen_locale(locale, **kwargs):
 
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
-        valid = __salt__['file.search'](search, '^{0}$'.format(locale))
+
+        def search_locale():
+            return __salt__['file.search'](search,
+                                           '^{0}$'.format(locale),
+                                           flags=re.MULTILINE)
+
+        valid = search_locale()
         if not valid and not locale_info['charmap']:
             # charmap was not supplied, so try copying the codeset
             locale_info['charmap'] = locale_info['codeset']
             locale = salt.utils.locales.join_locale(locale_info)
-            valid = __salt__['file.search'](search, '^{0}$'.format(locale))
+            valid = search_locale()
     else:  # directory-based search
         if on_suse:
             search = '/usr/share/locale'
@@ -234,7 +240,7 @@ def gen_locale(locale, **kwargs):
         __salt__['file.replace'](
             '/etc/locale.gen',
             r'^\s*#\s*{0}\s*$'.format(locale),
-            '{0}'.format(locale),
+            '{0}\\n'.format(locale),
             append_if_not_found=True
         )
     elif on_ubuntu:
@@ -252,8 +258,7 @@ def gen_locale(locale, **kwargs):
         cmd = ['locale-gen']
         if on_gentoo:
             cmd.append('--generate')
-        if not on_ubuntu:
-            cmd.append(locale)
+        cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
         cmd = ['localedef', '--force',
                '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']),

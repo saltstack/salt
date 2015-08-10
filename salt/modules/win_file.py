@@ -16,6 +16,8 @@ import os.path
 import logging
 import struct
 # pylint: disable=W0611
+import operator  # do not remove
+from collections import Iterable, Mapping  # do not remove
 import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
@@ -59,7 +61,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, comment,
-        uncomment)
+        uncomment, _add_flags, comment_line)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -81,11 +83,11 @@ def __virtual__():
             global remove, append, _error, directory_exists, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
             global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, _get_flags, extract_hash
+            global get_diff, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global write, pardir, join
+            global write, pardir, join, _add_flags
             global path_exists_glob, comment, uncomment, _mkstemp_copy
 
             replace = _namespaced_function(replace, globals())
@@ -141,7 +143,9 @@ def __virtual__():
             join = _namespaced_function(join, globals())
             comment = _namespaced_function(comment, globals())
             uncomment = _namespaced_function(uncomment, globals())
+            comment_line = _namespaced_function(comment_line, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
+            _add_flags = _namespaced_function(_add_flags, globals())
 
             return __virtualname__
     return False
@@ -878,7 +882,8 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
+    if hash_type:
+        ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'

@@ -2,7 +2,7 @@
 '''
 Publish commands to the salt system from the command line on the master.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 from salt.scripts import salt_spm

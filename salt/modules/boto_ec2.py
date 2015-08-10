@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon EC2
 
-.. versionadded:: TBD
+.. versionadded:: 2015.8.0
 
 :configuration: This module accepts explicit EC2 credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.

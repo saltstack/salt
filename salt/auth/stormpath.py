@@ -16,7 +16,7 @@ normally requires.
     directory: 3456789012
     # But not both
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 '''
 
 from __future__ import absolute_import

@@ -2,7 +2,7 @@
 '''
 Support for IFTTT
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Requires an ``api_key`` in ``/etc/salt/minion``:
 
@@ -40,9 +40,7 @@ def _query(event=None,
            header_dict=None,
            data=None):
     '''
-    Make a web call to IFTTT
-
-    .. versionadded:: Beryllium
+    Make a web call to IFTTT.
     '''
     secret_key = __salt__['config.get']('ifttt.secret_key') or \
         __salt__['config.get']('ifttt:secret_key')

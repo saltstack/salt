@@ -687,23 +687,27 @@ class Key(object):
         if match.startswith('acc'):
             ret[os.path.basename(acc)] = []
             for fn_ in salt.utils.isorted(os.listdir(acc)):
-                if os.path.isfile(os.path.join(acc, fn_)):
-                    ret[os.path.basename(acc)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(acc, fn_)):
+                        ret[os.path.basename(acc)].append(fn_)
         elif match.startswith('pre') or match.startswith('un'):
             ret[os.path.basename(pre)] = []
             for fn_ in salt.utils.isorted(os.listdir(pre)):
-                if os.path.isfile(os.path.join(pre, fn_)):
-                    ret[os.path.basename(pre)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(pre, fn_)):
+                        ret[os.path.basename(pre)].append(fn_)
         elif match.startswith('rej'):
             ret[os.path.basename(rej)] = []
             for fn_ in salt.utils.isorted(os.listdir(rej)):
-                if os.path.isfile(os.path.join(rej, fn_)):
-                    ret[os.path.basename(rej)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(rej, fn_)):
+                        ret[os.path.basename(rej)].append(fn_)
         elif match.startswith('den'):
             ret[os.path.basename(den)] = []
             for fn_ in salt.utils.isorted(os.listdir(den)):
-                if os.path.isfile(os.path.join(den, fn_)):
-                    ret[os.path.basename(den)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(den, fn_)):
+                        ret[os.path.basename(den)].append(fn_)
         elif match.startswith('all'):
             return self.all_keys()
         return ret
@@ -827,6 +831,24 @@ class Key(object):
             self.name_match(match) if match is not None
             else self.dict_match(matches)
         )
+
+    def delete_den(self):
+        '''
+        Delete all denied keys
+        '''
+        keys = self.list_keys()
+        for status, keys in six.iteritems(self.list_keys()):
+            for key in keys[self.DEN]:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                                 'act': 'delete',
+                                 'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
+        self.check_minion_cache()
+        return self.list_keys()
 
     def delete_all(self):
         '''

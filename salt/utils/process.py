@@ -5,16 +5,20 @@ from __future__ import absolute_import
 import os
 import sys
 import time
+import types
 import signal
 import subprocess
 import logging
 import multiprocessing
+import multiprocessing.util
 
 import threading
 
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
+import salt.log.setup
+from salt.log.mixins import NewStyleClassMixIn
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -238,7 +242,20 @@ class ProcessManager(object):
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
         process.start()
-        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, process.pid))
+
+        # create a nicer name for the debug log
+        if isinstance(tgt, types.FunctionType):
+            name = '{0}.{1}'.format(
+                tgt.__module__,
+                tgt.__name__,
+            )
+        else:
+            name = '{0}.{1}.{2}'.format(
+                tgt.__module__,
+                tgt.__class__,
+                tgt.__name__,
+            )
+        log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
                                           'kwargs': kwargs,
@@ -278,8 +295,8 @@ class ProcessManager(object):
                 if not salt.utils.is_windows():
                     pid, exit_status = os.wait()
                     if pid not in self._process_map:
-                        log.debug(('Process of pid {0} died, not a known'
-                                   ' process, will not restart').format(pid))
+                        log.debug('Process of pid {0} died, not a known'
+                                  ' process, will not restart'.format(pid))
                         continue
                     self.restart_process(pid)
                 else:
@@ -321,8 +338,13 @@ class ProcessManager(object):
                         )
                     p_map['Process'].terminate()
         else:
-            for p_map in six.itervalues(self._process_map):
-                p_map['Process'].terminate()
+            for pid, p_map in six.iteritems(self._process_map.copy()):
+                try:
+                    p_map['Process'].terminate()
+                except OSError as exc:
+                    if exc.errno != 3:
+                        raise
+                    del self._process_map[pid]
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
@@ -342,3 +364,13 @@ class ProcessManager(object):
             # in case the process has since decided to die, os.kill returns OSError
             except OSError:
                 pass
+
+
+class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
+    def __init__(self, *args, **kwargs):
+        self.log_queue = kwargs.pop('log_queue', salt.log.setup.get_multiprocessing_logging_queue())
+        multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
+        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
+
+    def __setup_process_logging(self):
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)

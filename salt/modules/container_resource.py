@@ -2,7 +2,7 @@
 '''
 Common resources for LXC and systemd-nspawn containers
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 These functions are not designed to be called directly, but instead from the
 :mod:`lxc <salt.modules.lxc>`, :mod:`nspawn <salt.modules.nspawn>`, and
@@ -133,8 +133,6 @@ def run(name,
     path
         path to the container parent (for LXC only)
         default: /var/lib/lxc (system default)
-
-        .. versionadded:: Beryllium
 
     CLI Example:
 
@@ -282,8 +280,6 @@ def copy_to(name,
     path
         path to the container parent (for LXC only)
         default: /var/lib/lxc (system default)
-
-        .. versionadded:: Beryllium
 
     CLI Example:
 

@@ -3,7 +3,7 @@
 QingCloud Cloud Module
 ======================
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 The QingCloud cloud module is used to control access to the QingCloud.
 http://www.qingcloud.com/
@@ -638,11 +638,14 @@ def create(vm_):
         salt-cloud -p qingcloud-ubuntu-c1m1 hostname1
         salt-cloud -m /path/to/mymap.sls -P
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'qingcloud',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'qingcloud',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"

@@ -78,7 +78,7 @@ def parse_pkginfo(line, osarch=None):
     if osarch is None:
         osarch = _osarch()
 
-    if not check_32(arch):
+    if not check_32(arch, osarch):
         if arch not in (osarch, 'noarch'):
             name += '.{0}'.format(arch)
     if release:

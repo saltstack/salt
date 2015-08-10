@@ -61,7 +61,7 @@ The package definition file should look similar to this example for Firefox:
 
 .. code-block:: yaml
 
-    Firefox:
+    firefox:
       17.0.1:
         installer: 'salt://win/repo/firefox/English/Firefox Setup 17.0.1.exe'
         full_name: Mozilla Firefox 17.0.1 (x86 en-US)
@@ -161,14 +161,28 @@ project's wiki_:
         installer: salt://win/repo/7zip/7z920-x64.msi
         full_name: 7-Zip 9.20 (x64 edition)
         reboot: False
-        install_flags: ' /q '
+        install_flags: '/qn /norestart'
         msiexec: True
-        uninstaller: salt://win/repo/7zip/7z920-x64.msi
-        uninstall_flags: ' /qn'
+        uninstaller: '{23170F69-40C1-2702-0920-000001000000}'
+        uninstall_flags: '/qn /norestart'
 
 Add ``cache_dir: True`` when the installer requires multiple source files. The
 directory containing the installer file will be recursively cached on the minion.
 Only applies to salt: installer URLs.
+
+Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file.
+
+.. code-block:: yaml
+
+    7zip:
+      9.20.00.0:
+        installer: salt://win/repo/7zip/7z920-x64.msi
+        full_name: 7-Zip 9.20 (x64 edition)
+        reboot: False
+        install_flags: '/qn /norestart'
+        msiexec: True
+        uninstaller: salt://win/repo/7zip/7z920-x64.msi
+        uninstall_flags: '/qn /norestart'
 
 .. code-block:: yaml
 
@@ -177,7 +191,7 @@ Only applies to salt: installer URLs.
         installer: 'salt://win/repo/sqlexpress/setup.exe'
         full_name: Microsoft SQL Server 2014 Setup (English)
         reboot: False
-        install_flags: ' /ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
+        install_flags: '/ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
         cache_dir: True
 
 Generate Repo Cache File
@@ -189,10 +203,10 @@ Once the sls file has been created, generate the repository cache file with the 
 
     salt-run winrepo.genrepo
 
-Beginning with the Beryllium Salt release the repository cache is compiled on
+Beginning with the 2015.8.0 Salt release the repository cache is compiled on
 the Salt Minion. This allows for easy templating on the minion which allows for
 pillar, grains and other things to be available during compilation time. From
-Beryllium forward the above `salt-run winrepo.genrepo` is only required for
+2015.8.0 forward the above `salt-run winrepo.genrepo` is only required for
 older minions. New minions should execute `salt \* pkg.refresh_db` to update
 from the latest from the master's repo.
 

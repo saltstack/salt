@@ -14,9 +14,57 @@ import salt.utils
 import salt.ext.six as six
 
 
+def base64_b64encode(instr):
+    '''
+    Encode a string as base64 using the "modern" Python interface.
+
+    Among other possible differences, the "modern" encoder does not include
+    newline ('\\n') characters in the encoded output.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.base64_b64encode 'get salted'
+    '''
+    if six.PY3:
+        b = salt.utils.to_bytes(instr)
+        b64 = base64.b64encode(b)
+        return salt.utils.to_str(b64)
+    return base64.b64encode(instr)
+
+
+def base64_b64decode(instr):
+    '''
+    Decode a base64-encoded string using the "modern" Python interface
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.base64_b64decode 'Z2V0IHNhbHRlZA=='
+    '''
+    if six.PY3:
+        b = salt.utils.to_bytes(instr)
+        data = base64.b64decode(b)
+        try:
+            return salt.utils.to_str(data)
+        except UnicodeDecodeError:
+            return data
+    return base64.b64decode(instr)
+
+
 def base64_encodestring(instr):
     '''
-    Encode a string as base64
+    Encode a string as base64 using the "legacy" Python interface.
+
+    Among other possible differences, the "legacy" encoder includes
+    a newline ('\\n') character after every 76 characters and always
+    at the end of the encoded string.
 
     .. versionadded:: 2014.7.0
 
@@ -35,7 +83,7 @@ def base64_encodestring(instr):
 
 def base64_decodestring(instr):
     '''
-    Decode a base64-encoded string
+    Decode a base64-encoded string using the "legacy" Python interface
 
     .. versionadded:: 2014.7.0
 

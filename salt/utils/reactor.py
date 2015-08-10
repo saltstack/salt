@@ -30,11 +30,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
     '''
     def __init__(self, opts):
         multiprocessing.Process.__init__(self)
-        salt.state.Compiler.__init__(self, opts)
-
-        local_minion_opts = self.opts.copy()
+        local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
+        salt.state.Compiler.__init__(self, opts, self.minion.rend)
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -102,6 +101,58 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                     reactors.extend(val)
         return reactors
 
+    def list_all(self):
+        '''
+        Return a list of the reactors
+        '''
+        if isinstance(self.minion.opts['reactor'], string_types):
+            log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
+            try:
+                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                    react_map = yaml.safe_load(fp_.read())
+            except (OSError, IOError):
+                log.error(
+                    'Failed to read reactor map: "{0}"'.format(
+                        self.opts['reactor']
+                        )
+                    )
+            except Exception:
+                log.error(
+                    'Failed to parse YAML in reactor map: "{0}"'.format(
+                        self.opts['reactor']
+                        )
+                    )
+        else:
+            log.debug('Not reading reactors from yaml')
+            react_map = self.minion.opts['reactor']
+        return react_map
+
+    def add_reactor(self, tag, reaction):
+        '''
+        Add a reactor
+        '''
+        reactors = self.list_all()
+        for reactor in reactors:
+            _tag = next(iterkeys(reactor))
+            if _tag == tag:
+                return {'status': False, 'comment': 'Reactor already exists.'}
+
+        self.minion.opts['reactor'].append({tag: reaction})
+        return {'status': True, 'comment': 'Reactor added.'}
+
+    def delete_reactor(self, tag):
+        '''
+        Delete a reactor
+        '''
+        reactors = self.list_all()
+        for reactor in reactors:
+            _tag = next(iterkeys(reactor))
+            if _tag == tag:
+                self.minion.opts['reactor'].remove(reactor)
+                return {'status': True, 'comment': 'Reactor deleted.'}
+
+        return {'status': False, 'comment': 'Reactor does not exists.'}
+
     def reactions(self, tag, data, reactors):
         '''
         Render a list of reactor files and returns a reaction struct
@@ -150,15 +201,31 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
-            reactors = self.list_reactors(data['tag'])
-            if not reactors:
-                continue
-            chunks = self.reactions(data['tag'], data['data'], reactors)
-            if chunks:
-                try:
-                    self.call_reactions(chunks)
-                except SystemExit:
-                    log.warning('Exit ignored by reactor')
+            if data['tag'].endswith('salt/reactors/manage/add'):
+                _data = data['data']
+                res = self.add_reactor(_data['event'], _data['reactors'])
+                self.event.fire_event({'reactors': self.list_all(),
+                                       'result': res},
+                                      'salt/reactors/manage/add-complete')
+            elif data['tag'].endswith('salt/reactors/manage/delete'):
+                _data = data['data']
+                res = self.delete_reactor(_data['event'])
+                self.event.fire_event({'reactors': self.list_all(),
+                                       'result': res},
+                                      'salt/reactors/manage/delete-complete')
+            elif data['tag'].endswith('salt/reactors/manage/list'):
+                self.event.fire_event({'reactors': self.list_all()},
+                                      'salt/reactors/manage/list-results')
+            else:
+                reactors = self.list_reactors(data['tag'])
+                if not reactors:
+                    continue
+                chunks = self.reactions(data['tag'], data['data'], reactors)
+                if chunks:
+                    try:
+                        self.call_reactions(chunks)
+                    except SystemExit:
+                        log.warning('Exit ignored by reactor')
 
 
 class ReactWrap(object):

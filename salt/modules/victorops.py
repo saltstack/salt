@@ -2,7 +2,7 @@
 '''
 Support for VictorOps
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Requires an ``api_key`` in ``/etc/salt/minion``:
 
@@ -34,8 +34,7 @@ def __virtual__():
     '''
     if not __salt__['config.get']('victorops.api_key') and \
             not __salt__['config.get']('victorops:api_key'):
-        log.error(_api_key_missing_error)
-        return False
+        return (False, _api_key_missing_error)
     return True
 
 
@@ -47,8 +46,6 @@ def _query(action=None,
            data=None):
     '''
     Make a web call to VictorOps
-
-    .. versionadded:: Beryllium
     '''
     api_key = __salt__['config.get']('victorops.api_key') or \
         __salt__['config.get']('victorops:api_key')

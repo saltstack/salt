@@ -421,7 +421,7 @@ def install(name=None,
         install --reinstall`` will only be used if the installed version
         matches the requested version.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
 
     Multiple Package Installation Options:
@@ -474,7 +474,7 @@ def install(name=None,
    force_conf_new
         Always install the new version of any configuration files.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     Returns a dict containing the new package names and versions::
 
@@ -733,7 +733,7 @@ def autoremove(list_only=False, purge=False):
     purge : False
         Also remove package config data when autoremoving packages.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -851,7 +851,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
    force_conf_new
         Always install the new version of any configuration files.
 
-        .. versionadded:: Beryllium
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1267,11 +1267,27 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2.4-0ubuntu1' '0.2.4.1-0ubuntu1'
     '''
+    # both apt_pkg.version_compare and _cmd_quote need string arguments.
+    pkg1 = str(pkg1)
+    pkg2 = str(pkg2)
+
     # if we have apt_pkg, this will be quickier this way
     # and also do not rely on shell.
     if HAS_APTPKG:
         try:
-            return apt_pkg.version_compare(pkg1, pkg2)
+            # the apt_pkg module needs to be manually initialized
+            apt_pkg.init_system()
+
+            # if there is a difference in versions, apt_pkg.version_compare will
+            # return an int representing the difference in minor versions, or
+            # 1/-1 if the difference is smaller than minor versions. normalize
+            # to -1, 0 or 1.
+            ret = apt_pkg.version_compare(pkg1, pkg2)
+            if ret > 0:
+                return 1
+            if ret < 0:
+                return -1
+            return 0
         except (TypeError, ValueError):
             # try to use shell version in case of errors via
             # the python binding
@@ -1550,7 +1566,7 @@ def del_repo(repo, **kwargs):
 
 def del_repo_key(name=None, **kwargs):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Remove a repo key using ``apt-key del``
 
@@ -1581,7 +1597,7 @@ def del_repo_key(name=None, **kwargs):
             owner_name, ppa_name = name[4:].split('/')
             ppa_info = _get_ppa_info_from_launchpad(
                 owner_name, ppa_name)
-            keyid = ppa_info['signing_key_fingerprint']
+            keyid = ppa_info['signing_key_fingerprint'][-8:]
         else:
             raise SaltInvocationError(
                 'keyid_ppa requires that a PPA be passed'

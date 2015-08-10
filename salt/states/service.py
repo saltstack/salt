@@ -299,7 +299,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
         if __opts__['test']:
-            ret['result'] = None
+            ret['result'] = True
             return ret
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
@@ -392,7 +392,7 @@ def dead(name, enable=None, sig=None, **kwargs):
                 ret.update(_disable(name, None, **kwargs))
             return ret
         else:
-            ret['result'] = None
+            ret['result'] = True
         return ret
 
     if __opts__['test']:
@@ -484,6 +484,19 @@ def mod_watch(name,
 
     sig
         The string to search for when looking for the service process with ps
+
+    reload
+        Use reload instead of the default restart (exclusive option with full_restart,
+        defaults to reload if both are used)
+
+    full_restart
+        Use service.full_restart instead of restart (exclusive option with reload)
+
+    force
+        Use service.force_reload instead of reload (needs reload to be set to True)
+
+    init_delay
+        Add a sleep command (in seconds) before the service is restarted/reloaded
     '''
     ret = {'name': name,
            'changes': {},

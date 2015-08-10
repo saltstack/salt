@@ -399,11 +399,14 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'azure',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'azure',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -1067,7 +1070,7 @@ def get_operation_status(kwargs=None, conn=None, call=None):
 
 def list_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List storage accounts associated with the account
 
@@ -1095,7 +1098,7 @@ def list_storage(kwargs=None, conn=None, call=None):
 
 def show_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List storage service properties
 
@@ -1131,7 +1134,7 @@ get_storage = show_storage
 
 def show_storage_keys(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show storage account keys
 
@@ -1174,7 +1177,7 @@ get_storage_keys = show_storage_keys
 
 def create_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a new storage account
 
@@ -1226,7 +1229,7 @@ def create_storage(kwargs=None, conn=None, call=None):
 
 def update_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update a storage account's properties
 
@@ -1263,7 +1266,7 @@ def update_storage(kwargs=None, conn=None, call=None):
 
 def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Regenerate storage account keys. Requires a key_type ("primary" or
     "secondary") to be specified.
@@ -1303,7 +1306,7 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
 
 def delete_storage(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific storage account
 
@@ -1336,7 +1339,7 @@ def delete_storage(kwargs=None, conn=None, call=None):
 
 def list_services(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List hosted services associated with the account
 
@@ -1364,7 +1367,7 @@ def list_services(kwargs=None, conn=None, call=None):
 
 def show_service(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List hosted service properties
 
@@ -1398,7 +1401,7 @@ def show_service(kwargs=None, conn=None, call=None):
 
 def create_service(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a new hosted service
 
@@ -1445,7 +1448,7 @@ def create_service(kwargs=None, conn=None, call=None):
 
 def delete_service(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific service associated with the account
 
@@ -1478,7 +1481,7 @@ def delete_service(kwargs=None, conn=None, call=None):
 
 def list_disks(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List disks associated with the account
 
@@ -1505,7 +1508,7 @@ def list_disks(kwargs=None, conn=None, call=None):
 
 def show_disk(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a disk
 
@@ -1539,7 +1542,7 @@ get_disk = show_disk
 
 def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Cleans up all disks associated with the account, which are not attached.
     *** CAUTION *** This is a destructive function with no undo button, and no
@@ -1574,7 +1577,7 @@ def cleanup_unattached_disks(kwargs=None, conn=None, call=None):
 
 def delete_disk(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific disk associated with the account
 
@@ -1608,7 +1611,7 @@ def delete_disk(kwargs=None, conn=None, call=None):
 
 def update_disk(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update a disk's properties
 
@@ -1647,7 +1650,7 @@ def update_disk(kwargs=None, conn=None, call=None):
 
 def list_service_certificates(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List certificates associated with the service
 
@@ -1680,7 +1683,7 @@ def list_service_certificates(kwargs=None, conn=None, call=None):
 
 def show_service_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a service certificate
 
@@ -1725,7 +1728,7 @@ get_service_certificate = show_service_certificate
 
 def add_service_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Add a new service certificate
 
@@ -1773,7 +1776,7 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
 
 def delete_service_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific certificate associated with the service
 
@@ -1817,7 +1820,7 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
 
 def list_management_certificates(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List management certificates associated with the subscription
 
@@ -1844,7 +1847,7 @@ def list_management_certificates(kwargs=None, conn=None, call=None):
 
 def show_management_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a management_certificate
 
@@ -1879,7 +1882,7 @@ get_management_certificate = show_management_certificate
 
 def add_management_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Add a new management certificate
 
@@ -1923,7 +1926,7 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
 
 def delete_management_certificate(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific certificate associated with the management
 
@@ -1957,7 +1960,7 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
 
 def list_virtual_networks(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List input endpoints associated with the deployment
 
@@ -1979,7 +1982,7 @@ def list_virtual_networks(kwargs=None, conn=None, call=None):
 
 def list_input_endpoints(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List input endpoints associated with the deployment
 
@@ -2023,7 +2026,7 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
 
 def show_input_endpoint(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show an input endpoint associated with the deployment
 
@@ -2055,7 +2058,7 @@ get_input_endpoint = show_input_endpoint
 
 def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update an input endpoint associated with the deployment. Please note that
     there may be a delay before the changes show up.
@@ -2169,7 +2172,7 @@ xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
 
 def add_input_endpoint(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Add an input endpoint to the deployment. Please note that
     there may be a delay before the changes show up.
@@ -2193,7 +2196,7 @@ def add_input_endpoint(kwargs=None, conn=None, call=None):
 
 def delete_input_endpoint(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete an input endpoint from the deployment. Please note that
     there may be a delay before the changes show up.
@@ -2215,7 +2218,7 @@ def delete_input_endpoint(kwargs=None, conn=None, call=None):
 
 def show_deployment(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return information about a deployment
 
@@ -2255,7 +2258,7 @@ get_deployment = show_deployment
 
 def list_affinity_groups(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List input endpoints associated with the deployment
 
@@ -2282,7 +2285,7 @@ def list_affinity_groups(kwargs=None, conn=None, call=None):
 
 def show_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show an affinity group associated with the account
 
@@ -2317,7 +2320,7 @@ get_affinity_group = show_affinity_group
 
 def create_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a new affinity group
 
@@ -2361,7 +2364,7 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
 
 def update_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Update an affinity group's properties
 
@@ -2398,7 +2401,7 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
 
 def delete_affinity_group(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a specific affinity group associated with the account
 
@@ -2431,7 +2434,7 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
 
 def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Return a storage_conn object for the storage account
     '''
@@ -2455,7 +2458,7 @@ def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
 
 def make_blob_url(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Creates the URL to access a blob
 
@@ -2511,7 +2514,7 @@ def make_blob_url(kwargs=None, storage_conn=None, call=None):
 
 def list_storage_containers(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List containers associated with the storage account
 
@@ -2538,7 +2541,7 @@ def list_storage_containers(kwargs=None, storage_conn=None, call=None):
 
 def create_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Create a storage container
 
@@ -2580,7 +2583,7 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
 
 def show_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a container associated with the storage account
 
@@ -2620,7 +2623,7 @@ get_storage_container = show_storage_container
 
 def show_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a storage container's metadata
 
@@ -2663,7 +2666,7 @@ get_storage_container_metadata = show_storage_container_metadata
 
 def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Set a storage container's metadata
 
@@ -2714,7 +2717,7 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 
 def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a storage container's acl
 
@@ -2757,7 +2760,7 @@ get_storage_container_acl = show_storage_container_acl
 
 def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Set a storage container's acl
 
@@ -2799,7 +2802,7 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
 
 def delete_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Delete a container associated with the storage account
 
@@ -2841,7 +2844,7 @@ def delete_storage_container(kwargs=None, storage_conn=None, call=None):
 
 def lease_storage_container(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Lease a container associated with the storage account
 
@@ -2920,7 +2923,7 @@ def lease_storage_container(kwargs=None, storage_conn=None, call=None):
 
 def list_blobs(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     List blobs associated with the container
 
@@ -2993,7 +2996,7 @@ def list_blobs(kwargs=None, storage_conn=None, call=None):
 
 def show_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Show a blob's service properties
 
@@ -3023,7 +3026,7 @@ get_blob_service_properties = show_blob_service_properties
 
 def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Sets the properties of a storage account's Blob service, including
     Windows Azure Storage Analytics. You can also use this operation to
@@ -3064,7 +3067,7 @@ def set_blob_service_properties(kwargs=None, storage_conn=None, call=None):
 
 def show_blob_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Returns all user-defined metadata, standard HTTP properties, and
     system properties for the blob.
@@ -3117,7 +3120,7 @@ get_blob_properties = show_blob_properties
 
 def set_blob_properties(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Set a blob's properties
 
@@ -3186,7 +3189,7 @@ def set_blob_properties(kwargs=None, storage_conn=None, call=None):
 
 def put_blob(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Upload a blob
 
@@ -3261,7 +3264,7 @@ def put_blob(kwargs=None, storage_conn=None, call=None):
 
 def get_blob(kwargs=None, storage_conn=None, call=None):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Download a blob
 
