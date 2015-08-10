@@ -2148,14 +2148,9 @@ class ClearFuncs(object):
 
             type_, value_, traceback_ = sys.exc_info()
             log.error(
-                'ARGH Exception occurred while authenticating: {0}'.format(exc)
-            )
-            log.error(traceback.format_exception(
-                type_, value_, traceback_))
-            return ''
-            log.error(
                 'Exception occurred while authenticating: {0}'.format(exc)
             )
+            log.error(traceback.format_exception(type_, value_, traceback_))
             return ''
 
     def get_token(self, clear_load):
@@ -2334,10 +2329,6 @@ class ClearFuncs(object):
                 )
                 log.error(traceback.format_exception(
                     type_, value_, traceback_))
-                return ''
-                log.error(
-                    'Exception occurred while authenticating: {0}'.format(exc)
-                )
                 return ''
 
 #            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
