@@ -73,8 +73,8 @@ class WinrepoTestCase(TestCase):
             ret.update({'comment': 'missing /srv/salt/win/repo'})
             self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
-            mock = MagicMock(return_value={'win_repo': 'salt',
-                                           'win_repo_mastercachefile': 'abc'})
+            mock = MagicMock(return_value={'winrepo_dir': 'salt',
+                                           'winrepo_cachefile': 'abc'})
             with patch.object(salt.config, 'master_config', mock):
                 mock = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
                 with patch.object(os, 'stat', mock):

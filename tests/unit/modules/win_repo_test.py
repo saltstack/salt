@@ -36,14 +36,14 @@ class WinRepoTestCase(TestCase):
     @patch('salt.loader.render', MagicMock(return_valu=''))
     def test_genrepo(self):
         '''
-            Test to generate win_repo_cachefile
-            based on sls files in the win_repo
+        Test to generate winrepo_cachefile based on sls files in the
+        winrepo_dir
         '''
-        with patch.dict(win_repo.__opts__, {'win_repo': 'c:\\salt'}):
+        with patch.dict(win_repo.__opts__, {'winrepo_dir': 'c:\\salt'}):
             mock_bool = MagicMock(return_value=True)
             with patch.object(os.path, 'exists', mock_bool):
                 with patch.dict(win_repo.__opts__,
-                                {'win_repo_cachefile': 'cache.c'}):
+                                {'winrepo_cachefile': 'cache.c'}):
                     mock = MagicMock(return_value={})
                     with patch.object(os, 'walk', mock):
                         with patch('salt.utils.fopen', mock_open()):
@@ -53,11 +53,11 @@ class WinRepoTestCase(TestCase):
 
     def test_update_git_repos(self):
         '''
-            Test to checkout git repos containing
-            Windows Software Package Definitions
+        Test to checkout git repos containing Windows software package
+        definitions
         '''
-        with patch.dict(win_repo.__opts__, {'win_repo': 'c:\\salt'}):
-            with patch.dict(win_repo.__opts__, {'win_gitrepos': {}}):
+        with patch.dict(win_repo.__opts__, {'winrepo_dir': 'c:\\salt'}):
+            with patch.dict(win_repo.__opts__, {'winrepo_remotes': {}}):
                 mock = MagicMock(return_value=True)
                 with patch.object(salt.output, 'display_output', mock):
                     self.assertDictEqual(win_repo.update_git_repos(), {})
