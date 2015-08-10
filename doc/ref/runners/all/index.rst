@@ -10,8 +10,10 @@ Full list of runner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    asam
     cache
     cloud
+    ddns
     doc
     drac
     error
@@ -33,6 +35,7 @@ Full list of runner modules
     reactor
     sdb
     search
+    spacewalk
     ssh
     state
     survey
