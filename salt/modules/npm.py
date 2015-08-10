@@ -113,22 +113,25 @@ def install(pkg=None,
     if pkg:
         pkg = _cmd_quote(pkg)
     if pkgs:
-        pkgs = ' '.join([_cmd_quote(item) for item in pkgs.split()])
+        pkg_list = []
+        for item in pkgs:
+            pkg_list.append(_cmd_quote(item))
+        pkgs = pkg_list
     if registry:
         registry = _cmd_quote(registry)
 
-    cmd = 'npm install --silent --json'
+    cmd = ['npm', 'install', '--silent', '--json']
 
     if dir is None:
-        cmd += ' --global'
+        cmd.append(' --global')
 
     if registry:
-        cmd += ' --registry="{0}"'.format(registry)
+        cmd.append(' --registry="{0}"'.format(registry))
 
     if pkg:
-        cmd += ' "{0}"'.format(pkg)
+        cmd.append(pkg)
     elif pkgs:
-        cmd += ' "{0}"'.format('" "'.join(pkgs))
+        cmd.extend(pkgs)
     else:
         return 'No package name specified'
 
@@ -140,6 +143,7 @@ def install(pkg=None,
         if uid:
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
+    cmd = ' '.join(cmd)
     result = __salt__['cmd.run_all'](cmd, python_shell=True, cwd=dir, runas=runas, env=env)
 
     if result['retcode'] != 0:
