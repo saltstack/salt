@@ -14,13 +14,13 @@ import time
 
 # Import salt libs
 from integration import TestDaemon, TMP  # pylint: disable=W0403
+from integration import INTEGRATION_TEST_DIR
+from integration import CODE_DIR as SALT_ROOT
 
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
 from salttesting.parser.cover import SaltCoverageTestingParser
 
-TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-SALT_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
     os.path.join(TMP, 'xml-test-reports')
@@ -30,7 +30,7 @@ HTML_OUTPUT_DIR = os.environ.get(
     os.path.join(TMP, 'html-test-reports')
 )
 
-
+TEST_DIR = os.path.dirname(INTEGRATION_TEST_DIR)
 try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
@@ -55,8 +55,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet'),
-            help='Set to raet to run integration tests with raet transport. Default: %default')
+            choices=('zeromq', 'raet', 'tcp'),
+            help=('Select which transport to run the integration tests with, '
+                  'zeromq, raet, or tcp. Default: %default')
+        )
         self.add_option(
             '--interactive',
             default=False,

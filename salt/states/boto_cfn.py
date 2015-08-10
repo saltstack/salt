@@ -2,7 +2,7 @@
 '''
     Connection module for Amazon Cloud Formation
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     :configuration: This module accepts explicit AWS credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
@@ -60,8 +60,6 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
             stack_policy_during_update_url=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure cloud formation stack is present.
-
-    .. versionadded:: Beryllium
 
     name (string) - Name of the stack.
 
@@ -183,8 +181,6 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
 def absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure cloud formation stack is absent.
-
-    .. versionadded:: Beryllium
 
     name (string) – The name of the stack to delete.
 

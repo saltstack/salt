@@ -57,6 +57,7 @@ import salt.output
 import salt.version
 import salt.utils
 import salt.utils.process
+import salt.log.setup as salt_log_setup
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
@@ -136,8 +137,9 @@ def run_tests(*test_cases, **kwargs):
                 self.add_option(
                     '--transport',
                     default='zeromq',
-                    choices=('zeromq', 'raet'),
-                    help='Set to raet to run integration tests with raet transport. Default: %default'
+                    choices=('zeromq', 'raet', 'tcp'),
+                    help=('Select which transport to run the integration tests with, '
+                          'zeromq, raet, or tcp. Default: %default')
                 )
 
         def validate_options(self):
@@ -177,6 +179,9 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
+        # Setup the multiprocessing logging queue listener
+        salt_log_setup.setup_multiprocessing_logging_listener()
+
         # Set up PATH to mockbin
         self._enter_mockbin()
 
@@ -184,6 +189,8 @@ class TestDaemon(object):
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
             self.start_raet_daemons()
+        elif self.parser.options.transport == 'tcp':
+            self.start_tcp_daemons()
 
         self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
@@ -287,6 +294,8 @@ class TestDaemon(object):
         #                                            'start')
 
         # no raet syndic daemon yet
+
+    start_tcp_daemons = start_zeromq_daemons
 
     def prep_ssh(self):
         '''
@@ -513,6 +522,12 @@ class TestDaemon(object):
             sub_minion_opts['raet_port'] = 64520
             # syndic_master_opts['transport'] = 'raet'
 
+        if transport == 'tcp':
+            master_opts['transport'] = 'tcp'
+            minion_opts['transport'] = 'tcp'
+            sub_minion_opts['transport'] = 'tcp'
+            syndic_master_opts['transport'] = 'tcp'
+
         # Set up config options that require internal data
         master_opts['pillar_roots'] = {
             'base': [os.path.join(FILES, 'pillar', 'base')]
@@ -674,6 +689,8 @@ class TestDaemon(object):
             pass
         self._exit_mockbin()
         self._exit_ssh()
+        # Shutdown the multiprocessing logging queue listener
+        salt_log_setup.shutdown_multiprocessing_logging_listener()
 
     def pre_setup_minions(self):
         '''
@@ -1188,6 +1205,12 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _code_dir_ = CODE_DIR
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
+
+    def chdir(self, dirname):
+        try:
+            os.chdir(dirname)
+        except OSError:
+            os.chdir(INTEGRATION_TEST_DIR)
 
     def run_salt(self, arg_str, with_retcode=False, catch_stderr=False):
         '''

@@ -2,8 +2,8 @@
 '''
 Renderer that will decrypt GPG ciphers
 
-Any key in the SLS file can be a GPG cipher, and this renderer will decrypt
-it before passing it off to Salt. This allows you to safely store secrets in
+Any key in the SLS file can be a GPG cipher, and this renderer will decrypt it
+before passing it off to Salt. This allows you to safely store secrets in
 source control, in such a way that only your Salt master can decrypt them and
 distribute them only to the minions that need them.
 
@@ -11,60 +11,60 @@ The typical use-case would be to use ciphers in your pillar data, and keep a
 secret key on your master. You can put the public key in source control so that
 developers can add new secrets quickly and easily.
 
-This renderer requires the python-gnupg package. Be careful to install the
-``python-gnupg`` package, not the ``gnupg`` package, or you will get errors.
+This renderer requires the gpg binary.
+
+**No python libraries are required as of the Beryllium release.**
 
 To set things up, you will first need to generate a keypair. On your master,
 run:
 
-.. code-block:: bash
+.. code-block:: shell
 
+    # mkdir -p /etc/salt/gpgkeys
+    # chmod 0700 /etc/salt/gpgkeys
     # gpg --gen-key --homedir /etc/salt/gpgkeys
 
 Do not supply a password for your keypair, and use a name that makes sense
 for your application. Be sure to back up your gpg directory someplace safe!
 
+.. note::
+    Unfortunately, there are some scenarios - for example, on virtual machines
+    which don’t have real hardware - where insufficient entropy causes key
+    generation to be extremely slow. If you come across this problem, you should
+    investigate means of increasing the system entropy. On virtualised Linux
+    systems, this can often be achieved by installing the rng-tools package.
+
 To retrieve the public key:
 
-.. code-block:: bash
+.. code-block:: shell
 
-    # gpg --armor --homedir /etc/salt/gpgkeys --armor --export <KEY-NAME> \
-          > exported_pubkey.gpg
+    # gpg --homedir /etc/salt/gpgkeys --armor --export <KEY-NAME> \
+        > exported_pubkey.gpg
 
 Now, to encrypt secrets, copy the public key to your local machine and run:
 
-.. code-block:: bash
+.. code-block:: shell
 
     $ gpg --import exported_pubkey.gpg
 
 To generate a cipher from a secret:
 
-.. code-block:: bash
+.. code-block:: shell
 
-   $ echo -n "supersecret" | gpg --homedir ~/.gnupg --armor --encrypt -r <KEY-name>
+   $ echo -n "supersecret" | gpg --armor --encrypt -r <KEY-name>
 
-There are two ways to configure salt for the usage of this renderer:
-
-1. Set up the renderer on your master by adding something like this line to your
-    config:
-
-        .. code-block:: yaml
-
-            renderer: jinja | yaml | gpg
-
-    This will apply the renderers to all pillars and states while requiring
-    ``python-gnupg`` to be installed on all minions since the decryption
-    will happen on the minions.
-
-2. To apply the renderer on a file-by-file basis add the following line to the top of any pillar with gpg data in it:
+To apply the renderer on a file-by-file basis add the following line to the
+top of any pillar with gpg data in it:
 
     .. code-block:: yaml
 
         #!yaml|gpg
 
-Now with your renderers configured, you can include your ciphers in your pillar data like so:
+Now with your renderer configured, you can include your ciphers in your pillar data like so:
 
 .. code-block:: yaml
+
+    #!yaml|gpg
 
     a-secret: |
       -----BEGIN PGP MESSAGE-----
@@ -87,6 +87,7 @@ from __future__ import absolute_import
 import os
 import re
 import logging
+from subprocess import Popen, PIPE
 
 # Import salt libs
 import salt.utils
@@ -96,45 +97,50 @@ from salt.exceptions import SaltRenderError
 # Import 3rd-party libs
 import salt.ext.six as six
 
-# pylint: disable=import-error
-try:
-    import gnupg
 
-    HAS_GPG = True
-    if salt.utils.which('gpg') is None:
-        HAS_GPG = False
-except ImportError:
-    HAS_GPG = False
-# pylint: enable=import-error
-
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
-DEFAULT_GPG_KEYDIR = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
-def decrypt_ciphertext(cypher, gpg, safe=False):
+def _get_gpg_exec():
+    '''
+    return the GPG executable or raise an error
+    '''
+    gpg_exec = salt.utils.which('gpg')
+    if gpg_exec:
+        return gpg_exec
+    else:
+        raise SaltRenderError('GPG unavailable')
+
+
+def _get_key_dir():
+    '''
+    return the location of the GPG key directory
+    '''
+    if __salt__['config.get']('gpg_keydir'):
+        return __salt__['config.get']('gpg_keydir')
+    else:
+        return os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+
+
+def _decrypt_ciphertext(cipher):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
     decrypted, log the error, and return the ciphertext back out.
-
-    :param safe: Raise an exception on failure instead of returning the ciphertext
     '''
-    decrypted_data = gpg.decrypt(cypher)
-    if not decrypted_data.ok:
-        decrypt_err = "Could not decrypt cipher {0}, received {1}".format(
-            cypher, decrypted_data.stderr)
-        log.error(decrypt_err)
-        if safe:
-            raise SaltRenderError(decrypt_err)
-        else:
-            return cypher
+    cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '-d']
+    proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
+    decrypted_data, decrypt_error = proc.communicate(input=cipher)
+    if not decrypted_data:
+        LOG.error('Could not decrypt cipher %s, received: %s', cipher, decrypt_error)
+        return cipher
     else:
         return str(decrypted_data)
 
 
-def decrypt_object(obj, gpg):
+def _decrypt_object(obj):
     '''
     Recursively try to decrypt any object. If the object is a six.string_types (string or unicode), and
     it contains a valid GPG header, decrypt it, otherwise keep going until
@@ -142,16 +148,16 @@ def decrypt_object(obj, gpg):
     '''
     if isinstance(obj, six.string_types):
         if GPG_HEADER.search(obj):
-            return decrypt_ciphertext(obj, gpg)
+            return _decrypt_ciphertext(obj)
         else:
             return obj
     elif isinstance(obj, dict):
         for key, val in six.iteritems(obj):
-            obj[key] = decrypt_object(val, gpg)
+            obj[key] = _decrypt_object(val)
         return obj
     elif isinstance(obj, list):
-        for n, v in enumerate(obj):
-            obj[n] = decrypt_object(v, gpg)
+        for key, value in enumerate(obj):
+            obj[key] = _decrypt_object(value)
         return obj
     else:
         return obj
@@ -162,17 +168,8 @@ def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
     Create a gpg object given a gpg_keydir, and then use it to try to decrypt
     the data to be rendered.
     '''
-    if not HAS_GPG:
+    if not _get_gpg_exec():
         raise SaltRenderError('GPG unavailable')
-    if 'config.get' in __salt__:
-        homedir = __salt__['config.get']('gpg_keydir', DEFAULT_GPG_KEYDIR)
-    else:
-        homedir = __opts__.get('gpg_keydir', DEFAULT_GPG_KEYDIR)
-    log.debug('Reading GPG keys from: {0}'.format(homedir))
-    try:
-        gpg = gnupg.GPG(gnupghome=homedir)
-    except TypeError:
-        gpg = gnupg.GPG()
-    except OSError:
-        raise SaltRenderError('Cannot initialize gnupg')
-    return decrypt_object(gpg_data, gpg)
+    LOG.debug('Reading GPG keys from: %s', _get_key_dir())
+
+    return _decrypt_object(gpg_data)

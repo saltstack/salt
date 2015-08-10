@@ -4,7 +4,7 @@ An engine that continuously reads messages from SQS and fires them as events.
 
 Note that long polling is utilized to avoid excessive CPU usage.
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 :configuration:
     This engine can be run on the master or on a minion.
@@ -113,7 +113,8 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
             __opts__,
-            __opts__['sock_dir']).fire_event
+            __opts__['sock_dir'],
+            listen=False).fire_event
     else:
         fire_master = None
 

@@ -104,7 +104,7 @@ def _get_options(ret=None):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db',
-             'username': 'username',
+             'user': 'user',
              'password': 'password',
              'indexes': 'indexes'}
 
@@ -139,10 +139,10 @@ def _get_conn(ret):
         mdb.authenticate(user, password)
 
     if indexes:
-        mdb.saltReturns.ensure_index('minion')
-        mdb.saltReturns.ensure_index('jid')
+        mdb.saltReturns.create_index('minion')
+        mdb.saltReturns.create_index('jid')
 
-        mdb.jobs.ensure_index('jid')
+        mdb.jobs.create_index('jid')
 
     return conn, mdb
 

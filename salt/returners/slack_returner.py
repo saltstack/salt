@@ -66,12 +66,12 @@ import logging
 import urllib
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
 import salt.returners
+import salt.utils.slack
 
 log = logging.getLogger(__name__)
 
@@ -119,103 +119,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _query(function,
-           api_key=None,
-           args=None,
-           method='GET',
-           header_dict=None,
-           data=None):
-    '''
-    Slack object method function to construct and execute on the API URL.
-
-    :param api_key:     The Slack api key.
-    :param function:    The Slack api function to perform.
-    :param method:      The HTTP method, e.g. GET or POST.
-    :param data:        The data to be sent for POST method.
-    :return:            The json response from the API call or False.
-    '''
-    query_params = {}
-
-    ret = {'message': '',
-           'res': True}
-
-    slack_functions = {
-        'rooms': {
-            'request': 'channels.list',
-            'response': 'channels',
-        },
-        'users': {
-            'request': 'users.list',
-            'response': 'members',
-        },
-        'message': {
-            'request': 'chat.postMessage',
-            'response': 'channel',
-        },
-    }
-
-    if not api_key:
-        try:
-            options = __salt__['config.option']('slack')
-            if not api_key:
-                api_key = options.get('api_key')
-        except (NameError, KeyError, AttributeError):
-            log.error('No Slack api key found.')
-            ret['message'] = 'No Slack api key found.'
-            ret['res'] = False
-            return ret
-
-    api_url = 'https://slack.com'
-    base_url = _urljoin(api_url, '/api/')
-    path = slack_functions.get(function).get('request')
-    url = _urljoin(base_url, path, False)
-
-    if not isinstance(args, dict):
-        query_params = {}
-    query_params['token'] = api_key
-
-    if header_dict is None:
-        header_dict = {}
-
-    if method != 'POST':
-        header_dict['Accept'] = 'application/json'
-
-    result = salt.utils.http.query(
-        url,
-        method,
-        params=query_params,
-        data=data,
-        decode=True,
-        status=True,
-        header_dict=header_dict,
-        opts=__opts__,
-    )
-
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
-        _result = result['dict']
-        response = slack_functions.get(function).get('response')
-        if 'error' in _result:
-            ret['message'] = _result['error']
-            ret['res'] = False
-            return ret
-        ret['message'] = _result.get(response)
-        return ret
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
-        return True
-    else:
-        log.debug(url)
-        log.debug(query_params)
-        log.debug(data)
-        log.debug(result)
-        _result = result['dict']
-        if 'error' in _result:
-            ret['message'] = _result['error']
-            ret['res'] = False
-            return ret
-        ret['message'] = _result.get(response)
-        return ret
-
-
 def _post_message(channel,
                   message,
                   username,
@@ -239,11 +142,11 @@ def _post_message(channel,
     parameters['text'] = '```' + message + '```'  # pre-formatted, fixed-width text
 
     # Slack wants the body on POST to be urlencoded.
-    result = _query(function='message',
-                    api_key=api_key,
-                    method='POST',
-                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
-                    data=urllib.urlencode(parameters))
+    result = salt.utils.slack.query(function='message',
+                                    api_key=api_key,
+                                    method='POST',
+                                    header_dict={'Content-Type': 'application/x-www-form-urlencoded'},
+                                    data=urllib.urlencode(parameters))
 
     log.debug('result {0}'.format(result))
     if result:

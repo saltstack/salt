@@ -197,11 +197,14 @@ def create(vm_):
     '''
     Create a single Linode VM.
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'linode',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'linode',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -766,7 +769,7 @@ def list_nodes_full():
     .. code-block:: bash
 
         salt-cloud -F
-         salt-cloud --full-query
+        salt-cloud --full-query
 
     .. note::
 
@@ -781,7 +784,7 @@ def reboot(name=None, linode_id=None, call=None):
     '''
     Reboot a linode. Either a name or a linode_id must be provided.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     name
         The name of the VM to reboot.
@@ -827,7 +830,7 @@ def show_instance(name=None, linode_id=None, call=None):
     Displays details about a particular Linode VM. Either a name or a linode_id must
     be provided.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     name
         The name of the VM for which to display details.
@@ -881,7 +884,7 @@ def show_pricing(kwargs=None, call=None):
     Show pricing for a particular profile. This is only an estimate, based on
     unofficial pricing sources.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1176,11 +1179,15 @@ def _wait_for_job(linode_id, job_id, timeout=300, quiet=True):
 
         time.sleep(interval)
         if not quiet:
-            log.info('Still waiting on Job {0} for {1}'.format(job_id,
-                                                               linode_id))
+            log.info('Still waiting on Job {0} for Linode {1}.'.format(
+                job_id,
+                linode_id)
+            )
         else:
-            log.debug('Still waiting on Job {0} for {1}'.format(job_id,
-                                                                linode_id))
+            log.debug('Still waiting on Job {0} for Linode {1}.'.format(
+                job_id,
+                linode_id)
+            )
     return False
 
 
@@ -1203,6 +1210,8 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
     if status is None:
         status = _get_status_id_by_name('brand_new')
 
+    status_desc_waiting = _get_status_descr_by_id(status)
+
     interval = 5
     iterations = int(timeout / interval)
 
@@ -1212,11 +1221,21 @@ def _wait_for_status(linode_id, status=None, timeout=300, quiet=True):
         if result['STATUS'] == status:
             return True
 
+        status_desc_result = _get_status_descr_by_id(result['STATUS'])
+
         time.sleep(interval)
         if quiet:
-            log.info('Status for {0} is {1}, waiting for {2}'.format(linode_id, result['STATUS'], status))
+            log.info('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
+                linode_id,
+                status_desc_result,
+                status_desc_waiting)
+            )
         else:
-            log.debug('Status for {0} is {1}, waiting for {2}'.format(linode_id, result, status))
+            log.debug('Status for Linode {0} is \'{1}\', waiting for \'{2}\'.'.format(
+                linode_id,
+                status_desc_result,
+                status_desc_waiting)
+            )
 
     return False
 

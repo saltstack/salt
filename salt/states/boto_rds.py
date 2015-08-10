@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage RDSs
-=================
+===========
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 Create and destroy RDS instances. Be aware that this interacts with Amazon's
 services, and so may incur charges.
@@ -315,8 +315,6 @@ def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
                          key=None, keyid=None, profile=None):
     '''
     Ensure DB subnet group exists.
-
-    .. versionadded:: Beryllium
 
     name
         The name for the DB subnet group. This value is stored as a lowercase string.

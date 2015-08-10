@@ -82,11 +82,14 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
-    # Check for required profile parameters before sending any API calls.
-    if config.is_profile_configured(__opts__,
-                                    __active_provider_name__ or 'gogrid',
-                                    vm_['profile']) is False:
-        return False
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'gogrid',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
 
     # Since using "provider: <provider-engine>" is deprecated, alias provider
     # to use driver: "driver: <provider-engine>"
@@ -313,7 +316,7 @@ def list_passwords(kwargs=None, call=None):
     '''
     List all password on the account
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     response = _query('support', 'password/list')
 
@@ -343,7 +346,7 @@ def list_public_ips(kwargs=None, call=None):
 
         salt-cloud -f list_public_ips <provider> state=assigned
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     if kwargs is None:
         kwargs = {}
@@ -373,7 +376,7 @@ def list_common_lookups(kwargs=None, call=None):
     '''
     List common lookups for a particular type of item
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     if kwargs is None:
         kwargs = {}
@@ -437,7 +440,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot vm_name
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     return _query('grid', 'server/power', args={'name': name, 'power': 'restart'})
 
@@ -452,7 +455,7 @@ def stop(name, call=None):
 
         salt-cloud -a stop vm_name
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     return _query('grid', 'server/power', args={'name': name, 'power': 'stop'})
 
@@ -467,7 +470,7 @@ def start(name, call=None):
 
         salt-cloud -a start vm_name
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     return _query('grid', 'server/power', args={'name': name, 'power': 'start'})
 
@@ -482,7 +485,7 @@ def show_instance(name, call=None):
 
         salt-cloud -a show_instance vm_name
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     response = _query('grid', 'server/get', args={'name': name})
     ret = {}
@@ -510,7 +513,7 @@ def _query(action=None,
     '''
     Make a web call to GoGrid
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     '''
     vm_ = get_configured_provider()
     apikey = config.get_cloud_config_value(

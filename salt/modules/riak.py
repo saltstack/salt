@@ -53,7 +53,7 @@ def stop():
     '''
     Stop Riak
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
 
     CLI Example:
 
@@ -78,7 +78,7 @@ def cluster_join(username, hostname):
     '''
     Join a Riak cluster
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
 
     CLI Example:
 
@@ -108,7 +108,7 @@ def cluster_leave(username, hostname):
     '''
     Leave a Riak cluster
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -138,7 +138,7 @@ def cluster_plan():
     '''
     Review Cluster Plan
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
 
     CLI Example:
 
@@ -158,7 +158,7 @@ def cluster_commit():
     '''
     Commit Cluster Changes
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
 
     CLI Example:
 
@@ -183,7 +183,7 @@ def member_status():
     '''
     Get cluster member status
 
-    .. versionchanged:: Beryllium
+    .. versionchanged:: 2015.8.0
 
     CLI Example:
 
@@ -227,7 +227,7 @@ def status():
     '''
     Current node status
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -251,7 +251,7 @@ def test():
     '''
     Runs a test of a few standard Riak operations
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -276,7 +276,7 @@ def services():
     '''
     List available services on a node
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
