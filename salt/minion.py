@@ -2559,10 +2559,6 @@ class ProxyMinion(Minion):
 
         self.grains_cache = self.opts['grains']
 
-        # store your hexid to subscribe to zmq, hash since zmq filters are prefix
-        # matches this way we can avoid collisions
-        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
-
         # self._running = True
 
     def _prep_mod_opts(self):
