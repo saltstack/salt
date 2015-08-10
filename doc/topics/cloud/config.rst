@@ -45,7 +45,7 @@ Cloud Configuration Syntax
 
 The data specific to interacting with public clouds is set up here.
 
-Cloud provider configuration syntax can live in several places. The first is in
+Cloud provider configuration settings can live in several places. The first is in
 ``/etc/salt/cloud``:
 
 .. code-block:: yaml
@@ -171,13 +171,13 @@ minion. In your pillar file, you would use something like this:
 
       profiles:
         ubuntu-nova:
-          driver: my-nova
+          provider: my-nova
           size: performance1-8
           image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
           script_args: git develop
 
         ubuntu-openstack:
-          driver: my-openstack
+          provider: my-openstack
           size: performance1-8
           image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
           script_args: git develop
@@ -217,7 +217,7 @@ Rackspace cloud requires two configuration options; a ``user`` and an ``apikey``
     my-rackspace-config:
       user: example_user
       apikey: 123984bjjas87034
-      driver: rackspace-config
+      driver: rackspace
 
 .. note::
 
@@ -444,7 +444,7 @@ Proxmox
 -------
 
 Using Salt with Proxmox requires a ``user``, ``password``, and ``URL``. These can be
-obtained from your cloud provider. Both PAM and PVE users can be used.
+obtained from your cloud host. Both PAM and PVE users can be used.
 
 .. code-block:: yaml
 
@@ -478,7 +478,7 @@ And in the map file:
 .. code-block:: yaml
 
     devhost10-lxc:
-      driver: devhost10-lxc
+      provider: devhost10-lxc
       from_container: ubuntu
       backing: lvm
       sudo: True

@@ -135,8 +135,8 @@ def read_key(hkey, path, key=None):
            'success': True}
 
     if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.read_value to read a registry'
-                                       'value. This functionality will be'
+        salt.utils.warn_until('Boron', 'Use reg.read_value to read a registry '
+                                       'value. This functionality will be '
                                        'removed in Salt Boron')
         return read_value(hive=hkey,
                           key=path,
@@ -248,8 +248,8 @@ def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
     '''
 
     if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry'
-                                       'value. This functionality will be'
+        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
+                                       'value. This functionality will be '
                                        'removed in Salt Boron')
         return set_value(hive=hkey,
                          key=path,
@@ -353,8 +353,8 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
     if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry'
-                                       'value. This functionality will be'
+        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
+                                       'value. This functionality will be '
                                        'removed in Salt Boron')
         return set_value(hive=hkey,
                          key=path,
@@ -406,8 +406,8 @@ def delete_key(hkey, path, key=None, reflection=True):
     '''
 
     if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry'
-                                       'value. This functionality will be'
+        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
+                                       'value. This functionality will be '
                                        'removed in Salt Boron')
         return delete_value(hive=hkey,
                             key=path,

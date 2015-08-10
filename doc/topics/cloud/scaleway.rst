@@ -2,7 +2,7 @@
 Getting Started With Scaleway
 =============================
 
-Scaleway is the first IaaS provider worldwide to offer an ARM based cloud. It’s the ideal platform for horizontal scaling with BareMetal SSD servers. The solution provides on demand resources: it comes with on-demand SSD storage, movable IPs , images, security group and an Object Storage solution. https://scaleway.com
+Scaleway is the first IaaS host worldwide to offer an ARM based cloud. It’s the ideal platform for horizontal scaling with BareMetal SSD servers. The solution provides on demand resources: it comes with on-demand SSD storage, movable IPs , images, security group and an Object Storage solution. https://scaleway.com
 
 Configuration
 =============
@@ -20,6 +20,15 @@ If you do not have API token you can create one by clicking the "Create New Toke
       access_key: 15cf404d-4560-41b1-9a0c-21c3d5c4ff1f
       token: a7347ec8-5de1-4024-a5e3-24b77d1ba91d
       driver: scaleway
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========

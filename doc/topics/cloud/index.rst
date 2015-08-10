@@ -15,9 +15,9 @@ Salt Cloud is built-in to Salt and is configured on and executed from your Salt 
 Define a Provider
 -----------------
 
-The first step is to add the credentials for your cloud provider. Credentials
-and provider settings are stored in provider configuration files.
-Provider configurations contain the details needed to connect to a cloud provider such as EC2, GCE, Rackspace, etc.,
+The first step is to add the credentials for your cloud host. Credentials
+and other settings provided by the cloud host are stored in provider configuration files.
+Provider configurations contain the details needed to connect to a cloud host such as EC2, GCE, Rackspace, etc.,
 and any global options that you want set on your cloud minions (such as the location of your Salt Master).
 
 On your Salt Master, browse to ``/etc/salt/cloud.providers.d/`` and create a file called ``<provider>.provider.conf``,
@@ -25,7 +25,7 @@ replacing ``<provider>`` with ``ec2``, ``softlayer``, and so on. The name helps 
 important as long as the file ends in ``.conf``.
 
 Next, browse to the :ref:`Provider specifics <cloud-provider-specifics>` and add any required settings for your
-provider to this file. Here is an example for Amazon EC2:
+cloud host to this file. Here is an example for Amazon EC2:
 
 .. code-block:: yaml
 
@@ -45,7 +45,7 @@ provider to this file. Here is an example for Amazon EC2:
       minion:
         master: saltmaster.example.com
 
-The required configuration varies between providers so make sure you read the provider specifics.
+The required configuration varies between cloud hosts so make sure you read the provider specifics.
 
 List Cloud Provider Options
 ---------------------------

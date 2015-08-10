@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+from datetime import datetime
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -19,6 +20,16 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import win_system
+
+# Import 3rd Party Libs
+try:
+    import win32net  # pylint: disable=W0611
+    import win32api  # pylint: disable=W0611
+    import pywintypes  # pylint: disable=W0611
+    from ctypes import windll  # pylint: disable=W0611
+    HAS_WIN32NET_MODS = True
+except ImportError:
+    HAS_WIN32NET_MODS = False
 
 win_system.__salt__ = {}
 
@@ -43,6 +54,7 @@ class WinSystemTestCase(TestCase):
         self.assertEqual(win_system.init(3),
                          'Not implemented on Windows at this time.')
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_poweroff(self):
         '''
             Test to poweroff a running system
@@ -51,6 +63,7 @@ class WinSystemTestCase(TestCase):
         with patch.object(win_system, 'shutdown', mock):
             self.assertEqual(win_system.poweroff(), 'salt')
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_reboot(self):
         '''
             Test to reboot the system
@@ -91,6 +104,7 @@ class WinSystemTestCase(TestCase):
                 mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
                 sleep_mock.assert_called_once_with(330)
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_shutdown(self):
         '''
             Test to shutdown a running system
@@ -99,6 +113,7 @@ class WinSystemTestCase(TestCase):
         with patch.dict(win_system.__salt__, {'cmd.run': mock}):
             self.assertEqual(win_system.shutdown(), 'salt')
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_shutdown_hard(self):
         '''
             Test to shutdown a running system with no timeout or warning
@@ -107,6 +122,7 @@ class WinSystemTestCase(TestCase):
         with patch.dict(win_system.__salt__, {'cmd.run': mock}):
             self.assertEqual(win_system.shutdown_hard(), 'salt')
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_computer_name(self):
         '''
             Test to set the Windows computer name
@@ -126,6 +142,7 @@ class WinSystemTestCase(TestCase):
 
             self.assertFalse(win_system.set_computer_name("salt"))
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_get_pending_computer_name(self):
         '''
             Test to get a pending computer name.
@@ -140,6 +157,7 @@ class WinSystemTestCase(TestCase):
                 self.assertEqual(win_system.get_pending_computer_name(),
                                  '(salt)')
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_get_computer_name(self):
         '''
             Test to get the Windows computer name
@@ -150,6 +168,7 @@ class WinSystemTestCase(TestCase):
 
             self.assertFalse(win_system.get_computer_name())
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_computer_desc(self):
         '''
             Test to set the Windows computer description
@@ -163,6 +182,7 @@ class WinSystemTestCase(TestCase):
                                                                   ),
                                      {'Computer Description': "Salt's comp"})
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_get_computer_desc(self):
         '''
             Test to get the Windows computer description
@@ -173,6 +193,7 @@ class WinSystemTestCase(TestCase):
 
             self.assertFalse(win_system.get_computer_desc())
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs w32net and other windows libraries')
     def test_join_domain(self):
         '''
             Test to join a computer to an Active Directory domain
@@ -193,10 +214,16 @@ class WinSystemTestCase(TestCase):
         '''
             Test to get system time
         '''
-        mock = MagicMock(return_value="11:31:15 AM")
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.get_system_time(), '11:31:15 AM')
+        tm = datetime.strftime(datetime.now(), "%I:%M %p")
+        win_tm = win_system.get_system_time()
+        try:
+            self.assertEqual(win_tm, tm)
+        except AssertionError:
+            # handle race condition
+            import re
+            self.assertTrue(re.search(r'^\d{2}:\d{2} \w{2}$', win_tm))
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_system_time(self):
         '''
             Test to set system time
@@ -213,10 +240,10 @@ class WinSystemTestCase(TestCase):
         '''
             Test to get system date
         '''
-        mock = MagicMock(return_value="03-28-13")
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.get_system_date(), '03-28-13')
+        date = datetime.strftime(datetime.now(), "%a %m/%d/%Y")
+        self.assertEqual(win_system.get_system_date(), date)
 
+    @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_system_date(self):
         '''
             Test to set system date

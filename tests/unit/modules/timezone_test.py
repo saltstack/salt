@@ -90,9 +90,9 @@ class TimezoneTestCase(TestCase):
         '''
         Test to unlinks, then symlinks /etc/localtime to the set timezone.
         '''
-        ret = ('Zone does not exist: /usr/share/lib/zoneinfo/timezone')
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
+        def zone_checking_and_unlinking():
+            ret = ('Zone does not exist: /usr/share/lib/zoneinfo/timezone')
+            mock = MagicMock(side_effect=[False, True, True])
             with patch.object(os.path, 'exists', mock):
                 self.assertEqual(timezone.set_zone('timezone'), ret)
 
@@ -101,6 +101,14 @@ class TimezoneTestCase(TestCase):
                                     {'file.sed':
                                      MagicMock(return_value=None)}):
                         self.assertTrue(timezone.set_zone('timezone'))
+
+        with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
+            with patch.object(salt.utils, 'which', return_value=False):
+                zone_checking_and_unlinking()
+
+            with patch.object(salt.utils, 'which', return_value=True):
+                with patch.dict(timezone.__salt__, {'cmd.run': MagicMock(return_value='')}):
+                    zone_checking_and_unlinking()
 
     def test_zone_compare(self):
         '''
