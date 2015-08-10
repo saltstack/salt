@@ -103,7 +103,9 @@ def tar(options, tarfile, sources=None, dest=None,
         cmd.extend(['-C', '{0}'.format(dest)])
 
     cmd.extend(['-{0}'.format(options), '{0}'.format(tarfile)])
-    cmd.extend(sources)
+
+    if sources:
+        cmd.extend(sources)
 
     return __salt__['cmd.run'](cmd,
                                cwd=cwd,
