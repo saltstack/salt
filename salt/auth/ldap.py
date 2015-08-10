@@ -229,8 +229,19 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-    if _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
-                                           _config('anonymous', mandatory=False)):
+    # If _bind is called with anonymous=True then we traverse the code path
+    # that does not attempt a real auth.  We need to check two config params
+    # though to see if we need to permit an anonymous bind.  This fn does a simple
+    # LDAP auth, it doesn't really make any sense to perform an anonymous bind from here
+    # since we *want* to auth with a username and password (either the LDAP lookup user
+    # or an actual user).  The exception is when the sysadmin is testing and needs to
+    # ignore usernames and passwords and *just* do an anon bind.  That's why we
+    # check both 'anonymous' and 'auth_by_group_membership_only'
+
+    auth_group_only = _config('auth_by_group_membership_only', mandatory=False)
+    anonymous = _config('anonymous', mandatory=False)
+
+    if _bind(username, password, anonymous=auth_group_only and anonymous):
         log.debug('LDAP authentication successful')
         return True
     else:
