@@ -59,10 +59,6 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    if not HAS_PIP:
-        logger.warning(
-            'An importable pip module could not be found on your system'
-        )
     if 'pip.list' in __salt__:
         return __virtualname__
     return False
