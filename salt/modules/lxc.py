@@ -1395,6 +1395,7 @@ def init(name,
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
         try:
+            kwargs['vgname'] = vgname
             clone_from = _get_base(profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = exc.strerror
