@@ -71,7 +71,7 @@ Available Functions
           - container: mysuperdocker
           - image: corp/mysuperdocker_img
           - ports:
-              "5000/tcp":
+            - "5000/tcp":
                   HostIp: ""
                   HostPort: "5000"
 
