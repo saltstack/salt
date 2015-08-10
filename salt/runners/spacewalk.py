@@ -145,7 +145,7 @@ def unregister(name, server_url):
         session = _get_client_and_key(config['api_url'], config['username'], config['password'])
         atexit.register(_disconnect_session, session)
     except Exception as exc:
-        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(url, exc)
+        err_msg = "Exception raised when connecting to spacewalk server ({0}): {1}".format(server_url, exc)
         log.error(err_msg)
         return {name: err_msg}
 
