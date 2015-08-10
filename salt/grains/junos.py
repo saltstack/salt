@@ -5,6 +5,8 @@ NOTE this is a little complicated--junos can only be accessed via salt-proxy-min
 Thus, some grains make sense to get them from the minion (PYTHONPATH), but others
 don't (ip_interfaces)
 '''
+from __future__ import absolute_import
+
 import logging
 
 __proxyenabled__ = ['junos']
