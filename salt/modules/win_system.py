@@ -165,9 +165,11 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
         salt '*' system.reboot 5
         salt '*' system.reboot 5 True
     '''
+
     ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds)
 
     if wait_for_reboot:
+        seconds = _convert_minutes_seconds(timeout, in_seconds)
         time.sleep(seconds + 30)
 
     return ret
