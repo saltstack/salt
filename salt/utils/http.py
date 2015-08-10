@@ -311,8 +311,6 @@ def query(url,
             urllib_request.HTTPHandler,
             urllib_request.HTTPCookieProcessor(sess_cookies)
         ]
-        if password_mgr:
-            handlers.append(urllib_request.HTTPBasicAuthHandler(password_mgr))
 
         if url.startswith('https') or port == 443:
             hostname = request.get_host()
