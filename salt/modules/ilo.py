@@ -37,8 +37,8 @@ def __execute_cmd(name, xml):
     if not os.path.isdir(tmp_dir):
         os.mkdir(tmp_dir)
     with tempfile.NamedTemporaryFile(dir=tmp_dir,
-                                     prefix=name,
-                                     suffix=os.getpid(),
+                                     prefix=name+str(os.getpid()),
+                                     suffix='.xml',
                                      delete=False) as fh:
         tmpfilename = fh.name
         fh.write(xml)
