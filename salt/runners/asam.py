@@ -38,8 +38,7 @@ HAS_LIBS = False
 HAS_SIX = False
 try:
     import requests
-    requests.packages.urllib3.disable_warnings()
-    from HTMLParser import HTMLParser
+    from six.moves.html_parser import HTMLParser
     try:
         import salt.ext.six as six
         HAS_SIX = True
