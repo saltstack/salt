@@ -868,6 +868,21 @@ minion to clean the keys.
 
     open_mode: False
 
+.. conf_minion:: master_finger
+
+``master_finger``
+-----------------
+
+Default: ``''``
+
+Fingerprint of the master public key to validate the identity of your Salt master
+before the initial key exchange. The master fingerprint can be found by running
+"salt-key -F master" on the Salt master.
+
+.. code-block:: yaml
+
+   master_finger: 'ba:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:11:13'
+
 .. conf_minion:: verify_master_pubkey_sign
 
 
