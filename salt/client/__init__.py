@@ -894,11 +894,10 @@ class LocalClient(object):
         # iterator for this job's return
         if self.opts['order_masters']:
             # If we are a MoM, we need to gather expected minions from downstreams masters.
-            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, tags_regex='^syndic/.*/{0}'.format(jid))
+            jinfo_iter = self.get_returns_no_block(jid, gather_errors=gather_errors, tags_regex='^syndic/.*/{0}'.format(jid))
         else:
-            ret_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
-        # iterator for the info of this job
-        jinfo_iter = []
+            jinfo_iter = self.get_returns_no_block(jid, gather_errors=gather_errors)
+
         timeout_at = time.time() + timeout
         gather_syndic_wait = time.time() + self.opts['syndic_wait']
         # are there still minions running the job out there
@@ -911,7 +910,7 @@ class LocalClient(object):
         )
         while True:
             # Process events until timeout is reached or all minions have returned
-            for raw in ret_iter:
+            for raw in jinfo_iter:
                 # if we got None, then there were no events
                 if raw is None:
                     break
