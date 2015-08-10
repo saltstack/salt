@@ -208,7 +208,7 @@ def query(url,
             auth = None
     else:
         if not username and not password and isinstance(auth, tuple):
-            (username, password) = auth # pylint: disable=W0633
+            (username, password) = auth  # pylint: disable=W0633
 
     if requests_lib is True:
         sess = requests.Session()
