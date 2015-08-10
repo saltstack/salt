@@ -592,7 +592,7 @@ class GitPython(GitProvider):
             except KeyError:
                 # File not found or repo_path points to a directory
                 break
-        return blob, blob.hexsha
+        return blob, blob.hexsha if blob is not None else blob
 
     def get_tree(self, tgt_env):
         '''
@@ -947,7 +947,7 @@ class Pygit2(GitProvider):
                     blob = self.repo[oid]
             except KeyError:
                 break
-        return blob, blob.hex
+        return blob, blob.hex if blob is not None else blob
 
     def get_tree(self, tgt_env):
         '''
@@ -1285,7 +1285,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     break
             except KeyError:
                 break
-        return blob, blob.sha().hexdigest()
+        return blob, blob.sha().hexdigest() if blob is not None else blob
 
     def get_conf(self):
         '''
