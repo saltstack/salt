@@ -135,7 +135,7 @@ authenication parameter names prefixed with ``git_pillar`` instead of ``gitfs``
 :conf_master:`git_pillar_passphrase`, etc.).
 
 A full list of the git_pillar configuration options can be found :ref:`here
-<git-pillar-config-opts>`.
+<git_pillar-config-opts>`.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
