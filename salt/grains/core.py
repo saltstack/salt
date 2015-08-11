@@ -1668,24 +1668,25 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None:
-        if not salt.utils.is_smartos() or salt.utils.is_smartos_globalzone():
-            grains = {
-                'biosversion': __salt__['smbios.get']('bios-version'),
-                'productname': __salt__['smbios.get']('system-product-name'),
-                'manufacturer': __salt__['smbios.get']('system-manufacturer'),
-                'biosreleasedate': __salt__['smbios.get']('bios-release-date'),
-                'uuid': __salt__['smbios.get']('system-uuid')
-            }
-            grains = dict([(key, val) for key, val in grains.items() if val is not None])
-            uuid = __salt__['smbios.get']('system-uuid')
-            if uuid is not None:
-                grains['uuid'] = uuid.lower()
-            for serial in ('system-serial-number', 'chassis-serial-number', 'baseboard-serial-number'):
-                serial = __salt__['smbios.get'](serial)
-                if serial is not None:
-                    grains['serial'] = serial
-                    break
+    # On SmartOS (possibly SunOS also) smbios only works in the global zone
+    # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
+        grains = {
+            'biosversion': __salt__['smbios.get']('bios-version'),
+            'productname': __salt__['smbios.get']('system-product-name'),
+            'manufacturer': __salt__['smbios.get']('system-manufacturer'),
+            'biosreleasedate': __salt__['smbios.get']('bios-release-date'),
+            'uuid': __salt__['smbios.get']('system-uuid')
+        }
+        grains = dict([(key, val) for key, val in grains.items() if val is not None])
+        uuid = __salt__['smbios.get']('system-uuid')
+        if uuid is not None:
+            grains['uuid'] = uuid.lower()
+        for serial in ('system-serial-number', 'chassis-serial-number', 'baseboard-serial-number'):
+            serial = __salt__['smbios.get'](serial)
+            if serial is not None:
+                grains['serial'] = serial
+                break
     elif osdata['kernel'] == 'FreeBSD':
         # On FreeBSD /bin/kenv (already in base system)
         # can be used instead of dmidecode
