@@ -599,12 +599,14 @@ class GitPython(GitProvider):
         Return a git.Tree object if the branch/tag/SHA is found, otherwise None
         '''
         if tgt_env == 'base':
-            tgt_env = self.base
+            tgt_ref = self.base
+        else:
+            tgt_ref = tgt_env
         for ref in self.repo.refs:
             if isinstance(ref, (git.RemoteReference, git.TagReference)):
                 parted = ref.name.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                if rspec == tgt_env:
+                if rspec == tgt_ref:
                     return ref.commit.tree
 
         # Branch or tag not matched, check if 'tgt_env' is a commit
@@ -612,7 +614,7 @@ class GitPython(GitProvider):
             return None
 
         try:
-            commit = self.repo.rev_parse(tgt_env)
+            commit = self.repo.rev_parse(tgt_ref)
             return commit.tree
         except gitdb.exc.ODBError:
             return None
@@ -955,20 +957,22 @@ class Pygit2(GitProvider):
         None
         '''
         if tgt_env == 'base':
-            tgt_env = self.base
+            tgt_ref = self.base
+        else:
+            tgt_ref = tgt_env
         for ref in self.repo.listall_references():
             _, rtype, rspec = ref.split('/', 2)
             if rtype in ('remotes', 'tags'):
                 parted = rspec.partition('/')
                 rspec = parted[2] if parted[2] else parted[0]
-                if rspec == tgt_env and self.env_is_exposed(rspec):
+                if rspec == tgt_ref and self.env_is_exposed(tgt_env):
                     return self.repo.lookup_reference(ref).get_object().tree
 
         # Branch or tag not matched, check if 'tgt_env' is a commit
         if not self.env_is_exposed(tgt_env):
             return None
         try:
-            commit = self.repo.revparse_single(tgt_env)
+            commit = self.repo.revparse_single(tgt_ref)
         except (KeyError, TypeError):
             # Not a valid commit, likely not a commit SHA
             pass
@@ -1307,13 +1311,15 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         otherwise None
         '''
         if tgt_env == 'base':
-            tgt_env = self.base
+            tgt_ref = self.base
+        else:
+            tgt_ref = tgt_env
         refs = self.repo.get_refs()
         # Sorting ensures we check heads (branches) before tags
         for ref in sorted(self.get_env_refs(refs)):
             # ref will be something like 'refs/heads/master'
             rtype, rspec = ref[5:].split('/', 1)
-            if rspec == tgt_env and self.env_is_exposed(rspec):
+            if rspec == tgt_ref and self.env_is_exposed(tgt_env):
                 if rtype == 'heads':
                     commit = self.repo.get_object(refs[ref])
                 elif rtype == 'tags':
@@ -1338,14 +1344,14 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         if not self.env_is_exposed(tgt_env):
             return None
         try:
-            int(tgt_env, 16)
+            int(tgt_ref, 16)
         except ValueError:
             # Not hexidecimal, likely just a non-matching environment
             return None
 
         try:
-            if len(tgt_env) == 40:
-                sha_obj = self.repo.get_object(tgt_env)
+            if len(tgt_ref) == 40:
+                sha_obj = self.repo.get_object(tgt_ref)
                 if isinstance(sha_obj, dulwich.objects.Commit):
                     sha_commit = sha_obj
             else:
@@ -1353,12 +1359,12 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     x for x in (
                         self.repo.get_object(y)
                         for y in self.repo.object_store
-                        if y.startswith(tgt_env)
+                        if y.startswith(tgt_ref)
                     )
                     if isinstance(x, dulwich.objects.Commit)
                 ])
                 if len(matches) > 1:
-                    log.warning('Ambiguous commit ID \'{0}\''.format(tgt_env))
+                    log.warning('Ambiguous commit ID \'{0}\''.format(tgt_ref))
                     return None
                 try:
                     sha_commit = matches.pop()
