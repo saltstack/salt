@@ -6,30 +6,30 @@ Module for handling openstack glance calls.
 :configuration: This module is not usable until the following are specified
     either in a pillar or in the minion's config file::
 
-        glance.user: admin
-        glance.password: verybadpass
-        glance.tenant: admin
-        glance.insecure: False   #(optional)
-        glance.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        keystone.user: admin
+        keystone.password: verybadpass
+        keystone.tenant: admin
+        keystone.insecure: False   #(optional)
+        keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
     If configuration for multiple openstack accounts is required, they can be
     set up as different configuration profiles:
     For example::
 
         openstack1:
-          glance.user: admin
-          glance.password: verybadpass
-          glance.tenant: admin
-          glance.auth_url: 'http://127.0.0.1:5000/v2.0/'
+          keystone.user: admin
+          keystone.password: verybadpass
+          keystone.tenant: admin
+          keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
         openstack2:
-          glance.user: admin
-          glance.password: verybadpass
-          glance.tenant: admin
-          glance.auth_url: 'http://127.0.0.2:5000/v2.0/'
+          keystone.user: admin
+          keystone.password: verybadpass
+          keystone.tenant: admin
+          keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
 
-    With this configuration in place, any of the keystone functions can make use
-    of a configuration profile by declaring it explicitly.
+    With this configuration in place, any of the glance functions can
+    make use of a configuration profile by declaring it explicitly.
     For example::
 
         salt '*' glance.image_list profile=openstack1
