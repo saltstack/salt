@@ -290,6 +290,44 @@ def add_vhost(vhost, runas=None):
     msg = 'Added'
     return _format_response(res, msg)
 
+def declare_queue(name, vhost, durable, auto_delete, runas=None):
+    '''
+    Adds a queue via rabbitmqctl declare queue.
+
+    ./rabbitmqadmin declare queue --vhost=Some_Virtual_Host name=some_outgoing_queue durable=True auto_delete=False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq declare_queue '<queue_name>' '<vhost_name>' True
+
+
+    Setup:
+    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
+    see rabbitmq-formula/rabbitmq/rabbit-management.sls
+
+    '''
+
+    if durable :
+        durable = 'true'
+    else:
+        durable = 'false'
+
+    if auto_delete:
+        auto_delete = 'true'
+    else:
+        auto_delete = 'false'
+
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare queue --vhost={0} name={1} durable={2} auto_delete={2}'.format(vhost,name,durable, auto_delete),
+                              python_shell=False,
+                              runas=runas)
+    log.debug(res)
+    msg = 'Declared'
+    return _format_response(res, msg)
+
 
 def delete_vhost(vhost, runas=None):
     '''
@@ -576,6 +614,28 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
         runas=runas,
         )
     return res
+
+def queue_vhost_exists(queue, vhost, runas=None, *kwargs):
+    '''
+    Returns whether the queue exists on the  specified virtual host. 
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.queue_vhost_exists queuename vhostname
+    '''
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_queues -p {0} '.format(
+            vhost
+            ),
+        python_shell=False,
+        runas=runas,
+        )
+    log.debug(res)
+    return queue in res
 
 
 def list_policies(vhost="/", runas=None):
