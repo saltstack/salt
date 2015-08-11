@@ -2010,7 +2010,12 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
         kwargs['service'],
         kwargs['deployment'],
     )
+
     data = query(path)
+    if data is None:
+        raise SaltCloudSystemExit(
+            'There was an error connecting to the Azure API. Check your credentials.'
+        )
 
     ret = {}
     for item in data:
