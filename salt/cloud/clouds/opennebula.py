@@ -1062,8 +1062,8 @@ def image_allocate(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_allocate opennebula path=/path/to/image_file.txt datastore_id=1
-        salt-cloud -f image_allocate opennebula datastore_name=default \
-            data='NAME="Ubuntu 14.04" PATH="/home/one_user/images/ubuntu_desktop.img" \
+        salt-cloud -f image_allocate opennebula datastore_name=default \\
+            data='NAME="Ubuntu 14.04" PATH="/home/one_user/images/ubuntu_desktop.img" \\
             DESCRIPTION="Ubuntu 14.04 for development."'
     '''
     if call != 'function':
@@ -1734,9 +1734,9 @@ def secgroup_allocate(call=None, kwargs=None):
 
     .. code-block:: bash
 
-        salt-cloud -f secgroup_allocate opennebula file=/path/to/secgroup_file.txt
+        salt-cloud -f secgroup_allocate opennebula path=/path/to/secgroup_file.txt
         salt-cloud -f secgroup_allocate opennebula \\
-            data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, \\
+            data="NAME = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, \\
             RANGE = 1000:2000]"
     '''
     if call != 'function':
@@ -1998,7 +1998,7 @@ def secgroup_update(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud --function secgroup_update opennebula secgroup_id=100 \\
-            file=/path/to/secgroup_update_file.txt \\
+            path=/path/to/secgroup_update_file.txt \\
             update_type=replace
         salt-cloud -f secgroup_update opennebula secgroup_name=my-secgroup update_type=merge \\
             data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, RANGE = 1000:2000]"
@@ -3363,7 +3363,7 @@ def vm_resize(name, kwargs=None, call=None):
 
         salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt
         salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt capacity_maintained=False
-        satl-cloud -a vm_resize my-vm data="CPU=1 VCPU=1 MEMORY=1024"
+        salt-cloud -a vm_resize my-vm data="CPU=1 VCPU=1 MEMORY=1024"
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
