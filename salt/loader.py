@@ -1042,7 +1042,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if not self.initial_load:
                         self._reload_submodules(mod)
                 else:
-                    with open(fpath, desc[1]) as fn_:
+                    with salt.utils.fopen(fpath, desc[1]) as fn_:
                         mod = imp.load_module(
                             '{0}.{1}.{2}.{3}'.format(
                                 self.loaded_base_name,
