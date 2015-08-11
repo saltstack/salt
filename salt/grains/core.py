@@ -1240,11 +1240,11 @@ def os_data():
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os_family'] = 'Solaris'
-        uname_v = __salt__['cmd.run']('uname -v')
-        if 'joyent_' in uname_v:
+        if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
+            uname_v = __salt__['cmd.run']('uname -v')
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            grains['osrelease'] = uname_v
+            grains['osrelease'] = uname_v[uname_v.index('_')+1:]
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
