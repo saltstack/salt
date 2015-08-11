@@ -2305,6 +2305,7 @@ class BaseHighState(object):
                 'state_auto_order',
                 opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
+            opts['env_order'] = mopts['env_order']
             opts['state_events'] = mopts.get('state_events')
             opts['state_aggregate'] = mopts.get('state_aggregate', opts.get('state_aggregate', False))
             opts['jinja_lstrip_blocks'] = mopts.get('jinja_lstrip_blocks', False)
@@ -2315,10 +2316,28 @@ class BaseHighState(object):
         '''
         Pull the file server environments out of the master options
         '''
-        envs = set(['base'])
+        envs = ['base']
         if 'file_roots' in self.opts:
-            envs.update(list(self.opts['file_roots']))
-        return envs.union(set(self.client.envs()))
+            envs.extend(list(self.opts['file_roots']))
+        client_envs = self.client.envs()
+        env_order = self.opts.get('env_order', [])
+        client_envs = self.client.envs()
+        if env_order and client_envs:
+            client_env_list = self.client.envs()
+            env_intersection = set(env_order).intersection(client_env_list)
+            final_list = []
+            for ord_env in env_order:
+                if ord_env in env_intersection:
+                    final_list.append(ord_env)
+            return final_list
+
+        elif env_order:
+            return env_order
+        else:
+            for cenv in client_envs:
+                if cenv not in envs:
+                    envs.append(cenv)
+            return envs
 
     def get_tops(self):
         '''
@@ -2329,6 +2348,13 @@ class BaseHighState(object):
         done = DefaultOrderedDict(list)
         found = 0  # did we find any contents in the top files?
         # Gather initial top files
+        if self.opts['top_file_merging_strategy'] == 'same' and \
+        not self.opts['environment']:
+            if not self.opts['default_top']:
+                raise SaltRenderError('Top file merge strategy set to same, but no default_top '
+                          'configuration option was set')
+            self.opts['environment'] = self.opts['default_top']
+
         if self.opts['environment']:
             contents = self.client.cache_file(
                 self.opts['state_top'],
@@ -2344,7 +2370,7 @@ class BaseHighState(object):
                     saltenv=self.opts['environment']
                 )
             ]
-        else:
+        elif self.opts['top_file_merging_strategy'] == 'merge':
             found = 0
             if self.opts.get('state_top_saltenv', False):
                 saltenv = self.opts['state_top_saltenv']
