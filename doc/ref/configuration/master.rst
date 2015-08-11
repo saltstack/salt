@@ -1062,6 +1062,14 @@ nothing is ignored.
       - '\*/somefolder/\*.bak'
       - '\*.swp'
 
+.. note::
+    Vim's .swp files are a common cause of Unicode errors in
+    :py:func:`file.recurse <salt.states.file.recurse>` states which use
+    templating. Unless there is a good reason to distribute them via the
+    fileserver, it is good practice to include ``'\*.swp'`` in the
+    :conf_master:`file_ignore_glob`.
+
+
 roots: Master's Local File Server
 ---------------------------------
 
