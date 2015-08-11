@@ -351,7 +351,7 @@ def _sunos_cpudata():
     grains = {}
     grains['cpu_flags'] = []
 
-    grains['cpuarch'] = __salt__['cmd.run']('uname -p')
+    grains['cpuarch'] = __salt__['cmd.run']('isainfo -k')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
