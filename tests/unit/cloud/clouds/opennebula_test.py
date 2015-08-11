@@ -335,7 +335,6 @@ class OpenNebulaTestCase(TestCase):
         '''
         self.assertEqual(opennebula.get_location('my-host'), 0)
 
-
     def test_get_secgroup_id_action(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call
