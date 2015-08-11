@@ -41,7 +41,12 @@ def __define_global_system_encoding_variable__():
         # encoding. MS Windows has problems with this and reports the wrong
         # encoding
         import locale
-        encoding = locale.getdefaultlocale()[-1]
+        try:
+            encoding = locale.getdefaultlocale()[-1]
+        except ValueError:
+            # A bad locale setting was most likely found:
+            #   https://github.com/saltstack/salt/issues/26063
+            pass
 
         # This is now garbage collectable
         del locale

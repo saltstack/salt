@@ -630,10 +630,10 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                         for header_name, header_value in ret['headers'].items():
                             name = header_name.strip()
                             value = header_value.strip()
-                            if name == 'Last-Modified'.lower():
+                            if str(name).lower() == 'last-modified':
                                 s3_file_mtime = datetime.datetime.strptime(
                                     value, '%a, %d %b %Y %H:%M:%S %Z')
-                            elif name == 'Content-Length'.lower():
+                            elif str(name).lower() == 'content-length':
                                 s3_file_size = int(value)
                         if (cached_file_size == s3_file_size and
                                 cached_file_mtime > s3_file_mtime):

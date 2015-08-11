@@ -248,7 +248,7 @@ def engines(opts, functions, runners):
                       pack=pack)
 
 
-def proxy(opts, functions, whitelist=None):
+def proxy(opts, functions, whitelist=None, loaded_base_name=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
@@ -256,7 +256,8 @@ def proxy(opts, functions, whitelist=None):
                       opts,
                       tag='proxy',
                       whitelist=whitelist,
-                      pack={'__proxy__': functions})
+                      pack={'__proxy__': functions},
+                      loaded_base_name=loaded_base_name)
 
 
 def returners(opts, functions, whitelist=None, context=None):
@@ -1138,14 +1139,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
         # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
         # containing the names of the proxy types that the module supports.
-        if not hasattr(mod, 'render') and 'proxy' in self.opts:
-            if not hasattr(mod, '__proxyenabled__') or \
-                    self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
-                    '*' in mod.__proxyenabled__:
-                err_string = 'not a proxy_minion enabled module'
-                self.missing_modules[module_name] = err_string
-                self.missing_modules[name] = err_string
-                return False
+        #
+        # Render modules and state modules are OK though
+        if 'proxy' in self.opts:
+            if self.tag not in ['render', 'states']:
+                if not hasattr(mod, '__proxyenabled__') or \
+                        (self.opts['proxy']['proxytype'] not in mod.__proxyenabled__ and
+                            '*' not in mod.__proxyenabled__):
+                    err_string = 'not a proxy_minion enabled module'
+                    self.missing_modules[module_name] = err_string
+                    self.missing_modules[name] = err_string
+                    return False
 
         if getattr(mod, '__load__', False) is not False:
             log.info(
