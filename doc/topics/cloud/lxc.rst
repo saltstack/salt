@@ -23,10 +23,6 @@ Limitations
 - Listing images must be targeted to a particular LXC provider (nothing will be
   outputted with ``all``)
 
-.. warning::
-
-   On pre **2015.5.2**, you need to specify explitly the network bridge
-
 Operation
 ---------
 
@@ -61,6 +57,15 @@ Here is a simple provider configuration:
     devhost10-lxc:
       target: devhost10
       driver: lxc
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profile configuration
 ---------------------

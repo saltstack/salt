@@ -2,7 +2,7 @@
 Getting Started With Linode
 ===========================
 
-Linode is a public cloud provider with a focus on Linux instances.
+Linode is a public cloud host with a focus on Linux instances.
 
 Starting with the 2015.8.0 release of Salt, the Linode driver uses Linode's
 native REST API. There are no external dependencies required to use the
@@ -27,6 +27,15 @@ instances also needs to be set:
 
 The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========

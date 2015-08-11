@@ -381,9 +381,6 @@ VALID_OPTS = {
     # Events matching a tag in this list should never be sent to an event returner.
     'event_return_blacklist': list,
 
-    # The source location for the winrepo sls files
-    'win_repo_source_dir': str,
-
     # This pidfile to write out to when a deamon starts
     'pidfile': str,
 
@@ -570,9 +567,21 @@ VALID_OPTS = {
     # The logfile location for salt-key
     'key_logfile': str,
 
-    'win_repo': str,
-    'win_repo_mastercachefile': str,
-    'win_gitrepos': list,
+    # The source location for the winrepo sls files
+    # (used by win_pkg.py, minion only)
+    'winrepo_source_dir': str,
+
+    'winrepo_dir': str,
+    'winrepo_cachefile': str,
+    'winrepo_remotes': list,
+    'winrepo_branch': str,
+    'winrepo_ssl_verify': bool,
+    'winrepo_user': str,
+    'winrepo_password': str,
+    'winrepo_insecure_auth': bool,
+    'winrepo_privkey': str,
+    'winrepo_pubkey': str,
+    'winrepo_passphrase': str,
 
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
@@ -843,7 +852,10 @@ DEFAULT_MINION_OPTS = {
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
-    'win_repo_source_dir': 'salt://win/repo/',
+    'winrepo_source_dir': 'salt://win/repo/',
+    'winrepo_dir': 'c:\\salt\\file_roots\\winrepo',
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
@@ -1042,10 +1054,17 @@ DEFAULT_MASTER_OPTS = {
     'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
-    'win_repo': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
-    'win_repo_mastercachefile': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR,
-                                             'win', 'repo', 'winrepo.p'),
-    'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,

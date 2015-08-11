@@ -109,6 +109,12 @@ def set_zone(timezone):
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
+    if salt.utils.which('timedatectl'):
+        try:
+            __salt__['cmd.run']('timedatectl set-timezone {0}'.format(timezone))
+        except CommandExecutionError:
+            pass
+
     if 'Solaris' in __grains__['os_family']:
         zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
     else:

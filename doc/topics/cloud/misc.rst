@@ -14,7 +14,7 @@ to pass arguments to the deploy script:
 .. code-block:: yaml
 
     ec2-amazon:
-        provider: ec2
+        provider: my-ec2-config
         image: ami-1624987f
         size: t1.micro
         ssh_username: ec2-user
@@ -95,7 +95,7 @@ Delete SSH Keys
 ===============
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
 to the known_hosts file for the user that ran the salt-cloud command. When an
-instance is deployed, a cloud provider generally recycles the IP address for
+instance is deployed, a cloud host generally recycles the IP address for
 the instance.  When Salt Cloud attempts to deploy an instance using a recycled
 IP address that has previously been accessed from the same machine, the old key
 in the known_hosts file will cause a conflict.
@@ -161,7 +161,7 @@ wait_for_ip_timeout
 ~~~~~~~~~~~~~~~~~~~
 
 The amount of time Salt Cloud should wait for a VM to start and get an IP back
-from the cloud provider. 
+from the cloud host.
 Default: varies by cloud provider ( between 5 and 25 minutes)
 
 
@@ -232,7 +232,7 @@ diff_cache_events
 ~~~~~~~~~~~~~~~~~
 
 When the cloud cachedir is being managed, if differences are encountered
-between the data that is returned live from the cloud provider and the data in
+between the data that is returned live from the cloud host and the data in
 the cache, fire events which describe the changes. This setting can be True or
 False.
 
@@ -251,20 +251,20 @@ The following are events that can be fired based on this data.
 
 salt/cloud/minionid/cache_node_new
 **********************************
-A new node was found on the cloud provider which was not listed in the cloud
+A new node was found on the cloud host which was not listed in the cloud
 cachedir. A dict describing the new node will be contained in the event.
 
 
 salt/cloud/minionid/cache_node_missing
 **************************************
 A node that was previously listed in the cloud cachedir is no longer available
-on the cloud provider.
+on the cloud host.
 
 
 salt/cloud/minionid/cache_node_diff
 ***********************************
 One or more pieces of data in the cloud cachedir has changed on the cloud
-provider. A dict containing both the old and the new data will be contained in
+host. A dict containing both the old and the new data will be contained in
 the event.
 
 
