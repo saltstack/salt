@@ -11,6 +11,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -55,6 +56,7 @@ _identify_attribs = [_camconsts.__dict__[key] for key in
                      _camconsts.__dict__ if not key.startswith('__')]
 
 
+@decorators.memoize
 def _freebsd_vbox():
     # Don't tickle VirtualBox storage emulation bugs
     camcontrol = salt.utils.which('camcontrol')
