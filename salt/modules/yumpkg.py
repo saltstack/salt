@@ -1056,7 +1056,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None, normalize=True, **kwargs):
+def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None, normalize=True, **kwargs):
     '''
     Run a full system upgrade - a yum upgrade, or upgrade specified packages. If the packages aren't installed,
     they will not be installed.
@@ -1073,7 +1073,7 @@ def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-        salt '*' pkg.upgrade openssl
+        salt '*' pkg.upgrade name=openssl
 
     Repository Options:
 
@@ -1102,11 +1102,14 @@ def upgrade(name=None, refresh=True, fromrepo=None, skip_verify=False, pkgs=None
         architecture designation (``.i686``, ``.i586``, etc.) to the end of the
         package name.
 
+        Warning: if you forget 'name=' and run pkg.upgrade openssl, ALL packages
+        are upgraded. This will be addressed in next releases.
+
         CLI Example:
 
         .. code-block:: bash
 
-            salt '*' pkg.install <package name>
+            salt '*' pkg.upgrade name=openssl
 
         .. versionadded:: Boron
     pkgs
