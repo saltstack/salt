@@ -2014,7 +2014,7 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
     data = query(path)
     if data is None:
         raise SaltCloudSystemExit(
-            'There was an error connecting to the Azure API. Check your credentials.'
+            'There was an error connecting to the Azure API. Please check your credentials.'
         )
 
     ret = {}
