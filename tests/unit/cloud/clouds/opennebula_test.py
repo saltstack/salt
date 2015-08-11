@@ -15,7 +15,7 @@ ensure_in_syspath('../../../')
 
 # Import Salt Libs
 from salt.cloud.clouds import opennebula
-from salt.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit, SaltCloudNotFound
 
 # Global Variables
 opennebula.__active_provider_name__ = ''
@@ -261,7 +261,22 @@ class OpenNebulaTestCase(TestCase):
         self.assertEqual(opennebula.get_host_id(mock_kwargs, 'foo'),
                          mock_id)
 
-    # TODO: Write tests for get_image function
+    @patch('salt.cloud.clouds.opennebula.avail_images', MagicMock(return_value={}))
+    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='foo'))
+    def test_get_image_not_found(self):
+        '''
+        Tests that a SaltCloudNotFound is raised when the image doesn't exist.
+        '''
+        self.assertRaises(SaltCloudNotFound, opennebula.get_image, 'my-vm')
+
+    @patch('salt.cloud.clouds.opennebula.avail_images',
+           MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}}))
+    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='my-vm'))
+    def test_get_image_success(self):
+        '''
+        Tests that the image is returned successfully.
+        '''
+        self.assertEqual(opennebula.get_image('my-vm'), 0)
 
     def test_get_image_id_action(self):
         '''
@@ -303,7 +318,22 @@ class OpenNebulaTestCase(TestCase):
         self.assertEqual(opennebula.get_image_id(mock_kwargs, 'foo'),
                          mock_id)
 
-    # TODO: Write tests for get_location function
+    @patch('salt.cloud.clouds.opennebula.avail_locations', MagicMock(return_value={}))
+    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='foo'))
+    def test_get_location_not_found(self):
+        '''
+        Tests that a SaltCloudNotFound is raised when the location doesn't exist.
+        '''
+        self.assertRaises(SaltCloudNotFound, opennebula.get_location, 'my-vm')
+
+    @patch('salt.cloud.clouds.opennebula.avail_locations',
+           MagicMock(return_value={'my-host': {'name': 'my-host', 'id': 0}}))
+    @patch('salt.config.get_cloud_config_value', MagicMock(return_value='my-host'))
+    def test_get_location_success(self):
+        '''
+        Tests that the image is returned successfully.
+        '''
+        self.assertEqual(opennebula.get_location('my-host'), 0)
 
     def test_get_secgroup_id_action(self):
         '''
@@ -588,7 +618,92 @@ class OpenNebulaTestCase(TestCase):
                           'function',
                           kwargs={'persist': False})
 
-    # TODO: Write tests for image_snapshot_delete, image_snapshot_revert, and image_snapshot_flatten
+    def test_image_snapshot_delete_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_delete,
+                          call='foo')
+
+    def test_image_snapshot_delete_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id kwarg is
+        missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_delete,
+                          call='function',
+                          kwargs=None)
+
+    def test_image_snapshot_delete_no_image_name_or_image_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the image_id and image_name
+        kwargs are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_delete,
+                          call='function',
+                          kwargs={'snapshot_id': 0})
+
+    def test_image_snapshot_revert_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_revert,
+                          call='foo')
+
+    def test_image_snapshot_revert_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id kwarg is
+        missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_revert,
+                          call='function',
+                          kwargs=None)
+
+    def test_image_snapshot_revert_no_image_name_or_image_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the image_id and image_name
+        kwargs are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_revert,
+                          call='function',
+                          kwargs={'snapshot_id': 0})
+
+    def test_image_snapshot_flatten_function_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --function or -f is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_flatten,
+                          call='foo')
+
+    def test_image_snapshot_flatten_no_snapshot_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the snapshot_id kwarg is
+        missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_flatten,
+                          call='function',
+                          kwargs=None)
+
+    def test_image_snapshot_flatten_no_image_name_or_image_id(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the image_id and image_name
+        kwargs are missing.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.image_snapshot_flatten,
+                          call='function',
+                          kwargs={'snapshot_id': 0})
 
     def test_image_update_function_error(self):
         '''
@@ -634,7 +749,25 @@ class OpenNebulaTestCase(TestCase):
                           'function',
                           kwargs={'update_type': 'merge', 'image_id': '0'})
 
-    # TODO: Write tests for script and show_instance functions
+    def test_show_instance_action_error(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when something other than
+        --action or -a is provided.
+        '''
+        self.assertRaises(SaltCloudSystemExit,
+                          opennebula.show_instance,
+                          VM_NAME,
+                          call='foo')
+
+    @patch('salt.cloud.clouds.opennebula._get_node',
+           MagicMock(return_value={'my-vm': {'name': 'my-vm', 'id': 0}}))
+    @patch('salt.utils.cloud.cache_node', MagicMock())
+    def test_show_instance_success(self):
+        '''
+        Tests that the node was found successfully.
+        '''
+        ret = {'my-vm': {'name': 'my-vm', 'id': 0}}
+        self.assertEqual(opennebula.show_instance('my-vm', call='action'), ret)
 
     def test_secgroup_allocate_function_error(self):
         '''
