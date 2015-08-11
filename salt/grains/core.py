@@ -351,7 +351,7 @@ def _sunos_cpudata():
     grains = {}
     grains['cpu_flags'] = []
 
-    grains['cpuarch'] = __salt__['cmd.run']('uname -p')
+    grains['cpuarch'] = __salt__['cmd.run']('isainfo -k')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
@@ -1240,11 +1240,11 @@ def os_data():
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os_family'] = 'Solaris'
-        uname_v = __salt__['cmd.run']('uname -v')
-        if 'joyent_' in uname_v:
+        if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
+            uname_v = __salt__['cmd.run']('uname -v')
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            grains['osrelease'] = uname_v
+            grains['osrelease'] = uname_v[uname_v.index('_')+1:]
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
@@ -1668,7 +1668,9 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None:
+    # On SmartOS (possibly SunOS also) smbios only works in the global zone
+    # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
