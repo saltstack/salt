@@ -55,6 +55,15 @@ _identify_attribs = [_camconsts.__dict__[key] for key in
                      _camconsts.__dict__ if not key.startswith('__')]
 
 
+def _freebsd_vbox():
+    # Don't tickle VirtualBox storage emulation bugs
+    camcontrol = salt.utils.which('camcontrol')
+    devlist = __salt__['cmd.run']('{0} devlist'.format(camcontrol))
+    if 'VBOX' in devlist:
+        return True
+    return False
+
+
 def _freebsd_disks():
     ret = {'disks': {}, 'SSDs': []}
     sysctl = salt.utils.which('sysctl')
@@ -62,10 +71,16 @@ def _freebsd_disks():
     SSD_TOKEN = 'non-rotating'
 
     for device in devices.split(' '):
-        cam = _freebsd_camcontrol(device)
-        ret['disks'][device] = cam
-        if cam.get(_clean_keys(_camconsts.MEDIA_RPM)) == SSD_TOKEN:
-            ret['SSDs'].append(device)
+        if device.startswith('cd'):
+            log.debug('Disk grain skipping cd')
+        elif _freebsd_vbox():
+            log.debug('Disk grain skipping CAM identify/inquirty on VBOX')
+            ret['disks'][device] = {}
+        else:
+            cam = _freebsd_camcontrol(device)
+            ret['disks'][device] = cam
+            if cam.get(_clean_keys(_camconsts.MEDIA_RPM)) == SSD_TOKEN:
+                ret['SSDs'].append(device)
 
     return ret
 
