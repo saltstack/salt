@@ -36,11 +36,11 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 .. code-block:: bash
 
-    salt-cloud -f image_allocate opennebula datastore_name=default \
-        data='NAME="My New Image" DESCRIPTION="Description of the image." \
+    salt-cloud -f image_allocate opennebula datastore_name=default \\
+        data='NAME="My New Image" DESCRIPTION="Description of the image." \\
         PATH=/home/one_user/images/image_name.img'
-    salt-cloud -f secgroup_allocate opennebula \
-        data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, \
+    salt-cloud -f secgroup_allocate opennebula \\
+        data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, \\
         RANGE = 1000:2000]"
 
 '''
