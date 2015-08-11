@@ -228,8 +228,8 @@ class SaltCloud(parsers.SaltCloudParser):
             for name in names:
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
-                    comps = name.split('=')
-                    kwargs[comps[0]] = comps[1]
+                    key, value = name.split('=', 1)
+                    kwargs[key] = value
                 else:
                     msg += '  {0}\n'.format(name)
                     machines.append(name)
