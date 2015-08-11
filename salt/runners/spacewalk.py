@@ -3,7 +3,7 @@
 Spacewalk Runner
 ================
 
-.. versionadded:: Beryllium
+.. versionadded:: Boron
 
 Runner to interact with Spacewalk using Spacewalk API
 
