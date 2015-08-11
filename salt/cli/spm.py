@@ -12,7 +12,7 @@
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.client.spm
+import salt.spm
 import salt.utils.parsers as parsers
 
 
@@ -27,5 +27,5 @@ class SPM(parsers.SPMParser):
         '''
         self.parse_args()
         self.setup_logfile_logger()
-        client = salt.client.spm.SPMClient(self.config)
+        client = salt.spm.SPMClient(self.config)
         client.run(self.args)
