@@ -24,6 +24,25 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       password: JHGhgsayu32jsa
       driver: opennebula
 
+.. note:
+
+    Whenever ``data`` is provided as a kwarg to a function and the
+    attribute=value syntax is used, the entire ``data`` value must be
+    wrapped in single or double quotes. If the value given in the
+    attribute=value data string contains multiple words, double quotes
+    *must* be used for the value while the entire data string should
+    be encapsulated in single quotes. Failing to do so will result in
+    an error. Example:
+
+.. code-block:: bash
+
+    salt-cloud -f image_allocate opennebula datastore_name=default \\
+        data='NAME="My New Image" DESCRIPTION="Description of the image." \\
+        PATH=/home/one_user/images/image_name.img'
+    salt-cloud -f secgroup_allocate opennebula \\
+        data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, \\
+        RANGE = 1000:2000]"
+
 '''
 
 # Import Python Libs
@@ -89,9 +108,6 @@ def avail_images(call=None):
     '''
     Return available OpenNebula images.
 
-    call
-        Optional type of call to use with this function such as ``function``.
-
     CLI Example:
 
     .. code-block:: bash
@@ -121,9 +137,6 @@ def avail_images(call=None):
 def avail_locations(call=None):
     '''
     Return available OpenNebula locations.
-
-    call
-        Optional type of call to use with this function such as ``function``.
 
     CLI Example:
 
@@ -250,9 +263,6 @@ def list_nodes(call=None):
     '''
     Return a list of VMs on OpenNebula.
 
-    call
-        Optional type of call to use with this function such as ``function``.
-
     CLI Example:
 
     .. code-block:: bash
@@ -275,9 +285,6 @@ def list_nodes_full(call=None):
     '''
     Return a list of the VMs on OpenNebula.
 
-    call
-        Optional type of call to use with this function such as ``function``.
-
     CLI Example:
 
     .. code-block:: bash
@@ -299,9 +306,6 @@ def list_nodes_full(call=None):
 def list_nodes_select(call=None):
     '''
     Return a list of the VMs that are on the provider, with select fields.
-
-    call
-        Optional type of call to use with this function such as ``function``.
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
@@ -585,7 +589,7 @@ def get_image(vm_):
     Return the image object to use.
 
     vm_
-        The VM for which to obtain an image.
+        The VM dictionary for which to obtain an image.
     '''
     images = avail_images()
     vm_image = str(config.get_cloud_config_value(
@@ -640,7 +644,7 @@ def get_location(vm_):
     Return the VM's location.
 
     vm_
-        The VM for which to obtain a location.
+        The VM dictionary for which to obtain a location.
     '''
     locations = avail_locations()
     vm_location = str(config.get_cloud_config_value(
@@ -810,7 +814,7 @@ def create(vm_):
     Create a single VM from a data dict.
 
     vm_
-        The name of the VM to create.
+        The dictionary use to create a VM.
 
     CLI Example:
 
@@ -977,9 +981,6 @@ def destroy(name, call=None):
     name
         The name of the vm to be destroyed.
 
-    call
-        Optional type of call to use with this function such as ``action``.
-
     CLI Example:
 
     .. code-block:: bash
@@ -1046,8 +1047,7 @@ def image_allocate(call=None, kwargs=None):
 
     data
         The data containing the template of the image to allocate. Syntax can be the
-        usual attribute=value or XML. The data provided must be wrapped in double
-        quotes. Can be used instead of ``path``.
+        usual attribute=value or XML. Can be used instead of ``path``.
 
     datastore_id
         The ID of the data-store to be used for the new image. Can be used instead
@@ -1061,10 +1061,10 @@ def image_allocate(call=None, kwargs=None):
 
     .. code-block:: bash
 
-        salt-cloud -f image_allocate opennebula file=/path/to/image_file.txt datastore_id=1
-        salt-cloud -f image_allocate opennebula datastore_id=default \
-            data="NAME = 'Ubuntu-Dev' PATH = /home/one_user/images/ubuntu_desktop.img \
-            DESCRIPTION = 'Ubuntu 14.04 for development.'"
+        salt-cloud -f image_allocate opennebula path=/path/to/image_file.txt datastore_id=1
+        salt-cloud -f image_allocate opennebula datastore_name=default \\
+            data='NAME="Ubuntu 14.04" PATH="/home/one_user/images/ubuntu_desktop.img" \\
+            DESCRIPTION="Ubuntu 14.04 for development."'
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1513,7 +1513,7 @@ def image_snapshot_revert(call=None, kwargs=None):
 
 def image_snapshot_flatten(call=None, kwargs=None):
     '''
-    Flatten the snapshot of an image and discards others.
+    Flattens the snapshot of an image and discards others.
 
     .. versionadded:: Boron
 
@@ -1597,8 +1597,7 @@ def image_update(call=None, kwargs=None):
 
     data
         Contains the template of the image. Syntax can be the usual attribute=value
-        or XML. Data provided must be wrapped in double quotes. Can be used instead
-        of ``path``.
+        or XML. Can be used instead of ``path``.
 
     update_type
         There are two ways to update an image: ``replace`` the whole template
@@ -1609,9 +1608,9 @@ def image_update(call=None, kwargs=None):
     .. code-block:: bash
 
         salt-cloud -f image_update opennebula image_id=0 file=/path/to/image_update_file.txt update_type=replace
-        salt-cloud -f image_update opennebula image_name="Ubuntu 14" update_type=merge \
-            data="NAME = 'Ubuntu-Dev' PATH = /home/one_user/images/ubuntu_desktop.img \
-            DESCRIPTION = 'Ubuntu 14.04 for development.'"
+        salt-cloud -f image_update opennebula image_name="Ubuntu 14.04" update_type=merge \\
+            data='NAME="Ubuntu Dev" PATH="/home/one_user/images/ubuntu_desktop.img" \\
+            DESCRIPTION = "Ubuntu 14.04 for development."'
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1729,16 +1728,16 @@ def secgroup_allocate(call=None, kwargs=None):
 
     data
         The template data of the security group. Syntax can be the usual
-        attribute=value or XML. Data provided must be wrapped in double quotes.
-        Can be used instead of ``path``.
+        attribute=value or XML. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-cloud -f secgroup_allocate opennebula file=/path/to/secgroup_file.txt
-        salt-cloud -f secgroup_allocate opennebula \
-            data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, RANGE = 1000:2000]"
+        salt-cloud -f secgroup_allocate opennebula path=/path/to/secgroup_file.txt
+        salt-cloud -f secgroup_allocate opennebula \\
+            data="NAME = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, \\
+            RANGE = 1000:2000]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1988,8 +1987,7 @@ def secgroup_update(call=None, kwargs=None):
 
     data
         The template data of the security group. Syntax can be the usual attribute=value
-        or XML. Data provided must be wrapped in double quotes. Can be used instead of
-        ``path``.
+        or XML. Can be used instead of ``path``.
 
     update_type
         There are two ways to update a security group: ``replace`` the whole template
@@ -1999,10 +1997,10 @@ def secgroup_update(call=None, kwargs=None):
 
     .. code-block:: bash
 
-        salt-cloud --function secgroup_update opennebula secgroup_id=100 \
-            file=/path/to/secgroup_update_file.txt \
+        salt-cloud --function secgroup_update opennebula secgroup_id=100 \\
+            path=/path/to/secgroup_update_file.txt \\
             update_type=replace
-        salt-cloud -f secgroup_update opennebula secgroup_name=my-secgroup update_type=merge \
+        salt-cloud -f secgroup_update opennebula secgroup_name=my-secgroup update_type=merge \\
             data="Name = test RULE = [PROTOCOL = TCP, RULE_TYPE = inbound, RANGE = 1000:2000]"
     '''
     if call != 'function':
@@ -2092,19 +2090,18 @@ def template_allocate(call=None, kwargs=None):
 
     data
         Contains the elements of the template to be allocated. Syntax can be the usual
-        attribute=value or XML. Data provided must be wrapped in double quotes. Can be
-        used instead of ``path``.
+        attribute=value or XML. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f template_allocate opennebula path=/path/to/template_file.txt
-        salt-cloud -f template_allocate opennebula \
-            data="CPU='1.0' DISK=[IMAGE='Ubuntu-14.04'] GRAPHICS=[LISTEN='0.0.0.0',TYPE='vnc'] \
-            MEMORY='1024' NETWORK='yes' NIC=[NETWORK='192net',NETWORK_UNAME='oneadmin'] \
-            OS=[ARCH='x86_64'] SUNSTONE_CAPACITY_SELECT='YES' SUNSTONE_NETWORK_SELECT='YES' \
-            VCPU='1'"
+        salt-cloud -f template_allocate opennebula \\
+            data='CPU="1.0" DISK=[IMAGE="Ubuntu-14.04"] GRAPHICS=[LISTEN="0.0.0.0",TYPE="vnc"] \\
+            MEMORY="1024" NETWORK="yes" NIC=[NETWORK="192net",NETWORK_UNAME="oneadmin"] \\
+            OS=[ARCH="x86_64"] SUNSTONE_CAPACITY_SELECT="YES" SUNSTONE_NETWORK_SELECT="YES" \\
+            VCPU="1"'
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -2367,8 +2364,7 @@ def template_update(call=None, kwargs=None):
 
     data
         Contains the elements of the template to be updated. Syntax can be the
-        usual attribute=value or XML. Data provided my be wrapped in double
-        quotes. Can be used instead of ``path``.
+        usual attribute=value or XML. Can be used instead of ``path``.
 
     update_type
         There are two ways to update a template: ``replace`` the whole template
@@ -2378,13 +2374,13 @@ def template_update(call=None, kwargs=None):
 
     .. code-block:: bash
 
-        salt-cloud --function template_update opennebula template_id=1 update_type=replace \
+        salt-cloud --function template_update opennebula template_id=1 update_type=replace \\
             path=/path/to/template_update_file.txt
-        salt-cloud -f template_update opennebula template_name=my-template update_type=merge \
-            data="CPU='1.0' DISK=[IMAGE='Ubuntu-14.04'] GRAPHICS=[LISTEN='0.0.0.0',TYPE='vnc'] \
-            MEMORY='1024' NETWORK='yes' NIC=[NETWORK='192net',NETWORK_UNAME='oneadmin'] \
-            OS=[ARCH='x86_64'] SUNSTONE_CAPACITY_SELECT='YES' SUNSTONE_NETWORK_SELECT='YES' \
-            VCPU='1'"
+        salt-cloud -f template_update opennebula template_name=my-template update_type=merge \\
+            data='CPU="1.0" DISK=[IMAGE="Ubuntu-14.04"] GRAPHICS=[LISTEN="0.0.0.0",TYPE="vnc"] \\
+            MEMORY="1024" NETWORK="yes" NIC=[NETWORK="192net",NETWORK_UNAME="oneadmin"] \\
+            OS=[ARCH="x86_64"] SUNSTONE_CAPACITY_SELECT="YES" SUNSTONE_NETWORK_SELECT="YES" \\
+            VCPU="1"'
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -2538,8 +2534,7 @@ def vm_allocate(call=None, kwargs=None):
 
     data
         Contains the template definitions of the VM to allocate. Syntax can
-        be the usual attribute=value or XML. Data provided must be wrapped
-        in double quotes. Can be used instead of ``path``.
+        be the usual attribute=value or XML. Can be used instead of ``path``.
 
     hold
         If this parameter is set to ``True``, the VM will be created in
@@ -2609,8 +2604,8 @@ def vm_attach(name, kwargs=None, call=None):
 
     data
         Contains the data needed to attach a single disk vector attribute.
-        Syntax can be the usual attribute=value or XML. Data provided
-        must be wrapped in double quotes. Can be used instead of ``path``.
+        Syntax can be the usual attribute=value or XML. Can be used instead
+        of ``path``.
 
     CLI Example:
 
@@ -2675,8 +2670,8 @@ def vm_attach_nic(name, kwargs=None, call=None):
 
     data
         Contains the single NIC vector attribute to attach to the VM.
-        Syntax can be the usual attribute=value or XML. Data provided
-        must be wrapped in double quotes. Can be used instead of ``path``.
+        Syntax can be the usual attribute=value or XML. Can be used instead
+        of ``path``.
 
     CLI Example:
 
@@ -3354,8 +3349,8 @@ def vm_resize(name, kwargs=None, call=None):
 
     data
         Contains the new capacity elements CPU, VCPU, and MEMORY. If one of them is not
-        present, or its value is 0, the VM will not be re-sized. Data provided must be
-        wrapped in double quotes. Can be used instead of ``path``.
+        present, or its value is 0, the VM will not be re-sized. Can be used instead of
+        ``path``.
 
     capacity_maintained
         True to enforce the Host capacity is not over-committed. This parameter is only
@@ -3368,7 +3363,7 @@ def vm_resize(name, kwargs=None, call=None):
 
         salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt
         salt-cloud -a vm_resize my-vm path=/path/to/capacity_template.txt capacity_maintained=False
-        satl-cloud -a vm_resize my-vm data="CPU=1 VCPU=1 MEMORY=1024"
+        salt-cloud -a vm_resize my-vm data="CPU=1 VCPU=1 MEMORY=1024"
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3567,8 +3562,7 @@ def vm_update(name, kwargs=None, call=None):
 
     data
         Contains the new user template contents. Syntax can be the usual attribute=value
-        or XML. Data provided must be wrapped in double quotes. Can be used instead of
-        ``path``.
+        or XML. Can be used instead of ``path``.
 
     update_type
         There are two ways to update a VM: ``replace`` the whole template
@@ -3660,15 +3654,15 @@ def vn_add_ar(call=None, kwargs=None):
 
     data
         Contains the template of the address range to add. Syntax can be the
-        usual attribute=value or XML. Data provided must be wrapped in double
-        quotes. Can be used instead of ``path``.
+        usual attribute=value or XML. Can be used instead of ``path``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-cloud -f vn_add_ar opennebula vn_id=3 path=/path/to/address_range.txt
-        salt-cloud -f vn_add_ar opennebula vn_name=my-vn data="AR=[TYPE=IP4, IP=192.168.0.5, SIZE=10]"
+        salt-cloud -f vn_add_ar opennebula vn_name=my-vn \\
+            data="AR=[TYPE=IP4, IP=192.168.0.5, SIZE=10]"
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -3738,8 +3732,7 @@ def vn_allocate(call=None, kwargs=None):
 
     data
         Contains the template of the virtual network to allocate. Syntax can be the
-        usual attribute=value or XML. Data provided must be wrapped in double quotes.
-        Can be used instead of ``path``.
+        usual attribute=value or XML. Can be used instead of ``path``.
 
     cluster_id
         The ID of the cluster for which to add the new virtual network. Can be used
@@ -3958,8 +3951,7 @@ def vn_hold(call=None, kwargs=None):
 
     data
         Contains the template of the lease to hold. Syntax can be the usual
-        attribute=value or XML. Data provided must be wrapped in double quotes.
-        Can be used instead of ``path``.
+        attribute=value or XML. Can be used instead of ``path``.
 
     CLI Example:
 
@@ -4103,8 +4095,7 @@ def vn_release(call=None, kwargs=None):
 
     data
         Contains the template defining the lease to release. Syntax can be the
-        usual attribute=value or XML. Data provided must be wrapped in double
-        quotes. Can be used instead of ``path``.
+        usual attribute=value or XML. Can be used instead of ``path``.
 
     CLI Example:
 
