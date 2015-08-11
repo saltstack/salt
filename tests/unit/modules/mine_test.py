@@ -40,7 +40,8 @@ class MineTestCase(TestCase):
         '''
         with patch.dict(mine.__salt__,
                         {'config.option': MagicMock(return_value={'A': 'B'}),
-                         'data.update': MagicMock(return_value='A')}):
+                         'data.update': MagicMock(return_value='A'),
+                         'A': MagicMock(return_value='B')}):
             with patch.dict(mine.__opts__, {'file_client': 'local',
                                             'id': 'id'}):
                 self.assertEqual(mine.update(True), 'A')
