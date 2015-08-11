@@ -104,9 +104,9 @@ def _auth(profile=None, api_version=2, **connection_args):
     '''
 
     if profile:
-        prefix = profile + ":glance."
+        prefix = profile + ":keystone."
     else:
-        prefix = "glance."
+        prefix = "keystone."
 
     # look in connection_args first, then default to config file
     def get(key, default=None):
