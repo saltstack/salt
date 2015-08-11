@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import logging
 
 # Import Salt Libs
+import salt.utils
 from salt.transport.client import ReqChannel
 
 log = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class LocalChannel(ReqChannel):
             #data = json.loads(load)
             #{'path': 'apt-cacher-ng/map.jinja', 'saltenv': 'base', 'cmd': '_serve_file', 'loc': 0}
             #f = open(data['path'])
-            f = open(load['path'])
+            f = salt.utils.fopen(load['path'])
             ret = {
                 'data': ''.join(f.readlines()),
                 'dest': load['path'],
