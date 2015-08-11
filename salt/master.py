@@ -964,6 +964,8 @@ class AESFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
+        mopts['env_order'] = self.opts['env_order']
+        mopts['top_file_merging_strategy'] = self.opts['top_file_merging_strategy']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']
