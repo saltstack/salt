@@ -67,10 +67,11 @@ except ImportError:
     pass
 
 # Workaround, as the Glance API v2 requires you to
-# already have a keystone token
+# already have a keystone session token
 HAS_KEYSTONE = False
 try:
     from keystoneclient.v2_0 import client as kstone
+    #import keystoneclient.apiclient.exceptions as kstone_exc
     HAS_KEYSTONE = True
 except ImportError:
     pass
@@ -122,18 +123,11 @@ def _auth(profile=None, api_version=2, **connection_args):
     tenant_id = get('tenant_id')
     auth_url = get('auth_url', 'http://127.0.0.1:35357/v2.0/')
     insecure = get('insecure', False)
-    token = get('token')
+    token = False # get('token')
     region = get('region')
     endpoint = get('endpoint', 'http://127.0.0.1:9292/')
 
-    if token:
-        kwargs = {'token': token,
-                  'username': user,
-                  'endpoint_url': endpoint,
-                  'auth_url': auth_url,
-                  'region_name': region,
-                  'tenant_name': tenant}
-    else:
+    if not token:
         kwargs = {'username': user,
                   'password': password,
                   'tenant_id': tenant_id,
@@ -144,6 +138,9 @@ def _auth(profile=None, api_version=2, **connection_args):
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs['insecure'] = True
+    #else:
+    #    kwargs = {'token': token,
+    #              'endpoint_url': endpoint}
 
     if token:
         log.debug('Calling glanceclient.client.Client(' +
@@ -160,14 +157,16 @@ def _auth(profile=None, api_version=2, **connection_args):
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
             '{0}, **{1})'.format(endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
-        log.debug(help(keystone.get_token))
-        kwargs['token'] = keystone.get_token(keystone.session)
+        #log.debug(help(keystone.get_token))
+        #kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
         # logging it anyway when in debug-mode
         kwargs.pop('password')
         log.debug('Calling glanceclient.client.Client(' +
             '{0}, {1}, **{2})'.format(api_version, endpoint, kwargs))
+        # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
+        # but we deal with those elsewhere
         return client.Client(api_version, endpoint, **kwargs)
     else:
         raise NotImplementedError(
@@ -376,7 +375,11 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
 
         salt '*' glance.image_list
     '''
+    #try:
     g_client = _auth(profile)
+    #except kstone_exc.Unauthorized:
+    #    return False
+    #
     # I may want to use this code on Beryllium
     # until we got Boron packages for Ubuntu
     # so please keep this code until Carbon!
