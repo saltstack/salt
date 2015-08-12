@@ -188,7 +188,7 @@ class SaltEvent(object):
             opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         if listen:
-            self.subscribe()
+            self.connect_pub()
         self.pending_tags = []
         self.pending_rtags = []
         self.pending_events = []
