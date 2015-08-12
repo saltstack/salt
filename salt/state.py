@@ -2701,6 +2701,8 @@ class BaseHighState(object):
                         inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
+                        if matches is None:
+                            matches = []
                         # Resolve inc_sls in the specified environment
                         if env_key in matches or fnmatch.filter(self.avail[env_key], inc_sls):
                             resolved_envs = [env_key]

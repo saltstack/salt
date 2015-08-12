@@ -263,8 +263,6 @@ class EventListener(object):
             listen=True,
         )
 
-        self.event.subscribe()  # start listening for events immediately
-
         # tag -> list of futures
         self.tag_map = defaultdict(list)
 

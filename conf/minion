@@ -1,5 +1,5 @@
 ##### Primary configuration settings #####
-########################################## 
+##########################################
 # This configuration file is used to manage the behavior of the Salt Minion.
 # With the exception of the location of the Salt Master Server, values that are
 # commented out but have an empty line after the comment are defaults that need
@@ -482,9 +482,9 @@
 # will be shown for each state run.
 #state_output_profile: True
 
-# Fingerprint of the master public key to double verify the master is valid,
-# the master fingerprint can be found by running "salt-key -f master.pub" on the
-# salt master.
+# Fingerprint of the master public key to validate the identity of your Salt master
+# before the initial key exchange. The master fingerprint can be found by running
+# "salt-key -F master" on the Salt master.
 #master_finger: ''
 
 
