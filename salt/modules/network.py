@@ -1305,6 +1305,7 @@ def get_route(ip):
 
     .. versionchanged:: 2015.8.0
         Added support for SunOS (Solaris 10, Illumos, SmartOS)
+        Added support for OpenBSD
 
     CLI Example::
 
@@ -1353,6 +1354,41 @@ def get_route(ip):
             if 'interface' in line[0]:
                 ret['interface'] = line[1].strip()
                 ret['source'] = salt.utils.network.interface_ip(line[1].strip())
+
+        return ret
+
+    if __grains__['kernel'] == 'OpenBSD':
+        # [root@exosphere] route -n get blackdot.be
+        #   route to: 5.135.127.100
+        #destination: default
+        #       mask: default
+        #    gateway: 192.168.0.1
+        #  interface: vio0
+        # if address: 192.168.0.2
+        #   priority: 8 (static)
+        #      flags: <UP,GATEWAY,DONE,STATIC>
+        #     use       mtu    expire
+        # 8352657         0         0
+        cmd = 'route -n get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+
+        ret = {
+            'destination': ip,
+            'gateway': None,
+            'interface': None,
+            'source': None
+        }
+
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'route to' in line[0]:
+                ret['destination'] = line[1].strip()
+            if 'gateway' in line[0]:
+                ret['gateway'] = line[1].strip()
+            if 'interface' in line[0]:
+                ret['interface'] = line[1].strip()
+            if 'if address' in line[0]:
+                ret['source'] = line[1].strip()
 
         return ret
 
