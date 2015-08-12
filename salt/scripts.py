@@ -154,6 +154,58 @@ def salt_minion():
         logging.basicConfig()
 
 
+def proxy_minion_process(queue):
+    '''
+    Start a proxy minion process
+    '''
+    import salt.cli.daemons
+    # salt_minion spawns this function in a new process
+
+    def suicide_when_without_parent(parent_pid):
+        '''
+        Have the minion suicide if the parent process is gone
+
+        NOTE: there is a small race issue where the parent PID could be replace
+        with another process with the same PID!
+        '''
+        while True:
+            time.sleep(5)
+            try:
+                # check pid alive (Unix only trick!)
+                os.kill(parent_pid, 0)
+            except OSError:
+                # forcibly exit, regular sys.exit raises an exception-- which
+                # isn't sufficient in a thread
+                os._exit(999)
+    if not salt.utils.is_windows():
+        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+        thread.start()
+
+    restart = False
+    proxyminion = None
+    try:
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.error('Proxy Minion failed to start: ', exc_info=True)
+        restart = True
+    except SystemExit as exc:
+        restart = False
+
+    if restart is True:
+        log.warn('** Restarting proxy minion **')
+        delay = 60
+        if proxyminion is not None:
+            if hasattr(proxyminion, 'config'):
+                delay = proxyminion.config.get('random_reauth_delay', 60)
+        random_delay = randint(1, delay)
+        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+        # preform delay after minion resources have been cleaned
+        queue.put(random_delay)
+    else:
+        queue.put(0)
+
+
 def salt_proxy_minion():
     '''
     Start a proxy minion.
@@ -164,14 +216,14 @@ def salt_proxy_minion():
         sys.path.remove('')
 
     if salt.utils.is_windows():
-        minion = salt.cli.daemons.ProxyMinion()
-        minion.start()
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
         return
 
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
-        minion = salt.cli.daemons.ProxyMinion()
-        minion.start()
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
         return
 
     # keep one minion subprocess running
@@ -180,8 +232,8 @@ def salt_proxy_minion():
             queue = multiprocessing.Queue()
         except Exception:
             # This breaks in containers
-            minion = salt.cli.daemons.ProxyMinion()
-            minion.start()
+            proxyminion = salt.cli.daemons.ProxyMinion()
+            proxyminion.start()
             return
         process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
         process.start()
