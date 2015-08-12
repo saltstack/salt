@@ -364,39 +364,66 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
 
 def declare_binding(source, vhost, destination, destination_type, routing_key, runas=None):
     '''
-    Adds a exchange via rabbitmqctl declare exchange.
+    Adds a exchange via rabbitmqctl declare binding
 
-    ./rabbitmqadmin declare binding --vhost=Some_Virtual_Host source=test.recv destination=blah.recvq destination_type=queue routing_key=
+    ./rabbitmqadmin declare binding --vhost=Some_Virtual_Host source=bloa destination=bla destination_type=queue routing_key=""
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' rabbitmq declare_exchange '<source>' '<vhost_name>' '<destination>' '<destination_type>' '<routing_key>'
+        salt '*' rabbitmq declare_exchange 'blah' '<vhost_name>' 'boo' "queue" ""
 
     Setup:
 
-    /usr/lib/rabbitmq-management/ is from
-    http://localhost:15672/cli/rabbitmqadmin
-
+    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
     see rabbitmq-formula/rabbitmq/rabbit-management.sls
 
     '''
+
     if runas is None:
         runas = salt.utils.get_user()
-        res = __salt__['cmd.run'](
-            '/usr/lib/rabbitmq-management/rabbitmqadmin declare exchange '
-            '--vhost={0} '
-            'source={1} '
-            'destination={2} '
-            'destination_type={3} '
-            'routing_key={4}'.format(
-                vhost, source, destination, destination_type, routing_key ),
+    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare binding --vhost={0} source={1} destination={2} destination_type={3} routing_key={4}'.format(vhost, source, destination, destination_type, routing_key),
                               python_shell=False,
                               runas=runas)
     log.debug(res)
     msg = 'Declared'
     return _format_response(res, msg)
+
+def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runas=None):
+    '''
+    Adds a exchange via rabbitmqctl declare exchange.
+
+    ./rabbitmqadmin declare exchange --vhost=Some_Virtual_Host name=some_exchange type=fanout durable=True auto_delete=False internal=False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq declare_exchange '<exchange_name>' '<vhost_name>' 'fanout' True False False
+
+
+    Setup:
+
+    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
+    see rabbitmq-formula/rabbitmq/rabbit-management.sls
+
+    '''
+
+    durable = translate_boolean(durable)
+    auto_delete = translate_boolean(auto_delete)
+    internal = translate_boolean(internal)
+
+
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
+                              python_shell=False,
+                              runas=runas)
+    log.debug(res)
+    msg = 'Declared'
+    return _format_response(res, msg)
+
 
 
 def delete_vhost(vhost, runas=None):
@@ -687,7 +714,7 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
 
 def queue_vhost_exists(queue, vhost, runas=None, *kwargs):
     '''
-    Returns whether the queue exists on the  specified virtual host. 
+    Returns whether the queue exists on the  specified virtual host.
 
     CLI Example:
 
@@ -709,7 +736,7 @@ def queue_vhost_exists(queue, vhost, runas=None, *kwargs):
 
 def exchange_vhost_exists(name, vhost, runas=None, *kwargs):
     '''
-    Returns whether the exchange exists on the specified virtual host. 
+    Returns whether the exchange exists on the specified virtual host.
 
     CLI Example:
 
@@ -725,16 +752,14 @@ def exchange_vhost_exists(name, vhost, runas=None, *kwargs):
         runas=runas,
         )
 
- # {
- #    "arguments": {}, 
- #    "auto_delete": false, 
- #    "durable": true, 
- #    "internal": false, 
- #    "name": "amq.topic", 
- #    "type": "topic", 
- #    "vhost": "guest"
- #  }
-    log.debug(res)
+    # example
+    #    "auto_delete": false,
+    #    "durable": true,
+    #    "internal": false,
+    #    "name": "amq.topic",
+    #    "type": "topic",
+    #    "vhost": "guest"
+
     res = json.loads(res)
     log.debug(res)
     for exchange in res:
@@ -742,6 +767,45 @@ def exchange_vhost_exists(name, vhost, runas=None, *kwargs):
         if exchange['name'] == name and exchange['vhost'] == vhost :
             return True
 
+    return False
+
+def binding_vhost_exists(source, destination, destination_type, routing_key, vhost, runas=None, *kwargs):
+    '''
+    Returns whether the bindiing exists on the specified virtual host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.exchange_vhost_exists source vhostname destination destination_type
+    '''
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        '/usr/lib/rabbitmq-management/rabbitmqadmin list bindings --format pretty_json',
+        python_shell=False,
+        runas=runas,
+        )
+
+#     "destination": "wdpibadger.mt.recvq",
+#     "destination_type": "queue",
+#     "properties_key": "wdpibadger.mt.recvq",
+#     "routing_key": "wdpibadger.mt.recvq",
+#     "source": "",
+#     "vhost": "guest"
+
+    log.debug(res)
+    res = json.loads(res)
+    log.debug(res)
+    for binding in res:
+        log.debug(binding)
+        if (
+                binding['source'] == source and
+                binding['destination'] == destination and
+                binding['destination_type'] == destination_type and
+                binding['routing_key'] == routing_key
+        ):
+            return True
     return False
 
 
