@@ -3,9 +3,7 @@
 Management of the GPG keychains
 ==============================
 
-.. versionadded:: XXX
-
-.. code-block:: yaml
+.. versionadded:: Boron
 
 '''
 
@@ -90,7 +88,6 @@ def present(name,
         if key in current_keys.keys():
             if trust:
                 if trust in _VALID_TRUST_VALUES:
-                    log.debug('current trust {0} trust {1}'.format(current_keys[key]['trust'], trust))
                     if current_keys[key]['trust'] != TRUST_MAP[trust]:
                         # update trust level
                         result = __salt__['gpg.trust_key'](keyid=key,
