@@ -523,29 +523,32 @@ def traceroute(host):
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
-    cmd2 = 'traceroute --version'
-    out2 = __salt__['cmd.run'](cmd2)
-    try:
-        # Linux traceroute version looks like:
-        #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
-        # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
-
-        traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-        log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
-        traceroute_version = []
-        for t in traceroute_version_raw:
-            try:
-                traceroute_version.append(int(t))
-            except ValueError:
-                traceroute_version.append(t)
-
-        if len(traceroute_version) < 3:
-            traceroute_version.append(0)
-
-        log.debug('traceroute_version: {0}'.format(traceroute_version))
-
-    except IndexError:
+    if __grains__['kernel'] == 'SunOS':
         traceroute_version = [0, 0, 0]
+    else:
+        cmd2 = 'traceroute --version'
+        out2 = __salt__['cmd.run'](cmd2)
+        try:
+            # Linux traceroute version looks like:
+            #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
+            # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
+
+            traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
+            log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
+            traceroute_version = []
+            for t in traceroute_version_raw:
+                try:
+                    traceroute_version.append(int(t))
+                except ValueError:
+                    traceroute_version.append(t)
+
+            if len(traceroute_version) < 3:
+                traceroute_version.append(0)
+
+            log.debug('traceroute_version: {0}'.format(traceroute_version))
+
+        except IndexError:
+            traceroute_version = [0, 0, 0]
 
     for line in out.splitlines():
         if ' ' not in line:
@@ -553,7 +556,8 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
-        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]):
+        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]) or \
+            __grains__['kernel'] == 'SunOS':
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:
