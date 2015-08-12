@@ -24,6 +24,11 @@ import salt.utils
 import salt.syspaths
 from salt.ext.six import string_types
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 from salt.exceptions import (
     SaltInvocationError
 )
@@ -791,15 +796,15 @@ def trust_key(keyid=None,
     if trust_level not in _VALID_TRUST_LEVELS:
         return 'ERROR: Valid trust levels - {0}'.format(','.join(_VALID_TRUST_LEVELS))
 
-    cmd = 'echo {0}:{1} | {2} --import-ownertrust'.format(fingerprint,
-                                                          NUM_TRUST_DICT[trust_level],
-                                                          _check_gpg())
+    cmd = 'echo {0}:{1} | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
+                                                          _cmd_quote(NUM_TRUST_DICT[trust_level]),
+                                                          _cmd_quote(_check_gpg()))
     _user = user
     if user == 'salt':
         homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
         cmd = '{0} --homedir {1}'.format(cmd, homeDir)
         _user = 'root'
-    res = __salt__['cmd.run_all'](cmd, runas=_user)
+    res = __salt__['cmd.run_all'](cmd, runas=_user, python_shell=True)
 
     if not res['retcode'] == 0:
         ret['res'] = False
