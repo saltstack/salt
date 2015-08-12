@@ -86,7 +86,10 @@ def ping(host, timeout=False, return_boolean=False):
         salt '*' network.ping archlinux.org timeout=3
     '''
     if timeout:
-        cmd = 'ping -W {0} -c 4 {1}'.format(timeout, salt.utils.network.sanitize_host(host))
+        if salt.utils.is_sunos():
+            cmd = 'ping -c 4 {1} {0}'.format(timeout, salt.utils.network.sanitize_host(host))
+        else:
+            cmd = 'ping -W {0} -c 4 {1}'.format(timeout, salt.utils.network.sanitize_host(host))
     else:
         cmd = 'ping -c 4 {0}'.format(salt.utils.network.sanitize_host(host))
     if return_boolean:
