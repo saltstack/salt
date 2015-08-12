@@ -302,7 +302,7 @@ def managed(name, **kwargs):
 
     # empty file before configure
     if kwargs.get('clean_file', False):
-        open(kwargs['file'], 'w').close()
+        salt.utils.fopen(kwargs['file'], 'w').close()
 
     try:
         if __grains__['os_family'] == 'Debian':

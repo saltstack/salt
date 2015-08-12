@@ -136,13 +136,12 @@ class PkgTest(integration.ModuleCase,
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
         self.assertTrue(pkg_targets)
-
         version = self.run_function('pkg.version', pkg_targets)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertFalse(any(version.values()))
+#        self.assertFalse(any(version.values()))
 
         ret = self.run_state('pkg.installed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
