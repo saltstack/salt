@@ -265,14 +265,20 @@ def list_tab(user):
                 ret['special'].append(dat)
             elif line.startswith('#'):
                 # It's a comment! Catch it!
-                comment = line.lstrip('# ')
+                comment_line = line.lstrip('# ')
+
                 # load the identifier if any
-                if SALT_CRON_IDENTIFIER in comment:
-                    parts = comment.split(SALT_CRON_IDENTIFIER)
-                    comment = parts[0].rstrip()
+                if SALT_CRON_IDENTIFIER in comment_line:
+                    parts = comment_line.split(SALT_CRON_IDENTIFIER)
+                    comment_line = parts[0].rstrip()
                     # skip leading :
                     if len(parts[1]) > 1:
                         identifier = parts[1][1:]
+
+                if comment is None:
+                    comment = comment_line
+                else:
+                    comment += '\n' + comment_line
             elif len(line.split()) > 5:
                 # Appears to be a standard cron line
                 comps = line.split()
