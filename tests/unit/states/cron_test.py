@@ -214,7 +214,7 @@ class CronTestCase(TestCase):
         cron.present(
             name='foo',
             hour='1',
-            comment='Second crontab\nmulti-line-comment\n',
+            comment='Second crontab\nmulti-line comment\n',
             identifier='2',
             user='root')
         self.assertEqual(
