@@ -1691,7 +1691,7 @@ def show_service_certificate(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_service_certificate my-azure name=my_service_certificate \
+        salt-cloud -f show_service_certificate my-azure name=my_service_certificate \\
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
     '''
     if call != 'function':
@@ -1736,7 +1736,7 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f add_service_certificate my-azure name=my_service_certificate \
+        salt-cloud -f add_service_certificate my-azure name=my_service_certificate \\
             data='...CERT_DATA...' certificate_format=sha1 password=verybadpass
     '''
     if call != 'function':
@@ -1784,7 +1784,7 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f delete_service_certificate my-azure name=my_service_certificate \
+        salt-cloud -f delete_service_certificate my-azure name=my_service_certificate \\
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
     '''
     if call != 'function':
@@ -1855,7 +1855,7 @@ def show_management_certificate(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f get_management_certificate my-azure name=my_management_certificate \
+        salt-cloud -f get_management_certificate my-azure name=my_management_certificate \\
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
     '''
     if call != 'function':
@@ -1890,7 +1890,7 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f add_management_certificate my-azure public_key='...PUBKEY...' \
+        salt-cloud -f add_management_certificate my-azure public_key='...PUBKEY...' \\
             thumbprint=0123456789ABCDEF data='...CERT_DATA...'
     '''
     if call != 'function':
@@ -1934,7 +1934,7 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f delete_management_certificate my-azure name=my_management_certificate \
+        salt-cloud -f delete_management_certificate my-azure name=my_management_certificate \\
             thumbalgorithm=sha1 thumbprint=0123456789ABCDEF
     '''
     if call != 'function':
@@ -2010,7 +2010,15 @@ def list_input_endpoints(kwargs=None, conn=None, call=None):
         kwargs['service'],
         kwargs['deployment'],
     )
+
     data = query(path)
+    if data is None:
+        raise SaltCloudSystemExit(
+            'There was an error listing endpoints with the {0} service on the {1} deployment.'.format(
+                kwargs['service'],
+                kwargs['deployment']
+            )
+        )
 
     ret = {}
     for item in data:
@@ -2034,7 +2042,7 @@ def show_input_endpoint(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_input_endpoint my-azure service=myservice \
+        salt-cloud -f show_input_endpoint my-azure service=myservice \\
             deployment=mydeployment name=SSH
     '''
     if call != 'function':
@@ -2067,9 +2075,9 @@ def update_input_endpoint(kwargs=None, conn=None, call=None, activity='update'):
 
     .. code-block:: bash
 
-        salt-cloud -f update_input_endpoint my-azure service=myservice \
-            deployment=mydeployment role=myrole name=HTTP local_port=80 \
-            port=80 protocol=tcp enable_direct_server_return=False \
+        salt-cloud -f update_input_endpoint my-azure service=myservice \\
+            deployment=mydeployment role=myrole name=HTTP local_port=80 \\
+            port=80 protocol=tcp enable_direct_server_return=False \\
             timeout_for_tcp_idle_connection=4
     '''
     if call != 'function':
@@ -2181,9 +2189,9 @@ def add_input_endpoint(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f add_input_endpoint my-azure service=myservice \
-            deployment=mydeployment role=myrole name=HTTP local_port=80 \
-            port=80 protocol=tcp enable_direct_server_return=False \
+        salt-cloud -f add_input_endpoint my-azure service=myservice \\
+            deployment=mydeployment role=myrole name=HTTP local_port=80 \\
+            port=80 protocol=tcp enable_direct_server_return=False \\
             timeout_for_tcp_idle_connection=4
     '''
     return update_input_endpoint(
@@ -2205,7 +2213,7 @@ def delete_input_endpoint(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f delete_input_endpoint my-azure service=myservice \
+        salt-cloud -f delete_input_endpoint my-azure service=myservice \\
             deployment=mydeployment role=myrole name=HTTP
     '''
     return update_input_endpoint(
@@ -2293,7 +2301,7 @@ def show_affinity_group(kwargs=None, conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f show_affinity_group my-azure service=myservice \
+        salt-cloud -f show_affinity_group my-azure service=myservice \\
             deployment=mydeployment name=SSH
     '''
     if call != 'function':
@@ -2674,7 +2682,7 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
 
     .. code-block:: bash
 
-        salt-cloud -f set_storage_container my-azure name=mycontainer \
+        salt-cloud -f set_storage_container my-azure name=mycontainer \\
             x_ms_meta_name_values='{"my_name": "my_value"}'
 
     name:
