@@ -36,28 +36,35 @@ class RegTestCase(TestCase):
         '''
         Test to set a registry entry.
         '''
-        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version'
-        value = '0.15.3'
+        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt'
+        vname = 'version'
+        vdata = '0.15.3'
 
         ret = {'name': name,
                'changes': {},
                'result': True,
                'comment': '{0} is already configured'.format(name)}
 
-        mock = MagicMock(side_effect=[{'vdata': value}, {'vdata': 'a'}, {'vdata': 'a'}])
+        mock = MagicMock(side_effect=[{'vdata': vdata}, {'vdata': 'a'}, {'vdata': 'a'}])
         mock_t = MagicMock(return_value=True)
         with patch.dict(reg.__salt__, {'reg.read_value': mock,
                                        'reg.set_value': mock_t}):
-            self.assertDictEqual(reg.present(name, value), ret)
+            self.assertDictEqual(reg.present(name,
+                                             vname=vname,
+                                             vdata=vdata), ret)
 
             with patch.dict(reg.__opts__, {'test': True}):
                 ret.update({'comment': '', 'result': None,
                             'changes': {'reg': 'configured to 0.15.3'}})
-                self.assertDictEqual(reg.present(name, value), ret)
+                self.assertDictEqual(reg.present(name,
+                                                 vname=vname,
+                                                 vdata=vdata), ret)
 
             with patch.dict(reg.__opts__, {'test': False}):
                 ret.update({'result': True})
-                self.assertDictEqual(reg.present(name, value), ret)
+                self.assertDictEqual(reg.present(name,
+                                                 vname=vname,
+                                                 vdata=vdata), ret)
 
     # 'absent' function tests: 1
 
@@ -65,7 +72,8 @@ class RegTestCase(TestCase):
         '''
         Test to remove a registry entry.
         '''
-        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version'
+        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt'
+        vname = 'version'
 
         ret = {'name': name,
                'changes': {},
@@ -76,16 +84,16 @@ class RegTestCase(TestCase):
         mock_t = MagicMock(return_value=True)
         with patch.dict(reg.__salt__, {'reg.read_value': mock,
                                        'reg.delete_value': mock_t}):
-            self.assertDictEqual(reg.absent(name), ret)
+            self.assertDictEqual(reg.absent(name, vname), ret)
 
             with patch.dict(reg.__opts__, {'test': True}):
                 ret.update({'comment': '', 'result': None,
                             'changes': {'reg': 'Removed {0}'.format(name)}})
-                self.assertDictEqual(reg.absent(name), ret)
+                self.assertDictEqual(reg.absent(name, vname), ret)
 
             with patch.dict(reg.__opts__, {'test': False}):
                 ret.update({'result': True})
-                self.assertDictEqual(reg.absent(name), ret)
+                self.assertDictEqual(reg.absent(name, vname), ret)
 
 
 if __name__ == '__main__':
