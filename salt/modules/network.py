@@ -65,6 +65,9 @@ def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
+
     CLI Example:
 
     .. code-block:: bash
@@ -464,6 +467,36 @@ def _netstat_route_openbsd():
     return ret
 
 
+def _netstat_route_sunos():
+    '''
+    Return netstat routing information for SunOS
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[5]})
+    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[5]})
+    return ret
+
+
 def netstat():
     '''
     Return information on open ports and states
@@ -474,6 +507,9 @@ def netstat():
 
     .. versionchanged:: 2014.1.4
         Added support for OpenBSD, FreeBSD, and NetBSD
+
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
 
     CLI Example:
 
@@ -506,6 +542,9 @@ def active_tcp():
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
+
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
 
     CLI Example:
 
@@ -634,6 +673,9 @@ def dig(host):
 def arp():
     '''
     Return the arp table from the minion
+
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
 
     CLI Example:
 
@@ -856,6 +898,9 @@ def get_hostname():
 def mod_hostname(hostname):
     '''
     Modify hostname
+
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
 
     CLI Example:
 
@@ -1178,6 +1223,9 @@ def routes(family=None):
     '''
     Return currently configured routes from routing table
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1189,6 +1237,8 @@ def routes(family=None):
 
     if __grains__['kernel'] == 'Linux':
         routes_ = _netstat_route_linux()
+    elif __grains__['kernel'] == 'SunOS':
+        routes_ = _netstat_route_sunos()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
         routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
@@ -1209,6 +1259,9 @@ def default_route(family=None):
     '''
     Return default route(s) from routing table
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1224,7 +1277,8 @@ def default_route(family=None):
     if __grains__['kernel'] == 'Linux':
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
-    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin']:
+    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin'] or \
+        __grains__['kernel'] == 'SunOS':
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']
     else:
