@@ -86,7 +86,7 @@ def ping(host, timeout=False, return_boolean=False):
         salt '*' network.ping archlinux.org timeout=3
     '''
     if timeout:
-        if salt.utils.is_sunos():
+        if __grains__['kernel'] == 'SunOS':
             cmd = 'ping -c 4 {1} {0}'.format(timeout, salt.utils.network.sanitize_host(host))
         else:
             cmd = 'ping -W {0} -c 4 {1}'.format(timeout, salt.utils.network.sanitize_host(host))
@@ -213,7 +213,10 @@ def _ppid():
     Return a dict of pid to ppid mappings
     '''
     ret = {}
-    cmd = 'ps -ax -o pid,ppid | tail -n+2'
+    if __grains__['kernel'] == 'SunOS':
+        cmd = 'ps -a -o pid,ppid | tail -n+2'
+    else:
+        cmd = 'ps -ax -o pid,ppid | tail -n+2'
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         pid, ppid = line.split()
@@ -295,6 +298,38 @@ def _netstat_bsd():
             continue
         ret[idx]['user'] = ptr[master_pid]['user']
         ret[idx]['program'] = '/'.join((master_pid, ptr[master_pid]['cmd']))
+    return ret
+
+
+def _netstat_sunos():
+    '''
+    Return netstat information for SunOS flavors
+    '''
+    log.warning('User and program not (yet) supported on SunOS')
+    ret = []
+    for addr_family in ('inet', 'inet6'):
+        # Lookup TCP connections
+        cmd = 'netstat -f {0} -P tcp -an | tail -n+5'.format(addr_family)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        for line in out.splitlines():
+            comps = line.split()
+            ret.append({
+                'proto': 'tcp6' if addr_family == 'inet6' else 'tcp',
+                'recv-q': comps[5],
+                'send-q': comps[4],
+                'local-address': comps[0],
+                'remote-address': comps[1],
+                'state': comps[6]})
+        # Lookup UDP connections
+        cmd = 'netstat -f {0} -P udp -an | tail -n+5'.format(addr_family)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        for line in out.splitlines():
+            comps = line.split()
+            ret.append({
+                'proto': 'udp6' if addr_family == 'inet6' else 'udp',
+                'local-address': comps[0],
+                'remote-address': comps[1]})
+
     return ret
 
 
@@ -450,6 +485,8 @@ def netstat():
         return _netstat_linux()
     elif __grains__['kernel'] in ('OpenBSD', 'FreeBSD', 'NetBSD'):
         return _netstat_bsd()
+    elif __grains__['kernel'] == 'SunOS':
+        return _netstat_sunos()
     raise CommandExecutionError('Not yet supported on this platform')
 
 
