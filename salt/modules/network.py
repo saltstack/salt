@@ -1303,6 +1303,9 @@ def get_route(ip):
 
     .. versionadded:: 2015.5.3
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+
     CLI Example::
 
         salt '*' network.get_route 10.10.10.10
@@ -1317,8 +1320,41 @@ def get_route(ip):
             'destination': ip,
             'gateway': m.group('gateway'),
             'interface': m.group('interface'),
-            'source': m.group('source')}
+            'source': m.group('source')
+        }
 
         return ret
+
+    if __grains__['kernel'] == 'SunOS':
+        # [root@nacl ~]# route -n get 172.16.10.123
+        #   route to: 172.16.10.123
+        #destination: 172.16.10.0
+        #       mask: 255.255.255.0
+        #  interface: net0
+        #      flags: <UP,DONE,KERNEL>
+        # recvpipe  sendpipe  ssthresh    rtt,ms rttvar,ms  hopcount      mtu     expire
+        #       0         0         0         0         0         0      1500         0
+        cmd = '/usr/sbin/route -n get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+
+        ret = {
+            'destination': ip,
+            'gateway': None,
+            'interface': None,
+            'source': None
+        }
+
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'route to' in line[0]:
+                ret['destination'] = line[1].strip()
+            if 'gateway' in line[0]:
+                ret['gateway'] = line[1].strip()
+            if 'interface' in line[0]:
+                ret['interface'] = line[1].strip()
+                ret['source'] = salt.utils.network.interface_ip(line[1].strip())
+
+        return ret
+
     else:
         raise CommandExecutionError('Not yet supported on this platform')
