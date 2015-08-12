@@ -27,6 +27,11 @@ from salt.exceptions import SaltInvocationError
 # Import 3rd-party libs
 import salt.ext.six as six
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -106,6 +111,7 @@ def _create_gpg(user=None, gnupghome=None):
     '''
     if not user:
         user = __salt__['config.option']('user')
+        log.debug('No user set, using {0}'.format(user))
 
     if user == 'salt':
         if gnupghome:
@@ -220,6 +226,7 @@ def list_keys(user=None, gnupghome=None):
     '''
     _keys = []
     for _key in _list_keys(user, gnupghome):
+        log.debug('Key {0}'.format(_key))
         tmp = {}
         tmp['keyid'] = _key['keyid']
         tmp['fingerprint'] = _key['fingerprint']
@@ -826,15 +833,17 @@ def trust_key(keyid=None,
     if trust_level not in _VALID_TRUST_LEVELS:
         return 'ERROR: Valid trust levels - {0}'.format(','.join(_VALID_TRUST_LEVELS))
 
-    cmd = 'echo {0}:{1} | {2} --import-ownertrust'.format(fingerprint,
-                                                          NUM_TRUST_DICT[trust_level],
-                                                          _check_gpg())
+    cmd = 'echo "{0}:{1}" | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
+                                                            _cmd_quote(NUM_TRUST_DICT[trust_level]),
+                                                            _cmd_quote(_check_gpg()))
+    log.debug('=== cmd {0}'.format(cmd))
     _user = user
     if user == 'salt':
         homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
         cmd = '{0} --homedir {1}'.format(cmd, homeDir)
         _user = 'root'
-    res = __salt__['cmd.run_all'](cmd, runas=_user)
+    res = __salt__['cmd.run_all'](cmd, runas=_user, python_shell=True)
+    log.debug('=== res {0} ==='.format(res))
 
     if not res['retcode'] == 0:
         ret['res'] = False
