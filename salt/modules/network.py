@@ -331,7 +331,7 @@ def _netstat_sunos():
             ret.append({
                 'proto': 'udp6' if addr_family == 'inet6' else 'udp',
                 'local-address': comps[0],
-                'remote-address': comps[1]})
+                'remote-address': comps[1] if len(comps) > 2 else ''})
 
     return ret
 
