@@ -61,6 +61,7 @@ try:
     #pylint: disable=unused-import
     import boto
     import boto.route53
+    from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -99,7 +100,8 @@ def _get_split_zone(zone, _conn, private_zone):
     return False
 
 
-def zone_exists(zone, region=None, key=None, keyid=None, profile=None):
+def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
+                retry_on_rate_limit=True, rate_limit_retries=5):
     '''
     Check for the existence of a Route53 hosted zone.
 
@@ -111,7 +113,18 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    return bool(conn.get_zone(zone))
+    while rate_limit_retries > 0:
+        try:
+            return bool(conn.get_zone(zone))
+
+        except DNSServerError, e:
+            # if rate limit, retry:
+            if retry_on_rate_limit and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(2)
+                rate_limit_retries -= 1
+                continue # the while True; try again if not out of retries
+            raise e
 
 
 def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
@@ -166,7 +179,8 @@ def _decode_name(name):
 
 
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
-               keyid=None, profile=None, split_dns=False, private_zone=False):
+               keyid=None, profile=None, split_dns=False, private_zone=False,
+               retry_on_rate_limit=True, rate_limit_retries=5):
     '''
     Get a record from a zone.
 
@@ -176,26 +190,39 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if split_dns:
-        _zone = _get_split_zone(zone, conn, private_zone)
-    else:
-        _zone = conn.get_zone(zone)
-    if not _zone:
-        msg = 'Failed to retrieve zone {0}'.format(zone)
-        log.error(msg)
-        return None
-    _type = record_type.upper()
-    ret = odict.OrderedDict()
+    while rate_limit_retries > 0:
+        try:
+            if split_dns:
+                _zone = _get_split_zone(zone, conn, private_zone)
+            else:
+                _zone = conn.get_zone(zone)
+            if not _zone:
+                msg = 'Failed to retrieve zone {0}'.format(zone)
+                log.error(msg)
+                return None
+            _type = record_type.upper()
+            ret = odict.OrderedDict()
 
-    name = _encode_name(name)
-    if _type == 'A':
-        _record = _zone.get_a(name, fetch_all)
-    elif _type == 'CNAME':
-        _record = _zone.get_cname(name, fetch_all)
-    elif _type == 'MX':
-        _record = _zone.get_mx(name, fetch_all)
-    else:
-        _record = _zone.find_records(name, _type, all=fetch_all)
+            name = _encode_name(name)
+            if _type == 'A':
+                _record = _zone.get_a(name, fetch_all)
+            elif _type == 'CNAME':
+                _record = _zone.get_cname(name, fetch_all)
+            elif _type == 'MX':
+                _record = _zone.get_mx(name, fetch_all)
+            else:
+                _record = _zone.find_records(name, _type, all=fetch_all)
+
+            break # the while True
+
+        except DNSServerError, e:
+            # if rate limit, retry:
+            if retry_on_rate_limit and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(2)
+                rate_limit_retries -= 1
+                continue # the while True; try again if not out of retries
+            raise e
 
     if _record:
         ret['name'] = _decode_name(_record.name)
@@ -208,7 +235,8 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None,
-               wait_for_sync=True, split_dns=False, private_zone=False):
+               wait_for_sync=True, split_dns=False, private_zone=False,
+               retry_on_rate_limit=True, rate_limit_retries=5):
     '''
     Add a record to a zone.
 
@@ -218,36 +246,59 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if split_dns:
-        _zone = _get_split_zone(zone, conn, private_zone)
-    else:
-        _zone = conn.get_zone(zone)
-    if not _zone:
-        msg = 'Failed to retrieve zone {0}'.format(zone)
-        log.error(msg)
-        return False
-    _type = record_type.upper()
+    while rate_limit_retries > 0:
+        try:
+            if split_dns:
+                _zone = _get_split_zone(zone, conn, private_zone)
+            else:
+                _zone = conn.get_zone(zone)
+            if not _zone:
+                msg = 'Failed to retrieve zone {0}'.format(zone)
+                log.error(msg)
+                return False
+            _type = record_type.upper()
+            break
 
-    if _type == 'A':
-        status = _zone.add_a(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    elif _type == 'CNAME':
-        status = _zone.add_cname(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    elif _type == 'MX':
-        status = _zone.add_mx(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    else:
-        # add_record requires a ttl value, annoyingly.
-        if ttl is None:
-            ttl = 60
-        status = _zone.add_record(_type, name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
+        except DNSServerError, e:
+            # if rate limit, retry:
+            if retry_on_rate_limit and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(2)
+                rate_limit_retries -= 1
+                continue # the while True; try again if not out of retries
+            raise e
 
+    while rate_limit_retries > 0:
+        try:
+            if _type == 'A':
+                status = _zone.add_a(name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            elif _type == 'CNAME':
+                status = _zone.add_cname(name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            elif _type == 'MX':
+                status = _zone.add_mx(name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            else:
+                # add_record requires a ttl value, annoyingly.
+                if ttl is None:
+                    ttl = 60
+                status = _zone.add_record(_type, name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+
+        except DNSServerError, e:
+            # if rate limit, retry:
+            if retry_on_rate_limit and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(2)
+                rate_limit_retries -= 1
+                continue # the while True; try again if not out of retries
+            raise e
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                   region=None, key=None, keyid=None, profile=None,
-                  wait_for_sync=True, split_dns=False, private_zone=False):
+                  wait_for_sync=True, split_dns=False, private_zone=False,
+                  retry_on_rate_limit=True, rate_limit_retries=5):
     '''
     Modify a record in a zone.
 
@@ -267,26 +318,38 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
-    if _type == 'A':
-        status = _zone.update_a(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    elif _type == 'CNAME':
-        status = _zone.update_cname(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    elif _type == 'MX':
-        status = _zone.update_mx(name, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    else:
-        old_record = _zone.find_records(name, _type)
-        if not old_record:
-            return False
-        status = _zone.update_record(old_record, value, ttl, identifier)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
+    while rate_limit_retries > 0:
+        try:
+            if _type == 'A':
+                status = _zone.update_a(name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            elif _type == 'CNAME':
+                status = _zone.update_cname(name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            elif _type == 'MX':
+                status = _zone.update_mx(name, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            else:
+                old_record = _zone.find_records(name, _type)
+                if not old_record:
+                    return False
+                status = _zone.update_record(old_record, value, ttl, identifier)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+
+        except DNSServerError, e:
+            # if rate limit, retry:
+            if retry_on_rate_limit and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(2)
+                rate_limit_retries -= 1
+                continue # the while True; try again if not out of retries
+            raise e
 
 
 def delete_record(name, zone, record_type, identifier=None, all_records=False,
                   region=None, key=None, keyid=None, profile=None,
-                  wait_for_sync=True, split_dns=False, private_zone=False):
+                  wait_for_sync=True, split_dns=False, private_zone=False,
+                  retry_on_rate_limit=True, rate_limit_retries=5):
     '''
     Modify a record in a zone.
 
@@ -306,22 +369,32 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         return False
     _type = record_type.upper()
 
-    if _type == 'A':
-        status = _zone.delete_a(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    elif _type == 'CNAME':
-        status = _zone.delete_cname(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    elif _type == 'MX':
-        status = _zone.delete_mx(name, identifier, all_records)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
-    else:
-        old_record = _zone.find_records(name, _type, all=all_records)
-        if not old_record:
-            return False
-        status = _zone.delete_record(old_record)
-        return _wait_for_sync(status.id, conn, wait_for_sync)
+    while rate_limit_retries > 0:
+        try:
+            if _type == 'A':
+                status = _zone.delete_a(name, identifier, all_records)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            elif _type == 'CNAME':
+                status = _zone.delete_cname(name, identifier, all_records)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            elif _type == 'MX':
+                status = _zone.delete_mx(name, identifier, all_records)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
+            else:
+                old_record = _zone.find_records(name, _type, all=all_records)
+                if not old_record:
+                    return False
+                status = _zone.delete_record(old_record)
+                return _wait_for_sync(status.id, conn, wait_for_sync)
 
+        except DNSServerError, e:
+            # if rate limit, retry:
+            if retry_on_rate_limit and 'Throttling' == e.code:
+                log.debug('Throttled by AWS API.')
+                time.sleep(2)
+                rate_limit_retries -= 1
+                continue # the while True; try again if not out of retries
+            raise e
 
 def _wait_for_sync(status, conn, wait_for_sync):
     if not wait_for_sync:
