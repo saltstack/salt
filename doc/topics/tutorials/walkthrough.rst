@@ -191,9 +191,13 @@ The easiest way to accept the minion key is to accept all pending keys:
 
 .. note::
 
-    Keys should be verified! The secure thing to do before accepting a key is
-    to run ``salt-key -f minion-id`` to print the fingerprint of the minion's
-    public key. This fingerprint can then be compared against the fingerprint
+    Keys should be verified! Print the master key fingerprint by running ``salt-key -F master``
+    on the Salt master. Copy the ``master.pub`` fingerprint from the Local Keys section,
+    and then set this value as the :conf_minion:`master_finger` in the minion configuration
+    file. Restart the Salt minion.
+
+    On the minion, run ``salt-key -f minion-id`` to print the fingerprint of the
+    minion's public key. This fingerprint can then be compared against the fingerprint
     generated on the minion.
 
     On the master:
