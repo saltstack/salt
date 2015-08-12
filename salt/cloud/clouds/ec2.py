@@ -1600,7 +1600,6 @@ def request_instance(vm_=None, call=None):
         }
         try:
             rd_data = aws.query(rd_params,
-                                return_root=True,
                                 location=get_location(),
                                 provider=get_provider(),
                                 opts=__opts__,
@@ -2294,7 +2293,7 @@ def create(vm_=None, call=None):
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
                 'instance_id': ret['instanceId'],
-                'del_all_vols_on_destroy': vm_.get('set_del_all_vols_on_destroy', False)
+                'del_all_vols_on_destroy': vm_.get('del_all_vols_on_destroy', False)
             },
             call='action'
         )
