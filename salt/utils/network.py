@@ -618,7 +618,12 @@ def _interfaces_ifconfig(out):
             # status determines global interface status.
             #
             # merge items with higher priority for older values
+            # after that merge the inet and inet6 sub items for both
             ret[iface] = dict(list(data.items()) + list(ret[iface].items()))
+            if 'inet' in data:
+                ret[iface]['inet'].extend(x for x in data['inet'] if x not in ret[iface]['inet'])
+            if 'inet6' in data:
+                ret[iface]['inet6'].extend(x for x in data['inet6'] if x not in ret[iface]['inet6'])
         else:
             ret[iface] = data
         del data

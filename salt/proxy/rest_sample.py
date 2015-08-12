@@ -1,147 +1,173 @@
 # -*- coding: utf-8 -*-
 '''
 This is a simple proxy-minion designed to connect to and communicate with
-the bottle-based web service contained in salt/tests/rest.py.
-
-Note this example needs the 'requests' library.
-Requests is not a hard dependency for Salt
+the bottle-based web service contained in https://github.com/salt-contrib/proxyminion_rest_example
 '''
 from __future__ import absolute_import
 
 # Import python libs
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
+import logging
+import salt.utils.http
 
 HAS_REST_EXAMPLE = True
 
+# This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['rest_sample']
 
 
+# Variables are scoped to this module so we can have persistent data
+# across calls to fns in here.
+GRAINS_CACHE = {}
+DETAILS = {}
+
+# Want logging!
+log = logging.getLogger(__file__)
+
+
+# This does nothing, it's here just as an example and to provide a log
+# entry when the module is loaded.
 def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not HAS_REQUESTS:
+    log.debug('rest_sample proxy __virtual__() called...')
+    return True
+
+
+def init(opts):
+    '''
+    Every proxy module needs an 'init', though you can
+    just put a 'pass' here if it doesn't need to do anything.
+    '''
+    log.debug('rest_sample proxy init() called...')
+
+    # Save the REST URL
+    DETAILS['url'] = opts['proxy']['url']
+
+    # Make sure the REST URL ends with a '/'
+    if not DETAILS['url'].endswith('/'):
+        DETAILS['url'] += '/'
+
+
+def id(opts):
+    '''
+    Return a unique ID for this proxy minion.  This ID MUST NOT CHANGE.
+    If it changes while the proxy is running the salt-master will get
+    really confused and may stop talking to this minion
+    '''
+    r = salt.utils.http.query(opts['proxy']['url']+'id', decode_type='json', decode=True)
+    return r['dict']['id'].encode('ascii', 'ignore')
+
+
+def grains():
+    '''
+    Get the grains from the proxied device
+    '''
+    if not GRAINS_CACHE:
+        r = salt.utils.http.query(DETAILS['url']+'info', decode_type='json', decode=True)
+        GRAINS_CACHE = r['dict']
+    return GRAINS_CACHE
+
+
+def grains_refresh():
+    '''
+    Refresh the grains from the proxied device
+    '''
+    GRAINS_CACHE = {}
+    return grains()
+
+
+def service_start(name):
+    '''
+    Start a "service" on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'service/start/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
+def service_stop(name):
+    '''
+    Stop a "service" on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'service/stop/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
+def service_restart(name):
+    '''
+    Restart a "service" on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'service/restart/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
+def service_list():
+    '''
+    List "services" on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'service/list', decode_type='json', decode=True)
+    return r['dict']
+
+
+def service_status(name):
+    '''
+    Check if a service is running on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'service/status/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
+def package_list():
+    '''
+    List "packages" installed on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'package/list', decode_type='json', decode=True)
+    return r['dict']
+
+
+def package_install(name, **kwargs):
+    '''
+    Install a "package" on the REST server
+    '''
+    cmd = DETAILS['url']+'package/install/'+name
+    if 'version' in kwargs:
+        cmd += '/'+kwargs['version']
+    else:
+        cmd += '/1.0'
+    r = salt.utils.http.query(cmd, decode_type='json', decode=True)
+    return r['dict']
+
+
+def package_remove(name):
+
+    '''
+    Remove a "package" on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
+def package_status(name):
+    '''
+    Check the installation status of a package on the REST server
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'package/status/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
+def ping():
+    '''
+    Is the REST server up?
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
+    try:
+        return r['dict'].get('ret', False)
+    except Exception:
         return False
 
 
-class Proxyconn(object):
+def shutdown(opts):
     '''
-    Interface with the REST sample web service (rest.py at
-    https://github.com/cro/salt-proxy-rest)
+    For this proxy shutdown is a no-op
     '''
-    def __init__(self, details):
-        self.url = details['url']
-        self.grains_cache = {}
-
-    def id(self, opts):
-        '''
-        Return a unique ID for this proxy minion
-        '''
-        r = requests.get(self.url+'id')
-        return r.text.encode('ascii', 'ignore')
-
-    def grains(self):
-        '''
-        Get the grains from the proxied device
-        '''
-        if not self.grains_cache:
-            r = requests.get(self.url+'info')
-            self.grains_cache = r.json()
-        return self.grains_cache
-
-    def grains_refresh(self):
-        '''
-        Refresh the grains from the proxied device
-        '''
-        self.grains_cache = {}
-        return self.grains()
-
-    def service_start(self, name):
-        '''
-        Start a "service" on the REST server
-        '''
-        r = requests.get(self.url+'service/start/'+name)
-        return r.json()
-
-    def service_stop(self, name):
-        '''
-        Stop a "service" on the REST server
-        '''
-        r = requests.get(self.url+'service/stop/'+name)
-        return r.json()
-
-    def service_restart(self, name):
-        '''
-        Restart a "service" on the REST server
-        '''
-        r = requests.get(self.url+'service/restart/'+name)
-        return r.json()
-
-    def service_list(self):
-        '''
-        List "services" on the REST server
-        '''
-        r = requests.get(self.url+'service/list')
-        return r.json()
-
-    def service_status(self, name):
-        '''
-        Check if a service is running on the REST server
-        '''
-        r = requests.get(self.url+'service/status/'+name)
-        return r.json()
-
-    def package_list(self):
-        '''
-        List "packages" installed on the REST server
-        '''
-        r = requests.get(self.url+'package/list')
-        return r.json()
-
-    def package_install(self, name, **kwargs):
-        '''
-        Install a "package" on the REST server
-        '''
-        cmd = self.url+'package/install/'+name
-        if 'version' in kwargs:
-            cmd += '/'+kwargs['version']
-        else:
-            cmd += '/1.0'
-        r = requests.get(cmd)
-
-    def package_remove(self, name):
-        '''
-        Remove a "package" on the REST server
-        '''
-        r = requests.get(self.url+'package/remove/'+name)
-        return r.json()
-
-    def package_status(self, name):
-        '''
-        Check the installation status of a package on the REST server
-        '''
-        r = requests.get(self.url+'package/status/'+name)
-        return r.json()
-
-    def ping(self):
-        '''
-        Is the REST server up?
-        '''
-        r = requests.get(self.url+'ping')
-        try:
-            if r.status_code == 200:
-                return True
-            else:
-                return False
-        except Exception:
-            return False
-
-    def shutdown(self, opts):
-        '''
-        For this proxy shutdown is a no-op
-        '''
-        pass
+    log.debug('rest_sample proxy shutdown() called...')

@@ -351,7 +351,7 @@ def _sunos_cpudata():
     grains = {}
     grains['cpu_flags'] = []
 
-    grains['cpuarch'] = __salt__['cmd.run']('uname -p')
+    grains['cpuarch'] = __salt__['cmd.run']('isainfo -k')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
@@ -477,30 +477,29 @@ def _virtual(osdata):
     skip_cmds = ('AIX',)
 
     # list of commands to be executed to determine the 'virtual' grain
-    _cmds = set()
-
+    _cmds = []
     # test first for virt-what, which covers most of the desired functionality
     # on most platforms
     if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.which('virt-what'):
-            _cmds = (['virt-what'])
+            _cmds = ['virt-what']
         else:
             log.debug(
                 'Please install \'virt-what\' to improve results of the '
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    elif __opts__.get('enable_lspci', True) is False:
-        _cmds = (['dmidecode', 'dmesg'])
+    if __opts__.get('enable_lspci', True) is False:
+        _cmds += ['dmidecode', 'dmesg']
     elif osdata['kernel'] in skip_cmds:
         _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg')
+            _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg']
         else:
-            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
-                     'dmesg')
+            _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
+                     'dmesg']
 
     failed_commands = set()
     for command in _cmds:
@@ -1253,11 +1252,11 @@ def os_data():
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os_family'] = 'Solaris'
-        uname_v = __salt__['cmd.run']('uname -v')
-        if 'joyent_' in uname_v:
+        if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
+            uname_v = __salt__['cmd.run']('uname -v')
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            grains['osrelease'] = uname_v
+            grains['osrelease'] = uname_v[uname_v.index('_')+1:]
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
@@ -1690,7 +1689,9 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None:
+    # On SmartOS (possibly SunOS also) smbios only works in the global zone
+    # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
