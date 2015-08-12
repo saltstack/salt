@@ -18,7 +18,7 @@ ensure_in_syspath('../../../')
 
 # Import Salt Libs
 from salt.cloud.clouds import vmware
-from salt.exceptions import SaltCloudSystemExit, SaltCloudNotFound
+from salt.exceptions import SaltCloudSystemExit
 
 # Global Variables
 vmware.__active_provider_name__ = ''
