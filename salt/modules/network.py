@@ -907,7 +907,7 @@ def mod_hostname(hostname):
 
             try:
                 host[host.index(o_hostname)] = hostname
-                if  __grains__['kernel'] == 'SunOS':
+                if __grains__['kernel'] == 'SunOS':
                     # also set a copy of the hostname
                     host[host.index(o_hostname.split('.')[0])] = hostname.split('.')[0]
             except ValueError:
