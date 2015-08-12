@@ -647,7 +647,11 @@ def arp():
         comps = line.split()
         if len(comps) < 4:
             continue
-        if not __grains__['kernel'] == 'OpenBSD':
+        if __grains__['kernel'] == 'SunOS':
+            if ':' not in comps[-1]:
+                continue
+            ret[comps[-1]] = comps[1]
+        elif not __grains__['kernel'] == 'OpenBSD':
             ret[comps[3]] = comps[1].strip('(').strip(')')
         else:
             if comps[0] == 'Host' or comps[1] == '(incomplete)':
