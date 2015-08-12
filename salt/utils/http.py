@@ -404,7 +404,7 @@ def query(url,
             data = urllib.urlencode(data)
 
         try:
-            result = HTTPClient(max_body_size=100*1024*1024*1024).fetch(
+            result = HTTPClient(max_body_size=opts['http_max_body']).fetch(
                 url_full,
                 method=method,
                 headers=header_dict,
@@ -414,7 +414,7 @@ def query(url,
                 validate_cert=verify_ssl,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
-                request_timeout=3600.0,
+                request_timeout=opts['http_request_timeout'],
                 **req_kwargs
             )
         except tornado.httpclient.HTTPError as exc:

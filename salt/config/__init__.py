@@ -728,6 +728,13 @@ VALID_OPTS = {
 
     # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': str,
+
+    # HTTP request timeout in seconds. Applied for tornado http fetch functions like cp.get_url should be greater than
+    # overall download time.
+    'http_request_timeout': float,
+
+    # HTTP request max file content size.
+    'http_max_body': int,
 }
 
 # default configurations
@@ -911,6 +918,8 @@ DEFAULT_MINION_OPTS = {
     'cache_sreqs': True,
     'cmd_safe': True,
     'sudo_user': '',
+    'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
+    'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
 }
 
 DEFAULT_MASTER_OPTS = {
