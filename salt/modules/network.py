@@ -863,10 +863,22 @@ def mod_hostname(hostname):
 
         salt '*' network.mod_hostname master.saltstack.com
     '''
+    #
+    # SunOS tested on SmartOS and OmniOS (Solaris 10 compatible)
+    # Oracle Solaris 11 uses smf, currently not supported
+    #
+    # /etc/nodename is the hostname only, not fqdn
+    # /etc/defaultdomain is the domain
+    # /etc/hosts should have both fqdn and hostname entries
+    #
+
     if hostname is None:
         return False
 
     hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
+    if __grains__['kernel'] == 'SunOS':
+        uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
+        check_hostname_cmd = salt.utils.which('check-hostname')
 
     if hostname_cmd.endswith('hostnamectl'):
         __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
@@ -874,9 +886,16 @@ def mod_hostname(hostname):
 
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
-    o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
+    if not __grains__['kernel'] == 'SunOS':
+        o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
+    else:
+        # output: Hostname core OK: fully qualified as core.acheron.be
+        o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
-    __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
+    if not __grains__['kernel'] == 'SunOS':
+        __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
+    else:
+        __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
 
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
@@ -888,6 +907,9 @@ def mod_hostname(hostname):
 
             try:
                 host[host.index(o_hostname)] = hostname
+                if  __grains__['kernel'] == 'SunOS':
+                    # also set a copy of the hostname
+                    host[host.index(o_hostname.split('.')[0])] = hostname.split('.')[0]
             except ValueError:
                 pass
 
@@ -910,6 +932,13 @@ def mod_hostname(hostname):
     elif __grains__['os_family'] == 'OpenBSD':
         with salt.utils.fopen('/etc/myname', 'w') as fh_:
             fh_.write(hostname + '\n')
+
+    # Update /etc/nodename and /etc/defaultdomain on SunOS
+    if __grains__['kernel'] == 'SunOS':
+        with salt.utils.fopen('/etc/nodename', 'w') as fh_:
+            fh_.write(hostname.split('.')[0] + '\n')
+        with salt.utils.fopen('/etc/defaultdomain', 'w') as fh_:
+            fh_.write(".".join(hostname.split('.')[1:]) + '\n')
 
     return True
 
