@@ -57,7 +57,10 @@ SCHEDULE_CONF = [
 ]
 
 
-def list_(show_all=False, where=None, return_yaml=True):
+def list_(show_all=False,
+          show_disabled=True,
+          where=None,
+          return_yaml=True):
     '''
     List the jobs currently scheduled on the minion
 
@@ -67,7 +70,12 @@ def list_(show_all=False, where=None, return_yaml=True):
 
         salt '*' schedule.list
 
+        # Show all jobs including hidden internal jobs
         salt '*' schedule.list show_all=True
+
+        # Hide disabled jobs from list of jobs
+        salt '*' schedule.list show_disabled=False
+
     '''
 
     schedule = {}
@@ -97,6 +105,11 @@ def list_(show_all=False, where=None, return_yaml=True):
             del schedule[job]
             continue
 
+        # if enabled is not included in the job,
+        # assume job is enabled.
+        if 'enabled' not in schedule[job]:
+            schedule[job]['enabled'] = True
+
         for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
@@ -105,6 +118,11 @@ def list_(show_all=False, where=None, return_yaml=True):
                 schedule[job][item] = True
             if schedule[job][item] == 'false':
                 schedule[job][item] = False
+
+        # if the job is disabled and show_disabled is False, skip job
+        if not show_disabled and not schedule[job]['enabled']:
+            del schedule[job]
+            continue
 
         if '_seconds' in schedule[job]:
             schedule[job]['seconds'] = schedule[job]['_seconds']
