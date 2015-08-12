@@ -1826,7 +1826,7 @@ class ClearFuncs(object):
                 groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
                 if groups is None:
                     groups = []
-                group_perm_keys = filter(lambda(item): item.endswith('%'), self.opts['external_auth'][extra['eauth']])  # The configured auth groups
+                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
                 # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
