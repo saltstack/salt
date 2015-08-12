@@ -1640,7 +1640,7 @@ def show_instance(name, call=None):
             return _format_instance_info(vm)
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a list of all the templates present in this VMware environment with basic
     details
@@ -1651,6 +1651,11 @@ def avail_images():
 
         salt-cloud --list-images my-vmware-config
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option.'
+        )
 
     templates = {}
     vm_properties = [
@@ -1673,6 +1678,74 @@ def avail_images():
             }
 
     return templates
+
+
+def avail_locations(call=None):
+    '''
+    Return a list of all the available locations/datacenters in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-locations my-vmware-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option.'
+        )
+
+    return list_datacenters(call='function')
+
+
+def avail_sizes(call=None):
+    '''
+    Return a list of all the available sizes in this VMware environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-sizes my-vmware-config
+
+    .. note::
+
+        Since sizes are built into templates, this function will return
+        an empty dictionary.
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option.'
+        )
+
+    log.warning(
+        'Because sizes are built into templates with VMware, there are no sizes '
+        'to return.'
+    )
+
+    return {}
+
+
+def list_templates(kwargs=None, call=None):
+    '''
+    List all the templates present in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_templates my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_templates function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Templates': avail_images(call='function')}
 
 
 def list_folders(kwargs=None, call=None):
