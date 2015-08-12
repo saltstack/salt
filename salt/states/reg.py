@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 ===========================
 Manage the Windows registry
 ===========================
@@ -206,7 +206,7 @@ def present(name, value=None, vname=None, vdata=None, vtype='REG_SZ', reflection
 
     ret['changes'] = {'reg': {
                         'Added': {
-                            'Key': '{0}\{1}'.format(hive, key),
+                            'Key': r'{0}\{1}'.format(hive, key),
                             'Entry': '{0}'.format(vname if vname else '(Default)'),
                             'Value': '{0}'.format(vdata if vdata else '(Empty String)')
                         }}}
@@ -259,7 +259,7 @@ def absent(name, vname=None):
 
     ret['changes'] = {'reg': {
                         'Removed': {
-                            'Key': '{0}\{1}'.format(hive, key),
+                            'Key': r'{0}\{1}'.format(hive, key),
                             'Entry': '{0}'.format(vname if vname else '(Default)')
                         }}}
 
@@ -272,14 +272,14 @@ def absent(name, vname=None):
     ret['result'] = __salt__['reg.delete_value'](hive, key, vname)
     if not ret['result']:
         ret['changes'] = {}
-        ret['comment'] = 'failed to remove {0} from {1}\{2}'.format(name, hive,
+        ret['comment'] = r'failed to remove {0} from {1}\{2}'.format(name, hive,
                                                                     key)
 
     return ret
 
 
 def key_absent(name, force=False):
-    '''
+    r'''
     Ensure a registry key is removed. This will remove a key and all value
     entries it contains. It will fail if the key contains subkeys.
 
@@ -326,7 +326,7 @@ def key_absent(name, force=False):
 
     ret['changes'] = {'reg': {
         'Removed': {
-            'Key': '{0}\{1}'.format(hive, key)
+            'Key': r'{0}\{1}'.format(hive, key)
         }}}
 
     # Check for test option

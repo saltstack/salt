@@ -467,13 +467,13 @@ def delete_key_recursive(hive, key):
                 subkey = _winreg.EnumKey(key, i)
                 yield subkey
                 i += 1
-            except WindowsError:
+            except WindowsError:  # pylint: disable=E0602
                 break
 
     def traverse_registry_tree(hkey, keypath, ret):
         key = _winreg.OpenKey(hkey, keypath, 0, _winreg.KEY_READ)
         for subkeyname in subkeys(key):
-            subkeypath = "{0}\{1}".format(keypath, subkeyname)
+            subkeypath = r'{0}\{1}'.format(keypath, subkeyname)
             ret = traverse_registry_tree(hkey, subkeypath, ret)
             ret.append('{0}'.format(subkeypath))
         return ret
@@ -494,18 +494,18 @@ def delete_key_recursive(hive, key):
     for keypath in key_list:
         try:
             _winreg.DeleteKey(hkey, keypath)
-            ret['Deleted'].append('{0}\{1}'.format(hive, keypath))
+            ret['Deleted'].append(r'{0}\{1}'.format(hive, keypath))
         except WindowsError as exc:  # pylint: disable=E0602
             log.error(exc)
-            ret['Failed'].append('{0}\{1} {2}'.format(hive, key, exc))
+            ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
 
     # Delete the key now that all the subkeys are deleted
     try:
         _winreg.DeleteKey(hkey, key)
-        ret['Deleted'].append('{0}\{1}'.format(hive, key))
+        ret['Deleted'].append(r'{0}\{1}'.format(hive, key))
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc)
-        ret['Failed'].append('{0}\{1} {2}'.format(hive, key, exc))
+        ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
 
     return ret
 
