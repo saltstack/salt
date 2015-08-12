@@ -294,7 +294,6 @@ class TestSaltEvent(TestCase):
         '''Tests that sending an event through fire_master generates expected event'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             data = {'data': 'foo1'}
             me.fire_master(data, 'test_master')
 
