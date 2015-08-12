@@ -43,7 +43,7 @@ specific groups of tests or individual tests:
 * Run unit and integration tests for states: ``./tests/runtests.py --state``
 * Run integration tests for an individual module: ``./tests/runtests.py -n integration.modules.virt``
 * Run unit tests for an individual module: ``./tests/runtests.py -n unit.modules.virt_test``
-* Run an individual test by using the class and test name (this example is for the ``test_default_kvm_profile`` test in the ``integration.module.virt``): ``./tests/runtests.py -n ingtegration.module.virt.VirtTest.test_default_kvm_profile``
+* Run an individual test by using the class and test name (this example is for the ``test_default_kvm_profile`` test in the ``integration.module.virt``): ``./tests/runtests.py -n integration.module.virt.VirtTest.test_default_kvm_profile``
 
 
 Running Unit Tests Without Integration Test Daemons
