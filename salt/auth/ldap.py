@@ -13,7 +13,6 @@ import logging
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
-
 # Import third party libs
 from jinja2 import Environment
 try:
@@ -111,7 +110,7 @@ class _LDAPConnection(object):
             )
 
 
-def _bind(username, password):
+def _bind(username, password, anonymous=False):
     '''
     Authenticate via an LDAP bind
     '''
@@ -121,8 +120,10 @@ def _bind(username, password):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous', 'accountattributename', 'activedirectory'],
-        'additional': ['binddn', 'bindpw', 'filter', 'groupclass'],
+        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+                      'accountattributename', 'activedirectory'],
+        'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
+                       'auth_by_group_membership_only'],
     }
 
     paramvalues = {}
@@ -137,6 +138,7 @@ def _bind(username, password):
         #except SaltInvocationError:
         #    pass
 
+    paramvalues['anonymous'] = anonymous
     if paramvalues['binddn']:
         # the binddn can also be composited, e.g.
         #   - {{ username }}@domain.com
@@ -204,7 +206,10 @@ def _bind(username, password):
     # Update connection dictionary with the user's password
     connargs['bindpw'] = password
     # Attempt bind with user dn and password
-    log.debug('Attempting LDAP bind with user dn: {0}'.format(connargs['binddn']))
+    if paramvalues['anonymous']:
+        log.debug('Attempting anonymous LDAP bind')
+    else:
+        log.debug('Attempting LDAP bind with user dn: {0}'.format(connargs['binddn']))
     try:
         ldap_conn = _LDAPConnection(**connargs).ldap
     except Exception:
@@ -224,8 +229,8 @@ def auth(username, password):
     '''
     Simple LDAP auth
     '''
-
-    if _bind(username, password):
+    if _bind(username, password, anonymous=_config('auth_by_group_membership_only', mandatory=False) and
+                                           _config('anonymous', mandatory=False)):
         log.debug('LDAP authentication successful')
         return True
     else:
@@ -250,7 +255,8 @@ def groups(username, **kwargs):
     '''
     group_list = []
 
-    bind = _bind(username, kwargs['password'])
+    bind = _bind(username, kwargs['password'],
+                 anonymous=_config('anonymous', mandatory=False))
     if bind:
         log.debug('ldap bind to determine group membership succeeded!')
 
@@ -285,15 +291,24 @@ def groups(username, **kwargs):
                     group_list.append(entry['cn'][0])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
         else:
-            search_results = bind.search_s('ou={0},{1}'.format(_config('groupou'), _config('basedn')),
+            if _config('groupou'):
+                search_base = 'ou={0},{1}'.format(_config('groupou'), _config('basedn'))
+            else:
+                search_base = '{0}'.format(_config('basedn'))
+            search_string = '(&({0}={1})(objectClass={2}))'.format(_config('accountattributename'),
+                                                                   username, _config('groupclass'))
+            search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
-                                           '(&({0}={1})(objectClass={2}))'.format(_config('accountattributename'),
-                                                                                  username, _config('groupclass')),
+                                           search_string,
                                            [_config('accountattributename'), 'cn'])
             for _, entry in search_results:
                 if username in entry[_config('accountattributename')]:
                     group_list.append(entry['cn'][0])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
+
+            if not auth(username, kwargs['password']):
+                log.error('LDAP username and password do not match')
+                return []
     else:
         log.error('ldap bind to determine group membership FAILED!')
         return group_list
