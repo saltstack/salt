@@ -243,13 +243,25 @@ def template(tem, queue=False, **kwargs):
 
         salt '*' state.template '<Path to template on the minion>'
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        saltenv = kwargs['env']
+    elif 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+    else:
+        saltenv = ''
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.HighState(__opts__)
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
-    high_state, errors = st_.render_state(tem, None, '', None, local=True)
+    high_state, errors = st_.render_state(tem, saltenv, '', None, local=True)
     if errors:
         __context__['retcode'] = 1
         return errors

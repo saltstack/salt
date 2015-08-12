@@ -70,8 +70,8 @@ Available Functions
         docker.running:
           - container: mysuperdocker
           - image: corp/mysuperdocker_img
-          - ports:
-              "5000/tcp":
+          - port_bindings:
+            - "5000/tcp":
                   HostIp: ""
                   HostPort: "5000"
 
