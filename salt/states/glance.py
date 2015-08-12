@@ -11,6 +11,12 @@ import time
 # Import salt libs
 from salt.utils import warn_until
 
+# Import OpenStack libs
+from keystoneclient.apiclient.exceptions import \
+    Unauthorized as kstone_Unauthorized
+from glanceclient.exc import \
+    HTTPUnauthorized as glance_Unauthorized
+
 log = logging.getLogger(__name__)
 
 
@@ -21,7 +27,12 @@ def _find_image(name):
         - None, 'No such image found'
         - False, 'Found more than one image with given name'
     '''
-    images_dict = __salt__['glance.image_list'](name=name)
+    try:
+        images_dict = __salt__['glance.image_list'](name=name)
+    except kstone_Unauthorized:
+        return False, 'keystoneclient: Unauthorized'
+    except glance_Unauthorized:
+        return False, 'glanceclient: Unauthorized'
     log.debug('Got images_dict: {0}'.format(images_dict))
 
     warn_until('Boron', 'Starting with Boron '
