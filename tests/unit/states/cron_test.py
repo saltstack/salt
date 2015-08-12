@@ -135,7 +135,8 @@ class CronTestCase(TestCase):
         cron.present(
             name='foo',
             hour='2',
-            user='root')
+            user='root',
+            identifier=None)
         self.assertEqual(
             get_crontab(),
             ('# Lines below here are managed by Salt, do not edit\n'
@@ -143,7 +144,7 @@ class CronTestCase(TestCase):
              '* 2 * * * foo\n'
              '# SALT_CRON_IDENTIFIER:2\n'
              '* 2 * * * foo\n'
-             '* 2 * * * foo\n'))
+             '* 2 * * * foo'))
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
@@ -192,214 +193,107 @@ class CronTestCase(TestCase):
            new=MagicMock(side_effect=get_crontab))
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
-    def test_aissue_1072(self):
+    def test_multiline_comments_are_updated(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
-            '# I have a multi-line comment SALT_CRON_IDENTIFIER:1\n'
+            '# First crontab - single line comment SALT_CRON_IDENTIFIER:1\n'
             '* 1 * * * foo'
         )
         cron.present(
             name='foo',
             hour='1',
-            comment='1I have a multi-line comment\n2about my script here.\n',
+            comment='First crontab\nfirst multi-line comment\n',
             identifier='1',
             user='root')
         cron.present(
             name='foo',
             hour='1',
-            comment='3I have a multi-line comment\n3about my script here.\n',
+            comment='First crontab\nsecond multi-line comment\n',
+            identifier='1',
             user='root')
         cron.present(
             name='foo',
             hour='1',
-            comment='I have a multi-line comment\nabout my script here.\n',
+            comment='Second crontab\nmulti-line comment\n',
             identifier='2',
             user='root')
         self.assertEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
-            '# 2about my script here. SALT_CRON_IDENTIFIER:1\n'
+            '# First crontab\n'
+            '# second multi-line comment SALT_CRON_IDENTIFIER:1\n'
             '* 1 * * * foo\n'
-            '# I have a multi-line comment\n'
-            '# about my script here. SALT_CRON_IDENTIFIER:2\n'
+            '# Second crontab\n'
+            '# multi-line comment SALT_CRON_IDENTIFIER:2\n'
             '* 1 * * * foo')
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
-    def test_issue_11935(self):
+    def test_existing_unmanaged_jobs_are_made_managed(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
-            '0 2 * * * find /var/www -type f '
-            '-mtime -7 -print0 | xargs -0 '
-            'clamscan -i --no-summary 2>/dev/null'
+            '0 2 * * * foo'
         )
-        cmd = (
-            'find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null'
-        )
-        self.assertEqual(cron._check_cron('root', cmd, hour='2', minute='0'),
-                         'present')
-        ret = cron.present(cmd, 'root', minute='0', hour='2')
-        self.assertEqual(ret['changes'], {})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null already present')
-        self.assertEqual(cron._check_cron('root', cmd, hour='3', minute='0'),
-                         'update')
-        ret = cron.present(cmd, 'root', minute='0', hour='3')
-        self.assertEqual(ret['changes'],
-                         {'root': 'find /var/www -type f -mtime -7 -print0 | '
-                          'xargs -0 clamscan -i --no-summary 2>/dev/null'})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null updated')
+        ret = cron._check_cron('root', 'foo', hour='2', minute='0')
+        self.assertEqual(ret, 'present')
+        ret = cron.present('foo', 'root', minute='0', hour='2')
+        self.assertEqual(ret['changes'], {'root': 'foo'})
+        self.assertEqual(ret['comment'], 'Cron foo updated')
         self.assertEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
-            '0 3 * * * find /var/www -type f -mtime -7 -print0 |'
-            ' xargs -0 clamscan -i --no-summary 2>/dev/null')
+            '# SALT_CRON_IDENTIFIER:foo\n'
+            '0 2 * * * foo')
+        ret = cron.present('foo', 'root', minute='0', hour='2')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(ret['comment'], 'Cron foo already present')
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
-    def test_issue_11935_with_id(self):
+    def test_existing_noid_jobs_are_updated_with_identifier(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '0 2 * * * find /var/www -type f '
-            '-mtime -7 -print0 | xargs -0 '
-            'clamscan -i --no-summary 2>/dev/null'
+            '# SALT_CRON_IDENTIFIER:NO ID SET\n'
+            '1 * * * * foo'
         )
-        cmd = (
-            'find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null'
-        )
-        self.assertEqual(cron._check_cron(
-            'root', cmd, hour='2', minute='0', identifier=1), 'present')
-        ret = cron.present(cmd, 'root', minute='0', hour='2', identifier='1')
-        self.assertEqual(ret['changes'], {})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null already present')
-        self.assertEqual(cron._check_cron(
-            'root', cmd, hour='3', minute='0', identifier='1'), 'update')
-        ret = cron.present(cmd, 'root', minute='0', hour='3', identifier='1')
-        self.assertEqual(ret['changes'],
-                         {'root': 'find /var/www -type f -mtime -7 -print0 | '
-                          'xargs -0 clamscan -i --no-summary 2>/dev/null'})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null updated')
+        ret = cron._check_cron('root', 'foo', minute=1)
+        self.assertEqual(ret, 'present')
+        ret = cron.present('foo', 'root', minute=1)
+        self.assertEqual(ret['changes'], {'root': 'foo'})
+        self.assertEqual(ret['comment'], 'Cron foo updated')
         self.assertEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '0 3 * * * find /var/www -type f -mtime -7 -print0 |'
-            ' xargs -0 clamscan -i --no-summary 2>/dev/null')
+            '# SALT_CRON_IDENTIFIER:foo\n'
+            '1 * * * * foo')
 
     @patch('salt.modules.cron.raw_cron',
            new=MagicMock(side_effect=get_crontab))
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
-    def test_issue_11935_mixed(self):
+    def test_existing_duplicate_unmanaged_jobs_are_merged_and_given_id(self):
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
-            '0 2 * * * find /var/www -type f '
-            '-mtime -7 -print0 | xargs -0 '
-            'clamscan -i --no-summary 2>/dev/null'
+            '0 2 * * * foo\n'
+            '0 2 * * * foo'
         )
-        cmd = (
-            'find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null'
-        )
-        self.assertEqual(cron._check_cron('root', cmd, hour='2', minute='0'),
-                         'present')
-        ret = cron.present(cmd, 'root', minute='0', hour='2')
+        ret = cron._check_cron('root', 'foo', hour='2', minute='0')
+        self.assertEqual(ret, 'present')
+        ret = cron.present('foo', 'root', minute='0', hour='2')
+        self.assertEqual(ret['changes'], {'root': 'foo'})
+        self.assertEqual(ret['comment'], 'Cron foo updated')
+        self.assertEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:foo\n'
+            '0 2 * * * foo')
+        ret = cron.present('foo', 'root', minute='0', hour='2')
         self.assertEqual(ret['changes'], {})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null already present')
-        self.assertEqual(cron._check_cron('root', cmd, hour='3', minute='0'),
-                         'update')
-        ret = cron.present(cmd, 'root', minute='0', hour='3')
-        self.assertEqual(ret['changes'],
-                         {'root': 'find /var/www -type f -mtime -7 -print0 | '
-                          'xargs -0 clamscan -i --no-summary 2>/dev/null'})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null updated')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '0 3 * * * find /var/www -type f -mtime -7 -print0 |'
-            ' xargs -0 clamscan -i --no-summary 2>/dev/null')
-        self.assertEqual(cron._check_cron(
-            'root', cmd, hour='2', minute='0', identifier='1'), 'update')
-        ret = cron.present(cmd, 'root', minute='0', hour='2', identifier='1')
-        self.assertEqual(
-            ret['changes'],
-            {'root': 'find /var/www -type f -mtime -7 -print0 | '
-             'xargs -0 clamscan -i --no-summary 2>/dev/null'})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null updated')
-        self.assertEqual(cron._check_cron(
-            'root', cmd, hour='3', minute='0', identifier='1'), 'update')
-        ret = cron.present(cmd, 'root', minute='0', hour='3', identifier='1')
-        self.assertEqual(ret['changes'],
-                         {'root': 'find /var/www -type f -mtime -7 -print0 | '
-                          'xargs -0 clamscan -i --no-summary 2>/dev/null'})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 '
-            '| xargs -0 clamscan -i --no-summary 2>/dev/null updated')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '0 3 * * * find /var/www -type f -mtime -7 -print0 |'
-            ' xargs -0 clamscan -i --no-summary 2>/dev/null')
-
-        set_crontab(
-            '# Lines below here are managed by Salt, do not edit\n'
-            '0 2 * * * find /var/www -type f '
-            '-mtime -7 -print0 | xargs -0 '
-            'clamscan -i --no-summary 2>/dev/null'
-        )
-        self.assertEqual(cron._check_cron(
-            'root', cmd + "a", hour='2', minute='0', identifier='1'), 'absent')
-        ret = cron.present(
-            cmd + "a", 'root', minute='0', hour='2', identifier='1')
-        self.assertEqual(
-            ret['changes'],
-            {'root': 'find /var/www -type f -mtime -7 -print0 | '
-             'xargs -0 clamscan -i --no-summary 2>/dev/nulla'})
-        self.assertEqual(
-            ret['comment'],
-            'Cron find /var/www -type f -mtime -7 -print0 | '
-            'xargs -0 clamscan -i --no-summary 2>/dev/nulla added '
-            'to root\'s crontab')
-        self.assertEqual(
-            get_crontab(),
-            '# Lines below here are managed by Salt, do not edit\n'
-            '0 2 * * *'
-            ' find /var/www -type f -mtime -7 -print0'
-            ' | xargs -0 clamscan -i --no-summary 2>/dev/null\n'
-            '# SALT_CRON_IDENTIFIER:1\n'
-            '0 2 * * *'
-            ' find /var/www -type f -mtime -7 -print0'
-            ' | xargs -0 clamscan -i --no-summary 2>/dev/nulla')
-
+        self.assertEqual(ret['comment'], 'Cron foo already present')
 
 if __name__ == '__main__':
     from integration import run_tests
