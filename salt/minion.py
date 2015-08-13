@@ -1760,6 +1760,7 @@ class Minion(MinionBase):
                         self.socket.connect(self.master_pub)
                         self.poller.register(self.socket, zmq.POLLIN)
                         self.poller.register(self.epull_sock, zmq.POLLIN)
+                        self.functions, self.returners, self.function_errors = self._load_modules()
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
 
