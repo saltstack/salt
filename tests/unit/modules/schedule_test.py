@@ -47,13 +47,13 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it list the jobs currently scheduled on the minion.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': []}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': {'enabled': True}}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {'_seconds': []}}
+                _ret_value = {'complete': True, 'schedule': {'_seconds': {'enabled': True}}}
                 with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertEqual(schedule.list_(), 'schedule:\n  _seconds: []\n')
-                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': []})
+                    self.assertEqual(schedule.list_(), "schedule:\n  _seconds:\n    enabled: true\n")
+                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': {'enabled': True}})
 
         with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
