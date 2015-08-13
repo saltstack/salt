@@ -21,6 +21,7 @@ import logging
 import locale
 import salt.exceptions
 
+__proxyenabled__ = ['*']
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
@@ -1024,7 +1025,13 @@ def os_data():
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.is_windows():
+    if salt.utils.is_proxy():
+        grains['kernel'] = 'proxy'
+        grains['kernelrelease'] = 'proxy'
+        grains['osrelease'] = 'proxy'
+        grains['os'] = 'proxy'
+        grains['os_family'] = 'proxy'
+    elif salt.utils.is_windows():
         with salt.utils.winapi.Com():
             wmi_c = wmi.WMI()
             grains['osrelease'] = grains['kernelrelease']

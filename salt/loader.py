@@ -804,6 +804,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  whitelist=None,
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
+
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -1141,10 +1142,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # containing the names of the proxy types that the module supports.
         #
         # Render modules and state modules are OK though
-        if 'proxy' in self.opts:
+        if 'proxymodule' in self.opts:
             if self.tag not in ['render', 'states']:
                 if not hasattr(mod, '__proxyenabled__') or \
-                        (self.opts['proxy']['proxytype'] not in mod.__proxyenabled__ and
+                        (self.opts['proxymodule'].loaded_base_name not in mod.__proxyenabled__ and
                             '*' not in mod.__proxyenabled__):
                     err_string = 'not a proxy_minion enabled module'
                     self.missing_modules[module_name] = err_string

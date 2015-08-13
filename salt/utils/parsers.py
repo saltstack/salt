@@ -1000,7 +1000,7 @@ class ArgsStdinMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
-    _mixin_prio = 30
+    _mixin_prio = 40
 
     def _mixin_setup(self):
         self.add_option(
@@ -1487,7 +1487,16 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
                                     cache_minion_id=True)
 
 
-class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser, ProxyIdMixIn)):  # pylint: disable=no-init
+class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
+                                                 OptionParser,
+                                                 ConfigDirMixIn,
+                                                 MergeConfigMixIn,
+                                                 LogLevelMixIn,
+                                                 RunUserMixin,
+                                                 DaemonMixIn,
+                                                 PidfileMixin,
+                                                 SaltfileMixIn,
+                                                 ProxyIdMixIn)):  # pylint: disable=no-init
 
     description = (
         'The Salt proxy minion, connects to and controls devices not able to run a minion.  Receives commands from a remote Salt master.'
@@ -1500,7 +1509,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionP
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
-                                    cache_minion_id=False)
+                                   cache_minion_id=False)
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
