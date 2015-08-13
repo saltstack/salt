@@ -562,7 +562,7 @@ def traceroute(host):
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
-    if __grains__['kernel'] == 'SunOS':
+    if salt.utils.is_sunos():
         traceroute_version = [0, 0, 0]
     else:
         cmd2 = 'traceroute --version'
