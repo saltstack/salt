@@ -39,14 +39,14 @@ def __virtual__():
     return salt.utils.which('rabbitmqctl') is not None
 
 
-def _check_perms_changes(name, newperms):
+def _check_perms_changes(name, newperms, runas=None):
     '''
     Whether Rabbitmq user's permissions need to be changed
     '''
     if not newperms:
         return False
 
-    existing_perms = __salt__['rabbitmq.list_user_permissions'](name)
+    existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
 
     perm_need_change = False
     for vhost_perms in newperms:
@@ -60,14 +60,14 @@ def _check_perms_changes(name, newperms):
     return perm_need_change
 
 
-def _check_tags_changes(name, newtags):
+def _check_tags_changes(name, newtags, runas=None):
     '''
     Whether Rabbitmq user's tags need to be changed
     '''
     if newtags:
         if isinstance(newtags, str):
             newtags = newtags.split()
-        return __salt__['rabbitmq.list_users']()[name] - set(newtags)
+        return __salt__['rabbitmq.list_users'](runas=runas)[name] - set(newtags)
     else:
         return []
 
@@ -144,7 +144,7 @@ def present(name,
                         name, runas=runas)
                     changes['old'] += 'Removed password.\n'
 
-        if _check_tags_changes(name, tags):
+        if _check_tags_changes(name, tags, runas=runas):
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] += ('Tags for user {0} '
@@ -155,7 +155,7 @@ def present(name,
             )
             changes['new'] += 'Set tags: {0}\n'.format(tags)
 
-        if _check_perms_changes(name, perms):
+        if _check_perms_changes(name, perms, runas=runas):
             if __opts__['test']:
                 ret['result'] = None
                 ret['comment'] += ('Permissions for user {0} '
@@ -164,7 +164,7 @@ def present(name,
             for vhost_perm in perms:
                 for vhost, perm in vhost_perm.iteritems():
                     result.update(__salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
+                        vhost, name, perm[0], perm[1], perm[2], runas=runas)
                     )
                     changes['new'] += (
                         'Set permissions {0} for vhost {1}'
