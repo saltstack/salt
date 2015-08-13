@@ -926,10 +926,10 @@ ARGS = {9}\n'''.format(self.minion_config,
             pass
 
         # Execute shim
-        ret = self.shell.exec_cmd('/bin/sh $HOME/{0}'.format(target_shim_file))
+        ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
 
         # Remove shim from target system
-        self.shell.exec_cmd('rm $HOME/{0}'.format(target_shim_file))
+        self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
 
         return ret
 
