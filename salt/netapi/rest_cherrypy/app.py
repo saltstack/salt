@@ -329,6 +329,75 @@ def salt_token_tool():
         cherrypy.request.cookie['session_id'] = x_auth
 
 
+def salt_api_acl_tool(username, request):
+    '''
+    ..versionadded:: Boron
+
+    Verifies user requests against the API whitelist. (User/IP pair)
+    in order to provide whitelisting for the API similar to the
+    master, but over the API.
+
+    ..code-block:: yaml
+
+        rest_cherrypy:
+            api_acl:
+                users:
+                    '*':
+                        - 1.1.1.1
+                        - 1.1.1.2
+                    foo:
+                        - 8.8.4.4
+                    bar:
+                        - '*'
+
+    :param username: Username to check against the API.
+    :type username: str
+    :param request: Cherrypy request to check against the API.
+    :type request: cherrypy.request
+    '''
+    failure_str = ("[api_acl] Authentication failed for "
+                   "user {0} from IP {1}")
+    success_str = ("[api_acl] Authentication sucessful for "
+                   "user {0} from IP {1}")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user {0} from IP {1}")
+
+    acl = None
+    # Salt Configuration
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        # Cherrypy Config.
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            # ACL Config.
+            acl = cherrypy_conf.get('api_acl', None)
+
+    ip = request.remote.ip
+    if acl:
+        users = acl.get('users', {})
+        if users:
+            if username in users:
+                if ip in users[username] or '*' in users[username]:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            elif username not in users and '*' in users:
+                if ip in users['*'] or '*' in users['*']:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            else:
+                logger.info(failure_str.format(username, ip))
+                return False
+    else:
+        logger.info(pass_str.format(username, ip))
+        return True
+
+
 def salt_ip_verify_tool():
     '''
     If there is a list of restricted IPs, verify current
@@ -1427,6 +1496,12 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
+        username = creds.get('username', None)
+        # Validate against the whitelist.
+        if not salt_api_acl_tool(username, cherrypy.request):
+            raise cherrypy.HTTPError(401)
+
+        # Mint token.
         token = self.auth.mk_token(creds)
         if 'token' not in token:
             raise cherrypy.HTTPError(401,
