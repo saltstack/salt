@@ -705,6 +705,8 @@ def sdb(opts, functions=None, whitelist=None):
 def pkgdb(opts):
     '''
     Return modules for SPM's package database
+
+    .. versionadded:: 2015.8.0
     '''
     return LazyLoader(
         _module_dirs(
@@ -721,6 +723,8 @@ def pkgdb(opts):
 def pkgfiles(opts):
     '''
     Return modules for SPM's file handling
+
+    .. versionadded:: 2015.8.0
     '''
     return LazyLoader(
         _module_dirs(

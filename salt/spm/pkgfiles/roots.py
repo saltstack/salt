@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+'''
+This module allows SPM to use the local filesystem (``file_roots``) to install
+files for SPM.
+
+.. versionadded:: 2015.8.0
+'''
 
 import os
 import logging
