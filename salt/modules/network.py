@@ -921,7 +921,7 @@ def mod_hostname(hostname):
         return False
 
     hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
-    if __grains__['kernel'] == 'SunOS':
+    if salt.utils.is_sunos():
         uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
         check_hostname_cmd = salt.utils.which('check-hostname')
 
