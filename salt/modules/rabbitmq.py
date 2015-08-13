@@ -311,7 +311,7 @@ def declare_queue(name, vhost, durable, auto_delete, runas=None):
 
 
     Setup:
-    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
+    rabbitmqadmin is from http://localhost:15672/cli/rabbitmqadmin it needs to be in the path.
     see rabbitmq-formula/rabbitmq/rabbit-management.sls
 
     '''
@@ -321,7 +321,7 @@ def declare_queue(name, vhost, durable, auto_delete, runas=None):
 
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare queue --vhost={0} name={1} durable={2} auto_delete={2}'.format(vhost,name,durable, auto_delete),
+    res = __salt__['cmd.run']('rabbitmqadmin declare queue --vhost={0} name={1} durable={2} auto_delete={2}'.format(vhost,name,durable, auto_delete),
                               python_shell=False,
                               runas=runas)
     log.debug(res)
@@ -343,7 +343,7 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
 
     Setup:
 
-    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
+    rabbitmqadmin is from http://localhost:15672/cli/rabbitmqadmin
     see rabbitmq-formula/rabbitmq/rabbit-management.sls
 
     '''
@@ -355,7 +355,7 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
 
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
+    res = __salt__['cmd.run']('rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
                               python_shell=False,
                               runas=runas)
     log.debug(res)
@@ -366,7 +366,7 @@ def declare_binding(source, vhost, destination, destination_type, routing_key, r
     '''
     Adds a exchange via rabbitmqctl declare binding
 
-    ./rabbitmqadmin declare binding --vhost=Some_Virtual_Host source=bloa destination=bla destination_type=queue routing_key=""
+    rabbitmqadmin declare binding --vhost=Some_Virtual_Host source=bloa destination=bla destination_type=queue routing_key=""
 
     CLI Example:
 
@@ -376,14 +376,14 @@ def declare_binding(source, vhost, destination, destination_type, routing_key, r
 
     Setup:
 
-    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
+    rabbitmqadmin is from http://localhost:15672/cli/rabbitmqadmin
     see rabbitmq-formula/rabbitmq/rabbit-management.sls
 
     '''
 
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare binding --vhost={0} source={1} destination={2} destination_type={3} routing_key={4}'.format(vhost, source, destination, destination_type, routing_key),
+    res = __salt__['cmd.run']('rabbitmqadmin declare binding --vhost={0} source={1} destination={2} destination_type={3} routing_key={4}'.format(vhost, source, destination, destination_type, routing_key),
                               python_shell=False,
                               runas=runas)
     log.debug(res)
@@ -405,7 +405,7 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
 
     Setup:
 
-    /usr/lib/rabbitmq-management/ is from http://localhost:15672/cli/rabbitmqadmin
+    rabbitmqadmin is from http://localhost:15672/cli/rabbitmqadmin
     see rabbitmq-formula/rabbitmq/rabbit-management.sls
 
     '''
@@ -417,7 +417,7 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
 
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('/usr/lib/rabbitmq-management/rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
+    res = __salt__['cmd.run']('rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
                               python_shell=False,
                               runas=runas)
     log.debug(res)
@@ -747,7 +747,7 @@ def exchange_vhost_exists(name, vhost, runas=None, *kwargs):
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        '/usr/lib/rabbitmq-management/rabbitmqadmin list exchanges --format pretty_json',
+        'rabbitmqadmin list exchanges --format pretty_json',
         python_shell=False,
         runas=runas,
         )
@@ -782,17 +782,10 @@ def binding_vhost_exists(source, destination, destination_type, routing_key, vho
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        '/usr/lib/rabbitmq-management/rabbitmqadmin list bindings --format pretty_json',
+        'rabbitmqadmin list bindings --format pretty_json',
         python_shell=False,
         runas=runas,
         )
-
-#     "destination": "wdpibadger.mt.recvq",
-#     "destination_type": "queue",
-#     "properties_key": "wdpibadger.mt.recvq",
-#     "routing_key": "wdpibadger.mt.recvq",
-#     "source": "",
-#     "vhost": "guest"
 
     log.debug(res)
     res = json.loads(res)
