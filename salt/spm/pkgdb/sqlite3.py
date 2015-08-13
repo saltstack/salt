@@ -11,6 +11,7 @@ import logging
 import sqlite3
 import datetime
 from sqlite3 import OperationalError
+from salt.ext.six.moves import zip
 
 # Get logging started
 log = logging.getLogger(__name__)
