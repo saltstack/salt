@@ -382,6 +382,94 @@ class VMwareTestCase(TestCase):
         '''
         self.assertEqual(vmware.avail_sizes(call='foo'), {})
 
+    def test_create_datacenter_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        create_datacenter.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datacenter,
+            kwargs=None,
+            call='function')
+
+    def test_create_datacenter_no_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is not present in
+        kwargs that are provided to create_datacenter.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datacenter,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    def test_create_datacenter_name_too_short(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is present in kwargs
+        that are provided to create_datacenter but is an empty string.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datacenter,
+            kwargs={'name': ''},
+            call='function')
+
+    def test_create_datacenter_name_too_long(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is present in kwargs
+        that are provided to create_datacenter but is a string with length <= 80.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datacenter,
+            kwargs={'name': 'cCD2GgJGPG1DUnPeFBoPeqtdmUxIWxDoVFbA14vIG0BPoUECkgbRMnnY6gaUPBvIDCcsZ5HU48ubgQu5c'},
+            call='function')
+
+    def test_create_cluster_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        create_cluster.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_cluster,
+            kwargs=None,
+            call='function')
+
+    def test_create_cluster_no_name_no_datacenter_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when neither the name nor the
+        datacenter is present in kwargs that are provided to create_cluster.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_cluster,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    def test_create_cluster_no_datacenter_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the name is present but the
+        datacenter is not present in kwargs that are provided to create_cluster.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_cluster,
+            kwargs={'name': 'my-cluster'},
+            call='function')
+
+    def test_create_cluster_no_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the datacenter is present
+        but the name is not present in kwargs that are provided to create_cluster.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_cluster,
+            kwargs={'datacenter': 'my-datacenter'},
+            call='function')
+
 
 if __name__ == '__main__':
     from integration import run_tests
