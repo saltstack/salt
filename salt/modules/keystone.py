@@ -713,7 +713,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
                 user_id
             )
         )
-        return {'Could not find user \'{0}\''.format(user_id)}
+        return {'Error': 'Could not find user \'{0}\''.format(user_id)}
 
     ret[user.name] = {'id': user.id,
                       'name': user.name,
