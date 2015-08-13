@@ -220,12 +220,25 @@ def create_or_update_alarm(
     if isinstance(ok_actions, string_types):
         ok_actions = ok_actions.split(",")
 
-    # convert action names into ARN's
-    alarm_actions = convert_to_arn(alarm_actions, region, key, keyid, profile)
-    insufficient_data_actions = convert_to_arn(
-        insufficient_data_actions, region, key, keyid, profile
-    )
-    ok_actions = convert_to_arn(ok_actions, region, key, keyid, profile)
+    # convert provided action names into ARN's
+    if alarm_actions:
+        alarm_actions = convert_to_arn(alarm_actions,
+                                       region=region,
+                                       key=key,
+                                       keyid=keyid,
+                                       profile=profile)
+    if insufficient_data_actions:
+        insufficient_data_actions = convert_to_arn(insufficient_data_actions,
+                                                   region=region,
+                                                   key=key,
+                                                   keyid=keyid,
+                                                   profile=profile)
+    if ok_actions:
+        ok_actions = convert_to_arn(ok_actions,
+                                    region=region,
+                                    key=key,
+                                    keyid=keyid,
+                                    profile=profile)
 
     conn = _get_conn(region, key, keyid, profile)
     if not conn:
