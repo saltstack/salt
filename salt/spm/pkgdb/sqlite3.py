@@ -9,7 +9,6 @@ from __future__ import absolute_import
 import os.path
 import logging
 import sqlite3
-import hashlib
 import datetime
 from sqlite3 import OperationalError
 
@@ -143,6 +142,7 @@ def register_pkg(name, formula_def, conn=None):
         formula_def['description'],
     ))
 
+
 def register_file(name, member, path, digest='', conn=None):
     '''
     Register a file in the package database
@@ -174,6 +174,7 @@ def unregister_pkg(name, conn=None):
         conn = init()
 
     conn.execute('DELETE FROM packages WHERE package=?', (name, ))
+
 
 def unregister_file(path, conn=None):
     '''

@@ -6,6 +6,7 @@ files for SPM.
 .. versionadded:: 2015.8.0
 '''
 
+from __future__ import absolute_import
 import os
 import logging
 
@@ -78,6 +79,7 @@ def install_file(package, formula_tar, member, conn=None):
     formula_tar.extract(member, out_path)
 
     return out_path
+
 
 def remove_file(path, conn=None):
     '''
