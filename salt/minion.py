@@ -590,7 +590,8 @@ class Minion(MinionBase):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        self.opts['grains'] = salt.loader.grains(opts)
+        if 'proxyid' not in self.opts:
+            self.opts['grains'] = salt.loader.grains(opts)
 
     # TODO: remove?
     def sync_connect_master(self):
@@ -2489,7 +2490,18 @@ class ProxyMinion(Minion):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
+
+        fq_proxyname = self.opts['pillar']['proxy']['proxytype']
+        self.opts['proxy'] = self.opts['pillar']['proxy']
+
+        # We need to do this again, because we are going to throw out a lot of grains.
+        self.opts['grains'] = salt.loader.grains(self.opts)
+
+        self.opts['proxymodule'] = salt.loader.proxy(self.opts, None, loaded_base_name=fq_proxyname)
         self.functions, self.returners, self.function_errors = self._load_modules()
+        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
+        self.opts['proxymodule'][proxy_fn](self.opts)
+
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
