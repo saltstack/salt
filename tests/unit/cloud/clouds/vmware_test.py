@@ -8,6 +8,7 @@
 
 # Import Python libs
 from __future__ import absolute_import
+from copy import deepcopy
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -23,12 +24,32 @@ from salt.exceptions import SaltCloudSystemExit
 # Global Variables
 vmware.__active_provider_name__ = ''
 vmware.__opts__ = {}
+PROVIDER_CONFIG = {
+  'vcenter01': {
+    'vmware': {
+      'driver': 'vmware',
+      'url': 'vcenter01.domain.com',
+      'user': 'DOMAIN\user',
+      'password': 'verybadpass',
+    }
+  }
+}
 VM_NAME = 'test-vm'
+
+class ExtendedTestCase(TestCase):
+
+    def assertRaisesWithMessage(self, exc_type, exc_msg, func, *args, **kwargs):
+        try:
+          func(*args, **kwargs)
+          self.assertFail()
+        except Exception as inst:
+            self.assertEqual(type(inst), exc_type)
+            self.assertEqual(inst.message, exc_msg)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.cloud.clouds.vmware.__virtual__', MagicMock(return_value='vmware'))
-class VMwareTestCase(TestCase):
+class VMwareTestCase(ExtendedTestCase):
     '''
     Unit TestCase for salt.cloud.clouds.vmware module.
     '''
@@ -469,6 +490,148 @@ class VMwareTestCase(TestCase):
             vmware.create_cluster,
             kwargs={'datacenter': 'my-datacenter'},
             call='function')
+
+    def test_rescan_hba_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        rescan_hba.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.rescan_hba,
+            kwargs=None,
+            call='function')
+
+    def test_rescan_hba_no_host_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when host is not present in
+        kwargs that are provided to rescan_hba.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.rescan_hba,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    def test_create_snapshot_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        create_snapshot.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_snapshot,
+            name=VM_NAME,
+            kwargs=None,
+            call='action')
+
+    def test_create_snapshot_no_snapshot_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when snapshot_name is not present
+        in kwargs that are provided to create_snapshot.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_snapshot,
+            name=VM_NAME,
+            kwargs={'foo': 'bar'},
+            call='action')
+
+    def test_add_host_no_esxi_host_user_in_config(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_user is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+        with patch.dict(vmware.__opts__, {'providers': PROVIDER_CONFIG}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'You must specify the ESXi host username in your providers config.',
+                vmware.add_host,
+                kwargs=None,
+                call='function')
+
+    def test_add_host_no_esxi_host_password_in_config(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when esxi_host_password is not
+        specified in the cloud provider configuration when calling add_host.
+        '''
+        provider_config_additions = {
+          'esxi_host_user': 'root',
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'You must specify the ESXi host password in your providers config.',
+                vmware.add_host,
+                kwargs=None,
+                call='function')
+
+    def test_add_host_no_host_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when host is not present in
+        kwargs that are provided to add_host.
+        '''
+        provider_config_additions = {
+          'esxi_host_user': 'root',
+          'esxi_host_password': 'myhostpassword'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'You must specify either the IP or DNS name of the host system.',
+                vmware.add_host,
+                kwargs={'foo': 'bar'},
+                call='function')
+
+    def test_add_host_both_cluster_and_datacenter_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when both cluster and datacenter
+        are present in kwargs that are provided to add_host.
+        '''
+        provider_config_additions = {
+          'esxi_host_user': 'root',
+          'esxi_host_password': 'myhostpassword'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'You must specify either the cluster name or the datacenter name.',
+                vmware.add_host,
+                kwargs={'host': 'my-esxi-host', 'datacenter': 'my-datacenter', 'cluster': 'my-cluster'},
+                call='function')
+
+    def test_add_host_neither_cluster_nor_datacenter_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when neither cluster nor
+        datacenter is present in kwargs that are provided to add_host.
+        '''
+        provider_config_additions = {
+          'esxi_host_user': 'root',
+          'esxi_host_password': 'myhostpassword'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'You must specify either the cluster name or the datacenter name.',
+                vmware.add_host,
+                kwargs={'host': 'my-esxi-host'},
+                call='function')
 
 
 if __name__ == '__main__':
