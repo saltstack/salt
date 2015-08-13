@@ -931,13 +931,13 @@ def mod_hostname(hostname):
 
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
-    if not __grains__['kernel'] == 'SunOS':
+    if not salt.utils.is_sunos():
         o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
     else:
         # output: Hostname core OK: fully qualified as core.acheron.be
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
-    if not __grains__['kernel'] == 'SunOS':
+    if not salt.utils.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
         __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
@@ -952,7 +952,7 @@ def mod_hostname(hostname):
 
             try:
                 host[host.index(o_hostname)] = hostname
-                if __grains__['kernel'] == 'SunOS':
+                if salt.utils.is_sunos():
                     # also set a copy of the hostname
                     host[host.index(o_hostname.split('.')[0])] = hostname.split('.')[0]
             except ValueError:
@@ -979,7 +979,7 @@ def mod_hostname(hostname):
             fh_.write(hostname + '\n')
 
     # Update /etc/nodename and /etc/defaultdomain on SunOS
-    if __grains__['kernel'] == 'SunOS':
+    if salt.utils.is_sunos():
         with salt.utils.fopen('/etc/nodename', 'w') as fh_:
             fh_.write(hostname.split('.')[0] + '\n')
         with salt.utils.fopen('/etc/defaultdomain', 'w') as fh_:
