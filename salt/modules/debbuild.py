@@ -19,6 +19,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import SaltInvocationError
 
 # pylint: disable=import-error
 
@@ -34,9 +35,46 @@ def __virtual__():
     return False
 
 
-def _create_pbuilders():
+def _get_env(env):
+    '''
+    Get environment overrides dictionary to use in build process
+    '''
+    env_override = ""
+    if env is None:
+        return env_override
+    if not isinstance(env, dict):
+        raise SaltInvocationError(
+            '\'env\' must be a Python dictionary'
+        )
+    for key, value in env.items():
+        env_override += '{0}={1}\n'.format(key, value)
+        env_override += 'export {0}\n'.format(key)
+    return env_override
+
+
+def _create_pbuilders(env):
     '''
     Create the .pbuilder family of files in user's home directory
+
+    env
+        A list  or dictionary of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                  - DEB_BUILD_OPTIONS: 'nocheck'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+
     '''
     hook_text = '''#!/bin/sh
 set -e
@@ -100,6 +138,11 @@ OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free 
     with open(pbuilderrc, "w") as fow:
         fow.write('{0}'.format(pbldrc_text))
 
+    env_overrides = _get_env(env)
+    if env_overrides and not env_overrides.isspace():
+        with open(pbuilderrc, "a") as fow:
+            fow.write('{0}'.format(env_overrides))
+
 
 def _mk_tree():
     '''
@@ -133,7 +176,7 @@ def _get_src(tree_base, source, saltenv='base'):
         shutil.copy(source, dest)
 
 
-def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base'):
     '''
     Create a platform specific source package from the given platform spec/control file and sources
 
@@ -145,7 +188,7 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     This example command should build the libnacl SOURCE package and place it in
     /var/www/html/ on the minion
     '''
-    _create_pbuilders()
+    _create_pbuilders(env)
     tree_base = _mk_tree()
     ret = []
     if not os.path.isdir(dest_dir):
@@ -221,7 +264,7 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, deps, template, saltenv='base'):
+def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='base'):
     '''
     Given the package destination directory, the tarball containing debian files (e.g. control)
     and package sources, use pbuilder to safely build the platform package
@@ -241,7 +284,7 @@ def build(runas, tgt, dest_dir, spec, sources, deps, template, saltenv='base'):
         except (IOError, OSError):
             pass
     dsc_dir = tempfile.mkdtemp()
-    dscs = make_src_pkg(dsc_dir, spec, sources, template, saltenv)
+    dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
