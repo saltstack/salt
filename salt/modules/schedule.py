@@ -105,11 +105,6 @@ def list_(show_all=False,
             del schedule[job]
             continue
 
-        # if enabled is not included in the job,
-        # assume job is enabled.
-        if 'enabled' not in schedule[job]:
-            schedule[job]['enabled'] = True
-
         for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
@@ -346,6 +341,11 @@ def build_schedule_item(name, **kwargs):
             'return_config', 'until']:
         if item in kwargs:
             schedule[name][item] = kwargs[item]
+
+    # if enabled is not included in the job,
+    # assume job is enabled.
+    if 'enabled' not in kwargs:
+        schedule[name]['enabled'] = True
 
     return schedule[name]
 

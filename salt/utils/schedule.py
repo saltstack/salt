@@ -387,6 +387,12 @@ class Schedule(object):
         if not len(data) == 1:
             raise ValueError('You can only schedule one new job at a time.')
 
+        # if enabled is not included in the job,
+        # assume job is enabled.
+        for job in data.keys():
+            if 'enabled' not in data[job]:
+                data[job]['enabled'] = True
+
         new_job = next(six.iterkeys(data))
 
         if new_job in self.opts['schedule']:

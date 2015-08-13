@@ -33,7 +33,7 @@ schedule.__opts__ = {}
 schedule.__pillar__ = {}
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
-        'jid_include': True}
+        'jid_include': True, 'enabled': True}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
