@@ -72,7 +72,7 @@ def _strip_listing_to_done(output_list):
     # some versions of rabbitmq have no trailing '...done' line,
     # which some versions do not output.
     l_line = ''.join(output_list[-1:])
-    if l_line == '...done':
+    if '...done' in l_line:
         output_list.pop()
 
     return output_list
