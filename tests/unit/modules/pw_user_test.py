@@ -15,7 +15,11 @@ from salttesting.mock import (
 # Import Salt Libs
 from salt.modules import pw_user
 from salt.exceptions import CommandExecutionError
-import pwd
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 
 # Globals
@@ -24,6 +28,7 @@ pw_user.__salt__ = {}
 pw_user.__context__ = {}
 
 
+@skipIf(not HAS_PWD, 'These tests can only run on systems with the python pwd module')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PwUserTestCase(TestCase):
     '''
@@ -46,16 +51,21 @@ class PwUserTestCase(TestCase):
         with patch.dict(pw_user.__salt__, {'cmd.run_all': mock}):
             self.assertTrue(pw_user.delete('A'), 1)
 
-    @patch('salt.modules.pw_user.__context__', MagicMock(return_value='A'))
     def test_getent(self):
         '''
         Test if user.getent already have a value
         '''
-        self.assertTrue(pw_user.getent())
+        mock_user = 'saltdude'
 
-        mock = MagicMock(return_value='A')
-        with patch.object(pw_user, 'info', mock):
-            self.assertEqual(pw_user.getent(True)[0], 'A')
+        class MockData(object):
+            pw_name = mock_user
+
+        with patch('pwd.getpwall', MagicMock(return_value=[MockData()])):
+            with patch.dict(pw_user.__context__, {'user.getent': mock_user}):
+                self.assertEqual(pw_user.getent(), mock_user)
+
+                with patch.object(pw_user, 'info', MagicMock(return_value=mock_user)):
+                    self.assertEqual(pw_user.getent(True)[0], mock_user)
 
     def test_chuid(self):
         '''
@@ -288,13 +298,22 @@ class PwUserTestCase(TestCase):
         '''
         Return a list of groups the named user belongs to
         '''
-        self.assertEqual(pw_user.list_groups('name'), 'A')
+        mock_group = 'saltgroup'
+
+        with patch('salt.utils.get_group_list', MagicMock(return_value=[mock_group])):
+            self.assertEqual(pw_user.list_groups('name'), [mock_group])
 
     def test_list_users(self):
         '''
         Return a list of all users
         '''
-        self.assertTrue(pw_user.list_users())
+        mock_user = 'saltdude'
+
+        class MockData(object):
+            pw_name = mock_user
+
+        with patch('pwd.getpwall', MagicMock(return_value=[MockData()])):
+            self.assertEqual(pw_user.list_users(), [mock_user])
 
     def test_rename(self):
         '''
