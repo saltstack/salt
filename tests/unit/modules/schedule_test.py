@@ -109,7 +109,8 @@ class ScheduleTestCase(TestCase):
             self.assertDictEqual(schedule.build_schedule_item
                                  ('job1', function='test.ping'),
                                  {'function': 'test.ping', 'maxrunning': 1,
-                                  'name': 'job1', 'jid_include': True})
+                                  'name': 'job1', 'jid_include': True,
+                                  'enabled': True})
 
             self.assertDictEqual(schedule.build_schedule_item
                                  ('job1', function='test.ping', seconds=3600,
