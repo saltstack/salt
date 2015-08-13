@@ -282,6 +282,8 @@ def absent(name, vname=None):
 
 def key_absent(name, force=False):
     r'''
+    .. versionadded:: 2015.5.4
+
     Ensure a registry key is removed. This will remove a key and all value
     entries it contains. It will fail if the key contains subkeys.
 
