@@ -846,6 +846,192 @@ class VMwareTestCase(ExtendedTestCase):
                 kwargs={'host': 'my-esxi-host'},
                 call='function')
 
+    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    def test_add_host_cluster_not_exists(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the specified cluster present
+        in kwargs that are provided to add_host does not exist in the VMware
+        environment.
+        '''
+        provider_config_additions = {
+          'esxi_host_user': 'root',
+          'esxi_host_password': 'myhostpassword'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'Specified cluster does not exist.',
+                vmware.add_host,
+                kwargs={'host': 'my-esxi-host', 'cluster': 'my-cluster'},
+                call='function')
+
+    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    def test_add_host_datacenter_not_exists(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the specified datacenter
+        present in kwargs that are provided to add_host does not exist in the VMware
+        environment.
+        '''
+        provider_config_additions = {
+          'esxi_host_user': 'root',
+          'esxi_host_password': 'myhostpassword'
+        }
+
+        provider_config = deepcopy(PROVIDER_CONFIG)
+        provider_config['vcenter01']['vmware'].update(provider_config_additions)
+
+        with patch.dict(vmware.__opts__, {'providers': provider_config}, clean=True):
+            self.assertRaisesWithMessage(
+                SaltCloudSystemExit,
+                'Specified datacenter does not exist.',
+                vmware.add_host,
+                kwargs={'host': 'my-esxi-host', 'datacenter': 'my-datacenter'},
+                call='function')
+
+    def test_remove_host_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        remove_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_host,
+            kwargs=None,
+            call='function')
+
+    def test_remove_host_no_host_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when host is not present in
+        kwargs that are provided to remove_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_host,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    def test_remove_host_not_exists(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the specified host present
+        in kwargs that are provided to remove_host does not exist in the VMware
+        environment.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.remove_host,
+            kwargs={'host': 'my-host'},
+            call='function')
+
+    def test_connect_host_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        connect_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.connect_host,
+            kwargs=None,
+            call='function')
+
+    def test_connect_host_no_host_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when host is not present in
+        kwargs that are provided to connect_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.connect_host,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    def test_connect_host_not_exists(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the specified host present
+        in kwargs that are provided to connect_host does not exist in the VMware
+        environment.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.connect_host,
+            kwargs={'host': 'my-host'},
+            call='function')
+
+    def test_disconnect_host_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        disconnect_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.disconnect_host,
+            kwargs=None,
+            call='function')
+
+    def test_disconnect_host_no_host_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when host is not present in
+        kwargs that are provided to disconnect_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.disconnect_host,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    def test_disconnect_host_not_exists(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the specified host present
+        in kwargs that are provided to disconnect_host does not exist in the VMware
+        environment.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.disconnect_host,
+            kwargs={'host': 'my-host'},
+            call='function')
+
+    def test_reboot_host_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        reboot_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.reboot_host,
+            kwargs=None,
+            call='function')
+
+    def test_reboot_host_no_host_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when host is not present in
+        kwargs that are provided to reboot_host.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.reboot_host,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    def test_reboot_host_not_exists(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when the specified host present
+        in kwargs that are provided to connect_host does not exist in the VMware
+        environment.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.reboot_host,
+            kwargs={'host': 'my-host'},
+            call='function')
+
 
 if __name__ == '__main__':
     from integration import run_tests
