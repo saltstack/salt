@@ -10,7 +10,8 @@ Example:
     somequeue:
         rabbitmq_queue.present:
             - vhost: somehost
-            - durable: true
+            - durable: True
+            - auto_delete: False
 '''
 from __future__ import absolute_import
 

@@ -29,9 +29,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if RabbitMQ is installed.
+    Only load if RabbitMQ rabbitmqctl is installed.
     '''
-    return salt.utils.which('rabbitmqctl') is not None
+    return salt.utils.which('rabbitmqadmin') is not None
 
 
 def present(source, vhost, destination, destination_type, routing_key):
@@ -39,16 +39,20 @@ def present(source, vhost, destination, destination_type, routing_key):
     Ensure the RabbitMQ Binding exists.
 
     source
-        Binding name
+        the name of the source exchange
 
     destination
+        the name of the destination queue or exchange
+
 
     destination_type
+        the type of the destination, queue or exchange
 
     vhost
         VHost name
 
     routing_key
+        the routing key on the message that is matched
 
     runas
         Name of the user to run the command
