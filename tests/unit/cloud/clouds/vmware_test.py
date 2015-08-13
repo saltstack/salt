@@ -1033,6 +1033,50 @@ class VMwareTestCase(ExtendedTestCase):
             kwargs={'host': 'my-host'},
             call='function')
 
+    def test_create_datastore_cluster_no_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when no kwargs are provided to
+        create_datastore_cluster.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datastore_cluster,
+            kwargs=None,
+            call='function')
+
+    def test_create_datastore_cluster_no_name_in_kwargs(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is not present in
+        kwargs that are provided to create_datastore_cluster.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datastore_cluster,
+            kwargs={'foo': 'bar'},
+            call='function')
+
+    def test_create_datastore_cluster_name_too_short(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is present in kwargs
+        that are provided to create_datastore_cluster but is an empty string.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datastore_cluster,
+            kwargs={'name': ''},
+            call='function')
+
+    def test_create_datastore_cluster_name_too_long(self):
+        '''
+        Tests that a SaltCloudSystemExit is raised when name is present in kwargs
+        that are provided to create_datastore_cluster but is a string with length <= 80.
+        '''
+        self.assertRaises(
+            SaltCloudSystemExit,
+            vmware.create_datastore_cluster,
+            kwargs={'name': 'cCD2GgJGPG1DUnPeFBoPeqtdmUxIWxDoVFbA14vIG0BPoUECkgbRMnnY6gaUPBvIDCcsZ5HU48ubgQu5c'},
+            call='function')
+
 
 if __name__ == '__main__':
     from integration import run_tests
