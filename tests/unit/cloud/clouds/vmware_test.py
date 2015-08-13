@@ -29,12 +29,13 @@ PROVIDER_CONFIG = {
     'vmware': {
       'driver': 'vmware',
       'url': 'vcenter01.domain.com',
-      'user': 'DOMAIN\user',
+      'user': 'DOMAIN\\user',
       'password': 'verybadpass',
     }
   }
 }
 VM_NAME = 'test-vm'
+
 
 class ExtendedTestCase(TestCase):
     '''
