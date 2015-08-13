@@ -204,16 +204,14 @@ def present(name, value=None, vname=None, vdata=None, vtype='REG_SZ', reflection
             format(vname if vname else '(Default)', name)
         return ret
 
-    ret['changes'] = {'reg': {
-                        'Added': {
-                            'Key': r'{0}\{1}'.format(hive, key),
-                            'Entry': '{0}'.format(vname if vname else '(Default)'),
-                            'Value': '{0}'.format(vdata if vdata else '(Empty String)')
-                        }}}
+    add_change = {'Key': r'{0}\{1}'.format(hive, key),
+                  'Entry': '{0}'.format(vname if vname else '(Default)'),
+                  'Value': '{0}'.format(vdata if vdata else '(Empty String)')}
 
     # Check for test option
     if __opts__['test']:
         ret['result'] = None
+        ret['changes'] = {'reg': {'Will add': add_change}}
         return ret
 
     # Configure the value
@@ -222,7 +220,10 @@ def present(name, value=None, vname=None, vdata=None, vtype='REG_SZ', reflection
 
     if not ret['result']:
         ret['changes'] = {}
-        ret['comment'] = 'Could not configure the registry key'
+        ret['comment'] = r'Failed to add {0} to {1}\{2}'.format(name, hive, key)
+    else:
+        ret['changes'] = {'reg': {'Added': add_change}}
+        ret['comment'] = r'Added {0} to {1}\{2}'.format(name, hive, key)
 
     return ret
 
@@ -257,23 +258,24 @@ def absent(name, vname=None):
             ret['comment'] = '{0} is already absent'.format(name)
             return ret
 
-    ret['changes'] = {'reg': {
-                        'Removed': {
-                            'Key': r'{0}\{1}'.format(hive, key),
-                            'Entry': '{0}'.format(vname if vname else '(Default)')
-                        }}}
+    remove_change = {'Key': r'{0}\{1}'.format(hive, key),
+                     'Entry': '{0}'.format(vname if vname else '(Default)')}
 
     # Check for test option
     if __opts__['test']:
         ret['result'] = None
+        ret['changes'] = {'reg': {'Will remove': remove_change}}
         return ret
 
     # Delete the value
     ret['result'] = __salt__['reg.delete_value'](hive, key, vname)
     if not ret['result']:
         ret['changes'] = {}
-        ret['comment'] = r'failed to remove {0} from {1}\{2}'.format(name, hive,
+        ret['comment'] = r'Failed to remove {0} from {1}\{2}'.format(name, hive,
                                                                     key)
+    else:
+        ret['changes'] = {'reg': {'Removed': remove_change}}
+        ret['comment'] = r'Removed {0} from {1}\{2}'.format(name, hive, key)
 
     return ret
 
@@ -339,6 +341,6 @@ def key_absent(name, force=False):
     if __salt__['reg.read_value'](hive, key)['success']:
         ret['result'] = False
         ret['changes'] = {}
-        ret['comment'] = 'failed to remove registry key {0}'.format(name)
+        ret['comment'] = 'Failed to remove registry key {0}'.format(name)
 
     return ret
