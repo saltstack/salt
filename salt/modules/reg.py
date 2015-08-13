@@ -443,6 +443,8 @@ def delete_key(hkey, path, key=None, reflection=True, force=False):
 
 def delete_key_recursive(hive, key):
     '''
+    .. versionadded:: 2015.5.4
+
     Delete a registry key to include all subkeys.
 
     :param hive:
