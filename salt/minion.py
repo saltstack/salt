@@ -602,9 +602,7 @@ class Minion(MinionBase):
         self._connect_master_future = self.connect_master()
         # finish connecting to master
         self._connect_master_future.add_done_callback(lambda f: self.io_loop.stop())
-        log.debug("ioloop starting")
         self.io_loop.start()
-        log.debug("ioloop done")
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.

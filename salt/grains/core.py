@@ -22,6 +22,7 @@ import locale
 import salt.exceptions
 
 __proxyenabled__ = ['*']
+
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
