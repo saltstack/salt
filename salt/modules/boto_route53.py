@@ -117,13 +117,13 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None,
         try:
             return bool(conn.get_zone(zone))
 
-        except DNSServerError, e:
+        except DNSServerError as e:
             # if rate limit, retry:
             if retry_on_rate_limit and 'Throttling' == e.code:
                 log.debug('Throttled by AWS API.')
                 time.sleep(2)
                 rate_limit_retries -= 1
-                continue # the while True; try again if not out of retries
+                continue  # the while True; try again if not out of retries
             raise e
 
 
@@ -213,15 +213,15 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
             else:
                 _record = _zone.find_records(name, _type, all=fetch_all)
 
-            break # the while True
+            break  # the while True
 
-        except DNSServerError, e:
+        except DNSServerError as e:
             # if rate limit, retry:
             if retry_on_rate_limit and 'Throttling' == e.code:
                 log.debug('Throttled by AWS API.')
                 time.sleep(2)
                 rate_limit_retries -= 1
-                continue # the while True; try again if not out of retries
+                continue  # the while True; try again if not out of retries
             raise e
 
     if _record:
@@ -259,13 +259,13 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
             _type = record_type.upper()
             break
 
-        except DNSServerError, e:
+        except DNSServerError as e:
             # if rate limit, retry:
             if retry_on_rate_limit and 'Throttling' == e.code:
                 log.debug('Throttled by AWS API.')
                 time.sleep(2)
                 rate_limit_retries -= 1
-                continue # the while True; try again if not out of retries
+                continue  # the while True; try again if not out of retries
             raise e
 
     while rate_limit_retries > 0:
@@ -286,14 +286,15 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 status = _zone.add_record(_type, name, value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
-        except DNSServerError, e:
+        except DNSServerError as e:
             # if rate limit, retry:
             if retry_on_rate_limit and 'Throttling' == e.code:
                 log.debug('Throttled by AWS API.')
                 time.sleep(2)
                 rate_limit_retries -= 1
-                continue # the while True; try again if not out of retries
+                continue  # the while True; try again if not out of retries
             raise e
+
 
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                   region=None, key=None, keyid=None, profile=None,
@@ -336,13 +337,13 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                 status = _zone.update_record(old_record, value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
-        except DNSServerError, e:
+        except DNSServerError as e:
             # if rate limit, retry:
             if retry_on_rate_limit and 'Throttling' == e.code:
                 log.debug('Throttled by AWS API.')
                 time.sleep(2)
                 rate_limit_retries -= 1
-                continue # the while True; try again if not out of retries
+                continue  # the while True; try again if not out of retries
             raise e
 
 
@@ -387,14 +388,15 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
                 status = _zone.delete_record(old_record)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
-        except DNSServerError, e:
+        except DNSServerError as e:
             # if rate limit, retry:
             if retry_on_rate_limit and 'Throttling' == e.code:
                 log.debug('Throttled by AWS API.')
                 time.sleep(2)
                 rate_limit_retries -= 1
-                continue # the while True; try again if not out of retries
+                continue  # the while True; try again if not out of retries
             raise e
+
 
 def _wait_for_sync(status, conn, wait_for_sync):
     if not wait_for_sync:
