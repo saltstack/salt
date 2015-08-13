@@ -79,6 +79,11 @@ def list_(show_all=False, return_yaml=True):
             del schedule[job]
             continue
 
+        # if enabled is not included in the job,
+        # assume job is enabled.
+        if 'enabled' not in schedule[job]:
+            schedule[job]['enabled'] = True
+
         for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
