@@ -247,7 +247,7 @@ if WITH_SETUPTOOLS:
              'common paths that salt uses. This defaults to False on '
              'develop/editable setups. If GENERATE_SALT_SYSPATHS is found in '
              'the environment this flag is switched to True.'),
-            ('mimic-install', None,
+            ('mimic-salt-install', None,
              'Mimmic the install command when running the develop command. '
              'This will generate salt\'s _version.py and _syspaths.py files. '
              'Generate Salt\'s _syspaths.py file which allows tweaking some '
