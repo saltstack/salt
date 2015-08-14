@@ -190,6 +190,30 @@ class WriteSaltSshPackagingFile(Command):
             # pylint: enable=E0602
 
 
+class InstallM2CryptoWindows(Command):
+
+    description = 'Install M2CryptoWindows'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if getattr(self.distribution, 'salt_installing_m2crypto_windows', None) is None:
+            print('This command is not meant to be called on it\'s own')
+            exit(1)
+        import platform
+        from pip.utils import call_subprocess
+        from pip.utils.logging import indent_log
+        platform_bits, _ = platform.architecture()
+        with indent_log():
+            call_subprocess(
+                ['pip', 'install', '--egg', 'M2CryptoWin{0}'.format(platform_bits[:2])]
+            )
+
+
 class Sdist(sdist):
 
     def make_release_tree(self, base_dir, files):
@@ -507,6 +531,11 @@ class Install(install):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, 'salt', '_version.py'
         )
+        if IS_WINDOWS_PLATFORM:
+            # Install M2Crypto first
+            self.distribution.salt_installing_m2crypto_windows = True
+            self.run_command('install-m2crypto-windows')
+            self.distribution.salt_installing_m2crypto_windows = None
         # Run install.run
         install.run(self)
 
@@ -605,7 +634,6 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
 
-
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = 'Portable, distributed, remote execution and configuration management system'
@@ -621,7 +649,8 @@ class SaltDistribution(distutils.dist.Distribution):
                               'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
-                                  'install_lib': InstallLib})
+                                  'install_lib': InstallLib
+                                  'install-m2crypto-windows': InstallM2CryptoWindows})
 
         self.license = 'Apache Software License 2.0'
         self.packages = self.discover_packages()
