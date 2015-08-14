@@ -53,6 +53,19 @@ def _connect(host=None, port=None, db=None, password=None):
 
     return redis.StrictRedis(host, port, db, password)
 
+def _sconnect(host=None, port=None, password=None):
+    '''
+    Returns an instance of the redis client
+    '''
+    if host is None:
+        host = __salt__['config.option']('redis_sentinel.host', 'localhost')
+    if port is None:
+        port = __salt__['config.option']('redis_sentinel.port', 26379)
+    if password is None:
+        password = __salt__['config.option']('redis_sentinel.password')
+
+    return redis.StrictRedis(host, port, password=password)
+
 
 def bgrewriteaof(host=None, port=None, db=None, password=None):
     '''
@@ -488,3 +501,34 @@ def zrange(key, start, stop, host=None, port=None, db=None, password=None):
     '''
     server = _connect(host, port, db, password)
     return server.zrange(key, start, stop)
+
+
+def sentinel_get_master_ip(master, host=None, port=None, password=None):
+    '''
+    Get ip for sentinel master
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.sentinel_get_master_ip 'mymaster'
+    '''
+    server = _sconnect(host, port, password)
+    ret = server.sentinel_get_master_addr_by_name(master)
+    return dict(zip(('master_host', 'master_port'), ret))
+
+
+def get_master_ip(host=None, port=None, password=None):
+    '''
+    Get host information about slave
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' redis.get_master_ip
+    '''
+    server = _connect(host, port, password)
+    info = server.info()
+    ret = (info.get('master_host', ''), info.get('master_port', ''))
+    return dict(zip(('master_host', 'master_port'), ret))
