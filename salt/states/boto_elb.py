@@ -193,7 +193,11 @@ Overriding the alarm values on the resource:
                   attributes:
                     threshold: 2.0
 '''
+
+# Import Python Libs
 from __future__ import absolute_import
+
+# Import Salt Libs
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
@@ -302,13 +306,17 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _attributes_present(name, attributes, region, key, keyid, profile)
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
-            return ret
+
+    if attributes:
+        _ret = _attributes_present(name, attributes, region, key, keyid, profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+
     _ret = _health_check_present(name, health_check, region, key, keyid,
                                  profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
