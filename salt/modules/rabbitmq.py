@@ -13,7 +13,7 @@ import salt.utils
 import logging
 import random
 import string
-import json
+
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -577,6 +577,7 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
         runas=runas,
         )
     return res
+
 
 def queue_vhost_exists(queue, vhost, runas=None, *kwargs):
     '''
