@@ -665,6 +665,9 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
+        if WITH_SETUPTOOLS:
+            self.cmdclass.update({'develop': Develop})
+
         self.license = 'Apache Software License 2.0'
         self.packages = self.discover_packages()
         self.zip_safe = False
