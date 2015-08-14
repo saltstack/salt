@@ -104,6 +104,7 @@ except ImportError:
 
 SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py')
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
+SALT_SYSPATHS_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_syspaths.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), '_requirements.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'zeromq-requirements.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'raet-requirements.txt')
@@ -173,6 +174,40 @@ class WriteSaltVersion(Command):
             # pylint: enable=E0602
 
 
+class GenerateSaltSyspaths(Command):
+
+    description = 'Generate salt\'s hardcoded syspaths file'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        # Write the syspaths file
+        if getattr(self.distribution, 'salt_syspaths_hardcoded_path', None) is None:
+            print('This command is not meant to be called on it\'s own')
+            exit(1)
+
+        # Write the system paths file
+        open(self.distribution.salt_syspaths_hardcoded_path, 'w').write(
+            INSTALL_SYSPATHS_TEMPLATE.format(
+                date=datetime.utcnow(),
+                root_dir=self.distribution.salt_root_dir,
+                config_dir=self.distribution.salt_config_dir,
+                cache_dir=self.distribution.salt_cache_dir,
+                sock_dir=self.distribution.salt_sock_dir,
+                srv_root_dir=self.distribution.salt_srv_root_dir,
+                base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
+                base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
+                base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
+                logs_dir=self.distribution.salt_logs_dir,
+                pidfile_dir=self.distribution.salt_pidfile_dir,
+            )
+        )
+
+
 class WriteSaltSshPackagingFile(Command):
 
     description = 'Write salt\'s ssh packaging file'
@@ -204,20 +239,46 @@ if WITH_SETUPTOOLS:
         user_options = develop.user_options + [
             ('write-salt-version', None,
              'Generate Salt\'s _version.py file which allows proper version '
-             'reporting. This defaults to False on develop/editable setups.')
+             'reporting. This defaults to False on develop/editable setups. '
+             'If WRITE_SALT_VERSION is found in the environment this flag is '
+             'switched to True.'),
+            ('generate-salt-syspaths', None,
+             'Generate Salt\'s _syspaths.py file which allows tweaking some '
+             'common paths that salt uses. This defaults to False on '
+             'develop/editable setups. If GENERATE_SALT_SYSPATHS is found in '
+             'the environment this flag is switched to True.'),
+            ('mimic-install', None,
+             'Mimmic the install command when running the develop command. '
+             'This will generate salt\'s _version.py and _syspaths.py files. '
+             'Generate Salt\'s _syspaths.py file which allows tweaking some '
+             'This defaults to False on develop/editable setups. '
+             'If MIMIC_INSTALL is found in the environment this flag is '
+             'switched to True.')
         ]
         boolean_options = develop.boolean_options + [
-            'write-salt-version'
+            'write-salt-version',
+            'generate-salt-syspaths',
+            'mimic-salt-install'
         ]
 
         def initialize_options(self):
             develop.initialize_options(self)
             self.write_salt_version = False
+            self.generate_salt_syspaths = False
+            self.mimic_salt_install = False
 
         def finalize_options(self):
             develop.finalize_options(self)
             if 'WRITE_SALT_VERSION' in os.environ:
                 self.write_salt_version = True
+            if 'GENERATE_SALT_SYSPATHS' in os.environ:
+                self.generate_salt_syspaths = True
+            if 'MIMIC_SALT_INSTALL' in os.environ:
+                self.mimic_salt_install = True
+
+            if self.mimic_salt_install:
+                self.write_salt_version = True
+                self.generate_salt_syspaths = True
 
         def run(self):
             if IS_WINDOWS_PLATFORM:
@@ -238,8 +299,15 @@ if WITH_SETUPTOOLS:
                 self.distribution.salt_download_windows_dlls = None
 
             if self.write_salt_version is True:
+                self.distribution.running_salt_install = True
                 self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
                 self.run_command('write-salt-version')
+
+            if self.generate_salt_syspaths:
+                self.distribution.salt_syspaths_hardcoded_path = SALT_SYSPATHS_HARDCODED
+                self.run_command('generate-salt-syspaths')
+
+            # Resume normal execution
             develop.run(self)
 
 
@@ -565,24 +633,10 @@ class Build(build):
             self.run_command('write-salt-version')
 
             # Write the system paths file
-            system_paths_file_path = os.path.join(
+            self.distribution.salt_syspaths_hardcoded_path = os.path.join(
                 self.build_lib, 'salt', '_syspaths.py'
             )
-            open(system_paths_file_path, 'w').write(
-                INSTALL_SYSPATHS_TEMPLATE.format(
-                    date=datetime.utcnow(),
-                    root_dir=self.distribution.salt_root_dir,
-                    config_dir=self.distribution.salt_config_dir,
-                    cache_dir=self.distribution.salt_cache_dir,
-                    sock_dir=self.distribution.salt_sock_dir,
-                    srv_root_dir=self.distribution.salt_srv_root_dir,
-                    base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
-                    base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
-                    base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
-                    logs_dir=self.distribution.salt_logs_dir,
-                    pidfile_dir=self.distribution.salt_pidfile_dir,
-                )
-            )
+            self.run_command('generate-salt-syspaths')
 
 
 class Install(install):
@@ -799,6 +853,7 @@ class SaltDistribution(distutils.dist.Distribution):
                               'sdist': Sdist,
                               'install': Install,
                               'write-salt-version': WriteSaltVersion,
+                              'generate-salt-syspaths': GenerateSaltSyspaths,
                               'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
