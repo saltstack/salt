@@ -141,7 +141,8 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None,
     return None.
     '''
     if name:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        if vpc_name:
+            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if vpc_id is None:
             log.debug('getting group for {0}'.format(name))
             group_filter = {'group-name': name}
@@ -306,7 +307,8 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    if vpc_name:
+        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     created = conn.create_security_group(name, description, vpc_id)
     if created:
         log.info('Created security group {0}.'.format(name))
