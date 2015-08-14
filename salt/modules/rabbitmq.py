@@ -13,6 +13,7 @@ import salt.utils
 import logging
 import random
 import string
+import json
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -576,6 +577,28 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
         runas=runas,
         )
     return res
+
+def queue_vhost_exists(queue, vhost, runas=None, *kwargs):
+    '''
+    Returns whether the queue exists on the  specified virtual host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.queue_vhost_exists queuename vhostname
+    '''
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        'rabbitmqctl list_queues -p {0} '.format(
+            vhost
+            ),
+        python_shell=False,
+        runas=runas,
+        )
+    log.debug(res)
+    return queue in res
 
 
 def list_policies(vhost="/", runas=None):
