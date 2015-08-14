@@ -212,6 +212,48 @@ and 103 characters on BSD-based systems.
     </topics/installation/osx>` instructions.
 
 
+Changing Default Paths
+~~~~~~~~~~~~~~~~~~~~~~
+
+Instead of updating your configuration files to point to the new root directory
+and having to pass the new configuration directory path to all of Salt's CLI
+tools, you can explicitly tweak the default system paths that Salt expects:
+
+.. code-block:: bash
+
+    GENERATE_SALT_SYSPATHS=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        install -e ./salt   # the path to the salt git clone from above
+
+
+You can now call all of Salt's CLI tools without explicitly passing the configuration directory.
+
+Additional Options
+..................
+
+In case you want to distribute your virtualenv, you probably don't want to
+include Salt's clone ``.git/`` directory, and, without it, Salt won't report
+the accurate version. You can tell ``setup.py`` to generate the hardcoded
+version information which is distributable:
+
+.. code-block:: bash
+
+    GENERATE_SALT_SYSPATHS=1 WRITE_SALT_VERSION=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        install -e ./salt   # the path to the salt git clone from above
+
+
+Instead of passing those two environmental variables, you can just pass a
+single one which will trigger the other two:
+
+.. code-block:: bash
+
+    MIMIC_SALT_INSTALL=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        install -e ./salt   # the path to the salt git clone from above
+
+
+This last one will grant you an edditable salt installation with hardcoded
+system paths and version information.
+
+
 Installing Salt from the Python Package Index
 ---------------------------------------------
 
