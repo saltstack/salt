@@ -25,7 +25,7 @@ from __future__ import absolute_import
 import redis
 import salt.client
 from salt.ext import six
-from salt.ext.six import zip
+from salt.ext.six.moves import zip
 
 try:
     import redis
