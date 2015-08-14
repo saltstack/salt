@@ -49,7 +49,8 @@ def present(name, vhost, durable, auto_delete):
 
         .. deprecated:: 2015.8.0
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    ret = {'name': name, 'comment': '', 'changes': {}}
 
     vhost_exists = __salt__['rabbitmq.queue_vhost_exists'](vhost, name)
 
@@ -61,6 +62,7 @@ def present(name, vhost, durable, auto_delete):
             ret['comment'] = 'Creating Queue {0} in VHost {1}'.format(name, vhost)
 
     else:
+        ret['result'] = True
         if vhost_exists:
             ret['comment'] = 'Queue {0} already exists in VHost {1}'.format(name, vhost)
         else:
@@ -70,7 +72,15 @@ def present(name, vhost, durable, auto_delete):
                 ret['comment'] = result['Error']
             elif 'Added' in result:
                 ret['comment'] = result['Declared']
-                ret['changes'] = {'old': '', 'new': name}
+                ret['changes'] = {
+                    'old': '',
+                    'new': {
+                        'name': name,
+                        'vhost': vhost,
+                        'durable': durable,
+                        'auto_delete': auto_delete
+                    }
+                }
     return ret
 
 
