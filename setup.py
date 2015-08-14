@@ -126,12 +126,16 @@ def _parse_requirements_file(requirements_file):
             line = line.strip()
             if not line or line.startswith(('#', '-r')):
                 continue
-            if IS_WINDOWS_PLATFORM and 'libcloud' in line:
-                continue
-            if IS_WINDOWS_PLATFORM and 'M2Crypto' in line and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                # In Windows, we're installing M2CryptoWin{32,64} which comes
-                # compiled
-                continue
+            if IS_WINDOWS_PLATFORM:
+                if 'libcloud' in line:
+                    continue
+                if 'pycrypto' in line.lower():
+                    # On windows we install PyCrypto using python wheels
+                    continue
+                if 'm2crypto' in line.lower() and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
+                    # In Windows, we're installing M2CryptoWin{32,64} which comes
+                    # compiled
+                    continue
             parsed_requirements.append(line)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
@@ -198,11 +202,16 @@ class WriteSaltSshPackagingFile(Command):
 if WITH_SETUPTOOLS:
     class Develop(develop):
         def run(self):
-            if IS_WINDOWS_PLATFORM and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-                # Install M2Crypto first
-                self.distribution.salt_installing_m2crypto_windows = True
-                self.run_command('install-m2crypto-windows')
-                self.distribution.salt_installing_m2crypto_windows = None
+            if IS_WINDOWS_PLATFORM:
+                if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
+                    # Install M2Crypto first
+                    self.distribution.salt_installing_m2crypto_windows = True
+                    self.run_command('install-m2crypto-windows')
+                    self.distribution.salt_installing_m2crypto_windows = None
+                self.distribution.salt_installing_pycrypto_windows = True
+                self.run_command('install-pycrypto-windows')
+                self.distribution.salt_installing_pycrypto_windows = None
+
             develop.run(self)
 
 
@@ -228,6 +237,37 @@ class InstallM2CryptoWindows(Command):
             call_subprocess(
                 ['pip', 'install', '--egg', 'M2CryptoWin{0}'.format(platform_bits[:2])]
             )
+
+
+class InstallPyCryptoWindowsWheel(Command):
+
+    description = 'Install PyCrypto on Windows'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if getattr(self.distribution, 'salt_installing_pycrypto_windows', None) is None:
+            print('This command is not meant to be called on it\'s own')
+            exit(1)
+        import platform
+        from pip.utils import call_subprocess
+        from pip.utils.logging import indent_log
+        platform_bits, _ = platform.architecture()
+        call_arguments = ['pip', 'install', 'wheel']
+        if platform_bits == '64bit':
+            call_arguments.append(
+                'http://repo.saltstack.com/windows/dependencies/64/pycrypto-2.6.1-cp27-none-win_amd64.whl'
+            )
+        else:
+            call_arguments.append(
+                'http://repo.saltstack.com/windows/dependencies/32/pycrypto-2.6.1-cp27-none-win32.whl'
+            )
+        with indent_log():
+            call_subprocess(call_arguments)
 
 
 class Sdist(sdist):
@@ -547,11 +587,15 @@ class Install(install):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, 'salt', '_version.py'
         )
-        if IS_WINDOWS_PLATFORM and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-            # Install M2Crypto first
-            self.distribution.salt_installing_m2crypto_windows = True
-            self.run_command('install-m2crypto-windows')
-            self.distribution.salt_installing_m2crypto_windows = None
+        if IS_WINDOWS_PLATFORM:
+            if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
+                # Install M2Crypto first
+                self.distribution.salt_installing_m2crypto_windows = True
+                self.run_command('install-m2crypto-windows')
+                self.distribution.salt_installing_m2crypto_windows = None
+            self.distribution.salt_installing_pycrypto_windows = True
+            self.run_command('install-pycrypto-windows')
+            self.distribution.salt_installing_pycrypto_windows = None
         # Run install.run
         install.run(self)
 
@@ -666,8 +710,10 @@ class SaltDistribution(distutils.dist.Distribution):
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
-        if IS_WINDOWS_PLATFORM and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
-            self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
+        if IS_WINDOWS_PLATFORM:
+            self.cmdclass.update({'install-pycrypto-windows': InstallPyCryptoWindowsWheel})
+            if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
+                self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
         if WITH_SETUPTOOLS:
             self.cmdclass.update({'develop': Develop})
