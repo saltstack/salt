@@ -169,7 +169,12 @@ def sig4(method, endpoint, params, prov_dict,
         endpoint,
         amzdate,
     )
+
     signed_headers = 'host;x-amz-date'
+
+    if token != '':
+        canonical_headers += 'x-amz-security-token:{0}\n'.format(token)
+        signed_headers += ';x-amz-security-token'
 
     algorithm = 'AWS4-HMAC-SHA256'
 

@@ -21,10 +21,11 @@ options
 The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
 The ``keyid`` parameter specifies the key id to use when access the S3 bucket.
-It is required.
+If it is not provided, an attempt to fetch it from EC2 instance meta-data will
+be made.
 
-The ``key`` parameter specifies the key to use when access the S3 bucket. It
-is required.
+The ``key`` parameter specifies the key to use when access the S3 bucket. If it
+is not provided, an attempt to fetch it from EC2 instance meta-data will be made.
 
 The ``multiple_env`` defaults to False. It specifies whether the pillar should
 interpret top level folders as pillar environments (see mode section below).
@@ -109,8 +110,8 @@ class S3Credentials(object):
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                bucket,
-               key,
-               keyid,
+               key=None,
+               keyid=None,
                verify_ssl=True,
                location=None,
                multiple_env=False,
