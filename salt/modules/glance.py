@@ -127,7 +127,9 @@ def _auth(profile=None, api_version=2, **connection_args):
     region = get('region')
     ks_endpoint = get('endpoint', 'http://127.0.0.1:9292/')
     g_endpoint_url = __salt__['keystone.endpoint_get']('glance')
-    g_endpoint_url = g_endpoint_url['internalurl'].strip('v'+str(api_version))
+    # The trailing 'v2' causes URLs like thise one:
+    # http://127.0.0.1:9292/v2/v1/images
+    g_endpoint_url = g_endpoint_url['internalurl'].strip('v2')
 
     if admin_token and api_version != 1 and not password:
         # If we had a password we could just
