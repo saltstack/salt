@@ -507,6 +507,8 @@ def sentinel_get_master_ip(master, host=None, port=None, password=None):
     '''
     Get ip for sentinel master
 
+    .. versionadded: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -521,6 +523,8 @@ def sentinel_get_master_ip(master, host=None, port=None, password=None):
 def get_master_ip(host=None, port=None, password=None):
     '''
     Get host information about slave
+
+    .. versionadded: Boron
 
     CLI Example:
 

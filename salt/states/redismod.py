@@ -119,6 +119,8 @@ def absent(name, keys=None, **connection_args):
 def slaveof(name, sentinel_host=None, sentinel_port=None, sentinel_password=None, **connection_args):
     '''
     Set this redis instance as a slave.
+
+    .. versionadded: Boron
     
     name
         Master to make this a slave of
