@@ -304,18 +304,31 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
                 id = image.id  # pylint: disable=C0103
                 continue
     if not id:
-        return {'Error': 'Unable to resolve '
-            'image id for name {0}'.format(name)}
+        return {
+            'result': False,
+            'comment':
+                'Unable to resolve image id '
+                'for name {0}'.format(name)
+            }
     try:
         g_client.images.delete(id)
     except exc.HTTPNotFound:
-        return {'Error': 'No image with ID {0}'.format(id)}
+        return {
+            'result': False,
+            'comment': 'No image with ID {0}'.format(id)
+            }
     except exc.HTTPForbidden as forbidden:
         log.error(str(forbidden))
-        return {'Error': str(forbidden)}
-    ret = 'Deleted image with ID {0}'.format(id)
+        return {
+            'result': False,
+            'comment': str(forbidden)
+            }
+    ret = {
+        'result': True,
+        'comment': 'Deleted image with ID {0}'.format(id)
+        }
     if name:
-        ret += ' ({0})'.format(name)
+        ret['comment'] += ' ({0})'.format(name)
     return ret
 
 
@@ -337,8 +350,19 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
                 id = image.id  # pylint: disable=C0103
                 continue
     if not id:
-        return {'Error': 'Unable to resolve image id'}
-    image = g_client.images.get(id)
+        return {
+            'result': False,
+            'comment':
+                'Unable to resolve image ID '
+                'for name \'{0}\''.format(name)
+            }
+    try:
+        image = g_client.images.get(id)
+    except exc.HTTPNotFound:
+        return {
+            'result': False,
+            'comment': 'No image with ID {0}'.format(id)
+            }
     pformat = pprint.PrettyPrinter(indent=4).pformat
     log.debug('Properties of image {0}:\n{1}'.format(
         image.name, pformat(image)))
@@ -397,8 +421,12 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
             if name == image.name:
                 if name in ret and CUR_VER < BORON:
                     # Not really worth an exception
-                    return {'Error': 'More than one image '
-                            'with name "{0}"'.format(name)}
+                    return {
+                        'result': False,
+                        'comment':
+                            'More than one image with '
+                            'name "{0}"'.format(name)
+                        }
                 _add_image(ret, image)
     log.debug('Returning images: {0}'.format(ret))
     return ret
@@ -422,16 +450,22 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     '''
     if id:
         image = image_show(id=id)
-        if len(image) == 1:
+        if 'result' in image and not image['result']:
+            return image
+        elif len(image) == 1:
             image = image.values()[0]
     elif name:
         img_list = image_list(name=name)
-        if img_list is not list and 'Error' in img_list:
+        if img_list is not list and 'result' in img_list and \
+                not img_list['result']:
             return img_list
         elif len(img_list) == 0:
-            return {'result': False,
-                'comment': 'No image with name \'{0}\' '
-                    'found.'.format(name)}
+            return {
+                'result': False,
+                'comment':
+                    'No image with name \'{0}\' '
+                    'found.'.format(name)
+                }
         elif len(img_list) == 1:
             image = img_list[0]
     else:
