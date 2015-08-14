@@ -201,6 +201,24 @@ class WriteSaltSshPackagingFile(Command):
 
 if WITH_SETUPTOOLS:
     class Develop(develop):
+        user_options = develop.user_options + [
+            ('write-salt-version', None,
+             'Generate Salt\'s _version.py file which allows proper version '
+             'reporting. This defaults to False on develop/editable setups.')
+        ]
+        boolean_options = develop.boolean_options + [
+            'write-salt-version'
+        ]
+
+        def initialize_options(self):
+            develop.initialize_options(self)
+            self.write_salt_version = False
+
+        def finalize_options(self):
+            develop.finalize_options(self)
+            if 'WRITE_SALT_VERSION' in os.environ:
+                self.write_salt_version = True
+
         def run(self):
             if IS_WINDOWS_PLATFORM:
                 if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
@@ -218,6 +236,10 @@ if WITH_SETUPTOOLS:
                 self.distribution.salt_download_windows_dlls = True
                 self.run_command('download-windows-dlls')
                 self.distribution.salt_download_windows_dlls = None
+
+            if self.write_salt_version is True:
+                self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+                self.run_command('write-salt-version')
             develop.run(self)
 
 
