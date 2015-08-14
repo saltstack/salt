@@ -208,10 +208,16 @@ if WITH_SETUPTOOLS:
                     self.distribution.salt_installing_m2crypto_windows = True
                     self.run_command('install-m2crypto-windows')
                     self.distribution.salt_installing_m2crypto_windows = None
+
+                # Install PyCrypto
                 self.distribution.salt_installing_pycrypto_windows = True
                 self.run_command('install-pycrypto-windows')
                 self.distribution.salt_installing_pycrypto_windows = None
 
+                # Download the required DLLs
+                self.distribution.salt_download_windows_dlls = True
+                self.run_command('download-windows-dlls')
+                self.distribution.salt_download_windows_dlls = None
             develop.run(self)
 
 
@@ -268,6 +274,66 @@ class InstallPyCryptoWindowsWheel(Command):
             )
         with indent_log():
             call_subprocess(call_arguments)
+
+
+class DownloadWindowsDlls(Command):
+
+    description = 'Download required DLL\'s for windows'
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        if getattr(self.distribution, 'salt_download_windows_dlls', None) is None:
+            print('This command is not meant to be called on it\'s own')
+            exit(1)
+        import platform
+        from pip.utils.logging import indent_log
+        platform_bits, _ = platform.architecture()
+        url= 'http://repo.saltstack.com/windows/dependencies/{bits}/{fname}32.dll'
+        dest = os.path.join(os.path.dirname(sys.executable), '{fname}32.dll')
+        with indent_log():
+            for fname in ('libeay', 'ssleay'):
+                furl = url.format(bits=platform_bits[:2], fname=fname)
+                fdest = dest.format(fname=fname)
+                if not os.path.exists(fdest):
+                    log.info('Downloading {0}32.dll to {1} from {2}'.format(fname, fdest, furl))
+                    try:
+                        import requests
+                        from contextlib import closing
+                        with closing(requests.get(url, stream=True)) as req:
+                            if req.status_code == 200:
+                                with open(fdest, 'w') as wfh:
+                                    for chunk in req.iter_content(chunk_size=4096):
+                                        if chunk:  # filter out keep-alive new chunks
+                                            wfh.write(chunk)
+                                            wfh.flush()
+                            else:
+                                log.error(
+                                    'Failed to download {0}32.dll to {1} from {2}'.format(
+                                        fname, fdest, furl
+                                    )
+                                )
+                    except ImportError:
+                        req = urlopen(url)
+
+                        if req.getcode() == 200:
+                            with open(fdest, 'w') as wfh:
+                                while True:
+                                    for chunk in req.read(4096):
+                                        if not chunk:
+                                            break
+                                        wfh.write(chunk)
+                                        wfh.flush()
+                        else:
+                            log.error(
+                                'Failed to download {0}32.dll to {1} from {2}'.format(
+                                    fname, fdest, furl
+                                )
+                            )
 
 
 class Sdist(sdist):
@@ -593,9 +659,14 @@ class Install(install):
                 self.distribution.salt_installing_m2crypto_windows = True
                 self.run_command('install-m2crypto-windows')
                 self.distribution.salt_installing_m2crypto_windows = None
+            # Install PyCrypto
             self.distribution.salt_installing_pycrypto_windows = True
             self.run_command('install-pycrypto-windows')
             self.distribution.salt_installing_pycrypto_windows = None
+            # Download the required DLLs
+            self.distribution.salt_download_windows_dlls = True
+            self.run_command('download-windows-dlls')
+            self.distribution.salt_download_windows_dlls = None
         # Run install.run
         install.run(self)
 
@@ -711,7 +782,8 @@ class SaltDistribution(distutils.dist.Distribution):
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
-            self.cmdclass.update({'install-pycrypto-windows': InstallPyCryptoWindowsWheel})
+            self.cmdclass.update({'install-pycrypto-windows': InstallPyCryptoWindowsWheel,
+                                  'download-windows-dlls': DownloadWindowsDlls})
             if __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                 self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
