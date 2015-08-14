@@ -2157,6 +2157,9 @@ class ClearFuncs(object):
             if 'metadata' in clear_load['kwargs']:
                 load['metadata'] = clear_load['kwargs'].get('metadata')
 
+            if 'module_executors' in clear_load['kwargs']:
+                load['module_executors'] = clear_load['kwargs'].get('module_executors')
+
         if 'user' in clear_load:
             log.info(
                 'User {user} Published command {fun} with jid {jid}'.format(
