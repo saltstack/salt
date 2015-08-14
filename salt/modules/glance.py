@@ -109,10 +109,10 @@ def _auth(profile=None, api_version=2, **connection_args):
     else:
         prefix = "keystone."
 
-    # look in connection_args first, then default to config file
     def get(key, default=None):
         '''
-        TODO: Add docstring.
+        Checks connection_args, then salt-minion config,
+        falls back to specified default value.
         '''
         return connection_args.get('connection_' + key,
             __salt__['config.get'](prefix + key, default))
@@ -422,7 +422,6 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     '''
     if id:
         image = image_show(id=id)
-        # TODO: This unwrapping should get a warn_until
         if len(image) == 1:
             image = image.values()[0]
     elif name:
