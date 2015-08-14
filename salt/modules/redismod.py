@@ -15,8 +15,9 @@ Module to provide redis functionality to Salt
     redis.password: None
 '''
 
-# Import Pytho libs
+# Import Python libs
 from __future__ import absolute_import
+from salt.ext.six.moves import zip
 
 # Import third party libs
 try:
@@ -52,6 +53,7 @@ def _connect(host=None, port=None, db=None, password=None):
         password = __salt__['config.option']('redis.password')
 
     return redis.StrictRedis(host, port, db, password)
+
 
 def _sconnect(host=None, port=None, password=None):
     '''
@@ -517,7 +519,7 @@ def sentinel_get_master_ip(master, host=None, port=None, password=None):
     '''
     server = _sconnect(host, port, password)
     ret = server.sentinel_get_master_addr_by_name(master)
-    return dict(zip(('master_host', 'master_port'), ret))
+    return dict(list(zip(('master_host', 'master_port'), ret)))
 
 
 def get_master_ip(host=None, port=None, password=None):
@@ -535,4 +537,4 @@ def get_master_ip(host=None, port=None, password=None):
     server = _connect(host, port, password)
     info = server.info()
     ret = (info.get('master_host', ''), info.get('master_port', ''))
-    return dict(zip(('master_host', 'master_port'), ret))
+    return dict(list(zip(('master_host', 'master_port'), ret)))
