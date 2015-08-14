@@ -118,17 +118,21 @@ def _auth(profile=None, api_version=2, **connection_args):
             __salt__['config.get'](prefix + key, default))
 
     user = get('user', 'admin')
-    password = get('password', 'ADMIN')
+    password = get('password', None)
     tenant = get('tenant', 'admin')
     tenant_id = get('tenant_id')
-    auth_url = get('auth_url', 'http://127.0.0.1:35357/')
+    auth_url = get('auth_url', 'http://127.0.0.1:35357/v2.0')
     insecure = get('insecure', False)
-    token = False # get('token')
+    admin_token = get('token')
     region = get('region')
     ks_endpoint = get('endpoint', 'http://127.0.0.1:9292/')
-    g_endpoint_url = __salt__['keystone.endpoint_get']('glance')['internalurl']
+    g_endpoint_url = __salt__['keystone.endpoint_get']('glance')
+    g_endpoint_url = g_endpoint_url['internalurl'].strip('v'+str(api_version))
 
-    if not token:
+    if admin_token and api_version != 1 and not password:
+        raise SaltInvocationError('Only can use keystone admin token ' +
+            'with Glance API v1')
+    elif api_version <= 2:
         kwargs = {'username': user,
                   'password': password,
                   'tenant_id': tenant_id,
@@ -140,33 +144,24 @@ def _auth(profile=None, api_version=2, **connection_args):
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs['insecure'] = True
-    #else:
-    #    kwargs = {'token': token,
-    #              'endpoint_url': endpoint}
-
-    if token:
-        log.debug('Calling glanceclient.client.Client(' +
-            '{0}, {1}, **{2})'.format(api_version, g_endpoint_url, kwargs))
-        try:
-            return client.Client(api_version, g_endpoint_url, **kwargs)
-        except exc.HTTPUnauthorized:
-            kwargs.pop('token')
-            kwargs['password'] = password
-            log.warn('Supplied token is invalid, trying to ' +
-                'get a new one using username and password.')
+    else:
+        kwargs = {'token': admin_token,
+                  'auth_url': auth_url,
+                  'endpoint_url': g_endpoint_url}
 
     if HAS_KEYSTONE:
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
             '{0}, **{1})'.format(ks_endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
-        #log.debug(help(keystone.get_token))
-        #kwargs['token'] = keystone.get_token(keystone.session)
+        log.debug(help(keystone.get_token))
+        kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
         # logging it anyway when in debug-mode
         kwargs.pop('password')
         log.debug('Calling glanceclient.client.Client(' +
-            '{0}, {1}, **{2})'.format(api_version, g_endpoint_url, kwargs))
+            '{0}, {1}, **{2})'.format(api_version,
+                g_endpoint_url, kwargs))
         # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
         # but we deal with those elsewhere
         return client.Client(api_version, g_endpoint_url, **kwargs)
