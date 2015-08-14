@@ -59,7 +59,7 @@ def present(source, vhost, destination, destination_type, routing_key):
 
         .. deprecated:: 2015.8.0
     '''
-    ret = {'name': source, 'result': True, 'comment': '', 'changes': {}}
+    ret = {'name': source, 'comment': '', 'changes': {}}
 
     vhost_exists = __salt__['rabbitmq.binding_vhost_exists'](vhost, source, destination, destination_type, routing_key)
 
@@ -72,6 +72,7 @@ def present(source, vhost, destination, destination_type, routing_key):
 
     else:
         if vhost_exists:
+            ret['result'] = True
             ret['comment'] = 'Binding Source {0} Destination {1} Destination Type {2} RoutingKey {3} already exists in VHost {4}'.format(source, destination, destination_type, routing_key, vhost)
         else:
             result = __salt__['rabbitmq.declare_binding'](source, vhost, destination, destination_type, routing_key)
@@ -79,8 +80,17 @@ def present(source, vhost, destination, destination_type, routing_key):
                 ret['result'] = False
                 ret['comment'] = result['Error']
             elif 'Added' in result:
+                ret['result'] = True
                 ret['comment'] = result['Declared']
-                ret['changes'] = {'old': '', 'new': source}
+                ret['changes'] = {'old': '',
+                                  'new': {
+                                      "source": source,
+                                      "vhost": vhost,
+                                      "destination": destination,
+                                      "destination_type": destination_type,
+                                      "routing_key": routing_key
+                                  }
+                              }
     return ret
 
 
