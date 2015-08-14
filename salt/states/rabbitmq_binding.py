@@ -61,18 +61,18 @@ def present(source, vhost, destination, destination_type, routing_key):
     '''
     ret = {'name': source, 'result': True, 'comment': '', 'changes': {}}
 
-    vhost_exists = __salt__['rabbitmq.binding_vhost_exists'](vhost,source, destination, destination_type, routing_key )
+    vhost_exists = __salt__['rabbitmq.binding_vhost_exists'](vhost, source, destination, destination_type, routing_key)
 
     if __opts__['test']:
         ret['result'] = None
         if vhost_exists:
-            ret['comment'] = 'Binding {0} already exists in VHost {1}'.format(name, vhost)
+            ret['comment'] = 'Binding Source {0} Destination {1} Destination Type {2} RoutingKey {3} already exists in VHost {4}'.format(source, destination, destination_type, routing_key, vhost)
         else:
-            ret['comment'] = 'Creating Binding {0} in VHost {0}'.format(name, vhost)
+            ret['comment'] = 'Creating Binding Source {0} Destination {1} Destination Type {2} RoutingKey {3} in VHost {4}'.format(source, destination, destination_type, routing_key, vhost)
 
     else:
         if vhost_exists:
-            ret['comment'] = 'Binding {0} already exists in VHost {1}'.format(name, vhost)
+            ret['comment'] = 'Binding Source {0} Destination {1} Destination Type {2} RoutingKey {3} already exists in VHost {4}'.format(source, destination, destination_type, routing_key, vhost)
         else:
             result = __salt__['rabbitmq.declare_binding'](source, vhost, destination, destination_type, routing_key)
             if 'Error' in result:
@@ -82,6 +82,7 @@ def present(source, vhost, destination, destination_type, routing_key):
                 ret['comment'] = result['Declared']
                 ret['changes'] = {'old': '', 'new': source}
     return ret
+
 
 def absent(name):
     #TODO

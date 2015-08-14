@@ -63,14 +63,14 @@ def present(name, vhost, typename, durable, auto_delete, internal):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    vhost_exists = __salt__['rabbitmq.exchange_vhost_exists'](vhost,name)
+    vhost_exists = __salt__['rabbitmq.exchange_vhost_exists'](vhost, name)
 
     if __opts__['test']:
         ret['result'] = None
         if vhost_exists:
             ret['comment'] = 'Exchange {0} already exists in VHost {1}'.format(name, vhost)
         else:
-            ret['comment'] = 'Creating Exchange {0} in VHost {0}'.format(name, vhost)
+            ret['comment'] = 'Creating Exchange {0} in VHost {1}'.format(name, vhost)
 
     else:
         if vhost_exists:
@@ -84,6 +84,7 @@ def present(name, vhost, typename, durable, auto_delete, internal):
                 ret['comment'] = result['Declared']
                 ret['changes'] = {'old': '', 'new': name}
     return ret
+
 
 def absent(name):
     #TODO
