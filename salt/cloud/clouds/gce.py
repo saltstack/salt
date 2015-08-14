@@ -2121,11 +2121,10 @@ def create(vm_=None, call=None):
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
     vm_['key_filename'] = ssh_key
-
-    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
+    salt.utils.cloud.bootstrap(vm_, __opts__)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
+    log.trace(
         '{0[name]!r} VM creation details:\n{1}'.format(
             vm_, pprint.pformat(node_dict)
         )
@@ -2143,7 +2142,7 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
-    return ret
+    return node_dict
 
 
 def update_pricing(kwargs=None, call=None):
