@@ -983,6 +983,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             install_requires.append('WMI')
+            install_requires.append('pypiwin32 >= 219')
 
         if self.salt_transport == 'zeromq':
             install_requires += _parse_requirements_file(SALT_ZEROMQ_REQS)
