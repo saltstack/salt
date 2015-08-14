@@ -535,7 +535,6 @@ def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     '''
 
     if not _exactly_one((vpc_name, vpc_id)):
-        log.debug('EXISTS: {} , {}'.format(vpc_id, vpc_name))
         raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
                                   'must be provided.')
     if vpc_name:
