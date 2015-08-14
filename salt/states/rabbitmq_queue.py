@@ -26,9 +26,9 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if RabbitMQ is installed.
+    Only load if RabbitMQ rabbitmqcadmin is installed.
     '''
-    return salt.utils.which('rabbitmqctl') is not None
+    return salt.utils.which('rabbitmqadmin') is not None
 
 
 def present(name, vhost, durable, auto_delete):
