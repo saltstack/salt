@@ -323,13 +323,10 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
             'result': False,
             'comment': str(forbidden)
             }
-    ret = {
+    return {
         'result': True,
-        'comment': 'Deleted image with ID {0}'.format(id)
+        'comment': 'Deleted image \'{0}\' ({1}).'.format(image.name, id)
         }
-    if name:
-        ret['comment'] += ' ({0})'.format(name)
-    return ret
 
 
 def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
