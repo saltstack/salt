@@ -316,10 +316,7 @@ def load_args_and_kwargs(func, args, data=None):
             _args.append(arg)
 
     if invalid_kwargs:
-        raise SaltInvocationError(
-            'The following keyword arguments are not valid: {0}'
-            .format(', '.join(invalid_kwargs))
-        )
+        salt.utils.invalid_kwargs(invalid_kwargs)
 
     if argspec.keywords and isinstance(data, dict):
         # this function accepts **kwargs, pack in the publish data
