@@ -5,7 +5,7 @@ The setup script for salt
 '''
 
 from __future__ import absolute_import
-
+# pylint: disable=file-perms
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
@@ -18,7 +18,7 @@ import time
 try:
     from urllib2 import urlopen
 except ImportError:
-    from urllib.request import urlopen
+    from urllib.request import urlopen  # pylint: disable=no-name-in-module
 from datetime import datetime
 # pylint: disable=E0611
 import distutils.dist
@@ -194,7 +194,7 @@ class WriteSaltSshPackagingFile(Command):
 if WITH_SETUPTOOLS:
     class Develop(develop):
         def run(self):
-            if IS_WINDOWS_PLATFORM:
+            if IS_WINDOWS_PLATFORM and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
                 # Install M2Crypto first
                 self.distribution.salt_installing_m2crypto_windows = True
                 self.run_command('install-m2crypto-windows')
@@ -543,7 +543,7 @@ class Install(install):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             self.build_lib, 'salt', '_version.py'
         )
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
             # Install M2Crypto first
             self.distribution.salt_installing_m2crypto_windows = True
             self.run_command('install-m2crypto-windows')
@@ -662,7 +662,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
-        if IS_WINDOWS_PLATFORM:
+        if IS_WINDOWS_PLATFORM and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
             self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
         if WITH_SETUPTOOLS:
