@@ -10,18 +10,19 @@ import salt.utils
 
 # Import python libs
 import logging
-import random
-import string
 import json
-from salt.ext.six.moves import range
+
+from rabbitmq import _format_response
 
 log = logging.getLogger(__name__)
 
+
 def translate_boolean(v):
-    if v :
+    if v:
         return 'true'
     else:
         return 'false'
+
 
 def __virtual__():
     '''
@@ -54,44 +55,9 @@ def declare_queue(name, vhost, durable, auto_delete, runas=None):
 
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('rabbitmqadmin declare queue --vhost={0} name={1} durable={2} auto_delete={2}'.format(vhost,name,durable, auto_delete),
-                              python_shell=False,
-                              runas=runas)
-    log.debug(res)
-    msg = 'Declared'
-    return _format_response(res, msg)
-
-
-def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runas=None):
-    '''
-    Adds a exchange via rabbitmqctl declare exchange.
-
-    ./rabbitmqadmin declare exchange --vhost=Some_Virtual_Host name=some_exchange type=fanout durable=True auto_delete=False internal=False
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' rabbitmq declare_exchange '<exchange_name>' '<vhost_name>' 'fanout' True False False
-
-
-    Setup:
-
-    rabbitmqadmin is from http://localhost:15672/cli/rabbitmqadmin
-    see rabbitmq-formula/rabbitmq/rabbit-management.sls
-
-    '''
-
-    durable = translate_boolean(durable)
-    auto_delete = translate_boolean(auto_delete)
-    internal = translate_boolean(internal)
-
-
-    if runas is None:
-        runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
-                              python_shell=False,
-                              runas=runas)
+    res = __salt__['cmd.run']('rabbitmqadmin declare queue --vhost={0} name={1} durable={2} auto_delete={3}'.format(
+        vhost, name, durable, auto_delete),
+                              python_shell=False, runas=runas)
     log.debug(res)
     msg = 'Declared'
     return _format_response(res, msg)
@@ -150,7 +116,6 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
     auto_delete = translate_boolean(auto_delete)
     internal = translate_boolean(internal)
 
-
     if runas is None:
         runas = salt.utils.get_user()
     res = __salt__['cmd.run']('rabbitmqadmin declare exchange --vhost={0} name={1} type={2} durable={3} auto_delete={4} internal={5}'.format(vhost, name, typename, durable, auto_delete, internal),
@@ -159,6 +124,7 @@ def declare_exchange(name, vhost, typename, durable, auto_delete, internal, runa
     log.debug(res)
     msg = 'Declared'
     return _format_response(res, msg)
+
 
 def exchange_vhost_exists(name, vhost, runas=None, *kwargs):
     '''
@@ -190,10 +156,11 @@ def exchange_vhost_exists(name, vhost, runas=None, *kwargs):
     log.debug(res)
     for exchange in res:
         log.debug(exchange)
-        if exchange['name'] == name and exchange['vhost'] == vhost :
+        if exchange['name'] == name and exchange['vhost'] == vhost:
             return True
 
     return False
+
 
 def binding_vhost_exists(source, destination, destination_type, routing_key, vhost, runas=None, *kwargs):
     '''
