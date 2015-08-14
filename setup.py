@@ -71,6 +71,7 @@ WITH_SETUPTOOLS = False
 if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
     try:
         from setuptools import setup
+        from setuptools.command.develop import develop
         from setuptools.command.install import install
         from setuptools.command.sdist import sdist
         from setuptools.command.egg_info import egg_info
@@ -188,6 +189,17 @@ class WriteSaltSshPackagingFile(Command):
             # pylint: disable=E0602
             open(self.distribution.salt_ssh_packaging_file, 'w').write('Packaged for Salt-SSH\n')
             # pylint: enable=E0602
+
+
+if WITH_SETUPTOOLS:
+    class Develop(develop):
+        def run(self):
+            if IS_WINDOWS_PLATFORM:
+                # Install M2Crypto first
+                self.distribution.salt_installing_m2crypto_windows = True
+                self.run_command('install-m2crypto-windows')
+                self.distribution.salt_installing_m2crypto_windows = None
+            develop.run(self)
 
 
 class InstallM2CryptoWindows(Command):
@@ -649,8 +661,9 @@ class SaltDistribution(distutils.dist.Distribution):
                               'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
-                                  'install_lib': InstallLib
-                                  'install-m2crypto-windows': InstallM2CryptoWindows})
+                                  'install_lib': InstallLib})
+        if IS_WINDOWS_PLATFORM:
+            self.cmdclass.update({'install-m2crypto-windows': InstallM2CryptoWindows})
 
         self.license = 'Apache Software License 2.0'
         self.packages = self.discover_packages()
