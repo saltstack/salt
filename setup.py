@@ -128,6 +128,10 @@ def _parse_requirements_file(requirements_file):
                 continue
             if IS_WINDOWS_PLATFORM and 'libcloud' in line:
                 continue
+            if IS_WINDOWS_PLATFORM and 'M2Crypto' in line and __saltstack_version__.info < (2015, 8):  # pylint: disable=undefined-variable
+                # In Windows, we're installing M2CryptoWin{32,64} which comes
+                # compiled
+                continue
             parsed_requirements.append(line)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
