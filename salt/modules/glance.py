@@ -130,9 +130,12 @@ def _auth(profile=None, api_version=2, **connection_args):
     g_endpoint_url = g_endpoint_url['internalurl'].strip('v'+str(api_version))
 
     if admin_token and api_version != 1 and not password:
+        # If we had a password we could just
+        # ignore the admin-token and move on...
         raise SaltInvocationError('Only can use keystone admin token ' +
             'with Glance API v1')
-    elif api_version <= 2:
+    elif password:
+        # Can't use the admin-token anyway
         kwargs = {'username': user,
                   'password': password,
                   'tenant_id': tenant_id,
@@ -144,10 +147,12 @@ def _auth(profile=None, api_version=2, **connection_args):
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs['insecure'] = True
-    else:
+    elif api_version == 1 and admin_token:
         kwargs = {'token': admin_token,
                   'auth_url': auth_url,
                   'endpoint_url': g_endpoint_url}
+    else:
+        raise SaltInvocationError('No credentials to authenticate with.')
 
     if HAS_KEYSTONE:
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
