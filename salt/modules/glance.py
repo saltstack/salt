@@ -121,17 +121,19 @@ def _auth(profile=None, api_version=2, **connection_args):
     password = get('password', 'ADMIN')
     tenant = get('tenant', 'admin')
     tenant_id = get('tenant_id')
-    auth_url = get('auth_url', 'http://127.0.0.1:35357/v2.0/')
+    auth_url = get('auth_url', 'http://127.0.0.1:35357/')
     insecure = get('insecure', False)
     token = False # get('token')
     region = get('region')
-    endpoint = get('endpoint', 'http://127.0.0.1:9292/')
+    ks_endpoint = get('endpoint', 'http://127.0.0.1:9292/')
+    g_endpoint_url = __salt__['keystone.endpoint_get']('glance')['internalurl']
 
     if not token:
         kwargs = {'username': user,
                   'password': password,
                   'tenant_id': tenant_id,
                   'auth_url': auth_url,
+                  'endpoint_url': g_endpoint_url,
                   'region_name': region,
                   'tenant_name': tenant}
         # 'insecure' keyword not supported by all v2.0 keystone clients
@@ -144,9 +146,9 @@ def _auth(profile=None, api_version=2, **connection_args):
 
     if token:
         log.debug('Calling glanceclient.client.Client(' +
-            '{0}, {1}, **{2})'.format(api_version, endpoint, kwargs))
+            '{0}, {1}, **{2})'.format(api_version, g_endpoint_url, kwargs))
         try:
-            return client.Client(api_version, endpoint, **kwargs)
+            return client.Client(api_version, g_endpoint_url, **kwargs)
         except exc.HTTPUnauthorized:
             kwargs.pop('token')
             kwargs['password'] = password
@@ -155,7 +157,7 @@ def _auth(profile=None, api_version=2, **connection_args):
 
     if HAS_KEYSTONE:
         log.debug('Calling keystoneclient.v2_0.client.Client(' +
-            '{0}, **{1})'.format(endpoint, kwargs))
+            '{0}, **{1})'.format(ks_endpoint, kwargs))
         keystone = kstone.Client(**kwargs)
         #log.debug(help(keystone.get_token))
         #kwargs['token'] = keystone.get_token(keystone.session)
@@ -164,10 +166,10 @@ def _auth(profile=None, api_version=2, **connection_args):
         # logging it anyway when in debug-mode
         kwargs.pop('password')
         log.debug('Calling glanceclient.client.Client(' +
-            '{0}, {1}, **{2})'.format(api_version, endpoint, kwargs))
+            '{0}, {1}, **{2})'.format(api_version, g_endpoint_url, kwargs))
         # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
         # but we deal with those elsewhere
-        return client.Client(api_version, endpoint, **kwargs)
+        return client.Client(api_version, g_endpoint_url, **kwargs)
     else:
         raise NotImplementedError(
             "Can't retrieve a auth_token without keystone")
