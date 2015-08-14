@@ -49,6 +49,10 @@ Module for handling openstack keystone calls.
         salt '*' keystone.tenant_list profile=openstack1
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+import logging
+
 # Import third party libs
 HAS_KEYSTONE = False
 try:
@@ -57,6 +61,8 @@ try:
     HAS_KEYSTONE = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -699,7 +705,13 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
                 break
     if not user_id:
         return {'Error': 'Unable to resolve user id'}
-    user = kstone.users.get(user_id)
+    try:
+        user = kstone.users.get(user_id)
+    except keystoneclient.exceptions.NotFound:
+        msg = 'Could not find user \'{0}\''.format(user_id)
+        log.error(msg)
+        return {'Error': msg}
+
     ret[user.name] = {'id': user.id,
                       'name': user.name,
                       'email': user.email,
