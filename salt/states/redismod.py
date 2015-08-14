@@ -28,6 +28,7 @@ overridden in states using the following arguments: ``host``, ``post``, ``db``,
         - db: 0
         - password: somuchkittycat
 '''
+from __future__ import absolute_import
 import copy
 
 __virtualname__ = 'redis'
@@ -121,7 +122,7 @@ def slaveof(name, sentinel_host=None, sentinel_port=None, sentinel_password=None
     Set this redis instance as a slave.
 
     .. versionadded: Boron
-    
+
     name
         Master to make this a slave of
 
@@ -141,7 +142,7 @@ def slaveof(name, sentinel_host=None, sentinel_port=None, sentinel_password=None
     sentinel_master = __salt__['redis.sentinel_get_master_ip'](name, sentinel_host, sentinel_port, sentinel_password)
     if sentinel_master['master_host'] in __salt__['network.ip_addrs']():
         ret['result'] = True
-        ret['comment'] = 'Minion is the master: '.format(name)
+        ret['comment'] = 'Minion is the master: {0}'.format(name)
         return ret
 
     first_master = __salt__['redis.get_master_ip'](**connection_args)
@@ -150,8 +151,7 @@ def slaveof(name, sentinel_host=None, sentinel_port=None, sentinel_password=None
         ret['comment'] = 'Minion already slave of master: {0}'.format(name)
         return ret
 
-
-    if __opts__['test'] == True:
+    if __opts__['test'] is True:
         ret['comment'] = 'Minion will be made a slave of {0}: {1}'.format(name, sentinel_master['host'])
         ret['result'] = None
         return ret

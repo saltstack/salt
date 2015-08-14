@@ -21,9 +21,11 @@ events based on the channels they are subscribed to.
 
 :depends: redis
 '''
+from __future__ import absolute_import
 import redis
-import threading
 import salt.client
+from salt.ext import six
+from salt.ext.six import zip
 
 try:
     import redis
@@ -59,12 +61,16 @@ class Listener(object):
 
     def work(self, item):
         ret = {'channel': item['channel']}
-        if isinstance(item['data'], (int, long)):
+        if isinstance(item['data'], six.integer_types):
             ret['code'] = item['data']
         elif item['channel'] == '+switch-master':
-            ret.update(dict(zip(('master', 'old_host', 'old_port', 'new_host', 'new_port'), item['data'].split(' '))))
+            ret.update(dict(list(zip(
+                ('master', 'old_host', 'old_port', 'new_host', 'new_port'), item['data'].split(' ')
+            ))))
         elif item['channel'] in ('+odown', '-odown'):
-            ret.update(dict(zip(('master', 'host', 'port'), item['data'].split(' ')[1:])))
+            ret.update(dict(list(zip(
+                ('master', 'host', 'port'), item['data'].split(' ')[1:]
+            ))))
         else:
             ret = {
                 'channel': item['channel'],
