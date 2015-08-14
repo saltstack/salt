@@ -305,6 +305,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
         salt '*' glance.image_delete name=f16-jeos
     '''
     g_client = _auth(profile)
+    image = {'id': False, 'name': None}
     if name:
         for image in g_client.images.list():
             if image.name == name:
@@ -317,6 +318,8 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
                 'Unable to resolve image id '
                 'for name {0}'.format(name)
             }
+    elif not name:
+        name = image['name']
     try:
         g_client.images.delete(id)
     except exc.HTTPNotFound:
@@ -332,7 +335,7 @@ def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
             }
     return {
         'result': True,
-        'comment': 'Deleted image \'{0}\' ({1}).'.format(image.name, id)
+        'comment': 'Deleted image \'{0}\' ({1}).'.format(name, id),
         }
 
 
