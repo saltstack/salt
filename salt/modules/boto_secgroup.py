@@ -142,7 +142,7 @@ def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None,
     '''
     if name:
         if vpc_name:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = __salt__['boto_vpc.check_vpc'](vpc_id, vpc_name, region, key, keyid, profile)
         if vpc_id is None:
             log.debug('getting group for {0}'.format(name))
             group_filter = {'group-name': name}
@@ -308,7 +308,7 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if vpc_name:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = __salt__['boto_vpc.check_vpc'](vpc_id, vpc_name, region, key, keyid, profile)
     created = conn.create_security_group(name, description, vpc_id)
     if created:
         log.info('Created security group {0}.'.format(name))
@@ -492,58 +492,3 @@ def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
         return [vpc.id for vpc in vpcs]
     else:
         return []
-
-
-def _get_id(vpc_name=None, cidr=None, tags=None, region=None, key=None,
-            keyid=None, profile=None):
-    '''
-    Given VPC properties, return the VPC id if a match is found.
-    Borrowed from boto_vpc; these could be refactored into a common library
-    '''
-
-    if vpc_name and not any((cidr, tags)):
-        vpc_id = _cache_id(vpc_name, region=region,
-                           key=key, keyid=keyid,
-                           profile=profile)
-        if vpc_id:
-            return vpc_id
-
-    vpc_ids = _find_vpcs(vpc_name=vpc_name, cidr=cidr, tags=tags, region=region,
-                         key=key, keyid=keyid, profile=profile)
-    if vpc_ids:
-        log.info("Matching VPC: {0}".format(" ".join(vpc_ids)))
-        if len(vpc_ids) == 1:
-            vpc_id = vpc_ids[0]
-            if vpc_name:
-                _cache_id(vpc_name, vpc_id,
-                          region=region, key=key,
-                          keyid=keyid, profile=profile)
-            return vpc_id
-        else:
-            raise CommandExecutionError('Found more than one VPC matching the criteria.')
-    else:
-        log.info('No VPC found.')
-        return None
-
-
-def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
-    '''
-    Check whether a VPC with the given name or id exists.
-    Returns the vpc_id or None. Raises SaltInvocationError if
-    both vpc_id and vpc_name are None. Optionally raise a
-    CommandExecutionError if the VPC does not exist.
-
-    Borrowed from boto_vpc; these could be refactored into a common library
-    '''
-
-    if not _exactly_one((vpc_name, vpc_id)):
-        raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
-                                  'must be provided.')
-    if vpc_name:
-        vpc_id = _get_id(vpc_name=vpc_name, region=region, key=key, keyid=keyid,
-                         profile=profile)
-    elif not _find_vpcs(vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                        profile=profile):
-        log.info('VPC {0} does not exist.'.format(vpc_id))
-        return None
-    return vpc_id
