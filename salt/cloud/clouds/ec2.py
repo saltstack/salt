@@ -3763,7 +3763,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
                                                 argument_being_watched='status',
                                                 required_argument_response='completed')
 
-    return data
+    return r_data
 
 
 def delete_snapshot(kwargs=None, call=None):
