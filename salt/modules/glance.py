@@ -456,8 +456,7 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
             image = image.values()[0]
     elif name:
         img_list = image_list(name=name)
-        if img_list is not list and 'result' in img_list and \
-                not img_list['result']:
+        if img_list is dict and 'result' in img_list:
             return img_list
         elif len(img_list) == 0:
             return {
@@ -467,7 +466,10 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
                     'found.'.format(name)
                 }
         elif len(img_list) == 1:
-            image = img_list[0]
+            try:
+                image = img_list[0]
+            except KeyError:
+                image = img_list[name]
     else:
         raise SaltInvocationError
     log.debug('Found image:\n{0}'.format(image))
