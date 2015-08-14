@@ -961,14 +961,6 @@ class SaltDistribution(distutils.dist.Distribution):
     def parse_command_line(self):
         args = distutils.dist.Distribution.parse_command_line(self)
 
-        # Setup our property functions after class initialization and
-        # after parsing the command line since most are set to None
-        for funcname in dir(self):
-            if not funcname.startswith('_property_'):
-                continue
-            property_name = funcname.split('_property_', 1)[-1]
-            setattr(self, property_name, getattr(self, funcname))
-
         if not self.ssh_packaging and PACKAGED_FOR_SALT_SSH:
             self.ssh_packaging = 1
 
@@ -985,6 +977,16 @@ class SaltDistribution(distutils.dist.Distribution):
                     self.salt_transport
                 )
             )
+
+        # Setup our property functions after class initialization and
+        # after parsing the command line since most are set to None
+        # ATTENTION: This should be the last step before returning the args or
+        # some of the requirements won't be correctly set
+        for funcname in dir(self):
+            if not funcname.startswith('_property_'):
+                continue
+            property_name = funcname.split('_property_', 1)[-1]
+            setattr(self, property_name, getattr(self, funcname))
 
         return args
     # <---- Overridden Methods ---------------------------------------------------------------------------------------
