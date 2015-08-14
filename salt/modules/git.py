@@ -5,6 +5,7 @@ Support for the Git SCM
 from __future__ import absolute_import
 
 # Import python libs
+import copy
 import logging
 import os
 import shlex
@@ -27,7 +28,7 @@ def __virtual__():
 
 
 def _git_run(command, cwd=None, runas=None, identity=None,
-             ignore_retcode=False, **kwargs):
+             ignore_retcode=False, failhard=True, **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -100,7 +101,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 stderrs.append(result['stderr'])
 
         # we've tried all IDs and still haven't passed, so error out
-        raise CommandExecutionError('\n\n'.join(stderrs))
+        if failhard:
+            raise CommandExecutionError('\n\n'.join(stderrs))
+        return result
 
     else:
         result = __salt__['cmd.run_all'](command,
@@ -110,15 +113,16 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                                          python_shell=False,
                                          ignore_retcode=ignore_retcode,
                                          **kwargs)
-        retcode = result['retcode']
 
-        if retcode == 0:
+        if result['retcode'] == 0:
             return result
         else:
-            msg = 'Command \'{0}\' failed'.format(command)
-            if result['stderr']:
-                msg += ': {0}'.format(result['stderr'])
-            raise CommandExecutionError(msg)
+            if failhard:
+                msg = 'Command \'{0}\' failed'.format(command)
+                if result['stderr']:
+                    msg += ': {0}'.format(result['stderr'])
+                raise CommandExecutionError(msg)
+            return result
 
 
 def _check_abs(*paths):
@@ -139,8 +143,13 @@ def _format_opts(opts):
     if opts is None:
         return []
     elif isinstance(opts, list):
-        if any(x for x in opts if not isinstance(x, six.string_types)):
-            opts = [str(x) for x in opts]
+        new_opts = []
+        for item in opts:
+            if isinstance(item, six.string_types):
+                new_opts.append(item)
+            else:
+                new_opts.append(str(item))
+        return new_opts
     else:
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
@@ -493,14 +502,7 @@ def archive(cwd,
     kwargs = salt.utils.clean_kwargs(**kwargs)
     format_ = kwargs.pop('format', None)
     if kwargs:
-        raise SaltInvocationError(
-            'The following keyword arguments are invalid: {0}'.format(
-                ', '.join([
-                    '{0}={1}'.format(key, val)
-                    for key, val in six.iteritems(kwargs)
-                ])
-            )
-        )
+        salt.utils.invalid_kwargs(kwargs)
 
     if fmt:
         salt.utils.warn_until(
@@ -848,6 +850,243 @@ def merge(cwd,
             rev = str(rev)
         command.append(rev)
     command.extend(_format_opts(opts))
+    return _git_run(command,
+                    cwd=cwd,
+                    runas=user,
+                    ignore_retcode=ignore_retcode)['stdout']
+
+
+def merge_base(cwd,
+               refs=None,
+               octopus=False,
+               is_ancestor=False,
+               independent=False,
+               fork_point=None,
+               opts='',
+               user=None,
+               ignore_retcode=False,
+               **kwargs):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Interface to `git-merge-base(1)`_.
+
+    cwd
+        The path to the git checkout
+
+    refs
+        Any refs/commits to check for a merge base. Can be passed as a
+        comma-separated list or a Python list.
+
+    all : False
+        Return a list of all matching merge bases. Not compatible with any of
+        the below options except for ``octopus``.
+
+    octopus : False
+        If ``True``, then this function will determine the best common
+        ancestors of all specified commits, in preparation for an n-way merge.
+        See here_ for a description of how these bases are determined.
+
+        Set ``all`` to ``True`` with this option to return all computed merge
+        bases, otherwise only the "best" will be returned.
+
+    is_ancestor : False
+        If ``True``, then instead of returning the merge base, return a
+        boolean telling whether or not the first commit is an ancestor of the
+        second commit.
+
+        .. note::
+            This option requires two commits to be passed.
+
+    independent : False
+        If ``True``, this function will return the IDs of the refs/commits
+        passed which cannot be reached by another commit.
+
+    fork_point
+        If passed, then this function will return the commit where the
+        commit diverged from the ref specified by ``fork_point``. If no fork
+        point is found, ``None`` is returned.
+
+        .. note::
+            At most one commit is permitted to be passed if a ``fork_point`` is
+            specified. If no commits are passed, then ``HEAD`` is assumed.
+
+    opts
+        Any additional options to add to the command line, in a single string
+
+        .. note::
+            On the Salt CLI, if the opts are preceded with a dash, it is
+            necessary to precede them with ``opts=`` (as in the CLI examples
+            below) to avoid causing errors with Salt's own argument parsing.
+
+            This option should not be necessary unless new CLI arguments are
+            added to `git-merge-base(1)`_ and are not yet supported in Salt.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    ignore_retcode : False
+        if ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    .. _`git-merge-base(1)`: http://git-scm.com/docs/git-merge-base
+    .. _here: http://git-scm.com/docs/git-merge-base#_discussion
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion git.merge_base /path/to/repo HEAD upstream/mybranch
+        salt myminion git.merge_base /path/to/repo 8f2e542,4ad8cab,cdc9886 octopus=True
+        salt myminion git.merge_base /path/to/repo refs=8f2e542,4ad8cab,cdc9886 independent=True
+        salt myminion git.merge_base /path/to/repo refs=8f2e542,4ad8cab is_ancestor=True
+        salt myminion git.merge_base /path/to/repo fork_point=upstream/master
+        salt myminion git.merge_base /path/to/repo refs=mybranch fork_point=upstream/master
+    '''
+    _check_abs(cwd)
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    all_ = kwargs.pop('all', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    if all_ and (independent or is_ancestor or fork_point):
+        raise SaltInvocationError(
+
+        )
+
+    if refs is None:
+        refs = []
+    elif not isinstance(refs, (list, tuple)):
+        refs = [x.strip() for x in str(refs).split(',')]
+    mutually_exclusive_count = len(
+        [x for x in octopus, independent, is_ancestor, fork_point if x]
+    )
+    if mutually_exclusive_count > 1:
+        raise SaltInvocationError(
+            'Only one of \'octopus\', \'independent\', \'is_ancestor\', and '
+            '\'fork_point\' is permitted'
+        )
+    elif independent:
+        if all_:
+            raise SaltInvocationError(
+                '\'all\' is not compatible with \'independent\''
+            )
+    elif is_ancestor:
+        if all_:
+            raise SaltInvocationError(
+                '\'all\' is not compatible with \'is_ancestor\''
+            )
+        if len(refs) != 2:
+            raise SaltInvocationError(
+                'Two refs/commits are required if \'is_ancestor\' is True'
+            )
+    elif fork_point:
+        if all_:
+            raise SaltInvocationError(
+                '\'all\' is not compatible with \'fork_point\''
+            )
+        if len(refs) > 1:
+            raise SaltInvocationError(
+                'At most one ref/commit can be passed if \'fork_point\' is '
+                'specified'
+            )
+        elif not refs:
+            refs = ['HEAD']
+        if not isinstance(fork_point, six.string_types):
+            fork_point = str(fork_point)
+
+    command = ['git', 'merge-base']
+    command.extend(_format_opts(opts))
+    if all_:
+        command.append('--all')
+    if octopus:
+        command.append('--octopus')
+    elif is_ancestor:
+        command.append('--is-ancestor')
+    elif independent:
+        command.append('--independent')
+    elif fork_point:
+        command.extend(['--fork-point', fork_point])
+    for ref in refs:
+        if isinstance(ref, six.string_types):
+            command.append(ref)
+        else:
+            command.append(str(ref))
+    result = _git_run(command,
+                      cwd=cwd,
+                      runas=user,
+                      ignore_retcode=ignore_retcode,
+                      failhard=False if is_ancestor else True)
+    if is_ancestor:
+        return result['retcode'] == 0
+    all_bases = result['stdout'].splitlines()
+    if all_:
+        return all_bases
+    return all_bases[0]
+
+
+def merge_tree(cwd,
+               ref1,
+               ref2,
+               base=None,
+               user=None,
+               ignore_retcode=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Interface to `git-merge-tree(1)`_, shows the merge results and conflicts
+    from a 3-way merge without touching the index.
+
+    cwd
+        The path to the git checkout
+
+    ref1
+        First ref/commit to compare
+
+    ref2
+        Second ref/commit to compare
+
+    base
+        The base tree to use for the 3-way-merge. If not provided, then
+        :py:func:`git.merge_base <salt.modules.git.merge_base>` will be invoked
+        on ``ref1`` and ``ref2`` to determine the merge base to use.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    ignore_retcode : False
+        if ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    .. _`git-merge-tree(1)`: http://git-scm.com/docs/git-merge-tree
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion git.merge_tree /path/to/repo HEAD upstream/dev
+        salt myminion git.merge_tree /path/to/repo HEAD upstream/dev base=aaf3c3d
+    '''
+    _check_abs(cwd)
+
+    command = ['git', 'merge-tree']
+    if not isinstance(ref1, six.string_types):
+        ref1 = str(ref1)
+    if not isinstance(ref2, six.string_types):
+        ref2 = str(ref2)
+    if base is None:
+        try:
+            base = merge_base(cwd, refs=[ref1, ref2])
+        except (SaltInvocationError, CommandExecutionError):
+            raise CommandExecutionError(
+                'Unable to determine merge base for {0} and {1}'
+                .format(ref1, ref2)
+            )
+    command.extend([base, ref1, ref2])
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -1531,12 +1770,12 @@ def remote_set(cwd,
         salt myminion git.remote_set /path/to/repo https://github.com/user/repo.git remote=upstream push_url=git@github.com:user/repo.git
     '''
     # Check if remote exists
-    if remote not in remotes(cwd, user=user, ignore_retcode=ignore_retcode):
+    if remote in remotes(cwd, user=user, ignore_retcode=ignore_retcode):
         log.debug(
             'Remote \'{0}\' already exists in git checkout located at {1}, '
             'removing so it can be re-added'.format(remote, cwd)
         )
-        command = ['git', 'remote', 'rm', name]
+        command = ['git', 'remote', 'rm', remote]
         _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     # Add remote
     url = _add_http_basic_auth(url, https_user, https_pass)
@@ -1558,7 +1797,7 @@ def remote_set(cwd,
         _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     return remote_get(cwd=cwd,
                       remote=remote,
-                      runas=user,
+                      user=user,
                       ignore_retcode=ignore_retcode)
 
 
@@ -1793,17 +2032,17 @@ def stash(cwd, opts='', user=None, ignore_retcode=False):
 
 def config_set(cwd,
                key,
-               value,
+               value=None,
+               multivar=None,
                user=None,
                ignore_retcode=False,
                is_global=False):
     '''
-    Set a key in the git configuration file (.git/config) of the repository or
-    globally.
+    Set a key in the git configuration file
 
     cwd
         The path to the git checkout. Must be an absolute path, or the word
-        ``global``.
+        ``global`` to indicate that a global key should be set.
 
         .. versionchanged:: 2015.8.0
             Can now be set to ``global`` instead of an absolute path, to set a
@@ -1820,7 +2059,7 @@ def config_set(cwd,
             Argument renamed from ``setting_name`` to ``key``
 
     value
-        The (new) value to set. Required.
+        The value to set for the specified key
 
         .. versionchanged:: 2015.8.0
             Argument renamed from ``setting_value`` to ``value``
@@ -1841,6 +2080,7 @@ def config_set(cwd,
         .. deprecated:: 2015.8.0
             Pass ``global`` as the value of ``cwd`` instead
 
+
     CLI Example:
 
     .. code-block:: bash
@@ -1848,7 +2088,8 @@ def config_set(cwd,
         salt myminion git.config_set /path/to/repo user.email me@example.com
         salt myminion git.config_set global user.email foo@bar.com
     '''
-    _check_abs(cwd)
+    if cwd != 'global':
+        _check_abs(cwd)
     if is_global:
         salt.utils.warn_until(
             'Nitrogen',
@@ -1858,7 +2099,101 @@ def config_set(cwd,
         )
         cwd = 'global'
 
+    if value is not None:
+        if not isinstance(value, six.string_types):
+            value = str(value)
+        desired = [value]
+    if multivar is not None:
+        if not isinstance(multivar, list):
+            try:
+                multivar = multivar.split(',')
+            except AttributeError:
+                multivar = str(multivar).split(',')
+        else:
+            new_multivar = []
+            for item in multivar:
+                if isinstance(item, six.string_types):
+                    new_multivar.append(item)
+                else:
+                    new_multivar.append(str(item))
+            multivar = new_multivar
+        desired = multivar
+
+    command_prefix = ['git', 'config']
+    if cwd == 'global':
+        command_prefix.append('--global')
+    first = True
+    for target in desired:
+        command = copy.copy(command_prefix)
+        if first is True:
+            command.append('--replace-all')
+            first = False
+        else:
+            command.append('--add')
+        command.extend([key, target])
+        _git_run(command,
+                 cwd=cwd if cwd != 'global' else None,
+                 runas=user,
+                 ignore_retcode=ignore_retcode)
+    return True
+
+
+def config_unset(cwd,
+                 key,
+                 value_regex=None,
+                 user=None,
+                 ignore_retcode=False,
+                 **kwargs):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Unset a key in the git configuration file
+
+    cwd
+        The path to the git checkout. Must be an absolute path, or the word
+        ``global`` to indicate that a global key should be unset.
+
+    key
+        The name of the configuration key to unset
+
+    value_regex
+        Regular expression that matches exactly one key, used to delete a
+        single value from a multivar. Ignored if ``all`` is set to ``True``.
+
+    all : False
+        If ``True`` unset all values for a multivar. If ``False``, and ``key``
+        is a multivar, an error will be raised.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.config_unset /path/to/repo foo.bar
+        salt myminion git.config_unset /path/to/repo foo.bar all=True
+    '''
+    if cwd != 'global':
+        _check_abs(cwd)
+
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    all_ = kwargs.pop('all', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     command = ['git', 'config']
+    if all_:
+        command.append('--unset-all')
+    else:
+        command.append('--unset')
+
     if cwd == 'global':
         command.append('--global')
     elif not os.path.isabs(cwd):
@@ -1866,30 +2201,114 @@ def config_set(cwd,
             'Path must be either \'global\' or an absolute path to a git '
             'checkout'
         )
-    command.extend([key, value])
+    if not isinstance(key, six.string_types):
+        key = str(key)
+    command.append(key)
+    if value_regex is not None:
+        if not isinstance(value_regex, six.string_types):
+            value_regex = str(value_regex)
+        command.append(value_regex)
+    ret = _git_run(command,
+                   cwd=cwd if cwd != 'global' else None,
+                   runas=user,
+                   ignore_retcode=ignore_retcode,
+                   failhard=False)
+    retcode = ret['retcode']
+    if retcode == 0:
+        return True
+    elif retcode == 1:
+        raise CommandExecutionError('Section or key is invalid')
+    elif retcode == 5:
+        if config_get(cwd,
+                      key,
+                      user=user,
+                      ignore_retcode=ignore_retcode) is None:
+            raise CommandExecutionError(
+                'Key \'{0}\' does not exist'.format(key)
+            )
+        else:
+            msg = 'Multiple values exist for key \'{0}\''.format(key)
+            if value_regex is not None:
+                msg += ' and value_regex matches multiple values'
+            raise CommandExecutionError(msg)
+    elif retcode == 6:
+        raise CommandExecutionError('The value_regex is invalid')
+    else:
+        msg = (
+            'Failed to unset key \'{0}\', git config returned exit code {1}'
+            .format(key, retcode)
+        )
+        if ret['stderr']:
+            msg += '; ' + ret['stderr']
+        raise CommandExecutionError(msg)
+
+
+def _config_getter(get_opt,
+                   cwd,
+                   key,
+                   value_regex=None,
+                   user=None,
+                   ignore_retcode=False,
+                   **kwargs):
+    '''
+    Common code for config.get_* functions, builds and runs the git CLI command
+    and returns the result dict for the calling function to parse.
+    '''
+    if cwd != 'global':
+        _check_abs(cwd)
+
+    if get_opt == '--get-regexp':
+        if value_regex is not None \
+                and not isinstance(value_regex, six.string_types):
+            value_regex = str(value_regex)
+    else:
+        # Ignore value_regex
+        value_regex = None
+
+    command = ['git', 'config', get_opt]
+    if cwd == 'global':
+        command.append('--global')
+    command.append(key)
+    if value_regex is not None:
+        command.append(value_regex)
     return _git_run(command,
                     cwd=cwd if cwd != 'global' else None,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode,
+                    failhard=False)
 
 
-def config_get(cwd, key, user=None, ignore_retcode=False):
+def config_get(cwd,
+               key,
+               user=None,
+               ignore_retcode=False,
+               **kwargs):
     '''
-    Get the value of a key using ``git config --get``
+    Get the value of a key in the git configuration file
 
     cwd
         The path to the git checkout. Must be an absolute path, or the word
-        ``global``.
+        ``global`` to indicate that a global key should be queried.
 
         .. versionchanged:: 2015.8.0
             Can now be set to ``global`` instead of an absolute path, to get
             the value from the global git configuration.
 
     key
-        The name of the configuration key to get
+        The name of the configuration key to get. Can also be a regex if
+        ``value_regex`` is specified.
 
         .. versionchanged:: 2015.8.0
-            Argument renamed from ``setting_name`` to ``key``
+            Argument renamed from ``setting_name`` to ``key``, and regex
+            support added.
+
+    all : False
+        If ``True``, return a list of all values set for ``key``. If the key
+        does not exist, ``None`` will be returned.
+
+        This argument will be ignored if ``value_regex`` is specified.
+
+        .. versionadded:: 2015.8.0
 
     user
         User under which to run the git command. By default, the command is run
@@ -1908,21 +2327,107 @@ def config_get(cwd, key, user=None, ignore_retcode=False):
 
         salt myminion git.config_get /path/to/repo user.name
         salt myminion git.config_get global user.email
+        salt myminion git.config_get core.gitproxy all=True
     '''
-    _check_abs(cwd)
-    command = ['git', 'config', '--get']
-    if cwd == 'global':
-        command.append('--global')
-    elif not os.path.isabs(cwd):
-        raise SaltInvocationError(
-            'The cwd must be either \'global\' or an absolute path to a git '
-            'checkout'
-        )
-    command.append(key)
-    return _git_run(command,
-                    cwd=cwd if cwd != 'global' else None,
-                    runas=user,
-                    ignore_retcode=ignore_retcode)['stdout']
+    # Sanitize kwargs and make sure that no invalid ones were passed. This
+    # allows us to accept 'all' as an argument to this function without
+    # shadowing all(), while also not allowing unwanted arguments to be passed.
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    all_ = kwargs.pop('all', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    result = _config_getter('--get-all',
+                            cwd,
+                            key,
+                            user=user,
+                            ignore_retcode=ignore_retcode)
+
+    # git config --get exits with retcode of 1 when key does not exist
+    if result['retcode'] == 1:
+        return None
+    ret = result['stdout'].splitlines()
+    if all_:
+        return ret
+    else:
+        try:
+            return ret[-1]
+        except IndexError:
+            # Should never happen but I'm paranoid and don't like tracebacks
+            return ''
+
+
+def config_get_regexp(cwd,
+                      key,
+                      value_regex=None,
+                      user=None,
+                      ignore_retcode=False):
+    '''
+    .. versionaded:: 2015.8.0
+
+    Get the value of a key or keys in the git configuration file using regexes
+    for more flexible matching. The return data is a dictionary mapping keys to
+    lists of values matching the ``value_regex``. If no values match, an empty
+    dictionary will be returned.
+
+    cwd
+        The path to the git checkout. Must be an absolute path, or the word
+        ``global`` to indicate that a global key should be queried.
+
+    key
+        Regex on which key names will be matched
+
+    value_regex
+        If specified, return all values matching this regex. The return data
+        will be a dictionary mapping keys to lists of values matching the
+        regex.
+
+        .. important::
+            Only values matching the ``value_regex`` will be part of the return
+            data. So, if ``key`` matches a multivar, then it is possible that
+            not all of the values will be returned. To get all values set for a
+            multivar, simply omit the ``value_regex`` argument.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        # Matches any values for key 'foo.bar'
+        salt myminion git.config_get_regexp /path/to/repo foo.bar
+        # Matches any value starting with 'baz' set for key 'foo.bar'
+        salt myminion git.config_get_regexp /path/to/repo foo.bar 'baz.*'
+        # Matches any key starting with 'user.'
+        salt myminion git.config_get_regexp global '^user\.'
+    '''
+    result = _config_getter('--get-regexp',
+                            cwd,
+                            key,
+                            value_regex=value_regex,
+                            user=user,
+                            ignore_retcode=ignore_retcode)
+
+    # git config --get exits with retcode of 1 when key does not exist
+    ret = {}
+    if result['retcode'] == 1:
+        return ret
+    for line in result['stdout'].splitlines():
+        try:
+            param, value = line.split(None, 1)
+        except ValueError:
+            continue
+        ret.setdefault(param, []).append(value)
+    return ret
+
+config_get_regex = config_get_regexp
 
 
 def ls_remote(cwd=None,
@@ -2005,7 +2510,8 @@ def ls_remote(cwd=None,
         salt myminion git.ls_remote /path/to/repo origin master
         salt myminion git.ls_remote remote=https://mydomain.tld/repo.git ref=mytag opts='--tags'
     '''
-    _check_abs(cwd)
+    if cwd is not None:
+        _check_abs(cwd)
     remote = _add_http_basic_auth(remote, https_user, https_pass)
     command = ['git', 'ls-remote']
     command.extend(_format_opts(opts))
@@ -2019,13 +2525,14 @@ def ls_remote(cwd=None,
                       runas=user,
                       identity=identity,
                       ignore_retcode=ignore_retcode)['stdout']
-    ret = []
+    ret = {}
     for line in output.splitlines():
         try:
-            ret.append(output.split()[0])
+            ref_sha1, ref_name = line.split(None, 1)
         except IndexError:
             continue
-    return '\n'.join(ret)
+        ret[ref_name] = ref_sha1
+    return ret
 
 
 def version(versioninfo=False, user=None):
