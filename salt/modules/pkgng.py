@@ -63,7 +63,7 @@ def __virtual__():
             providers = __opts__['providers']
         log.debug('__opts__.providers: {0}'.format(providers))
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
-            log.debug('Configuration option \'providers:pkg\' is set to ' \
+            log.debug('Configuration option \'providers:pkg\' is set to '
                 '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
             return __virtualname__
     return False
