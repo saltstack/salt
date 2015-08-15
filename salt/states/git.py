@@ -455,9 +455,9 @@ def latest(name,
         try:
             all_local_branches = __salt__['git.list_branches'](
                 target, user=user)
-            has_local_branch = local_branch in all_local_branches
             all_local_tags = __salt__['git.list_tags'](target, user=user)
             local_rev, local_branch = _get_local_rev_and_branch(target, user)
+            has_local_branch = local_branch in all_local_branches
 
             if local_rev is not None and remote_rev is None:
                 return _fail(
@@ -1056,6 +1056,9 @@ def latest(name,
             if depth is not None:
                 clone_opts.extend(['--depth', str(depth)])
 
+            # We're cloning a fresh repo, there is no local branch or revision
+            local_branch = local_rev = None
+
             __salt__['git.clone'](target,
                                   name,
                                   user=user,
@@ -1096,11 +1099,9 @@ def latest(name,
                     log.error(msg.format(name))
                     return _fail(ret, msg.format('Repository'), comments)
                 else:
-                    local_rev, local_branch = \
-                        _get_local_rev_and_branch(target, user)
                     all_local_branches = __salt__['git.list_branches'](
                         target, user=user)
-                    has_local_branch = local_branch in all_local_branches
+                    has_local_branch = branch in all_local_branches
                     if remote_rev_type == 'tag' \
                             and rev not in __salt__['git.list_tags'](
                                 target, user=user):
