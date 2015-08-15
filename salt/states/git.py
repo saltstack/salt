@@ -21,7 +21,6 @@ import copy
 import logging
 import os
 import re
-import shutil
 import string
 
 # Import salt libs
@@ -54,8 +53,8 @@ def _parse_fetch(output):
     Go through the output from a git fetch and return a dict
     '''
     update_re = re.compile(
-        '.*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
-        '\[(?:new (tag|branch)|tag update)\])\s+(.+)->'
+        r'.*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
+        r'\[(?:new (tag|branch)|tag update)\])\s+(.+)->'
     )
     ret = {}
     for line in output.splitlines():
@@ -63,7 +62,7 @@ def _parse_fetch(output):
         if match:
             old_sha, new_sha, new_ref_type, ref_name = \
                 match.groups()
-            ref_name = refname.rstrip()
+            ref_name = ref_name.rstrip()
             if new_ref_type is not None:
                 # ref is a new tag/branch
                 ref_key = 'new tags' \
@@ -80,16 +79,29 @@ def _parse_fetch(output):
     return ret
 
 
-def _get_local_rev(target, user):
+def _get_local_rev_and_branch(target, user):
     '''
     Return the local revision for before/after comparisons
     '''
     log.info('Checking local revision for {0}'.format(target))
     try:
-        return __salt__['git.revision'](target, user=user, ignore_retcode=True)
+        local_rev = __salt__['git.revision'](target,
+                                             user=user,
+                                             ignore_retcode=True)
     except CommandExecutionError:
         log.info('No local revision for {0}'.format(target))
-        return None
+        local_rev = None
+
+    log.info('Checking local branch for {0}'.format(target))
+    try:
+        local_branch = __salt__['git.current_branch'](target,
+                                                      user=user,
+                                                      ignore_retcode=True)
+    except CommandExecutionError:
+        log.info('No local branch for {0}'.format(target))
+        local_branch = None
+
+    return local_rev, local_branch
 
 
 def _strip_exc(exc):
@@ -391,16 +403,6 @@ def latest(name,
         '+refs/tags/*:refs/tags/*'
     ] if fetch_tags else []
 
-    local_rev = _get_local_rev(target, user)
-
-    log.info('Checking local branch for {0}'.format(target))
-    try:
-        local_branch = __salt__['git.current_branch'](
-            target, user=user, ignore_retcode=True)
-    except CommandExecutionError:
-        log.info('No local branch for {0}'.format(target))
-        local_branch = None
-
     log.info('Checking remote revision for {0}'.format(name))
     remote_rev_matches = __salt__['git.ls_remote'](
         None,
@@ -444,12 +446,6 @@ def latest(name,
             'No revision matching \'{0}\' exists in the remote '
             'repository'.format(rev)
         )
-    elif local_rev is not None and remote_rev is None:
-        return _fail(
-            ret,
-            'Remote repository is empty, cannot update from {0} to an '
-            'empty repository'.format(local_rev[:7])
-        )
 
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
@@ -461,6 +457,14 @@ def latest(name,
                 target, user=user)
             has_local_branch = local_branch in all_local_branches
             all_local_tags = __salt__['git.list_tags'](target, user=user)
+            local_rev, local_branch = _get_local_rev_and_branch(target, user)
+
+            if local_rev is not None and remote_rev is None:
+                return _fail(
+                    ret,
+                    'Remote repository is empty, cannot update from {0} to an '
+                    'empty repository'.format(local_rev[:7])
+                )
 
             remotes = __salt__['git.remotes'](target, user=user)
             if remote not in remotes \
@@ -505,30 +509,28 @@ def latest(name,
                                     # locally but account for this just in
                                     # case.
                                     local_tag_sha1 = None
-                                finally:
-                                    if local_tag_sha1 != remote_rev \
-                                            and merge_action != 'hard-reset':
-                                        # Remote tag is different than local
-                                        # tag, unless we're doing a hard reset
-                                        # then we don't need to proceed as we
-                                        # know that the fetch will update the
-                                        # tag and the only way to make the
-                                        # state succeed is to reset the branch
-                                        # to point at the tag's new rev
-                                        return _fail(
-                                            ret,
-                                            '\'{0}\' is a tag, but the remote '
-                                            'SHA1 for this tag ({1}) doesn\'t '
-                                            'match the local SHA1 ({2}). Set '
-                                            '\'force_reset\' to True to force '
-                                            'this update.'.format(
-                                                rev,
-                                                remote_rev[:7],
-                                                local_tag_sha1[:7] if
-                                                    local_tag_sha1 is not None
-                                                    else None
-                                            )
+                                if local_tag_sha1 != remote_rev \
+                                        and fast_forward is False:
+                                    # Remote tag is different than local tag,
+                                    # unless we're doing a hard reset then we
+                                    # don't need to proceed as we know that the
+                                    # fetch will update the tag and the only
+                                    # way to make the state succeed is to reset
+                                    # the branch to point at the tag's new rev
+                                    return _fail(
+                                        ret,
+                                        '\'{0}\' is a tag, but the remote '
+                                        'SHA1 for this tag ({1}) doesn\'t '
+                                        'match the local SHA1 ({2}). Set '
+                                        '\'force_reset\' to True to force '
+                                        'this update.'.format(
+                                            rev,
+                                            remote_rev[:7],
+                                            local_tag_sha1[:7] if
+                                                local_tag_sha1 is not None
+                                                else None
                                         )
+                                    )
 
                 pre_rev = None
                 if not has_remote_rev or not has_local_branch:
@@ -691,7 +693,11 @@ def latest(name,
                                 actions.append(
                                     'New branch \'{0}\' would be checked out, '
                                     'with {1} ({2}) as a starting point'
-                                    .format(branch, checkout_rev, remote_rev)
+                                    .format(
+                                        branch,
+                                        desired_upstream if desired_upstream
+                                            else rev,
+                                        remote_rev)
                                 )
                                 if desired_upstream:
                                     actions.append(
@@ -797,7 +803,7 @@ def latest(name,
                             target,
                             remote_rev + '^{commit}',
                             ignore_retcode=True)
-                    except CommandExecutionError:
+                    except CommandExecutionError as exc:
                         return _fail(
                             ret,
                             'Fetch did not successfully retrieve remote rev '
@@ -1016,7 +1022,8 @@ def latest(name,
                 except OSError as exc:
                     return _fail(
                         ret,
-                        'Unable to remove {0}: {1}'.format(target, exc)
+                        'Unable to remove {0}: {1}'.format(target, exc),
+                        comments
                     )
                 else:
                     ret['changes']['forced clone'] = True
@@ -1043,8 +1050,6 @@ def latest(name,
                 )
             )
         try:
-            local_rev = _get_local_rev(target, user)
-
             clone_opts = ['--mirror'] if mirror else ['--bare'] if bare else []
             if remote != 'origin':
                 clone_opts.extend(['--origin', remote])
@@ -1091,17 +1096,20 @@ def latest(name,
                     log.error(msg.format(name))
                     return _fail(ret, msg.format('Repository'), comments)
                 else:
+                    local_rev, local_branch = \
+                        _get_local_rev_and_branch(target, user)
                     all_local_branches = __salt__['git.list_branches'](
                         target, user=user)
                     has_local_branch = local_branch in all_local_branches
                     if remote_rev_type == 'tag' \
                             and rev not in __salt__['git.list_tags'](
                                 target, user=user):
-                            return _fail(
-                                ret,
-                                'Revision \'{0}\' does not exist in clone',
-                                comments
-                            )
+                        return _fail(
+                            ret,
+                            'Revision \'{0}\' does not exist in clone'
+                            .format(rev),
+                            comments
+                        )
                     if not has_local_branch:
                         checkout_rev = desired_upstream if desired_upstream \
                             else rev
@@ -1255,8 +1263,7 @@ def present(name,
             except OSError as exc:
                 return _fail(
                     ret,
-                    'Unable to remove {0}: {1}'.format(name, exc),
-                    comments
+                    'Unable to remove {0}: {1}'.format(name, exc)
                 )
             else:
                 ret['changes']['forced init'] = True
@@ -1310,7 +1317,7 @@ def config_unset(name,
                  repo=None,
                  user=None,
                  **kwargs):
-    '''
+    r'''
     .. versionadded:: 2015.8.0
 
     Ensure that the named config key is not present
@@ -1442,7 +1449,6 @@ def config_unset(name,
                         '; '.join(greedy_matches)
                     )
                 )
-
 
     if __opts__['test']:
         ret['changes'] = pre_matches
