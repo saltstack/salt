@@ -961,7 +961,7 @@ def merge_base(cwd,
     elif not isinstance(refs, (list, tuple)):
         refs = [x.strip() for x in str(refs).split(',')]
     mutually_exclusive_count = len(
-        [x for x in octopus, independent, is_ancestor, fork_point if x]
+        [x for x in (octopus, independent, is_ancestor, fork_point) if x]
     )
     if mutually_exclusive_count > 1:
         raise SaltInvocationError(
@@ -2362,7 +2362,7 @@ def config_get_regexp(cwd,
                       value_regex=None,
                       user=None,
                       ignore_retcode=False):
-    '''
+    r'''
     .. versionaded:: 2015.8.0
 
     Get the value of a key or keys in the git configuration file using regexes
