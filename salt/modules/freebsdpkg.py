@@ -86,9 +86,18 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Load as 'pkg' on FreeBSD versions less than 10
+    Load as 'pkg' on FreeBSD versions less than 10.
+    Don't load on FreeBSD 9 when the config option
+    ``providers:pkg`` is set to 'pkgng'.
     '''
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) < 10:
+        providers = {}
+        if 'providers' in __opts__:
+            providers = __opts__['providers']
+        if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
+            log.debug('Configuration option \'providers:pkg\' is set to '\
+                    '\'pkgng\', won\'t load old provider \'freebsdpkg\'.')
+            return False
         return __virtualname__
     return False
 
