@@ -138,6 +138,12 @@ def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None, keyid=None,
     Returns the vpc_id or None. Raises SaltInvocationError if
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.check_vpc vpc_name=myvpc profile=awsprofile
     '''
 
     if not _exactly_one((vpc_name, vpc_id)):
