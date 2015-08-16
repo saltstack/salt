@@ -4,25 +4,35 @@ Return data to a memcache server
 
 To enable this returner the minion will need the python client for memcache
 installed and the following values configured in the minion or master
-config, these are the defaults:
+config, these are the defaults.
+
+.. code-block:: yaml
 
     memcache.host: 'localhost'
     memcache.port: '11211'
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location.
+
+.. code-block:: yaml
 
     alternative.memcache.host: 'localhost'
     alternative.memcache.port: '11211'
 
 python2-memcache uses 'localhost' and '11211' as syntax on connection.
 
-  To use the memcache returner, append '--return memcache' to the salt command. ex:
+To use the memcache returner, append '--return memcache' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return memcache
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return memcache --return_config alternative
 '''
@@ -31,7 +41,7 @@ from __future__ import absolute_import
 # Import python libs
 import json
 import logging
-import salt.utils
+import salt.utils.jid
 
 import salt.returners
 
@@ -94,11 +104,11 @@ def _get_serv(ret):
     #    an integer weight value.
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 
 def returner(ret):

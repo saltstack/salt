@@ -6,8 +6,7 @@ Interaction with the Supervisor daemon
 .. code-block:: yaml
 
     wsgi_server:
-      supervisord:
-        - running
+      supervisord.running:
         - require:
           - pkg: supervisor
         - watch:
@@ -342,7 +341,8 @@ def mod_watch(name,
               update=False,
               user=None,
               conf_file=None,
-              bin_env=None):
+              bin_env=None,
+              **kwargs):
     # Always restart on watch
     return running(
         name,

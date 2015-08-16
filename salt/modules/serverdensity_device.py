@@ -5,17 +5,38 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
 
-import requests
+# Import Python libs
+from __future__ import absolute_import
 import json
 import logging
+import os
+import tempfile
 
-from salt.ext.six.moves import map
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 from salt.exceptions import CommandExecutionError
 
+try:
+    import requests
+    ENABLED = True
+except ImportError:
+    ENABLED = False
+
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Return virtual name of the module.
+
+    :return: The virtual name of the module.
+    '''
+    if not ENABLED:
+        return False
+    return "serverdensity_device"
 
 
 def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
@@ -31,7 +52,7 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     sd_pillar = __pillar__.get(sd_auth_pillar_name)
     log.debug('Server Density Pillar: {0}'.format(sd_pillar))
     if not sd_pillar:
-        log.error('Cloud not load {0} pillar'.format(sd_auth_pillar_name))
+        log.error('Could not load {0} pillar'.format(sd_auth_pillar_name))
         raise CommandExecutionError(
             '{0} pillar is required for authentication'.format(sd_auth_pillar_name)
         )
@@ -39,7 +60,7 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     try:
         return sd_pillar[val]
     except KeyError:
-        log.error('Cloud not find value {0} in pillar'.format(val))
+        log.error('Could not find value {0} in pillar'.format(val))
         raise CommandExecutionError('{0} value was not found in pillar'.format(val))
 
 
@@ -146,8 +167,8 @@ def ls(**params):
         endpoint = 'resources'
 
     # Convert all ints to strings:
-    for k, v in params.items():
-        params[k] = str(v)
+    for key, val in six.iteritems(params):
+        params[key] = str(val)
 
     api_response = requests.get(
         'https://api.serverdensity.io/inventory/{0}'.format(endpoint),
@@ -220,17 +241,24 @@ def install_agent(agent_key):
 
         salt '*' serverdensity_device.install_agent c2bbdd6689ff46282bdaa07555641498
     '''
-    work_dir = '/tmp/'
+    work_dir = os.path.join(__opts__['cachedir'], 'tmp')
+    if not os.path.isdir(work_dir):
+        os.mkdir(work_dir)
+    install_file = tempfile.NamedTemporaryFile(dir=work_dir,
+                                                   suffix='.sh',
+                                                   delete=False)
+    install_filename = install_file.name
+    install_file.close()
     account_url = get_sd_auth('account_url')
 
     __salt__['cmd.run'](
-        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh -o install.sh',
+        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh -o {0}'.format(install_filename),
         cwd=work_dir
     )
-    __salt__['cmd.run'](cmd='chmod +x install.sh', cwd=work_dir)
+    __salt__['cmd.run'](cmd='chmod +x {0}'.format(install_filename), cwd=work_dir)
 
     return __salt__['cmd.run'](
-        cmd='./install.sh -a {account_url} -k {agent_key}'.format(
-            account_url=account_url, agent_key=agent_key),
+        cmd='./{filename} -a {account_url} -k {agent_key}'.format(
+            filename=install_filename, account_url=account_url, agent_key=agent_key),
         cwd=work_dir
     )

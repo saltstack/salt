@@ -32,7 +32,7 @@ def dirinfo(path, opts=None):
     if opts:
         cmd += ' -' + opts
     cmd += ' ' + path
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     output = out['stdout'].splitlines()
     for line in output:
@@ -56,7 +56,7 @@ def fileinfo(path):
     cmd = 'mfsfileinfo ' + path
     ret = {}
     chunknum = ''
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     output = out['stdout'].splitlines()
     for line in output:
@@ -142,7 +142,7 @@ def getgoal(path, opts=None):
     else:
         opts = ''
     cmd += ' ' + path
-    out = __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     output = out['stdout'].splitlines()
     if 'r' not in opts:

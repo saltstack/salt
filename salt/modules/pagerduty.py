@@ -40,24 +40,110 @@ def list_services(profile=None, api_key=None):
 
     CLI Example:
 
-        pagerduty.list_services my-pagerduty-account
+        salt myminion pagerduty.list_services my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'services', 'name', profile, api_key, opts=__opts__
+        'services',
+        'name',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
 def list_incidents(profile=None, api_key=None):
     '''
-    List services belonging to this account
+    List incidents belonging to this account
 
     CLI Example:
 
-        pagerduty.list_incidents my-pagerduty-account
+        salt myminion pagerduty.list_incidents my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'incidents', 'id', profile, api_key, opts=__opts__
+        'incidents',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
+
+
+def list_users(profile=None, api_key=None):
+    '''
+    List users belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_users my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'users',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+def list_schedules(profile=None, api_key=None):
+    '''
+    List schedules belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_schedules my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'schedules',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+def list_windows(profile=None, api_key=None):
+    '''
+    List maintenance windows belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_windows my-pagerduty-account
+        salt myminion pagerduty.list_maintenance_windows my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'maintenance_windows',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+# The long version, added for consistency
+list_maintenance_windows = list_windows
+
+
+def list_policies(profile=None, api_key=None):
+    '''
+    List escalation policies belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_policies my-pagerduty-account
+        salt myminion pagerduty.list_escalation_policies my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'escalation_policies',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+# The long version, added for consistency
+list_escalation_policies = list_policies
 
 
 def create_event(service_key=None, description=None, details=None,
@@ -69,7 +155,7 @@ def create_event(service_key=None, description=None, details=None,
 
     .. code-block:: yaml
 
-        pagerduty.create_event <service_key> <description> <details> \
+        salt myminion pagerduty.create_event <service_key> <description> <details> \
         profile=my-pagerduty-account
 
     The following parameters are required:
@@ -96,7 +182,7 @@ def create_event(service_key=None, description=None, details=None,
 
     ret = json.loads(salt.utils.pagerduty.query(
         method='POST',
-        profile=profile,
+        profile_dict=__salt__['config.option'](profile),
         api_key=service_key,
         data={
             'service_key': service_key,

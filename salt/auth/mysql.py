@@ -9,29 +9,29 @@ use an existing table that has a username and a password column.
 To get started, create a simple table that holds just a username and
 a password. The password field will hold a SHA256 checksum.
 
-  .. code-block:: sql
+.. code-block:: sql
 
-  CREATE TABLE `users` (
-    `id` int(11) NOT NULL AUTO_INCREMENT,
-    `username` varchar(25) DEFAULT NULL,
-    `password` varchar(70) DEFAULT NULL,
-    PRIMARY KEY (`id`)
-  ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+    CREATE TABLE `users` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `username` varchar(25) DEFAULT NULL,
+      `password` varchar(70) DEFAULT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 
 To create a user within MySQL, execute the following statement.
 
-  .. code-block:: sql
+.. code-block:: sql
 
-  INSERT INTO users VALUES (NULL, 'diana', SHA2('secret', 256))
+    INSERT INTO users VALUES (NULL, 'diana', SHA2('secret', 256))
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
-  mysql_auth:
-    hostname: localhost
-    database: SaltStack
-    username: root
-    password: letmein
-    auth_sql: 'SELECT username FROM users WHERE username = "{0}" AND password = SHA2("{1}", 256)'
+    mysql_auth:
+      hostname: localhost
+      database: SaltStack
+      username: root
+      password: letmein
+      auth_sql: 'SELECT username FROM users WHERE username = "{0}" AND password = SHA2("{1}", 256)'
 
 The `auth_sql` contains the SQL that will validate a user to ensure they are
 correctly authenticated. This is where you can specify other SQL queries to
@@ -39,7 +39,7 @@ authenticate users.
 
 Enable MySQL authentication.
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
     external_auth:
       mysql:

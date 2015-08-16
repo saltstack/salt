@@ -159,26 +159,22 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     rdtype = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, data)
 
-    is_update = False
-    for rrset in answer.answer:
-        if rdata in rrset.items:
-            rr = rrset.items
-            if ttl == rrset.ttl:
-                if replace and (len(answer.answer) > 1
-                        or len(rrset.items) > 1):
-                    is_update = True
-                    break
-                return None
-            is_update = True
-            break
-
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
+    keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
-    if is_update:
+    is_exist = False
+    for rrset in answer.answer:
+        if rdata in rrset.items:
+            if ttl == rrset.ttl:
+                if len(answer.answer) >= 1 or len(rrset.items) >= 1:
+                    is_exist = True
+                    break
+
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
+    if replace:
         dns_update.replace(name, ttl, rdata)
-    else:
+    elif not is_exist:
         dns_update.add(name, ttl, rdata)
     answer = dns.query.udp(dns_update, nameserver)
     if answer.rcode() > 0:
@@ -206,8 +202,9 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1', **kwargs)
 
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
+    keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
 
     if rdtype:
         rdtype = dns.rdatatype.from_text(rdtype)

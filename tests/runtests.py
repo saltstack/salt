@@ -3,21 +3,24 @@
 '''
 Discover all instances of unittest.TestCase in this directory.
 '''
+# pylint: disable=file-perms
+
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import resource
 import tempfile
+import time
 
 # Import salt libs
 from integration import TestDaemon, TMP  # pylint: disable=W0403
+from integration import INTEGRATION_TEST_DIR
+from integration import CODE_DIR as SALT_ROOT
 
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
 from salttesting.parser.cover import SaltCoverageTestingParser
 
-TEST_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
-SALT_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 XML_OUTPUT_DIR = os.environ.get(
     'SALT_XML_TEST_REPORTS_DIR',
     os.path.join(TMP, 'xml-test-reports')
@@ -27,7 +30,7 @@ HTML_OUTPUT_DIR = os.environ.get(
     os.path.join(TMP, 'html-test-reports')
 )
 
-
+TEST_DIR = os.path.dirname(INTEGRATION_TEST_DIR)
 try:
     if SALT_ROOT:
         os.chdir(SALT_ROOT)
@@ -52,8 +55,16 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet'),
-            help='Set to raet to run integration tests with raet transport. Default: %default')
+            choices=('zeromq', 'raet', 'tcp'),
+            help=('Select which transport to run the integration tests with, '
+                  'zeromq, raet, or tcp. Default: %default')
+        )
+        self.add_option(
+            '--interactive',
+            default=False,
+            action='store_true',
+            help='Do not run any tests. Simply start the daemons.'
+        )
 
         self.test_selection_group.add_option(
             '-m',
@@ -182,11 +193,20 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
         if self.options.coverage and any((
-                self.options.module, self.options.cli, self.options.client,
-                self.options.shell, self.options.unit, self.options.state,
-                self.options.runners, self.options.loader, self.options.name,
-                self.options.outputter, self.options.fileserver,
-                self.options.wheel, os.geteuid() != 0,
+                self.options.module,
+                self.options.cli,
+                self.options.client,
+                self.options.shell,
+                self.options.unit,
+                self.options.state,
+                self.options.runners,
+                self.options.loader,
+                self.options.name,
+                self.options.outputter,
+                self.options.fileserver,
+                self.options.wheel,
+                self.options.api,
+                os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
                 'No sense in generating the tests coverage report when '
@@ -234,38 +254,51 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         path = os.path.join(TEST_DIR, 'integration', suite_folder)
         return self.run_suite(path, display_name)
 
-    def run_integration_tests(self):
-        '''
-        Execute the integration tests suite
-        '''
-        named_tests = []
-        named_unit_test = []
+    def start_daemons_only(self):
+        self.prep_filehandles()
+        try:
+            print_header(
+                ' * Setting up Salt daemons for interactive use',
+                top=False, width=getattr(self.options, 'output_columns', PNUM)
+            )
+        except TypeError:
+            print_header(' * Setting up Salt daemons for interactive use', top=False)
 
-        if self.options.name:
-            for test in self.options.name:
-                if test.startswith('unit.'):
-                    named_unit_test.append(test)
-                    continue
-                named_tests.append(test)
+        with TestDaemon(self):
+            print_header(' * Salt daemons started')
+            master_conf = TestDaemon.config('master')
+            minion_conf = TestDaemon.config('minion')
+            syndic_conf = TestDaemon.config('syndic')
+            syndic_master_conf = TestDaemon.config('syndic_master')
 
-        if (self.options.unit or named_unit_test) and not \
-                (self.options.runners or
-                 self.options.state or
-                 self.options.module or
-                 self.options.cli or
-                 self.options.client or
-                 self.options.loader or
-                 self.options.outputter or
-                 self.options.fileserver or
-                 self.options.wheel or
-                 self.options.cloud_provider_tests or
-                 named_tests):
-            # We're either not running any of runners, state, module and client
-            # tests, or, we're only running unittests by passing --unit or by
-            # passing only `unit.<whatever>` to --name.
-            # We don't need the tests daemon running
-            return [True]
+            print_header(' * Syndic master configuration values', top=False)
+            print('interface: {0}'.format(syndic_master_conf['interface']))
+            print('publish port: {0}'.format(syndic_master_conf['publish_port']))
+            print('return port: {0}'.format(syndic_master_conf['ret_port']))
+            print('\n')
 
+            print_header(' * Master configuration values', top=True)
+            print('interface: {0}'.format(master_conf['interface']))
+            print('publish port: {0}'.format(master_conf['publish_port']))
+            print('return port: {0}'.format(master_conf['ret_port']))
+            print('\n')
+
+            print_header(' * Minion configuration values', top=True)
+            print('interface: {0}'.format(minion_conf['interface']))
+            print('\n')
+
+            print_header(' * Syndic configuration values', top=True)
+            print('interface: {0}'.format(syndic_conf['interface']))
+            print('syndic master port: {0}'.format(syndic_conf['syndic_master']))
+            print('\n')
+
+            print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
+            print('To access the minion: `salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+
+            while True:
+                time.sleep(1)
+
+    def prep_filehandles(self):
         smax_open_files, hmax_open_files = resource.getrlimit(
             resource.RLIMIT_NOFILE
         )
@@ -294,6 +327,40 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.exit()
             finally:
                 print('~' * getattr(self.options, 'output_columns', PNUM))
+
+    def run_integration_tests(self):
+        '''
+        Execute the integration tests suite
+        '''
+        named_tests = []
+        named_unit_test = []
+
+        if self.options.name:
+            for test in self.options.name:
+                if test.startswith('unit.'):
+                    named_unit_test.append(test)
+                    continue
+                named_tests.append(test)
+
+        if (self.options.unit or named_unit_test) and not \
+                (self.options.runners or
+                 self.options.state or
+                 self.options.module or
+                 self.options.cli or
+                 self.options.client or
+                 self.options.loader or
+                 self.options.outputter or
+                 self.options.fileserver or
+                 self.options.wheel or
+                 self.options.cloud_provider_tests or
+                 self.options.api or
+                 named_tests):
+            # We're either not running any of runners, state, module and client
+            # tests, or, we're only running unittests by passing --unit or by
+            # passing only `unit.<whatever>` to --name.
+            # We don't need the tests daemon running
+            return [True]
+        self.prep_filehandles()
 
         try:
             print_header(
@@ -367,7 +434,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
-            # bellow
+            # below
             return status
 
         for name in named_unit_test:
@@ -391,6 +458,8 @@ def main():
         parser.parse_args()
 
         overall_status = []
+        if parser.options.interactive:
+            parser.start_daemons_only()
         status = parser.run_integration_tests()
         overall_status.extend(status)
         status = parser.run_unit_tests()

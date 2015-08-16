@@ -17,7 +17,10 @@ import salt.utils.cloud
 import salt.config as config
 
 # Import pyrax libraries
-import salt.utils.openstack.pyrax as suop
+# This is typically against SaltStack coding styles,
+# it should be 'import salt.utils.openstack.pyrax as suop'.  Something
+# in the loader is creating a name clash and making that form fail
+from salt.utils.openstack import pyrax as suop
 
 
 # Only load in this module is the OPENSTACK configurations are in place

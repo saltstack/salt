@@ -7,17 +7,23 @@ Connection module for Amazon ELB
 :configuration: This module accepts explicit elb credentials but can also utilize
     IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+    configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         elb.keyid: GKTADJGHEIQSXMKKRBJ08H
         elb.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         elb.region: us-east-1
 
@@ -26,17 +32,23 @@ Connection module for Amazon ELB
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
+    .. code-block:: yaml
+
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto
+:depends: boto >= 2.33.0
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
+
 from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
 import salt.ext.six as six
 
@@ -45,13 +57,25 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import boto
+    # connection settings were added in 2.33.0
+    required_boto_version = '2.33.0'
+    if (_LooseVersion(boto.__version__) <
+            _LooseVersion(required_boto_version)):
+        msg = 'boto_elb requires boto {0}.'.format(required_boto_version)
+        logging.debug(msg)
+        raise ImportError()
     import boto.ec2
-    import boto.ec2.elb as elb
+    from boto.ec2.elb import HealthCheck
+    from boto.ec2.elb.attributes import AccessLogAttribute
+    from boto.ec2.elb.attributes import ConnectionDrainingAttribute
+    from boto.ec2.elb.attributes import ConnectionSettingAttribute
+    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
 
+# Import Salt libs
 from salt.ext.six import string_types
 import salt.utils.odict as odict
 
@@ -62,6 +86,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb')
     return True
 
 
@@ -73,14 +98,18 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
-        conn.get_all_load_balancers(load_balancer_names=[name])
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+        elb = conn.get_all_load_balancers(load_balancer_names=[name])
+        if elb:
+            return True
+        else:
+            msg = 'The load balancer does not exist in region {0}'.format(region)
+            log.debug(msg)
+            return False
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
         return False
 
 
@@ -92,9 +121,8 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return []
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         lb = conn.get_all_load_balancers(load_balancer_names=[name])
         lb = lb[0]
@@ -117,8 +145,8 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         ret['scheme'] = lb.scheme
         ret['dns_name'] = lb.dns_name
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
         return []
 
 
@@ -131,11 +159,10 @@ def create(name, availability_zones, listeners=None, subnets=None,
 
     CLI example to create an ELB::
 
-        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::1111111:server-certificate/mycert"]]' region=us-east-1
+        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='[[443, 80, "HTTPS", "HTTP", "arn:aws:iam::1111111:server-certificate/mycert"]]' region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if __salt__['boto_elb.exists'](name, region, key, keyid, profile):
         return True
     if isinstance(availability_zones, string_types):
@@ -166,9 +193,9 @@ def create(name, availability_zones, listeners=None, subnets=None,
             msg = 'Failed to create ELB {0}'.format(name)
             log.error(msg)
             return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create ELB {0}'.format(name)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to create ELB {0}: {1}'.format(name, error)
         log.error(msg)
         return False
 
@@ -181,9 +208,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.delete myelb region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if not __salt__['boto_elb.exists'](name, region, key, keyid, profile):
         return True
     try:
@@ -191,8 +217,8 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         msg = 'Deleted ELB {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
         msg = 'Failed to delete ELB {0}'.format(name)
         log.error(msg)
         return False
@@ -207,9 +233,8 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.create_listeners myelb listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::11  11111:server-certificate/mycert"]]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if isinstance(listeners, string_types):
         listeners = json.loads(listeners)
     # Combining listeners and complex_listeners together makes our lives
@@ -231,9 +256,9 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
         msg = 'Created ELB listeners on {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create ELB listeners on {0}'.format(name)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to create ELB listeners on {0}: {1}'.format(name, error)
         log.error(msg)
         return False
 
@@ -247,9 +272,8 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.delete_listeners myelb '[80,443]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if isinstance(ports, string_types):
         ports = json.loads(ports)
     try:
@@ -257,9 +281,35 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
         msg = 'Deleted ELB listeners on {0}'.format(name)
         log.info(msg)
         return True
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to delete ELB listeners on {0}: {1}'.format(name, error)
+        log.error(msg)
+        return False
+
+
+def apply_security_groups(name, security_groups, region=None, key=None,
+                          keyid=None, profile=None):
+    '''
+    Apply security groups to ELB.
+
+    CLI example::
+
+        salt myminion boto_elb.apply_security_groups myelb '["mysecgroup1"]'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if isinstance(security_groups, string_types):
+        security_groups = json.loads(security_groups)
+    try:
+        conn.apply_security_groups_to_lb(name, security_groups)
+        msg = 'Applied security_groups on ELB {0}'.format(name)
+        log.info(msg)
+        return True
     except boto.exception.BotoServerError as e:
         log.debug(e)
-        msg = 'Failed to delete ELB listeners on {0}'.format(name)
+        msg = 'Failed to appply security_groups on ELB {0}: {1}'
+        msg = msg.format(name, e.message)
         log.error(msg)
         return False
 
@@ -273,9 +323,8 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
 
         salt myminion boto_elb.enable_availability_zones myelb '["us-east-1a"]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     try:
@@ -283,9 +332,9 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
         msg = 'Enabled availability_zones on ELB {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to enable availability_zones on ELB {0}'.format(name)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to enable availability_zones on ELB {0}: {1}'.format(name, error)
         log.error(msg)
         return False
 
@@ -299,9 +348,8 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
 
         salt myminion boto_elb.disable_availability_zones myelb '["us-east-1a"]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     try:
@@ -309,9 +357,9 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
         msg = 'Disabled availability_zones on ELB {0}'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to disable availability_zones on ELB {0}'.format(name)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to disable availability_zones on ELB {0}: {1}'.format(name, error)
         log.error(msg)
         return False
 
@@ -325,9 +373,8 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.attach_subnets myelb '["mysubnet"]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if isinstance(subnets, string_types):
         subnets = json.loads(subnets)
     try:
@@ -335,9 +382,9 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
         msg = 'Attached ELB {0} on subnets.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to attach ELB {0} on subnets.'.format(name)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to attach ELB {0} on subnets: {1}'.format(name, error)
         log.error(msg)
         return False
 
@@ -351,9 +398,8 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.detach_subnets myelb '["mysubnet"]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     if isinstance(subnets, string_types):
         subnets = json.loads(subnets)
     try:
@@ -361,9 +407,9 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
         msg = 'Detached ELB {0} from subnets.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to detach ELB {0} from subnets.'.format(name)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        msg = 'Failed to detach ELB {0} from subnets: {1}'.format(name, error)
         log.error(msg)
         return False
 
@@ -376,25 +422,31 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.get_attributes myelb
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         lbattrs = conn.get_all_lb_attributes(name)
         ret = odict.OrderedDict()
         ret['access_log'] = odict.OrderedDict()
         ret['cross_zone_load_balancing'] = odict.OrderedDict()
+        ret['connection_draining'] = odict.OrderedDict()
+        ret['connecting_settings'] = odict.OrderedDict()
         al = lbattrs.access_log
         czlb = lbattrs.cross_zone_load_balancing
+        cd = lbattrs.connection_draining
+        cs = lbattrs.connecting_settings
         ret['access_log']['enabled'] = al.enabled
         ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
         ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
         ret['access_log']['emit_interval'] = al.emit_interval
         ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
+        ret['connection_draining']['enabled'] = cd.enabled
+        ret['connection_draining']['timeout'] = cd.timeout
+        ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        log.error('ELB {0} does not exist: {1}'.format(name, error))
         return {}
 
 
@@ -407,16 +459,17 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.set_attributes myelb '{"access_log": {"enabled": "true", "s3_bucket_name": "mybucket", "s3_bucket_prefix": "mylogs/", "emit_interval": "5"}}' region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     al = attributes.get('access_log', {})
     czlb = attributes.get('cross_zone_load_balancing', {})
-    if not al and not czlb:
+    cd = attributes.get('connection_draining', {})
+    cs = attributes.get('connecting_settings', {})
+    if not al and not czlb and not cd and not cs:
         log.error('No supported attributes for ELB.')
         return False
     if al:
-        _al = elb.attributes.AccessLogAttribute()
+        _al = AccessLogAttribute()
         _al.enabled = al.get('enabled', False)
         if not _al.enabled:
             msg = 'Access log attribute configured, but enabled config missing'
@@ -433,7 +486,7 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             log.error(msg.format(name))
             return False
     if czlb:
-        _czlb = elb.attributes.CrossZoneLoadBalancingAttribute()
+        _czlb = CrossZoneLoadBalancingAttribute()
         _czlb.enabled = czlb['enabled']
         added_attr = conn.modify_lb_attribute(name, 'crossZoneLoadBalancing',
                                               _czlb.enabled)
@@ -442,6 +495,27 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
             log.info(msg.format(name))
         else:
             log.error('Failed to add cross_zone_load_balancing attribute.')
+            return False
+    if cd:
+        _cd = ConnectionDrainingAttribute()
+        _cd.enabled = cd['enabled']
+        _cd.timeout = cd.get('timeout', 300)
+        added_attr = conn.modify_lb_attribute(name, 'connectionDraining', _cd)
+        if added_attr:
+            msg = 'Added connection_draining attribute to {0} elb.'
+            log.info(msg.format(name))
+        else:
+            log.error('Failed to add connection_draining attribute.')
+            return False
+    if cs:
+        _cs = ConnectionSettingAttribute()
+        _cs.idle_timeout = cs.get('idle_timeout', 60)
+        added_attr = conn.modify_lb_attribute(name, 'connectingSettings', _cs)
+        if added_attr:
+            msg = 'Added connecting_settings attribute to {0} elb.'
+            log.info(msg.format(name))
+        else:
+            log.error('Failed to add connecting_settings attribute.')
             return False
     return True
 
@@ -454,9 +528,8 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_elb.get_health_check myelb
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         lb = conn.get_all_load_balancers(load_balancer_names=[name])
         lb = lb[0]
@@ -468,9 +541,9 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
         ret['timeout'] = hc.timeout
         ret['unhealthy_threshold'] = hc.unhealthy_threshold
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.error('ELB {0} does not exist.'.format(name))
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        log.error('ELB {0} does not exist: {1}'.format(name, error))
         return {}
 
 
@@ -483,16 +556,15 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
 
         salt myminion boto_elb.set_health_check myelb '{"target": "HTTP:80/"}'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
-    hc = elb.HealthCheck(**health_check)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    hc = HealthCheck(**health_check)
     try:
         conn.configure_health_check(name, hc)
         log.info('Configured health check on ELB {0}'.format(name))
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        log.info('Failed to configure health check on ELB {0}'.format(name))
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
+        log.info('Failed to configure health check on ELB {0}: {1}'.format(name, error))
         return False
     return True
 
@@ -517,13 +589,12 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     # variable throughout the register_instances method
     if isinstance(instances, str) or isinstance(instances, six.text_type):
         instances = [instances]
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         registered_instances = conn.register_instances(name, instances)
-    except boto.exception.BotoServerError as e:
-        log.warn(e)
+    except boto.exception.BotoServerError as error:
+        log.warn(error)
         return False
     registered_instance_ids = [instance.id for instance in
                                registered_instances]
@@ -560,23 +631,22 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     # variable throughout the deregister_instances method
     if isinstance(instances, str) or isinstance(instances, six.text_type):
         instances = [instances]
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         registered_instances = conn.deregister_instances(name, instances)
-    except boto.exception.BotoServerError as e:
+    except boto.exception.BotoServerError as error:
         # if the instance(s) given as an argument are not members of the ELB
-        # boto returns e.error_code == 'InvalidInstance'
+        # boto returns error.error_code == 'InvalidInstance'
         # deregister_instances returns "None" because the instances are
         # effectively deregistered from ELB
-        if e.error_code == 'InvalidInstance':
+        if error.error_code == 'InvalidInstance':
             log.warn('One or more of instance(s) {0} are not part of ELB {1}.'
                      ' deregister_instances not performed.'
                      .format(instances, name))
             return None
         else:
-            log.warn(e)
+            log.warn(error)
             return False
     registered_instance_ids = [instance.id for instance in
                                registered_instances]
@@ -601,9 +671,8 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
         salt myminion boto_elb.get_instance_health myelb
         salt myminion boto_elb.get_instance_health myelb region=us-east-1 instances="[instance_id,instance_id]"
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return []
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
     try:
         instance_states = conn.describe_instance_health(name, instances)
         ret = []
@@ -614,40 +683,6 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
                         'reason_code': _instance.reason_code
                         })
         return ret
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
+    except boto.exception.BotoServerError as error:
+        log.debug(error)
         return []
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to ELB.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('elb.region'):
-        region = __salt__['config.option']('elb.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('elb.key'):
-        key = __salt__['config.option']('elb.key')
-    if not keyid and __salt__['config.option']('elb.keyid'):
-        keyid = __salt__['config.option']('elb.keyid')
-
-    try:
-        conn = elb.connect_to_region(region, aws_access_key_id=keyid,
-                                              aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto elb connection.')
-        return None
-    return conn

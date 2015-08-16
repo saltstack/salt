@@ -4,6 +4,7 @@ Simple script to dump the contents of msgpack files to the terminal
 '''
 
 # Import python libs
+from __future__ import absolute_import, print_function
 import os
 import sys
 import pprint
@@ -17,7 +18,7 @@ def dump(path):
     Read in a path and dump the contents to the screen
     '''
     if not os.path.isfile(path):
-        print 'Not a file'
+        print('Not a file')
         return
     with open(path, 'rb') as fp_:
         data = msgpack.loads(fp_.read())

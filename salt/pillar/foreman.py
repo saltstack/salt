@@ -33,7 +33,7 @@ The following options are optional:
 An alternative would be to use the Foreman modules integrating Salt features
 in the Smart Proxy and the webinterface.
 
-Further information can be found on `Github <https://github.com/theforeman/foreman_salt>`_.
+Further information can be found on `GitHub <https://github.com/theforeman/foreman_salt>`_.
 
 Module Documentation
 ====================
@@ -42,8 +42,12 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import requests
 
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 __opts__ = {'foreman.url': 'http://foreman/api',
             'foreman.user': 'admin',
@@ -59,6 +63,14 @@ __opts__ = {'foreman.url': 'http://foreman/api',
 
 # Set up logging
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Only return if all the modules are available
+    '''
+    if not HAS_REQUESTS:
+        return False
 
 
 def ext_pillar(minion_id,

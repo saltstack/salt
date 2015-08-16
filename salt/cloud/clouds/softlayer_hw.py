@@ -17,7 +17,7 @@ configuration at:
       # SoftLayer account api key
       user: MYLOGIN
       apikey: JVkbSJDGHSDKUKSDJfhsdklfjgsjdkflhjlsdfffhgdgjkenrtuinv
-      provider: softlayer_hw
+      driver: softlayer_hw
 
 The SoftLayer Python Library needs to be installed in order to use the
 SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
@@ -29,16 +29,14 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 from __future__ import absolute_import
 
 # Import python libs
-import copy
-import pprint
 import logging
 import time
+import decimal
 
 # Import salt cloud libs
+import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-from salt.utils import namespaced_function
 
 # Attempt to import softlayer lib
 try:
@@ -51,14 +49,10 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-# Redirect SoftLayer functions to this module namespace
-script = namespaced_function(script, globals())
-
-
 # Only load in this module if the SoftLayer configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for SoftLayer configurations.
+    Check for SoftLayer configurations.
     '''
     if not HAS_SLLIBS:
         return False
@@ -78,6 +72,21 @@ def get_configured_provider():
         __active_provider_name__ or 'softlayer_hw',
         ('apikey',)
     )
+
+
+def script(vm_):
+    '''
+    Return the script deployment object
+    '''
+    deploy_script = salt.utils.cloud.os_script(
+        config.get_cloud_config_value('script', vm_, __opts__),
+        vm_,
+        __opts__,
+        salt.utils.cloud.salt_config_to_yaml(
+            salt.utils.cloud.minion_config(__opts__, vm_)
+        )
+    )
+    return deploy_script
 
 
 def get_conn(service='SoftLayer_Hardware'):
@@ -118,6 +127,8 @@ def avail_locations(call=None):
 
     available = conn.getAvailableLocations(id=50)
     for location in available:
+        if location.get('isAvailable', 0) is 0:
+            continue
         ret[location['locationId']]['available'] = True
 
     return ret
@@ -135,34 +146,15 @@ def avail_sizes(call=None):
             '-f or --function, or with the --list-sizes option'
         )
 
-    ret = {
-        'Bare Metal Instance': {
-            '1921': {
-                'id': '1921',
-                'name': '2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram'},
-            '1922': {
-                'id': '1922',
-                'name': '4 x 2.0 GHz Core Bare Metal Instance - 4 GB Ram'},
-            '1923': {
-                'id': '1923',
-                'name': '8 x 2.0 GHz Core Bare Metal Instance - 8 GB Ram'},
-            '1924': {
-                'id': '1924',
-                'name': '16 x 2.0 GHz Core Bare Metal Instance - 16 GB Ram'},
-            '2164': {
-                'id': '2164',
-                'name': '2 x 2.0 GHz Core Bare Metal Instance - 8 GB Ram '},
-            '2165': {
-                'id': '2165',
-                'name': '4 x 2.0 GHz Core Bare Metal Instance - 16 GB Ram'},
-            '2166': {
-                'id': '2166',
-                'name': '8 x 2.0 GHz Core Bare Metal Instance - 32 GB Ram'},
-            '2167': {
-                'id': '2167',
-                'name': '16 x 2.0 GHz Core Bare Metal Instance - 64 GB Ram'},
-            }
-        }
+    ret = {}
+    conn = get_conn(service='SoftLayer_Product_Package')
+    for category in conn.getCategories(id=50):
+        if category['categoryCode'] != 'server_core':
+            continue
+        for group in category['groups']:
+            for price in group['prices']:
+                ret[price['id']] = price['item'].copy()
+                del ret[price['id']]['id']
     return ret
 
 
@@ -176,198 +168,15 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    ret = {'Operating System': {
-        '13962': {
-            'id': '13962',
-            'name': 'CentOS 6.0 - Minimal Install (32 bit)'},
-        '13963': {
-            'id': '13963',
-            'name': 'CentOS 6.0 - Minimal Install (64 bit)'},
-        '13960': {
-            'id': '13960',
-            'name': 'CentOS 6.0 - LAMP Install (32 bit)'},
-        '13961': {
-            'id': '13961',
-            'name': 'CentOS 6.0 - LAMP Install (64 bit)'},
-        '1930': {
-            'id': '1930',
-            'name': 'CentOS 5 - Minimal Install (32 bit)'},
-        '1931': {
-            'id': '1931',
-            'name': 'CentOS 5 - Minimal Install (64 bit)'},
-        '1928': {
-            'id': '1928',
-            'name': 'CentOS 5 - LAMP Install (32 bit)'},
-        '1929': {
-            'id': '1929',
-            'name': 'CentOS 5 - LAMP Install (64 bit)'},
-        '14075': {
-            'id': '14075',
-            'name': 'Debian GNU/Linux 6.0 Squeeze/Stable - Minimal Install (32 bit)'},
-        '14077': {
-            'id': '14077',
-            'name': 'Debian GNU/Linux 6.0 Squeeze/Stable - Minimal Install (64 bit)'},
-        '14074': {
-            'id': '14074',
-            'name': 'Debian GNU/Linux 6.0 Squeeze/Stable - LAMP Install (32 bit)'},
-        '14076': {
-            'id': '14076',
-            'name': 'Debian GNU/Linux 6.0 Squeeze/Stable - LAMP Install (64 bit)'},
-        '21774': {
-            'id': '21774',
-            'name': 'CloudLinux 6 (32 bit)'},
-        '21777': {
-            'id': '21777',
-            'name': 'CloudLinux 6 (64 bit)'},
-        '21768': {
-            'id': '21768',
-            'name': 'CloudLinux 5 (32 bit)'},
-        '21771': {
-            'id': '21771',
-            'name': 'CloudLinux 5 (64 bit)'},
-        '22247': {
-            'id': '22247',
-            'name': 'Debian GNU/Linux 7.0 Wheezy/Stable - Minimal Install (32 bit)'},
-        '22251': {
-            'id': '22251',
-            'name': 'Debian GNU/Linux 7.0 Wheezy/Stable - Minimal Install (64 bit)'},
-        '21265': {
-            'id': '21265',
-            'name': 'FreeBSD 9 Latest (32 bit)'},
-        '21269': {
-            'id': '21269',
-            'name': 'FreeBSD 9 Latest (64 bit)'},
-        '21257': {
-            'id': '21257',
-            'name': 'FreeBSD 8 Latest (32 bit)'},
-        '21261': {
-            'id': '21261',
-            'name': 'FreeBSD 8 Latest (64 bit)'},
-        '2143': {
-            'id': '2143',
-            'name': 'Ubuntu Linux 10.04 LTS Lucid Lynx - Minimal Install (32 bit)'},
-        '2145': {
-            'id': '2145',
-            'name': 'Ubuntu Linux 10.04 LTS Lucid Lynx - Minimal Install (64 bit)'},
-        '2138': {
-            'id': '2138',
-            'name': 'Ubuntu Linux 10.04 LTS Lucid Lynx - LAMP Install (32 bit)'},
-        '2141': {
-            'id': '2141',
-            'name': 'Ubuntu Linux 10.04 LTS Lucid Lynx - LAMP Install (64 bit)'},
-        '17436': {
-            'id': '17436',
-            'name': 'Ubuntu Linux 12.04 LTS Precise Pangolin - Minimal Install (32 bit)'},
-        '17438': {
-            'id': '17438',
-            'name': 'Ubuntu Linux 12.04 LTS Precise Pangolin - Minimal Install (64 bit)'},
-        '17432': {
-            'id': '17432',
-            'name': 'Ubuntu Linux 12.04 LTS Precise Pangolin - LAMP Install (32 bit)'},
-        '17434': {
-            'id': '17434',
-            'name': 'Ubuntu Linux 12.04 LTS Precise Pangolin - LAMP Install (64 bit)'},
-        '20948': {
-            'id': '20948',
-            'name': 'Windows Server 2012 Standard Edition (64 bit)'},
-        '21074': {
-            'id': '21074',
-            'name': 'Windows Server 2008 Standard SP1 with R2 (64 bit)'},
-        '1857': {
-            'id': '1857',
-            'name': 'Windows Server 2008 R2 Standard Edition (64bit)'},
-        '1860': {
-            'id': '1860',
-            'name': 'Windows Server 2008 R2 Enterprise Edition (64bit)'},
-        '1742': {
-            'id': '1742',
-            'name': 'Windows Server 2008 Standard Edition SP2 (32bit)'},
-        '1752': {
-            'id': '1752',
-            'name': 'Windows Server 2008 Standard Edition SP2 (64bit)'},
-        '1756': {
-            'id': '1756',
-            'name': 'Windows Server 2008 Enterprise Edition SP2 (32bit)'},
-        '1761': {
-            'id': '1761',
-            'name': 'Windows Server 2008 Enterprise Edition SP2 (64bit)'},
-        '1766': {
-            'id': '1766',
-            'name': 'Windows Server 2008 Datacenter Edition SP2 (32bit)'},
-        '1770': {
-            'id': '1770',
-            'name': 'Windows Server 2008 Datacenter Edition SP2 (64bit)'},
-        '21060': {
-            'id': '21060',
-            'name': 'Windows Server 2012 Datacenter Edition With Hyper-V (64bit)'},
-        '20971': {
-            'id': '20971',
-            'name': 'Windows Server 2012 Datacenter Edition (64bit)'},
-        '21644': {
-            'id': '21644',
-            'name': 'Windows Server 2008 R2 Datacenter Edition With Hyper-V (64bit)'},
-        '13866': {
-            'id': '13866',
-            'name': 'Windows Server 2008 R2 Datacenter Edition (64bit)'},
-        '1700': {
-            'id': '1700',
-            'name': 'Windows Server 2003 Standard SP2 with R2 (32 bit)'},
-        '1701': {
-            'id': '1701',
-            'name': 'Windows Server 2003 Standard SP2 with R2 (64 bit)'},
-        '1716': {
-            'id': '1716',
-            'name': 'Windows Server 2003 Datacenter SP2 with R2 (32 bit)'},
-        '1715': {
-            'id': '1715',
-            'name': 'Windows Server 2003 Datacenter SP2 with R2 (64 bit)'},
-        '1702': {
-            'id': '1702',
-            'name': 'Windows Server 2003 Enterprise SP2 with R2 (32 bit)'},
-        '1703': {
-            'id': '1703',
-            'name': 'Windows Server 2003 Enterprise SP2 with R2 (64 bit)'},
-        '22418': {
-            'id': '22418',
-            'name': 'Citrix XenServer 6.2'},
-        '21133': {
-            'id': '21133',
-            'name': 'Citrix XenServer 6.1'},
-        '17228': {
-            'id': '17228',
-            'name': 'Citrix XenServer 6.0.2'},
-        '14059': {
-            'id': '14059',
-            'name': 'Citrix XenServer 6.0.0'},
-        '13891': {
-            'id': '13891',
-            'name': 'Citrix XenServer 5.6.2'},
-        '2380': {
-            'id': '2380',
-            'name': 'Citrix XenServer 5.6.1'},
-        '2214': {
-            'id': '2214',
-            'name': 'Citrix XenServer 5.6'},
-        '1806': {
-            'id': '1806',
-            'name': 'Citrix XenServer 5.5'},
-        '21158': {
-            'id': '21158',
-            'name': 'VMware ESXi 5.1'},
-        '14048': {
-            'id': '14048',
-            'name': 'VMware ESX 4.1'},
-        '2032': {
-            'id': '2032',
-            'name': 'VMware ESX 4.0'},
-        '21396': {
-            'id': '21396',
-            'name': 'Vyatta 6.5 Community Edition (64 bit)'},
-        '22177': {
-            'id': '22177',
-            'name': 'Vyatta 6.x Subscription Edition (64 bit)'},
-        }
-    }
+    ret = {}
+    conn = get_conn(service='SoftLayer_Product_Package')
+    for category in conn.getCategories(id=50):
+        if category['categoryCode'] != 'os':
+            continue
+        for group in category['groups']:
+            for price in group['prices']:
+                ret[price['id']] = price['item'].copy()
+                del ret[price['id']]['id']
     return ret
 
 
@@ -394,6 +203,20 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'softlayer_hw',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -401,7 +224,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -443,7 +266,7 @@ def create(vm_):
     }
 
     optional_products = config.get_cloud_config_value(
-        'optional_products', vm_, __opts__, default=True
+        'optional_products', vm_, __opts__, default=[]
     )
     for product in optional_products:
         kwargs['prices'].append({'id': product})
@@ -454,9 +277,9 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': port_speed})
 
-    # Default is 248 (5000 GB Bandwidth)
+    # Default is 1800 (0 GB Bandwidth)
     bandwidth = config.get_cloud_config_value(
-        'bandwidth', vm_, __opts__, default=248
+        'bandwidth', vm_, __opts__, default=1800
     )
     kwargs['prices'].append({'id': bandwidth})
 
@@ -489,7 +312,7 @@ def create(vm_):
     except Exception as exc:
         log.error(
             'Error creating {0} on SoftLayer\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], str(exc)
             ),
@@ -557,116 +380,9 @@ def create(vm_):
         'ssh_username', vm_, __opts__, default='root'
     )
 
-    ret = {}
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': ip_address,
-            'username': ssh_username,
-            'password': passwd,
-            'script': deploy_script.script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
-    log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(response)
-        )
-    )
+    vm_['ssh_host'] = ip_address
+    vm_['password'] = passwd
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(response)
 
@@ -677,7 +393,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -819,3 +535,81 @@ def list_vlans(call=None):
 
     conn = get_conn(service='Account')
     return conn.getNetworkVlans()
+
+
+def show_pricing(kwargs=None, call=None):
+    '''
+    Show pricing for a particular profile. This is only an estimate, based on
+    unofficial pricing sources.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_pricing my-softlayerhw-config profile=my-profile
+
+    If pricing sources have not been cached, they will be downloaded. Once they
+    have been cached, they will not be updated automatically. To manually update
+    all prices, use the following command:
+
+    .. code-block:: bash
+
+        salt-cloud -f update_pricing <provider>
+
+    .. versionadded:: 2015.8.0
+    '''
+    profile = __opts__['profiles'].get(kwargs['profile'], {})
+    if not profile:
+        return {'Error': 'The requested profile was not found'}
+
+    # Make sure the profile belongs to Softlayer HW
+    provider = profile.get('provider', '0:0')
+    comps = provider.split(':')
+    if len(comps) < 2 or comps[1] != 'softlayer_hw':
+        return {'Error': 'The requested profile does not belong to Softlayer HW'}
+
+    raw = {}
+    ret = {}
+    ret['per_hour'] = 0
+    conn = get_conn(service='SoftLayer_Product_Item_Price')
+    for item in profile:
+        if item in ('profile', 'provider', 'location'):
+            continue
+        price = conn.getObject(id=profile[item])
+        raw[item] = price
+        ret['per_hour'] += decimal.Decimal(price.get('hourlyRecurringFee', 0))
+
+    ret['per_day'] = ret['per_hour'] * 24
+    ret['per_week'] = ret['per_day'] * 7
+    ret['per_month'] = ret['per_day'] * 30
+    ret['per_year'] = ret['per_week'] * 52
+
+    if kwargs.get('raw', False):
+        ret['_raw'] = raw
+
+    return {profile['profile']: ret}
+
+
+def show_all_prices(call=None, kwargs=None):
+    '''
+    Return a dict of all available VM images on the cloud provider.
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option'
+        )
+
+    conn = get_conn(service='SoftLayer_Product_Package')
+    if 'code' not in kwargs:
+        return conn.getCategories(id=50)
+
+    ret = {}
+    for category in conn.getCategories(id=50):
+        if category['categoryCode'] != kwargs['code']:
+            continue
+        for group in category['groups']:
+            for price in group['prices']:
+                ret[price['id']] = price['item'].copy()
+                del ret[price['id']]['id']
+    return ret

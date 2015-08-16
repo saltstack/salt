@@ -2,15 +2,15 @@
 '''
 Run nagios plugins/checks from salt and get the return as data.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import stat
-
-# Import salt libs
-
 import logging
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,9 @@ def _execute_cmd(plugin, args='', run_type='cmd.retcode'):
 
     all_plugins = list_plugins()
     if plugin in all_plugins:
-        data = __salt__[run_type]('{0}{1} {2}'.format(PLUGINDIR, plugin, args))
+        data = __salt__[run_type](
+                '{0}{1} {2}'.format(PLUGINDIR, plugin, args),
+                python_shell=False)
 
     return data
 
@@ -46,10 +48,10 @@ def _execute_pillar(pillar_name, run_type):
     ------
     webserver:
         Ping_google:
-            - check_icmp:8.8.8.8
-            - check_icmp:google.com
+            - check_icmp: 8.8.8.8
+            - check_icmp: google.com
         Load:
-            - check_load:-w 0.8 -c 1
+            - check_load: -w 0.8 -c 1
         APT:
             - check_apt
     -------
@@ -61,10 +63,10 @@ def _execute_pillar(pillar_name, run_type):
         data[group] = {}
         commands = groups[group]
         for command in commands:
-            #Check if is a dict to get the arguments
-            #in command if not set the arguments to empty string
+            # Check if is a dict to get the arguments
+            # in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = next(command.iterkeys())
+                plugin = next(six.iterkeys(command))
                 args = command[plugin]
             else:
                 plugin = command
@@ -135,10 +137,10 @@ def retcode_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------
@@ -163,10 +165,10 @@ def retcode_pillar(pillar_name):
     for group in groups:
         commands = groups[group]
         for command in commands:
-            #Check if is a dict to get the arguments
-            #in command if not set the arguments to empty string
+            # Check if is a dict to get the arguments
+            # in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = next(command.iterkeys())
+                plugin = next(six.iterkeys(command))
                 args = command[plugin]
             else:
                 plugin = command
@@ -196,10 +198,10 @@ def run_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------
@@ -228,10 +230,10 @@ def run_all_pillar(pillar_name):
         ------
         webserver:
             Ping_google:
-                - check_icmp:8.8.8.8
-                - check_icmp:google.com
+                - check_icmp: 8.8.8.8
+                - check_icmp: google.com
             Load:
-                - check_load:-w 0.8 -c 1
+                - check_load: -w 0.8 -c 1
             APT:
                 - check_apt
         -------

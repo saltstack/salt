@@ -130,15 +130,20 @@ strftime
   Converts any time related object into a time based string. It requires a
   valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
   :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-  the official Python documentation. Fuzzy dates are parsed by `timelib`_ python
-  module. Some examples are available on this pages.
+  the official Python documentation.
+
+  .. code-block:: yaml
+
+      {% set curtime = None | strftime() %}
+
+  Fuzzy dates require the `timelib`_ Python module is installed.
 
   .. code-block:: yaml
 
       {{ "2002/12/25"|strftime("%y") }}
       {{ "1040814000"|strftime("%Y-%m-%d") }}
       {{ datetime|strftime("%u") }}
-      {{ "now"|strftime }}
+      {{ "tomorrow"|strftime }}
 
 sequence
   Ensure that parsed data is a sequence.
@@ -264,16 +269,17 @@ in the current Jinja context.
     Context is: {{ show_full_context() }}
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from StringIO import StringIO
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -291,7 +297,7 @@ def _split_module_dicts():
     if not isinstance(__salt__, dict):
         return __salt__
     mod_dict = dict(__salt__)
-    for module_func_name, mod_fun in mod_dict.items():
+    for module_func_name, mod_fun in six.iteritems(mod_dict.copy()):
         mod, fun = module_func_name.split('.', 1)
         if mod not in mod_dict:
             # create an empty object that we can add attributes to

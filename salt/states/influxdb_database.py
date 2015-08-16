@@ -10,6 +10,15 @@ Management of InfluxDB databases
 '''
 
 
+def __virtual__():
+    '''
+    Only load if the influxdb module is available
+    '''
+    if 'influxdb.db_exists' in __salt__:
+        return 'influxdb_database'
+    return False
+
+
 def present(name, user=None, password=None, host=None, port=None):
     '''
     Ensure that the named database is present
