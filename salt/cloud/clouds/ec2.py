@@ -3141,11 +3141,13 @@ def list_nodes_min(location=None, call=None):
             for item in instance['instancesSet']['item']:
                 state = item['instanceState']['name']
                 name = _extract_name_tag(item)
+                id = item['instanceId']
         else:
             item = instance['instancesSet']['item']
             state = item['instanceState']['name']
             name = _extract_name_tag(item)
-        ret[name] = {'state': state}
+            id = item['instanceId']
+        ret[name] = {'state': state, 'id': id}
     return ret
 
 

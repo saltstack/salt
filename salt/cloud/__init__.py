@@ -1454,10 +1454,13 @@ class Cloud(object):
                     if not names:
                         break
                     if vm_name not in names:
-                        log.debug('vm:{0} in provider:{1} is not in name list:{2!r}'.format(
-                            vm_name, driver, names
-                        ))
-                        continue
+                        if 'id' in vm_details and vm_details['id'] in names:
+                            vm_name = vm_details['id']
+                        else:
+                            log.debug('vm:{0} in provider:{1} is not in name list:{2!r}'.format(
+                                vm_name, driver, names
+                            ))
+                            continue
                     with context.func_globals_inject(
                         self.clouds[fun],
                         __active_provider_name__=':'.join([alias, driver])
