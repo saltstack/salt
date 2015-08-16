@@ -250,7 +250,7 @@ Version 0.17.1 is the first bugfix release for :doc:`0.17.0
   (:issue:`7718`)
 - Fix for pillar/grains naming regression in python renderer (:issue:`7693`)
 - Fix args/kwargs handling in the scheduler (:issue:`7422`)
-- Fix logfile handling for `file://`, `tcp://` and `udp://` (:issue:`7754`)
+- Fix logfile handling for `file://`, `tcp://`, and `udp://` (:issue:`7754`)
 - Fix error handling in config file parsing (:issue:`6714`)
 - Fix RVM using sudo when running as non-root user (:issue:`2193`)
 - Fix client ACL and underlying logging bugs (:issue:`7706`)

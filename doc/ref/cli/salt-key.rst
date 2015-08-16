@@ -22,6 +22,15 @@ Options
 
 .. include:: _includes/common-options.rst
 
+.. option:: -u USER, --user=USER
+
+    Specify user to run salt-key
+
+.. option:: --hard-crash
+
+    Raise any original exception rather than exiting gracefully. Default is
+    False.
+
 .. option:: -q, --quiet
 
    Suppress output
@@ -29,6 +38,12 @@ Options
 .. option:: -y, --yes
 
    Answer 'Yes' to all questions presented, defaults to False
+
+.. option:: --rotate-aes-key=ROTATE_AES_KEY
+
+    Setting this to False prevents the master from refreshing the key session
+    when keys are deleted or rejected, this lowers the security of the key
+    deletion/rejection operation. Default is True.
 
 .. include:: _includes/logging-options.rst
     :end-before: start-console-output
@@ -119,6 +134,29 @@ Key Generation Options
    higher, otherwise it will be rounded up to 2048. The
    default is 2048.
 
+.. option:: --gen-signature
+
+    Create a signature file of the masters public-key named
+    master_pubkey_signature. The signature can be send to a minion in the
+    masters auth-reply and enables the minion to verify the masters public-key
+    cryptographically. This requires a new signing-key- pair which can be
+    auto-created with the --auto-create parameter.
+
+.. option:: --priv=PRIV
+
+    The private-key file to create a signature with
+
+.. option:: --signature-path=SIGNATURE_PATH
+
+    The path where the signature file should be written
+
+.. option:: --pub=PUB
+
+    The public-key file to create a signature for
+
+.. option:: --auto-create
+
+    Auto-create a signing key-pair if it does not yet exist
 
 See also
 ========

@@ -40,7 +40,7 @@ Blacklist Additions
 
 Additions allowing more granular blacklisting are available in 0.13.0. The
 ability to blacklist users and functions in client_acl have been added, as
-well as the ability to exclude state formulas from the command line. 
+well as the ability to exclude state formulas from the command line.
 
 Command Line Pillar Embedding
 -----------------------------

@@ -1,24 +1,32 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
-import time
 import sys
-import multiprocessing
+import time
+import types
 import signal
+import subprocess
+import logging
+import multiprocessing
+import multiprocessing.util
 
 import threading
-import Queue
 
 # Import salt libs
+import salt.defaults.exitcodes
 import salt.utils
+import salt.log.setup
+from salt.log.mixins import NewStyleClassMixIn
+
+# Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -26,11 +34,21 @@ try:
 except ImportError:
     pass
 
-try:
-    import systemd.daemon
-    HAS_PYTHON_SYSTEMD = True
-except ImportError:
-    HAS_PYTHON_SYSTEMD = False
+
+def notify_systemd():
+    '''
+    Notify systemd that this process has started
+    '''
+    try:
+        import systemd.daemon
+    except ImportError:
+        return False
+    if systemd.daemon.booted():
+        try:
+            return systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon was not started by systemd
+            pass
 
 
 def set_pidfile(pidfile, user):
@@ -64,7 +82,7 @@ def set_pidfile(pidfile, user):
                 user
             )
         )
-        sys.exit(os.EX_NOUSER)
+        sys.exit(salt.defaults.exitcodes.EX_NOUSER)
 
     if os.getuid() == uid:
         # The current user already owns the pidfile. Return!
@@ -147,12 +165,12 @@ class ThreadPool(object):
         self.num_threads = num_threads
 
         # create a task queue of queue_size
-        self._job_queue = Queue.Queue(queue_size)
+        self._job_queue = queue.Queue(queue_size)
 
         self._workers = []
 
         # create worker threads
-        for idx in xrange(num_threads):
+        for _ in range(num_threads):
             thread = threading.Thread(target=self._thread_target)
             thread.daemon = True
             thread.start()
@@ -167,22 +185,25 @@ class ThreadPool(object):
         if kwargs is None:
             kwargs = {}
         try:
-            self._job_queue.put((func, args, kwargs), False)
+            self._job_queue.put_nowait((func, args, kwargs))
             return True
-        except Queue.Full:
+        except queue.Full:
             return False
 
     def _thread_target(self):
         while True:
-            # 1s timeout so that if the parent dies this thread will die after 1s
+            # 1s timeout so that if the parent dies this thread will die within 1s
             try:
                 func, args, kwargs = self._job_queue.get(timeout=1)
-            except Queue.Empty:
+                self._job_queue.task_done()  # Mark the task as done once we get it
+            except queue.Empty:
                 continue
             try:
+                log.debug('ThreadPool executing func: {0} with args:{1}'
+                          ' kwargs{2}'.format(func, args, kwargs))
                 func(*args, **kwargs)
-            except Exception:
-                pass
+            except Exception as err:
+                log.debug(err, exc_info=True)
 
 
 class ProcessManager(object):
@@ -215,29 +236,39 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
-        if type(multiprocessing.Process) == type(tgt) and issubclass(tgt, multiprocessing.Process):
-            p = tgt(*args, **kwargs)
+        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
+            process = tgt(*args, **kwargs)
         else:
-            p = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
+            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
-        p.start()
-        log.debug("Started '{0}'(*{1}, **{2} with pid {3}".format(tgt,
-                                                                  args,
-                                                                  kwargs,
-                                                                  p.pid))
-        self._process_map[p.pid] = {'tgt': tgt,
-                                    'args': args,
-                                    'kwargs': kwargs,
-                                    'Process': p}
+        process.start()
+
+        # create a nicer name for the debug log
+        if isinstance(tgt, types.FunctionType):
+            name = '{0}.{1}'.format(
+                tgt.__module__,
+                tgt.__name__,
+            )
+        else:
+            name = '{0}.{1}.{2}'.format(
+                tgt.__module__,
+                tgt.__class__,
+                tgt.__name__,
+            )
+        log.debug("Started '{0}' with pid {1}".format(name, process.pid))
+        self._process_map[process.pid] = {'tgt': tgt,
+                                          'args': args,
+                                          'kwargs': kwargs,
+                                          'Process': process}
 
     def restart_process(self, pid):
         '''
         Create new process (assuming this one is dead), then remove the old one
         '''
-        log.info(('Process {0} ({1}) died with exit status {2},'
-                  ' restarting...').format(self._process_map[pid]['tgt'],
-                                           pid,
-                                           self._process_map[pid]['Process'].exitcode))
+        log.info('Process {0} ({1}) died with exit status {2},'
+                 ' restarting...'.format(self._process_map[pid]['tgt'],
+                                         pid,
+                                         self._process_map[pid]['Process'].exitcode))
         # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
@@ -256,24 +287,21 @@ class ProcessManager(object):
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
-        try:
-            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
-                systemd.daemon.notify('READY=1')
-        except SystemError:
-            # Daemon wasn't started by systemd
-            pass
-
         while True:
             try:
                 # in case someone died while we were waiting...
                 self.check_children()
 
-                pid, exit_status = os.wait()
-                if pid not in self._process_map:
-                    log.debug(('Process of pid {0} died, not a known'
-                               ' process, will not restart').format(pid))
-                    continue
-                self.restart_process(pid)
+                if not salt.utils.is_windows():
+                    pid, exit_status = os.wait()
+                    if pid not in self._process_map:
+                        log.debug('Process of pid {0} died, not a known'
+                                  ' process, will not restart'.format(pid))
+                        continue
+                    self.restart_process(pid)
+                else:
+                    # os.wait() is not supported on Windows.
+                    time.sleep(10)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
@@ -299,14 +327,29 @@ class ProcessManager(object):
                 return signal.default_int_handler(signal.SIGTERM)(*args)
             else:
                 return
-
-        for pid, p_map in self._process_map.items():
-            p_map['Process'].terminate()
+        if salt.utils.is_windows():
+            with open(os.devnull, 'wb') as devnull:
+                for pid, p_map in six.iteritems(self._process_map):
+                    # On Windows, we need to explicitly terminate sub-processes
+                    # because the processes don't have a sigterm handler.
+                    subprocess.call(
+                        ['taskkill', '/F', '/T', '/PID', str(pid)],
+                        stdout=devnull, stderr=devnull
+                        )
+                    p_map['Process'].terminate()
+        else:
+            for pid, p_map in six.iteritems(self._process_map.copy()):
+                try:
+                    p_map['Process'].terminate()
+                except OSError as exc:
+                    if exc.errno != 3:
+                        raise
+                    del self._process_map[pid]
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:
-            for pid, p_map in self._process_map.items():
+            for pid, p_map in six.iteritems(self._process_map.copy()):
                 p_map['Process'].join(0)
 
                 # This is a race condition if a signal was passed to all children
@@ -321,3 +364,13 @@ class ProcessManager(object):
             # in case the process has since decided to die, os.kill returns OSError
             except OSError:
                 pass
+
+
+class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
+    def __init__(self, *args, **kwargs):
+        self.log_queue = kwargs.pop('log_queue', salt.log.setup.get_multiprocessing_logging_queue())
+        multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
+        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
+
+    def __setup_process_logging(self):
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)

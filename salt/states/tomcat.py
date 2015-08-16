@@ -40,6 +40,11 @@ Notes:
       Apache Tomcat/7.0.37
 '''
 
+from __future__ import absolute_import
+
+# import salt libs
+from salt.modules.tomcat import _extract_version
+
 
 # Private
 def __virtual__():
@@ -96,7 +101,9 @@ def war_deployed(name,
        'changes': {},
        'comment': ''}
     basename = war.split('/')[-1]
-    version = basename.replace('.war', '')
+
+    version = _extract_version(basename)
+
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
     undeploy = False
@@ -104,7 +111,7 @@ def war_deployed(name,
 
     # Determine what to do
     try:
-        if (version != webapps[name]['version']) or force:
+        if not webapps[name]['version'].endswith(version) or force:
             deploy = True
             undeploy = True
             ret['changes']['undeploy'] = ('undeployed {0} in version {1}'.
@@ -187,21 +194,18 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     .. code-block:: yaml
 
         tomcat-service:
-          service:
-            - running
+          service.running:
             - name: tomcat
             - enable: True
 
         wait-for-tomcatmanager:
-          tomcat:
-            - wait
+          tomcat.wait:
             - timeout: 300
             - require:
               - service: tomcat-service
 
         jenkins:
-          tomcat:
-            - war_deployed
+          tomcat.war_deployed:
             - name: /ran
             - war: salt://jenkins-1.2.4.war
             - require:

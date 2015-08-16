@@ -19,7 +19,7 @@ Assuming there is a profile configured as following:
 .. code-block:: bash
 
     fedora_rackspace:
-        provider: rackspace
+        provider: my-rackspace-config
         image: Fedora 17
         size: 256 server
         script: bootstrap-salt

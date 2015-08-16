@@ -2,10 +2,10 @@ include AUTHORS
 include HACKING.rst
 include LICENSE
 include README.rst
-include _requirements.txt
-include raet-requirements.txt
-include cloud-requirements.txt
-include zeromq-requirements.txt
+include requirements/base.txt
+include requirements/raet.txt
+include requirements/cloud.txt
+include requirements/zeromq.txt
 include tests/*.py
 recursive-include tests *
 include tests/integration/modules/files/*

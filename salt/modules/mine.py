@@ -2,17 +2,34 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
+import time
+import traceback
 
 # Import salt libs
 import salt.crypt
 import salt.payload
+import salt.utils
 import salt.utils.network
 import salt.utils.event
+from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+MINE_INTERNAL_KEYWORDS = frozenset([
+    '__pub_user',
+    '__pub_arg',
+    '__pub_fun',
+    '__pub_jid',
+    '__pub_tgt',
+    '__pub_tgt_type',
+    '__pub_ret'
+])
 
 __proxyenabled__ = ['*']
 
@@ -24,7 +41,11 @@ def _auth():
     Return the auth object
     '''
     if 'auth' not in __context__:
-        __context__['auth'] = salt.crypt.SAuth(__opts__)
+        try:
+            __context__['auth'] = salt.crypt.SAuth(__opts__)
+        except SaltClientError:
+            log.error('Could not authenticate with master.'
+                      'Mine data will not be transmitted.')
     return __context__['auth']
 
 
@@ -37,18 +58,25 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    if opts.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-
-    eventer = salt.utils.event.MinionEvent(opts)
-    return eventer.fire_event(load, '_minion_mine')
+    eventer = salt.utils.event.MinionEvent(opts, listen=False)
+    event_ret = eventer.fire_event(load, '_minion_mine')
+    # We need to pause here to allow for the decoupled nature of
+    # events time to allow the mine to propagate
+    time.sleep(0.5)
+    return event_ret
 
 
 def _mine_get(load, opts):
     if opts.get('transport', '') == 'zeromq':
-        load['tok'] = _auth().gen_token('salt')
-    sreq = salt.transport.Channel.factory(opts)
-    ret = sreq.send(load)
+        try:
+            load['tok'] = _auth().gen_token('salt')
+        except AttributeError:
+            log.error('Mine could not authenticate with master. '
+                      'Mine could not be retreived.'
+                      )
+            return False
+    channel = salt.transport.Channel.factory(opts)
+    ret = channel.send(load)
     return ret
 
 
@@ -97,8 +125,10 @@ def update(clear=False):
                     continue
                 data[func] = __salt__[func]()
         except Exception:
+            trace = traceback.format_exc()
             log.error('Function {0} in mine_functions failed to execute'
                       .format(func))
+            log.debug('Error: {0}'.format(trace))
             continue
     if __opts__['file_client'] == 'local':
         if not clear:
@@ -127,6 +157,7 @@ def send(func, *args, **kwargs):
         salt '*' mine.send network.ip_addrs eth0
         salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
     mine_func = kwargs.pop('mine_function', func)
     if mine_func not in __salt__:
         return False
@@ -139,7 +170,9 @@ def send(func, *args, **kwargs):
         except IndexError:
             # Safe error, arg may be in kwargs
             pass
-    f_call = salt.utils.format_call(__salt__[mine_func], func_data)
+    f_call = salt.utils.format_call(__salt__[mine_func],
+                                    func_data,
+                                    expected_extra_kws=MINE_INTERNAL_KEYWORDS)
     for arg in args:
         if arg not in f_call['args']:
             f_call['args'].append(arg)
@@ -179,6 +212,7 @@ def get(tgt, fun, expr_form='glob'):
         grain_pcre
         compound
         pillar
+        pillar_pcre
 
     Note that all pillar matches, whether using the compound matching system or
     the pillar matching system, will be exact matches, with globbing disabled.
@@ -201,6 +235,7 @@ def get(tgt, fun, expr_form='glob'):
                      'ipcidr': __salt__['match.ipcidr'],
                      'compound': __salt__['match.compound'],
                      'pillar': __salt__['match.pillar'],
+                     'pillar_pcre': __salt__['match.pillar_pcre'],
                      }[expr_form](tgt)
         if is_target:
             data = __salt__['data.getval']('mine_cache')
@@ -288,26 +323,27 @@ def get_docker(interfaces=None, cidrs=None):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'docker.get_containers'
+    cmd = 'dockerng.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}
 
     # Process docker info
-    for host, containers in docker_hosts.items():
+    for containers in six.itervalues(docker_hosts):
+        host = containers.pop('host')
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for iface, info in containers['host']['interfaces'].items():
+            for info in six.itervalues(host['interfaces']):
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
         else:
             for interface in interfaces:
-                if interface in containers['host']['interfaces']:
-                    if 'inet' in containers['host']['interfaces'][interface]:
-                        for item in containers['host']['interfaces'][interface]['inet']:
+                if interface in host['interfaces']:
+                    if 'inet' in host['interfaces'][interface]:
+                        for item in host['interfaces'][interface]['inet']:
                             host_ips.append(item['address'])
         host_ips = list(set(host_ips))
 
@@ -321,19 +357,21 @@ def get_docker(interfaces=None, cidrs=None):
             host_ips = list(set(good_ips))
 
         # Process each container
-        if containers['out']:
-            for container in containers['out']:
-                if container['Image'] not in proxy_lists:
-                    proxy_lists[container['Image']] = {}
-                for dock_port in container['Ports']:
-                    # If port is 0.0.0.0, then we must get the docker host IP
-                    if dock_port['IP'] == '0.0.0.0':
-                        for ip_ in host_ips:
-                            proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
-                                '{0}:{1}'.format(ip_, dock_port['PublicPort']))
-                            proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
-                    elif dock_port['IP']:
+        for container in six.itervalues(containers):
+            if container['Image'] not in proxy_lists:
+                proxy_lists[container['Image']] = {}
+            for dock_port in container['Ports']:
+                # IP exists only if port is exposed
+                ip_address = dock_port.get('IP')
+                # If port is 0.0.0.0, then we must get the docker host IP
+                if ip_address == '0.0.0.0':
+                    for ip_ in host_ips:
                         proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
-                            '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
+                            '{0}:{1}'.format(ip_, dock_port['PublicPort']))
                         proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
+                elif ip_address:
+                    proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
+                        '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
+                    proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
+
     return proxy_lists

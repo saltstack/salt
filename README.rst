@@ -13,7 +13,7 @@ Documentation
 =============
 
 Installation instructions, getting started guides, and in-depth API
-documention.
+documentation.
 
 http://docs.saltstack.com
 
@@ -59,3 +59,10 @@ links should get you started:
 
 * https://github.com/saltstack
 * http://docs.saltstack.com/en/latest/topics/development/index.html
+
+Reporting Issues
+================
+
+To report an issue with Salt, please follow the guidelines for filing bug reports:
+
+* http://docs.saltstack.com/en/develop/topics/development/reporting_bugs.html

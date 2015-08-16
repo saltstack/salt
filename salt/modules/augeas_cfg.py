@@ -104,6 +104,7 @@ def execute(context=None, lens=None, commands=()):
 
     method_map = {
         'set':    'set',
+        'setm':    'setm',
         'mv':     'move',
         'move':   'move',
         'ins':    'insert',
@@ -130,18 +131,26 @@ def execute(context=None, lens=None, commands=()):
 
         try:
             if method == 'set':
-                path, value, remainder = re.split('([^\'" ]+|"[^"]+"|\'[^\']+\')$', arg, 1)
+                path, value, remainder = re.split('([^\'" ]+|"[^"]*"|\'[^\']*\')$', arg, 1)
+                path = path.rstrip()
                 if context:
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 value = value.strip('"').strip("'")
                 args = {'path': path, 'value': value}
+            elif method == 'setm':
+                base, sub, value = re.findall('([^\'" ]+|"[^"]*"|\'[^\']*\')', arg)
+                base = base.rstrip()
+                if context:
+                    base = os.path.join(context.rstrip('/'), base.lstrip('/'))
+                value = value.strip('"').strip("'")
+                args = {'base': base, 'sub': sub, 'value': value}
             elif method == 'move':
                 path, dst = arg.split(' ', 1)
                 if context:
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 args = {'src': path, 'dst': dst}
             elif method == 'insert':
-                path, where, label = re.split(' (before|after) ', arg)
+                label, where, path = re.split(' (before|after) ', arg)
                 if context:
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 args = {'path': path, 'label': label, 'before': where == 'before'}

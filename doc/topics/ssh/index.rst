@@ -30,14 +30,14 @@ standard ``salt`` commands.
 
 .. note::
 
-    The Salt SSH eventually is supposed to support the same set of commands and 
-    functionality as standard ``salt`` command. 
-    
-    At the moment fileserver operations must be wrapped to ensure that the 
-    relevant files are delivered with the ``salt-ssh`` commands. 
-    The state module is an exception, which compiles the state run on the 
-    master, and in the process finds all the references to ``salt://`` paths and 
-    copies those files down in the same tarball as the state run. 
+    The Salt SSH eventually is supposed to support the same set of commands and
+    functionality as standard ``salt`` command.
+
+    At the moment fileserver operations must be wrapped to ensure that the
+    relevant files are delivered with the ``salt-ssh`` commands.
+    The state module is an exception, which compiles the state run on the
+    master, and in the process finds all the references to ``salt://`` paths and
+    copies those files down in the same tarball as the state run.
     However, needed fileserver wrappers are still under development.
 
 Salt SSH Roster
@@ -67,11 +67,11 @@ address. A more elaborate roster can be created:
       sudo: True         # Whether to sudo to root, not enabled by default
     web2:
       host: 192.168.42.2
-      
+
 .. note::
 
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
-    ``fred ALL=(ALL) NOPASSWD: ALL`` 
+    ``fred ALL=(ALL) NOPASSWD: ALL``
 
 Calling Salt SSH
 ================
@@ -86,7 +86,7 @@ command:
 Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
 The standard salt functions are available! The output is the same as ``salt``
-and many of the same flags are available. Please see 
+and many of the same flags are available. Please see
 http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available
 options.
 
@@ -118,13 +118,29 @@ Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
 
+.. note::
+    By default, Grains are settable through ``salt-ssh``. By
+    default, these grains will *not* be persisted across reboots. 
+
+    See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
+    for more details.
+
 Configuring Salt SSH
 ====================
 
 Salt SSH takes its configuration from a master configuration file. Normally, this
 file is in ``/etc/salt/master``. If one wishes to use a customized configuration file,
-the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a 
+the ``-c`` option to Salt SSH facilitates passing in a directory to look inside for a
 configuration file named ``master``.
+
+Minion Config
+---------------
+
+.. versionadded:: 2015.5.1
+
+Minion config options can be defined globally using the master configuration
+option ``ssh_minion_opts``. It can also be defined on a per-minion basis with
+the ``minion_opts`` entry in the roster.
 
 Running Salt SSH as non-root user
 =================================
@@ -144,16 +160,28 @@ If you are commonly passing in CLI options to ``salt-ssh``, you can create
 a ``Saltfile`` to automatically use these options. This is common if you're
 managing several different salt projects on the same server.
 
-So if you ``cd`` into a directory with a Saltfile with the following
-contents:
+So you can ``cd`` into a directory that has a ``Saltfile`` with the following
+YAML contents:
 
 .. code-block:: yaml
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_prox: 30
+      max_procs: 30
+      wipe_ssh: True
 
 Instead of having to call
-``salt-ssh --config-dir=path/to/config/dir --max-procs=30 \* test.ping`` you
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
 can call ``salt-ssh \* test.ping``.
 
+Boolean-style options should be specified in their YAML representation.
+
+.. note::
+
+   The option keys specified must match the destination attributes for the
+   options specified in the parser
+   :py:class:`salt.utils.parsers.SaltSSHOptionParser`.  For example, in the
+   case of the ``--wipe`` command line option, its ``dest`` is configured to
+   be ``wipe_ssh`` and thus this is what should be configured in the
+   ``Saltfile``.  Using the names of flags for this option, being ``wipe:
+   True`` or ``w: True``, will not work.

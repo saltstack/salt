@@ -14,10 +14,18 @@ import socket
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 import salt.utils.network
-from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
-from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
 
 
 log = logging.getLogger(__name__)
@@ -34,6 +42,25 @@ def __virtual__():
     return True
 
 
+def wol(mac, bcast='255.255.255.255', destport=9):
+    '''
+    Send Wake On Lan packet to a host
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.wol 08-00-27-13-69-77
+        salt '*' network.wol 080027136977 255.255.255.255 7
+        salt '*' network.wol 08:00:27:13:69:77 255.255.255.255 7
+    '''
+    dest = salt.utils.mac_str_to_bytes(mac)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.sendto(b'\xff' * 6 + dest * 16, (bcast, int(destport)))
+    return True
+
+
 def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
@@ -44,13 +71,17 @@ def ping(host, timeout=False, return_boolean=False):
 
         salt '*' network.ping archlinux.org
 
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.5.0
 
     Return a True or False instead of ping output.
+
+    .. code-block:: bash
 
         salt '*' network.ping archlinux.org return_boolean=True
 
     Set the time to wait for a response in seconds.
+
+    .. code-block:: bash
 
         salt '*' network.ping archlinux.org timeout=3
     '''
@@ -250,12 +281,12 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in ppid.items() if x in ptr)
+        conn_ppid = dict((x, y) for x, y in six.iteritems(ppid) if x in ptr)
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
             master_pid = next(iter(
-                x for x, y in conn_ppid.items() if y not in ptr
+                x for x, y in six.iteritems(conn_ppid) if y not in ptr
             ))
         except StopIteration:
             continue
@@ -270,7 +301,7 @@ def _netstat_route_linux():
     '''
     ret = []
     cmd = 'netstat -A inet -rn | tail -n+3'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -281,7 +312,7 @@ def _netstat_route_linux():
             'flags': comps[3],
             'interface': comps[7]})
     cmd = 'netstat -A inet6 -rn | tail -n+3'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         if len(comps) == 6:
@@ -311,7 +342,7 @@ def _netstat_route_freebsd():
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -322,7 +353,7 @@ def _netstat_route_freebsd():
             'flags': comps[3],
             'interface': comps[5]})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -341,7 +372,7 @@ def _netstat_route_netbsd():
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -352,7 +383,7 @@ def _netstat_route_netbsd():
             'flags': comps[3],
             'interface': comps[6]})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -371,7 +402,7 @@ def _netstat_route_openbsd():
     '''
     ret = []
     cmd = 'netstat -f inet -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -382,7 +413,7 @@ def _netstat_route_openbsd():
             'flags': comps[2],
             'interface': comps[7]})
     cmd = 'netstat -f inet6 -rn | tail -n+5'
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         comps = line.split()
         ret.append({
@@ -503,8 +534,8 @@ def traceroute(host):
                         'hostname': traceline[1],
                         'ip': traceline[2],
                     }
-                    for x in range(0, len(delays)):
-                        result['ms{0}'.format(x + 1)] = delays[x]
+                    for idx in range(0, len(delays)):
+                        result['ms{0}'.format(idx + 1)] = delays[idx]
             except IndexError:
                 result = {}
 
@@ -555,6 +586,7 @@ def dig(host):
     return __salt__['cmd.run'](cmd)
 
 
+@decorators.which('arp')
 def arp():
     '''
     Return the arp table from the minion
@@ -639,9 +671,23 @@ def interface_ip(iface):
     return salt.utils.network.interface_ip(iface)
 
 
-def subnets():
+def subnets(interfaces=None):
     '''
-    Returns a list of subnets to which the host belongs
+    Returns a list of IPv4 subnets to which the host belongs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.subnets
+        salt '*' network.subnets interfaces=eth1
+    '''
+    return salt.utils.network.subnets(interfaces)
+
+
+def subnets6():
+    '''
+    Returns a list of IPv6 subnets to which the host belongs
 
     CLI Example:
 
@@ -649,7 +695,7 @@ def subnets():
 
         salt '*' network.subnets
     '''
-    return salt.utils.network.subnets()
+    return salt.utils.network.subnets6()
 
 
 def in_subnet(cidr):
@@ -663,6 +709,37 @@ def in_subnet(cidr):
         salt '*' network.in_subnet 10.0.0.0/16
     '''
     return salt.utils.network.in_subnet(cidr)
+
+
+def ip_in_subnet(ip_addr, cidr):
+    '''
+    Returns True if given IP is within specified subnet, otherwise False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
+    '''
+    return salt.utils.network.in_subnet(cidr, ip_addr)
+
+
+def calc_net(ip_addr, netmask=None):
+    '''
+    Returns the CIDR of a subnet based on
+    an IP address (CIDR notation supported)
+    and optional netmask.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.calc_net 172.17.0.5 255.255.255.240
+        salt '*' network.calc_net 2a02:f6e:a000:80:84d8:8332:7866:4e07/64
+
+    .. versionadded:: 2015.8.0
+    '''
+    return salt.utils.network.calc_net(ip_addr, netmask)
 
 
 def ip_addrs(interface=None, include_loopback=False, cidr=None):
@@ -689,11 +766,13 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None):
 ipaddrs = ip_addrs
 
 
-def ip_addrs6(interface=None, include_loopback=False):
+def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     '''
     Returns a list of IPv6 addresses assigned to the host. ::1 is ignored,
     unless 'include_loopback=True' is indicated. If 'interface' is provided,
     then only IP addresses from that interface will be returned.
+    Providing a CIDR via 'cidr="2000::/3"' will return only the addresses
+    which are within that subnet.
 
     CLI Example:
 
@@ -701,8 +780,12 @@ def ip_addrs6(interface=None, include_loopback=False):
 
         salt '*' network.ip_addrs6
     '''
-    return salt.utils.network.ip_addrs6(interface=interface,
+    addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
+    if cidr:
+        return [i for i in addrs if salt.utils.network.ip_in_subnet(cidr, [i])]
+    else:
+        return addrs
 
 ipaddrs6 = ip_addrs6
 
@@ -730,12 +813,17 @@ def mod_hostname(hostname):
 
     .. code-block:: bash
 
-        salt '*' network.mod_hostname   master.saltstack.com
+        salt '*' network.mod_hostname master.saltstack.com
     '''
     if hostname is None:
         return False
 
-    hostname_cmd = salt.utils.which('hostname')
+    hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
+
+    if hostname_cmd.endswith('hostnamectl'):
+        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+        return True
+
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
@@ -746,7 +834,7 @@ def mod_hostname(hostname):
     # new hostname
     host_c = salt.utils.fopen('/etc/hosts', 'r').readlines()
 
-    with salt.utils.fopen('/etc/hosts', 'w') as fh:
+    with salt.utils.fopen('/etc/hosts', 'w') as fh_:
         for host in host_c:
             host = host.split()
 
@@ -755,25 +843,25 @@ def mod_hostname(hostname):
             except ValueError:
                 pass
 
-            fh.write('\t'.join(host) + '\n')
+            fh_.write('\t'.join(host) + '\n')
 
     # Modify the /etc/sysconfig/network configuration file to set the
     # new hostname
     if __grains__['os_family'] == 'RedHat':
         network_c = salt.utils.fopen('/etc/sysconfig/network', 'r').readlines()
 
-        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh:
-            for i in network_c:
-                if i.startswith('HOSTNAME'):
-                    fh.write('HOSTNAME={0}\n'.format(hostname))
+        with salt.utils.fopen('/etc/sysconfig/network', 'w') as fh_:
+            for net in network_c:
+                if net.startswith('HOSTNAME'):
+                    fh_.write('HOSTNAME={0}\n'.format(hostname))
                 else:
-                    fh.write(i)
+                    fh_.write(net)
     elif __grains__['os_family'] == 'Debian':
-        with salt.utils.fopen('/etc/hostname', 'w') as fh:
-            fh.write(hostname + '\n')
+        with salt.utils.fopen('/etc/hostname', 'w') as fh_:
+            fh_.write(hostname + '\n')
     elif __grains__['os_family'] == 'OpenBSD':
-        with salt.utils.fopen('/etc/myname', 'w') as fh:
-            fh.write(hostname + '\n')
+        with salt.utils.fopen('/etc/myname', 'w') as fh_:
+            fh_.write(hostname + '\n')
 
     return True
 
@@ -843,29 +931,24 @@ def connect(host, port=None, **kwargs):
          garbage,
          _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
 
-        s = socket.socket(family, socktype, _proto)
-        s.settimeout(timeout)
+        skt = socket.socket(family, socktype, _proto)
+        skt.settimeout(timeout)
 
         if proto == 'udp':
             # Generate a random string of a
             # decent size to test UDP connection
-            h = hashlib.md5()
-            h.update(datetime.datetime.now().strftime('%s'))
-            msg = h.hexdigest()
-            s.sendto(msg, _address)
-            recv, svr = s.recvfrom(255)
-            s.close()
+            md5h = hashlib.md5()
+            md5h.update(datetime.datetime.now().strftime('%s'))
+            msg = md5h.hexdigest()
+            skt.sendto(msg, _address)
+            recv, svr = skt.recvfrom(255)
+            skt.close()
         else:
-            s.connect(_address)
-            s.shutdown(2)
-    except Exception as e:
+            skt.connect(_address)
+            skt.shutdown(2)
+    except Exception as exc:
         ret['result'] = False
-        try:
-            errno, errtxt = e
-        except ValueError:
-            ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
-        else:
-            ret['comment'] = '{0}'.format(errtxt)
+        ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         return ret
 
     ret['result'] = True
@@ -878,12 +961,16 @@ def is_private(ip_addr):
     Check if the given IP address is a private address
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: 2015.8.0
+        IPv6 support
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.is_private 10.0.0.3
     '''
-    return salt.utils.network.IPv4Address(ip_addr).is_private
+    return ipaddress.ip_address(ip_addr).is_private
 
 
 def is_loopback(ip_addr):
@@ -891,12 +978,32 @@ def is_loopback(ip_addr):
     Check if the given IP address is a loopback address
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: 2015.8.0
+        IPv6 support
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.is_loopback 127.0.0.1
     '''
-    return salt.utils.network.IPv4Address(ip_addr).is_loopback
+    return ipaddress.ip_address(ip_addr).is_loopback
+
+
+def reverse_ip(ip_addr):
+    '''
+    Returns the reversed IP address
+
+    .. versionchanged:: 2015.8.0
+        IPv6 support
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.reverse_ip 172.17.0.4
+    '''
+    return ipaddress.ip_address(ip_addr).reverse_pointer
 
 
 def _get_bufsize_linux(iface):
@@ -931,7 +1038,9 @@ def get_bufsize(iface):
     '''
     Return network buffer sizes as a dict
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.getbufsize
     '''
@@ -975,7 +1084,9 @@ def mod_bufsize(iface, *args, **kwargs):
     '''
     Modify network interface buffers (currently linux only)
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.getBuffers
     '''
@@ -990,7 +1101,9 @@ def routes(family=None):
     '''
     Return currently configured routes from routing table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.routes
     '''
@@ -1019,7 +1132,9 @@ def default_route(family=None):
     '''
     Return default route(s) from routing table
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.default_route
     '''
@@ -1049,3 +1164,30 @@ def default_route(family=None):
                 ret.append(route)
 
     return ret
+
+
+def get_route(ip):
+    '''
+    Return routing information for given destination ip
+
+    .. versionadded:: 2015.5.3
+
+    CLI Example::
+
+        salt '*' network.get_route 10.10.10.10
+    '''
+
+    if __grains__['kernel'] == 'Linux':
+        cmd = 'ip route get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        regexp = re.compile(r'(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:]+)\s+.*src\s+(?P<source>[\w\.:]+)')
+        m = regexp.search(out.splitlines()[0])
+        ret = {
+            'destination': ip,
+            'gateway': m.group('gateway'),
+            'interface': m.group('interface'),
+            'source': m.group('source')}
+
+        return ret
+    else:
+        raise CommandExecutionError('Not yet supported on this platform')

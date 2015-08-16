@@ -24,7 +24,7 @@ minion as an unprivileged user will keep it from making changes to things like
 users, installed packages, etc. unless access controls (sudo, etc.) are setup
 on the minion to permit the non-root user to make the needed changes.
 
-In order to allow Salt to successfully run as a non-root user, ownership and
+In order to allow Salt to successfully run as a non-root user, ownership, and
 permissions need to be set such that the desired user can read from and write
 to the following directories (and their subdirectories, where applicable):
 

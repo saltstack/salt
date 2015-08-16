@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 import os.path
 import os
-import StringIO
 
 # Import third party libs
 import jinja2
@@ -19,6 +18,7 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
 import salt.ext.six as six
+from salt.ext.six.moves import StringIO
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ _CONFIG_FALSE = ['no', 'off', 'false', '0', False]
 _IFACE_TYPES = [
     'eth', 'bond', 'alias', 'clone',
     'ipsec', 'dialup', 'bridge', 'slave', 'vlan',
-    'ipip',
+    'ipip', 'ib',
 ]
 
 
@@ -151,13 +151,6 @@ def _parse_ethtool_opts(opts, iface):
             config.update({'duplex': opts['duplex']})
         else:
             _raise_error_iface(iface, 'duplex', valid)
-
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            config.update({'mtu': opts['mtu']})
-        except Exception:
-            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'speed' in opts:
         valid = ['10', '100', '1000', '10000']
@@ -565,6 +558,12 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['dns'] = opts['dns']
         result['peerdns'] = 'yes'
 
+    if 'mtu' in opts:
+        try:
+            result['mtu'] = int(opts['mtu'])
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
+
     if iface_type not in ['bridge']:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
@@ -590,7 +589,8 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 ifaces = __salt__['network.interfaces']()
                 if iface in ifaces and 'hwaddr' in ifaces[iface]:
                     result['addr'] = ifaces[iface]['hwaddr']
-
+    if iface_type == 'eth':
+        result['devtype'] = 'Ethernet'
     if iface_type == 'bridge':
         result['devtype'] = 'Bridge'
         bypassfirewall = True
@@ -622,8 +622,19 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _raise_error_iface(iface, opts[opt], ['1.2.3.4'])
             else:
                 result[opt] = opts[opt]
+    if iface_type == 'ib':
+        result['devtype'] = 'InfiniBand'
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
+    if 'prefix' in opts:
+        if 'netmask' in opts:
+            msg = 'Cannot use prefix and netmask together'
+            log.error(msg)
+            raise AttributeError(msg)
+        result['prefix'] = opts['prefix']
+    elif 'netmask' in opts:
+        result['netmask'] = opts['netmask']
+
+    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname']:
         if opt in opts:
             result[opt] = opts[opt]
 
@@ -631,14 +642,19 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
-    if 'ipv6_autoconf' in opts:
-        result['ipv6_autoconf'] = opts['ipv6_autoconf']
+    if 'mtu' in opts:
+        try:
+            int(opts['mtu'])
+            result['mtu'] = opts['mtu']
+        except Exception:
+            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'enable_ipv6' in opts:
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute']:
+    for opt in ['onparent', 'peerdns', 'peerroutes', 'slave', 'vlan', 'defroute', 'stp', 'ipv6_peerdns',
+                'ipv6_defroute', 'ipv6_peerroutes', 'ipv6_autoconf', 'ipv4_failure_fatal', 'dhcpv6c']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -670,6 +686,29 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             _raise_error_iface(iface, opts['userctl'], valid)
     else:
         result['userctl'] = 'no'
+
+    # This vlan is in opts, and should be only used in range interface
+    # will affect jinja template for interface generating
+    if 'vlan' in opts:
+        if opts['vlan'] in _CONFIG_TRUE:
+            result['vlan'] = 'yes'
+        elif opts['vlan'] in _CONFIG_FALSE:
+            result['vlan'] = 'no'
+        else:
+            _raise_error_iface(iface, opts['vlan'], valid)
+
+    if 'arpcheck' in opts:
+        if opts['arpcheck'] in _CONFIG_FALSE:
+            result['arpcheck'] = 'no'
+
+    if 'ipaddr_start' in opts:
+        result['ipaddr_start'] = opts['ipaddr_start']
+
+    if 'ipaddr_end' in opts:
+        result['ipaddr_end'] = opts['ipaddr_end']
+
+    if 'clonenum_start' in opts:
+        result['clonenum_start'] = opts['clonenum_start']
 
     return result
 
@@ -782,7 +821,7 @@ def _read_file(path):
             # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
             return contents.read().splitlines()
     except Exception:
-        return ''
+        return []  # Return empty list for type consistency
 
 
 def _write_file_iface(iface, data, folder, pattern):
@@ -810,7 +849,7 @@ def _write_file_network(data, filename):
 
 
 def _read_temp(data):
-    tout = StringIO.StringIO()
+    tout = StringIO()
     tout.write(data)
     tout.seek(0)
     output = tout.read().splitlines()  # Discard newlines
@@ -842,10 +881,12 @@ def build_bond(iface, **settings):
     path = os.path.join(_RH_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if rh_major == '5':
         __salt__['cmd.run'](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
         __salt__['cmd.run'](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface)
+            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
+            python_shell=False
         )
         __salt__['file.append']('/etc/modprobe.conf', path)
     __salt__['kmod.load']('bonding')
@@ -890,7 +931,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip']:
+    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib']:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
@@ -923,24 +964,49 @@ def build_routes(iface, **settings):
         salt '*' ip.build_routes eth0 <settings>
     '''
 
+    template = 'rh6_route_eth.jinja'
+    if __grains__['osrelease'][0] < 6:
+        template = 'route_eth.jinja'
+    log.debug('Template name: ' + template)
+
     iface = iface.lower()
     opts = _parse_routes(iface, settings)
+    log.debug("Opts: \n {0}".format(opts))
     try:
-        template = JINJA.get_template('route_eth.jinja')
+        template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
         log.error(
-            'Could not load template route_eth.jinja'
+            'Could not load template {0}'.format(template)
         )
         return ''
-    routecfg = template.render(routes=opts['routes'])
+    opts6 = []
+    opts4 = []
+    for route in opts['routes']:
+        ipaddr = route['ipaddr']
+        if salt.utils.validate.net.ipv6_addr(ipaddr):
+            opts6.append(route)
+        else:
+            opts4.append(route)
+    log.debug("IPv4 routes:\n{0}".format(opts4))
+    log.debug("IPv6 routes:\n{0}".format(opts6))
+
+    routecfg = template.render(routes=opts4)
+    routecfg6 = template.render(routes=opts6)
 
     if settings['test']:
-        return _read_temp(routecfg)
+        routes = _read_temp(routecfg)
+        routes.extend(_read_temp(routecfg6))
+        return routes
 
     _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, 'route-{0}')
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, 'route6-{0}')
 
-    return _read_file(path)
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+
+    routes = _read_file(path)
+    routes.extend(_read_file(path6))
+    return routes
 
 
 def down(iface, iface_type):
@@ -1014,7 +1080,10 @@ def get_routes(iface):
         salt '*' ip.get_routes eth0
     '''
     path = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route-{0}'.format(iface))
-    return _read_file(path)
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, 'route6-{0}'.format(iface))
+    routes = _read_file(path)
+    routes.extend(_read_file(path6))
+    return routes
 
 
 def get_network_settings():

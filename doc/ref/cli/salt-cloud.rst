@@ -11,6 +11,10 @@ Synopsis
 
     salt-cloud -m /etc/salt/cloud.map
 
+    salt-cloud -m /etc/salt/cloud.map NAME
+
+    salt-cloud -m /etc/salt/cloud.map NAME1 NAME2
+
     salt-cloud -p PROFILE NAME
 
     salt-cloud -p PROFILE NAME1 NAME2 NAME3 NAME4 NAME5 NAME6
@@ -26,20 +30,36 @@ Options
 
 .. program:: salt-cloud
 
-.. option:: -h, --help
+.. include:: _includes/common-options.rst
 
-    Print a usage message briefly summarizing these command-line options.
+Execution Options
+-----------------
+
+.. option:: -L LOCATION, --location=LOCATION
+
+    Specify which region to connect to.
+
+.. option:: -a ACTION, --action=ACTION
+
+    Perform an action that may be specific to this cloud provider. This
+    argument requires one or more instance names to be specified.
+
+.. option:: -f <FUNC-NAME> <PROVIDER>, --function=<FUNC-NAME> <PROVIDER>
+
+    Perform an function that may be specific to this cloud provider, that does
+    not apply to an instance. This argument requires a provider to be specified
+    (i.e.: nova).
 
 .. option:: -p PROFILE, --profile=PROFILE
 
-    Select a single profile to build the named cloud VMs from. The profile
-    must be defined in the specified profiles file.
+    Select a single profile to build the named cloud VMs from. The profile must
+    be defined in the specified profiles file.
 
 .. option:: -m MAP, --map=MAP
 
     Specify a map file to use. If used without any other options, this option
-    will ensure that all of the mapped VMs are created. If the named VM
-    already exists then it will be skipped.
+    will ensure that all of the mapped VMs are created. If the named VM already
+    exists then it will be skipped.
 
 .. option:: -H, --hard
 
@@ -67,10 +87,33 @@ Options
     for this influx of vm creation. When creating large groups of VMs watch the
     cloud provider carefully.
 
+.. option:: -u, --update-bootstrap
+
+    Update salt-bootstrap to the latest develop version on GitHub.
+
+.. option:: -y, --assume-yes
+
+    Default yes in answer to all confirmation questions.
+
+.. option:: -k, --keep-tmp
+
+    Do not remove files from /tmp/ after deploy.sh finishes.
+
+.. option:: --show-deploy-args
+
+    Include the options used to deploy the minion in the data returned.
+
+.. option:: --script-args=SCRIPT_ARGS
+
+    Script arguments to be fed to the bootstrap script when deploying the VM.
+
+Query Options
+-------------
+
 .. option:: -Q, --query
 
-    Execute a query and print out information about all cloud VMs. Can be used
-    in conjunction with -m to display only information about the specified map.
+    Execute a query and return some information about the nodes running on
+    configured cloud providers
 
 .. option:: -F, --full-query
 
@@ -96,61 +139,45 @@ Options
     the provider's associated profiles, such as ``digital_ocean``, or pass in
     ``all`` to list all the configured profiles.
 
-.. option:: --list-images
 
-    Display a list of images available in configured cloud providers.
-    Pass the cloud provider that available images are desired on, aka
-    "linode", or pass "all" to list images for all configured cloud providers.
+Cloud Providers Listings
+------------------------
 
-.. option:: --list-sizes
+.. option:: --list-locations=LIST_LOCATIONS
+
+    Display a list of locations available in configured cloud providers. Pass
+    the cloud provider that available locations are desired on, aka "linode",
+    or pass "all" to list locations for all configured cloud providers
+
+.. option:: --list-images=LIST_IMAGES
+
+    Display a list of images available in configured cloud providers. Pass the
+    cloud provider that available images are desired on, aka "linode", or pass
+    "all" to list images for all configured cloud providers
+
+.. option:: --list-sizes=LIST_SIZES
 
     Display a list of sizes available in configured cloud providers. Pass the
-    cloud provider that available sizes are desired on, aka "aws", or pass
+    cloud provider that available sizes are desired on, aka "AWS", or pass
     "all" to list sizes for all configured cloud providers
 
-.. option:: -C CLOUD_CONFIG, --cloud-config=CLOUD_CONFIG
+Cloud Credentials
+-----------------
 
-    Specify an alternative location for the salt cloud configuration file.
-    Default location is /etc/salt/cloud.
+.. option::     --set-password=<USERNAME> <PROVIDER>
 
-.. option:: -M MASTER_CONFIG, --master-config=MASTER_CONFIG
+    Configure password for a cloud provider and save it to the keyring.
+    PROVIDER can be specified with or without a driver, for example:
+    "--set-password bob rackspace" or more specific "--set-password bob
+    rackspace:openstack" DEPRECATED!
 
-    Specify an alternative location for the salt master configuration file.
-    The salt master configuration file is used to determine how to handle the
-    minion RSA keys. Default location is /etc/salt/master.
-
-.. option:: -V VM_CONFIG, --profiles=VM_CONFIG, --vm_config=VM_CONFIG
-
-    Specify an alternative location for the salt cloud profiles file.
-    Default location is /etc/salt/cloud.profiles.
-
-.. option:: --raw-out
-
-    Print the output from the salt command in raw python
-    form, this is suitable for re-reading the output into
-    an executing python script with eval.
-
-.. option:: --text-out
-
-    Print the output from the salt command in the same form the shell would.
-
-.. option:: --yaml-out
-
-    Print the output from the salt command in yaml.
-
-.. option:: --json-out
-
-    Print the output from the salt command in json.
-
-.. option:: --no-color
-
-    Disable all colored output.
+.. include:: _includes/output-options.rst
 
 
 Examples
 ========
 
-To create 4 VMs named web1, web2, db1 and db2 from specified profiles:
+To create 4 VMs named web1, web2, db1, and db2 from specified profiles:
 
 .. code-block:: bash
 

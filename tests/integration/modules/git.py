@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import Python Libs
+from __future__ import absolute_import
 import shutil
 import subprocess
 import tempfile
@@ -35,9 +36,3 @@ class GitModuleTest(integration.ModuleCase):
             setting_value=config_value,
         )
         self.assertEqual("", ret)
-
-        output = subprocess.check_output(
-            ['git', 'config', '--local', config_key],
-            cwd=self.repos)
-
-        self.assertEqual(config_value + "\n", output)

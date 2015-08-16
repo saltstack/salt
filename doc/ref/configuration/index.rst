@@ -8,7 +8,7 @@ setting up a :term:`minion` is to set the location of the master in the minion
 configuration file.
 
 The configuration files will be installed to :file:`/etc/salt` and are named
-after the respective components, :file:`/etc/salt/master` and
+after the respective components, :file:`/etc/salt/master`, and
 :file:`/etc/salt/minion`.
 
 Master Configuration
@@ -76,7 +76,7 @@ Running Salt
 
         salt-master --log-level=debug
 
-    For information on salt's logging system please see the :doc:`logging 
+    For information on salt's logging system please see the :doc:`logging
     document</ref/configuration/logging/index>`.
 
 
@@ -85,7 +85,7 @@ Running Salt
     To run Salt as another user, set the :conf_master:`user` parameter in the
     master config file.
 
-    Additionally, ownership and permissions need to be set such that the
+    Additionally, ownership, and permissions need to be set such that the
     desired user can read from and write to the following directories (and
     their subdirectories, where applicable):
 
@@ -100,6 +100,41 @@ Running Salt
 
 There is also a full :doc:`troubleshooting guide</topics/troubleshooting/index>`
 available.
+
+.. _key-identity:
+
+Key Identity
+============
+
+Salt provides commands to validate the identity of your Salt master
+and Salt minions before the initial key exchange. Validating key identity helps
+avoid inadvertently connecting to the wrong Salt master, and helps prevent
+a potential MiTM attack when establishing the initial connection.
+
+Master Key Fingerprint
+----------------------
+
+Print the master key fingerprint by running the following command on the Salt master:
+
+.. code-block:: bash
+
+   salt-key -F master
+
+Copy the ``master.pub`` fingerprint from the *Local Keys* section, and then set this value
+as the :conf_minion:`master_finger` in the minion configuration file. Save the configuration
+file and then restart the Salt minion.
+
+Minion Key Fingerprint
+----------------------
+
+Run the following command on each Salt minion to view the minion key fingerprint:
+
+.. code-block:: bash
+
+   salt-call --local key.finger
+
+Compare this value to the value that is displayed when you run the
+``salt-key --finger <MINION_ID>`` command on the Salt master.
 
 
 Key Management
@@ -181,4 +216,3 @@ Understanding :doc:`targeting </topics/targeting/index>` is important. From ther
 depending on the way you wish to use Salt, you should also proceed to learn
 about :doc:`States </topics/tutorials/starting_states>` and :doc:`Execution Modules
 </ref/modules/index>`.
-

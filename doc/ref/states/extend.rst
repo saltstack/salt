@@ -63,7 +63,7 @@ twice then only one of the extend blocks will be read. So this is WRONG:
         service:
           - watch:
             - file: /etc/ssh/banner
-    
+
 
 The Requisite "in" Statement
 ----------------------------

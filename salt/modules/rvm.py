@@ -29,7 +29,7 @@ def _get_rvm_location(runas=None):
     if runas:
         runas_home = os.path.expanduser('~{0}'.format(runas))
         rvmpath = '{0}/.rvm/bin/rvm'.format(runas_home)
-        if os.path.isdir(rvmpath):
+        if os.path.exists(rvmpath):
             return rvmpath
     return '/usr/local/rvm/bin/rvm'
 
@@ -52,8 +52,8 @@ def _rvm(command, arguments=None, runas=None, cwd=None):
 
 
 def _rvm_do(ruby, command, runas=None, cwd=None):
-    return _rvm('{ruby} do {command}'.
-                format(ruby=ruby or 'default', command=command),
+    return _rvm('{ruby}'.format(ruby=ruby or 'default'),
+                arguments='do {command}'.format(command=command),
                 runas=runas, cwd=cwd)
 
 
@@ -82,7 +82,7 @@ def install(runas=None):
     '''
     # RVM dependencies on Ubuntu 10.04:
     #   bash coreutils gzip bzip2 gawk sed curl git-core subversion
-    installer = 'https://raw.githubusercontent.com/wayneeseguin/rvm/master/binscripts/rvm-installer'
+    installer = 'https://raw.githubusercontent.com/rvm/rvm/master/binscripts/rvm-installer'
     ret = __salt__['cmd.run_all'](
         # the RVM installer automatically does a multi-user install when it is
         # invoked with root privileges
@@ -120,8 +120,8 @@ def install_ruby(ruby, runas=None):
     #   libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev autoconf libc6-dev
     #   libncurses5-dev automake libtool bison subversion ruby
     if runas and runas != 'root':
-        _rvm('autolibs disable', ruby, runas=runas)
-        return _rvm('install --disable-binary', ruby, runas=runas)
+        _rvm('autolibs', 'disable {ruby}'.format(ruby=ruby), runas=runas)
+        return _rvm('install', '--disable-binary {ruby}'.format(ruby=ruby), runas=runas)
     else:
         return _rvm('install', ruby, runas=runas)
 

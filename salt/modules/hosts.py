@@ -2,16 +2,18 @@
 '''
 Manage the information in the hosts file
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
 import salt.utils.odict as odict
-from salt.ext.six.moves import range
+
+# Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 # pylint: disable=C0103
@@ -24,6 +26,19 @@ def __get_hosts_filename():
         return 'C:\\Windows\\System32\\drivers\\etc\\hosts'
 
     return __salt__['config.option']('hosts.file')
+
+
+def _get_or_create_hostfile():
+    '''
+    Wrapper of __get_hosts_filename but create host file if it
+    does not exist.
+    '''
+    hfn = __get_hosts_filename()
+    if hfn is None:
+        hfn = ''
+    if not os.path.exists(hfn):
+        salt.utils.fopen(hfn, 'w').close()
+    return hfn
 
 
 def _list_hosts():
@@ -130,7 +145,7 @@ def set_host(ip, alias):
 
         salt '*' hosts.set_host <ip> <alias>
     '''
-    hfn = __get_hosts_filename()
+    hfn = _get_or_create_hostfile()
     ovr = False
     if not os.path.isfile(hfn):
         return False
@@ -171,7 +186,7 @@ def rm_host(ip, alias):
     '''
     if not has_pair(ip, alias):
         return True
-    hfn = __get_hosts_filename()
+    hfn = _get_or_create_hostfile()
     lines = salt.utils.fopen(hfn).readlines()
     for ind in range(len(lines)):
         tmpline = lines[ind].strip()
@@ -181,11 +196,11 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = '{0}\t'.format(comps[0])
+            newline = '{0}\t\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t{0}'.format(existing)
+                newline += ' {0}'.format(existing)
             if newline.strip() == ip:
                 # No aliases exist for the line, make it empty
                 lines[ind] = ''
@@ -208,7 +223,7 @@ def add_host(ip, alias):
 
         salt '*' hosts.add_host <ip> <alias>
     '''
-    hfn = __get_hosts_filename()
+    hfn = _get_or_create_hostfile()
     if not os.path.isfile(hfn):
         return False
 
@@ -217,7 +232,7 @@ def add_host(ip, alias):
 
     hosts = _list_hosts()
     inserted = False
-    for i, h in hosts.items():
+    for i, h in six.iteritems(hosts):
         for j in range(len(h)):
             if h[j].startswith('#') and i == ip:
                 h.insert(j, alias)
@@ -237,14 +252,14 @@ def _write_hosts(hosts):
             else:
                 line = '{0}\t\t{1}'.format(
                     ip,
-                    '\t\t'.join(aliases)
+                    ' '.join(aliases)
                     )
         lines.append(line)
 
-    hfn = __get_hosts_filename()
+    hfn = _get_or_create_hostfile()
     with salt.utils.fopen(hfn, 'w+') as ofile:
-        ofile.write(
-            '\n'.join(
-                [l.strip() for l in lines if l.strip()]
-            )
-        )
+        for line in lines:
+            if line.strip():
+                # /etc/hosts needs to end with EOL so that some utils that read
+                # it do not break
+                ofile.write('{0}\n'.format(line.strip()))

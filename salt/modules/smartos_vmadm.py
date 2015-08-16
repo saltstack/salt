@@ -41,7 +41,7 @@ def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if __grains__['os'] == "SmartOS" and _check_vmadm():
+    if salt.utils.is_smartos_globalzone() and _check_vmadm():
         return __virtualname__
     return False
 
@@ -90,13 +90,9 @@ def _gen_zone_json(**kwargs):
     # This one is mandatory for OS virt
     ret.update(brand='joyent')
     # Populate JSON without NIC information
-    ret.update((key, kwargs[key])
-        for key in check_args
-        if key in kwargs and key not in nics_args)
+    ret.update((key, kwargs[key]) for key in check_args if key in kwargs and key not in nics_args)
     # NICs are defined in a subdict
-    nics.update((key, kwargs[key])
-        for key in nics_args
-        if key in kwargs)
+    nics.update((key, kwargs[key]) for key in nics_args if key in kwargs)
     ret.update(nics=[nics])
 
     return json.dumps(ret)
@@ -114,10 +110,8 @@ def init(**kwargs):
     '''
     ret = {}
     vmadm = _check_vmadm()
-    check_zone_args = (
-        'image_uuid', 'alias', 'hostname',
-        'max_physical_memory', 'quota', 'nic_tag',
-        'ip', 'netmask', 'gateway')
+    check_zone_args = ('image_uuid', 'alias', 'hostname', 'max_physical_memory',
+                       'quota', 'nic_tag', 'ip', 'netmask', 'gateway')
     check_kvm_args = ('to_be_implemented')
     # check routines for mandatory arguments
     # Zones
@@ -143,7 +137,21 @@ def init(**kwargs):
         raise CommandExecutionError('Missing mandatory arguments')
 
 
-def list_vms():
+def _call_vmadm(cmd):
+    '''
+    Call vmadm and return the result or raise an exception.
+
+    :param cmd: command params for the vmadm on SmartOS.
+    :return:
+    '''
+    res = __salt__['cmd.run_all']('{vmadm} {cmd}'.format(vmadm=_check_vmadm(), cmd=cmd))
+    if res['retcode'] != 0:
+        raise CommandExecutionError(_exit_status(res['retcode']))
+
+    return res
+
+
+def list_domains():
     '''
     Return a list of virtual machine names on the minion
 
@@ -151,7 +159,7 @@ def list_vms():
 
     .. code-block:: bash
 
-        salt '*' virt.list_vms
+        salt '*' virt.list_domains
     '''
     vmadm = _check_vmadm()
     cmd = '{0} list'.format(vmadm)
@@ -212,7 +220,7 @@ def list_inactive_vms():
     return vms
 
 
-def vm_info(uuid=None):
+def vm_info(uuid):
     '''
     Return a dict with information about the specified VM on this CN
 
@@ -222,20 +230,14 @@ def vm_info(uuid=None):
 
         salt '*' virt.vm_info <uuid>
     '''
-    info = {}
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
-    vmadm = _check_vmadm()
-    cmd = '{0} get {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    info = res['stdout']
-    return info
+    res = __salt__['cmd.run_all']('{0} get {1}'.format(_check_vmadm(), uuid))
+    if res['retcode'] != 0:
+        raise CommandExecutionError(_exit_status(res['retcode']))
+
+    return res['stdout']
 
 
-def start(uuid=None):
+def start(uuid):
     '''
     Start a defined domain
 
@@ -245,23 +247,15 @@ def start(uuid=None):
 
         salt '*' virt.start <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
-    vmadm = _check_vmadm()
-    cmd = '{0} start {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    if uuid in list_active_vms():
-        return True
-    else:
-        return False
+
+    _call_vmadm('start {0}'.format(uuid))
+
+    return uuid in list_active_vms()
 
 
-def shutdown(uuid=None):
+def shutdown(uuid):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -271,23 +265,15 @@ def shutdown(uuid=None):
 
         salt '*' virt.shutdown <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
-    vmadm = _check_vmadm()
-    cmd = '{0} stop {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    if uuid in list_inactive_vms():
-        return True
-    else:
-        return False
+
+    _call_vmadm('stop {0}'.format(uuid))
+
+    return uuid in list_inactive_vms()
 
 
-def reboot(uuid=None):
+def reboot(uuid):
     '''
     Reboot a domain via ACPI request
 
@@ -297,25 +283,17 @@ def reboot(uuid=None):
 
         salt '*' virt.reboot <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
-    vmadm = _check_vmadm()
-    cmd = '{0} reboot {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    if uuid in list_active_vms():
-        return True
-    else:
-        return False
+
+    _call_vmadm('reboot {0}'.format(uuid))
+
+    return uuid in list_active_vms()
 
 
-def destroy(uuid=None):
+def stop(uuid):
     '''
-    Hard power down the virtual machine, this is equivalent to pulling the power
+    Hard power down the virtual machine, this is equivalent to powering off the hardware.
 
     CLI Example:
 
@@ -323,18 +301,15 @@ def destroy(uuid=None):
 
         salt '*' virt.destroy <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
-    vmadm = _check_vmadm()
-    cmd = '{0} delete {1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    return True
+    if uuid in list_inactive_vms():
+        raise CommandExecutionError('The specified vm is stopped')
+
+    _call_vmadm('delete {0}'.format(uuid))
+
+    return uuid in list_inactive_vms()
 
 
-def vm_virt_type(uuid=None):
+def vm_virt_type(uuid):
     '''
     Return VM virtualization type : OS or KVM
 
@@ -344,18 +319,10 @@ def vm_virt_type(uuid=None):
 
         salt '*' virt.vm_virt_type <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
-    vmadm = _check_vmadm()
-    cmd = '{0} list -p -o type uuid={1}'.format(vmadm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    ret = res['stdout']
-    if ret != '':
-        return ret
-    raise CommandExecutionError('We can\'t determine the type of this VM')
+    ret = _call_vmadm('list -p -o type uuid={0}'.format(uuid))['stdout']
+    if not ret:
+        raise CommandExecutionError('We can\'t determine the type of this VM')
+    return ret
 
 
 def setmem(uuid, memory):
@@ -371,26 +338,24 @@ def setmem(uuid, memory):
 
         salt '*' virt.setmem <uuid> 512
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
-    # We want to determine the nature of the VM
+    warning = None
     vmtype = vm_virt_type(uuid)
-    vmadm = _check_vmadm()
-    warning = []
     if vmtype == 'OS':
-        cmd = '{0} update {1} max_physical_memory={2}'.format(vmadm, uuid, memory)
+        cmd = 'update {1} max_physical_memory={2}'.format(uuid, memory)
     elif vmtype == 'KVM':
-        cmd = '{0} update {1} ram={2}'.format(vmadm, uuid, memory)
-        warning = 'Done, but please note this will require a restart of the VM'
-    retcode = __salt__['cmd.retcode'](cmd)
-    if retcode != 0:
+        cmd = 'update {1} ram={2}'.format(uuid, memory)
+        warning = 'Changes will be applied after the VM restart.'
+    else:
+        raise CommandExecutionError('Unknown VM type')
+
+    retcode = _call_vmadm(cmd)['retcode']
+    if retcode:
         raise CommandExecutionError(_exit_status(retcode))
-    if not warning:
-        return True
-    return warning
+
+    return warning or None
 
 
-def get_macs(uuid=None):
+def get_macs(uuid):
     '''
     Return a list off MAC addresses from the named VM
 
@@ -400,8 +365,6 @@ def get_macs(uuid=None):
 
         salt '*' virt.get_macs <uuid>
     '''
-    if not uuid:
-        raise CommandExecutionError('UUID parameter is mandatory')
     dladm = _check_dladm()
     cmd = '{0} show-vnic -o MACADDRESS -p -z {1}'.format(dladm, uuid)
     res = __salt__['cmd.run_all'](cmd)
@@ -411,4 +374,53 @@ def get_macs(uuid=None):
     raise CommandExecutionError('We can\'t find the MAC address of this VM')
 
 
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
+# Deprecated aliases
+def create(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.start` instead.
+
+    Start a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.create <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.start" instead.')
+    return start(domain)
+
+
+def destroy(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.stop` instead.
+
+    Power off a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.destroy <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.stop" instead.')
+    return stop(domain)
+
+
+def list_vms():
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.list_domains` instead.
+
+    List all virtual machines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_vms <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
+    return list_domains()

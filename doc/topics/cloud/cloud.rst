@@ -1,24 +1,24 @@
-==============================
-Writing Cloud Provider Modules
-==============================
+============================
+Writing Cloud Driver Modules
+============================
 
 Salt Cloud runs on a module system similar to the main Salt project. The
 modules inside saltcloud exist in the ``salt/cloud/clouds`` directory of the
 salt source.
 
-There are two basic types of cloud modules. If a cloud provider is supported by
+There are two basic types of cloud modules. If a cloud host is supported by
 libcloud, then using it is the fastest route to getting a module written. The
 Apache Libcloud project is located at:
 
 http://libcloud.apache.org/
 
-Not every cloud provider is supported by libcloud. Additionally, not every
-feature in a supported cloud provider is necessary supported by libcloud. In
+Not every cloud host is supported by libcloud. Additionally, not every
+feature in a supported cloud host is necessarily supported by libcloud. In
 either of these cases, a module can be created which does not rely on libcloud.
 
-All Modules
-===========
-The following functions are required by all modules, whether or not they are
+All Driver Modules
+==================
+The following functions are required by all driver modules, whether or not they are
 based on libcloud.
 
 The __virtual__() Function
@@ -51,17 +51,17 @@ The create() Function
 ---------------------
 The most important function that does need to be manually written is the
 ``create()`` function. This is what is used to request a virtual machine to be
-created by the cloud provider, wait for it to become available, and then
+created by the cloud host, wait for it to become available, and then
 (optionally) log in and install Salt on it.
 
-A good example to follow for writing a cloud provider module based on libcloud
+A good example to follow for writing a cloud driver module based on libcloud
 is the module provided for Linode:
 
 https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/linode.py
 
 The basic flow of a ``create()`` function is as follows:
 
-* Send a request to the cloud provider to create a virtual machine.
+* Send a request to the cloud host to create a virtual machine.
 * Wait for the virtual machine to become available.
 * Generate kwargs to be used to deploy Salt.
 * Log into the virtual machine and deploy Salt.
@@ -80,20 +80,20 @@ configuration and environment variables.
 The first thing the ``create()`` function must do is fire an event stating that
 it has started the create process. This event is tagged
 ``salt/cloud/<vm name>/creating``. The payload contains the names of the VM,
-profile and provider. 
+profile, and provider.
 
 A set of kwargs is then usually created, to describe the parameters required
-by the cloud provider to request the virtual machine.
+by the cloud host to request the virtual machine.
 
 An event is then fired to state that a virtual machine is about to be requested.
 It is tagged as ``salt/cloud/<vm name>/requesting``. The payload contains most
-or all of the parameters that will be sent to the cloud provider. Any private
+or all of the parameters that will be sent to the cloud host. Any private
 information (such as passwords) should not be sent in the event.
 
 After a request is made, a set of deploy kwargs will be generated. These will
 be used to install Salt on the target machine. Windows options are supported
-at this point, and should be generated, even if the cloud provider does not
-currently support Windows. This will save time in the future if the provider
+at this point, and should be generated, even if the cloud host does not
+currently support Windows. This will save time in the future if the host
 does eventually decide to support Windows.
 
 An event is then fired to state that the deploy process is about to begin. This
@@ -102,7 +102,7 @@ will contain a set of deploy kwargs, useful for debugging purposed. Any private
 data, including passwords and keys (including public keys) should be stripped
 from the deploy kwargs before the event is fired.
 
-If any Windows options have been passed in, the 
+If any Windows options have been passed in, the
 ``salt.utils.cloud.deploy_windows()`` function will be called. Otherwise, it
 will be assumed that the target is a Linux or Unix machine, and the
 ``salt.utils.cloud.deploy_script()`` will be called.
@@ -116,21 +116,30 @@ deploy script (bootstrap-salt.sh, by default) will be run, which will
 auto-detect the operating system, and install Salt using its native package
 manager. These do not need to be handled by the developer in the cloud module.
 
+The ``salt.utils.cloud.validate_windows_cred()`` function has been extended to
+take the number of retries and retry_delay parameters in case a specific cloud
+host has a delay between providing the Windows credentials and the
+credentials being available for use.  In their ``create()`` function, or as a
+a sub-function called during the creation process, developers should use the
+``win_deploy_auth_retries`` and ``win_deploy_auth_retry_delay`` parameters from
+the provider configuration to allow the end-user the ability to customize the
+number of tries and delay between tries for their particular host.
+
 After the appropriate deploy function completes, a final event is fired
 which describes the virtual machine that has just been created. This event is
 tagged ``salt/cloud/<vm name>/created``. The payload contains the names of the
-VM, profile and provider.
+VM, profile, and provider.
 
 Finally, a dict (queried from the provider) which describes the new virtual
 machine is returned to the user. Because this data is not fired on the event
 bus it can, and should, return any passwords that were returned by the cloud
-provider. In some cases (for example, Rackspace), this is the only time that
+host. In some cases (for example, Rackspace), this is the only time that
 the password can be queried by the user; post-creation queries may not contain
-password information (depending upon the provider).
+password information (depending upon the host).
 
 The libcloudfuncs Functions
 ---------------------------
-A number of other functions are required for all cloud providers. However, with
+A number of other functions are required for all cloud hosts. However, with
 libcloud-based modules, these are all provided for free by the libcloudfuncs
 library. The following two lines set up the imports:
 
@@ -144,17 +153,17 @@ within the cloud module.
 
 .. code-block:: python
 
-    get_size = namespaced_function(get_size, globals())    
-    get_image = namespaced_function(get_image, globals())    
-    avail_locations = namespaced_function(avail_locations, globals())    
-    avail_images = namespaced_function(avail_images, globals())    
-    avail_sizes = namespaced_function(avail_sizes, globals())    
-    script = namespaced_function(script, globals())    
-    destroy = namespaced_function(destroy, globals())    
-    list_nodes = namespaced_function(list_nodes, globals())    
-    list_nodes_full = namespaced_function(list_nodes_full, globals())    
-    list_nodes_select = namespaced_function(list_nodes_select, globals())          
-    show_instance = namespaced_function(show_instance, globals())    
+    get_size = namespaced_function(get_size, globals())
+    get_image = namespaced_function(get_image, globals())
+    avail_locations = namespaced_function(avail_locations, globals())
+    avail_images = namespaced_function(avail_images, globals())
+    avail_sizes = namespaced_function(avail_sizes, globals())
+    script = namespaced_function(script, globals())
+    destroy = namespaced_function(destroy, globals())
+    list_nodes = namespaced_function(list_nodes, globals())
+    list_nodes_full = namespaced_function(list_nodes_full, globals())
+    list_nodes_select = namespaced_function(list_nodes_select, globals())
+    show_instance = namespaced_function(show_instance, globals())
 
 If necessary, these functions may be replaced by removing the appropriate
 declaration line, and then adding the function as normal.
@@ -172,14 +181,14 @@ required by the developer. When this is the case, some or all of the functions
 in ``libcloudfuncs`` may be replaced. If they are all replaced, the libcloud
 imports should be absent from the Salt Cloud module.
 
-A good example of a non-libcloud provider is the DigitalOcean module:
+A good example of a non-libcloud driver is the DigitalOcean driver:
 
 https://github.com/saltstack/salt/tree/develop/salt/cloud/clouds/digital_ocean.py
 
 The ``create()`` Function
 -------------------------
 The ``create()`` function must be created as described in the libcloud-based
-module documentation. 
+module documentation.
 
 The get_size() Function
 -----------------------
@@ -193,8 +202,8 @@ to exist otherwise.
 
 The avail_locations() Function
 ------------------------------
-This function returns a list of locations available, if the cloud provider uses
-multiple data centers. It is not necessary if the cloud provider only uses one
+This function returns a list of locations available, if the cloud host uses
+multiple data centers. It is not necessary if the cloud host uses only one
 data center. It is normally called using the ``--list-locations`` option.
 
 .. code-block:: bash
@@ -215,9 +224,9 @@ functionality, though they may refer to images by a different name (for example,
 The avail_sizes() Function
 --------------------------
 This function returns a list of sizes available for this cloud provider.
-Generally, this refers to a combination of RAM, CPU and/or disk space. This
+Generally, this refers to a combination of RAM, CPU, and/or disk space. This
 functionality may not be present on some cloud providers. For example, the
-Parallels module breaks down RAM, CPU and disk space into separate options,
+Parallels module breaks down RAM, CPU, and disk space into separate options,
 whereas in other providers, these options are baked into the image. It is
 normally called using the ``--list-sizes`` option.
 
@@ -311,7 +320,7 @@ appropriately:
         '''
         if not conn:
             conn = get_conn()   # pylint: disable=E0602
-    
+
         return salt.utils.cloud.list_nodes_select(
             list_nodes_full(conn, 'function'),
             __opts__['query.selection'],
@@ -404,12 +413,12 @@ useful information to the user. A basic function looks like:
             raise SaltCloudSystemExit(
                 'The show_image action must be called with -f or --function.'
             )
-    
+
         params = {'ImageId.1': kwargs['image'],
                   'Action': 'DescribeImages'}
         result = query(params)
         log.info(result)
-    
+
         return result
 
 Take note that generic kwargs are passed through to functions as ``kwargs`` and

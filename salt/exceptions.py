@@ -6,13 +6,23 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
-import salt.exitcodes
+import salt.defaults.exitcodes
 
 
 class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
+    def __init__(self, message=''):
+        super(SaltException, self).__init__(message)
+        self.strerror = message
+
+    def pack(self):
+        '''
+        Pack this exception into a serializable dictionary that is safe for
+        transport via msgpack
+        '''
+        return dict(message=self.__unicode__(), args=self.args)
 
 
 class SaltClientError(SaltException):
@@ -24,6 +34,12 @@ class SaltClientError(SaltException):
 class SaltMasterError(SaltException):
     '''
     Problem reading the master root key
+    '''
+
+
+class SaltNoMinionsFound(SaltException):
+    '''
+    An attempt to retrieve a list of minions failed
     '''
 
 
@@ -64,9 +80,21 @@ class LoaderError(SaltException):
     '''
 
 
+class PublishError(SaltException):
+    '''
+    Problems encountered when trying to publish a command
+    '''
+
+
 class MinionError(SaltException):
     '''
     Minion problems reading uris such as salt:// or http://
+    '''
+
+
+class FileserverConfigError(SaltException):
+    '''
+    Used when invalid fileserver settings are detected
     '''
 
 
@@ -91,13 +119,13 @@ class SaltRenderError(SaltException):
     of the error.
     '''
     def __init__(self,
-                 error,
+                 message,
                  line_num=None,
                  buf='',
                  marker='    <======================',
                  trace=None):
-        self.error = error
-        exc_str = copy.deepcopy(error)
+        self.error = message
+        exc_str = copy.deepcopy(message)
         self.line_num = line_num
         self.buffer = buf
         self.context = ''
@@ -160,6 +188,13 @@ class AuthorizationError(SaltException):
     '''
 
 
+class SaltDaemonNotRunning(SaltException):
+    '''
+    Throw when a running master/minion/syndic is not running but is needed to
+    perform the requested operation (e.g., eauth).
+    '''
+
+
 class SaltRunnerError(SaltException):
     '''
     Problem in runner
@@ -193,7 +228,7 @@ class SaltCloudSystemExit(SaltCloudException):
     '''
     This exception is raised when the execution should be stopped.
     '''
-    def __init__(self, message, exit_code=salt.exitcodes.EX_GENERIC):
+    def __init__(self, message, exit_code=salt.defaults.exitcodes.EX_GENERIC):
         SaltCloudException.__init__(self, message)
         self.message = message
         self.exit_code = exit_code
@@ -226,4 +261,11 @@ class SaltCloudExecutionFailure(SaltCloudException):
 class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
+    '''
+
+
+class NotImplemented(SaltException):
+    '''
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
     '''

@@ -20,6 +20,8 @@ import jinja2.ext
 
 # Import salt libs
 import salt.utils
+import salt.utils.yamlencoding
+import salt.utils.locales
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
@@ -40,6 +42,68 @@ TEMPLATE_DIRNAME = os.path.join(saltpath[0], 'templates')
 SLS_ENCODING = 'utf-8'  # this one has no BOM.
 SLS_ENCODER = codecs.getencoder(SLS_ENCODING)
 
+ALIAS_WARN = (
+        'Starting in 2015.5, cmd.run uses python_shell=False by default, '
+        'which doesn\'t support shellisms (pipes, env variables, etc). '
+        'cmd.run is currently aliased to cmd.shell to prevent breakage. '
+        'Please switch to cmd.shell or set python_shell=True to avoid '
+        'breakage in the future, when this aliasing is removed.'
+)
+ALIASES = {
+        'cmd.run': 'cmd.shell',
+        'cmd': {'run': 'shell'},
+}
+
+
+class AliasedLoader(object):
+    '''
+    Light wrapper around the LazyLoader to redirect 'cmd.run' calls to
+    'cmd.shell', for easy use of shellisms during templating calls
+
+    Dotted aliases ('cmd.run') must resolve to another dotted alias
+    (e.g. 'cmd.shell')
+
+    Non-dotted aliases ('cmd') must resolve to a dictionary of function
+    aliases for that module (e.g. {'run': 'shell'})
+    '''
+
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
+
+    def __getitem__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return self.wrapped[ALIASES[name]]
+        else:
+            return self.wrapped[name]
+
+    def __getattr__(self, name):
+        if name in ALIASES:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return AliasedModule(getattr(self.wrapped, name), ALIASES[name])
+        else:
+            return getattr(self.wrapped, name)
+
+
+class AliasedModule(object):
+    '''
+    Light wrapper around module objects returned by the LazyLoader's getattr
+    for the purposes of `salt.cmd.run()` syntax in templates
+
+    Allows for aliasing specific functions, such as `run` to `shell` for easy
+    use of shellisms during templating calls
+    '''
+    def __init__(self, wrapped, aliases):
+        self.aliases = aliases
+        self.wrapped = wrapped
+
+    def __getattr__(self, name):
+        if name in self.aliases:
+            salt.utils.warn_until('Nitrogen', ALIAS_WARN)
+            return getattr(self.wrapped, self.aliases[name])
+        else:
+            return getattr(self.wrapped, name)
+
 
 def wrap_tmpl_func(render_str):
 
@@ -53,6 +117,11 @@ def wrap_tmpl_func(render_str):
         if context is None:
             context = {}
 
+        # Alias cmd.run to cmd.shell to make python_shell=True the default for
+        # templated calls
+        if 'salt' in kws:
+            kws['salt'] = AliasedLoader(kws['salt'])
+
         # We want explicit context to overwrite the **kws
         kws.update(context)
         context = kws
@@ -65,6 +134,17 @@ def wrap_tmpl_func(render_str):
                 context['tplpath'] = tmplpath
                 if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
                     slspath = os.path.dirname(slspath)
+                template = tmplpath.replace('\\', '/')
+                i = template.rfind(slspath.replace('.', '/'))
+                if i != -1:
+                    template = template[i:]
+                tpldir = os.path.dirname(template).replace('\\', '/')
+                tpldata = {
+                    'tplfile': template,
+                    'tpldir': tpldir,
+                    'tpldot': tpldir.replace('/', '.'),
+                }
+                context.update(tpldata)
             context['slsdotpath'] = slspath.replace('/', '.')
             context['slscolonpath'] = slspath.replace('/', ':')
             context['sls_path'] = slspath.replace('/', '_')
@@ -103,6 +183,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
+            log.error("Rendering exception occurred :{0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:
@@ -264,33 +345,30 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.filters['strftime'] = salt.utils.date_format
     jinja_env.filters['sequence'] = ensure_sequence_filter
-    jinja_env.filters['yaml_dquote'] = salt.utils.yaml_dquote
-    jinja_env.filters['yaml_squote'] = salt.utils.yaml_squote
-    jinja_env.filters['yaml_encode'] = salt.utils.yaml_encode
+    jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
+    jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
+    jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
-    unicode_context = {}
+    jinja_env.tests['list'] = salt.utils.is_list
+
+    decoded_context = {}
     for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
-            unicode_context[key] = value
+            decoded_context[key] = value
             continue
 
-        # Let's try UTF-8 and fail if this still fails, that's why this is not
-        # wrapped in a try/except
-        if isinstance(value, six.text_type):
-            unicode_context[key] = value
-        else:
-            unicode_context[key] = six.text_type(value, 'utf-8')
+        decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
-        template.globals.update(unicode_context)
-        output = template.render(**unicode_context)
+        template.globals.update(decoded_context)
+        output = template.render(**decoded_context)
     except jinja2.exceptions.TemplateSyntaxError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         raise SaltRenderError('Jinja syntax error: {0}{1}'.format(exc, out),
@@ -298,7 +376,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                               tmplstr)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        out = _get_jinja_error(trace, context=unicode_context)[1]
+        out = _get_jinja_error(trace, context=decoded_context)[1]
         tmplstr = ''
         # Don't include the line number, since it is misreported
         # https://github.com/mitsuhiko/jinja2/issues/276
@@ -308,7 +386,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             buf=tmplstr)
     except (SaltInvocationError, CommandExecutionError) as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         raise SaltRenderError(
@@ -319,11 +397,18 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     except Exception as exc:
         tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
-        line, out = _get_jinja_error(trace, context=unicode_context)
+        line, out = _get_jinja_error(trace, context=decoded_context)
         if not line:
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
+        log.debug("Jinja Error")
+        log.debug("Exception: {0}".format(exc))
+        log.debug("Out: {0}".format(out))
+        log.debug("Line: {0}".format(line))
+        log.debug("TmplStr: {0}".format(tmplstr))
+        log.debug("TraceStr: {0}".format(tracestr))
+
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
                               tmplstr,

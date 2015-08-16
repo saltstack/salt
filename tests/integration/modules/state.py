@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
+import textwrap
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -14,11 +16,14 @@ import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 class StateModuleTest(integration.ModuleCase,
                       integration.SaltReturnAssertsMixIn):
     '''
-    Validate the test module
+    Validate the state module
     '''
 
     maxDiff = None
@@ -62,6 +67,67 @@ class StateModuleTest(integration.ModuleCase,
         sls = self.run_function('state.show_sls', mods='recurse_ok_two')
         self.assertIn('/etc/nagios/nrpe.cfg', sls)
 
+    def _remove_request_cache_file(self):
+        '''
+        remove minion state request file
+        '''
+        cache_file = os.path.join(integration.RUNTIME_CONFIGS['minion']['cachedir'], 'req_state.p')
+        if os.path.exists(cache_file):
+            os.remove(cache_file)
+
+    def test_request(self):
+        '''
+        verify sending a state request to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        ret = self.run_function('state.request', mods='modules.state.requested')
+        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+        self.assertEqual(result, None)
+
+    def test_check_request(self):
+        '''
+        verify checking a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.check_request')
+        result = ret['default']['test_run']['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+        self.assertEqual(result, None)
+
+    def test_clear_request(self):
+        '''
+        verify clearing a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.clear_request')
+        self.assertTrue(ret)
+
+    def test_run_request_succeeded(self):
+        '''
+        verify running a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        ret = self.run_function('state.run_request')
+        result = ret['cmd_|-count_root_dir_contents_|-ls -a / | wc -l_|-run']['result']
+        self.assertTrue(result)
+
+    def test_run_request_failed_no_request_staged(self):
+        '''
+        verify not running a state request sent to the minion(s)
+        '''
+        self._remove_request_cache_file()
+
+        self.run_function('state.request', mods='modules.state.requested')
+        self.run_function('state.clear_request')
+        ret = self.run_function('state.run_request')
+        self.assertEqual(ret, {})
+
     def test_issue_1896_file_append_source(self):
         '''
         Verify that we can append a file's contents
@@ -79,17 +145,17 @@ class StateModuleTest(integration.ModuleCase,
         ret = self.run_function('state.sls', mods='testappend.step-2')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual('''\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
+        self.assertMultiLineEqual(textwrap.dedent('''\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
 
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-''', salt.utils.fopen(testfile, 'r').read())
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            '''), salt.utils.fopen(testfile, 'r').read())
 
         # Re-append switching order
         ret = self.run_function('state.sls', mods='testappend.step-2')
@@ -98,17 +164,17 @@ fi
         ret = self.run_function('state.sls', mods='testappend.step-1')
         self.assertSaltTrueReturn(ret)
 
-        self.assertMultiLineEqual('''\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
+        self.assertMultiLineEqual(textwrap.dedent('''\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
 
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-''', salt.utils.fopen(testfile, 'r').read())
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            '''), salt.utils.fopen(testfile, 'r').read())
 
     def test_issue_1876_syntax_error(self):
         '''
@@ -133,16 +199,16 @@ fi
         )
 
     def test_issue_1879_too_simple_contains_check(self):
-        contents = '''\
-# set variable identifying the chroot you work in (used in the prompt below)
-if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-    debian_chroot=$(cat /etc/debian_chroot)
-fi
-# enable bash completion in interactive shells
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-'''
+        contents = textwrap.dedent('''\
+            # set variable identifying the chroot you work in (used in the prompt below)
+            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
+                debian_chroot=$(cat /etc/debian_chroot)
+            fi
+            # enable bash completion in interactive shells
+            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+                . /etc/bash_completion
+            fi
+            ''')
         testfile = os.path.join(integration.TMP, 'issue-1879')
         # Delete if exiting
         if os.path.isfile(testfile):
@@ -321,15 +387,15 @@ fi
                 shutil.rmtree(venv_dir)
 
     def test_template_invalid_items(self):
-        TEMPLATE = '''\
-{0}:
-  - issue-2068-template-str
+        TEMPLATE = textwrap.dedent('''\
+            {0}:
+              - issue-2068-template-str
 
-/tmp/test-template-invalid-items:
-  file:
-    - managed
-    - source: salt://testfile
-'''
+            /tmp/test-template-invalid-items:
+              file:
+                - managed
+                - source: salt://testfile
+            ''')
         for item in ('include', 'exclude', 'extends'):
             ret = self.run_function(
                 'state.template_str', [TEMPLATE.format(item)]
@@ -485,7 +551,7 @@ fi
         Normalize the return to the format that we'll use for result checking
         '''
         result = {}
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             result[item] = {
                 '__run_num__': descr['__run_num__'],
                 'comment': descr['comment'],
@@ -782,11 +848,9 @@ fi
             + '                       foobar: C\n'
         )
 
-        # issue #8211, chaining complex prereq & prereq_in
-        # TODO: Actually this test fails
-        #ret = self.run_function('state.sls', mods='requisites.prereq_complex')
-        #result = self.normalize_ret(ret)
-        #self.assertEqual(expected_result_complex, result)
+        ret = self.run_function('state.sls', mods='requisites.prereq_complex')
+        result = self.normalize_ret(ret)
+        self.assertEqual(expected_result_complex, result)
 
         # issue #8210 : prereq recursion undetected
         # TODO: this test fails
@@ -804,7 +868,7 @@ fi
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function('state.sls', mods='requisites.use')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected
@@ -842,6 +906,140 @@ fi
                 self.assertIn('Comte', data)
         finally:
             os.unlink(tgt)
+
+    # onchanges tests
+
+    def test_onchanges_requisite(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_simple')
+
+        # First, test the result of the state run when changes are expected to happen
+        test_data = state_run['cmd_|-test_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_requisite_multiple(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls',
+                mods='requisites.onchanges_multiple')
+
+        # First, test the result of the state run when two changes are expected to happen
+        test_data = state_run['cmd_|-test_two_changing_states_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when two changes are not expected to happen
+        test_data = state_run['cmd_|-test_two_non_changing_states_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+        # Finally, test the result of the state run when only one of the onchanges requisites changes.
+        test_data = state_run['cmd_|-test_one_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_in_requisite(self):
+        '''
+        Tests a simple state using the onchanges_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onchanges_in_simple')
+
+        # First, test the result of the state run of when changes are expected to happen
+        test_data = state_run['cmd_|-test_changes_expected_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when changes are not expected to happen
+        test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+    # onfail tests
+
+    def test_onfail_requisite(self):
+        '''
+        Tests a simple state using the onfail requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    def test_onfail_in_requisite(self):
+        '''
+        Tests a simple state using the onfail_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.onfail_in_simple')
+
+        # First, test the result of the state run when a failure is expected to happen
+        test_data = state_run['cmd_|-test_failing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when a failure is not expected to happen
+        test_data = state_run['cmd_|-test_non_failing_state_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because onfail req did not change'
+        self.assertIn(expected_result, test_data)
+
+    # listen tests
+
+    def test_listen_requisite(self):
+        '''
+        Tests a simple state using the listen requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple')
+
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
+
+    def test_listen_in_requisite(self):
+        '''
+        Tests a simple state using the listen_in requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_simple')
+
+        # First, test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        # Then, test the result of the state run when a listener should not trigger
+        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        self.assertNotIn(absent_state, state_run)
 
 
 if __name__ == '__main__':

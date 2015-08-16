@@ -13,6 +13,9 @@ from os import makedirs
 from os.path import dirname, isdir
 from errno import EEXIST
 
+# Import Salt libs
+import salt.utils
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -174,7 +177,7 @@ class SaltSwift(object):
                 dirpath = dirname(local_file)
                 if dirpath and not isdir(dirpath):
                     mkdirs(dirpath)
-                fp = open(local_file, 'wb')
+                fp = salt.utils.fopen(local_file, 'wb')
 
             read_length = 0
             for chunk in body:
@@ -197,9 +200,8 @@ class SaltSwift(object):
         Upload a file to Swift
         '''
         try:
-            fp = open(local_file, 'rb')
-            self.conn.put_object(cont, obj, fp)
-            fp.close()
+            with salt.utils.fopen(local_file, 'rb') as fp_:
+                self.conn.put_object(cont, obj, fp_)
             return True
         except Exception as exc:
             log.error('There was an error::')

@@ -3,12 +3,16 @@
 Set up the version of Salt
 '''
 
+# pylint: disable=incompatible-py3-code
+
 # Import python libs
 from __future__ import absolute_import, print_function
 import re
 import sys
+import platform
 
 # Don't rely on external packages in this module since it's used at install time
+# pylint: disable=invalid-name,redefined-builtin
 if sys.version_info[0] == 3:
     MAX_SIZE = sys.maxsize
     string_types = (str,)
@@ -16,6 +20,7 @@ else:
     MAX_SIZE = sys.maxint
     string_types = (basestring,)
     from itertools import imap as map
+# pylint: enable=invalid-name,redefined-builtin
 
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
@@ -77,11 +82,11 @@ class SaltStackVersion(object):
         # ------------------------------------------------------------------------------------------------------------
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
-        'Lithium'       : (MAX_SIZE - 106, 0),
-        'Beryllium'     : (MAX_SIZE - 105, 0),
+        'Lithium'       : (2015, 5),
+        'Beryllium'     : (2015, 8),
         'Boron'         : (MAX_SIZE - 104, 0),
-        #'Carbon'       : (MAX_SIZE - 103, 0),
-        #'Nitrogen'     : (MAX_SIZE - 102, 0),
+        'Carbon'        : (MAX_SIZE - 103, 0),
+        'Nitrogen'      : (MAX_SIZE - 102, 0),
         #'Oxygen'       : (MAX_SIZE - 101, 0),
         #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
@@ -188,9 +193,9 @@ class SaltStackVersion(object):
         # pylint: enable=E8203,E8265
     }
 
-    LNAMES = dict((k.lower(), v) for (k, v) in NAMES.items())
-    VNAMES = dict((v, k) for (k, v) in NAMES.items())
-    RMATCH = dict((v[:2], k) for (k, v) in NAMES.items())
+    LNAMES = dict((k.lower(), v) for (k, v) in iter(NAMES.items()))
+    VNAMES = dict((v, k) for (k, v) in iter(NAMES.items()))
+    RMATCH = dict((v[:2], k) for (k, v) in iter(NAMES.items()))
 
     def __init__(self,              # pylint: disable=C0103
                  major,
@@ -242,7 +247,8 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        match = cls.git_describe_regex.match(version_string.decode())
+        s = version_string.decode() if isinstance(version_string, bytes) else version_string
+        match = cls.git_describe_regex.match(s)
         if not match:
             raise ValueError(
                 'Unable to parse version string: {0!r}'.format(version_string)
@@ -350,7 +356,7 @@ class SaltStackVersion(object):
     def __str__(self):
         return self.string
 
-    def __cmp__(self, other):
+    def __compare__(self, other, method):
         if not isinstance(other, SaltStackVersion):
             if isinstance(other, string_types):
                 other = SaltStackVersion.parse(other)
@@ -365,18 +371,36 @@ class SaltStackVersion(object):
 
         if (self.rc and other.rc) or (not self.rc and not other.rc):
             # Both have rc information, regular compare is ok
-            return cmp(self.noc_info, other.noc_info)
+            return method(self.noc_info, other.noc_info)
 
         # RC's are always lower versions than non RC's
         if self.rc > 0 and other.rc <= 0:
             noc_info = list(self.noc_info)
             noc_info[3] = -1
-            return cmp(tuple(noc_info), other.noc_info)
+            return method(tuple(noc_info), other.noc_info)
 
         if self.rc <= 0 and other.rc > 0:
             other_noc_info = list(other.noc_info)
             other_noc_info[3] = -1
-            return cmp(self.noc_info, tuple(other_noc_info))
+            return method(self.noc_info, tuple(other_noc_info))
+
+    def __lt__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self < _other)
+
+    def __le__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self <= _other)
+
+    def __eq__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self == _other)
+
+    def __ne__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self != _other)
+
+    def __ge__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self >= _other)
+
+    def __gt__(self, other):
+        return self.__compare__(other, lambda _self, _other: _self > _other)
 
     def __repr__(self):
         parts = []
@@ -411,18 +435,7 @@ __saltstack_version__ = SaltStackVersion.from_last_named_version()
 
 
 # ----- Dynamic/Runtime Salt Version Information -------------------------------------------------------------------->
-def __get_version(saltstack_version):
-    '''
-    If we can get a version provided at installation time or from Git, use
-    that instead, otherwise we carry on.
-    '''
-    try:
-        # Try to import the version information provided at install time
-        from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
-        return __saltstack_version__
-    except ImportError:
-        pass
-
+def __discover_version(saltstack_version):
     # This might be a 'python setup.py develop' installation type. Let's
     # discover the version information at runtime.
     import os
@@ -487,6 +500,19 @@ def __get_version(saltstack_version):
     return saltstack_version
 
 
+def __get_version(saltstack_version):
+    '''
+    If we can get a version provided at installation time or from Git, use
+    that instead, otherwise we carry on.
+    '''
+    try:
+        # Try to import the version information provided at install time
+        from salt._version import __saltstack_version__  # pylint: disable=E0611,F0401
+        return __saltstack_version__
+    except ImportError:
+        return __discover_version(saltstack_version)
+
+
 # Get additional version information if available
 __saltstack_version__ = __get_version(__saltstack_version__)
 # This function has executed once, we're done with it. Delete it!
@@ -500,13 +526,18 @@ __version__ = __saltstack_version__.string
 # <---- Common version related attributes - NO NEED TO CHANGE --------------------------------------------------------
 
 
-def versions_information(include_salt_cloud=False):
+def salt_information():
     '''
-    Report on all of the versions for dependent software
+    Report version of salt.
     '''
+    yield 'Salt', __version__
 
+
+def dependency_information(include_salt_cloud=False):
+    '''
+    Report versions of library dependencies.
+    '''
     libs = [
-        ('Salt', None, __version__),
         ('Python', None, sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
         ('M2Crypto', 'M2Crypto', 'version'),
@@ -520,6 +551,8 @@ def versions_information(include_salt_cloud=False):
         ('RAET', 'raet', '__version__'),
         ('ZMQ', 'zmq', 'zmq_version'),
         ('Mako', 'mako', '__version__'),
+        ('Tornado', 'tornado', 'version'),
+        ('timelib', 'timelib', 'version'),
     ]
 
     if include_salt_cloud:
@@ -543,18 +576,76 @@ def versions_information(include_salt_cloud=False):
             yield name, None
 
 
+def system_information():
+    '''
+    Report system versions.
+    '''
+    def system_version():
+        '''
+        Return host system version.
+        '''
+        lin_ver = platform.linux_distribution()
+        mac_ver = platform.mac_ver()
+        win_ver = platform.win32_ver()
+
+        if lin_ver[0]:
+            return ' '.join(lin_ver)
+        elif mac_ver[0]:
+            return ' '.join([mac_ver[0], '-'.join(mac_ver[1]), mac_ver[2]])
+        elif win_ver[0]:
+            return ' '.join(win_ver)
+
+    system = [
+        ('dist', ' '.join(platform.dist())),
+        ('release', platform.release()),
+        ('machine', platform.machine()),
+    ]
+
+    sys_ver = system_version()
+    if sys_ver:
+        system.append(('system', sys_ver))
+
+    for name, attr in system:
+        yield name, attr
+        continue
+
+
+def versions_information(include_salt_cloud=False):
+    '''
+    Report the versions of dependent software.
+    '''
+    salt_info = list(salt_information())
+    lib_info = list(dependency_information(include_salt_cloud))
+    sys_info = list(system_information())
+
+    return {'Salt Version': dict(salt_info),
+            'Dependency Versions': dict(lib_info),
+            'System Versions': dict(sys_info)}
+
+
 def versions_report(include_salt_cloud=False):
     '''
-    Yield each library properly formatted for a console clean output.
+    Yield each version properly formatted for console output.
     '''
-    libs = list(versions_information(include_salt_cloud=include_salt_cloud))
+    ver_info = versions_information(include_salt_cloud)
 
-    padding = max(len(lib[0]) for lib in libs) + 1
+    lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
+    sys_pad = max(len(name) for name in ver_info['System Versions'])
+    padding = max(lib_pad, sys_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
+    info = []
+    for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
+        info.append('{0}:'.format(ver_type))
+        for name in sorted(ver_info[ver_type]):
+            ver = fmt.format(name,
+                             ver_info[ver_type][name] or 'Not Installed',
+                             pad=padding)
+            info.append(ver)
+        info.append(' ')
 
-    for name, version in libs:
-        yield fmt.format(name, version or 'Not Installed', pad=padding)
+    for line in info:
+        yield line
 
 
 if __name__ == '__main__':

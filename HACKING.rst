@@ -6,10 +6,10 @@ welcome!
 
 To assist in Salt development, you can help in a number of ways.
 
-Setting a Github pull request
+Setting a GitHub pull request
 -----------------------------
 
-This is the preferred method for contributions, simply create a Github
+This is the preferred method for contributions, simply create a GitHub
 fork, commit your changes to the fork, and then open up a pull request.
 
 Posting patches to the mailing list
@@ -140,6 +140,10 @@ M2Crypto installed using apt::
 
     virtualenv --system-site-packages /path/to/your/virtualenv
 
+On Gentoo systems you should use ``--system-site-packages`` when creating
+the virtualenv to enable pkg and portage_config functionality as the
+portage package is not available via pip
+
 .. note:: Using your system Python modules in the virtualenv
 
     If you have the required python modules installed on your system already
@@ -163,7 +167,7 @@ ZeroMQ Transport:
 
 .. code-block:: bash
 
-    pip install -r zeromq-requirements.txt
+    pip install -r requirements/zeromq.txt
     pip install psutil
     pip install -e .
 
@@ -180,7 +184,7 @@ RAET Transport:
 
 .. code-block:: bash
 
-    pip install -r raet-requirements.txt
+    pip install -r requirements/raet.txt
     pip install psutil
     pip install -e .
 
@@ -279,9 +283,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``dev_requirements_python2x.txt``::
+For running tests, you'll also need to install ``requirements/dev_python2x.txt``::
 
-    pip install -r dev_requirements_python2x.txt
+    pip install -r requirements/dev_python2x.txt
 
 Finally you use setup.py to run the tests with the following command::
 

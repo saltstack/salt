@@ -3,7 +3,12 @@
 Mercurial Fileserver Backend
 
 To enable, add ``hg`` to the :conf_master:`fileserver_backend` option in the
-master config file.
+Master config file.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - hg
 
 After enabling this backend, branches, bookmarks, and tags in a remote
 mercurial repository are exposed to salt as different environments. This
@@ -26,32 +31,37 @@ will set the desired branch method. Possible values are: ``branches``,
 :depends:   - mercurial
             - python bindings for mercurial (``python-hglib``)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
+import errno
+import fnmatch
 import glob
 import hashlib
 import logging
 import os
 import shutil
 from datetime import datetime
-from salt.ext.six import text_type as _text_type
+from salt.exceptions import FileserverConfigError
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
 PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import hglib
     HAS_HG = True
 except ImportError:
     HAS_HG = False
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
@@ -162,6 +172,15 @@ def _get_ref(repo, name):
     return False
 
 
+def _failhard():
+    '''
+    Fatal fileserver configuration issue, raise an exception
+    '''
+    raise FileserverConfigError(
+        'Failed to load hg fileserver backend'
+    )
+
+
 def init():
     '''
     Return a list of hglib objects for the various hgfs remotes
@@ -173,23 +192,25 @@ def init():
     per_remote_defaults = {}
     for param in PER_REMOTE_PARAMS:
         per_remote_defaults[param] = \
-            _text_type(__opts__['hgfs_{0}'.format(param)])
+            six.text_type(__opts__['hgfs_{0}'.format(param)])
 
     for remote in __opts__['hgfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = dict(
-                [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                [(key, six.text_type(val)) for key, val in
+                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
-                    'Invalid per-remote configuration for remote {0}. If no '
-                    'per-remote parameters are being specified, there may be '
-                    'a trailing colon after the URI, which should be removed. '
-                    'Check the master configuration file.'.format(repo_url)
+                    'Invalid per-remote configuration for hgfs remote {0}. If '
+                    'no per-remote parameters are being specified, there may '
+                    'be a trailing colon after the URL, which should be '
+                    'removed. Check the master configuration file.'
+                    .format(repo_url)
                 )
+                _failhard()
 
             branch_method = \
                 per_remote_conf.get('branch_method',
@@ -201,8 +222,9 @@ def init():
                     .format(branch_method, repo_url,
                             ', '.join(VALID_BRANCH_METHODS))
                 )
-                continue
+                _failhard()
 
+            per_remote_errors = False
             for param in (x for x in per_remote_conf
                           if x not in PER_REMOTE_PARAMS):
                 log.error(
@@ -212,20 +234,23 @@ def init():
                         param, repo_url, ', '.join(PER_REMOTE_PARAMS)
                     )
                 )
-                per_remote_conf.pop(param)
+                per_remote_errors = True
+            if per_remote_errors:
+                _failhard()
+
             repo_conf.update(per_remote_conf)
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, string_types):
+        if not isinstance(repo_url, six.string_types):
             log.error(
-                'Invalid gitfs remote {0}. Remotes must be strings, you may '
-                'need to enclose the URI in quotes'.format(repo_url)
+                'Invalid hgfs remote {0}. Remotes must be strings, you may '
+                'need to enclose the URL in quotes'.format(repo_url)
             )
-            continue
+            _failhard()
 
         try:
-            repo_conf['mountpoint'] = salt.utils.strip_proto(
+            repo_conf['mountpoint'] = salt.utils.url.strip_proto(
                 repo_conf['mountpoint']
             )
         except TypeError:
@@ -251,11 +276,24 @@ def init():
                 'delete this directory on the master to continue to use this '
                 'hgfs remote.'.format(rp_, repo_url)
             )
-            continue
+            _failhard()
+        except Exception as exc:
+            log.error(
+                'Exception \'{0}\' encountered while initializing hgfs remote '
+                '{1}'.format(exc, repo_url)
+            )
+            _failhard()
 
-        refs = repo.config(names='paths')
+        try:
+            refs = repo.config(names='paths')
+        except hglib.error.CommandError:
+            refs = None
+
+        # Do NOT put this if statement inside the except block above. Earlier
+        # versions of hglib did not raise an exception, so we need to do it
+        # this way to support both older and newer hglib.
         if not refs:
-            # Write an hgrc defining the remote URI
+            # Write an hgrc defining the remote URL
             hgconfpath = os.path.join(rp_, '.hg', 'hgrc')
             with salt.utils.fopen(hgconfpath, 'w+') as hgconfig:
                 hgconfig.write('[paths]\n')
@@ -265,7 +303,10 @@ def init():
             'repo': repo,
             'url': repo_url,
             'hash': repo_hash,
-            'cachedir': rp_
+            'cachedir': rp_,
+            'lockfile': os.path.join(__opts__['cachedir'],
+                                     'hgfs',
+                                     '{0}.update.lk'.format(repo_hash))
         })
         repos.append(repo_conf)
         repo.close()
@@ -286,27 +327,164 @@ def init():
     return repos
 
 
-def purge_cache():
+def _clear_old_remotes():
     '''
-    Purge the fileserver cache
+    Remove cache directories for remotes no longer configured
     '''
     bp_ = os.path.join(__opts__['cachedir'], 'hgfs')
     try:
-        remove_dirs = os.listdir(bp_)
+        cachedir_ls = os.listdir(bp_)
     except OSError:
-        remove_dirs = []
-    for repo in init():
+        cachedir_ls = []
+    repos = init()
+    # Remove actively-used remotes from list
+    for repo in repos:
         try:
-            remove_dirs.remove(repo['hash'])
+            cachedir_ls.remove(repo['hash'])
         except ValueError:
             pass
-    remove_dirs = [os.path.join(bp_, rdir) for rdir in remove_dirs
-                   if rdir not in ('hash', 'refs', 'envs.p', 'remote_map.txt')]
-    if remove_dirs:
-        for rdir in remove_dirs:
-            shutil.rmtree(rdir)
-        return True
-    return False
+    to_remove = []
+    for item in cachedir_ls:
+        if item in ('hash', 'refs'):
+            continue
+        path = os.path.join(bp_, item)
+        if os.path.isdir(path):
+            to_remove.append(path)
+    failed = []
+    if to_remove:
+        for rdir in to_remove:
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                log.error(
+                    'Unable to remove old hgfs remote cachedir {0}: {1}'
+                    .format(rdir, exc)
+                )
+                failed.append(rdir)
+            else:
+                log.debug('hgfs removed old cachedir {0}'.format(rdir))
+    for fdir in failed:
+        to_remove.remove(fdir)
+    return bool(to_remove), repos
+
+
+def clear_cache():
+    '''
+    Completely clear hgfs cache
+    '''
+    fsb_cachedir = os.path.join(__opts__['cachedir'], 'hgfs')
+    list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/hgfs')
+    errors = []
+    for rdir in (fsb_cachedir, list_cachedir):
+        if os.path.exists(rdir):
+            try:
+                shutil.rmtree(rdir)
+            except OSError as exc:
+                errors.append('Unable to delete {0}: {1}'.format(rdir, exc))
+    return errors
+
+
+def clear_lock(remote=None):
+    '''
+    Clear update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
+    '''
+    def _do_clear_lock(repo):
+        def _add_error(errlist, repo, exc):
+            msg = ('Unable to remove update lock for {0} ({1}): {2} '
+                   .format(repo['url'], repo['lockfile'], exc))
+            log.debug(msg)
+            errlist.append(msg)
+        success = []
+        failed = []
+        if os.path.exists(repo['lockfile']):
+            try:
+                os.remove(repo['lockfile'])
+            except OSError as exc:
+                if exc.errno == errno.EISDIR:
+                    # Somehow this path is a directory. Should never happen
+                    # unless some wiseguy manually creates a directory at this
+                    # path, but just in case, handle it.
+                    try:
+                        shutil.rmtree(repo['lockfile'])
+                    except OSError as exc:
+                        _add_error(failed, repo, exc)
+                else:
+                    _add_error(failed, repo, exc)
+            else:
+                msg = 'Removed lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_clear_lock(remote)
+
+    cleared = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if not fnmatch.fnmatch(repo['url'], remote):
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
+                    continue
+        success, failed = _do_clear_lock(repo)
+        cleared.extend(success)
+        errors.extend(failed)
+    return cleared, errors
+
+
+def lock(remote=None):
+    '''
+    Place an update.lk
+
+    ``remote`` can either be a dictionary containing repo configuration
+    information, or a pattern. If the latter, then remotes for which the URL
+    matches the pattern will be locked.
+    '''
+    def _do_lock(repo):
+        success = []
+        failed = []
+        if not os.path.exists(repo['lockfile']):
+            try:
+                with salt.utils.fopen(repo['lockfile'], 'w+') as fp_:
+                    fp_.write('')
+            except (IOError, OSError) as exc:
+                msg = ('Unable to set update lock for {0} ({1}): {2} '
+                       .format(repo['url'], repo['lockfile'], exc))
+                log.debug(msg)
+                failed.append(msg)
+            else:
+                msg = 'Set lock for {0}'.format(repo['url'])
+                log.debug(msg)
+                success.append(msg)
+        return success, failed
+
+    if isinstance(remote, dict):
+        return _do_lock(remote)
+
+    locked = []
+    errors = []
+    for repo in init():
+        if remote:
+            try:
+                if not fnmatch.fnmatch(repo['url'], remote):
+                    continue
+            except TypeError:
+                # remote was non-string, try again
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
+                    continue
+        success, failed = _do_lock(repo)
+        locked.extend(success)
+        errors.extend(failed)
+
+    return locked, errors
 
 
 def update():
@@ -316,13 +494,27 @@ def update():
     # data for the fileserver event
     data = {'changed': False,
             'backend': 'hgfs'}
-    pid = os.getpid()
-    data['changed'] = purge_cache()
-    for repo in init():
+    # _clear_old_remotes runs init(), so use the value from there to avoid a
+    # second init()
+    data['changed'], repos = _clear_old_remotes()
+    for repo in repos:
+        if os.path.exists(repo['lockfile']):
+            log.warning(
+                'Update lockfile is present for hgfs remote {0}, skipping. '
+                'If this warning persists, it is possible that the update '
+                'process was interrupted. Removing {1} or running '
+                '\'salt-run fileserver.clear_lock hgfs\' will allow updates '
+                'to continue for this remote.'
+                .format(repo['url'], repo['lockfile'])
+            )
+            continue
+        _, errors = lock(repo)
+        if errors:
+            log.error('Unable to set update lock for hgfs remote {0}, '
+                      'skipping.'.format(repo['url']))
+            continue
+        log.debug('hgfs is fetching from {0}'.format(repo['url']))
         repo['repo'].open()
-        lk_fn = os.path.join(repo['repo'].root(), 'update.lk')
-        with salt.utils.fopen(lk_fn, 'w+') as fp_:
-            fp_.write(str(pid))
         curtip = repo['repo'].tip()
         try:
             repo['repo'].pull()
@@ -337,10 +529,7 @@ def update():
             if curtip[1] != newtip[1]:
                 data['changed'] = True
         repo['repo'].close()
-        try:
-            os.remove(lk_fn)
-        except (IOError, OSError):
-            pass
+        clear_lock(repo)
 
     env_cache = os.path.join(__opts__['cachedir'], 'hgfs/envs.p')
     if data.get('changed', False) is True or not os.path.isfile(env_cache):
@@ -689,4 +878,6 @@ def _get_dir_list(load):
                             ret.add(os.path.join(repo['mountpoint'], relpath))
                     split = split[0].rsplit('/', 1)
         repo['repo'].close()
+    if repo['mountpoint']:
+        ret.add(repo['mountpoint'])
     return sorted(ret)

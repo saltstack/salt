@@ -7,6 +7,7 @@ Provides access to randomness generators.
 from __future__ import absolute_import
 # Import python libs
 import hashlib
+import random
 
 # Import salt libs
 import salt.utils.pycrypto
@@ -20,6 +21,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
+    # Certain versions of hashlib do not contain
+    # the necessary functions
+    if not hasattr(hashlib, 'algorithms'):
+        return False
     return __virtualname__
 
 
@@ -118,3 +123,50 @@ def shadow_hash(crypt_salt=None, password=None, algorithm='sha512'):
         salt '*' random.shadow_hash 'My5alT' 'MyP@asswd' md5
     '''
     return salt.utils.pycrypto.gen_hash(crypt_salt, password, algorithm)
+
+
+def rand_int(start=1, end=10):
+    '''
+    Returns a random integer number between the start and end number.
+
+    .. versionadded: 2015.5.3
+
+    start : 1
+        Any valid integer number
+
+    end : 10
+        Any valid integer number
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' random.rand_int 1 10
+    '''
+    return random.randint(start, end)
+
+
+def seed(range=10, hash=None):
+    '''
+    Returns a random number within a range. Optional hash argument can
+    be any hashable object. If hash is omitted or None, the id of the minion is used.
+
+    .. versionadded: 2015.8.0
+
+    hash: None
+        Any hashable object.
+
+    range: 10
+        Any valid integer number
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' random.seed 10 hash=None
+    '''
+    if hash is None:
+        hash = __grains__['id']
+
+    random.seed(hash)
+    return random.randrange(range)

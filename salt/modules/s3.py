@@ -30,11 +30,17 @@ Connection module for Amazon S3
 
     SSL verification may also be turned off in the configuration:
 
-    s3.verify_ssl: False
+        s3.verify_ssl: False
 
     This is required if using S3 bucket names that contain a period, as
     these will not match Amazon's S3 wildcard certificates. Certificate
     verification is enabled by default.
+
+    AWS region may be specified in the configuration:
+
+        s3.location: eu-central-1
+
+    Default is us-east-1.
 
     This module should be usable to query other S3-like services, such as
     Eucalyptus.
@@ -61,7 +67,7 @@ def __virtual__():
 
 
 def delete(bucket, path=None, action=None, key=None, keyid=None,
-           service_url=None, verify_ssl=None):
+           service_url=None, verify_ssl=None, kms_keyid=None, location=None):
     '''
     Delete a bucket, or delete an object from a bucket.
 
@@ -73,8 +79,14 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
 
         salt myminion s3.delete mybucket remoteobject
     '''
-    key, keyid, service_url, verify_ssl = _get_key(key, keyid, service_url,
-                                                   verify_ssl)
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_key(
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+    )
 
     return salt.utils.s3.query(method='DELETE',
                                bucket=bucket,
@@ -82,13 +94,15 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                action=action,
                                key=key,
                                keyid=keyid,
+                               kms_keyid=kms_keyid,
                                service_url=service_url,
-                               verify_ssl=verify_ssl)
+                               verify_ssl=verify_ssl,
+                               location=location)
 
 
 def get(bucket=None, path=None, return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
-        verify_ssl=None):
+        verify_ssl=None, kms_keyid=None, location=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
@@ -140,8 +154,14 @@ def get(bucket=None, path=None, return_bin=False, action=None,
 
         salt myminion s3.get mybucket myfile.png action=acl
     '''
-    key, keyid, service_url, verify_ssl = _get_key(key, keyid, service_url,
-                                                   verify_ssl)
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_key(
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+    )
 
     return salt.utils.s3.query(method='GET',
                                bucket=bucket,
@@ -151,12 +171,14 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                                action=action,
                                key=key,
                                keyid=keyid,
+                               kms_keyid=kms_keyid,
                                service_url=service_url,
-                               verify_ssl=verify_ssl)
+                               verify_ssl=verify_ssl,
+                               location=location)
 
 
 def head(bucket, path=None, key=None, keyid=None, service_url=None,
-         verify_ssl=None):
+         verify_ssl=None, kms_keyid=None, location=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
 
@@ -167,20 +189,30 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
     '''
-    key, keyid, service_url, verify_ssl = _get_key(key, keyid, service_url,
-                                                   verify_ssl)
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_key(
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+    )
 
     return salt.utils.s3.query(method='HEAD',
                                bucket=bucket,
                                path=path,
                                key=key,
                                keyid=keyid,
+                               kms_keyid=kms_keyid,
                                service_url=service_url,
-                               verify_ssl=verify_ssl)
+                               verify_ssl=verify_ssl,
+                               location=location,
+                               full_headers=True)
 
 
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
-        key=None, keyid=None, service_url=None, verify_ssl=None):
+        key=None, keyid=None, service_url=None, verify_ssl=None,
+        kms_keyid=None, location=None):
     '''
     Create a new bucket, or upload an object to a bucket.
 
@@ -196,8 +228,14 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
     '''
-    key, keyid, service_url, verify_ssl = _get_key(key, keyid, service_url,
-                                                   verify_ssl)
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_key(
+        key,
+        keyid,
+        service_url,
+        verify_ssl,
+        kms_keyid,
+        location,
+    )
 
     return salt.utils.s3.query(method='PUT',
                                bucket=bucket,
@@ -207,11 +245,13 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
                                action=action,
                                key=key,
                                keyid=keyid,
+                               kms_keyid=kms_keyid,
                                service_url=service_url,
-                               verify_ssl=verify_ssl)
+                               verify_ssl=verify_ssl,
+                               location=location)
 
 
-def _get_key(key, keyid, service_url, verify_ssl):
+def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location):
     '''
     Examine the keys, and populate as necessary
     '''
@@ -220,6 +260,9 @@ def _get_key(key, keyid, service_url, verify_ssl):
 
     if not keyid and __salt__['config.option']('s3.keyid'):
         keyid = __salt__['config.option']('s3.keyid')
+
+    if not kms_keyid and __salt__['config.option']('aws.kms.keyid'):
+        kms_keyid = __salt__['config.option']('aws.kms.keyid')
 
     if not service_url and __salt__['config.option']('s3.service_url'):
         service_url = __salt__['config.option']('s3.service_url')
@@ -233,4 +276,7 @@ def _get_key(key, keyid, service_url, verify_ssl):
     if verify_ssl is None:
         verify_ssl = True
 
-    return key, keyid, service_url, verify_ssl
+    if location is None and __salt__['config.option']('s3.location') is not None:
+        location = __salt__['config.option']('s3.location')
+
+    return key, keyid, service_url, verify_ssl, kms_keyid, location

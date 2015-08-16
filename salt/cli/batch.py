@@ -4,8 +4,7 @@ Execute batch runs
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import math
 import time
 import copy
@@ -14,7 +13,12 @@ import copy
 import salt.client
 import salt.output
 from salt.utils import print_cli
+
+# Import 3rd-party libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
 from salt.ext.six.moves import range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 
 class Batch(object):
@@ -26,7 +30,7 @@ class Batch(object):
         self.eauth = eauth if eauth else {}
         self.quiet = quiet
         self.local = salt.client.get_local_client(opts['conf_file'])
-        self.minions = self.__gather_minions()
+        self.minions, self.ping_gen = self.__gather_minions()
 
     def __gather_minions(self):
         '''
@@ -44,13 +48,14 @@ class Batch(object):
         else:
             args.append(self.opts.get('expr_form', 'glob'))
 
-        fret = []
-        for ret in self.local.cmd_iter(*args, **self.eauth):
-            for minion in ret:
-                if not self.quiet:
-                    print_cli('{0} Detected for this batch run'.format(minion))
-                fret.append(minion)
-        return sorted(fret)
+        ping_gen = self.local.cmd_iter(*args, **self.eauth)
+
+        fret = set()
+        for ret in ping_gen:
+            m = next(six.iterkeys(ret))
+            if m is not None:
+                fret.add(m)
+        return (list(fret), ping_gen)
 
     def get_bnum(self):
         '''
@@ -105,7 +110,11 @@ class Batch(object):
             else:
                 for i in range(bnum - len(active)):
                     if to_run:
-                        next_.append(to_run.pop())
+                        minion_id = to_run.pop()
+                        if isinstance(minion_id, dict):
+                            next_.append(minion_id.keys()[0])
+                        else:
+                            next_.append(minion_id)
 
             active += next_
             args[0] = next_
@@ -130,6 +139,15 @@ class Batch(object):
                 time.sleep(0.02)
             parts = {}
 
+            # see if we found more minions
+            for ping_ret in self.ping_gen:
+                if ping_ret is None:
+                    break
+                m = next(ping_ret.iterkeys())
+                if m not in self.minions:
+                    self.minions.append(m)
+                    to_run.append(m)
+
             for queue in iters:
                 try:
                     # Gather returns until we get to the bottom
@@ -144,8 +162,11 @@ class Batch(object):
                             continue
                         if self.opts.get('raw'):
                             parts.update({part['id']: part})
+                            minion_tracker[queue]['minions'].remove(part['id'])
                         else:
                             parts.update(part)
+                            for id in part.keys():
+                                minion_tracker[queue]['minions'].remove(id)
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive
@@ -162,8 +183,9 @@ class Batch(object):
                                 parts[minion] = {}
                                 parts[minion]['ret'] = {}
 
-            for minion, data in parts.items():
-                active.remove(minion)
+            for minion, data in six.iteritems(parts):
+                if minion in active:
+                    active.remove(minion)
                 if self.opts.get('raw'):
                     yield data
                 else:

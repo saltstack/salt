@@ -13,7 +13,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import pipes
 import re
 
 # Import salt libs
@@ -34,7 +33,7 @@ def __virtual__():
     return False
 
 
-def _run_varnishadm(cmd, params=None, **kwargs):
+def _run_varnishadm(cmd, params=(), **kwargs):
     '''
     Execute varnishadm command
     return the output of the command
@@ -48,11 +47,10 @@ def _run_varnishadm(cmd, params=None, **kwargs):
     kwargs
         Additional options to pass to the salt cmd.run_all function
     '''
-    params = params or []
-    sanitized_params = [pipes.quote(p) for p in params if p is not None]
-    cmd = 'varnishadm {0} {1}'.format(cmd, ' '.join(sanitized_params))
-    log.debug('Executing: {0}'.format(cmd))
-    return __salt__['cmd.run_all'](cmd, **kwargs)
+    cmd = ['varnishadm', cmd]
+    cmd.extend([param for param in params if param is not None])
+    log.debug('Executing: {0}'.format(' '.join(cmd)))
+    return __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
 
 def version():
@@ -65,8 +63,8 @@ def version():
 
         salt '*' varnish.version
     '''
-    cmd = 'varnishd -V'
-    out = __salt__['cmd.run'](cmd)
+    cmd = ['varnishd', '-V']
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     ret = re.search(r'\(varnish-([^\)]+)\)', out).group(1)
     return ret
 

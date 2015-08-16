@@ -5,6 +5,12 @@ Use pycrypto to generate random passwords on the fly.
 '''
 
 # Import python libraries
+from __future__ import absolute_import
+import re
+import string
+import random
+
+# Import 3rd-party libs
 try:
     import Crypto.Random  # pylint: disable=E0611
     HAS_RANDOM = True
@@ -17,10 +23,6 @@ try:
     HAS_CRYPT = True
 except ImportError:
     HAS_CRYPT = False
-
-import re
-import string
-import random
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError

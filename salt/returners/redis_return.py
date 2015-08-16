@@ -14,17 +14,25 @@ config, these are the defaults:
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.redis.db: '0'
     alternative.redis.host: 'salt'
     alternative.redis.port: 6379
 
-  To use the redis returner, append '--return redis' to the salt command. ex:
+To use the redis returner, append '--return redis' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return redis
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return redis --return_config alternative
 '''
@@ -34,7 +42,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
-import salt.utils
+import salt.utils.jid
 import salt.returners
 
 # Import third party libs
@@ -90,10 +98,12 @@ def returner(ret):
     Return data to a redis data store
     '''
     serv = _get_serv(ret)
-    serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
-    serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
-    serv.sadd('minions', ret['id'])
-    serv.sadd('jids', ret['jid'])
+    pipe = serv.pipeline()
+    pipe.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
+    pipe.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
+    pipe.sadd('minions', ret['id'])
+    pipe.sadd('jids', ret['jid'])
+    pipe.execute()
 
 
 def save_load(jid, load):
@@ -163,8 +173,8 @@ def get_minions():
     return list(serv.smembers('minions'))
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

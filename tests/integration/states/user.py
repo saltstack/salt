@@ -8,6 +8,7 @@ user present with custom homedir
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import grp
 
@@ -58,6 +59,27 @@ class UserTest(integration.ModuleCase,
         '''
         ret = self.run_state('user.present', name='salt_test')
         self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_user_present_when_home_dir_does_not_18843(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the minion.
+        And then destroys that user.
+        Assume that it will break any system you run it on.
+        '''
+        HOMEDIR = '/tmp/home_of_salt_test'
+        ret = self.run_state('user.present', name='salt_test',
+                             home=HOMEDIR)
+        self.assertSaltTrueReturn(ret)
+
+        self.run_function('file.absent', name=HOMEDIR)
+        ret = self.run_state('user.present', name='salt_test',
+                             home=HOMEDIR)
+        self.assertSaltTrueReturn(ret)
+
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
@@ -143,6 +165,31 @@ class UserTest(integration.ModuleCase,
             workphone=1234567890, homephone=1234567890
         )
         self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_user_present_gecos_none_fields(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+
+        It ensures that if no GECOS data is supplied, the fields will be coerced
+        into empty strings as opposed to the string "None".
+        '''
+        ret = self.run_state(
+            'user.present', name='salt_test', fullname=None, roomnumber=None,
+            workphone=None, homephone=None
+        )
+        self.assertSaltTrueReturn(ret)
+
+        ret = self.run_function('user.info', ['salt_test'])
+        self.assertReturnNonEmptySaltType(ret)
+        self.assertEqual('', ret['fullname'])
+        self.assertEqual('', ret['roomnumber'])
+        self.assertEqual('', ret['workphone'])
+        self.assertEqual('', ret['homephone'])
+
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 

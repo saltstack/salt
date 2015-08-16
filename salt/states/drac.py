@@ -27,7 +27,7 @@ Ensure the user damian does not exist
 
 Ensure DRAC network is in a consistent state
 
-  .. code-bock:: yaml
+  .. code-block:: yaml
 
     my_network:
       drac.network:

@@ -29,9 +29,9 @@ In other words `salt mac-machine pkg.refresh_db` is more like
 `apt-get update; apt-get upgrade dpkg apt-get` than simply `apt-get update`.
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
@@ -41,6 +41,9 @@ import salt.utils
 from salt.exceptions import (
     CommandExecutionError
 )
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -173,11 +176,11 @@ def latest_version(*names, **kwargs):
 
     ret = {}
 
-    for k, v in available.items():
-        if k not in installed or salt.utils.compare_versions(ver1=installed[k], oper='<', ver2=v):
-            ret[k] = v
+    for key, val in six.iteritems(available):
+        if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
+            ret[key] = val
         else:
-            ret[k] = ''
+            ret[key] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -223,11 +226,12 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    cmd = ['port', 'uninstall'].append(targets)
+    cmd = ['port', 'uninstall']
+    cmd.extend(targets)
     __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return __salt__['saltutil.compare_dicts'](old, new)
+    return salt.utils.compare_dicts(old, new)
 
 
 def install(name=None, refresh=False, pkgs=None, **kwargs):
@@ -315,11 +319,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         return {}
 
     formulas_array = []
-    for pname, pparams in pkg_params.items():
+    for pname, pparams in six.iteritems(pkg_params):
         formulas_array.append(pname + (pparams or ''))
 
     old = list_pkgs()
-    cmd = ['port', 'install'].append(formulas_array)
+    cmd = ['port', 'install']
+    cmd.extend(formulas_array)
 
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
@@ -396,11 +401,6 @@ def upgrade(refresh=True):  # pylint: disable=W0613
 
         salt '*' pkg.upgrade
     '''
-    ret = {'changes': {},
-           'result': True,
-           'comment': '',
-           }
-
     if refresh:
         refresh_db()
 

@@ -262,9 +262,8 @@ Links
 For more examples and information see <https://github.com/mickep76/pepa>.
 '''
 
-from __future__ import print_function
-
-from __future__ import absolute_import
+# Import futures
+from __future__ import absolute_import, print_function
 
 __author__ = 'Michael Persson <michael.ake.persson@gmail.com>'
 __copyright__ = 'Copyright (c) 2013 Michael Persson'
@@ -279,12 +278,24 @@ import yaml
 import jinja2
 import re
 from os.path import isfile, join
-from salt.ext.six.moves import input
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+# Import Salt libs
+import salt.utils
 
 # Only used when called from a terminal
 log = None
 if __name__ == '__main__':
-    import argparse
+    import argparse  # pylint: disable=minimum-python-version
 
     parser = argparse.ArgumentParser()
     parser.add_argument('hostname', help='Hostname')
@@ -307,7 +318,7 @@ if __name__ == '__main__':
     formatter = None
     if not args.no_color:
         try:
-            import colorlog
+            import colorlog  # pylint: disable=import-error
             formatter = colorlog.ColoredFormatter("[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s")
         except ImportError:
             formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
@@ -339,6 +350,9 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
+    if not HAS_REQUESTS:
+        return False
+
     return True
 
 
@@ -347,7 +361,7 @@ def key_value_to_tree(data):
     Convert key/value to tree
     '''
     tree = {}
-    for flatkey, value in data.items():
+    for flatkey, value in six.iteritems(data):
         t = tree
         keys = flatkey.split(__opts__['pepa_delimiter'])
         for key in keys:
@@ -381,7 +395,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
     output['pepa_templates'] = []
     immutable = {}
 
-    for categ, info in [s.items()[0] for s in sequence]:
+    for categ, info in [next(six.iteritems(s)) for s in sequence]:
         if categ not in inp:
             log.warn("Category is not defined: {0}".format(categ))
             continue
@@ -413,7 +427,8 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
             fn = join(templdir, re.sub(r'\W', '_', entry.lower()) + '.yaml')
             if isfile(fn):
                 log.info("Loading template: {0}".format(fn))
-                template = jinja2.Template(open(fn).read())
+                with salt.utils.fopen(fn) as fhr:
+                    template = jinja2.Template(fhr.read())
                 output['pepa_templates'].append(fn)
 
                 try:
@@ -451,11 +466,11 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
                             immutable[rkey] = True
                         if rkey not in output:
                             log.error('Cant\'t merge key {0} doesn\'t exist'.format(rkey))
-                        elif type(results[key]) != type(output[rkey]):
+                        elif not isinstance(results[key], type(output[rkey])):
                             log.error('Can\'t merge different types for key {0}'.format(rkey))
-                        elif type(results[key]) is dict:
+                        elif isinstance(results[key], dict):
                             output[rkey].update(results[key])
-                        elif type(results[key]) is list:
+                        elif isinstance(results[key], list):
                             output[rkey].extend(results[key])
                         else:
                             log.error('Unsupported type need to be list or dict for key {0}'.format(rkey))
@@ -496,7 +511,7 @@ def validate(output, resource):
     Validate Pepa templates
     '''
     try:
-        import cerberus
+        import cerberus  # pylint: disable=import-error
     except ImportError:
         log.critical('You need module cerberus in order to use validation')
         return
@@ -509,7 +524,8 @@ def validate(output, resource):
     pepa_schemas = []
     for fn in glob.glob(valdir + '/*.yaml'):
         log.info("Loading schema: {0}".format(fn))
-        template = jinja2.Template(open(fn).read())
+        with salt.utils.fopen(fn) as fhr:
+            template = jinja2.Template(fhr.read())
         data = output
         data['grains'] = __grains__.copy()
         data['pillar'] = __pillar__.copy()
@@ -519,7 +535,7 @@ def validate(output, resource):
 
     val = cerberus.Validator()
     if not val.validate(output['pepa_keys'], all_schemas):
-        for ekey, error in val.errors.items():
+        for ekey, error in six.iteritems(val.errors):
             log.warning('Validation failed for key {0}: {1}'.format(ekey, error))
 
     output['pepa_schema_keys'] = all_schemas
@@ -534,7 +550,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Get configuration
-    __opts__.update(yaml.load(open(args.config).read()))
+    with salt.utils.fopen(args.config) as fh_:
+        __opts__.update(yaml.load(fh_.read()))
 
     loc = 0
     for name in [next(iter(list(e.keys()))) for e in __opts__['ext_pillar']]:
@@ -609,10 +626,15 @@ if __name__ == '__main__':
     yaml.dumper.SafeDumper.ignore_aliases = lambda self, data: True
     if not args.no_color:
         try:
+            # pylint: disable=import-error
             import pygments
             import pygments.lexers
             import pygments.formatters
-            print(pygments.highlight(yaml.safe_dump(result), pygments.lexers.YamlLexer(), pygments.formatters.TerminalFormatter()))
+            # pylint: disable=no-member
+            print(pygments.highlight(yaml.safe_dump(result),
+                                     pygments.lexers.YamlLexer(),
+                                     pygments.formatters.TerminalFormatter()))
+            # pylint: enable=no-member, import-error
         except ImportError:
             print(yaml.safe_dump(result, indent=4, default_flow_style=False))
     else:

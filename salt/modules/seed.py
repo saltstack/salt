@@ -8,13 +8,13 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import shutil
-import yaml
 import logging
 import tempfile
 
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.utils.cloud
 import salt.config
 import salt.syspaths
 import uuid
@@ -31,7 +31,7 @@ __func_alias__ = {
 
 def _file_or_content(file_):
     if os.path.exists(file_):
-        with open(file_) as fic:
+        with salt.utils.fopen(file_) as fic:
             return fic.read()
     return file_
 
@@ -161,16 +161,19 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                   .format(salt.syspaths.BOOTSTRAP))
         res = False
     else:
-        log.warn('No useful action performed on '
-                 '{0}'.format(mpt))
+        log.warning('No useful action performed on {0}'.format(mpt))
         res = False
 
     _umount(mpt, ftype)
     return res
 
 
-def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
-            pub_key=None, priv_key=None):
+def mkconfig(config=None,
+             tmp=None,
+             id_=None,
+             approve_key=True,
+             pub_key=None,
+             priv_key=None):
     '''
     Generate keys and config and put them in a tmp directory.
 
@@ -199,16 +202,16 @@ def mkconfig(config=None, tmp=None, id_=None, approve_key=True,
     # Write the new minion's config to a tmp file
     tmp_config = os.path.join(tmp, 'minion')
     with salt.utils.fopen(tmp_config, 'w+') as fp_:
-        fp_.write(yaml.dump(config, default_flow_style=False))
+        fp_.write(salt.utils.cloud.salt_config_to_yaml(config))
 
     # Generate keys for the minion
     pubkeyfn = os.path.join(tmp, 'minion.pub')
     privkeyfn = os.path.join(tmp, 'minion.pem')
     preseeded = pub_key and priv_key
     if preseeded:
-        with open(pubkeyfn, 'w') as fic:
+        with salt.utils.fopen(pubkeyfn, 'w') as fic:
             fic.write(_file_or_content(pub_key))
-        with open(privkeyfn, 'w') as fic:
+        with salt.utils.fopen(privkeyfn, 'w') as fic:
             fic.write(_file_or_content(priv_key))
         os.chmod(pubkeyfn, 0o600)
         os.chmod(privkeyfn, 0o600)

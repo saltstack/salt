@@ -1,11 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Fileserver backend  which serves files pushed to master by :mod:`cp.push
-<salt.modules.cp.push>`
+Fileserver backend which serves files pushed to the Master
 
-:conf_master:`file_recv` needs to be enabled in the master config file in order
-to use this backend, and ``minion`` must also be present in the
-:conf_master:`fileserver_backends` list.
+The :mod:`cp.push <salt.modules.cp.push>` function allows Minions to push files
+up to the Master. Using this backend, these pushed files are exposed to other
+Minions via the Salt fileserver.
+
+To enable minionfs, :conf_master:`file_recv` needs to be set to ``True`` in
+the master config file (otherwise :mod:`cp.push <salt.modules.cp.push>` will
+not be allowed to push files to the Master), and ``minion`` must be added to
+the :conf_master:`fileserver_backends` list.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - minion
 
 Other minionfs settings include: :conf_master:`minionfs_whitelist`,
 :conf_master:`minionfs_blacklist`, :conf_master:`minionfs_mountpoint`, and
@@ -23,6 +32,7 @@ import logging
 # Import salt libs
 import salt.fileserver
 import salt.utils
+import salt.utils.url
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +75,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                   'for security reasons (path requested: {0})'.format(path))
         return fnd
 
-    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
     # Remove the mountpoint to get the "true" path
     path = path[len(mountpoint):].lstrip(os.path.sep)
     try:
@@ -222,7 +232,7 @@ def file_list(load):
 
     if load['saltenv'] not in envs():
         return []
-    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
     prefix = load.get('prefix', '').strip('/')
     if mountpoint and prefix.startswith(mountpoint + os.path.sep):
         prefix = prefix[len(mountpoint + os.path.sep):]
@@ -305,7 +315,7 @@ def dir_list(load):
 
     if load['saltenv'] not in envs():
         return []
-    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
     prefix = load.get('prefix', '').strip('/')
     if mountpoint and prefix.startswith(mountpoint + os.path.sep):
         prefix = prefix[len(mountpoint + os.path.sep):]

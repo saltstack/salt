@@ -16,26 +16,32 @@ state_verbose:
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
 state_output:
-    The highstate outputter has five output modes, `full`, `terse`, `mixed`,
-    `changes` and `filter`. The default is set to full, which will display many
-    lines of detailed information for each executed chunk. If the `state_output`
-    option is set to `terse` then the output is greatly simplified and shown in
-    only one line.  If `mixed` is used, then terse output will be used unless a
-    state failed, in which case full output will be used.  If `changes` is used,
-    then terse output will be used if there was no error and no changes,
-    otherwise full output will be used. If `filter` is used, then either or both
-    of two different filters can be used: `exclude` or `terse`. These can be set
-    as such from the command line, or in the Salt config as
-    `state_output_exclude` or `state_output_terse`, respectively. The values to
-    exclude must be a comma-separated list of `True`, `False` and/or `None`.
-    Because of parsing nuances, if only one of these is used, it must still
-    contain a comma. For instance: `exclude=True,`.
+    The highstate outputter has five output modes, ``full``, ``terse``,
+    ``mixed``, ``changes`` and ``filter``.
+
+    * The default is set to ``full``, which will display many lines of detailed
+      information for each executed chunk.
+    * If ``terse`` is used, then the output is greatly simplified and shown in
+      only one line.
+    * If ``mixed`` is used, then terse output will be used unless a state
+      failed, in which case full output will be used.
+    * If ``changes`` is used, then terse output will be used if there was no
+      error and no changes, otherwise full output will be used.
+    * If ``filter`` is used, then either or both of two different filters can be
+      used: ``exclude`` or ``terse``.
+      These can be set as such from the command line, or in the Salt config as
+      `state_output_exclude` or `state_output_terse`, respectively. The values to
+      exclude must be a comma-separated list of `True`, `False` and/or `None`.
+      Because of parsing nuances, if only one of these is used, it must still
+      contain a comma. For instance: `exclude=True,`.
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
 
-Example output::
+Example output:
+
+.. code-block:: text
 
     myminion:
     ----------
@@ -48,24 +54,26 @@ Example output::
                   ret:
                       True
 
-    Summary
+    Summary for myminion
     ------------
     Succeeded: 1
     Failed:    0
     ------------
     Total:     0
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import pprint
-import sys
+import textwrap
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.output
+
+# Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six import string_types
 
 
 def output(data):
@@ -78,16 +86,27 @@ def output(data):
 
 
 def _format_host(host, data):
-    colors = salt.utils.get_colors(__opts__.get('color'))
+    colors = salt.utils.get_colors(
+            __opts__.get('color'),
+            __opts__.get('color_theme'))
     tabular = __opts__.get('state_tabular', False)
     rcounts = {}
+    rdurations = []
     hcolor = colors['GREEN']
     hstrs = []
     nchanges = 0
     strip_colors = __opts__.get('strip_colors', True)
+
+    if isinstance(data, int) or isinstance(data, str):
+        # Data in this format is from saltmod.function,
+        # so it is always a 'change'
+        nchanges = 1
+        hstrs.append((u'{0}    {1}{2[ENDC]}'
+                      .format(hcolor, data, colors)))
+        hcolor = colors['CYAN']  # Print the minion name in cyan
     if isinstance(data, list):
         # Errors have been detected, list them in RED!
-        hcolor = colors['RED_BOLD']
+        hcolor = colors['LIGHT_RED']
         hstrs.append((u'    {0}Data failed to compile:{1[ENDC]}'
                       .format(hcolor, colors)))
         for err in data:
@@ -96,13 +115,9 @@ def _format_host(host, data):
             hstrs.append((u'{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
-        # Strip out the result: True, without changes returns if
-        # state_verbose is False
-        if not __opts__.get('state_verbose', False):
-            data = _strip_clean(data)
         # Verify that the needed data is present
-        for tname, info in data.items():
-            if '__run_num__' not in info:
+        for tname, info in six.iteritems(data):
+            if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
                        'in which all states were executed. The state '
                        'return missing data is:')
@@ -116,6 +131,7 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
+            rdurations.append(ret.get('duration', 0))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
@@ -126,14 +142,20 @@ def _format_host(host, data):
                ret['result'] and not schanged:
                 continue
 
+            # Skip this state if state_verbose is False, the result is True and
+            # there were no changes made
+            if not __opts__.get('state_verbose', False) and \
+               ret['result'] and not schanged:
+                continue
+
             if schanged:
                 tcolor = colors['CYAN']
             if ret['result'] is False:
                 hcolor = colors['RED']
                 tcolor = colors['RED']
             if ret['result'] is None:
-                hcolor = colors['YELLOW']
-                tcolor = colors['YELLOW']
+                hcolor = colors['LIGHT_YELLOW']
+                tcolor = colors['LIGHT_YELLOW']
             comps = tname.split('_|-')
             if __opts__.get('state_output', 'full').lower() == 'filter':
                 # By default, full data is shown for all types. However, return
@@ -153,13 +175,13 @@ def _format_host(host, data):
                 exclude = clikwargs.get(
                     'exclude', __opts__.get('state_output_exclude', [])
                 )
-                if isinstance(exclude, string_types):
+                if isinstance(exclude, six.string_types):
                     exclude = str(exclude).split(',')
 
                 terse = clikwargs.get(
                     'terse', __opts__.get('state_output_terse', [])
                 )
-                if isinstance(terse, string_types):
+                if isinstance(terse, six.string_types):
                     terse = str(terse).split(',')
 
                 if str(ret['result']) in terse:
@@ -193,9 +215,12 @@ def _format_host(host, data):
                 u'    {tcolor}Function: {comps[0]}.{comps[3]}{colors[ENDC]}',
                 u'    {tcolor}  Result: {ret[result]!s}{colors[ENDC]}',
                 u'    {tcolor} Comment: {comment}{colors[ENDC]}',
-                u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
-                u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}'
             ]
+            if __opts__.get('state_output_profile', True):
+                state_lines.extend([
+                    u'    {tcolor} Started: {ret[start_time]!s}{colors[ENDC]}',
+                    u'    {tcolor}Duration: {ret[duration]!s}{colors[ENDC]}',
+                ])
             # This isn't the prettiest way of doing this, but it's readable.
             if comps[1] != comps[2]:
                 state_lines.insert(
@@ -208,7 +233,7 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = ret['comment'].decode(sys.getfilesystemencoding())
+                comment = salt.utils.locales.sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
@@ -223,6 +248,16 @@ def _format_host(host, data):
                     comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
+            # If there is a data attribute, append it to the comment
+            if 'data' in ret:
+                if isinstance(ret['data'], list):
+                    for item in ret['data']:
+                        comment = '{0} {1}'.format(comment, item)
+                elif isinstance(ret['data'], dict):
+                    for key, value in ret['data'].items():
+                        comment = '{0}\n\t\t{1}: {2}'.format(comment, key, value)
+                else:
+                    comment = '{0} {1}'.format(comment, ret['data'])
             for detail in ['start_time', 'duration']:
                 ret.setdefault(detail, u'')
             if ret['duration'] != '':
@@ -240,16 +275,31 @@ def _format_host(host, data):
             hstrs.append((u'{0}{1}{2[ENDC]}'
                           .format(tcolor, changes, colors)))
 
+            if 'warnings' in ret:
+                rcounts.setdefault('warnings', 0)
+                rcounts['warnings'] += 1
+                wrapper = textwrap.TextWrapper(
+                    width=80,
+                    initial_indent=u' ' * 14,
+                    subsequent_indent=u' ' * 14
+                )
+                hstrs.append(
+                    u'   {colors[LIGHT_RED]} Warnings: {0}{colors[ENDC]}'.format(
+                        wrapper.fill('\n'.join(ret['warnings'])).lstrip(),
+                        colors=colors
+                    )
+                )
+
         # Append result counts to end of output
         colorfmt = u'{0}{1}{2[ENDC]}'
-        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run'}
+        rlabel = {True: u'Succeeded', False: u'Failed', None: u'Not Run', 'warnings': u'Warnings'}
         count_max_len = max([len(str(x)) for x in six.itervalues(rcounts)] or [0])
         label_max_len = max([len(x) for x in six.itervalues(rlabel)] or [0])
         line_max_len = label_max_len + count_max_len + 2  # +2 for ': '
         hstrs.append(
             colorfmt.format(
                 colors['CYAN'],
-                u'\nSummary\n{0}'.format('-' * line_max_len),
+                u'\nSummary for {0}\n{1}'.format(host, '-' * line_max_len),
                 colors
             )
         )
@@ -267,7 +317,7 @@ def _format_host(host, data):
             # test=True states
             changestats.append(
                 colorfmt.format(
-                    colors['YELLOW'],
+                    colors['LIGHT_YELLOW'],
                     u'unchanged={0}'.format(rcounts.get(None, 0)),
                     colors
                 )
@@ -305,10 +355,30 @@ def _format_host(host, data):
             )
         )
 
+        num_warnings = rcounts.get('warnings', 0)
+        if num_warnings:
+            hstrs.append(
+                colorfmt.format(
+                    colors['LIGHT_RED'],
+                    _counts(rlabel['warnings'], num_warnings),
+                    colors
+                )
+            )
         totals = u'{0}\nTotal states run: {1:>{2}}'.format('-' * line_max_len,
-                                               sum(six.itervalues(rcounts)),
+                                               sum(six.itervalues(rcounts)) - rcounts.get('warnings', 0),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
+
+        sum_duration = sum(rdurations)
+        duration_unit = 'ms'
+        # convert to seconds if duration is 1000ms or more
+        if sum_duration > 999:
+            sum_duration /= 1000
+            duration_unit = 's'
+        total_duration = u'Total run time: {0} {1}'.format(
+            '{0:.3f}'.format(sum_duration).rjust(line_max_len - 5),
+            duration_unit)
+        hstrs.append(colorfmt.format(colors['CYAN'], total_duration, colors))
 
     if strip_colors:
         host = salt.output.strip_esc_sequence(host)
@@ -353,22 +423,6 @@ def _format_changes(changes):
     return changed, ctext
 
 
-def _strip_clean(returns):
-    '''
-    Check for the state_verbose option and strip out the result=True
-    and changes={} members of the state return list.
-    '''
-    rm_tags = []
-    for tag in returns:
-        if isinstance(tag, dict):
-            continue
-        if returns[tag]['result'] and not returns[tag]['changes']:
-            rm_tags.append(tag)
-    for tag in rm_tags:
-        returns.pop(tag)
-    return returns
-
-
 def _format_terse(tcolor, comps, ret, colors, tabular):
     '''
     Terse formatting of a message.
@@ -381,11 +435,28 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     elif ret['result'] is None:
         result = u'Differs'
     if tabular is True:
-        fmt_string = u'{0}{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
+        fmt_string = ''
+        if 'warnings' in ret:
+            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}\n'.format(
+                c=colors, w='\n'.join(ret['warnings'])
+            )
+        fmt_string += u'{0}'
+        if __opts__.get('state_output_profile', False):
+            fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
+        fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
         fmt_string = tabular
     else:
-        fmt_string = u' {0} Name: {1} - Function: {2}.{3} - Result: {4}{5}'
+        fmt_string = ''
+        if 'warnings' in ret:
+            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}'.format(
+                c=colors, w='\n'.join(ret['warnings'])
+            )
+        fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
+        if __opts__.get('state_output_profile', False):
+            fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
+        fmt_string += u'{5}'
+
     msg = fmt_string.format(tcolor,
                             comps[2],
                             comps[0],

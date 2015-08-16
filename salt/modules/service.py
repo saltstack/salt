@@ -33,6 +33,7 @@ def __virtual__():
         'Gentoo',
         'Ubuntu',
         'Debian',
+        'Devuan',
         'Arch',
         'Arch ARM',
         'ALT',
@@ -40,7 +41,8 @@ def __virtual__():
         'OEL',
         'Linaro',
         'elementary OS',
-        'McAfee  OS Server'
+        'McAfee  OS Server',
+        'Mint'
     ))
     if __grains__.get('os', '') in disable:
         return False
@@ -76,7 +78,7 @@ def start(name):
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
         name
     ) + ' start'
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -93,7 +95,7 @@ def stop(name):
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
         name
     ) + ' stop'
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -110,7 +112,7 @@ def restart(name):
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
         name
     ) + ' restart'
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -143,7 +145,7 @@ def reload_(name):
         _GRAINMAP.get(__grains__.get('os'), '/etc/init.d'),
         name
     ) + ' reload'
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def available(name):

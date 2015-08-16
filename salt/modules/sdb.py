@@ -32,7 +32,7 @@ def set_(uri, value):
     '''
     Set a value in a db, using a uri in the form of ``sdb://<profile>/<key>``.
     If the uri provided does not start with ``sdb://`` or the value is not
-    succesfully set, return ``False``.
+    successfully set, return ``False``.
 
     CLI Example:
 

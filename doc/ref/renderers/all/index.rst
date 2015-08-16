@@ -10,7 +10,10 @@ Full list of builtin renderer modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    cheetah
+    genshi
     gpg
+    hjson
     jinja
     json
     mako

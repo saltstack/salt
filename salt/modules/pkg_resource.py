@@ -2,31 +2,35 @@
 '''
 Resources needed by pkg providers
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import fnmatch
 import logging
+import os
 import pprint
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
-import salt.ext.six as six
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ('x86_64', 'noarch')
 
 
-def _repack_pkgs(pkgs):
+def _repack_pkgs(pkgs, normalize=True):
     '''
     Repack packages specified using "pkgs" argument to pkg states into a single
     dictionary
     '''
-    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
+    if normalize and 'pkg.normalize_name' in __salt__:
+        _normalize_name = __salt__['pkg.normalize_name']
+    else:
+        _normalize_name = lambda pkgname: pkgname
     return dict(
         [
             (_normalize_name(str(x)), str(y) if y is not None else y)
@@ -35,7 +39,7 @@ def _repack_pkgs(pkgs):
     )
 
 
-def pack_sources(sources):
+def pack_sources(sources, normalize=True):
     '''
     Accepts list of dicts (or a string representing a list of dicts) and packs
     the key/value pairs into a single dict.
@@ -43,14 +47,28 @@ def pack_sources(sources):
     ``'[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'`` would become
     ``{"foo": "salt://foo.rpm", "bar": "salt://bar.rpm"}``
 
+    normalize : True
+        Normalize the package name by removing the architecture, if the
+        architecture of the package is different from the architecture of the
+        operating system. The ability to disable this behavior is useful for
+        poorly-created packages which include the architecture as an actual
+        part of the name, such as kernel modules which match a specific kernel
+        version.
+
+        .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg_resource.pack_sources '[{"foo": "salt://foo.rpm"}, {"bar": "salt://bar.rpm"}]'
     '''
-    _normalize_name = __salt__.get('pkg.normalize_name', lambda pkgname: pkgname)
-    if isinstance(sources, string_types):
+    if normalize and 'pkg.normalize_name' in __salt__:
+        _normalize_name = __salt__['pkg.normalize_name']
+    else:
+        _normalize_name = lambda pkgname: pkgname
+
+    if isinstance(sources, six.string_types):
         try:
             sources = yaml.safe_load(sources)
         except yaml.parser.ParserError as err:
@@ -103,32 +121,34 @@ def parse_targets(name=None,
         return None, None
 
     elif pkgs:
-        pkgs = _repack_pkgs(pkgs)
+        pkgs = _repack_pkgs(pkgs, normalize=normalize)
         if not pkgs:
             return None, None
         else:
             return pkgs, 'repository'
 
     elif sources and __grains__['os'] != 'MacOS':
-        sources = pack_sources(sources)
+        sources = pack_sources(sources, normalize=normalize)
         if not sources:
             return None, None
 
         srcinfo = []
         for pkg_name, pkg_src in six.iteritems(sources):
             if __salt__['config.valid_fileproto'](pkg_src):
-                # Cache package from remote source (salt master, HTTP, FTP)
-                srcinfo.append((pkg_name,
-                                pkg_src,
-                               __salt__['cp.cache_file'](pkg_src, saltenv),
-                               'remote'))
+                # Cache package from remote source (salt master, HTTP, FTP) and
+                # append the cached path.
+                srcinfo.append(__salt__['cp.cache_file'](pkg_src, saltenv))
             else:
-                # Package file local to the minion
-                srcinfo.append((pkg_name, pkg_src, pkg_src, 'local'))
+                # Package file local to the minion, just append the path to the
+                # package file.
+                if not os.path.isabs(pkg_src):
+                    raise SaltInvocationError(
+                        'Path {0} for package {1} is either not absolute or '
+                        'an invalid protocol'.format(pkg_src, pkg_name)
+                    )
+                srcinfo.append(pkg_src)
 
-        # srcinfo is a 4-tuple (pkg_name,pkg_uri,pkg_path,pkg_type), so grab
-        # the package path (3rd element of tuple).
-        return [x[2] for x in srcinfo], 'file'
+        return srcinfo, 'file'
 
     elif name:
         if normalize:
@@ -140,7 +160,7 @@ def parse_targets(name=None,
         return packed, 'repository'
 
     else:
-        log.error('No package sources passed to pkg.install.')
+        log.error('No package sources provided')
         return None, None
 
 
@@ -175,13 +195,13 @@ def version(*names, **kwargs):
     # return dict
     if len(ret) == 1 and not pkg_glob:
         try:
-            return next(ret.itervalues())
+            return next(six.itervalues(ret))
         except StopIteration:
             return ''
     return ret
 
 
-def add_pkg(pkgs, name, version):
+def add_pkg(pkgs, name, pkgver):
     '''
     Add a package to a dict of installed packages.
 
@@ -192,9 +212,9 @@ def add_pkg(pkgs, name, version):
         salt '*' pkg_resource.add_pkg '{}' bind 9
     '''
     try:
-        pkgs.setdefault(name, []).append(version)
-    except AttributeError as e:
-        log.exception(e)
+        pkgs.setdefault(name, []).append(pkgver)
+    except AttributeError as exc:
+        log.exception(exc)
 
 
 def sort_pkglist(pkgs):
@@ -216,8 +236,8 @@ def sort_pkglist(pkgs):
             # Passing the pkglist to set() also removes duplicate version
             # numbers (if present).
             pkgs[key] = sorted(set(pkgs[key]))
-    except AttributeError as e:
-        log.exception(e)
+    except AttributeError as exc:
+        log.exception(exc)
 
 
 def stringify(pkgs):
@@ -234,11 +254,11 @@ def stringify(pkgs):
     try:
         for key in pkgs:
             pkgs[key] = ','.join(pkgs[key])
-    except AttributeError as e:
-        log.exception(e)
+    except AttributeError as exc:
+        log.exception(exc)
 
 
-def version_clean(version):
+def version_clean(verstr):
     '''
     Clean the version string removing extra data.
     This function will simply try to call ``pkg.version_clean``.
@@ -249,16 +269,16 @@ def version_clean(version):
 
         salt '*' pkg_resource.version_clean <version_string>
     '''
-    if version and 'pkg.version_clean' in __salt__:
-        return __salt__['pkg.version_clean'](version)
-
-    return version
+    if verstr and 'pkg.version_clean' in __salt__:
+        return __salt__['pkg.version_clean'](verstr)
+    return verstr
 
 
 def check_extra_requirements(pkgname, pkgver):
     '''
     Check if the installed package already has the given requirements.
-    This function will simply try to call "pkg.check_extra_requirements".
+    This function will return the result of ``pkg.check_extra_requirements`` if
+    this function exists for the minion, otherwise it will return True.
 
     CLI Example:
 

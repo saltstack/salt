@@ -2,9 +2,9 @@
 Getting Started With Parallels
 ==============================
 
-Parallels Cloud Server is a product by Parallels that delivers a cloud hosting 
-solution. The PARALLELS module for Salt Cloud enables you to manage instances 
-hosted by a provider using PCS. Further information can be found at:
+Parallels Cloud Server is a product by Parallels that delivers a cloud hosting
+solution. The PARALLELS module for Salt Cloud enables you to manage instances
+hosted using PCS. Further information can be found at:
 
 http://www.parallels.com/products/pcs/
 
@@ -22,13 +22,13 @@ http://www.parallels.com/products/pcs/
     PARALLELS.user: myuser
     PARALLELS.password: badpass
 
-    # Set the access URL for your PARALLELS provider
+    # Set the access URL for your PARALLELS host
     #
     PARALLELS.url: https://api.cloud.xmission.com:4465/paci/v1.0/
 
 
-* Using the new format, set up the cloud configuration at 
-  ``/etc/salt/cloud.providers`` or 
+* Using the new format, set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/parallels.conf``:
 
 .. code-block:: yaml
@@ -47,33 +47,27 @@ http://www.parallels.com/products/pcs/
       # Set the access URL for your PARALLELS provider
       #
       url: https://api.cloud.xmission.com:4465/paci/v1.0/
-      provider: parallels
+      driver: parallels
 
+.. note::
+    .. versionchanged:: 2015.8.0
 
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
-The ``user``, ``password`` and ``url`` will be provided to you by your cloud 
-provider. These are all required in order for the PARALLELS driver to work.
+The ``user``, ``password``, and ``url`` will be provided to you by your cloud
+host. These are all required in order for the PARALLELS driver to work.
 
 
 Cloud Profiles
 ==============
-Set up an initial profile at ``/etc/salt/cloud.profiles`` or 
+Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/parallels.conf``:
-
-
-* Using the old cloud configuration format:
-
-.. code-block:: yaml
-
-    parallels-ubuntu:
-        provider: parallels
-        image: ubuntu-12.04-x86_64
-
-
-* Using the new cloud configuration format and the cloud configuration example 
-  from above:
 
 .. code-block:: yaml
 
@@ -81,20 +75,18 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         provider: my-parallels-config
         image: ubuntu-12.04-x86_64
 
-
-
 The profile can be realized now with a salt command:
 
 .. code-block:: bash
 
     # salt-cloud -p parallels-ubuntu myubuntu
 
-This will create an instance named ``myubuntu`` on the cloud provider. The 
+This will create an instance named ``myubuntu`` on the cloud host. The
 minion that is installed on this instance will have an ``id`` of ``myubuntu``.
-If the command was executed on the salt-master, its Salt key will automatically 
+If the command was executed on the salt-master, its Salt key will automatically
 be signed on the master.
 
-Once the instance has been created with salt-minion installed, connectivity to 
+Once the instance has been created with salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
@@ -124,15 +116,15 @@ The following settings are always required for PARALLELS:
       user: myuser
       password: badpass
       url: https://api.cloud.xmission.com:4465/paci/v1.0/
-      provider: parallels
+      driver: parallels
 
 
 Optional Settings
 =================
-Unlike other cloud providers in Salt Cloud, Parallels does not utilize a 
-``size`` setting. This is because Parallels allows the end-user to specify a 
-more detailed configuration for their instances, than is allowed by many other 
-cloud providers. The following options are available to be used in a profile, 
+Unlike other cloud providers in Salt Cloud, Parallels does not utilize a
+``size`` setting. This is because Parallels allows the end-user to specify a
+more detailed configuration for their instances than is allowed by many other
+cloud hosts. The following options are available to be used in a profile,
 with their default settings listed.
 
 .. code-block:: yaml

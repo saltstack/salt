@@ -8,7 +8,7 @@
 '''
 
 # Import python libs
-import warnings
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -19,7 +19,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 from salt.states import pip_state
-from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 try:
@@ -38,82 +37,6 @@ pip_state.__salt__ = {'cmd.which_bin': lambda _: 'pip'}
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
-    def test_installed_deprecated_runas(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value=[])
-        pip_install = MagicMock(return_value={'retcode': 0})
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list,
-                                             'pip.install': pip_install}):
-            with warnings.catch_warnings(record=True) as w:
-                ret = pip_state.installed('pep8', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', str(w[-1].message)
-                )
-                self.assertSaltTrueReturn({'testsuite': ret})
-                # Is the state returning a warnings key with the deprecation
-                # message?
-                self.assertInSalStatetWarning(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', {'testsuite': ret}
-                )
-
-    def test_installed_runas_and_user_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip_state.installed,
-                'pep8',
-                user='Me!',
-                runas='Not Me!'
-            )
-
-    def test_removed_deprecated_runas(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value=['pep8'])
-        pip_uninstall = MagicMock(return_value=True)
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list,
-                                             'pip.uninstall': pip_uninstall}):
-            with warnings.catch_warnings(record=True) as w:
-                ret = pip_state.removed('pep8', runas='me!')
-                self.assertEqual(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', str(w[-1].message)
-                )
-                self.assertSaltTrueReturn({'testsuite': ret})
-                # Is the state returning a warnings key with the deprecation
-                # message?
-                self.assertInSalStatetWarning(
-                    'The \'runas\' argument to pip.installed is deprecated, '
-                    'and will be removed in Salt Lithium (Unreleased). '
-                    'Please use \'user\' instead.', {'testsuite': ret}
-                )
-
-    def test_removed_runas_and_user_raises_exception(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip_state.removed,
-                'pep8',
-                user='Me!',
-                runas='Not Me!'
-            )
-
     def test_install_requirements_parsing(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
@@ -130,13 +53,15 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list}):
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with patch.dict(pip_state.__opts__, {'test': True}):
                 ret = pip_state.installed('pep8>=1.3.2')
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Python package pep8>=1.3.2 already installed',
+                    'Python package pep8>=1.3.2 was already installed',
                     {'test': ret}
                 )
 
@@ -154,25 +79,29 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.2'})
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list}):
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with patch.dict(pip_state.__opts__, {'test': True}):
                 ret = pip_state.installed('pep8>1.3.1,<1.3.3')
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Python package pep8>1.3.1;<1.3.3 already installed',
+                    'Python package pep8>1.3.1,<1.3.3 was already installed',
                     {'test': ret}
                 )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_install = MagicMock(return_value={'retcode': 0})
         with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                             'pip.list': pip_list}):
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
             with patch.dict(pip_state.__opts__, {'test': True}):
                 ret = pip_state.installed('pep8>1.3.1,<1.3.3')
                 self.assertSaltNoneReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Python package pep8>1.3.1;<1.3.3 is set to be installed',
+                    'Python package pep8>1.3.1,<1.3.3 is set to be installed',
                     {'test': ret}
                 )
 
@@ -248,11 +177,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 '#md5=e6760af92b7165f8be53b5763e40bc24'
             )
             self.assertSaltTrueReturn({'test': ret})
-            self.assertInSaltComment(
-                'There was no error installing package '
-                '\'https://pypi.python.org/packages/source/S/SaltTesting/'
-                'SaltTesting-0.5.0.tar.gz#md5=e6760af92b7165f8be53b5763e40bc24\' '
-                'although it does not show when calling \'pip.freeze\'.',
+            self.assertInSaltComment('All packages were successfully installed',
                 {'test': ret}
             )
             self.assertInSaltReturn(
@@ -264,7 +189,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
             )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
             'stderr': '',
@@ -279,7 +204,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Package was successfully installed',
+                    'successfully installed',
                     {'test': ret}
                 )
 
@@ -298,7 +223,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
 
         # Test VCS installations using git+git://
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
             'stderr': '',
@@ -313,7 +238,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Package was successfully installed',
+                    'were successfully installed',
                     {'test': ret}
                 )
 
@@ -330,7 +255,7 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
             pass
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        pip_list = MagicMock(return_value={'pep8': '1.3.1'})
+        pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
         pip_install = MagicMock(return_value={
             'retcode': 0,
             'stderr': '',
@@ -345,13 +270,38 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
                 )
                 self.assertSaltTrueReturn({'test': ret})
                 self.assertInSaltComment(
-                    'Package was successfully installed',
+                    'were successfully installed',
                     {'test': ret}
                 )
 
         # Reset the version attribute if existing
         if hasattr(pip, '__version__'):
             pip.__version__ = original_pip_version
+
+    def test_install_in_editable_mode(self):
+        '''
+        Check that `name` parameter containing bad characters is not parsed by
+        pip when package is being installed in editable mode.
+        For more information, see issue #21890.
+        '''
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={})
+        pip_install = MagicMock(return_value={
+            'retcode': 0,
+            'stderr': '',
+            'stdout': 'Cloned!'
+        })
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
+            ret = pip_state.installed('state@name',
+                                      cwd='/path/to/project',
+                                      editable=['.'])
+            self.assertSaltTrueReturn({'test': ret})
+            self.assertInSaltComment(
+                'successfully installed',
+                {'test': ret}
+            )
 
 
 if __name__ == '__main__':

@@ -1,22 +1,27 @@
 # -*- coding: utf-8 -*-
 
+# Import Pytohn libs
+from __future__ import absolute_import
 import os
 import shutil
 import tempfile
 import uuid
 
+# Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
 
+# Import Salt libs
+import integration
+import salt.config
 import salt.state
-from salt.config import minion_config
+import salt.utils
 from salt.template import compile_template
 from salt.utils.odict import OrderedDict
 from salt.utils.pyobjects import (StateFactory, State, Registry,
                                   SaltObject, InvalidFunction, DuplicateState)
-
 File = StateFactory('file')
 Service = StateFactory('service')
 
@@ -86,6 +91,26 @@ from_import_template = '''#!pyobjects
 from   salt://map.sls  import     Samba
 
 Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
+'''
+
+import_as_template = '''#!pyobjects
+from salt://map.sls import Samba as Other
+Pkg.removed("samba-imported", names=[Other.server, Other.client])
+'''
+
+random_password_template = '''#!pyobjects
+import random, string
+password = ''.join(random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(20))
+'''
+
+random_password_import_template = '''#!pyobjecs
+from salt://password.sls import password
+'''
+
+requisite_implicit_list_template = '''#!pyobjects
+with Pkg.installed("pkg"):
+    Service.running("service", watch=File("file"), require=Cmd("cmd"))
 '''
 
 
@@ -191,25 +216,33 @@ class RendererMixin(object):
     def setUp(self, *args, **kwargs):
         super(RendererMixin, self).setUp(*args, **kwargs)
 
-        self.root_dir = tempfile.mkdtemp('pyobjects_test_root')
+        self.root_dir = tempfile.mkdtemp('pyobjects_test_root', dir=integration.TMP)
+        self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
+        self.cache_dir = os.path.join(self.root_dir, 'cachedir')
+        if not os.path.isdir(self.root_dir):
+            os.makedirs(self.root_dir)
 
-        self.config = minion_config(None)
-        self.config.update({
-            'file_client': 'local',
-            'file_roots': {
-                'base': [self.root_dir]
-            },
-            'cachedir': 'cachedir'
-        })
+        if not os.path.isdir(self.state_tree_dir):
+            os.makedirs(self.state_tree_dir)
+
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        self.config = salt.config.minion_config(None)
+        self.config['root_dir'] = self.root_dir
+        self.config['state_events'] = False
+        self.config['id'] = 'match'
+        self.config['file_client'] = 'local'
+        self.config['file_roots'] = dict(base=[self.state_tree_dir])
+        self.config['cachedir'] = self.cache_dir
+        self.config['test'] = False
 
     def tearDown(self, *args, **kwargs):
         shutil.rmtree(self.root_dir)
-
         super(RendererMixin, self).tearDown(*args, **kwargs)
 
     def write_template_file(self, filename, content):
-        full_path = os.path.join(self.root_dir, filename)
-        with open(full_path, 'w') as f:
+        full_path = os.path.join(self.state_tree_dir, filename)
+        with salt.utils.fopen(full_path, 'w') as f:
             f.write(content)
         return full_path
 
@@ -230,7 +263,7 @@ class RendererMixin(object):
                                 state.opts['renderer'])
 
 
-class RendererTests(RendererMixin, TestCase):
+class RendererTests(RendererMixin, StateTests):
     def test_basic(self):
         ret = self.render(basic_template)
         self.assertEqual(ret, OrderedDict([
@@ -242,7 +275,6 @@ class RendererTests(RendererMixin, TestCase):
                 ]
             }),
         ]))
-
         self.assertEqual(Registry.states, OrderedDict())
 
     def test_invalid_function(self):
@@ -257,7 +289,11 @@ class RendererTests(RendererMixin, TestCase):
         ]))
 
     def test_extend(self):
-        ret = self.render(extend_template)
+        ret = self.render(extend_template,
+                          {'grains': {
+                              'os_family': 'Debian',
+                              'os': 'Debian'
+                          }})
         self.assertEqual(ret, OrderedDict([
             ('include', ['http']),
             ('extend', OrderedDict([
@@ -288,6 +324,36 @@ class RendererTests(RendererMixin, TestCase):
         self.write_template_file("map.sls", map_template)
         render_and_assert(import_template)
         render_and_assert(from_import_template)
+        render_and_assert(import_as_template)
+
+    def test_random_password(self):
+        '''Test for https://github.com/saltstack/salt/issues/21796'''
+        ret = self.render(random_password_template)
+
+    def test_import_random_password(self):
+        '''Import test for https://github.com/saltstack/salt/issues/21796'''
+        self.write_template_file("password.sls", random_password_template)
+        ret = self.render(random_password_import_template)
+
+    def test_requisite_implicit_list(self):
+        '''Ensure that the implicit list characteristic works as expected'''
+        ret = self.render(requisite_implicit_list_template,
+                          {'grains': {
+                              'os_family': 'Debian',
+                              'os': 'Debian'
+                          }})
+
+        self.assertEqual(ret, OrderedDict([
+            ('pkg', OrderedDict([
+                ('pkg.installed', [])
+            ])),
+            ('service', OrderedDict([
+                ('service.running', [
+                    {'require': [{'cmd': 'cmd'}, {'pkg': 'pkg'}]},
+                    {'watch': [{'file': 'file'}]},
+                ])
+            ]))
+        ]))
 
 
 class MapTests(RendererMixin, TestCase):

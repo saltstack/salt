@@ -3,6 +3,9 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -15,10 +18,10 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 # Import Salt libs
-from salt.utils.odict import OrderedDict
-from salt import utils
 from salt.utils import args
+from salt.utils.odict import OrderedDict
 from salt.exceptions import (SaltInvocationError, SaltSystemExit, CommandNotFoundError)
+from salt import utils
 
 # Import Python libraries
 import os
@@ -28,8 +31,10 @@ import zmq
 from collections import namedtuple
 
 # Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range
 try:
-    import timelib  # pylint: disable=W0611
+    import timelib  # pylint: disable=import-error,unused-import
     HAS_TIMELIB = True
 except ImportError:
     HAS_TIMELIB = False
@@ -59,11 +64,11 @@ class UtilsTestCase(TestCase):
     def test_jid_to_time(self):
         test_jid = 20131219110700123489
         expected_jid = '2013, Dec 19 11:07:00.123489'
-        self.assertEqual(utils.jid_to_time(test_jid), expected_jid)
+        self.assertEqual(utils.jid.jid_to_time(test_jid), expected_jid)
 
         # Test incorrect lengths
         incorrect_jid_length = 2012
-        self.assertEqual(utils.jid_to_time(incorrect_jid_length), '')
+        self.assertEqual(utils.jid.jid_to_time(incorrect_jid_length), '')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('random.randint', return_value=1)
@@ -72,6 +77,14 @@ class UtilsTestCase(TestCase):
         ret = utils.gen_mac('00:16:3E')
         expected_mac = '00:16:3E:01:01:01'
         self.assertEqual(ret, expected_mac)
+
+    def test_mac_str_to_bytes(self):
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '31337')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '0001020304056')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, '00:01:02:03:04:056')
+        self.assertRaises(ValueError, utils.mac_str_to_bytes, 'a0:b0:c0:d0:e0:fg')
+        self.assertEqual(b'\x10\x08\x06\x04\x02\x00', utils.mac_str_to_bytes('100806040200'))
+        self.assertEqual(b'\xf8\xe7\xd6\xc5\xb4\xa3', utils.mac_str_to_bytes('f8e7d6c5b4a3'))
 
     def test_ip_bracket(self):
         test_ipv4 = '127.0.0.1'
@@ -86,14 +99,14 @@ class UtilsTestCase(TestCase):
 
         expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
 
-        ret = utils.jid_dir(test_jid, test_cache_dir, test_hash_type)
+        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
 
         self.assertEqual(ret, expected_jid_dir)
 
     def test_is_jid(self):
-        self.assertTrue(utils.is_jid('20131219110700123489'))  # Valid JID
-        self.assertFalse(utils.is_jid(20131219110700123489))  # int
-        self.assertFalse(utils.is_jid('2013121911070012348911111'))  # Wrong length
+        self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
+        self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
+        self.assertFalse(utils.jid.is_jid('2013121911070012348911111'))  # Wrong length
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @patch('salt.utils.is_windows', return_value=False)
@@ -115,7 +128,7 @@ class UtilsTestCase(TestCase):
 
         expected_argspec = namedtuple('ArgSpec', 'args varargs keywords defaults')(
             args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
-        ret = utils.get_function_argspec(dummy_func)
+        ret = utils.args.get_function_argspec(dummy_func)
 
         self.assertEqual(ret, expected_argspec)
 
@@ -135,18 +148,20 @@ class UtilsTestCase(TestCase):
 
     @skipIf(os.path.exists('/tmp/no_way_this_is_a_file_nope.sh'), 'Test file exists! Skipping safe_rm_exceptions test!')
     def test_safe_rm_exceptions(self):
+        error = False
         try:
             utils.safe_rm('/tmp/no_way_this_is_a_file_nope.sh')
         except (IOError, OSError):
-            self.assertTrue(False, "utils.safe_rm raised exception when it should not have")
+            error = True
+        self.assertFalse(error, 'utils.safe_rm raised exception when it should not have')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
-    @patch.multiple('salt.utils', get_function_argspec=DEFAULT, arg_lookup=DEFAULT)
-    def test_format_call(self, arg_lookup, get_function_argspec):
+    @patch('salt.utils.arg_lookup')
+    def test_format_call(self, arg_lookup):
         def dummy_func(first=None, second=None, third=None):
             pass
-
         arg_lookup.return_value = {'args': ['first', 'second', 'third'], 'kwargs': {}}
+        get_function_argspec = DEFAULT
         get_function_argspec.return_value = namedtuple('ArgSpec', 'args varargs keywords defaults')(
             args=['first', 'second', 'third', 'fourth'], varargs=None, keywords=None, defaults=('fifth',))
 
@@ -315,7 +330,13 @@ class UtilsTestCase(TestCase):
     def test_clean_kwargs(self):
         self.assertDictEqual(utils.clean_kwargs(foo='bar'), {'foo': 'bar'})
         self.assertDictEqual(utils.clean_kwargs(__pub_foo='bar'), {})
-        self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {'__foo_bar': 'gwar'})
+        self.assertDictEqual(utils.clean_kwargs(__foo_bar='gwar'), {})
+        self.assertDictEqual(utils.clean_kwargs(foo_bar='gwar'), {'foo_bar': 'gwar'})
+
+    def test_sanitize_win_path_string(self):
+        p = '\\windows\\system'
+        self.assertEqual(utils.sanitize_win_path_string('\\windows\\system'), '\\windows\\system')
+        self.assertEqual(utils.sanitize_win_path_string('\\bo:g|us\\p?at*h>'), '\\bo_g_us\\p_at_h_')
 
     def test_check_state_result(self):
         self.assertFalse(utils.check_state_result(None), "Failed to handle None as an invalid data type.")
@@ -370,7 +391,7 @@ class UtilsTestCase(TestCase):
                 ]))
             ])
         }
-        for test, data in test_valid_false_states.items():
+        for test, data in six.iteritems(test_valid_false_states):
             self.assertFalse(
                 utils.check_state_result(data),
                 msg='{0} failed'.format(test))
@@ -421,7 +442,7 @@ class UtilsTestCase(TestCase):
                  ]))
             ])
         }
-        for test, data in test_valid_true_states.items():
+        for test, data in six.iteritems(test_valid_true_states):
             self.assertTrue(
                 utils.check_state_result(data),
                 msg='{0} failed'.format(test))
@@ -435,7 +456,7 @@ class UtilsTestCase(TestCase):
         Ensure we throw an exception if we have a too-long IPC URI
         '''
         with patch('zmq.IPC_PATH_MAX_LEN', 1):
-            self.assertRaises(SaltSystemExit, utils.check_ipc_path_max_len, '1' * 1024)
+            self.assertRaises(SaltSystemExit, utils.zeromq.check_ipc_path_max_len, '1' * 1024)
 
     def test_test_mode(self):
         self.assertTrue(utils.test_mode(test=True))
@@ -484,8 +505,6 @@ class UtilsTestCase(TestCase):
             self.assertEqual(now, utils.date_cast(None))
         self.assertEqual(now, utils.date_cast(now))
         try:
-            import timelib
-
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)
@@ -523,18 +542,18 @@ class UtilsTestCase(TestCase):
 
     def test_yaml_dquote(self):
         for teststr in (r'"\ []{}"',):
-            self.assertEqual(teststr, yaml.safe_load(utils.yaml_dquote(teststr)))
+            self.assertEqual(teststr, yaml.safe_load(utils.yamlencoding.yaml_dquote(teststr)))
 
     def test_yaml_squote(self):
-        ret = utils.yaml_squote(r'"')
+        ret = utils.yamlencoding.yaml_squote(r'"')
         self.assertEqual(ret, r"""'"'""")
 
     def test_yaml_encode(self):
         for testobj in (None, True, False, '[7, 5]', '"monkey"', 5, 7.5, "2014-06-02 15:30:29.7"):
-            self.assertEqual(testobj, yaml.safe_load(utils.yaml_encode(testobj)))
+            self.assertEqual(testobj, yaml.safe_load(utils.yamlencoding.yaml_encode(testobj)))
 
         for testobj in ({}, [], set()):
-            self.assertRaises(TypeError, utils.yaml_encode, testobj)
+            self.assertRaises(TypeError, utils.yamlencoding.yaml_encode, testobj)
 
     def test_compare_dicts(self):
         ret = utils.compare_dicts(old={'foo': 'bar'}, new={'foo': 'bar'})
@@ -624,7 +643,12 @@ class UtilsTestCase(TestCase):
         # To to ensure safe exit if str passed doesn't evaluate to True
         self.assertFalse(utils.is_bin_str(''))
 
-        # TODO: Test binary detection
+        nontext = 3 * (''.join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)]))
+        almost_bin_str = '{0}{1}'.format(LORUM_IPSUM[:100], nontext[:42])
+        self.assertFalse(utils.is_bin_str(almost_bin_str))
+
+        bin_str = almost_bin_str + '\x01'
+        self.assertTrue(utils.is_bin_str(bin_str))
 
     def test_repack_dict(self):
         list_of_one_element_dicts = [{'dict_key_1': 'dict_val_1'},
@@ -647,13 +671,14 @@ class UtilsTestCase(TestCase):
 
     def test_get_colors(self):
         ret = utils.get_colors()
-        self.assertDictContainsSubset({'LIGHT_GRAY': '\x1b[0;37m'}, ret)
+        self.assertEqual('\x1b[0;37m', str(ret['LIGHT_GRAY']))
 
         ret = utils.get_colors(use=False)
         self.assertDictContainsSubset({'LIGHT_GRAY': ''}, ret)
 
         ret = utils.get_colors(use='LIGHT_GRAY')
-        self.assertDictContainsSubset({'YELLOW': '\x1b[0;37m'}, ret)  # YELLOW now == LIGHT_GRAY
+        # LIGHT_YELLOW now == LIGHT_GRAY
+        self.assertEqual(str(ret['LIGHT_YELLOW']), str(ret['LIGHT_GRAY']))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_daemonize_if(self):
@@ -696,7 +721,7 @@ class UtilsTestCase(TestCase):
         now = datetime.datetime(2002, 12, 25, 12, 00, 00, 00)
         with patch('datetime.datetime'):
             datetime.datetime.now.return_value = now
-            ret = utils.gen_jid()
+            ret = utils.jid.gen_jid()
             self.assertEqual(ret, '20021225120000000000')
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -721,6 +746,57 @@ class UtilsTestCase(TestCase):
     def test_kwargs_warn_until(self):
         # Test invalid version arg
         self.assertRaises(RuntimeError, utils.kwargs_warn_until, {}, [])
+
+    def test_to_str(self):
+        for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+            self.assertRaises(TypeError, utils.to_str, x)
+        if six.PY3:
+            self.assertEqual(utils.to_str('plugh'), 'plugh')
+            self.assertEqual(utils.to_str('áéíóúý', 'utf-8'), 'áéíóúý')
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            self.assertEqual(utils.to_str(ut, 'utf-8'), un)
+            self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), un)
+        else:
+            self.assertEqual(utils.to_str('plugh'), 'plugh')
+            self.assertEqual(utils.to_str(u'áéíóúý', 'utf-8'), 'áéíóúý')
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
+            self.assertEqual(utils.to_str(un, 'utf-8'), ut)
+            self.assertEqual(utils.to_str(bytearray(ut), 'utf-8'), ut)
+
+    def test_to_bytes(self):
+        for x in (123, (1, 2, 3), [1, 2, 3], {1: 23}, None):
+            self.assertRaises(TypeError, utils.to_bytes, x)
+        if six.PY3:
+            self.assertEqual(utils.to_bytes('xyzzy'), b'xyzzy')
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            self.assertEqual(utils.to_bytes(ut), ut)
+            self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
+            self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
+        else:
+            self.assertEqual(utils.to_bytes('xyzzy'), 'xyzzy')
+            ut = ''.join([chr(x) for x in (0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29)])
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            self.assertEqual(utils.to_bytes(ut), ut)
+            self.assertEqual(utils.to_bytes(bytearray(ut)), ut)
+            self.assertEqual(utils.to_bytes(un, 'utf-8'), ut)
+
+    def test_to_unicode(self):
+        if six.PY3:
+            self.assertEqual(utils.to_unicode('plugh'), 'plugh')
+            self.assertEqual(utils.to_unicode('áéíóúý'), 'áéíóúý')
+            un = '\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'  # pylint: disable=anomalous-unicode-escape-in-string
+            ut = bytes((0xe4, 0xb8, 0xad, 0xe5, 0x9b, 0xbd, 0xe8, 0xaa, 0x9e, 0x20, 0x28, 0xe7, 0xb9, 0x81, 0xe4, 0xbd, 0x93, 0x29))
+            self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
+            self.assertEqual(utils.to_unicode(bytearray(ut), 'utf-8'), un)
+        else:
+            self.assertEqual(utils.to_unicode('xyzzy', 'utf-8'), u'xyzzy')
+            ut = '\xe4\xb8\xad\xe5\x9b\xbd\xe8\xaa\x9e (\xe7\xb9\x81\xe4\xbd\x93)'
+            un = u'\u4e2d\u56fd\u8a9e (\u7e41\u4f53)'
+            self.assertEqual(utils.to_unicode(ut, 'utf-8'), un)
+
 
 if __name__ == '__main__':
     from integration import run_tests

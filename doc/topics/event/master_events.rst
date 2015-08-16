@@ -1,3 +1,5 @@
+.. _event-master_events:
+
 ==================
 Salt Master Events
 ==================
@@ -17,6 +19,15 @@ Authentication events
         ``reject``.
     :var pub: The minion public key.
 
+
+    .. note:: Minions fire auth events on fairly regular basis for a number
+              of reasons.  Writing reactors to respond to events through
+              the auth cycle can lead to infinite reactor event loops
+              (minion tries to auth, reactor responds by doing something
+              that generates another auth event, minion sends auth event,
+              etc.).  Consider reacting to ``salt/key`` or ``salt/minion/<MID>/start``
+              or firing a custom event tag instead.
+
 Start events
 ============
 
@@ -35,7 +46,14 @@ Key events
 
     :var id: The minion ID.
     :var act: The new status of the minion key: ``accept``, ``pend``,
-        ``reject``.
+              ``reject``.
+
+.. warning:: If a master is in :conf_master:`auto_accept mode`, ``salt/key`` events
+             will not be fired when the keys are accepted.  In addition, pre-seeding
+             keys (like happens through :ref:`Salt-Cloud<salt-cloud>`) will not cause
+             firing of these events.
+
+
 
 Job events
 ==========
@@ -68,12 +86,25 @@ Job events
     :var fun: The function the minion ran. E.g., ``test.ping``.
     :var return: The data returned from the execution module.
 
+.. salt:event:: salt/job/<JID>/prog/<MID>/<RUN NUM>
+
+    Fired each time a each function in a state run completes execution. Must be
+    enabled using the :conf_master:`state_events` option.
+
+    :var data: The data returned from the state module function.
+    :var id: The minion ID.
+    :var jid: The job ID.
+
+.. _event-master_presence:
+
 Presence events
 ===============
 
 .. salt:event:: salt/presence/present
 
-    Fired on a set schedule.
+    Events fired on a regular interval about currently connected, newly
+    connected, or recently disconnected minions. Requires the
+    :conf_master:`presence_events` setting to be enabled.
 
     :var present: A list of minions that are currently connected to the Salt
         master.
@@ -89,6 +120,15 @@ Presence events
 
 Cloud Events
 ============
+
+Unlike other Master events, ``salt-cloud`` events are not fired on behalf of a
+Salt Minion. Instead, ``salt-cloud`` events are fired on behalf of a VM. This
+is because the minion-to-be may not yet exist to fire events to or also may have
+been destroyed.
+
+This behavior is reflected by the ``name`` variable in the event data for
+``salt-cloud`` events as compared to the ``id`` variable for Salt
+Minion-triggered events.
 
 .. salt:event:: salt/cloud/<VM NAME>/creating
 
@@ -119,7 +159,7 @@ Cloud Events
 
     :var event: description of the event.
     :var location: the location of the VM being requested.
-    :var kwargs: options available as the VM is being requested: 
+    :var kwargs: options available as the VM is being requested:
         ``Action``, ``ImageId``, ``InstanceType``, ``KeyName``, ``MaxCount``,
         ``MinCount``, ``SecurityGroup.1``
 

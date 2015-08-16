@@ -4,9 +4,9 @@ Package support for openSUSE via the zypper package manager
 
 :depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
@@ -16,7 +16,7 @@ import os
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
 from salt.ext.six.moves import configparser
-from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -62,7 +62,7 @@ def list_upgrades(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     ret = {}
-    call = __salt__['cmd.run_stdout'](
+    call = __salt__['cmd.run_all'](
         'zypper list-updates', output_loglevel='trace'
     )
     if call['retcode'] != 0:
@@ -95,6 +95,51 @@ def list_upgrades(refresh=True):
 list_updates = list_upgrades
 
 
+def info(*names, **kwargs):
+    '''
+    Return the information of the named package available for the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info <package name>
+        salt '*' pkg.info <package1> <package2> <package3> ...
+    '''
+    ret = {}
+
+    if not names:
+        return ret
+    else:
+        names = sorted(list(set(names)))
+
+    # Refresh db before extracting the latest package
+    if salt.utils.is_true(kwargs.pop('refresh', True)):
+        refresh_db()
+
+    pkg_info = []
+    batch = names[:]
+    batch_size = 200
+
+    # Run in batches
+    while batch:
+        cmd = 'zypper info -t package {0}'.format(' '.join(batch[:batch_size]))
+        pkg_info.extend(re.split("----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        batch = batch[batch_size:]
+
+    for pkg_data in pkg_info:
+        nfo = {}
+        for line in [data for data in pkg_data.split("\n") if ":" in data]:
+            kw = [data.strip() for data in line.split(":", 1)]
+            if len(kw) == 2 and kw[1]:
+                nfo[kw[0].lower()] = kw[1]
+        if nfo.get("name"):
+            name = nfo.pop("name")
+            ret[name] = nfo
+
+    return ret
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -102,60 +147,35 @@ def latest_version(*names, **kwargs):
     name/version pairs is returned.
 
     If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
+    dict will be returned for that package.
 
-    CLI Example:
+    CLI example:
 
     .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-
-    if len(names) == 0:
-        return ''
-
     ret = {}
+
+    if not names:
+        return ret
+
+    names = sorted(list(set(names)))
+    package_info = info(*names)
     for name in names:
-        ret[name] = ''
-
-    # Refresh before looking for the latest version available
-    if refresh:
-        refresh_db()
-
-    restpackages = names
-    outputs = []
-    # Split call to zypper into batches of 500 packages
-    while restpackages:
-        cmd = 'zypper info -t package {0}'.format(' '.join(restpackages[:500]))
-        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
-        outputs.extend(re.split('Information for package \\S+:\n', output))
-        restpackages = restpackages[500:]
-    for package in outputs:
-        pkginfo = {}
-        for line in package.splitlines():
-            try:
-                key, val = line.split(':', 1)
-                key = key.lower()
-                val = val.strip()
-            except ValueError:
-                continue
-            else:
-                pkginfo[key] = val
-
-        # Ignore if the needed keys weren't found in this iteration
-        if not set(('name', 'version', 'status')) <= set(pkginfo):
-            continue
-
-        status = pkginfo['status'].lower()
-        if 'not installed' in status or 'out-of-date' in status:
-            ret[pkginfo['name']] = pkginfo['version']
+        pkg_info = package_info.get(name)
+        if pkg_info is not None and pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
+            ret_data = {}
+            for k in ['version', 'vendor']:
+                ret_data[k] = pkg_info.get(k)
+            ret[name] = ret_data
 
     # Return a string if only one package name passed
     if len(names) == 1:
-        return ret[names[0]]
+        return ret[names[0]]['version']
     return ret
+
 
 # available_version is being deprecated
 available_version = latest_version
@@ -171,12 +191,12 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name) != ''
+    return latest_version(name).get(name) is not None
 
 
 def version(*names, **kwargs):
     '''
-    Returns a string representing the package version or an empty string if not
+    Returns a string representing the package version or an empty dict if not
     installed. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
@@ -187,7 +207,7 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package name>
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
-    return __salt__['pkg_resource.version'](*names, **kwargs)
+    return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -216,13 +236,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = ('rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n')
+    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n']
     ret = {}
     out = __salt__['cmd.run'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False
-            )
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
     for line in out.splitlines():
         name, pkgver, rel = line.split('_|-')
         if rel:
@@ -254,17 +274,17 @@ def _get_repo_info(alias, repos_cfg=None):
     try:
         meta = dict((repos_cfg or _get_configured_repos()).items(alias))
         meta['alias'] = alias
-        for k, v in meta.items():
-            if v in ['0', '1']:
-                meta[k] = int(meta[k]) == 1
-            elif v == 'NONE':
-                meta[k] = None
+        for key, val in six.iteritems(meta):
+            if val in ['0', '1']:
+                meta[key] = int(meta[key]) == 1
+            elif val == 'NONE':
+                meta[key] = None
         return meta
-    except Exception:
+    except (ValueError, configparser.NoSectionError) as error:
         return {}
 
 
-def get_repo(repo, **kwargs):
+def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     '''
     Display a repo.
 
@@ -315,7 +335,7 @@ def del_repo(repo):
                 return {
                     repo: True,
                     'message': msg[0].childNodes[0].nodeValue,
-                    }
+                }
 
     raise CommandExecutionError('Repository \'{0}\' not found.'.format(repo))
 
@@ -328,7 +348,7 @@ def mod_repo(repo, **kwargs):
     repo or alias
         alias by which the zypper refers to the repo
 
-    url or mirrorlist
+    url, mirrorlist or baseurl
         the URL for zypper to reference
 
     enabled
@@ -343,6 +363,9 @@ def mod_repo(repo, **kwargs):
 
     gpgcheck
         Enable or disable (True or False) GOG check for this repository.
+
+    gpgautoimport
+        Automatically trust and import new repository.
 
     Key/Value pairs may also be removed from a repo's configuration by setting
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
@@ -361,12 +384,12 @@ def mod_repo(repo, **kwargs):
 
     # An attempt to add new one?
     if repo not in repos_cfg.sections():
-        url = kwargs.get('url', kwargs.get('mirrorlist'))
+        url = kwargs.get('url', kwargs.get('mirrorlist', kwargs.get('baseurl')))
         if not url:
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and no URL passed to create one.'.format(repo))
 
-        if not urlparse(url).scheme:
+        if not _urlparse(url).scheme:
             raise CommandExecutionError(
                 'Repository \'{0}\' not found and passed URL looks wrong.'.format(repo))
 
@@ -375,15 +398,15 @@ def mod_repo(repo, **kwargs):
             repo_meta = _get_repo_info(alias, repos_cfg=repos_cfg)
 
             # Complete user URL, in case it is not
-            new_url = urlparse(url)
+            new_url = _urlparse(url)
             if not new_url.path:
-                new_url = urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
-                                               netloc=new_url.netloc,
-                                               path='/',
-                                               params=new_url.params,
-                                               query=new_url.query,
-                                               fragment=new_url.fragment)
-            base_url = urlparse(repo_meta['baseurl'])
+                new_url = _urlparse.ParseResult(scheme=new_url.scheme,  # pylint: disable=E1123
+                                                netloc=new_url.netloc,
+                                                path='/',
+                                                params=new_url.params,
+                                                query=new_url.query,
+                                                fragment=new_url.fragment)
+            base_url = _urlparse(repo_meta['baseurl'])
 
             if new_url == base_url:
                 raise CommandExecutionError(
@@ -430,6 +453,9 @@ def mod_repo(repo, **kwargs):
     if 'gpgcheck' in kwargs:
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
 
+    if kwargs.get('gpgautoimport') is True:
+        cmd_opt.append('--gpg-auto-import-keys')
+
     if cmd_opt:
         __salt__['cmd.run'](('zypper -x mr {0} \'{1}\''.format(' '.join(cmd_opt), repo)),
                             output_loglevel='trace')
@@ -437,9 +463,9 @@ def mod_repo(repo, **kwargs):
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
         raise CommandExecutionError(
-                'Modification of the repository \'{0}\' was not specified.'.format(repo))
+            'Modification of the repository \'{0}\' was not specified.'.format(repo))
 
-    return {}
+    return get_repo(repo)
 
 
 def refresh_db():
@@ -487,6 +513,7 @@ def install(name=None,
             fromrepo=None,
             pkgs=None,
             sources=None,
+            downloadonly=None,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
@@ -510,6 +537,9 @@ def install(name=None,
 
     fromrepo
         Specify a package repository to install from.
+
+    downloadonly
+        Only download the packages, do not install.
 
     version
         Can be either a version number, or the combination of a comparison
@@ -551,9 +581,6 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    if salt.utils.is_true(refresh):
-        refresh_db()
-
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, sources, **kwargs
@@ -582,9 +609,9 @@ def install(name=None,
             else:
                 match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
-                    gt_lt, eq, verstr = match.groups()
+                    gt_lt, equal, verstr = match.groups()
                     prefix = gt_lt or ''
-                    prefix += eq or ''
+                    prefix += equal or ''
                     # If no prefix characters were supplied, use '='
                     prefix = prefix or '='
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
@@ -603,25 +630,29 @@ def install(name=None,
     old = list_pkgs()
     downgrades = []
     if fromrepo:
-        fromrepoopt = ('--force', '--force-resolution', '--from', fromrepo)
+        fromrepoopt = ['--force', '--force-resolution', '--from', fromrepo]
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
+    cmd_install = ['zypper', '--non-interactive']
+    if not refresh:
+        cmd_install.append('--no-refresh')
+    cmd_install += ['install', '--name', '--auto-agree-with-licenses']
+    if downloadonly:
+        cmd_install.append('--download-only')
+    if fromrepo:
+        cmd_install.extend(fromrepoopt)
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-                '--auto-agree-with-licenses']
-        if fromrepo:
-            cmd.extend(fromrepoopt)
-        cmd.extend(targets[:500])
+        cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
         out = __salt__['cmd.run'](
-                cmd,
-                output_loglevel='trace',
-                python_shell=False
-                )
+            cmd,
+            output_loglevel='trace',
+            python_shell=False
+        )
         for line in out.splitlines():
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
@@ -631,11 +662,7 @@ def install(name=None,
                 downgrades.append(match.group(1))
 
     while downgrades:
-        cmd = ['zypper', '--non-interactive', 'install', '--name',
-            '--auto-agree-with-licenses', '--force']
-        if fromrepo:
-            cmd.extend(fromrepoopt)
-        cmd.extend(downgrades[:500])
+        cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
@@ -662,7 +689,7 @@ def upgrade(refresh=True):
     ret = {'changes': {},
            'result': True,
            'comment': '',
-           }
+    }
 
     if salt.utils.is_true(refresh):
         refresh_db()
@@ -709,7 +736,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
     return salt.utils.compare_dicts(old, new)
 
 
-def remove(name=None, pkgs=None, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove packages with ``zypper -n remove``
 
@@ -739,7 +766,7 @@ def remove(name=None, pkgs=None, **kwargs):
     return _uninstall(action='remove', name=name, pkgs=pkgs)
 
 
-def purge(name=None, pkgs=None, **kwargs):
+def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Recursively remove a package and all dependencies which were installed
     with it, this will call a ``zypper -n remove -u``
@@ -786,17 +813,16 @@ def list_locks():
 
         salt '*' pkg.list_locks
     '''
-    if not os.path.exists(LOCKS):
-        return False
-
     locks = {}
-    for meta in [item.split('\n') for item in open(LOCKS).read().split('\n\n')]:
-        lock = {}
-        for element in [el for el in meta if el]:
-            if ':' in element:
-                lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
-        if lock.get('solvable_name'):
-            locks[lock.pop('solvable_name')] = lock
+    if os.path.exists(LOCKS):
+        with salt.utils.fopen(LOCKS) as fhr:
+            for meta in [item.split('\n') for item in fhr.read().split('\n\n')]:
+                lock = {}
+                for element in [el for el in meta if el]:
+                    if ':' in element:
+                        lock.update(dict([tuple([i.strip() for i in element.split(':', 1)]), ]))
+                if lock.get('solvable_name'):
+                    locks[lock.pop('solvable_name')] = lock
 
     return locks
 
@@ -820,7 +846,7 @@ def clean_locks():
     return True
 
 
-def remove_lock(name=None, pkgs=None, **kwargs):
+def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove specified package lock.
 
@@ -855,7 +881,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):
     return {'removed': len(removed), 'not_found': missing}
 
 
-def add_lock(name=None, pkgs=None, **kwargs):
+def add_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     '''
     Add a package lock. Specify packages to lock by exact name.
 
@@ -937,6 +963,55 @@ def file_dict(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_dict'](*packages)
+
+
+def modified(*packages, **flags):
+    '''
+    List the modified files that belong to a package. Not specifying any packages
+    will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.5.0
+
+    Filtering by flags (True or False):
+
+    size
+        Include only files where size changed.
+
+    mode
+        Include only files which file's mode has been changed.
+
+    checksum
+        Include only files which MD5 checksum has been changed.
+
+    device
+        Include only files which major and minor numbers has been changed.
+
+    symlink
+        Include only files which are symbolic link contents.
+
+    owner
+        Include only files where owner has been changed.
+
+    group
+        Include only files where group has been changed.
+
+    time
+        Include only files where modification time of the file has been changed.
+
+    capabilities
+        Include only files where capabilities differ or not. Note: supported only on newer RPM versions.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.modified
+        salt '*' pkg.modified httpd
+        salt '*' pkg.modified httpd postfix
+        salt '*' pkg.modified httpd owner=True group=False
+    '''
+
+    return __salt__['lowpkg.modified'](*packages, **flags)
 
 
 def owner(*paths):
@@ -1022,7 +1097,7 @@ def search(criteria):
     out = {}
     for solvable in [s for s in solvables
                      if s.getAttribute('status') == 'not-installed' and
-                     s.getAttribute('kind') == 'package']:
+                        s.getAttribute('kind') == 'package']:
         out[solvable.getAttribute('name')] = {
             'summary': solvable.getAttribute('summary')
         }
@@ -1069,15 +1144,15 @@ def list_products():
 
         salt '*' pkg.list_products
     '''
-    PRODUCTS = '/etc/products.d'
-    if not os.path.exists(PRODUCTS):
-        raise CommandExecutionError('Directory {0} does not exists.'.format(PRODUCTS))
+    products_dir = '/etc/products.d'
+    if not os.path.exists(products_dir):
+        raise CommandExecutionError('Directory {0} does not exists.'.format(products_dir))
 
-    products = {}
-    for fname in os.listdir('/etc/products.d'):
-        pth_name = os.path.join(PRODUCTS, fname)
+    p_data = {}
+    for fname in os.listdir(products_dir):
+        pth_name = os.path.join(products_dir, fname)
         r_pth_name = os.path.realpath(pth_name)
-        products[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
+        p_data[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
 
     info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
             'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
@@ -1085,9 +1160,78 @@ def list_products():
             'description']
 
     ret = {}
-    for prod_meta, is_base_product in products.items():
+    for prod_meta, is_base_product in six.iteritems(p_data):
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product
+
+    return ret
+
+
+def download(*packages):
+    """
+    Download packages to the local disk.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.download httpd
+        salt '*' pkg.download httpd postfix
+    """
+    if not packages:
+        raise CommandExecutionError("No packages has been specified.")
+
+    doc = dom.parseString(__salt__['cmd.run'](
+        ('zypper -x --non-interactive download {0}'.format(' '.join(packages))),
+        output_loglevel='trace'))
+    pkg_ret = {}
+    for dld_result in doc.getElementsByTagName("download-result"):
+        repo = dld_result.getElementsByTagName("repository")[0]
+        pkg_info = {
+            'repository-name': repo.getAttribute("name"),
+            'repository-alias': repo.getAttribute("alias"),
+            'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
+        }
+        pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
+
+    if pkg_ret:
+        return pkg_ret
+
+    raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
+
+
+def diff(*paths):
+    '''
+    Return a formatted diff between current files and original in a package.
+    NOTE: this function includes all files (configuration and not), but does
+    not work on binary content.
+
+    :param path: Full path to the installed file
+    :return: Difference string or raises and exception if examined file is binary.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.diff /etc/apache2/httpd.conf /etc/sudoers
+    '''
+    ret = {}
+
+    pkg_to_paths = {}
+    for pth in paths:
+        pth_pkg = __salt__['lowpkg.owner'](pth)
+        if not pth_pkg:
+            ret[pth] = os.path.exists(pth) and 'Not managed' or 'N/A'
+        else:
+            if pkg_to_paths.get(pth_pkg) is None:
+                pkg_to_paths[pth_pkg] = []
+            pkg_to_paths[pth_pkg].append(pth)
+
+    if pkg_to_paths:
+        local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
+        for pkg, files in pkg_to_paths.items():
+            for path in files:
+                ret[path] = __salt__['lowpkg.diff'](local_pkgs[pkg]['path'], path) or 'Unchanged'
 
     return ret

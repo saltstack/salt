@@ -88,7 +88,7 @@ by their ``os`` grain:
 The above pillar sets two key/value pairs. If a minion is running RedHat, then
 the ``apache`` key is set to ``httpd`` and the ``git`` key is set to the value
 of ``git``. If the minion is running Debian, those values are changed to
-``apache2`` and ``git-core`` respctively. All minions that have this pillar
+``apache2`` and ``git-core`` respectively. All minions that have this pillar
 targeting to them via a top file will have the key of ``company`` with a value
 of ``Foo Industries``.
 
@@ -98,21 +98,19 @@ files, and more via the shared pillar :ref:`dict <python2:typesmapping>`:
 .. code-block:: yaml
 
     apache:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['apache'] }}
 
 .. code-block:: yaml
 
     git:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['git'] }}
 
 Finally, the above states can utilize the values provided to them via Pillar.
 All pillar values targeted to a minion are available via the 'pillar'
 dictionary. As seen in the above example, Jinja substitution can then be
-utilized to access the keys and values in the Pillar dictionary. 
+utilized to access the keys and values in the Pillar dictionary.
 
 Note that you cannot just list key/value-information in ``top.sls``. Instead,
 target a minion to a pillar file and then list the keys and values in the
@@ -366,14 +364,49 @@ can be created like this:
 Master Config In Pillar
 =======================
 
-For convenience the data stored in the master configuration file is made
+For convenience the data stored in the master configuration file can be made
 available in all minion's pillars. This makes global configuration of services
 and systems very easy but may not be desired if sensitive data is stored in the
-master configuration.
+master configuration. This option is disabled by default.
 
-To disable the master config from being added to the pillar set ``pillar_opts``
-to ``False``:
+To enable the master config from being added to the pillar set ``pillar_opts``
+to ``True``:
 
 .. code-block:: yaml
 
-    pillar_opts: False
+    pillar_opts: True
+
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module, set the following pillar
+variable:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+
+
+Master Provided Pillar Error
+============================
+
+By default if there is an error rendering a pillar, the detailed error is
+hidden and replaced with:
+
+.. code-block:: bash
+
+    Rendering SLS 'my.sls' failed. Please see master log for details.
+
+The error is protected because it's possible to contain templating data
+which would give that minion information it shouldn't know, like a password!
+
+To have the master provide the detailed error that could potentially carry
+protected data set ``pillar_safe_render_error`` to ``False``:
+
+.. code-block:: yaml
+
+    pillar_safe_render_error: True

@@ -68,7 +68,9 @@ from __future__ import absolute_import
 import sys
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
+import salt.utils
+
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -157,11 +159,6 @@ def managed(name, **kwargs):
         Toggles whether or not the repo is used for resolving dependencies
         and/or installing packages.
 
-    enabled
-        Enables the repository, even if the repository has been disabled, in
-        order for the respective package requiring the repository can be found
-        and installed.
-
     comps
         On apt-based systems, comps dictate the types of packages to be
         installed from the repository (e.g. main, nonfree, ...).  For
@@ -177,15 +174,16 @@ def managed(name, **kwargs):
        for.  (e.g. unstable)
 
     keyid
-       The KeyID of the GPG key to install.  This option also requires
-       the 'keyserver' option to be set.
+       The KeyID of the GPG key to install. This option also requires
+       the ``keyserver`` option to be set.
 
     keyserver
        This is the name of the keyserver to retrieve gpg keys from.  The
        keyid option must also be set for this option to work.
 
     key_url
-       URL to retrieve a GPG key from.
+       URL to retrieve a GPG key from. Allows the usage of ``http://``,
+       ``https://`` as well as ``salt://``.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
@@ -194,6 +192,10 @@ def managed(name, **kwargs):
        to a single line, and finally remove comments from the sources.list
        file.  The consolidate will run every time the state is processed. The
        option only needs to be set on one repo managed by salt to take effect.
+
+    clean_file
+       If set to true, empty file before config repo, dangerous if use
+       multiple sources in one file.
 
     refresh_db
        If set to false this will skip refreshing the apt package database on
@@ -219,7 +221,7 @@ def managed(name, **kwargs):
                              'and the "ppa" argument.'
             return ret
         kwargs['repo'] = kwargs['name']
-    if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
+    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         # overload the name/repo value for PPAs cleanly
         # this allows us to have one code-path for PPAs
         repo_name = 'ppa:{0}'.format(kwargs['ppa'])
@@ -229,6 +231,14 @@ def managed(name, **kwargs):
 
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
+
+    if kwargs.pop('enabled', None):
+        kwargs['disabled'] = False
+        salt.utils.warn_until(
+            'Boron',
+            'The `enabled` argument has been deprecated in favor of '
+            '`disabled`.'
+        )
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
@@ -281,6 +291,7 @@ def managed(name, **kwargs):
             ret['comment'] = ('Package repo {0!r} already configured'
                               .format(name))
             return ret
+
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be configured. This may '
                           'cause pkg states to behave differently than stated '
@@ -288,6 +299,11 @@ def managed(name, **kwargs):
                           'to the differences in the configured repositories.'
                           .format(name))
         return ret
+
+    # empty file before configure
+    if kwargs.get('clean_file', False):
+        open(kwargs['file'], 'w').close()
+
     try:
         if __grains__['os_family'] == 'Debian':
             __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
@@ -338,6 +354,8 @@ def absent(name, **kwargs):
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
 
+    **UBUNTU-SPECIFIC OPTIONS**
+
     ppa
         On Ubuntu, you can take advantage of Personal Package Archives on
         Launchpad simply by specifying the user and archive name.
@@ -351,7 +369,7 @@ def absent(name, **kwargs):
     ppa_auth
         For Ubuntu PPAs there can be private PPAs that require authentication
         to access. For these PPAs the username/password can be specified.  This
-        is required for matching if the name format uses the "ppa:" specifier
+        is required for matching if the name format uses the ``ppa:`` specifier
         and is private (requires username/password to access, which is encoded
         in the URI).
 
@@ -361,14 +379,37 @@ def absent(name, **kwargs):
               pkgrepo.absent:
                 - ppa: wolfnet/logstash
                 - ppa_auth: username:password
+
+    keyid
+        If passed, then the GPG key corresponding to the passed KeyID will also
+        be removed.
+
+    keyid_ppa : False
+        If set to ``True``, the GPG key's ID will be looked up from
+        ppa.launchpad.net and removed, and the ``keyid`` argument will be
+        ignored.
+
+        .. note::
+            This option will be disregarded unless the ``ppa`` argument is
+            present.
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
     repo = {}
-    if 'ppa' in kwargs and __grains__['os'] == 'Ubuntu':
-        kwargs['name'] = kwargs.pop('ppa')
+    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
+        name = kwargs.pop('ppa')
+        if not name.startswith('ppa:'):
+            name = 'ppa:' + name
+
+    remove_key = any(kwargs.get(x) is not None
+                     for x in ('keyid', 'keyid_ppa'))
+    if remove_key and 'pkg.del_repo_key' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = \
+            'Repo key management is not implemented for this platform'
+        return ret
 
     try:
         repo = __salt__['pkg.get_repo'](
@@ -384,6 +425,7 @@ def absent(name, **kwargs):
         ret['comment'] = 'Package repo {0} is absent'.format(name)
         ret['result'] = True
         return ret
+
     if __opts__['test']:
         ret['comment'] = ('Package repo {0!r} will be removed. This may '
                           'cause pkg states to behave differently than stated '
@@ -391,19 +433,40 @@ def absent(name, **kwargs):
                           'to the differences in the configured repositories.'
                           .format(name))
         return ret
-    __salt__['pkg.del_repo'](repo=name, **kwargs)
+
+    try:
+        __salt__['pkg.del_repo'](repo=name, **kwargs)
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
+        return ret
+
     repos = __salt__['pkg.list_repos']()
     if name not in repos:
-        ret['result'] = True
-        ret['changes'] = {'repo': name}
-        ret['comment'] = 'Removed package repo {0}'.format(name)
+        ret['changes']['repo'] = name
+        ret['comment'] = 'Removed repo {0}'.format(name)
+
+        if not remove_key:
+            ret['result'] = True
+        else:
+            try:
+                removed_keyid = __salt__['pkg.del_repo_key'](name, **kwargs)
+            except (CommandExecutionError, SaltInvocationError) as exc:
+                ret['result'] = False
+                ret['comment'] += ', but failed to remove key: {0}'.format(exc)
+            else:
+                ret['result'] = True
+                ret['changes']['keyid'] = removed_keyid
+                ret['comment'] += ', and keyid {0}'.format(removed_keyid)
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to remove repo {0}'.format(name)
+
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
     if ret['changes']:
         sys.modules[
             __salt__['test.ping'].__module__
         ].__context__.pop('pkg._avail', None)
+
     return ret

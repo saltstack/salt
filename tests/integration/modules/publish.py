@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import Python libs
+from __future__ import absolute_import, print_function
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
@@ -38,7 +41,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret:
-                print name
+                print(name)
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')
@@ -46,16 +49,49 @@ class PublishModuleTest(integration.ModuleCase,
         self.assertEqual(ret['__pub_id'], 'minion')
         self.assertEqual(ret['__pub_fun'], 'test.kwarg')
 
+    def test_publish_yaml_args(self):
+        '''
+        test publish.publish yaml args formatting
+        '''
+        ret = self.run_function('publish.publish', ['minion', 'test.ping'])
+        self.assertEqual(ret, {'minion': True})
+
+        test_args_list = ['saltines, si', 'crackers, nein', 'cheese, indeed']
+        test_args = '["{args[0]}", "{args[1]}", "{args[2]}"]'.format(args=test_args_list)
+        ret = self.run_function(
+            'publish.publish',
+            ['minion', 'test.arg', test_args]
+        )
+        ret = ret['minion']
+
+        check_true = (
+            '__pub_arg',
+            '__pub_fun',
+            '__pub_id',
+            '__pub_jid',
+            '__pub_ret',
+            '__pub_tgt',
+            '__pub_tgt_type',
+        )
+        for name in check_true:
+            if name not in ret['kwargs']:
+                print(name)
+            self.assertTrue(name in ret['kwargs'])
+
+        self.assertEqual(ret['args'], test_args_list)
+        self.assertEqual(ret['kwargs']['__pub_id'], 'minion')
+        self.assertEqual(ret['kwargs']['__pub_fun'], 'test.arg')
+
     def test_full_data(self):
         '''
         publish.full_data
         '''
         ret = self.run_function(
             'publish.full_data',
-            ['minion', 'test.fib', 40]
+            ['minion', 'test.fib', 20]
         )
         self.assertTrue(ret)
-        self.assertEqual(ret['minion']['ret'][0][-1], 34)
+        self.assertEqual(ret['minion']['ret'][0], 6765)
 
     def test_kwarg(self):
         '''
@@ -79,7 +115,7 @@ class PublishModuleTest(integration.ModuleCase,
         )
         for name in check_true:
             if name not in ret:
-                print name
+                print(name)
             self.assertTrue(name in ret)
 
         self.assertEqual(ret['cheese'], 'spam')

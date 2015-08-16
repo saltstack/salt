@@ -21,10 +21,10 @@ Modules Are Easy to Write!
 
 Writing Salt execution modules is straightforward.
 
-A Salt execution modules is a Python or `Cython`_ module
+A Salt execution module is a Python or `Cython`_ module
 placed in a directory called ``_modules/``
 within the :conf_master:`file_roots` as specified by the master config file. By
-default this is `/srv/salt/_modules` on Linux systems.
+default this is ``/srv/salt/_modules`` on Linux systems.
 
 
 Modules placed in ``_modules/`` will be synced to the minions when any of the following
@@ -84,7 +84,7 @@ minion.
 Grains Data
 -----------
 
-The values detected by the Salt Grains on the minion are available in a 
+The values detected by the Salt Grains on the minion are available in a
 :ref:`dict <python2:typesmapping>` named ``__grains__`` and can be accessed
 from within callable objects in the Python modules.
 
@@ -337,4 +337,19 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         '''
         return True
 
+In addition to global dependancies the depends decorator also supports raw booleans.
 
+.. code-block:: python
+
+    from salt.utils.decorators import depends
+
+    HAS_DEP = False
+    try:
+        import dependency_that_sometimes_exists
+        HAS_DEP = True
+    except ImportError:
+        pass
+
+    @depends(HAS_DEP)
+    def foo():
+        return True

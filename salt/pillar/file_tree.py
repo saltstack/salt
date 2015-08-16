@@ -173,9 +173,10 @@ def _construct_pillar(top_dir, follow_dir_links, raw_data=False):
                 continue
 
             try:
-                pillar_node[file_name] = open(file_path, 'rb').read()
-                if raw_data is False and pillar_node[file_name].endswith('\n'):
-                    pillar_node[file_name] = pillar_node[file_name][:-1]
+                with salt.utils.fopen(file_path, 'rb') as fhr:
+                    pillar_node[file_name] = fhr.read()
+                    if raw_data is False and pillar_node[file_name].endswith('\n'):
+                        pillar_node[file_name] = pillar_node[file_name][:-1]
             except IOError as err:
                 log.error('%s', str(err))
 

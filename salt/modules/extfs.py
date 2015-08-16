@@ -98,7 +98,7 @@ def mkfs(device, fs_type, **kwargs):
             else:
                 opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'mke2fs -F -t {0} {1}{2}'.format(fs_type, opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     ret = []
     for line in out:
         if not line:
@@ -183,7 +183,7 @@ def tune(device, **kwargs):
             else:
                 opts += '-{0} {1} '.format(opt, kwargs[key])
     cmd = 'tune2fs {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
@@ -229,7 +229,7 @@ def dump(device, args=None):
     if args:
         cmd = cmd + ' -' + args
     ret = {'attributes': {}, 'blocks': {}}
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     mode = 'opts'
     group = None
     for line in out:

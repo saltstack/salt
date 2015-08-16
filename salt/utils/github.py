@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
 Connection library for GitHub
-
-:depends: requests
 '''
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import json
-import requests
+import salt.utils.http
 import logging
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
 
 log = logging.getLogger(__name__)
 
@@ -43,13 +45,19 @@ def get_user_pubkeys(users):
     for user in users:
         key_ids = []
         if isinstance(user, dict):
-            tmp_user = next(user.iterkeys())
+            tmp_user = next(six.iterkeys(user))
             key_ids = user[tmp_user]
             user = tmp_user
 
         url = 'https://api.github.com/users/{0}/keys'.format(user)
-        result = requests.request('GET', url)
-        keys = json.loads(result.text)
+        result = salt.utils.http.query(
+            url,
+            'GET',
+            decode=False,
+            text=True,
+        )
+
+        keys = json.loads(result['text'])
 
         ret[user] = {}
         for key in keys:

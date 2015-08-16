@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Salt interface to ZFS commands
+
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 '''
 from __future__ import absolute_import
 
@@ -15,13 +17,13 @@ import sys
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.modules.cmdmod as salt_cmd
 
 log = logging.getLogger(__name__)
 
-# Function alias to set mapping. Filled
-# in later on.
-__func_alias__ = {}
+# Function alias to set mapping.
+__func_alias__ = {
+    'list_': 'list',
+}
 
 
 @decorators.memoize
@@ -42,7 +44,7 @@ def _available_commands():
         return False
 
     ret = {}
-    res = salt_cmd.run_stderr(
+    res = __salt__['cmd.run_stderr'](
         '{0} -?'.format(zfs_path),
         output_loglevel='trace',
         ignore_retcode=True
@@ -67,20 +69,40 @@ def _exit_status(retcode):
     ret = {0: 'Successful completion.',
            1: 'An error occurred.',
            2: 'Usage error.'
-          }[retcode]
+           }[retcode]
     return ret
 
 
 def __virtual__():
     '''
-    Makes sure that ZFS is available.
+    Makes sure that ZFS kernel module is loaded.
     '''
-    if _check_zfs():
+    on_freebsd = __grains__['kernel'] == 'FreeBSD'
+    on_linux = __grains__['kernel'] == 'Linux'
+
+    cmd = ''
+    if on_freebsd:
+        cmd = 'kldstat -q -m zfs'
+    elif on_linux:
+        modinfo = salt.utils.which('modinfo')
+        if modinfo:
+            cmd = '{0} zfs'.format(modinfo)
+        else:
+            cmd = 'ls /sys/module/zfs'
+
+    if cmd and __salt__['cmd.retcode'](
+        cmd, output_loglevel='quiet', ignore_retcode=True
+    ) == 0:
+        # Build dynamic functions and allow loading module
+        _build_zfs_cmd_list()
         return 'zfs'
     return False
 
 
 def _add_doc(func, doc, prefix='\n\n    '):
+    '''
+    Add documentation to a function
+    '''
     if not func.__doc__:
         func.__doc__ = ''
     func.__doc__ += '{0}{1}'.format(prefix, doc)
@@ -95,7 +117,7 @@ def _make_function(cmd_name, doc):
         ret = {}
 
         # Run the command.
-        res = salt_cmd.run_all(
+        res = __salt__['cmd.run_all'](
                 '{0} {1} {2}'.format(
                     _check_zfs(),
                     cmd_name,
@@ -121,18 +143,214 @@ def _make_function(cmd_name, doc):
     # At this point return the function we've just defined.
     return _cmd
 
-# Run through all the available commands
-if _check_zfs():
-    available_cmds = _available_commands()
-    for available_cmd in available_cmds:
 
-        # Set the output from _make_function to be 'available_cmd_'.
-        # i.e. 'list' becomes 'list_' in local module.
-        setattr(
-                sys.modules[__name__],
-                '{0}_'.format(available_cmd),
-                _make_function(available_cmd, available_cmds[available_cmd])
-                )
+def _build_zfs_cmd_list():
+    '''
+    Run through zfs command options, and build equivalent functions dynamically
+    '''
+    # Run through all the available commands
+    if _check_zfs():
+        available_cmds = _available_commands()
+        for available_cmd in available_cmds:
 
-        # Update the function alias so that salt finds the functions properly.
-        __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+            # Set the output from _make_function to be 'available_cmd_'.
+            # i.e. 'list' becomes 'list_' in local module.
+            setattr(
+                    sys.modules[__name__],
+                    '{0}_'.format(available_cmd),
+                    _make_function(available_cmd, available_cmds[available_cmd])
+                    )
+
+            # Update the function alias so that salt finds the functions properly.
+            __func_alias__['{0}_'.format(available_cmd)] = available_cmd
+
+
+def exists(name):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Check if a ZFS filesystem or volume or snapshot exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.exists myzpool/mydataset
+    '''
+    zfs = _check_zfs()
+    cmd = '{0} list {1}'.format(zfs, name)
+    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
+    if "dataset does not exist" in res or "invalid dataset name" in res:
+        return False
+    return True
+
+
+def create(name, **kwargs):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Create a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.create myzpool/mydataset [create_parent=True|False]
+
+    .. note::
+
+        ZFS properties can be specified at the time of creation of the filesystem by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zfs.create myzpool/mydataset properties="{'mountpoint': '/export/zfs', 'sharenfs': 'on'}"
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    properties = kwargs.get('properties', None)
+    create_parent = kwargs.get('create_parent', False)
+    cmd = '{0} create'.format(zfs)
+
+    if create_parent:
+        cmd = '{0} -p'.format(cmd)
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist = []
+        for prop in properties:
+            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+        opts = ' '.join(optlist)
+        cmd = '{0} {1}'.format(cmd, opts)
+    cmd = '{0} {1}'.format(cmd, name)
+
+    # Create filesystem
+    res = __salt__['cmd.run'](cmd)
+
+    # Check and see if the dataset is available
+    if not res:
+        ret[name] = 'created'
+        return ret
+    else:
+        ret['Error'] = res
+    return ret
+
+
+def destroy(name, **kwargs):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Destroy a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.destroy myzpool/mydataset [force=True|False]
+    '''
+    ret = {}
+    zfs = _check_zfs()
+    force = kwargs.get('force', False)
+    cmd = '{0} destroy {1}'.format(zfs, name)
+
+    if force:
+        cmd = '{0} destroy -f {1}'.format(zfs, name)
+
+    res = __salt__['cmd.run'](cmd)
+    if not res:
+        ret[name] = 'Destroyed'
+        return ret
+    elif "dataset does not exist" in res:
+        ret['Error'] = 'Cannot destroy {0}: dataset does not exist'.format(name)
+    elif "operation does not apply to pools" in res:
+        ret['Error'] = 'Cannot destroy {0}: use zpool.destroy to destroy the pool'.format(name)
+    else:
+        ret['Error'] = res
+    return ret
+
+
+def rename(name, new_name):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Rename or Relocate a ZFS File System.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.rename myzpool/mydataset myzpool/renameddataset
+    '''
+    ret = {}
+    zfs = _check_zfs()
+    cmd = '{0} rename {1} {2}'.format(zfs, name, new_name)
+
+    res = __salt__['cmd.run'](cmd)
+    if not res:
+        ret[name] = 'Renamed/Relocated to {0}'.format(new_name)
+        return ret
+    else:
+        ret['Error'] = res
+    return ret
+
+
+def list_(name='', **kwargs):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Return a list of all datasets or a specified dataset on the system and the
+    values of their used, available, referenced, and mountpoint properties.
+
+    .. note::
+
+        Information about the dataset and all of it\'s descendent datasets can be displayed
+        by passing ``recursive=True`` on the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.list [recursive=True|False]
+        salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
+
+    .. note::
+
+        Dataset property value output can be customized by passing an additional argument called
+        "properties" in the form of a python list::
+
+            properties="[property1, property2, property3]"
+
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' zfs.list /myzpool/mydataset properties="[name, sharenfs, mountpoint]"
+
+    '''
+    zfs = _check_zfs()
+    recursive_opt = kwargs.get('recursive', False)
+    properties_opt = kwargs.get('properties', False)
+    cmd = '{0} list'.format(zfs)
+
+    if recursive_opt:
+        cmd = '{0} -r'.format(cmd)
+
+    if properties_opt:
+        cmd = '{0} -o {1}'.format(cmd, ','.join(properties_opt))
+
+    cmd = '{0} {1}'.format(cmd, name)
+
+    res = __salt__['cmd.run_all'](cmd)
+
+    if res['retcode'] == 0:
+        dataset_list = [l for l in res['stdout'].splitlines()]
+        return {'datasets': dataset_list}
+    else:
+        return {'Error': res['stderr']}

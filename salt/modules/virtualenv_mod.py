@@ -53,7 +53,6 @@ def create(path,
            symlinks=None,
            upgrade=None,
            user=None,
-           runas=None,
            use_vt=False,
            saltenv='base'):
     '''
@@ -107,25 +106,6 @@ def create(path,
     # raise CommandNotFoundError if venv_bin is missing
     salt.utils.check_or_die(venv_bin)
 
-    if runas is not None:
-        # The user is using a deprecated argument, warn!
-        salt.utils.warn_until(
-            'Lithium',
-            'The \'runas\' argument to pip.install is deprecated, and will be '
-            'removed in Salt {version}. Please use \'user\' instead.'
-        )
-
-    # "There can only be one"
-    if runas is not None and user:
-        raise salt.exceptions.CommandExecutionError(
-            'The \'runas\' and \'user\' arguments are mutually exclusive. '
-            'Please use \'user\' as \'runas\' is being deprecated.'
-        )
-
-    # Support deprecated 'runas' arg
-    elif runas is not None and not user:
-        user = str(runas)
-
     cmd = [venv_bin]
 
     if 'pyvenv' not in venv_bin:
@@ -155,7 +135,9 @@ def create(path,
         except ImportError:
             # Unable to import?? Let's parse the version from the console
             version_cmd = '{0} --version'.format(venv_bin)
-            ret = __salt__['cmd.run_all'](version_cmd, runas=user)
+            ret = __salt__['cmd.run_all'](
+                    version_cmd, runas=user, python_shell=False
+                )
             if ret['retcode'] > 0 or not ret['stdout'].strip():
                 raise salt.exceptions.CommandExecutionError(
                     'Unable to get the virtualenv version output using {0!r}. '
@@ -178,10 +160,9 @@ def create(path,
                 cmd.append('--distribute')
 
         if python is not None and python.strip() != '':
-            if not os.access(python, os.X_OK):
+            if not salt.utils.which(python):
                 raise salt.exceptions.CommandExecutionError(
-                    'Requested python ({0}) does not appear '
-                    'executable.'.format(python)
+                    'Cannot find requested python ({0}).'.format(python)
                 )
             cmd.append('--python={0}'.format(python))
         if extra_search_dir is not None:
@@ -247,8 +228,8 @@ def create(path,
     cmd.append(path)
 
     # Let's create the virtualenv
-    ret = __salt__['cmd.run_all'](' '.join(cmd), runas=user)
-    if ret['retcode'] > 0:
+    ret = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
+    if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret
 
@@ -273,7 +254,7 @@ def create(path,
         for fpath in glob.glob(os.path.join(path, 'distribute-*.tar.gz*')):
             os.unlink(fpath)
 
-    if ret['retcode'] > 0:
+    if ret['retcode'] != 0:
         # Something went wrong. Let's bail out now!
         return ret
 
@@ -310,31 +291,12 @@ def get_site_packages(venv):
         raise salt.exceptions.CommandExecutionError(
             "Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](bin_path,
-            'from distutils import sysconfig; print sysconfig.get_python_lib()')
+    ret = __salt__['cmd.exec_code_all'](bin_path, 'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
+    if ret['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
 
-def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
-    if not salt.utils.is_windows():
-        tmppath = salt.utils.mkstemp(dir=cwd)
-    else:
-        tmppath = __salt__['cp.cache_file'](source, saltenv)
-
-    if not salt.utils.is_windows():
-        fn_ = __salt__['cp.cache_file'](source, saltenv)
-        shutil.copyfile(fn_, tmppath)
-        os.chmod(tmppath, 0o500)
-        os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
-    try:
-        return __salt__['cmd.run_all'](
-            '{0} {1}'.format(python, tmppath),
-            runas=user,
-            cwd=cwd,
-            env={'VIRTUAL_ENV': cwd},
-            use_vt=use_vt
-        )
-    finally:
-        os.remove(tmppath)
+    return ret['stdout']
 
 
 def get_resource_path(venv, package_or_requirement, resource_name):
@@ -356,7 +318,12 @@ def get_resource_path(venv, package_or_requirement, resource_name):
     if not os.path.exists(bin_path):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+    if ret['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
+
+    return ret['stdout']
 
 
 def get_resource_content(venv, package_or_requirement, resource_name):
@@ -378,4 +345,33 @@ def get_resource_content(venv, package_or_requirement, resource_name):
     if not os.path.exists(bin_path):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    return __salt__['cmd.exec_code'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
+
+    if ret['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
+
+    return ret['stdout']
+
+
+def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
+    if not salt.utils.is_windows():
+        tmppath = salt.utils.mkstemp(dir=cwd)
+    else:
+        tmppath = __salt__['cp.cache_file'](source, saltenv)
+
+    if not salt.utils.is_windows():
+        fn_ = __salt__['cp.cache_file'](source, saltenv)
+        shutil.copyfile(fn_, tmppath)
+        os.chmod(tmppath, 0o500)
+        os.chown(tmppath, __salt__['file.user_to_uid'](user), -1)
+    try:
+        return __salt__['cmd.run_all'](
+            '{0} {1}'.format(python, tmppath),
+            runas=user,
+            cwd=cwd,
+            env={'VIRTUAL_ENV': cwd},
+            use_vt=use_vt,
+            python_shell=False,
+        )
+    finally:
+        os.remove(tmppath)

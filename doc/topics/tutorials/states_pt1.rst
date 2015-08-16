@@ -18,7 +18,7 @@ States are stored in text files on the master and transferred to the minions on
 demand via the master's File Server. The collection of state files make up the
 ``State Tree``.
 
-To start using a central state system in Salt, the Salt File Server must first 
+To start using a central state system in Salt, the Salt File Server must first
 be set up. Edit the master config file (:conf_master:`file_roots`) and
 uncomment the following lines:
 
@@ -85,7 +85,7 @@ named ``webserver.sls``, containing the following:
         - installed         # function declaration
 
 The first line, called the :ref:`id-declaration`, is an arbitrary identifier.
-In this case it defines the name of the package to be installed. 
+In this case it defines the name of the package to be installed.
 
 .. note::
 
@@ -150,13 +150,20 @@ and all changes made.
 
     Note that in the :ref:`example <targeting-minions>` above, the SLS file
     ``webserver.sls`` was referred to simply as ``webserver``. The namespace
-    for SLS files follows a few simple rules:
+    for SLS files when referenced in :conf_master:`top.sls <state_top>` or an :ref:`include-declaration` 
+    follows a few simple rules:
 
     1. The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes
        ``webserver``).
     2. Subdirectories can be used for better organization.
-        a. Each subdirectory is represented by a dot.
-        b. ``webserver/dev.sls`` is referred to as ``webserver.dev``.
+        a. Each subdirectory can be represented with a dot (following the python 
+           import model) or a slash.  ``webserver/dev.sls`` can also be referred to 
+           as ``webserver.dev``
+        b. Because slashes can be represented as dots, SLS files can not contain
+           dots in the name besides the dot for the SLS suffix.  The SLS file 
+           webserver_1.0.sls can not be matched, and webserver_1.0 would match 
+           the directory/file webserver_1/0.sls
+        
     3. A file called ``init.sls`` in a subdirectory is referred to by the path
        of the directory. So, ``webserver/init.sls`` is referred to as
        ``webserver``.
@@ -178,8 +185,8 @@ and all changes made.
             salt-minion -l debug
 
     Run the minion in the foreground
-        By not starting the minion in daemon mode (:option:`-d <salt-minion
-        -d>`) one can view any output from the minion as it works:
+        By not starting the minion in daemon mode (:option:`-d <salt-minion -d>`)
+        one can view any output from the minion as it works:
 
         .. code-block:: bash
 

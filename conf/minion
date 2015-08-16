@@ -1,10 +1,10 @@
 ##### Primary configuration settings #####
 ##########################################
 # This configuration file is used to manage the behavior of the Salt Minion.
-# With the exception of the location of the Salt Master Server, values that
-# are commented out but have no space after the comment are defaults that need
-# not be set in the config. If there is a space after the comment that the value
-# is presented as an example and is not the default.
+# With the exception of the location of the Salt Master Server, values that are
+# commented out but have an empty line after the comment are defaults that need
+# not be set in the config. If there is no blank line after the comment, the
+# value is presented as an example and is not the default.
 
 # Per default the minion will automatically include all config files
 # from minion.d/*.conf (minion.d is a directory in the same directory
@@ -22,6 +22,18 @@
 # If only one master is listed, this setting is ignored and a warning will be logged.
 #random_master: False
 
+# Minions can connect to multiple masters simultaneously (all masters
+# are "hot"), or can be configured to failover if a master becomes
+# unavailable.  Multiple hot masters are configured by setting this
+# value to "str".  Failover masters can be requested by setting
+# to "failover".  MAKE SURE TO SET master_alive_interval if you are
+# using failover.
+# master_type: str
+
+# Poll interval in seconds for checking if the master is still there.  Only
+# respected if master_type above is "failover".
+# master_alive_interval: 30
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
@@ -35,6 +47,12 @@
 
 # The user to run salt.
 #user: root
+
+# Setting sudo_user will cause salt to run all execution modules under an sudo
+# to the user given in sudo_user.  The user under which the salt minion process
+# itself runs will still be that provided in the user config above, but all
+# execution modules run by the minion will be rerouted through sudo.
+#sudo_user: saltdev
 
 # Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
@@ -68,8 +86,9 @@
 #  deployment: datacenter4
 #  cabinet: 13
 #  cab_u: 14-15
-
+#
 # Where cache data goes.
+# This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
 
 # Verify and set permissions on configuration directories at startup.
@@ -151,7 +170,6 @@
 #    auth_tries: 10
 #    auth_safemode: False
 #    ping_interval: 90
-#    restart_on_error: True
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
 # the minion will attempt authentication and likely fails out and cause a restart.
@@ -216,7 +234,8 @@
 # recon_default: 100
 # recon_max: 5000
 # recon_randomize: False
-
+#
+#
 # The loop_interval sets how long in seconds the minion will wait between
 # evaluating the scheduler and running cleanup tasks. This defaults to a
 # sane 60 seconds, but if the minion scheduler needs to be evaluated more
@@ -277,8 +296,9 @@
 #include:
 #  - /etc/salt/extra_config
 #  - /etc/roles/webserver
-
-
+#
+#
+#
 #####   Minion module management     #####
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
@@ -331,9 +351,7 @@
 # failure detected in the state execution. Defaults to False.
 #failhard: False
 #
-# autoload_dynamic_modules turns on automatic loading of modules found in the
-# environments on the master. This is turned on by default. To turn of
-# autoloading modules when states run, set this value to False.
+# Reload the modules prior to a highstate run.
 #autoload_dynamic_modules: True
 #
 # clean_dynamic_modules keeps the dynamic modules on the minion in sync with
@@ -366,6 +384,14 @@
 # Top file to execute if startup_states is 'top':
 #top_file: ''
 
+# Automatically aggregate all states that have support for mod_aggregate by
+# setting to True. Or pass a list of state module names to automatically
+# aggregate just those types.
+#
+# state_aggregate:
+#   - pkg
+#
+#state_aggregate: False
 
 #####     File Directory Settings    #####
 ##########################################
@@ -420,8 +446,8 @@
 #pillar_roots:
 #  base:
 #    - /srv/pillar
-
-
+#
+#
 ######        Security settings       #####
 ###########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
@@ -452,9 +478,13 @@
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 
-# Fingerprint of the master public key to double verify the master is valid,
-# the master fingerprint can be found by running "salt-key -F master" on the
-# salt master.
+# The state_output_profile setting changes whether profile information
+# will be shown for each state run.
+#state_output_profile: True
+
+# Fingerprint of the master public key to validate the identity of your Salt master
+# before the initial key exchange. The master fingerprint can be found by running
+# "salt-key -F master" on the Salt master.
 #master_finger: ''
 
 
@@ -486,6 +516,7 @@
 
 # The level of messages to send to the log file.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+# If using 'log_granular_levels' this must be set to the highest desired level.
 # Default: 'warning'
 #log_level_logfile:
 
@@ -496,18 +527,50 @@
 
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
+#
+# Console log colors are specified by these additional formatters:
+#
+# %(colorlevel)s
+# %(colorname)s
+# %(colorprocess)s
+# %(colormsg)s
+#
+# Since it is desirable to include the surrounding brackets, '[' and ']', in
+# the coloring of the messages, these color formatters also include padding as
+# well.  Color LogRecord attributes are only available for console logging.
+#
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets
 # 'salt.modules' to log at the 'debug' level:
 #   log_granular_levels:
-#     'salt': 'warning',
+#     'salt': 'warning'
 #     'salt.modules': 'debug'
 #
 #log_granular_levels: {}
 
+# To diagnose issues with minions disconnecting or missing returns, ZeroMQ
+# supports the use of monitor sockets # to log connection events. This
+# feature requires ZeroMQ 4.0 or higher.
+#
+# To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
+# debug level or higher.
+#
+# A sample log event is as follows:
+#
+# [DEBUG   ] ZeroMQ event: {'endpoint': 'tcp://127.0.0.1:4505', 'event': 512,
+# 'value': 27, 'description': 'EVENT_DISCONNECTED'}
+#
+# All events logged will include the string 'ZeroMQ event'. A connection event
+# should be logged on the as the minion starts up and initially connects to the
+# master. If not, check for debug log level and that the necessary version of
+# ZeroMQ is installed.
+#
+#zmq_monitor: False
 
 ######      Module configuration      #####
 ###########################################
@@ -528,8 +591,8 @@
 #
 # A dict for the test module:
 #test.baz: {spam: sausage, cheese: bread}
-
-
+#
+#
 ######      Update settings          ######
 ###########################################
 # Using the features in Esky, a salt minion can both run as a frozen app and
@@ -571,7 +634,13 @@
 #tcp_keepalive_intvl: -1
 
 
-######      Windows Software settings ######
+######   Windows Software settings    ######
 ############################################
 # Location of the repository cache file on the master:
 #win_repo_cachefile: 'salt://win/repo/winrepo.p'
+
+
+######      Returner  settings        ######
+############################################
+# Which returner(s) will be used for minion's result:
+#return: mysql

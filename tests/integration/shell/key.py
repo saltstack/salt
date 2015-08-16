@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil
@@ -13,6 +14,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -39,7 +41,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 'Accepted Keys:',
                 'minion',
@@ -65,7 +67,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --out json')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 '{',
                 '    "minions_rejected": [], ',
@@ -97,7 +99,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --out yaml')
         expect = []
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 'minions:',
                 '- minion',
@@ -123,7 +125,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --out raw')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 "{'minions_rejected': [], 'minions_denied': [], 'minions_pre': [], "
                 "'minions': ['minion', 'sub_minion']}"
@@ -142,7 +144,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         test salt-key -l
         '''
         data = self.run_key('-l acc')
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             self.assertEqual(
                 data,
                 ['Accepted Keys:', 'minion', 'sub_minion']
@@ -164,7 +166,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-l un')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = ['Unaccepted Keys:']
         elif self.master_opts['transport'] == 'raet':
             expect = ['minions_pre:']
@@ -179,7 +181,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.run_key(arg_str)
         try:
             key_names = None
-            if self.master_opts['transport'] == 'zeromq':
+            if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
                 key_names = ('minibar.key',)
@@ -195,7 +197,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.run_script('salt-key', arg_str)
         try:
             key_names = None
-            if self.master_opts['transport'] == 'zeromq':
+            if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
                 key_names = ('minibar.key',)
@@ -234,13 +236,13 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        config = yaml.load(
-            open(self.get_config_file_path(config_file_name), 'r').read()
-        )
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        open(os.path.join(config_dir, config_file_name), 'w').write(
-            yaml.dump(config, default_flow_style=False)
-        )
+        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = yaml.load(fhr.read())
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                fhw.write(
+                    yaml.dump(config, default_flow_style=False)
+                )
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -L'.format(
@@ -252,7 +254,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertIn('minion', '\n'.join(ret))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

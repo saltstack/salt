@@ -14,5 +14,5 @@ Full list of builtin wheel modules
     error
     file_roots
     key
-    pillar_roots
     minions
+    pillar_roots

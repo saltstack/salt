@@ -1,10 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Windows users with the net user command
+Module for managing Windows Users
+
+:depends:
+        - pywintypes
+        - win32api
+        - win32net
+        - win32netcon
+        - win32profile
+        - win32security
+        - win32ts
 
 NOTE: This currently only works with local user accounts, not domain accounts
 '''
 from __future__ import absolute_import
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except:  # pylint: disable=W0702
+    from pipes import quote as _cmd_quote
 
 # Import salt libs
 import salt.utils
@@ -15,9 +29,13 @@ import logging
 log = logging.getLogger(__name__)
 
 try:
+    import pywintypes
+    import win32api
     import win32net
     import win32netcon
+    import win32profile
     import win32security
+    import win32ts
     HAS_WIN32NET_MODS = True
 except ImportError:
     HAS_WIN32NET_MODS = False
@@ -30,32 +48,54 @@ def __virtual__():
     '''
     Set the user module if the kernel is Windows
     '''
-    if HAS_WIN32NET_MODS is True and salt.utils.is_windows():
+    if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
     return False
 
 
 def add(name,
         password=None,
-        # Disable pylint checking on the next options. They exist to match the
-        # user modules of other distributions.
-        # pylint: disable=W0613
-        uid=None,
-        gid=None,
-        groups=None,
-        home=False,
-        shell=None,
-        unique=False,
-        system=False,
         fullname=False,
-        roomnumber=False,
-        workphone=False,
-        homephone=False,
-        createhome=False
-        # pylint: enable=W0613
-        ):
+        description=None,
+        groups=None,
+        home=None,
+        homedrive=None,
+        profile=None,
+        logonscript=None):
     '''
-    Add a user to the minion
+    Add a user to the minion.
+
+    :param name: str
+    User name
+
+    :param password: str
+    User's password in plain text.
+
+    :param fullname: str
+    The user's full name.
+
+    :param description: str
+    A brief description of the user account.
+
+    :param groups: list
+    A list of groups to add the user to.
+
+    :param home: str
+    The path to the user's home directory.
+
+    :param homedrive: str
+    The drive letter to assign to the home directory. Must be the Drive Letter
+    followed by a colon. ie: U:
+
+    :param profile: str
+    An explicit path to a profile. Can be a UNC or a folder on the system. If
+    left blank, windows uses it's default profile directory.
+
+    :param logonscript: str
+    Path to a login script to run when the user logs on.
+
+    :return: bool
+    True if successful. False is unsuccessful.
 
     CLI Example:
 
@@ -63,28 +103,147 @@ def add(name,
 
         salt '*' user.add name password
     '''
-    if password:
-        ret = __salt__['cmd.run_all']('net user {0} {1} /add /y'.format(name, password))
+    user_info = {}
+    if name:
+        user_info['name'] = name
     else:
-        ret = __salt__['cmd.run_all']('net user {0} /add'.format(name))
-    if groups:
-        chgroups(name, groups)
+        return False
+    user_info['password'] = password
+    user_info['priv'] = win32netcon.USER_PRIV_USER
+    user_info['home_dir'] = home
+    user_info['comment'] = description
+    user_info['flags'] = win32netcon.UF_SCRIPT
+    user_info['script_path'] = logonscript
+
+    try:
+        win32net.NetUserAdd(None, 1, user_info)
+    except win32net.error as exc:
+        (number, context, message) = exc
+        log.error('Failed to create user {0}'.format(name))
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+        return False
+
+    update(name=name,
+           homedrive=homedrive,
+           profile=profile,
+           fullname=fullname)
+
+    ret = chgroups(name, groups) if groups else True
+
+    return ret
+
+
+def update(name,
+           password=None,
+           fullname=None,
+           description=None,
+           home=None,
+           homedrive=None,
+           logonscript=None,
+           profile=None):
+    r'''
+    Updates settings for the windows user. Name is the only required parameter.
+    Settings will only be changed if the parameter is passed a value.
+
+    .. versionadded:: 2015.8.0
+
+    :param name: str
+    The user name to update.
+
+    :param password: str
+    New user password in plain text.
+
+    :param fullname: str
+    The user's full name.
+
+    :param description: str
+    A brief description of the user account.
+
+    :param home: str
+    The path to the user's home directory.
+
+    :param homedrive: str
+    The drive letter to assign to the home directory. Must be the Drive Letter
+    followed by a colon. ie: U:
+
+    :param logonscript: str
+    The path to the logon script.
+
+    :param profile: str
+    The path to the user's profile directory.
+
+    :return: bool
+    True if successful. False is unsuccessful.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.update bob password=secret profile=C:\Users\Bob
+                 home=\\server\homeshare\bob homedrive=U:
+    '''
+
+    # Make sure the user exists
+    # Return an object containing current settings for the user
+    try:
+        user_info = win32net.NetUserGetInfo(None, name, 4)
+    except win32net.error as exc:
+        (number, context, message) = exc
+        log.error('Failed to update user {0}'.format(name))
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+        return False
+
+    # Check parameters to update
+    # Update the user object with new settings
+    if password:
+        user_info['password'] = password
+    if home:
+        user_info['home_dir'] = home
+    if homedrive:
+        user_info['home_dir_drive'] = homedrive
+    if description:
+        user_info['comment'] = description
+    if logonscript:
+        user_info['script_path'] = logonscript
     if fullname:
-        chfullname(name, fullname)
-    return ret['retcode'] == 0
+        user_info['full_name'] = fullname
+    if profile:
+        user_info['profile'] = profile
+
+    # Apply new settings
+    try:
+        win32net.NetUserSetInfo(None, name, 4, user_info)
+    except win32net.error as exc:
+        (number, context, message) = exc
+        log.error('Failed to update user {0}'.format(name))
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+        return False
+
+    return True
 
 
 def delete(name,
-           # Disable pylint checking on the next options. They exist to match
-           # the user modules of other distributions.
-           # pylint: disable=W0613
            purge=False,
-           force=False
-           # pylint: enable=W0613
-           ):
+           force=False):
     '''
     Remove a user from the minion
-    NOTE: purge and force have not been implemented on Windows yet
+
+    :param name:
+    The name of the user to delete
+
+    :param purge:
+    Boolean value indicating that the user profile should also be removed when
+    the user account is deleted. If set to True the profile will be removed.
+
+    :param force:
+    Boolean value indicating that the user account should be deleted even if the
+    user is logged in. True will log the user out and delete user.
 
     CLI Example:
 
@@ -92,8 +251,90 @@ def delete(name,
 
         salt '*' user.delete name
     '''
-    ret = __salt__['cmd.run_all']('net user {0} /delete'.format(name))
-    return ret['retcode'] == 0
+    # Check if the user exists
+    try:
+        user_info = win32net.NetUserGetInfo(None, name, 4)
+    except win32net.error as exc:
+        (number, context, message) = exc
+        log.error('User not found: {0}'.format(name))
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+        return False
+
+    # Check if the user is logged in
+    # Return a list of logged in users
+    try:
+        sess_list = win32ts.WTSEnumerateSessions()
+    except win32ts.error as exc:
+        (number, context, message) = exc
+        log.error('No logged in users found')
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+
+    # Is the user one that is logged in
+    logged_in = False
+    session_id = None
+    for sess in sess_list:
+        if win32ts.WTSQuerySessionInformation(None, sess['SessionId'], win32ts.WTSUserName) == name:
+            session_id = sess['SessionId']
+            logged_in = True
+
+    # If logged in and set to force, log the user out and continue
+    # If logged in and not set to force, return false
+    if logged_in:
+        if force:
+            try:
+                win32ts.WTSLogoffSession(win32ts.WTS_CURRENT_SERVER_HANDLE, session_id, True)
+            except win32ts.error as exc:
+                (number, context, message) = exc
+                log.error('User not found: {0}'.format(name))
+                log.error('nbr: {0}'.format(number))
+                log.error('ctx: {0}'.format(context))
+                log.error('msg: {0}'.format(message))
+                return False
+        else:
+            log.error('User {0} is currently logged in.'.format(name))
+            return False
+
+    # Remove the User Profile directory
+    if purge:
+        try:
+            sid = getUserSid(name)
+            win32profile.DeleteProfile(sid)
+        except pywintypes.error as exc:
+            (number, context, message) = exc
+            if number == 2:  # Profile Folder Not Found
+                pass
+            else:
+                log.error('Failed to remove profile for {0}'.format(name))
+                log.error('nbr: {0}'.format(number))
+                log.error('ctx: {0}'.format(context))
+                log.error('msg: {0}'.format(message))
+                return False
+
+    # And finally remove the user account
+    try:
+        win32net.NetUserDel(None, name)
+    except win32net.error as exc:
+        (number, context, message) = exc
+        log.error('Failed to delete user {0}'.format(name))
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+        return False
+
+    return True
+
+
+def getUserSid(username):
+    domain = win32api.GetComputerName()
+    if username.find(u'\\') != -1:
+        domain = username.split(u'\\')[0]
+        username = username.split(u'\\')[-1]
+    domain = domain.upper()
+    return win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, domain + u'\\' + username)[0])
 
 
 def setpassword(name, password):
@@ -106,10 +347,7 @@ def setpassword(name, password):
 
         salt '*' user.setpassword name password
     '''
-    ret = __salt__['cmd.run_all'](
-        'net user {0} {1}'.format(name, password), output_loglevel='quiet'
-    )
-    return ret['retcode'] == 0
+    return update(name=name, password=password)
 
 
 def addgroup(name, group):
@@ -122,14 +360,18 @@ def addgroup(name, group):
 
         salt '*' user.addgroup username groupname
     '''
+    name = _cmd_quote(name)
+    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+
     user = info(name)
     if not user:
         return False
     if group in user['groups']:
         return True
-    ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /add'.format(group, name)
-    )
+
+    cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+
     return ret['retcode'] == 0
 
 
@@ -143,6 +385,9 @@ def removegroup(name, group):
 
         salt '*' user.removegroup username groupname
     '''
+    name = _cmd_quote(name)
+    group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+
     user = info(name)
 
     if not user:
@@ -151,21 +396,22 @@ def removegroup(name, group):
     if group not in user['groups']:
         return True
 
-    ret = __salt__['cmd.run_all'](
-        'net localgroup {0} {1} /delete'.format(group, name)
-    )
+    cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=True)
+
     return ret['retcode'] == 0
 
 
-def chhome(name, home):
+def chhome(name, home, persist=False):
     '''
-    Change the home directory of the user
+    Change the home directory of the user, pass True for persist to move files
+    to the new home directory if the old home directory exist.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.chhome foo \\\\fileserver\\home\\foo
+        salt '*' user.chhome foo \\\\fileserver\\home\\foo True
     '''
     pre_info = info(name)
 
@@ -175,9 +421,13 @@ def chhome(name, home):
     if home == pre_info['home']:
         return True
 
-    if __salt__['cmd.retcode']('net user {0} /homedir:{1}'.format(
-            name, home)) != 0:
+    if not update(name=name, home=home):
         return False
+
+    if persist and home is not None and pre_info['home'] is not None:
+        cmd = 'move /Y {0} {1}'.format(pre_info['home'], home)
+        if __salt__['cmd.retcode'](cmd, python_shell=False) != 0:
+            log.debug('Failed to move the contents of the Home Directory')
 
     post_info = info(name)
     if post_info['home'] != pre_info['home']:
@@ -196,22 +446,7 @@ def chprofile(name, profile):
 
         salt '*' user.chprofile foo \\\\fileserver\\profiles\\foo
     '''
-    pre_info = info(name)
-
-    if not pre_info:
-        return False
-
-    if profile == pre_info['profile']:
-        return True
-    if __salt__['cmd.retcode']('net user {0} /profilepath:{1}'.format(
-            name, profile)) != 0:
-        return False
-
-    post_info = info(name)
-    if post_info['profile'] != pre_info['profile']:
-        return post_info['profile'] == profile
-
-    return False
+    return update(name=name, profile=profile)
 
 
 def chfullname(name, fullname):
@@ -224,28 +459,13 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname user 'First Last'
     '''
-    pre_info = info(name)
-
-    if not pre_info:
-        return False
-
-    if fullname == pre_info['fullname']:
-        return True
-    if __salt__['cmd.retcode']('net user {0} /fullname:"{1}"'.format(
-            name, fullname)) != 0:
-        return False
-
-    post_info = info(name)
-    if post_info['fullname'] != pre_info['fullname']:
-        return post_info['fullname'] == fullname
-
-    return False
+    return update(name=name, fullname=fullname)
 
 
-def chgroups(name, groups, append=False):
+def chgroups(name, groups, append=True):
     '''
-    Change the groups this user belongs to, add append to append the specified
-    groups
+    Change the groups this user belongs to, add append=False to make the user a
+    member of only the specified groups
 
     CLI Example:
 
@@ -261,17 +481,22 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
 
+    name = _cmd_quote(name)
+
     if not append:
         for group in ugrps:
+            group = _cmd_quote(group).lstrip('\'').rstrip('\'')
             if group not in groups:
-                __salt__['cmd.retcode'](
-                        'net localgroup {0} {1} /delete'.format(group, name))
+                cmd = 'net localgroup "{0}" {1} /delete'.format(group, name)
+                __salt__['cmd.run_all'](cmd, python_shell=True)
 
     for group in groups:
         if group in ugrps:
             continue
-        __salt__['cmd.retcode'](
-                'net localgroup {0} {1} /add'.format(group, name))
+        group = _cmd_quote(group).lstrip('\'').rstrip('\'')
+        cmd = 'net localgroup "{0}" {1} /add'.format(group, name)
+        __salt__['cmd.run_all'](cmd, python_shell=True)
+
     agrps = set(list_groups(name))
     return len(ugrps - agrps) == 0
 
@@ -279,6 +504,25 @@ def chgroups(name, groups, append=False):
 def info(name):
     '''
     Return user information
+
+    :param name: str
+    Username for which to display information
+
+    :returns: dict
+    A dictionary containing user information
+    - fullname
+    - username
+    - uid
+    - passwd (will always return None)
+    - comment (same as description, left here for backwards compatibility)
+    - description
+    - active
+    - logonscript
+    - profile
+    - home
+    - homedrive
+    - groups
+    - gid
 
     CLI Example:
 
@@ -305,12 +549,14 @@ def info(name):
         ret['uid'] = win32security.ConvertSidToStringSid(items['user_sid'])
         ret['passwd'] = items['password']
         ret['comment'] = items['comment']
+        ret['description'] = items['comment']
         ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
         ret['logonscript'] = items['script_path']
         ret['profile'] = items['profile']
         if not ret['profile']:
             ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
         ret['home'] = items['home_dir']
+        ret['homedrive'] = items['home_dir_drive']
         if not ret['home']:
             ret['home'] = ret['profile']
         ret['groups'] = groups

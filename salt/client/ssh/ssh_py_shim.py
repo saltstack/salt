@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# pylint: disable=W9903
 '''
 This is a shim that handles checking and updating salt thin and
 then invoking thin.
@@ -16,26 +16,37 @@ import shutil
 import sys
 import os
 import stat
+import subprocess
 
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
-# FIXME - it would be ideal if these could be obtained directly from
-#         salt.exitcodes rather than duplicated.
+# Keep these in sync with salt/exitcodes.py
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
+EX_SCP_NOT_FOUND = 14
 
 
 class OBJ(object):
+    """An empty class for holding instance attribute values."""
     pass
+
 
 OPTIONS = None
 ARGS = None
+# The below line is where OPTIONS can be redefined with internal options
+# (rather than cli arguments) when the shim is bundled by
+# client.ssh.Single._cmd_str()
+# pylint: disable=block-comment-should-start-with-cardinal-space
 #%%OPTS
 
 
 def need_deployment():
+    """
+    Salt thin needs to be deployed - prep the target directory and emit the
+    delimeter and exit code that signals a required deployment.
+    """
     if os.path.exists(OPTIONS.saltdir):
         shutil.rmtree(OPTIONS.saltdir)
     old_umask = os.umask(0o077)
@@ -54,16 +65,17 @@ def need_deployment():
     sudo_gid = os.environ.get('SUDO_GID')
     if sudo_gid:
         os.chown(OPTIONS.saltdir, -1, int(sudo_gid))
-        st = os.stat(OPTIONS.saltdir)
-        os.chmod(OPTIONS.saltdir, st.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
+        stt = os.stat(OPTIONS.saltdir)
+        os.chmod(OPTIONS.saltdir, stt.st_mode | stat.S_IWGRP | stat.S_IRGRP | stat.S_IXGRP)
 
-    # Delimeter emitted on stdout *only* to indicate shim message to master.
+    # Delimiter emitted on stdout *only* to indicate shim message to master.
     sys.stdout.write("{0}\ndeploy\n".format(OPTIONS.delimiter))
     sys.exit(EX_THIN_DEPLOY)
 
 
 # Adapted from salt.utils.get_hash()
 def get_hash(path, form='sha1', chunk_size=4096):
+    """Generate a hash digest string for a file."""
     try:
         hash_type = getattr(hashlib, form)
     except AttributeError:
@@ -77,6 +89,7 @@ def get_hash(path, form='sha1', chunk_size=4096):
 
 
 def unpack_thin(thin_path):
+    """Unpack the Salt thin archive."""
     tfile = tarfile.TarFile.gzopen(thin_path)
     tfile.extractall(path=OPTIONS.saltdir)
     tfile.close()
@@ -84,11 +97,13 @@ def unpack_thin(thin_path):
 
 
 def need_ext():
+    """Signal that external modules need to be deployed."""
     sys.stdout.write("{0}\next_mods\n".format(OPTIONS.delimiter))
     sys.exit(EX_MOD_DEPLOY)
 
 
 def unpack_ext(ext_path):
+    """Unpack the external modules."""
     modcache = os.path.join(
             OPTIONS.saltdir,
             'running_data',
@@ -106,7 +121,8 @@ def unpack_ext(ext_path):
     shutil.move(ver_path, ver_dst)
 
 
-def main(argv):
+def main(argv):  # pylint: disable=W0613
+    """Main program body"""
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
     if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
@@ -118,21 +134,36 @@ def main(argv):
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
+        scpstat = subprocess.Popen(['/bin/bash', '-c', 'command -v scp']).wait()
+        if not scpstat == 0:
+            sys.exit(EX_SCP_NOT_FOUND)
+
         if not os.path.exists(OPTIONS.saltdir):
             need_deployment()
 
         if not os.path.isdir(OPTIONS.saltdir):
-            sys.stderr.write('ERROR: salt path "{0}" exists but is not a directory\n'.format(OPTIONS.saltdir))
+            sys.stderr.write(
+                'ERROR: salt path "{0}" exists but is'
+                ' not a directory\n'.format(OPTIONS.saltdir)
+            )
             sys.exit(os.EX_CANTCREAT)
 
         version_path = os.path.join(OPTIONS.saltdir, 'version')
         if not os.path.exists(version_path) or not os.path.isfile(version_path):
-            sys.stderr.write('WARNING: Unable to locate current thin version.\n')
+            sys.stderr.write(
+                'WARNING: Unable to locate current thin '
+                ' version: {0}.\n'.format(version_path)
+            )
             need_deployment()
         with open(version_path, 'r') as vpo:
             cur_version = vpo.readline().strip()
         if cur_version != OPTIONS.version:
-            sys.stderr.write('WARNING: current thin version is not up-to-date.\n')
+            sys.stderr.write(
+                'WARNING: current thin version {0}'
+                ' is not up-to-date with {1}.\n'.format(
+                    cur_version, OPTIONS.version
+                )
+            )
             need_deployment()
         # Salt thin exists and is up-to-date - fall through and use it
 
@@ -155,7 +186,7 @@ def main(argv):
                 cur_version = vpo.readline().strip()
             if cur_version != OPTIONS.ext_mods:
                 need_ext()
-    #Fix parameter passing issue
+    # Fix parameter passing issue
     if len(ARGS) == 1:
         argv_prepared = ARGS[0].split()
     else:
@@ -180,8 +211,13 @@ def main(argv):
     sys.stdout.flush()
     sys.stderr.write(OPTIONS.delimiter + '\n')
     sys.stderr.flush()
-    if OPTIONS.wipe:
-        import subprocess
+    if OPTIONS.tty:
+        stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+        sys.stdout.write(stdout)
+        sys.stdout.flush()
+        if OPTIONS.wipe:
+            shutil.rmtree(OPTIONS.saltdir)
+    elif OPTIONS.wipe:
         subprocess.call(salt_argv)
         shutil.rmtree(OPTIONS.saltdir)
     else:

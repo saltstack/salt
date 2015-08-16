@@ -15,7 +15,6 @@ import datetime
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import map
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 # pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
@@ -206,26 +205,16 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     if not binary:
         return '\'at.at\' is not available.'
 
-    if __grains__['os_family'] == 'RedHat':
-        echo_cmd = 'echo -e'
-    else:
-        echo_cmd = 'echo'
-
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
-                                                          _cmd_quote(' '.join(args[1:])),
-                                                          binary,
-                                                          _cmd_quote(args[0]),
-                                                          echo_cmd)
+        stdin = '### SALT: {0}\n{1}'.format(kwargs['tag'], ' '.join(args[1:]))
     else:
-        cmd = '{3} "{1}" | {2} {0}'.format(args[0], ' '.join(args[1:]),
-            binary, echo_cmd)
+        stdin = ' '.join(args[1:])
+    cmd = [binary, args[0]]
 
-    # Can't use _cmd here since we need to prepend 'echo_cmd'
     if 'runas' in kwargs:
-        output = __salt__['cmd.run']('{0}'.format(cmd), runas=kwargs['runas'])
+        output = __salt__['cmd.run'](cmd, stdin=stdin, python_shell=False, runas=kwargs['runas'])
     else:
-        output = __salt__['cmd.run']('{0}'.format(cmd))
+        output = __salt__['cmd.run'](cmd, stdin=stdin, python_shell=False)
 
     if output is None:
         return '\'at.at\' is not available.'

@@ -69,7 +69,7 @@ Match the ``web-x``, ``web-y``, and ``web-z`` minions:
 
     For additional targeting methods please review the
     :doc:`compound matchers </topics/targeting/compound>` documentation.
- 
+
 
 Regular Expressions
 ===================
@@ -93,7 +93,7 @@ the matcher as the first option. The following example executes the contents of
       'web1-(prod|devel)':
       - match: pcre
       - webserver
-      
+
 
 Lists
 =====

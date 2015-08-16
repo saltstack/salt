@@ -1,16 +1,17 @@
-==================================
+=================================
 Getting Started With DigitalOcean
-==================================
+=================================
 
-DigitalOcean is a public cloud provider that specializes in Linux instances.
+DigitalOcean is a public cloud host that specializes in Linux instances.
 
 
 Configuration
 =============
-Using Salt for DigitalOcean requires a personal_access_token, an ssh_key_file, 
-and at least one SSH key name in ssh_key_names, more can be added by comma-separating them.
-The personal_access_token can be found in the Digital Ocean web interface,
-in the "Apps & API" section. The SSH key name can be found under the "SSH Keys" section.
+Using Salt for DigitalOcean requires a ``personal_access_token``, an ``ssh_key_file``,
+and at least one SSH key name in ``ssh_key_names``. More ``ssh_key_names`` can be added
+by separating each key with a comma. The ``personal_access_token`` can be found in the
+DigitalOcean web interface in the "Apps & API" section. The SSH key name can be found
+under the "SSH Keys" section.
 
 .. code-block:: yaml
 
@@ -18,12 +19,20 @@ in the "Apps & API" section. The SSH key name can be found under the "SSH Keys" 
     # /etc/salt/cloud.providers.d/ directory.
 
     my-digitalocean-config:
-      provider: digital_ocean
+      driver: digital_ocean
       personal_access_token: xxx
       ssh_key_file: /path/to/ssh/key/file
       ssh_key_names: my-key-name,my-key-name-2
       location: New York 1
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
@@ -43,6 +52,30 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
         private_networking: True
         backups_enabled: True
         ipv6: True
+
+Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
+command:
+
+.. code-block:: bash
+
+    # salt-cloud --list-locations my-digitalocean-config
+    my-digitalocean-config:
+        ----------
+        digital_ocean:
+            ----------
+            Amsterdam 1:
+                ----------
+                available:
+                    False
+                features:
+                    [u'backups']
+                name:
+                    Amsterdam 1
+                sizes:
+                    []
+                slug:
+                    ams1
+    ...SNIP...
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:

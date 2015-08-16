@@ -13,13 +13,15 @@ specified user. This configuration is much like the ``peer`` configuration:
 
 .. code-block:: yaml
 
-    # Allow thatch to execute anything and allow fred to use ping and pkg
     client_acl:
+      # Allow thatch to execute anything.
       thatch:
         - .*
+      # Allow fred to use test and pkg, but only on "web*" minions.
       fred:
-        - test.*
-        - pkg.*
+        - web*:
+          - test.*
+          - pkg.*
 
 Permission Issues
 =================

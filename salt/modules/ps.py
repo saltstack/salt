@@ -6,9 +6,9 @@ See http://code.google.com/p/psutil.
 :depends:   - psutil Python module, version 0.3.0 or later
             - python-utmp package (optional)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import datetime
 
@@ -16,13 +16,16 @@ import datetime
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
 
     HAS_PSUTIL = True
     PSUTIL2 = psutil.version_info >= (2, 0)
 except ImportError:
     HAS_PSUTIL = False
+# pylint: enable=import-error
 
 
 def __virtual__():
@@ -47,7 +50,10 @@ def _get_proc_cmdline(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.cmdline() if PSUTIL2 else proc.cmdline
+    try:
+        return proc.cmdline() if PSUTIL2 else proc.cmdline
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return ''
 
 
 def _get_proc_create_time(proc):
@@ -56,7 +62,10 @@ def _get_proc_create_time(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.create_time() if PSUTIL2 else proc.create_time
+    try:
+        return proc.create_time() if PSUTIL2 else proc.create_time
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_name(proc):
@@ -65,7 +74,10 @@ def _get_proc_name(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.name() if PSUTIL2 else proc.name
+    try:
+        return proc.name() if PSUTIL2 else proc.name
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return []
 
 
 def _get_proc_status(proc):
@@ -74,7 +86,10 @@ def _get_proc_status(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.status() if PSUTIL2 else proc.status
+    try:
+        return proc.status() if PSUTIL2 else proc.status
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_username(proc):
@@ -83,7 +98,10 @@ def _get_proc_username(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.username() if PSUTIL2 else proc.username
+    try:
+        return proc.username() if PSUTIL2 else proc.username
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_pid(proc):
@@ -111,18 +129,18 @@ def top(num_processes=5, interval=3):
     '''
     result = []
     start_usage = {}
-    for pid in psutil.get_pid_list():
+    for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         start_usage[process] = user + system
     time.sleep(interval)
     usage = set()
-    for process, start in start_usage.items():
+    for process, start in six.iteritems(start_usage):
         try:
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         now = user + system
@@ -133,7 +151,7 @@ def top(num_processes=5, interval=3):
         if num_processes and idx >= num_processes:
             break
         if len(_get_proc_cmdline(process)) == 0:
-            cmdline = [_get_proc_name(process)]
+            cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)
         info = {'cmd': cmdline,
@@ -144,9 +162,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in process.get_cpu_times()._asdict().items():
+        for key, value in six.iteritems(process.cpu_times()._asdict()):
             info['cpu'][key] = value
-        for key, value in process.get_memory_info()._asdict().items():
+        for key, value in six.iteritems(process.memory_info()._asdict()):
             info['mem'][key] = value
         result.append(info)
 
@@ -163,7 +181,7 @@ def get_pid_list():
 
         salt '*' ps.get_pid_list
     '''
-    return psutil.get_pid_list()
+    return psutil.pids()
 
 
 def proc_info(pid, attrs=None):
@@ -523,7 +541,7 @@ def boot_time(time_format=None):
     except AttributeError:
         # get_boot_time() has been removed in newer psutil versions, and has
         # been replaced by boot_time() which provides the same information.
-        b_time = int(psutil.get_boot_time())
+        b_time = int(psutil.boot_time())
     if time_format:
         # Load epoch timestamp as a datetime.datetime object
         b_time = datetime.datetime.fromtimestamp(b_time)
@@ -547,9 +565,9 @@ def network_io_counters(interface=None):
         salt '*' ps.network_io_counters interface=eth0
     '''
     if not interface:
-        return dict(psutil.network_io_counters()._asdict())
+        return dict(psutil.net_io_counters()._asdict())
     else:
-        stats = psutil.network_io_counters(pernic=True)
+        stats = psutil.net_io_counters(pernic=True)
         if interface in stats:
             return dict(stats[interface]._asdict())
         else:
@@ -589,13 +607,13 @@ def get_users():
         salt '*' ps.get_users
     '''
     try:
-        recs = psutil.get_users()
+        recs = psutil.users()
         return [dict(x._asdict()) for x in recs]
     except AttributeError:
         # get_users is only present in psutil > v0.5.0
         # try utmp
         try:
-            import utmp
+            import utmp  # pylint: disable=import-error
 
             result = []
             while True:
@@ -610,18 +628,3 @@ def get_users():
                                    'started': started, 'host': rec[5]})
         except ImportError:
             return False
-
-# This is a possible last ditch method
-# result = []
-#        w = __salt__['cmd.run'](
-#            'who', env='{"LC_ALL": "en_US.UTF-8"}').splitlines()
-#        for u in w:
-#            u = u.split()
-#            started = __salt__['cmd.run'](
-#                'date --d "{0} {1}" +%s'.format(u[2], u[3])).strip()
-#            rec = {'name': u[0], 'terminal': u[1],
-#                   'started': started, 'host': None}
-#            if len(u) > 4:
-#                rec['host'] = u[4][1:-1]
-#            result.append(rec)
-#        return result

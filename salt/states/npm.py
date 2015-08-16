@@ -18,17 +18,20 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
         - require:
           - pkg: npm
 '''
-from __future__ import absolute_import
 
 # Import salt libs
+from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
     '''
     Only load if the npm module is available in __salt__
     '''
-    return 'npm' if 'npm.list' in __salt__ else False
+    return 'npm' if 'npm.list' in __salt__ else False, '\'npm\' binary not found on system'
 
 
 def installed(name,
@@ -45,16 +48,18 @@ def installed(name,
     .. code-block:: yaml
 
         coffee-script:
-          npm:
-            - installed
+          npm.installed:
             - user: someuser
 
         coffee-script@1.0.1:
-          npm:
-            - installed
+          npm.installed: []
 
     name
         The package to install
+
+        .. versionchanged:: 2014.7.2
+            This parameter is no longer lowercased by salt so that
+            case-sensitive NPM package names will work.
 
     pkgs
         A list of packages to install with a single npm invocation; specifying
@@ -100,38 +105,62 @@ def installed(name,
         ret['comment'] = 'Error looking up {0!r}: {1}'.format(name, err)
         return ret
     else:
-        installed_pkgs = dict((p.lower(), info)
-                for p, info in installed_pkgs.items())
+        installed_pkgs = dict((p, info)
+                for p, info in six.iteritems(installed_pkgs))
 
     pkgs_satisfied = []
     pkgs_to_install = []
+
+    def _pkg_is_installed(pkg, installed_pkgs):
+        '''
+        Helper function to determine if a package is installed
+
+        This performs more complex comparison than just checking
+        keys, such as examining source repos to see if the package
+        was installed by a different name from the same repo
+
+        :pkg str: The package to compare
+        :installed_pkgs: A dictionary produced by npm list --json
+        '''
+        if (pkg_name in installed_pkgs and
+            'version' in installed_pkgs[pkg_name]):
+            return True
+        # Check to see if we are trying to install from a URI
+        elif '://' in pkg_name:  # TODO Better way?
+            for pkg_details in installed_pkgs.values():
+                try:
+                    pkg_from = pkg_details.get('from', '').split('://')[1]
+                    if pkg_name.split('://')[1] == pkg_from:
+                        return True
+                except IndexError:
+                    pass
+        return False
+
     for pkg in pkg_list:
         pkg_name, _, pkg_ver = pkg.partition('@')
-        pkg_name = pkg_name.strip().lower()
+        pkg_name = pkg_name.strip()
 
         if force_reinstall is True:
             pkgs_to_install.append(pkg)
             continue
-
-        if pkg_name not in installed_pkgs:
+        if not _pkg_is_installed(pkg, installed_pkgs):
             pkgs_to_install.append(pkg)
             continue
 
-        if pkg_name in installed_pkgs:
-            installed_name_ver = '{0}@{1}'.format(pkg_name,
-                    installed_pkgs[pkg_name]['version'])
+        installed_name_ver = '{0}@{1}'.format(pkg_name,
+                installed_pkgs[pkg_name]['version'])
 
-            # If given an explicit version check the installed version matches.
-            if pkg_ver:
-                if installed_pkgs[pkg_name].get('version') != pkg_ver:
-                    pkgs_to_install.append(pkg)
-                else:
-                    pkgs_satisfied.append(installed_name_ver)
-
-                continue
+        # If given an explicit version check the installed version matches.
+        if pkg_ver:
+            if installed_pkgs[pkg_name].get('version') != pkg_ver:
+                pkgs_to_install.append(pkg)
             else:
                 pkgs_satisfied.append(installed_name_ver)
-                continue
+
+            continue
+        else:
+            pkgs_satisfied.append(installed_name_ver)
+            continue
 
     if __opts__['test']:
         ret['result'] = None
@@ -146,6 +175,7 @@ def installed(name,
         if pkgs_satisfied:
             comment_msg.append('Package(s) {0!r} satisfied by {1}'
                 .format(', '.join(pkg_list), ', '.join(pkgs_satisfied)))
+            ret['result'] = True
 
         ret['comment'] = '. '.join(comment_msg)
         return ret

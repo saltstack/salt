@@ -152,9 +152,9 @@
     .. _`high water mark`: http://api.zeromq.org/3-2:zmq-setsockopt
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import json
 import logging
@@ -162,12 +162,12 @@ import logging.handlers
 import datetime
 
 # Import salt libs
-from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 from salt.log.mixins import NewStyleClassMixIn
 import salt.utils.network
 
 # Import Third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -185,7 +185,7 @@ def __virtual__():
         log.trace(
             'None of the required configuration sections, '
             '\'logstash_udp_handler\' and \'logstash_zmq_handler\', '
-            'were found the in the configuration. Not loading the Logstash '
+            'were found in the configuration. Not loading the Logstash '
             'logging handlers module.'
         )
         return False
@@ -304,7 +304,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in record.__dict__.items():
+        for key, value in six.iteritems(record.__dict__):
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -317,7 +317,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict['@fields'][key] = value
                 continue
 
-            if isinstance(value, (string_types, bool, dict, float, int, list)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list)):
                 message_dict['@fields'][key] = value
                 continue
 
@@ -348,7 +348,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
             )
 
         # Add any extra attributes to the message field
-        for key, value in record.__dict__.items():
+        for key, value in six.iteritems(record.__dict__):
             if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
@@ -361,7 +361,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 message_dict[key] = value
                 continue
 
-            if isinstance(value, (string_types, bool, dict, float, int, list)):
+            if isinstance(value, (six.string_types, bool, dict, float, int, list)):
                 message_dict[key] = value
                 continue
 

@@ -21,8 +21,7 @@ try:
     from libcloud.compute.providers import get_driver
     from libcloud.compute.deployment import (
         MultiStepDeployment,
-        ScriptDeployment,
-        SSHKeyDeployment
+        ScriptDeployment
     )
     HAS_LIBCLOUD = True
     LIBCLOUD_VERSION_INFO = tuple([
@@ -53,6 +52,9 @@ LIBCLOUD_MINIMAL_VERSION = (0, 14, 0)
 
 
 def node_state(id_):
+    '''
+    Libcloud supported node states
+    '''
     states = {0: 'RUNNING',
               1: 'REBOOTING',
               2: 'TERMINATED',
@@ -107,21 +109,6 @@ def get_node(conn, name):
         if node.name == name:
             salt.utils.cloud.cache_node(salt.utils.cloud.simple_types_filter(node.__dict__), __active_provider_name__, __opts__)
             return node
-
-
-def ssh_pub(vm_):
-    '''
-    Deploy the primary ssh authentication key
-    '''
-    ssh = config.get_cloud_config_value('ssh_auth', vm_, __opts__)
-    if not ssh:
-        return None
-
-    ssh = os.path.expanduser(ssh)
-    if os.path.isfile(ssh):
-        return None
-
-    return SSHKeyDeployment(open(ssh).read())
 
 
 def avail_locations(conn=None, call=None):
@@ -362,7 +349,13 @@ def destroy(name, conn=None, call=None):
             flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
-        client = salt.client.get_local_client(__opts__['conf_file'])
+
+        mopts_ = salt.config.DEFAULT_MINION_OPTS
+        conf_path = '/'.join(__opts__['conf_file'].split('/')[:-1])
+        mopts_.update(
+            salt.config.minion_config(os.path.join(conf_path, 'minion'))
+        )
+        client = salt.client.get_local_client(mopts_)
         minions = client.cmd(name, 'mine.flush')
 
     log.info('Clearing Salt Mine: {0}, {1}'.format(name, flush_mine_on_destroy))
@@ -507,22 +500,3 @@ def conn_has_method(conn, method_name):
         )
     )
     return False
-
-
-def get_salt_interface(vm_):
-    '''
-    Return the salt_interface type to connect to. Either 'public_ips' (default)
-    or 'private_ips'.
-    '''
-    salt_host = config.get_cloud_config_value(
-        'salt_interface', vm_, __opts__, default=False,
-        search_global=False
-    )
-
-    if salt_host is False:
-        salt_host = config.get_cloud_config_value(
-            'ssh_interface', vm_, __opts__, default='public_ips',
-            search_global=False
-        )
-
-    return salt_host

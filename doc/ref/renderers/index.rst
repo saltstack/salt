@@ -5,7 +5,7 @@ Renderers
 =========
 
 The Salt state system operates by gathering information from common data
-types such as lists, dictionaries and strings that would be familiar
+types such as lists, dictionaries, and strings that would be familiar
 to any developer.
 
 SLS files are translated from whatever data templating format they are written
@@ -109,7 +109,7 @@ as output.
 Writing Renderers
 -----------------
 
-A custom renderer must be a Python module placed in the rendered directory and the
+A custom renderer must be a Python module placed in the renderers directory and the
 module implement the ``render`` function.
 
 The ``render`` function will be passed the path of the SLS file as an argument.

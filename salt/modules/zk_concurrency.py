@@ -18,6 +18,7 @@ try:
         ForceRetryError
     )
     import kazoo.recipe.lock
+    import kazoo.recipe.party
     from kazoo.exceptions import CancelledError
     from kazoo.exceptions import NoNodeError
 
@@ -124,6 +125,30 @@ def lock_holders(path,
                  ephemeral_lease=False):
     '''
     Return an un-ordered list of lock holders
+
+    path
+        The path in zookeeper where the lock is
+
+    zk_hosts
+        zookeeper connect string
+
+    identifier
+        Name to identify this minion
+
+    max_concurrency
+        Maximum number of lock holders
+
+    timeout
+        timeout to wait for the lock. A None timeout will block forever
+
+    ephemeral_lease
+        Whether the locks in zookeper should be ephemeral
+
+    Example:
+
+    ... code-block: bash
+
+        salt minion zk_concurrency.lock_holders /lock/path host1:1234,host2:1234
     '''
 
     zk = _get_zk_conn(zk_hosts)
@@ -146,6 +171,33 @@ def lock(path,
          ):
     '''
     Get lock (with optional timeout)
+
+    path
+        The path in zookeeper where the lock is
+
+    zk_hosts
+        zookeeper connect string
+
+    identifier
+        Name to identify this minion
+
+    max_concurrency
+        Maximum number of lock holders
+
+    timeout
+        timeout to wait for the lock. A None timeout will block forever
+
+    ephemeral_lease
+        Whether the locks in zookeper should be ephemeral
+
+    force
+        Forcibly acquire the lock regardless of available slots
+
+    Example:
+
+    ... code-block: bash
+
+        salt minion zk_concurrency.lock /lock/path host1:1234,host2:1234
     '''
     zk = _get_zk_conn(zk_hosts)
     if path not in SEMAPHORE_MAP:
@@ -178,6 +230,30 @@ def unlock(path,
            ):
     '''
     Remove lease from semaphore
+
+    path
+        The path in zookeeper where the lock is
+
+    zk_hosts
+        zookeeper connect string
+
+    identifier
+        Name to identify this minion
+
+    max_concurrency
+        Maximum number of lock holders
+
+    timeout
+        timeout to wait for the lock. A None timeout will block forever
+
+    ephemeral_lease
+        Whether the locks in zookeper should be ephemeral
+
+    Example:
+
+    ... code-block: bash
+
+        salt minion zk_concurrency.unlock /lock/path host1:1234,host2:1234
     '''
     # if someone passed in zk_hosts, and the path isn't in SEMAPHORE_MAP, lets
     # see if we can find it
@@ -196,3 +272,26 @@ def unlock(path,
     else:
         logging.error('Unable to find lease for path {0}'.format(path))
         return False
+
+
+def party_members(path,
+                  zk_hosts,
+                  ):
+    '''
+    Get the List of identifiers in a particular party
+
+    path
+        The path in zookeeper where the lock is
+
+    zk_hosts
+        zookeeper connect string
+
+    Example:
+
+    ... code-block: bash
+
+        salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234
+    '''
+    zk = _get_zk_conn(zk_hosts)
+    party = kazoo.recipe.party.ShallowParty(zk, path)
+    return list(party)

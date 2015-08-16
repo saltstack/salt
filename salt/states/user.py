@@ -23,14 +23,18 @@ as either absent or present
     testuser:
       user.absent
 '''
-from __future__ import absolute_import
 
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
+import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -68,10 +72,17 @@ def _changes(name,
              maxdays=999999,
              inactdays=0,
              warndays=7,
-             expire=-1):
+             expire=-1,
+             win_homedrive=None,
+             win_profile=None,
+             win_logonscript=None,
+             win_description=None):
     '''
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
+
+    Updated in 2015.8.0 to include support for windows homedrive, profile,
+    logonscript, and description fields.
 
     Updated in 2014.7.0 to include support for shadow attributes, all
     attributes supported as integers only.
@@ -109,9 +120,10 @@ def _changes(name,
     if home:
         if lusr['home'] != home:
             change['home'] = home
-        if createhome and not os.path.isdir(home):
-            change['homeDoesNotExist'] = home
-
+    if createhome:
+        newhome = home if home else lusr['home']
+        if newhome is not None and not os.path.isdir(newhome):
+            change['homeDoesNotExist'] = newhome
     if shell:
         if lusr['shell'] != shell:
             change['shell'] = shell
@@ -137,6 +149,19 @@ def _changes(name,
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
+    if win_homedrive:
+        if lusr['homedrive'] != win_homedrive:
+            change['homedrive'] = win_homedrive
+    if win_profile:
+        if lusr['profile'] != win_profile:
+            change['profile'] = win_profile
+    if win_logonscript:
+        if lusr['logonscript'] != win_logonscript:
+            change['logonscript'] = win_logonscript
+    if win_description:
+        if lusr['description'] != win_description:
+            change['description'] = win_description
+
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
     if 'user.chroomnumber' in __salt__:
@@ -183,7 +208,11 @@ def present(name,
             maxdays=None,
             inactdays=None,
             warndays=None,
-            expire=None):
+            expire=None,
+            win_homedrive=None,
+            win_profile=None,
+            win_logonscript=None,
+            win_description=None):
     '''
     Ensure that the named user is present with the specified properties
 
@@ -195,7 +224,7 @@ def present(name,
         will be assigned
 
     gid
-        The default group id
+        The default group id. Also accepts group name.
 
     gid_from_name
         If True, the default group id will be set to the id of the group with
@@ -220,7 +249,10 @@ def present(name,
         the state, Default is ``True``.
 
     home
-        The location of the home directory to manage
+        The custom login directory of user. Uses default value of underlying
+        system if not set. Notice that this directory does not have to exists.
+        This also the location of the home directory to create if createhome is
+        set to True.
 
     createhome
         If False, the home directory will not be created if it doesn't exist.
@@ -230,6 +262,7 @@ def present(name,
     password
         A password hash to set for the user. This field is only supported on
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
+        For Windows this is the plain text password.
 
     .. versionchanged:: 0.16.0
        BSD support added.
@@ -276,7 +309,6 @@ def present(name,
     homephone
         The user's home phone number (not supported in MacOS)
 
-
     .. versionchanged:: 2014.7.0
        Shadow attribute support added.
 
@@ -304,23 +336,38 @@ def present(name,
     expire
         Date that account expires, represented in days since epoch (January 1,
         1970).
+
+    The below parameters apply to windows only:
+
+    win_homedrive (Windows Only)
+        The drive letter to use for the home directory. If not specified the
+        home directory will be a unc path. Otherwise the home directory will be
+        mapped to the specified drive. Must be a letter followed by a colon.
+        Because of the colon, the value must be surrounded by single quotes. ie:
+        - win_homedrive: 'U:
+    .. versionchanged:: 2015.8.0
+
+    win_profile (Windows Only)
+        The custom profile directory of the user. Uses default value of
+        underlying system if not set.
+    .. versionchanged:: 2015.8.0
+
+    win_logonscript (Windows Only)
+        The full path to the logon script to run when the user logs in.
+    .. versionchanged:: 2015.8.0
+
+    win_description (Windows Only)
+        A brief description of the purpose of the users account.
+    .. versionchanged:: 2015.8.0
     '''
-    try:
-        fullname = str(fullname) if fullname is not None else fullname
-    except UnicodeEncodeError:
-        fullname = fullname.encode('utf-8') if fullname is not None else fullname
-    try:
-        roomnumber = str(roomnumber) if roomnumber is not None else roomnumber
-    except UnicodeEncodeError:
-        roomnumber = roomnumber.encode('utf-8') if roomnumber is not None else roomnumber
-    try:
-        workphone = str(workphone) if workphone is not None else workphone
-    except UnicodeEncodeError:
-        workphone = workphone.encode('utf-8') if workphone is not None else workphone
-    try:
-        homephone = str(homephone) if homephone is not None else homephone
-    except UnicodeEncodeError:
-        homephone = homephone.encode('utf-8') if homephone is not None else homephone
+    if fullname is not None:
+        fullname = salt.utils.locales.sdecode(fullname)
+    if roomnumber is not None:
+        roomnumber = salt.utils.locales.sdecode(roomnumber)
+    if workphone is not None:
+        workphone = salt.utils.locales.sdecode(workphone)
+    if homephone is not None:
+        homephone = salt.utils.locales.sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},
@@ -374,19 +421,24 @@ def present(name,
                        roomnumber,
                        workphone,
                        homephone,
+                       loginclass,
                        date,
                        mindays,
                        maxdays,
                        inactdays,
                        warndays,
-                       expire)
+                       expire,
+                       win_homedrive,
+                       win_profile,
+                       win_logonscript,
+                       win_description)
 
     if changes:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in changes.items():
+            for key, val in six.iteritems(changes):
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
@@ -395,18 +447,21 @@ def present(name,
         if __grains__['kernel'] == 'OpenBSD':
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
-        for key, val in changes.items():
+        for key, val in six.iteritems(changes):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
             if key == 'date':
                 __salt__['shadow.set_date'](name, date)
                 continue
-            if key == 'home' or key == 'homeDoesNotExist':
-                if createhome:
-                    __salt__['user.chhome'](name, val, True)
-                else:
-                    __salt__['user.chhome'](name, val, False)
+            # run chhome once to avoid any possible bad side-effect
+            if key == 'home' and 'homeDoesNotExist' not in changes:
+                __salt__['user.chhome'](name, val, False)
+                continue
+            if key == 'homeDoesNotExist':
+                __salt__['user.chhome'](name, val, True)
+                if not os.path.isdir(val):
+                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)
@@ -422,6 +477,18 @@ def present(name,
                 continue
             if key == 'expire':
                 __salt__['shadow.set_expire'](name, expire)
+                continue
+            if key == 'win_homedrive':
+                __salt__['user.update'](name=name, homedrive=val)
+                continue
+            if key == 'win_profile':
+                __salt__['user.update'](name=name, profile=val)
+                continue
+            if key == 'win_logonscript':
+                __salt__['user.update'](name=name, logonscript=val)
+                continue
+            if key == 'win_description':
+                __salt__['user.update'](name=name, description=val)
                 continue
             if key == 'groups':
                 __salt__['user.ch{0}'.format(key)](
@@ -472,7 +539,11 @@ def present(name,
                            maxdays,
                            inactdays,
                            warndays,
-                           expire)
+                           expire,
+                           win_homedrive,
+                           win_profile,
+                           win_logonscript,
+                           win_description)
 
         if changes:
             ret['comment'] = 'These values could not be changed: {0}'.format(
@@ -491,20 +562,36 @@ def present(name,
             groups.extend(present_optgroups)
         elif present_optgroups:
             groups = present_optgroups[:]
-        if __salt__['user.add'](name,
-                                uid=uid,
-                                gid=gid,
-                                groups=groups,
-                                home=home,
-                                shell=shell,
-                                unique=unique,
-                                system=system,
-                                fullname=fullname,
-                                roomnumber=roomnumber,
-                                workphone=workphone,
-                                homephone=homephone,
-                                loginclass=loginclass,
-                                createhome=createhome):
+
+        # Setup params specific to Linux and Windows to be passed to the
+        # add.user function
+        if not salt.utils.is_windows():
+            params = {'name': name,
+                      'uid': uid,
+                      'gid': gid,
+                      'groups': groups,
+                      'home': home,
+                      'shell': shell,
+                      'unique': unique,
+                      'system': system,
+                      'fullname': fullname,
+                      'roomnumber': roomnumber,
+                      'workphone': workphone,
+                      'homephone': homephone,
+                      'createhome': createhome,
+                      'loginclass': loginclass}
+        else:
+            params = ({'name': name,
+                       'password': password,
+                       'fullname': fullname,
+                       'description': win_description,
+                       'groups': groups,
+                       'home': home,
+                       'homedrive': win_homedrive,
+                       'profile': win_profile,
+                       'logonscript': win_logonscript})
+
+        if __salt__['user.add'](**params):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
             if 'shadow.info' in __salt__ and not salt.utils.is_windows():
@@ -536,7 +623,7 @@ def present(name,
                         ret['result'] = False
                     ret['changes']['mindays'] = mindays
                 if maxdays:
-                    __salt__['shadow.set_maxdays'](name, mindays)
+                    __salt__['shadow.set_maxdays'](name, maxdays)
                     spost = __salt__['shadow.info'](name)
                     if spost['max'] != maxdays:
                         ret['comment'] = 'User {0} created but failed to set' \
@@ -559,7 +646,7 @@ def present(name,
                     if spost['warn'] != warndays:
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' warn days to' \
-                                         ' {1}'.format(name, mindays)
+                                         ' {1}'.format(name, warndays)
                         ret['result'] = False
                     ret['changes']['warndays'] = warndays
                 if expire:
@@ -571,6 +658,9 @@ def present(name,
                                          ' {1}'.format(name, expire)
                         ret['result'] = False
                     ret['changes']['expire'] = expire
+            elif salt.utils.is_windows():
+                if password and not empty_password:
+                    ret['changes']['passwd'] = password
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False

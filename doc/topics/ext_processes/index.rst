@@ -15,7 +15,7 @@ Processes started in this way will be restarted if they die and will be
 killed when the Salt Master is shut down.
 
 
-Example Configureation
+Example Configuration
 ======================
 
 Processes are declared in the master config file with the `ext_processes`
@@ -37,19 +37,19 @@ Example Process Class
     import time
     import logging
     from multiprocessing import Process
-    
+
     # Import Salt libs
     from salt.utils.event import SaltEvent
-    
-    
+
+
     log = logging.getLogger(__name__)
-    
-    
+
+
     class TestProcess(Process):
         def __init__(self, opts):
             Process.__init__(self)
             self.opts = opts
-    
+
         def run(self):
             self.event = SaltEvent('master', self.opts['sock_dir'])
             i = 0

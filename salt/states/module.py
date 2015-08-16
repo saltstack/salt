@@ -43,7 +43,16 @@ the execution module function being executed:
 
 Due to how the state system works, if a module function accepts an
 argument called, ``name``, then ``m_name`` must be used to specify that
-argument, to avoid a collision with the ``name`` argument. For example:
+argument, to avoid a collision with the ``name`` argument.
+
+Here is a list of keywords hidden by the state system, which must be prefixed
+with ``m_``:
+* fun
+* name
+* names
+* state
+
+For example:
 
 .. code-block:: yaml
 
@@ -62,14 +71,31 @@ arguments. For example:
         - func: network.ip_addrs
         - kwargs:
             interface: eth0
+
+.. code-block:: yaml
+
+cloud.create:
+  module.run:
+  - func: cloud.create
+  - provider: test-provider
+  - m_names:
+    - test-vlad
+  - kwargs: {
+        ssh_username: 'ubuntu',
+        image: 'ami-8d6d9daa',
+        securitygroup: 'default',
+        size: 'c3.large',
+        location: 'ap-northeast-1',
+        delvol_on_destroy: 'True'
+    }
+
 '''
 from __future__ import absolute_import
-# Import python libs
-import datetime
 
 # Import salt libs
 import salt.loader
 import salt.utils
+import salt.utils.jid
 from salt.ext.six.moves import range
 
 
@@ -130,7 +156,7 @@ def run(name, **kwargs):
         ret['comment'] = 'Module function {0} is set to execute'.format(name)
         return ret
 
-    aspec = salt.utils.get_function_argspec(__salt__[name])
+    aspec = salt.utils.args.get_function_argspec(__salt__[name])
     args = []
     defaults = {}
 
@@ -153,6 +179,9 @@ def run(name, **kwargs):
         elif arg == 'fun':
             if 'm_fun' in kwargs:
                 defaults[arg] = kwargs.pop('m_fun')
+        elif arg == 'state':
+            if 'm_state' in kwargs:
+                defaults[arg] = kwargs.pop('m_state')
         if arg in kwargs:
             defaults[arg] = kwargs.pop(arg)
     missing = set()
@@ -161,6 +190,10 @@ def run(name, **kwargs):
             rarg = 'm_name'
         elif arg == 'fun':
             rarg = 'm_fun'
+        elif arg == 'names':
+            rarg = 'm_names'
+        elif arg == 'state':
+            rarg = 'm_state'
         else:
             rarg = arg
         if rarg not in kwargs and arg not in defaults:
@@ -209,7 +242,7 @@ def run(name, **kwargs):
         ret['result'] = False
         return ret
     else:
-        if mret is not None:
+        if mret is not None or mret is not {}:
             ret['changes']['ret'] = mret
 
     if 'returner' in kwargs:
@@ -217,7 +250,7 @@ def run(name, **kwargs):
                 'id': __opts__['id'],
                 'ret': mret,
                 'fun': name,
-                'jid': '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())}
+                'jid': salt.utils.jid.gen_jid()}
         returners = salt.loader.returners(__opts__, __salt__)
         if kwargs['returner'] in returners:
             returners[kwargs['returner']](ret_ret)

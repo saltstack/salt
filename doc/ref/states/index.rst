@@ -113,19 +113,17 @@ Here is an example of a Salt State:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     salt:
-      pkg:
-        - latest
+      pkg.latest:
+        - name: salt
       service.running:
-        - require:
-          - file: /etc/salt/minion
-          - pkg: salt
         - names:
           - salt-master
           - salt-minion
+        - require:
+          - pkg: salt
         - watch:
           - file: /etc/salt/minion
 
@@ -179,6 +177,8 @@ The second glob contains a regular expression that will match all minions with
 an ID matching saltmaster.* and specifies that for those minions, the salt.master
 state should be applied.
 
+.. _reloading-modules:
+
 Reloading Modules
 -----------------
 
@@ -188,7 +188,7 @@ module requires the `pip`_ package for proper name and version parsing.
 
 In most of the common cases, Salt is clever enough to transparently reload the
 modules. For example, if you install a package, Salt reloads modules because
-some other module or state might require just that package which was installed.  
+some other module or state might require just that package which was installed.
 
 On some edge-cases salt might need to be told to reload the modules. Consider
 the following state file which we'll call ``pep8.sls``:
@@ -196,19 +196,19 @@ the following state file which we'll call ``pep8.sls``:
 .. code-block:: yaml
 
     python-pip:
-      cmd:
-        - run
+      cmd.run:
+        - name: |
+            easy_install --script-dir=/usr/bin -U pip
         - cwd: /
-        - name: easy_install --script-dir=/usr/bin -U pip
 
     pep8:
-      pip.installed
-      requires:
-        - cmd: python-pip
+      pip.installed:
+        - require:
+          - cmd: python-pip
 
 
-The above example installs `pip`_ using ``easy_install`` from `setuptools`_ and 
-installs `pep8`_ using :mod:`pip <salt.states.pip_state>`, which, as told 
+The above example installs `pip`_ using ``easy_install`` from `setuptools`_ and
+installs `pep8`_ using :mod:`pip <salt.states.pip_state>`, which, as told
 earlier, requires `pip`_ to be installed system-wide. Let's execute this state:
 
 .. code-block:: bash
@@ -268,7 +268,7 @@ state executed correctly.
 
 So how do we solve this *edge-case*? ``reload_modules``!
 
-``reload_modules`` is a boolean option recognized by salt on **all** available 
+``reload_modules`` is a boolean option recognized by salt on **all** available
 states which forces salt to reload its modules once a given state finishes.
 
 The modified state file would now be:
@@ -276,16 +276,16 @@ The modified state file would now be:
 .. code-block:: yaml
 
     python-pip:
-      cmd:
-        - run
+      cmd.run:
+        - name: |
+            easy_install --script-dir=/usr/bin -U pip
         - cwd: /
-        - name: easy_install --script-dir=/usr/bin -U pip
         - reload_modules: true
 
     pep8:
-      pip.installed
-      requires:
-        - cmd: python-pip
+      pip.installed:
+        - require:
+          - cmd: python-pip
 
 
 Let's run it, once:
@@ -318,4 +318,3 @@ The output is:
 .. _`pep8`: https://pypi.python.org/pypi/pep8
 .. _`setuptools`: https://pypi.python.org/pypi/setuptools
 .. _`runners`: /ref/runners
-

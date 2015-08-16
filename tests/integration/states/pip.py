@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import pwd
 import glob
@@ -18,6 +19,7 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
+    requires_system_grains,
     with_system_user
 )
 ensure_in_syspath('../../')
@@ -26,6 +28,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
@@ -47,9 +52,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertSaltFalseReturn(ret)
             self.assertSaltCommentRegexpMatches(
                 ret,
-                'Error installing \'supervisor\':(?:.*)'
-                '/tmp/pip-installed-errors(?:.*)'
-                '([nN]o such file or directory|not found)'
+                'Error installing \'supervisor\':'
             )
 
             # We now create the missing virtualenv
@@ -63,7 +66,12 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
 
-    def test_pip_installed_weird_install(self):
+    @requires_system_grains
+    def test_pip_installed_weird_install(self, grains=None):
+        # First, check to see if this is running on CentOS 5. If so, skip this test.
+        if grains['os'] in ('CentOS',) and grains['osrelease_info'][0] in (5,):
+            self.skipTest('This test does not run reliably on CentOS 5')
+
         ographite = '/opt/graphite'
         if os.path.isdir(ographite):
             self.skipTest(
@@ -95,7 +103,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
             # We cannot use assertInSaltComment here because we need to skip
             # some of the state return parts
-            for key in ret.keys():
+            for key in six.iterkeys(ret):
                 self.assertTrue(ret[key]['result'])
                 if ret[key]['comment'] == 'Created new virtualenv':
                     continue
@@ -182,7 +190,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         # ----- Using runas ------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -194,7 +202,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         # Using the package name.
         try:
             ret = self.run_state(
-                'pip.installed', name='pep8', runas=username, bin_env=venv_dir
+                'pip.installed', name='pep8', user=username, bin_env=venv_dir
             )
             self.assertSaltTrueReturn(ret)
             uinfo = pwd.getpwnam(username)
@@ -212,7 +220,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Using a requirements file
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -228,7 +236,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         try:
             ret = self.run_state(
-                'pip.installed', name='', runas=username, bin_env=venv_dir,
+                'pip.installed', name='', user=username, bin_env=venv_dir,
                 requirements='salt://issue-6912-requirements.txt'
             )
             self.assertSaltTrueReturn(ret)
@@ -249,7 +257,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # ----- Using user -------------------------------------------------->
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -279,7 +287,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
         # Using a requirements file
         venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], runas=username
+            'virtualenv.create', [venv_dir], user=username
         )
         if venv_create['retcode'] > 0:
             self.skipTest(
@@ -335,7 +343,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Let's install a fixed version pip over whatever pip was
             # previously installed
             ret = self.run_function(
-                'pip.install', ['pip==1.3.1'], upgrade=True,
+                'pip.install', ['pip==6.0'], upgrade=True,
                 ignore_installed=True,
                 bin_env=venv_dir
             )
@@ -350,15 +358,15 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 pprint.pprint(ret)
                 raise
 
-            # Le't make sure we have pip 1.3.1 installed
+            # Le't make sure we have pip 6.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
-                {'pip': '1.3.1'}
+                {'pip': '6.0'}
             )
 
             # Now the actual pip upgrade pip test
             ret = self.run_state(
-                'pip.installed', name='pip==1.4.1', upgrade=True,
+                'pip.installed', name='pip==6.0.7', upgrade=True,
                 bin_env=venv_dir
             )
             try:
@@ -366,7 +374,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 self.assertInSaltReturn(
                     'Installed',
                     ret,
-                    ['changes', 'pip==1.4.1']
+                    ['changes', 'pip==6.0.7']
                 )
             except AssertionError:
                 import pprint
@@ -390,7 +398,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             reqf.write('pep8\n')
 
         try:
-            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.run_function('virtualenv.create', [venv_dir])
 
             # The requirements file should not be found the base environment
             ret = self.run_state(
@@ -421,14 +429,38 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment(
-                'Successfully processed requirements file '
-                'salt://prod-env-requirements.txt', ret
+                'Requirements were already installed.',
+                ret
             )
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
             if os.path.isfile(requirements_file):
                 os.unlink(requirements_file)
+
+    def test_22359_pip_installed_unless_does_not_trigger_warnings(self):
+        # This test case should be moved to a format_call unit test specific to
+        # the state internal keywords
+        venv_dir = venv_dir = os.path.join(
+            integration.TMP, 'pip-installed-unless'
+        )
+        venv_create = self.run_function('virtualenv.create', [venv_dir])
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    venv_create
+                )
+            )
+
+        try:
+            ret = self.run_state(
+                'pip.installed', name='pep8', bin_env=venv_dir, unless='/bin/false'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertNotIn('warnings', next(ret.itervalues()))
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
 
 
 if __name__ == '__main__':

@@ -46,6 +46,13 @@ Here's a more complex example:
 
 .. code-blocK:: jinja
 
+    # Comments in yaml start with a hash symbol.
+    # Since jinja rendering occurs before yaml parsing, if you want to include jinja 
+    # in the comments you may need to escape them using 'jinja' comments to prevent
+    # jinja from trying to render something which is not well-defined jinja.
+    # e.g.
+    # {# iterate over the Three Stooges using a {% for %}..{% endfor %} loop 
+    # with the iterator variable {{ usr }} becoming the state ID. #}
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
       group:
@@ -88,8 +95,7 @@ The Salt module functions are also made available in the template context as
 .. code-block:: jinja
 
     moe:
-      user:
-        - present
+      user.present:
         - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
 Note that for the above example to work, ``some_group_that_exists`` must exist

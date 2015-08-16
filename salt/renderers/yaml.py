@@ -12,6 +12,7 @@ from yaml.scanner import ScannerError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
+import salt.utils.url
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
@@ -49,7 +50,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         try:
             data = load(yaml_data, Loader=get_yaml_loader(argline))
         except ScannerError as exc:
-            err_type = _ERROR_MAP.get(exc.problem, 'Unknown yaml render error')
+            err_type = _ERROR_MAP.get(exc.problem, exc.problem)
             line_num = exc.problem_mark.line + 1
             raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
         except ConstructorError as exc:
@@ -57,17 +58,16 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
-                    '{warn} found in salt://{sls} environment={saltenv}'.format(
-                        warn=item.message, sls=sls, saltenv=saltenv
+                    '{warn} found in {sls} environment={env}'.format(
+                        warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                     )
                 )
         if not data:
             data = {}
         else:
-            if isinstance(__salt__, dict):
-                if 'config.get' in __salt__:
-                    if __salt__['config.get']('yaml_utf8', False):
-                        data = _yaml_result_unicode_to_utf8(data)
+            if 'config.get' in __salt__:
+                if __salt__['config.get']('yaml_utf8', False):
+                    data = _yaml_result_unicode_to_utf8(data)
             elif __opts__.get('yaml_utf8'):
                 data = _yaml_result_unicode_to_utf8(data)
         log.debug('Results of YAML rendering: \n{0}'.format(data))
@@ -82,14 +82,7 @@ def _yaml_result_unicode_to_utf8(data):
     '''
     if isinstance(data, OrderedDict):
         for key, elt in six.iteritems(data):
-            if isinstance(elt, six.text_type):
-                # Here be dragons
-                data[key] = elt.encode('utf-8')
-            elif isinstance(elt, OrderedDict):
-                data[key] = _yaml_result_unicode_to_utf8(elt)
-            elif isinstance(elt, list):
-                for i in range(len(elt)):
-                    elt[i] = _yaml_result_unicode_to_utf8(elt[i])
+            data[key] = _yaml_result_unicode_to_utf8(elt)
     elif isinstance(data, list):
         for i in range(len(data)):
             data[i] = _yaml_result_unicode_to_utf8(data[i])

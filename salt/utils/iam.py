@@ -10,10 +10,14 @@ from __future__ import absolute_import
 import json
 import logging
 import time
-import requests
 import pprint
 from salt.ext.six.moves import range
 import salt.ext.six as six
+try:
+    import requests
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 
 log = logging.getLogger(__name__)
 
@@ -25,8 +29,13 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     '''
     for i in range(0, num_retries):
         try:
-            result = requests.get(url, timeout=timeout)
-            return result.text
+            result = requests.get(url, timeout=timeout, proxies={'http': ''})
+            if hasattr(result, 'text'):
+                return result.text
+            elif hasattr(result, 'content'):
+                return result.content
+            else:
+                return ''
         except requests.exceptions.HTTPError as exc:
             return ''
         except Exception as exc:
@@ -54,8 +63,25 @@ def _convert_key_to_str(key):
     return key
 
 
+def get_iam_region(version='latest', url='http://169.254.169.254',
+                   timeout=None, num_retries=5):
+    '''
+    Gets instance identity document and returns region
+    '''
+    instance_identity_url = '{0}/{1}/latest/dynamic/instance-identity/document'.format(url, version)
+
+    region = None
+    try:
+        document = _retry_get_url(instance_identity_url, num_retries, timeout)
+        region = json.loads(document)['region']
+    except (ValueError, TypeError, KeyError):
+        # JSON failed to decode
+        log.error('Failed to read region from instance metadata. Giving up.')
+    return region
+
+
 def get_iam_metadata(version='latest', url='http://169.254.169.254',
-        timeout=None, num_retries=5):
+                     timeout=None, num_retries=5):
     '''
     Grabs the first IAM role from this instances metadata if it exists.
     '''

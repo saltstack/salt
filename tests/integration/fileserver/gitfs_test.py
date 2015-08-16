@@ -2,6 +2,12 @@
 '''
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
+import os
+import logging
+import pwd
+import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -10,18 +16,12 @@ from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../..')
 
-# Import Python libs
-import copy
-import os
-import logging
-import pwd
-import shutil
-
 # Import salt libs
 import integration
 from salt.fileserver import gitfs
 
-gitfs.__opts__ = {'gitfs_remotes': [''],
+gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
+                  'gitfs_remotes': [''],
                   'gitfs_root': '',
                   'fileserver_backend': ['git'],
                   'gitfs_base': 'master',
@@ -35,7 +35,8 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'gitfs_insecure_auth': False,
                   'gitfs_privkey': '',
                   'gitfs_pubkey': '',
-                  'gitfs_passphrase': ''
+                  'gitfs_passphrase': '',
+                  'gitfs_ssl_verify': True
 }
 
 LOAD = {'saltenv': 'base'}
@@ -112,21 +113,6 @@ class GitFSTest(integration.ModuleCase):
             self.assertIn('testfile', ret)
 
     #@skipIf(True, 'Skipping tests temporarily')
-    def test_find_file(self):
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
-
-            path = os.path.join(self.master_opts['cachedir'],
-                                'gitfs/refs',
-                                LOAD['saltenv'],
-                                'testfile')
-
-            ret = gitfs.find_file('testfile')
-            expected_ret = {'path': path, 'rel': 'testfile'}
-            self.assertDictEqual(ret, expected_ret)
-
-    #@skipIf(True, 'Skipping tests temporarily')
     def test_dir_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
@@ -141,81 +127,6 @@ class GitFSTest(integration.ModuleCase):
                                          'sock_dir': self.master_opts['sock_dir']}):
             ret = gitfs.envs()
             self.assertIn('base', ret)
-
-    #@skipIf(True, 'Skipping tests temporarily')
-    def test_file_hash_sha1(self):
-        '''
-        NOTE: This test requires that gitfs.find_file is executed to ensure
-        that the file exists in the gitfs cache.
-        '''
-        target = 'testfile'
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
-            # This needs to be in its own patch because we are using a
-            # different hash_type for this test (sha1) from the one the master
-            # is using (md5), which will cause the find_file to fail when the
-            # repo URI is hashed to determine the cachedir.
-            gitfs.find_file(target)
-
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir'],
-                                         'hash_type': 'sha1'}):
-            tmp_load = copy.deepcopy(LOAD)
-            tmp_load['loc'] = 0
-            tmp_load['path'] = target
-            fnd = {'rel': target,
-                   'path': os.path.join(gitfs.__opts__['cachedir'],
-                                        'gitfs/refs',
-                                        tmp_load['saltenv'],
-                                        tmp_load['path'])}
-
-            ret = gitfs.file_hash(tmp_load, fnd)
-            self.assertDictEqual(
-                {'hash_type': 'sha1',
-                 'hsum': '6b18d04b61238ba13b5e4626b13ac5fb7432b5e2'},
-                ret)
-
-    #@skipIf(True, 'Skipping tests temporarily')
-    def test_serve_file(self):
-        '''
-        NOTE: This test requires that gitfs.find_file is executed to ensure
-        that the file exists in the gitfs cache.
-        '''
-        target = 'testfile'
-        with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
-                                         'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir'],
-                                         'file_buffer_size': 262144}):
-            tmp_load = copy.deepcopy(LOAD)
-            tmp_load['loc'] = 0
-            tmp_load['path'] = target
-            fnd = {'rel': target,
-                   'path': os.path.join(gitfs.__opts__['cachedir'],
-                                        'gitfs/refs',
-                                        tmp_load['saltenv'],
-                                        tmp_load['path'])}
-
-            gitfs.find_file(tmp_load['path'])
-            ret = gitfs.serve_file(tmp_load, fnd)
-            self.assertDictEqual({
-                'data': 'Scene 24\n\n \n  OLD MAN:  Ah, hee he he ha!\n  '
-                        'ARTHUR:  And this enchanter of whom you speak, he '
-                        'has seen the grail?\n  OLD MAN:  Ha ha he he he '
-                        'he!\n  ARTHUR:  Where does he live?  Old man, where '
-                        'does he live?\n  OLD MAN:  He knows of a cave, a '
-                        'cave which no man has entered.\n  ARTHUR:  And the '
-                        'Grail... The Grail is there?\n  OLD MAN:  Very much '
-                        'danger, for beyond the cave lies the Gorge\n      of '
-                        'Eternal Peril, which no man has ever crossed.\n  '
-                        'ARTHUR:  But the Grail!  Where is the Grail!?\n  OLD '
-                        'MAN:  Seek you the Bridge of Death.\n  ARTHUR:  The '
-                        'Bridge of Death, which leads to the Grail?\n  OLD '
-                        'MAN:  Hee hee ha ha!\n\n',
-                'dest': target},
-                ret)
-
 
 if __name__ == '__main__':
     integration.run_tests(GitFSTest)

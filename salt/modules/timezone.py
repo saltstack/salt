@@ -109,6 +109,12 @@ def set_zone(timezone):
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
+    if salt.utils.which('timedatectl'):
+        try:
+            __salt__['cmd.run']('timedatectl set-timezone {0}'.format(timezone))
+        except CommandExecutionError:
+            pass
+
     if 'Solaris' in __grains__['os_family']:
         zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
     else:
@@ -144,9 +150,10 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     '''
+    Compares the given timezone name with the system timezone name.
     Checks the hash sum between the given timezone, and the one set in
-    /etc/localtime. Returns True if they match, and False if not. Mostly useful
-    for running state checks.
+    /etc/localtime. Returns True if names and hash sums match, and False if not.
+    Mostly useful for running state checks.
 
     CLI Example:
 
@@ -156,6 +163,10 @@ def zone_compare(timezone):
     '''
     if 'Solaris' in __grains__['os_family']:
         return 'Not implemented for Solaris family'
+
+    curtzstring = get_zone()
+    if curtzstring != timezone:
+        return False
 
     tzfile = '/etc/localtime'
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)

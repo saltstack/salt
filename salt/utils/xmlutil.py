@@ -3,6 +3,9 @@
 Various XML utilities
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 
 def to_dict(xmltree):
     '''

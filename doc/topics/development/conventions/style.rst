@@ -195,12 +195,12 @@ This is a good way to import exceptions:
 Absolute Imports
 ----------------
 
-Although `absolute imports`_ seems like an awesome idea, please do not use it.  
-Extra care would be necessary all over salt's code in order for absolute 
-imports to work as supposed. Believe it, it has been tried before and, as a 
-tried example, by renaming ``salt.modules.sysmod`` to ``salt.modules.sys``, all 
-other salt modules which needed to import :mod:`sys<python2:sys>` would have to 
-also import :mod:`absolute_import<python2:__future__>`, which should be 
+Although `absolute imports`_ seems like an awesome idea, please do not use it.
+Extra care would be necessary all over salt's code in order for absolute
+imports to work as supposed. Believe it, it has been tried before and, as a
+tried example, by renaming ``salt.modules.sysmod`` to ``salt.modules.sys``, all
+other salt modules which needed to import :mod:`sys<python2:sys>` would have to
+also import :mod:`absolute_import<python2:__future__>`, which should be
 avoided.
 
 .. _`absolute imports`: http://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
@@ -256,12 +256,12 @@ instance:
 Line Length
 -----------
 
-For function definitions and function calls, Salt adheres to the PEP-8 
+For function definitions and function calls, Salt adheres to the PEP-8
 specification of at most 80 characters per line.
 
-Non function definitions or function calls, please adopt a soft limit of 120 
-characters per line. If breaking the line reduces the code readability, don't 
-break it. Still, try to avoid passing that 120 characters limit and remember, 
+Non function definitions or function calls, please adopt a soft limit of 120
+characters per line. If breaking the line reduces the code readability, don't
+break it. Still, try to avoid passing that 120 characters limit and remember,
 **vertical is better...  unless it isn't**
 
 

@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 # Import python libs
-import os
+from __future__ import absolute_import
+import sys
 
 # Import salt libs
 from salt.utils.winservice import Service, instart
 import salt
+import salt.defaults.exitcodes
 
 # Import third party libs
 import win32serviceutil
 import win32service
 import winerror
-
-# Import python libs
-import sys
 
 
 class MinionService(Service):
@@ -42,7 +39,7 @@ def _main():
     except win32service.error as details:
         if details[0] == winerror.ERROR_SERVICE_DOES_NOT_EXIST:
             instart(MinionService, servicename, 'Salt Minion')
-            sys.exit(os.EX_OK)
+            sys.exit(salt.defaults.exitcodes.EX_OK)
     if status[1] == win32service.SERVICE_RUNNING:
         win32serviceutil.StopServiceWithDeps(servicename)
         win32serviceutil.StartService(servicename)

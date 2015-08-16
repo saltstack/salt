@@ -2,9 +2,9 @@
 '''
 File server pluggable modules and generic backend functions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import errno
 import fnmatch
 import logging
@@ -13,9 +13,15 @@ import re
 import time
 
 # Import salt libs
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import parse_qs as _parse_qs  # pylint: disable=import-error,no-name-in-module
 import salt.loader
 import salt.utils
+import salt.utils.locales
+
+# Import 3rd-party libs
 import salt.ext.six as six
+
 
 log = logging.getLogger(__name__)
 
@@ -193,7 +199,7 @@ def diff_mtime_map(map1, map2):
     Is there a change to the mtime map? return a boolean
     '''
     # check if the mtimes are the same
-    if cmp(sorted(map1), sorted(map2)) != 0:
+    if sorted(map1) != sorted(map2):
         #log.debug('diff_mtime_map: the maps are different')
         return True
 
@@ -216,7 +222,9 @@ def reap_fileserver_cache_dir(cache_base, find_func):
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
             if len(dirs) == 0 and len(files) == 0:
-                os.rmdir(root)
+                # only remove if empty directory is older than 60s
+                if time.time() - os.path.getctime(root) > 60:
+                    os.rmdir(root)
                 continue
             # if not, lets check the files in the directory
             for file_ in files:
@@ -283,11 +291,22 @@ class Fileserver(object):
         ret = []
         if not back:
             back = self.opts['fileserver_backend']
-        if isinstance(back, str):
-            back = [back]
-        for sub in back:
-            if '{0}.envs'.format(sub) in self.servers:
-                ret.append(sub)
+        if isinstance(back, six.string_types):
+            back = back.split(',')
+        if all((x.startswith('-') for x in back)):
+            # Only subtracting backends from enabled ones
+            ret = self.opts['fileserver_backend']
+            for sub in back:
+                if '{0}.envs'.format(sub[1:]) in self.servers:
+                    ret.remove(sub[1:])
+                elif '{0}.envs'.format(sub[1:-2]) in self.servers:
+                    ret.remove(sub[1:-2])
+        else:
+            for sub in back:
+                if '{0}.envs'.format(sub) in self.servers:
+                    ret.append(sub)
+                elif '{0}.envs'.format(sub[:-2]) in self.servers:
+                    ret.append(sub[:-2])
         return ret
 
     def master_opts(self, load):
@@ -296,21 +315,107 @@ class Fileserver(object):
         '''
         return self.opts
 
+    def update_opts(self):
+        # This fix func monkey patching by pillar
+        for name, func in self.servers.items():
+            try:
+                if '__opts__' in func.__globals__:
+                    func.__globals__['__opts__'].update(self.opts)
+            except AttributeError:
+                pass
+
+    def clear_cache(self, back=None):
+        '''
+        Clear the cache of all of the fileserver backends that support the
+        clear_cache function or the named backend(s) only.
+        '''
+        back = self._gen_back(back)
+        cleared = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.clear_cache'.format(fsb)
+            if fstr in self.servers:
+                log.debug('Clearing {0} fileserver cache'.format(fsb))
+                failed = self.servers[fstr]()
+                if failed:
+                    errors.extend(failed)
+                else:
+                    cleared.append(
+                        'The {0} fileserver cache was successfully cleared'
+                        .format(fsb)
+                    )
+        return cleared, errors
+
+    def lock(self, back=None, remote=None):
+        '''
+        ``remote`` can either be a dictionary containing repo configuration
+        information, or a pattern. If the latter, then remotes for which the URL
+        matches the pattern will be locked.
+        '''
+        back = self._gen_back(back)
+        locked = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.lock'.format(fsb)
+            if fstr in self.servers:
+                msg = 'Setting update lock for {0} remotes'.format(fsb)
+                if remote:
+                    if not isinstance(remote, six.string_types):
+                        errors.append(
+                            'Badly formatted remote pattern \'{0}\''
+                            .format(remote)
+                        )
+                        continue
+                    else:
+                        msg += ' matching {0}'.format(remote)
+                log.debug(msg)
+                good, bad = self.servers[fstr](remote=remote)
+                locked.extend(good)
+                errors.extend(bad)
+        return locked, errors
+
+    def clear_lock(self, back=None, remote=None):
+        '''
+        Clear the update lock for the enabled fileserver backends
+
+        back
+            Only clear the update lock for the specified backend(s). The
+            default is to clear the lock for all enabled backends
+
+        remote
+            If not None, then any remotes which contain the passed string will
+            have their lock cleared.
+        '''
+        back = self._gen_back(back)
+        cleared = []
+        errors = []
+        for fsb in back:
+            fstr = '{0}.clear_lock'.format(fsb)
+            if fstr in self.servers:
+                msg = 'Clearing update lock for {0} remotes'.format(fsb)
+                if remote:
+                    msg += ' matching {0}'.format(remote)
+                log.debug(msg)
+                good, bad = self.servers[fstr](remote=remote)
+                cleared.extend(good)
+                errors.extend(bad)
+        return cleared, errors
+
     def update(self, back=None):
         '''
-        Update all of the file-servers that support the update function or the
-        named fileserver only.
+        Update all of the enabled fileserver backends which support the update
+        function, or
         '''
         back = self._gen_back(back)
         for fsb in back:
             fstr = '{0}.update'.format(fsb)
             if fstr in self.servers:
-                #log.debug('Updating fileserver cache')
+                log.debug('Updating {0} fileserver cache'.format(fsb))
                 self.servers[fstr]()
 
     def envs(self, back=None, sources=False):
         '''
-        Return the environments for the named backend or all back-ends
+        Return the environments for the named backend or all backends
         '''
         back = self._gen_back(back)
         ret = set()
@@ -349,20 +454,14 @@ class Fileserver(object):
             return fnd
         if '../' in path:
             return fnd
-        if path.startswith('|'):
-            # The path arguments are escaped
-            path = path[1:]
+        if salt.utils.url.is_escaped(path):
+            # don't attempt to find URL query arguements in the path
+            path = salt.utils.url.unescape(path)
         else:
-            if '?' in path:
-                hcomps = path.split('?')
-                path = hcomps[0]
-                comps = hcomps[1].split('&')
-                for comp in comps:
-                    if '=' not in comp:
-                        # Invalid option, skip it
-                        continue
-                    args = comp.split('=', 1)
-                    kwargs[args[0]] = args[1]
+            split_path = _urlparse(path)
+            path = split_path.path
+            query = _parse_qs(split_path.query)
+            kwargs.update(query)
         if 'env' in kwargs:
             salt.utils.warn_until(
                 'Boron',
@@ -446,10 +545,12 @@ class Fileserver(object):
         ret = set()
         if 'saltenv' not in load:
             return []
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.file_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # upgrade all set elements to a common encoding
+        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -476,6 +577,8 @@ class Fileserver(object):
             fstr = '{0}.file_list_emptydirs'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # upgrade all set elements to a common encoding
+        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -498,10 +601,12 @@ class Fileserver(object):
         ret = set()
         if 'saltenv' not in load:
             return []
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             fstr = '{0}.dir_list'.format(fsb)
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
+        # upgrade all set elements to a common encoding
+        ret = [salt.utils.locales.sdecode(f) for f in ret]
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
@@ -524,15 +629,19 @@ class Fileserver(object):
         ret = {}
         if 'saltenv' not in load:
             return {}
-        for fsb in self._gen_back(None):
+        for fsb in self._gen_back(load.pop('fsbackend', None)):
             symlstr = '{0}.symlink_list'.format(fsb)
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
+        # upgrade all set elements to a common encoding
+        ret = dict([
+            (salt.utils.locales.sdecode(x), salt.utils.locales.sdecode(y)) for x, y in ret.items()
+        ])
         # some *fs do not handle prefix. Ensure it is filtered
         prefix = load.get('prefix', '').strip('/')
         if prefix != '':
             ret = dict([
-                (x, y) for x, y in ret.items() if x.startswith(prefix)
+                (x, y) for x, y in six.iteritems(ret) if x.startswith(prefix)
             ])
         return ret
 

@@ -27,17 +27,15 @@ that can solve many specific problems in an infrastructure.
 
 The backbone of Salt is the remote execution engine, which creates a high-speed,
 secure and bi-directional communication net for groups of systems. On top of this
-communication system, Salt provides an extremely fast, flexible and easy-to-use
+communication system, Salt provides an extremely fast, flexible, and easy-to-use
 configuration management system called ``Salt States``.
 
 Installing Salt
 ---------------
 
-SaltStack has been made to be very easy to install and get started. Setting up
-Salt should be as easy as installing Salt via distribution packages on Linux or
-via the Windows installer. The :doc:`installation documents
-</topics/installation/index>` cover platform-specific installation in depth.
-
+SaltStack has been made to be very easy to install and get started. The
+:doc:`installation documents </topics/installation/index>` contain instructions
+for all supported platforms.
 
 Starting Salt
 -------------
@@ -184,7 +182,7 @@ master. To list the keys that are on the master:
 
     salt-key -L
 
-The keys that have been rejected, accepted and pending acceptance are listed.
+The keys that have been rejected, accepted, and pending acceptance are listed.
 The easiest way to accept the minion key is to accept all pending keys:
 
 .. code-block:: bash
@@ -193,14 +191,18 @@ The easiest way to accept the minion key is to accept all pending keys:
 
 .. note::
 
-    Keys should be verified! The secure thing to do before accepting a key is
-    to run ``salt-key -f minion-id`` to print the fingerprint of the minion's
-    public key. This fingerprint can then be compared against the fingerprint
+    Keys should be verified! Print the master key fingerprint by running ``salt-key -F master``
+    on the Salt master. Copy the ``master.pub`` fingerprint from the Local Keys section,
+    and then set this value as the :conf_minion:`master_finger` in the minion configuration
+    file. Restart the Salt minion.
+
+    On the minion, run ``salt-key -f minion-id`` to print the fingerprint of the
+    minion's public key. This fingerprint can then be compared against the fingerprint
     generated on the minion.
 
     On the master:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         # salt-key -f foo.domain.com
         Unaccepted Keys:
@@ -208,19 +210,19 @@ The easiest way to accept the minion key is to accept all pending keys:
 
     On the minion:
 
-    .. code-block: bash
+    .. code-block:: bash
 
         # salt-call key.finger --local
         local:
             39:f9:e4:8a:aa:74:8d:52:1a:ec:92:03:82:09:c8:f9
-            
+
     If they match, approve the key with ``salt-key -a foo.domain.com``.
 
 
 Sending the First Commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now that the minion is connected to the master and authenticated, the master 
+Now that the minion is connected to the master and authenticated, the master
 can start to command the minion.
 
 Salt commands allow for a vast set of functions to be executed and for
@@ -398,7 +400,7 @@ Targeting
 
 Salt allows for minions to be targeted based on a wide range of criteria.  The
 default targeting system uses globular expressions to match minions, hence if
-there are minions named ``larry1``, ``larry2``, ``curly1`` and ``curly2``, a
+there are minions named ``larry1``, ``larry2``, ``curly1``, and ``curly2``, a
 glob of ``larry*`` will match ``larry1`` and ``larry2``, and a glob of ``*1``
 will match ``larry1`` and ``curly1``.
 
@@ -443,7 +445,7 @@ the command line:
     salt '*' pkg.install vim
 
 This example passes the argument ``vim`` to the pkg.install function. Since
-many functions can accept more complex input then just a string, the arguments
+many functions can accept more complex input than just a string, the arguments
 are parsed through YAML, allowing for more complex data to be sent on the
 command line:
 
@@ -519,7 +521,7 @@ Now, to beef up the vim SLS formula, a ``vimrc`` can be added:
 .. code-block:: yaml
 
     vim:
-      pkg.installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -553,10 +555,8 @@ make an nginx subdirectory and add an init.sls file:
 .. code-block:: yaml
 
     nginx:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: nginx
 
@@ -638,9 +638,8 @@ Getting Deeper Into States
 Two more in-depth States tutorials exist, which delve much more deeply into States
 functionality.
 
-1. Thomas' original states tutorial, :doc:`How Do I Use Salt
-   States?</topics/tutorials/starting_states>`, covers much more to get off the
-   ground with States.
+1. :doc:`How Do I Use Salt States? </topics/tutorials/starting_states>`, covers much
+   more to get off the ground with States.
 
 2. The :doc:`States Tutorial</topics/tutorials/states_pt1>` also provides a
    fantastic introduction.

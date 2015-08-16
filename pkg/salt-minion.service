@@ -4,7 +4,9 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
+LimitNOFILE=8192
 ExecStart=/usr/bin/salt-minion
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target

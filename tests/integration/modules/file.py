@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import getpass
 import grp
 import pwd
@@ -159,7 +160,7 @@ class FileModuleTest(integration.ModuleCase):
     def test_cannot_remove(self):
         ret = self.run_function('file.remove', arg=['tty'])
         self.assertEqual(
-            'ERROR executing \'file.remove\': File path must be absolute.', ret
+            'ERROR executing \'file.remove\': File path must be absolute: tty', ret
         )
 
     def test_source_list_for_single_file_returns_unchanged(self):

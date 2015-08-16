@@ -13,6 +13,7 @@ import logging
 import subprocess
 
 # Import salt libs
+import salt.defaults.exitcodes
 import salt.utils
 import salt.utils.nb_popen
 import salt.utils.vt
@@ -56,7 +57,8 @@ class Shell(object):
             timeout=None,
             sudo=False,
             tty=False,
-            mods=None):
+            mods=None,
+            identities_only=False):
         self.opts = opts
         self.host = host
         self.user = user
@@ -67,6 +69,7 @@ class Shell(object):
         self.sudo = sudo
         self.tty = tty
         self.mods = mods
+        self.identities_only = identities_only
 
     def get_error(self, errstr):
         '''
@@ -93,11 +96,14 @@ class Shell(object):
             options.append('PasswordAuthentication=yes')
         else:
             options.append('PasswordAuthentication=no')
-        if self.opts['_ssh_version'] > '4.9':
+        if self.opts.get('_ssh_version', (0,)) > (4, 9):
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
         known_hosts = self.opts.get('known_hosts_file')
         if known_hosts and os.path.isfile(known_hosts):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
@@ -107,6 +113,8 @@ class Shell(object):
             options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
             options.append('User={0}'.format(self.user))
+        if self.identities_only:
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
@@ -123,11 +131,14 @@ class Shell(object):
         options = ['ControlMaster=auto',
                    'StrictHostKeyChecking=no',
                    ]
-        if self.opts['_ssh_version'] > '4.9':
+        if self.opts['_ssh_version'] > (4, 9):
             options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
 
         if self.passwd:
             options.extend(['PasswordAuthentication=yes',
@@ -142,6 +153,8 @@ class Shell(object):
             options.append('Port={0}'.format(self.port))
         if self.user:
             options.append('User={0}'.format(self.user))
+        if self.identities_only:
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
@@ -186,7 +199,7 @@ class Shell(object):
         Execute ssh-copy-id to plant the id file on the target
         '''
         stdout, stderr, retcode = self._run_cmd(self._copy_id_str_old())
-        if os.EX_OK != retcode and stderr.startswith('Usage'):
+        if salt.defaults.exitcodes.EX_OK != retcode and stderr.startswith('Usage'):
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
@@ -198,6 +211,10 @@ class Shell(object):
         # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
         # need to deliver the SHIM to the remote host and execute it there
 
+        opts = ''
+        tty = self.tty
+        if ssh != 'ssh':
+            tty = False
         if self.passwd:
             opts = self._passwd_opts()
         if self.priv:
@@ -205,7 +222,7 @@ class Shell(object):
         return "{0} {1} {2} {3} {4}".format(
                 ssh,
                 '' if ssh == 'scp' else self.host,
-                '-t -t' if self.tty else '',
+                '-t -t' if tty else '',
                 opts,
                 cmd)
 
@@ -281,15 +298,22 @@ class Shell(object):
         logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ('*' * 6))
-        log.debug(logmsg)
+        if 'decode("base64")' in logmsg:
+            log.debug('Executed SHIM command. Command logged to TRACE')
+            log.trace(logmsg)
+        else:
+            log.debug(logmsg)
 
         ret = self._run_cmd(cmd)
         return ret
 
-    def send(self, local, remote):
+    def send(self, local, remote, makedirs=False):
         '''
         scp a file or files to a remote system
         '''
+        if makedirs:
+            self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
+
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
 
@@ -309,7 +333,9 @@ class Shell(object):
                 cmd,
                 shell=True,
                 log_stdout=True,
+                log_stdout_level='trace',
                 log_stderr=True,
+                log_stderr_level='trace',
                 stream_stdout=False,
                 stream_stderr=False)
         sent_passwd = 0
@@ -346,7 +372,7 @@ class Shell(object):
                 elif stdout and stdout.endswith('_||ext_mods||_'):
                     mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
-                time.sleep(0.5)
+                time.sleep(0.01)
             return ret_stdout, ret_stderr, term.exitstatus
         finally:
             term.close(terminate=True, kill=True)

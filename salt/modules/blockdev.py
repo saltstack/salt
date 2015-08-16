@@ -3,12 +3,14 @@
 Module for managing block devices
 
 .. versionadded:: 2014.7.0
+.. deprecated:: Boron
+   Merged to `disk` module
+
 '''
 from __future__ import absolute_import
 
 # Import python libs
 import logging
-import subprocess
 
 # Import salt libs
 import salt.utils
@@ -29,6 +31,9 @@ def tune(device, **kwargs):
     '''
     Set attributes for the specified device
 
+    .. deprecated:: Boron
+       Use `disk.tune`
+
     CLI Example:
 
     .. code-block:: bash
@@ -41,30 +46,19 @@ def tune(device, **kwargs):
     See the ``blockdev(8)`` manpage for a more complete description of these
     options.
     '''
-
-    kwarg_map = {'read-ahead': 'setra',
-                 'filesystem-read-ahead': 'setfra',
-                 'read-only': 'setro',
-                 'read-write': 'setrw'}
-    opts = ''
-    args = []
-    for key in kwargs:
-        if key in kwarg_map:
-            switch = kwarg_map[key]
-            if key != 'read-write':
-                args.append(switch.replace('set', 'get'))
-            if kwargs[key] == 'True':
-                opts += '--{0} '.format(key)
-            else:
-                opts += '--{0} {1} '.format(switch, kwargs[key])
-    cmd = 'blockdev {0}{1}'.format(opts, device)
-    out = __salt__['cmd.run'](cmd).splitlines()
-    return dump(device, args)
+    salt.utils.warn_until(
+        'Carbon',
+        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+    )
+    return __salt__['disk.tune'](device, **kwargs)
 
 
 def wipe(device):
     '''
     Remove the filesystem information
+
+    .. deprecated:: Boron
+       Use `disk.tune`
 
     CLI Example:
 
@@ -72,60 +66,46 @@ def wipe(device):
 
         salt '*' blockdev.wipe /dev/sda1
     '''
-
-    cmd = 'wipefs {0}'.format(device)
-    try:
-        out = __salt__['cmd.run_all'](cmd)
-    except subprocess.CalledProcessError as err:
-        return False
-    if out['retcode'] == 0:
-        return True
+    salt.utils.warn_until(
+        'Carbon',
+        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+    )
+    return __salt__['disk.wipe'](device)
 
 
 def dump(device, args=None):
     '''
     Return all contents of dumpe2fs for a specified device
 
+    .. deprecated:: Boron
+       Use `disk.dump`
+
     CLI Example:
     .. code-block:: bash
 
         salt '*' extfs.dump /dev/sda1
     '''
-    cmd = 'blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra {0}'.format(device)
-    ret = {}
-    opts = [c[2:] for c in cmd.split() if c.startswith('--')]
-    out = __salt__['cmd.run_all'](cmd)
-    if out['retcode'] == 0:
-        lines = [line for line in out['stdout'].splitlines() if line]
-        count = 0
-        for line in lines:
-            ret[opts[count]] = line
-            count = count+1
-        if args:
-            temp_ret = {}
-            for arg in args:
-                temp_ret[arg] = ret[arg]
-            return temp_ret
-        else:
-            return ret
-    else:
-        return False
+    salt.utils.warn_until(
+        'Carbon',
+        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+    )
+    return __salt__['disk.dump'](device, args)
 
 
 def resize2fs(device):
     '''
     Resizes the filesystem.
 
+    .. deprecated:: Boron
+       Use `disk.resize2fs`
+
     CLI Example:
     .. code-block:: bash
 
         salt '*' blockdev.resize2fs /dev/sda1
     '''
-    ret = {}
-    cmd = 'resize2fs {0}'.format(device)
-    try:
-        out = __salt__['cmd.run_all'](cmd)
-    except subprocess.CalledProcessError as err:
-        return False
-    if out['retcode'] == 0:
-        return True
+    salt.utils.warn_until(
+        'Carbon',
+        'The blockdev module has been merged with the disk module, and will disappear in Carbon'
+    )
+    return __salt__['disk.resize2fs'](device)

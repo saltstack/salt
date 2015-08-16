@@ -6,7 +6,10 @@ master to the minion and vice-versa.
 from __future__ import absolute_import
 # Import Python libs
 import collections
+import logging
 import os
+import sys
+import traceback
 
 # Import salt libs
 import salt.crypt
@@ -16,6 +19,7 @@ import salt.transport
 import salt.ext.six as six
 
 __proxyenabled__ = ['*']
+log = logging.getLogger(__name__)
 
 
 def _dict_subset(keys, master_dict):
@@ -36,13 +40,13 @@ def fire_master(data, tag, preload=None):
         salt '*' event.fire_master '{"data":"my event data"}' 'tag'
     '''
     if __opts__['transport'] == 'raet':
-        sreq = salt.transport.Channel.factory(__opts__)
+        channel = salt.transport.Channel.factory(__opts__)
         load = {'id': __opts__['id'],
                 'tag': tag,
                 'data': data,
                 'cmd': '_minion_event'}
         try:
-            sreq.send(load)
+            channel.send(load)
         except Exception:
             pass
         return True
@@ -58,9 +62,9 @@ def fire_master(data, tag, preload=None):
                 'tok': auth.gen_token('salt'),
                 'cmd': '_minion_event'})
 
-        sreq = salt.transport.Channel.factory(__opts__)
+        channel = salt.transport.Channel.factory(__opts__)
         try:
-            sreq.send(load)
+            channel.send(load)
         except Exception:
             pass
         return True
@@ -68,9 +72,12 @@ def fire_master(data, tag, preload=None):
         # Usually, we can send the event via the minion, which is faster
         # because it is already authenticated
         try:
-            return salt.utils.event.MinionEvent(__opts__).fire_event(
+            return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
                 {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
         except Exception:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            log.debug(lines)
             return False
 
 
@@ -93,6 +100,9 @@ def fire(data, tag):
 
         return event.fire_event(data, tag)
     except Exception:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        log.debug(lines)
         return False
 
 

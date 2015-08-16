@@ -52,7 +52,7 @@ Or to explicitly list hosts, salt can take a list:
 More Powerful Targets
 ---------------------
 
-The simple target specifications, glob, regex and list will cover many use
+The simple target specifications, glob, regex, and list will cover many use
 cases, and for some will cover all use cases, but more powerful options exist.
 
 Targeting with Grains
@@ -136,8 +136,8 @@ shorthand for having to type out complicated compound expressions.
     nodegroups:
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
+      group3: 'G@os:Debian and N@group1'
 
-More info on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
 Calling the Function
 --------------------
@@ -296,3 +296,9 @@ salt-api
 .. toctree::
 
     salt-api
+
+spm
+===
+.. toctree::
+
+    spm

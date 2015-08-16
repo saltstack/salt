@@ -29,7 +29,7 @@ distribution.
 Single Package
 ==============
 
-Shipping Salt as a single package, where the minion, master and all tools are
+Shipping Salt as a single package, where the minion, master, and all tools are
 together is perfectly acceptable and practiced by distributions such as
 FreeBSD.
 
@@ -195,7 +195,6 @@ Depends
 ~~~~~~~
 
 - `Salt Common`
-- `sshpass`
 - `Python MessagePack` (Messagepack C lib, or msgpack-pure)
 
 Salt Cloud
@@ -220,7 +219,6 @@ Depends
 ~~~~~~~
 
 - `Salt Common`
-- `sshpass`
 - `apache libcloud` >= 0.14.0
 
 Salt Doc

@@ -34,8 +34,10 @@ Options
 
     By default as of version 0.9.8 the salt command returns data to the
     console as it is received from minions, but previous releases would return
-    data only after all data was received. To only return the data with a hard
-    timeout and after all minions have returned then use the static option.
+    data only after all data was received. Use the static option to only return
+    the data with a hard timeout and after all minions have returned.
+    Without the static option, you will get a separate JSON string per minion
+    which makes JSON output invalid as a whole.
 
 .. option:: --async
 
@@ -46,8 +48,9 @@ Options
 
     .. versionadded:: 0.17
 
-    Choose the format of the state output. The options are `full`,
-    `terse`, `mixed`, `changes` and `filter`. Default: full
+    Override the configured ``state_output`` value for minion output. One of
+    ``full``, ``terse``, ``mixed``, ``changes`` or ``filter``.  Default:
+    ``full``.
 
 .. option:: --subset=SUBSET
 
@@ -76,7 +79,7 @@ Options
 
     Pass in an external authentication medium to validate against. The
     credentials will be prompted for. The options are `auto`,
-    `keystone`, `ldap`, `pam` and `stormpath`. Can be used with the -T
+    `keystone`, `ldap`, `pam`, and `stormpath`. Can be used with the -T
     option.
 
 .. option:: -T, --make-token
@@ -93,7 +96,7 @@ Options
     The options are `carbon`, `cassandra`, `couchbase`, `couchdb`,
     `elasticsearch`, `etcd`, `hipchat`, `local`, `local_cache`,
     `memcache`, `mongo`, `mysql`, `odbc`, `postgres`, `redis`,
-    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog` and `xmpp`.
+    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog`, and `xmpp`.
 
 .. option:: -d, --doc, --documentation
 

@@ -42,20 +42,24 @@ XMPP settings may also be configured as::
         profile: xmpp_profile
         recipient: someone-else@xmpp.example.com
 
-  To use the XMPP returner, append '--return xmpp' to the salt command. ex:
+To use the XMPP returner, append '--return xmpp' to the salt command.
 
-  .. code-block:: bash
+.. code-block:: bash
 
     salt '*' test.ping --return xmpp
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return xmpp --return_config alternative
 '''
 from __future__ import absolute_import
 
 # Import python libs
-import distutils.version
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import pprint
 
@@ -63,7 +67,7 @@ import salt.returners
 
 HAS_LIBS = False
 try:
-    from sleekxmpp import ClientXMPP as _ClientXMPP
+    from sleekxmpp import ClientXMPP as _ClientXMPP  # pylint: disable=import-error
     HAS_LIBS = True
 except ImportError:
     class _ClientXMPP(object):

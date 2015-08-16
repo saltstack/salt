@@ -1,7 +1,24 @@
 # -*- coding: utf-8 -*-
 '''
-Use varstack data as a Pillar source
+Use `Varstack <https://github.com/conversis/varstack>`_ data as a Pillar source
+
+Configuring Varstack
+====================
+
+Using varstack in Salt is fairly simple. Just put the following into the
+config file of your master:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - varstack: /etc/varstack.yaml
+
+Varstack will then use /etc/varstack.yaml to determine which configuration
+data to return as pillar information. From there you can take a look at the
+`README <https://github.com/conversis/varstack/blob/master/README.md>`_ of
+varstack on how this file is evaluated.
 '''
+
 from __future__ import absolute_import
 
 # Import python libs

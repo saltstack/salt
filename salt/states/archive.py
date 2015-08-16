@@ -4,12 +4,19 @@ Extract an archive
 
 .. versionadded:: 2014.1.0
 '''
-from __future__ import absolute_import
 
-import logging
+# Import Python libs
+from __future__ import absolute_import
 import os
+import logging
 import tarfile
 from contextlib import closing
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# remove after archive_user deprecation.
+from salt.utils import warn_until
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +35,9 @@ def __virtual__():
 def extracted(name,
               source,
               archive_format,
+              archive_user=None,
+              user=None,
+              group=None,
               tar_options=None,
               source_hash=None,
               if_missing=None,
@@ -45,11 +55,12 @@ def extracted(name,
         instead.  If ``name`` exists, it will assume the archive was previously
         extracted successfully and will not extract it again.
 
+    Example, tar with flag for lmza compression:
+
     .. code-block:: yaml
 
         graylog2-server:
-          archive:
-            - extracted
+          archive.extracted:
             - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
@@ -57,16 +68,19 @@ def extracted(name,
             - archive_format: tar
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
+    Example, tar with flag for verbose output:
+
     .. code-block:: yaml
 
         graylog2-server:
-          archive:
-            - extracted
+          archive.extracted:
             - name: /opt/
             - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.gz
             - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
             - archive_format: tar
             - tar_options: v
+            - user: root
+            - group: root
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
@@ -81,6 +95,18 @@ def extracted(name,
 
     archive_format
         tar, zip or rar
+
+    archive_user
+        The user to own each extracted file.
+
+        .. deprecated:: 2014.7.2
+            replaced by standardized `user` parameter.
+
+    user
+        The user to own each extracted file.
+
+    group
+        The group to own each extracted file.
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
@@ -111,6 +137,16 @@ def extracted(name,
             archive_format, ','.join(valid_archives))
         return ret
 
+    # remove this whole block after formal deprecation.
+    if archive_user is not None:
+        warn_until(
+          'Boron',
+          'Passing \'archive_user\' is deprecated.'
+          'Pass \'user\' instead.'
+        )
+        if user is None:
+            user = archive_user
+
     if not name.endswith('/'):
         name += '/'
 
@@ -138,18 +174,6 @@ def extracted(name,
             return ret
 
         log.debug('Archive file {0} is not in cache, download it'.format(source))
-        data = {
-            filename: {
-                'file': [
-                    'managed',
-                    {'name': filename},
-                    {'source': source},
-                    {'source_hash': source_hash},
-                    {'makedirs': True},
-                    {'saltenv': __env__}
-                ]
-            }
-        }
         file_result = __salt__['state.single']('file.managed',
                                                filename,
                                                source=source,
@@ -159,7 +183,7 @@ def extracted(name,
         log.debug('file.managed: {0}'.format(file_result))
         # get value of first key
         try:
-            file_result = file_result[next(file_result.iterkeys())]
+            file_result = file_result[next(six.iterkeys(file_result))]
         except AttributeError:
             pass
 
@@ -180,32 +204,62 @@ def extracted(name,
             source, name)
         return ret
 
-    __salt__['file.makedirs'](name)
+    __salt__['file.makedirs'](name, user=user, group=group)
 
-    if archive_format in ('zip', 'rar'):
-        log.debug('Extract {0} in {1}'.format(filename, name))
-        files = __salt__['archive.un{0}'.format(archive_format)](filename,
-                                                                 name)
+    log.debug('Extract {0} in {1}'.format(filename, name))
+    if archive_format == 'zip':
+        files = __salt__['archive.cmd_unzip'](filename, name)
+    elif archive_format == 'rar':
+        files = __salt__['archive.unrar'](filename, name)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
                 files = tar.getnames()
                 tar.extractall(name)
         else:
-            log.debug('Untar {0} in {1}'.format(filename, name))
+            tar_opts = tar_options.split(' ')
 
-            results = __salt__['cmd.run_all']('tar x{0} -f {1!r}'.format(
-                tar_options, filename), cwd=name)
+            tar_cmd = ['tar']
+            tar_shortopts = 'x'
+            tar_longopts = []
+
+            for position, opt in enumerate(tar_opts):
+                if opt.startswith('-'):
+                    tar_longopts.append(opt)
+                else:
+                    if position > 0:
+                        tar_longopts.append(opt)
+                    else:
+                        append_opt = opt
+                        append_opt = append_opt.replace('x', '').replace('f', '')
+                        tar_shortopts = tar_shortopts + append_opt
+
+            tar_cmd.append(tar_shortopts)
+            tar_cmd.extend(tar_longopts)
+            tar_cmd.extend(['-f', filename])
+
+            results = __salt__['cmd.run_all'](tar_cmd, cwd=name, python_shell=False)
             if results['retcode'] != 0:
                 ret['result'] = False
                 ret['changes'] = results
                 return ret
-            if __salt__['cmd.retcode']('tar --version | grep bsdtar') == 0:
+            if 'bsdtar' in __salt__['cmd.run']('tar --version', python_shell=False):
                 files = results['stderr']
             else:
                 files = results['stdout']
             if not files:
                 files = 'no tar output so far'
+
+    # Recursively set user and group ownership of files after extraction.
+    # Note: We do this here because we might not have access to the cachedir.
+    if user or group:
+        dir_result = __salt__['state.single']('file.directory',
+                                               name,
+                                               user=user,
+                                               group=group,
+                                               recurse=['user', 'group'])
+        log.debug('file.directory: {0}'.format(dir_result))
+
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]

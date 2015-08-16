@@ -12,11 +12,11 @@
 %{!?pythonpath: %global pythonpath %(%{__python} -c "import os, sys; print(os.pathsep.join(x for x in sys.path if x))")}
 
 %define _salttesting SaltTesting
-%define _salttesting_ver 2014.8.5
+%define _salttesting_ver 2015.2.16
 
 Name: salt
-Version: 2014.1.13
-Release: 1%{?dist}
+Version: 2014.7.2
+Release: 2%{?dist}
 Summary: A parallel remote execution system
 
 Group:   System Environment/Daemons
@@ -27,11 +27,14 @@ Source1: https://pypi.python.org/packages/source/S/%{_salttesting}/%{_salttestin
 Source2: %{name}-master
 Source3: %{name}-syndic
 Source4: %{name}-minion
-Source5: %{name}-master.service
-Source6: %{name}-syndic.service
-Source7: %{name}-minion.service
-Source8: README.fedora
-Source9: logrotate.salt
+Source5: %{name}-api
+Source6: %{name}-master.service
+Source7: %{name}-syndic.service
+Source8: %{name}-minion.service
+Source9: %{name}-api.service
+Source10: README.fedora
+Source11: logrotate.salt
+Patch0:  skip_tests_%{version}.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
@@ -42,52 +45,52 @@ Requires: dmidecode
 
 Requires: pciutils
 Requires: yum-utils
-Requires: sshpass
 
 %if 0%{?with_python26}
-BuildRequires: python26-crypto
-BuildRequires: python26-devel
-BuildRequires: python26-jinja2
-BuildRequires: python26-m2crypto
-BuildRequires: python26-msgpack
-BuildRequires: python26-zmq
-BuildRequires: python26-PyYAML
 
+BuildRequires: python26-devel
 Requires: python26-crypto
 Requires: python26-jinja2
 Requires: python26-m2crypto
 Requires: python26-msgpack
 Requires: python26-PyYAML
+Requires: python26-requests
 Requires: python26-zmq
 
 %else
 
 %if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
+BuildRequires: m2crypto
+BuildRequires: python-crypto
+BuildRequires: python-jinja2
+BuildRequires: python-msgpack
+BuildRequires: python-pip
+BuildRequires: python-zmq
+BuildRequires: PyYAML
+BuildRequires: python-requests
 BuildRequires: python-unittest2
 # this BR causes windows tests to happen
 # clearly, that's not desired
 # https://github.com/saltstack/salt/issues/3749
 BuildRequires: python-mock
 BuildRequires: git
+BuildRequires: python-libcloud
 
-Requires: python-libcloud
+%if ((0%{?rhel} == 6) && 0%{?include_tests})
+# argparse now a salt-testing requirement
+BuildRequires: python-argparse
 %endif
 
-BuildRequires: m2crypto
-BuildRequires: python-crypto
-BuildRequires: python-devel
-BuildRequires: python-jinja2
-BuildRequires: python-msgpack
-BuildRequires: python-pip
-BuildRequires: python-zmq
-BuildRequires: PyYAML
+%endif
 
-Requires: python-crypto
-Requires: python-zmq
-Requires: python-jinja2
-Requires: PyYAML
+BuildRequires: python-devel
 Requires: m2crypto
+Requires: python-crypto
+Requires: python-jinja2
 Requires: python-msgpack
+Requires: PyYAML
+Requires: python-requests
+Requires: python-zmq
 
 %endif
 
@@ -121,28 +124,68 @@ malleable. Salt accomplishes this via its ability to handle larger loads of
 information, and not just dozens, but hundreds or even thousands of individual 
 servers, handle them quickly and through a simple and manageable interface.
 
-%package -n salt-master
+%package master
 Summary: Management component for salt, a parallel remote execution system 
 Group:   System Environment/Daemons
-Requires: salt = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}
 %if (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 Requires: systemd-python
 %endif
 
-%description -n salt-master 
+%description master
 The Salt master is the central server to which all minions connect.
 
-%package -n salt-minion
-Summary: Client component for salt, a parallel remote execution system 
+%package minion
+Summary: Client component for Salt, a parallel remote execution system 
 Group:   System Environment/Daemons
-Requires: salt = %{version}-%{release}
+Requires: %{name} = %{version}-%{release}
 
-%description -n salt-minion
-Salt minion is queried and controlled from the master.
+%description minion
+The Salt minion is the agent component of Salt. It listens for instructions
+from the master, runs jobs, and returns results back to the master.
+
+%package syndic
+Summary: Master-of-master component for Salt, a parallel remote execution system 
+Group:   System Environment/Daemons
+Requires: %{name} = %{version}-%{release}
+
+%description syndic
+The Salt syndic is a master daemon which can receive instruction from a
+higher-level master, allowing for tiered organization of your Salt
+infrastructure.
+
+%package api
+Summary: REST API for Salt, a parallel remote execution system
+Group:   System administration tools
+Requires: %{name}-master = %{version}-%{release}
+
+%description api
+salt-api provides a REST interface to the Salt master.
+
+%package cloud
+Summary: Cloud provisioner for Salt, a parallel remote execution system
+Group:   System administration tools
+Requires: %{name}-master = %{version}-%{release}
+
+%description cloud
+The salt-cloud tool provisions new cloud VMs, installs salt-minion on them, and
+adds them to the master's collection of controllable minions.
+
+%package ssh
+Summary: Agentless SSH-based version of Salt, a parallel remote execution system
+Group:   System administration tools
+Requires: %{name} = %{version}-%{release}
+
+%description ssh
+The salt-ssh tool can run remote execution functions and states without the use
+of an agent (salt-minion) service.
 
 %prep
 %setup -c
 %setup -T -D -a 1
+
+cd %{name}-%{version}
+%patch0 -p1
 
 %build
 
@@ -152,31 +195,43 @@ rm -rf %{buildroot}
 cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
 %{__python} setup.py install -O1 --root %{buildroot}
 
+# Add some directories
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
+install -d -m 0755 %{buildroot}%{_sysconfdir}/salt
+install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/cloud.conf.d
+install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/cloud.deploy.d
+install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/cloud.maps.d
+install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/cloud.profiles.d
+install -d -m 0755 %{buildroot}%{_sysconfdir}/salt/cloud.providers.d
+
+# Add the config files
+install -p -m 0640 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
+install -p -m 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0640 conf/cloud %{buildroot}%{_sysconfdir}/salt/cloud
+install -p -m 0640 conf/roster %{buildroot}%{_sysconfdir}/salt/roster
 
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p %{buildroot}%{_initrddir}
 install -p %{SOURCE2} %{buildroot}%{_initrddir}/
 install -p %{SOURCE3} %{buildroot}%{_initrddir}/
 install -p %{SOURCE4} %{buildroot}%{_initrddir}/
+install -p %{SOURCE5} %{buildroot}%{_initrddir}/
 %else
 mkdir -p %{buildroot}%{_unitdir}
-install -p -m 0644 %{SOURCE5} %{buildroot}%{_unitdir}/
 install -p -m 0644 %{SOURCE6} %{buildroot}%{_unitdir}/
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/
+install -p -m 0644 %{SOURCE8} %{buildroot}%{_unitdir}/
+install -p -m 0644 %{SOURCE9} %{buildroot}%{_unitdir}/
 %endif
 
-install -p %{SOURCE8} .
+install -p %{SOURCE10} .
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
-install -p %{SOURCE9} %{buildroot}%{_sysconfdir}/logrotate.d/salt
-
-mkdir -p %{buildroot}%{_sysconfdir}/salt/
-install -p -m 0640 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
+install -p -m 0644 %{SOURCE11} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 
 %if ((0%{?rhel} >= 6 || 0%{?fedora} > 12) && 0%{?include_tests})
 %check
 cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
+mkdir %{_tmppath}/salt-test-cache
 PYTHONPATH=%{pythonpath}:$RPM_BUILD_DIR/%{name}-%{version}/%{_salttesting}-%{_salttesting_ver} %{__python} setup.py test --runtests-opts=-u
 %endif
 
@@ -187,93 +242,127 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/LICENSE
 %{python_sitelib}/%{name}/*
-%{python_sitelib}/%{name}-%{version}-py?.?.egg-info
+#%{python_sitelib}/%{name}-%{version}-py?.?.egg-info
+%{python_sitelib}/%{name}-*-py?.?.egg-info
 %{_sysconfdir}/logrotate.d/salt
 %{_var}/cache/salt
-%doc %{_mandir}/man7/salt.7.*
 %doc $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}/README.fedora
 
-%files -n salt-minion
+%files master
+%defattr(-,root,root)
+%doc %{_mandir}/man7/salt.7.*
+%doc %{_mandir}/man1/salt-cp.1.*
+%doc %{_mandir}/man1/salt-key.1.*
+%doc %{_mandir}/man1/salt-master.1.*
+%doc %{_mandir}/man1/salt-run.1.*
+%doc %{_mandir}/man1/salt-unity.1.*
+%{_bindir}/salt
+%{_bindir}/salt-cp
+%{_bindir}/salt-key
+%{_bindir}/salt-master
+%{_bindir}/salt-run
+%{_bindir}/salt-unity
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+%attr(0755, root, root) %{_initrddir}/salt-master
+%else
+%config(noreplace) %{_unitdir}/salt-master.service
+%endif
+%config(noreplace) %{_sysconfdir}/salt/master
+
+%files minion
 %defattr(-,root,root)
 %doc %{_mandir}/man1/salt-call.1.*
 %doc %{_mandir}/man1/salt-minion.1.*
 %{_bindir}/salt-minion
 %{_bindir}/salt-call
-
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 %attr(0755, root, root) %{_initrddir}/salt-minion
 %else
-%{_unitdir}/salt-minion.service
+%config(noreplace) %{_unitdir}/salt-minion.service
 %endif
-
 %config(noreplace) %{_sysconfdir}/salt/minion
 
-%files -n salt-master
-%defattr(-,root,root)
-%doc %{_mandir}/man1/salt.1.*
-%doc %{_mandir}/man1/salt-cloud.1.*
-%doc %{_mandir}/man1/salt-cp.1.*
-%doc %{_mandir}/man1/salt-key.1.*
-%doc %{_mandir}/man1/salt-master.1.*
-%doc %{_mandir}/man1/salt-run.1.*
-%doc %{_mandir}/man1/salt-ssh.1.*
+%files syndic
 %doc %{_mandir}/man1/salt-syndic.1.*
-%{_bindir}/salt
-%{_bindir}/salt-cloud
-%{_bindir}/salt-cp
-%{_bindir}/salt-key
-%{_bindir}/salt-master
-%{_bindir}/salt-run
-%{_bindir}/salt-ssh
 %{_bindir}/salt-syndic
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
-%attr(0755, root, root) %{_initrddir}/salt-master
 %attr(0755, root, root) %{_initrddir}/salt-syndic
 %else
-%{_unitdir}/salt-master.service
-%{_unitdir}/salt-syndic.service
+%config(noreplace) %{_unitdir}/salt-syndic.service
 %endif
-%config(noreplace) %{_sysconfdir}/salt/master
+
+%files api
+%defattr(-,root,root)
+%doc %{_mandir}/man1/salt-api.1.*
+%{_bindir}/salt-api
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
+%attr(0755, root, root) %{_initrddir}/salt-api
+%else
+%config(noreplace) %{_unitdir}/salt-api.service
+%endif
+
+%files cloud
+%doc %{_mandir}/man1/salt-cloud.1.*
+%{_bindir}/salt-cloud
+%{_sysconfdir}/salt/cloud.conf.d
+%{_sysconfdir}/salt/cloud.deploy.d
+%{_sysconfdir}/salt/cloud.maps.d
+%{_sysconfdir}/salt/cloud.profiles.d
+%{_sysconfdir}/salt/cloud.providers.d
+%config(noreplace) %{_sysconfdir}/salt/cloud
+
+%files ssh
+%doc %{_mandir}/man1/salt-ssh.1.*
+%{_bindir}/salt-ssh
+%{_sysconfdir}/salt/roster
+
 
 # less than RHEL 8 / Fedora 16
 # not sure if RHEL 7 will use systemd yet
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 
-%preun -n salt-master
+%preun master
   if [ $1 -eq 0 ] ; then
       /sbin/service salt-master stop >/dev/null 2>&1
-      /sbin/service salt-syndic stop >/dev/null 2>&1
       /sbin/chkconfig --del salt-master
+  fi
+
+%preun syndic
+  if [ $1 -eq 0 ] ; then
+      /sbin/service salt-syndic stop >/dev/null 2>&1
       /sbin/chkconfig --del salt-syndic
   fi
 
-%preun -n salt-minion
+%preun minion
   if [ $1 -eq 0 ] ; then
       /sbin/service salt-minion stop >/dev/null 2>&1
       /sbin/chkconfig --del salt-minion
   fi
 
-%post -n salt-master
+%post master
   /sbin/chkconfig --add salt-master
-  /sbin/chkconfig --add salt-syndic
 
-%post -n salt-minion
+%post minion
   /sbin/chkconfig --add salt-minion
 
-%postun -n salt-master
+%postun master
   if [ "$1" -ge "1" ] ; then
       /sbin/service salt-master condrestart >/dev/null 2>&1 || :
-      /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
   fi
 
-%postun -n salt-minion
+#%postun syndic
+#  if [ "$1" -ge "1" ] ; then
+#      /sbin/service salt-syndic condrestart >/dev/null 2>&1 || :
+#  fi
+
+%postun minion
   if [ "$1" -ge "1" ] ; then
       /sbin/service salt-minion condrestart >/dev/null 2>&1 || :
   fi
 
 %else
 
-%preun -n salt-master
+%preun master
 %if 0%{?systemd_preun:1}
   %systemd_preun salt-master.service
 %else
@@ -281,47 +370,62 @@ rm -rf %{buildroot}
     # Package removal, not upgrade
     /bin/systemctl --no-reload disable salt-master.service > /dev/null 2>&1 || :
     /bin/systemctl stop salt-master.service > /dev/null 2>&1 || :
+  fi
+%endif
 
+%preun syndic
+%if 0%{?systemd_preun:1}
+  %systemd_preun salt-syndic.service
+%else
+  if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
     /bin/systemctl --no-reload disable salt-syndic.service > /dev/null 2>&1 || :
     /bin/systemctl stop salt-syndic.service > /dev/null 2>&1 || :
   fi
 %endif
 
-%preun -n salt-minion
+%preun minion
 %if 0%{?systemd_preun:1}
   %systemd_preun salt-minion.service
 %else
   if [ $1 -eq 0 ] ; then
-      # Package removal, not upgrade
-      /bin/systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
-      /bin/systemctl stop salt-minion.service > /dev/null 2>&1 || :
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable salt-minion.service > /dev/null 2>&1 || :
+    /bin/systemctl stop salt-minion.service > /dev/null 2>&1 || :
   fi
 %endif
 
-%post -n salt-master
+%post master
 %if 0%{?systemd_post:1}
   %systemd_post salt-master.service
 %else
   /bin/systemctl daemon-reload &>/dev/null || :
 %endif
 
-%post -n salt-minion
+%post minion
 %if 0%{?systemd_post:1}
   %systemd_post salt-minion.service
 %else
   /bin/systemctl daemon-reload &>/dev/null || :
 %endif
 
-%postun -n salt-master
+%postun master
 %if 0%{?systemd_post:1}
   %systemd_postun salt-master.service
 %else
   /bin/systemctl daemon-reload &>/dev/null
   [ $1 -gt 0 ] && /bin/systemctl try-restart salt-master.service &>/dev/null || :
+%endif
+
+%postun syndic
+%if 0%{?systemd_post:1}
+  %systemd_postun salt-syndic.service
+%else
+  /bin/systemctl daemon-reload &>/dev/null
   [ $1 -gt 0 ] && /bin/systemctl try-restart salt-syndic.service &>/dev/null || :
 %endif
 
-%postun -n salt-minion
+%postun minion
 %if 0%{?systemd_post:1}
   %systemd_postun salt-minion.service
 %else
@@ -332,6 +436,27 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Mar 27 2015 Stephen Spencer <stephen@revsys.com> - 2014.7.2-2
+- avoid replacing the salt*.service files. Systemd ignores /etc/security/limits*
+  in favor of directives entered in the service files.
+
+  See systemd.directives(7), systemd.exec(5), systemd-system.conf(5)
+
+* Tue Feb 17 2015 Erik Johnson <erik@saltstack.com> - 2014.7.2-1
+- Update to bugfix release 2014.7.2
+
+* Mon Jan 19 2015 Erik Johnson <erik@saltstack.com> - 2014.7.1-1
+- Update to bugfix release 2014.7.1
+
+* Fri Nov  7 2014 Erik Johnson <erik@saltstack.com> - 2014.7.0-3
+- Make salt-api its own package
+
+* Thu Nov  6 2014 Erik Johnson <erik@saltstack.com> - 2014.7.0-2
+- Fix changelog
+
+* Thu Nov  6 2014 Erik Johnson <erik@saltstack.com> - 2014.7.0-1
+- Update to feature release 2014.7.0
+
 * Fri Oct 17 2014 Erik Johnson <erik@saltstack.com> - 2014.1.13-1
 - Update to bugfix release 2014.1.13
 
@@ -350,23 +475,14 @@ rm -rf %{buildroot}
 * Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-3
 - Add logrotate script
 
-* Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-2
+* Thu Jul 10 2014 Erik Johnson <erik@saltstack.com> - 2014.1.7-1
 - Update to bugfix release 2014.1.7
 
 * Wed Jun 11 2014 Erik Johnson <erik@saltstack.com> - 2014.1.5-1
 - Update to bugfix release 2014.1.5
 
-* Sun Jun 08 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2014.1.4-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
-
 * Tue May  6 2014 Erik Johnson <erik@saltstack.com> - 2014.1.4-1
 - Update to bugfix release 2014.1.4
-
-* Fri Apr 18 2014 Erik Johnson <erik@saltstack.com> - 2014.1.3-1
-- Update to bugfix release 2014.1.3
-
-* Fri Mar 21 2014 Erik Johnson <erik@saltstack.com> - 2014.1.1-1
-- Update to bugfix release 2014.1.1
 
 * Thu Feb 20 2014 Erik Johnson <erik@saltstack.com> - 2014.1.0-1
 - Update to feature release 2014.1.0

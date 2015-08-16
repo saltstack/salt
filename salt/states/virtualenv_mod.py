@@ -45,8 +45,11 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
+            pip_ignore_installed=False,
             proxy=None,
-            use_vt=False):
+            use_vt=False,
+            env_vars=None,
+            no_use_wheel=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -57,8 +60,17 @@ def managed(name,
         the file will be transferred from the master file server.
     cwd
         Path to the working directory where "pip install" is executed.
+    user
+        The user under which to run virtualenv and pip
+    no_chown: False
+        When user is given, do not attempt to copy and chown
+        a requirements file (needed if the requirements file refers to other
+        files via relative paths, as the copy-and-chown procedure does not
+        account for such files)
     use_wheel : False
         Prefer wheel archives (requires pip>=1.4)
+    no_use_wheel : False
+        Force to not use wheel archives (requires pip>=1.4)
     no_deps: False
         Pass `--no-deps` to `pip`.
     pip_exists_action: None
@@ -66,6 +78,11 @@ def managed(name,
         (w)ipe, (b)ackup
     proxy: None
         Proxy address which is passed to "pip install"
+    env_vars
+        Set environment variables that some builds will depend on. For example,
+        a Python C-module may have a Makefile that needs INCLUDE_PATH set to
+        pick up a header file while compiling.
+
 
     Also accepts any kwargs that the virtualenv module will.
 
@@ -149,7 +166,12 @@ def managed(name,
             use_vt=use_vt,
         )
 
-        ret['result'] = _ret['retcode'] == 0
+        if _ret['retcode'] != 0:
+            ret['result'] = False
+            ret['comment'] = _ret['stdout'] + _ret['stderr']
+            return ret
+
+        ret['result'] = True
         ret['changes']['new'] = __salt__['cmd.run_stderr'](
             '{0} -V'.format(venv_py)).strip('\n')
 
@@ -172,6 +194,18 @@ def managed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
+                              'in pip {0} and newer. The version of pip '
+                              'detected was {1}.').format(min_version,
+                                                          cur_version)
+            return ret
+
     # Populate the venv via a requirements file
     if requirements:
         before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
@@ -179,6 +213,7 @@ def managed(name,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
+            no_use_wheel=no_use_wheel,
             user=user,
             cwd=cwd,
             index_url=index_url,
@@ -188,9 +223,11 @@ def managed(name,
             no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
+            ignore_installed=pip_ignore_installed,
             no_deps=no_deps,
             proxy=proxy,
-            use_vt=use_vt
+            use_vt=use_vt,
+            env_vars=env_vars
         )
         ret['result'] &= _ret['retcode'] == 0
         if _ret['retcode'] > 0:

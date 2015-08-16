@@ -7,9 +7,11 @@ Return data to a mysql server
 :depends:       python-mysqldb
 :platform:      all
 
-To enable this returner the minion will need the python client for mysql
+To enable this returner, the minion will need the python client for mysql
 installed and the following values configured in the minion or master
-config, these are the defaults::
+config. These are the defaults:
+
+.. code-block:: yaml
 
     mysql.host: 'salt'
     mysql.user: 'salt'
@@ -17,17 +19,34 @@ config, these are the defaults::
     mysql.db: 'salt'
     mysql.port: 3306
 
-Alternative configuration values can be used by prefacing the configuration.
-Any values not found in the alternative configuration will be pulled from
-the default location::
+SSL is optional. The defaults are set to None. If you do not want to use SSL,
+either exclude these options or set them to None.
+
+.. code-block:: yaml
+
+    mysql.ssl_ca: None
+    mysql.ssl_cert: None
+    mysql.ssl_key: None
+
+Alternative configuration values can be used by prefacing the configuration
+with `alternative.`. Any values not found in the alternative configuration will
+be pulled from the default location. As stated above, SSL configuration is
+optional. The following ssl options are simply for illustration purposes:
+
+.. code-block:: yaml
 
     alternative.mysql.host: 'salt'
     alternative.mysql.user: 'salt'
     alternative.mysql.pass: 'salt'
     alternative.mysql.db: 'salt'
     alternative.mysql.port: 3306
+    alternative.mysql.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
+    alternative.mysql.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
+    alternative.mysql.ssl_key: '/etc/pki/mysql/certs/localhost.key'
 
-Use the following mysql database schema::
+Use the following mysql database schema:
+
+.. code-block:: sql
 
     CREATE DATABASE  `salt`
       DEFAULT CHARACTER SET utf8
@@ -45,6 +64,7 @@ Use the following mysql database schema::
       `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    CREATE INDEX jid ON jids(jid) USING BTREE;
 
     --
     -- Table structure for table `salt_returns`
@@ -64,13 +84,34 @@ Use the following mysql database schema::
       KEY `fun` (`fun`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+    --
+    -- Table structure for table `salt_events`
+    --
+
+    DROP TABLE IF EXISTS `salt_events`;
+    CREATE TABLE `salt_events` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `tag` varchar(255) NOT NULL,
+    `data` varchar(1024) NOT NULL,
+    `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `master_id` varchar(255) NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `tag` (`tag`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 Required python modules: MySQLdb
 
-  To use the mysql returner, append '--return mysql' to the salt command. ex:
+To use the mysql returner, append '--return mysql' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return mysql
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return mysql --return_config alternative
 '''
@@ -86,7 +127,8 @@ import logging
 
 # Import salt libs
 import salt.returners
-import salt.utils
+import salt.utils.jid
+import salt.exceptions
 
 # Import third party libs
 try:
@@ -115,13 +157,19 @@ def _get_options(ret=None):
                 'user': 'salt',
                 'pass': 'salt',
                 'db': 'salt',
-                'port': 3306}
+                'port': 3306,
+                'ssl_ca': None,
+                'ssl_cert': None,
+                'ssl_key': None}
 
     attrs = {'host': 'host',
              'user': 'user',
              'pass': 'pass',
              'db': 'db',
-             'port': 'port'}
+             'port': 'port',
+             'ssl_ca': 'ssl_ca',
+             'ssl_cert': 'ssl_cert',
+             'ssl_key': 'ssl_key'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -141,12 +189,45 @@ def _get_serv(ret=None, commit=False):
     Return a mysql cursor
     '''
     _options = _get_options(ret)
-    conn = MySQLdb.connect(host=_options.get('host'),
-                           user=_options.get('user'),
-                           passwd=_options.get('pass'),
-                           db=_options.get('db'),
-                           port=_options.get('port'))
+
+    connect = True
+    if __context__ and 'mysql_returner_conn' in __context__:
+        try:
+            log.debug('Trying to reuse MySQL connection pool')
+            conn = __context__['mysql_returner_conn']
+            conn.ping()
+            connect = False
+        except MySQLdb.connections.OperationalError as exc:
+            log.debug('OperationalError on ping: {0}'.format(exc))
+
+    if connect:
+        log.debug('Generating new MySQL connection pool')
+        try:
+            # An empty ssl_options dictionary passed to MySQLdb.connect will
+            # effectively connect w/o SSL.
+            ssl_options = {}
+            if _options.get('ssl_ca'):
+                ssl_options['ca'] = _options.get('ssl_ca')
+            if _options.get('ssl_cert'):
+                ssl_options['cert'] = _options.get('ssl_cert')
+            if _options.get('ssl_key'):
+                ssl_options['key'] = _options.get('ssl_key')
+            conn = MySQLdb.connect(host=_options.get('host'),
+                                   user=_options.get('user'),
+                                   passwd=_options.get('pass'),
+                                   db=_options.get('db'),
+                                   port=_options.get('port'),
+                                   ssl=ssl_options)
+
+            try:
+                __context__['mysql_returner_conn'] = conn
+            except TypeError:
+                pass
+        except MySQLdb.connections.OperationalError as exc:
+            raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
+
     cursor = conn.cursor()
+
     try:
         yield cursor
     except MySQLdb.DatabaseError as err:
@@ -159,24 +240,42 @@ def _get_serv(ret=None, commit=False):
             cursor.execute("COMMIT")
         else:
             cursor.execute("ROLLBACK")
-    finally:
-        conn.close()
 
 
 def returner(ret):
     '''
     Return data to a mysql server
     '''
-    with _get_serv(ret, commit=True) as cur:
-        sql = '''INSERT INTO `salt_returns`
-                (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
-                VALUES (%s, %s, %s, %s, %s, %s)'''
+    try:
+        with _get_serv(ret, commit=True) as cur:
+            sql = '''INSERT INTO `salt_returns`
+                    (`fun`, `jid`, `return`, `id`, `success`, `full_ret` )
+                    VALUES (%s, %s, %s, %s, %s, %s)'''
 
-        cur.execute(sql, (ret['fun'], ret['jid'],
-                          json.dumps(ret['return']),
-                          ret['id'],
-                          ret['success'],
-                          json.dumps(ret)))
+            cur.execute(sql, (ret['fun'], ret['jid'],
+                              json.dumps(ret['return']),
+                              ret['id'],
+                              ret.get('success', False),
+                              json.dumps(ret)))
+    except salt.exceptions.SaltMasterError as exc:
+        log.critical(exc)
+        log.critical('Could not store return with MySQL returner. MySQL server unavailable.')
+
+
+def event_return(events):
+    '''
+    Return event to mysql server
+
+    Requires that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    with _get_serv(events, commit=True) as cur:
+        for event in events:
+            tag = event.get('tag', '')
+            data = event.get('data', '')
+            sql = '''INSERT INTO `salt_events` (`tag`, `data`, `master_id` )
+                     VALUES (%s, %s, %s)'''
+            cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
 
 
 def save_load(jid, load):
@@ -189,7 +288,13 @@ def save_load(jid, load):
                (`jid`, `load`)
                 VALUES (%s, %s)'''
 
-        cur.execute(sql, (jid, json.dumps(load)))
+        try:
+            cur.execute(sql, (jid, json.dumps(load)))
+        except MySQLdb.IntegrityError:
+            # https://github.com/saltstack/salt/issues/22171
+            # Without this try:except: we get tons of duplicate entry errors
+            # which result in job returns not being stored properly
+            pass
 
 
 def get_load(jid):
@@ -254,14 +359,40 @@ def get_jids():
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT jid
+        sql = '''SELECT DISTINCT `jid`, `load`
                 FROM `jids`'''
 
         cur.execute(sql)
         data = cur.fetchall()
+        ret = {}
+        for jid in data:
+            ret[jid[0]] = salt.utils.jid.format_jid_instance(jid[0],
+                                                             json.loads(jid[1]))
+        return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all job ids
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT * FROM (
+                     SELECT DISTINCT `jid` ,`load` FROM `jids`
+                     {0}
+                     ORDER BY `jid` DESC limit {1}
+                     ) `tmp`
+                 ORDER BY `jid`;'''
+        where = '''WHERE `load` NOT LIKE '%"fun": "saltutil.find_job"%' '''
+
+        cur.execute(sql.format(where if filter_find_job else '', count))
+        data = cur.fetchall()
         ret = []
         for jid in data:
-            ret.append(jid[0])
+            ret.append(salt.utils.jid.format_jid_instance_ext(jid[0],
+                                                              json.loads(jid[1])))
         return ret
 
 
@@ -282,8 +413,8 @@ def get_minions():
         return ret
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''
-    return passed_jid if passed_jid is not None else salt.utils.gen_jid()
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

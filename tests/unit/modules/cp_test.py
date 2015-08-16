@@ -3,6 +3,9 @@
     :codeauthor: :email:`jmoney <justin@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.modules import cp
 from salt.utils import templates
@@ -439,7 +442,6 @@ class CpTestCase(TestCase):
         mock_buf_size = len(file_data)
         mock_id = 'You don\'t need to see his identification.'
         ret = None
-        from time import sleep
 
         class MockChannel(object):
             @staticmethod
@@ -474,7 +476,6 @@ class CpTestCase(TestCase):
         mock_buf_size = len(file_data)
         mock_id = 'You don\'t need to see his identification.'
         ret = True
-        from time import sleep
 
         class MockChannel(object):
             @staticmethod

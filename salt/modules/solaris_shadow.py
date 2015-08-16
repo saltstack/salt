@@ -125,7 +125,7 @@ def info(name):
     #  5. Maximum age
     #  6. Warning period
 
-    output = __salt__['cmd.run_all']('passwd -s {0}'.format(name))
+    output = __salt__['cmd.run_all']('passwd -s {0}'.format(name), python_shell=False)
     if output['retcode'] != 0:
         return ret
 
@@ -163,7 +163,7 @@ def set_maxdays(name, maxdays):
     if maxdays == pre_info['max']:
         return True
     cmd = 'passwd -x {0} {1}'.format(maxdays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['max'] != pre_info['max']:
         return post_info['max'] == maxdays
@@ -183,7 +183,7 @@ def set_mindays(name, mindays):
     if mindays == pre_info['min']:
         return True
     cmd = 'passwd -n {0} {1}'.format(mindays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['min'] != pre_info['min']:
         return post_info['min'] == mindays
@@ -237,7 +237,7 @@ def set_warndays(name, warndays):
     if warndays == pre_info['warn']:
         return True
     cmd = 'passwd -w {0} {1}'.format(warndays, name)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     if post_info['warn'] != pre_info['warn']:
         return post_info['warn'] == warndays

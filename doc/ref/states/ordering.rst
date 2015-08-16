@@ -54,15 +54,14 @@ Often when setting up states any single action will require or depend on
 another action. Salt allows for the building of relationships between states
 with requisite statements. A requisite statement ensures that the named state
 is evaluated before the state requiring it. There are three types of requisite
-statements in Salt, **require**, **watch** and **prereq**.
+statements in Salt, **require**, **watch**, and **prereq**.
 
 These requisite statements are applied to a specific state declaration:
 
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
+      pkg.installed: []
       file.managed:
         - name: /etc/httpd/conf/httpd.conf
         - source: salt://httpd/httpd.conf
@@ -78,7 +77,7 @@ executing them before the state that requires them. Then the required states
 can be evaluated to see if they have executed correctly.
 
 Require statements can refer to any state defined in Salt. The basic examples
-are `pkg`, `service` and `file`, but any used state can be referenced.
+are `pkg`, `service`, and `file`, but any used state can be referenced.
 
 In addition to state declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
@@ -91,10 +90,8 @@ the discrete states are split or groups into separate sls files:
       - network
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running:
         - require:
           - pkg: httpd
           - sls: network
@@ -121,8 +118,7 @@ more requisites. Both requisite types can also be separately declared:
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
+      pkg.installed: []
       service.running:
         - enable: True
         - watch:
@@ -136,13 +132,11 @@ more requisites. Both requisite types can also be separately declared:
         - source: salt://httpd/httpd.conf
         - require:
           - pkg: httpd
-      user:
-        - present
-      group:
-        - present
+      user.present: []
+      group.present: []
 
 In this example, the httpd service is only going to be started if the package,
-user, group and file are executed successfully.
+user, group, and file are executed successfully.
 
 
 Requisite Documentation
@@ -184,4 +178,3 @@ a state to the end of the line. To do this, set the order to ``last``:
     vim:
       pkg.installed:
         - order: last
-

@@ -4,26 +4,18 @@ Execute salt convenience routines
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
-import collections
+from __future__ import absolute_import, print_function
 import logging
-import time
-import sys
-import multiprocessing
 
 # Import salt libs
 import salt.exceptions
 import salt.loader
 import salt.minion
-import salt.utils
 import salt.utils.args
 import salt.utils.event
 from salt.client import mixins
 from salt.output import display_output
-from salt.utils.error import raise_error
-from salt.utils.event import tagify
-import salt.ext.six as six
+from salt.utils.lazy import verify_fun
 
 log = logging.getLogger(__name__)
 
@@ -48,161 +40,12 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
 
     def __init__(self, opts):
         self.opts = opts
-        self.functions = salt.loader.runner(opts)  # Must be self.functions for mixin to work correctly :-/
-        self.returners = salt.loader.returners(opts, self.functions)
-        self.outputters = salt.loader.outputters(opts)
-        self.event = salt.utils.event.MasterEvent(self.opts['sock_dir'])
 
-    def cmd(self, fun, arg, pub_data=None, kwarg=None):
-        '''
-        Execute a runner function
-
-        .. code-block:: python
-
-            >>> opts = salt.config.master_config('/etc/salt/master')
-            >>> runner = salt.runner.RunnerClient(opts)
-            >>> runner.cmd('jobs.list_jobs', [])
-            {
-                '20131219215650131543': {
-                    'Arguments': [300],
-                    'Function': 'test.sleep',
-                    'StartTime': '2013, Dec 19 21:56:50.131543',
-                    'Target': '*',
-                    'Target-type': 'glob',
-                    'User': 'saltdev'
-                },
-                '20131219215921857715': {
-                    'Arguments': [300],
-                    'Function': 'test.sleep',
-                    'StartTime': '2013, Dec 19 21:59:21.857715',
-                    'Target': '*',
-                    'Target-type': 'glob',
-                    'User': 'saltdev'
-                },
-            }
-
-        '''
-        if kwarg is None:
-            kwarg = {}
-        if not isinstance(kwarg, dict):
-            raise salt.exceptions.SaltInvocationError(
-                'kwarg must be formatted as a dictionary'
-            )
-
-        if pub_data is None:
-            pub_data = {}
-        if not isinstance(pub_data, dict):
-            raise salt.exceptions.SaltInvocationError(
-                'pub_data must be formatted as a dictionary'
-            )
-
-        arglist = salt.utils.args.parse_input(arg)
-
-        def _append_kwarg(arglist, kwarg):
-            '''
-            Append the kwarg dict to the arglist
-            '''
-            kwarg['__kwarg__'] = True
-            arglist.append(kwarg)
-
-        if kwarg:
-            try:
-                if isinstance(arglist[-1], dict) \
-                        and '__kwarg__' in arglist[-1]:
-                    for key, val in six.iteritems(kwarg):
-                        if key in arglist[-1]:
-                            log.warning(
-                                'Overriding keyword argument {0!r}'.format(key)
-                            )
-                        arglist[-1][key] = val
-                else:
-                    # No kwargs yet present in arglist
-                    _append_kwarg(arglist, kwarg)
-            except IndexError:
-                # arglist is empty, just append
-                _append_kwarg(arglist, kwarg)
-
-        self._verify_fun(fun)
-        args, kwargs = salt.minion.load_args_and_kwargs(
-            self.functions[fun], arglist, pub_data
-        )
-        fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
-        log.debug('Runner starting with jid {0}'.format(jid))
-        self.event.fire_event({'runner_job': fun}, tagify([jid, 'new'], 'job'))
-        target = RunnerClient._thread_return
-        data = {'fun': fun, 'jid': jid, 'args': args, 'kwargs': kwargs}
-        args = (self, self.opts, data)
-        ret = jid
-        if self.opts.get('async', False):
-            process = multiprocessing.Process(
-                target=target, args=args
-            )
-            process.start()
-        else:
-            ret = target(*args)
-        return ret
-
-    @classmethod
-    def _thread_return(cls, instance, opts, data):
-        '''
-        The multiprocessing process calls back here
-        to stream returns
-        '''
-        # Runners modules runtime injection:
-        # - the progress event system with the correct jid
-        # - Provide JID if the runner wants to access it directly
-        done = {}
-        progress = salt.utils.event.get_runner_event(opts, data['jid']).fire_progress
-        for func_name, func in instance.functions.items():
-            if func.__module__ in done:
-                continue
-            mod = sys.modules[func.__module__]
-            mod.__jid__ = data['jid']
-            mod.__progress__ = progress
-            done[func.__module__] = mod
-        ret = instance.functions[data['fun']](*data['args'], **data['kwargs'])
-        # Sleep for just a moment to let any progress events return
-        time.sleep(0.1)
-        ret_load = {'return': ret, 'fun': data['fun'], 'fun_args': data['args']}
-        # Don't use the invoking processes' event socket because it could be closed down by the time we arrive here.
-        # Create another, for safety's sake.
-        salt.utils.event.MasterEvent(opts['sock_dir']).fire_event(ret_load, tagify([data['jid'], 'return'], 'runner'))
-        try:
-            fstr = '{0}.save_runner_load'.format(opts['master_job_cache'])
-            instance.returners[fstr](data['jid'], ret_load)
-        except KeyError:
-            log.debug(
-                'The specified returner used for the master job cache '
-                '"{0}" does not have a save_runner_load function! The results '
-                'of this runner execution will not be stored.'.format(
-                    opts['master_job_cache']
-                )
-            )
-        except Exception:
-            log.critical(
-                'The specified returner threw a stack trace:\n',
-                exc_info=True
-            )
-        if opts.get('async', False):
-            return data['jid']
-        else:
-            return ret
-
-    def master_call(self, **kwargs):
-        '''
-        Execute a runner function through the master network interface (eauth).
-        '''
-        load = kwargs
-        load['cmd'] = 'runner'
-        sreq = salt.transport.Channel.factory(self.opts,
-                                              crypt='clear',
-                                              usage='master_call')
-        ret = sreq.send(load)
-        if isinstance(ret, collections.Mapping):
-            if 'error' in ret:
-                raise_error(**ret['error'])
-        return ret
+    @property
+    def functions(self):
+        if not hasattr(self, '_functions'):
+            self._functions = salt.loader.runner(self.opts)  # Must be self.functions for mixin to work correctly :-/
+        return self._functions
 
     def _reformat_low(self, low):
         '''
@@ -216,8 +59,24 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         auth_creds = dict([(i, low.pop(i)) for i in [
                 'username', 'password', 'eauth', 'token', 'client',
             ] if i in low])
-        reformatted_low = {'fun': low.pop('fun')}
+        fun = low.pop('fun')
+        reformatted_low = {'fun': fun}
         reformatted_low.update(auth_creds)
+        # Support old style calls where arguments could be specified in 'low' top level
+        if not low.get('args') and not low.get('kwargs'):  # not specified or empty
+            verify_fun(self.functions, fun)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.functions[fun],
+                salt.utils.args.condition_input([], low),
+                self.opts,
+                ignore_invalid=True
+            )
+            low['args'] = args
+            low['kwargs'] = kwargs
+        if 'kwargs' not in low:
+            low['kwargs'] = {}
+        if 'args' not in low:
+            low['args'] = []
         reformatted_low['kwarg'] = low
         return reformatted_low
 
@@ -238,7 +97,8 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return self.master_call(**reformatted_low)
+
+        return mixins.AsyncClientMixin.cmd_async(self, reformatted_low)
 
     def cmd_sync(self, low, timeout=None):
         '''
@@ -256,34 +116,19 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 'eauth': 'pam',
             })
         '''
-        sevent = salt.utils.event.get_event('master',
-                                            self.opts['sock_dir'],
-                                            self.opts['transport'],
-                                            opts=self.opts)
-
         reformatted_low = self._reformat_low(low)
-        job = self.master_call(**reformatted_low)
-        ret_tag = tagify('ret', base=job['tag'])
-
-        timelimit = time.time() + (timeout or 300)
-        while True:
-            ret = sevent.get_event(full=True)
-            if ret is None:
-                if time.time() > timelimit:
-                    raise salt.exceptions.SaltClientTimeout(
-                        "RunnerClient job '{0}' timed out".format(job['jid']),
-                        jid=job['jid'])
-                else:
-                    continue
-
-            if ret['tag'] == ret_tag:
-                return ret['data']['return']
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
 
 
 class Runner(RunnerClient):
     '''
     Execute the salt runner interface
     '''
+    def __init__(self, opts):
+        super(Runner, self).__init__(opts)
+        self.returners = salt.loader.returners(opts, self.functions)
+        self.outputters = salt.loader.outputters(opts)
+
     def print_docs(self):
         '''
         Print out the documentation!
@@ -294,76 +139,50 @@ class Runner(RunnerClient):
             display_output('{0}:'.format(fun), 'text', self.opts)
             print(docs[fun])
 
+    # TODO: move to mixin whenever we want a salt-wheel cli
     def run(self):
         '''
         Execute the runner sequence
         '''
-        ret = {}
+        ret, async_pub = {}, {}
         if self.opts.get('doc', False):
             self.print_docs()
         else:
+            low = {'fun': self.opts['fun']}
             try:
-                # Run the runner!
-                jid = super(Runner, self).cmd(
-                    self.opts['fun'], self.opts['arg'], self.opts)
-                if self.opts.get('async', False):
-                    log.info('Running in async mode. Results of this execution may '
-                             'be collected by attaching to the master event bus or '
-                             'by examing the master job cache, if configured.')
-                    sys.exit(0)
-                    rets = self.get_runner_returns(jid)
-                else:
-                    rets = [jid]
-                # Gather the returns
-                for ret in rets:
-                    if not self.opts.get('quiet', False):
-                        if isinstance(ret, dict) and 'outputter' in ret and ret['outputter'] is not None:
-                            print(self.outputters[ret['outputter']](ret['data']))
-                        else:
-                            salt.output.display_output(ret, '', self.opts)
+                verify_fun(self.functions, low['fun'])
+                args, kwargs = salt.minion.load_args_and_kwargs(
+                    self.functions[low['fun']],
+                    salt.utils.args.parse_input(self.opts['arg']),
+                    self.opts,
+                )
+                low['args'] = args
+                low['kwargs'] = kwargs
 
+                user = salt.utils.get_specific_user()
+
+                # Run the runner!
+                if self.opts.get('async', False):
+                    async_pub = self.async(self.opts['fun'], low, user=user)
+                    # by default: info will be not enougth to be printed out !
+                    log.warn('Running in async mode. Results of this execution may '
+                             'be collected by attaching to the master event bus or '
+                             'by examing the master job cache, if configured. '
+                             'This execution is running under tag {tag}'.format(**async_pub))
+                    return async_pub['jid']  # return the jid
+
+                # otherwise run it in the main process
+                async_pub = self._gen_async_pub()
+                ret = self._proc_function(self.opts['fun'],
+                                          low,
+                                          user,
+                                          async_pub['tag'],
+                                          async_pub['jid'],
+                                          False)  # Don't daemonize
             except salt.exceptions.SaltException as exc:
-                ret = str(exc)
-                print(ret)
+                ret = '{0}'.format(exc)
+                if not self.opts.get('quiet', False):
+                    display_output(ret, 'nested', self.opts)
                 return ret
             log.debug('Runner return: {0}'.format(ret))
             return ret
-
-    def get_runner_returns(self, jid, timeout=None):
-        '''
-        Gather the return data from the event system, break hard when timeout
-        is reached.
-        '''
-        if timeout is None:
-            timeout = self.opts['timeout'] * 2
-
-        timeout_at = time.time() + timeout
-        last_progress_timestamp = time.time()
-
-        while True:
-            raw = self.event.get_event(timeout, full=True)
-            time.sleep(0.1)
-            # If we saw no events in the event bus timeout
-            # OR
-            # we have reached the total timeout
-            # AND
-            # have not seen any progress events for the length of the timeout.
-            if raw is None and (time.time() > timeout_at and
-                                time.time() - last_progress_timestamp > timeout):
-                # Timeout reached
-                break
-            try:
-                if not raw['tag'].split('/')[1] == 'runner' and raw['tag'].split('/')[2] == jid:
-                    continue
-                elif raw['tag'].split('/')[3] == 'progress' and raw['tag'].split('/')[2] == jid:
-                    last_progress_timestamp = time.time()
-                    yield {'data': raw['data']['data'], 'outputter': raw['data']['outputter']}
-                elif raw['tag'].split('/')[3] == 'return' and raw['tag'].split('/')[2] == jid:
-                    yield raw['data']['return']
-                    break
-                # Handle a findjob that might have been kicked off under the covers
-                elif raw['data']['fun'] == 'saltutil.findjob':
-                    timeout_at = timeout_at + 10
-                    continue
-            except (IndexError, KeyError):
-                continue

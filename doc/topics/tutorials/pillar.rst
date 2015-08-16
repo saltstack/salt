@@ -34,9 +34,9 @@ Variables:
     minions can be defined in pillar and then accessed inside sls formulas
     and template files.
 Arbitrary Data:
-    Pillar can contain any basic data structure, so a list of values, or a
-    key/value store can be defined making it easy to iterate over a group
-    of values in sls formulas
+    Pillar can contain any basic data structure in dictionary format,
+    so a key/value store can be defined making it easy to iterate over a group
+    of values in sls formulas.
 
 Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
@@ -100,7 +100,7 @@ To ensure that the minions have the new pillar data, issue a command
 to them asking that they fetch their pillars from the master:
 
 .. code-block:: bash
-    
+
     salt '*' saltutil.refresh_pillar
 
 Now that the minions have the new pillar, it can be retrieved:
@@ -247,8 +247,7 @@ A simple formula:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -266,8 +265,7 @@ Can be easily transformed into a powerful, parameterized formula:
 .. code-block:: jinja
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['pkgs']['vim'] }}
 
     /etc/vimrc:
@@ -311,12 +309,6 @@ line:
 
     salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
 
-Lists can be passed in pillar as well:
-
-.. code-block:: bash
-
-    salt '*' state.highstate pillar='["foo", "bar", "baz"]'
-
 .. note::
 
     If a key is passed on the command line that already exists on the minion,
@@ -335,3 +327,37 @@ Reference information on pillar and the external pillar interface can be found
 in the Salt documentation:
 
 :doc:`Pillar </topics/pillar/index>`
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+
+This is very convenient when you need some dynamic configuration change that
+you want to be applied on the fly. For example, there is a chicken and the egg
+problem if you do this:
+
+.. code-block:: yaml
+
+    mysql-admin-passwd:
+      mysql_user.present:
+        - name: root
+        - password: somepasswd
+
+    mydb:
+      mysql_db.present
+
+The second state will fail, because you changed the root password and the
+minion didn't notice it. Setting mysql.pass in the pillar, will help to sort
+out the issue. But always change the root admin password in the first place.
+
+This is very helpful for any module that needs credentials to apply state
+changes: mysql, keystone, etc.
+

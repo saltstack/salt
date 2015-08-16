@@ -14,53 +14,81 @@ Full list of builtin state modules
     alternatives
     apache
     apache_module
-    apt
+    aptpkg
     archive
+    artifactory
     at
     augeas
     aws_sqs
+    beacon
+    bigip
     blockdev
     boto_asg
+    boto_cfn
     boto_cloudwatch_alarm
+    boto_dynamodb
+    boto_ec2
     boto_elasticache
     boto_elb
+    boto_iam
     boto_iam_role
+    boto_kms
     boto_lc
+    boto_rds
     boto_route53
     boto_secgroup
+    boto_sns
     boto_sqs
+    boto_vpc
+    bower
+    cabal
+    chef
     cloud
     cmd
     composer
     cron
+    cyg
     ddns
     debconfmod
     disk
     dockerio
+    dockerng
+    drac
+    elasticsearch_index
+    elasticsearch_index_template
     environ
     eselect
+    etcd_mod
     event
     file
+    firewalld
     gem
     git
     glusterfs
     gnomedesktop
+    grafana
     grains
     group
     hg
+    hipchat
     host
     htpasswd
+    http
+    ifttt
     incron
     influxdb_database
     influxdb_user
     ini_manage
+    ipmi
     ipset
     iptables
+    jboss7
     keyboard
     keystone
     kmod
     layman
     libvirt
+    linux_acl
     locale
     lvm
     lvs_server
@@ -74,6 +102,7 @@ Full list of builtin state modules
     module
     mongodb_database
     mongodb_user
+    monit
     mount
     mysql_database
     mysql_grants
@@ -85,9 +114,14 @@ Full list of builtin state modules
     ntp
     openstack_config
     pagerduty
+    pagerduty_escalation_policy
+    pagerduty_schedule
+    pagerduty_service
+    pagerduty_user
     pecl
     pip_state
     pkg
+    pkgbuild
     pkgng
     pkgrepo
     portage_config
@@ -95,10 +129,14 @@ Full list of builtin state modules
     postgres_database
     postgres_extension
     postgres_group
+    postgres_schema
+    postgres_tablespace
     postgres_user
     powerpath
     process
+    pushover
     pyenv
+    pyrax_queues
     quota
     rabbitmq_cluster
     rabbitmq_plugin
@@ -109,34 +147,52 @@ Full list of builtin state modules
     rdp
     redismod
     reg
+    rsync
     rvm
     saltmod
     schedule
     selinux
     serverdensity_device
     service
+    slack
     smtp
+    splunk
+    splunk_search
+    sqlite3
     ssh_auth
     ssh_known_hosts
     stateconf
     status
+    stormpath_account
     supervisord
     svn
     sysctl
     syslog_ng
+    sysrc
+    telemetry_alert
     test
     timezone
+    tls
     tomcat
+    trafficserver
+    tuned
+    uptime
     user
+    vbox_guest
+    victorops
     virtualenv_mod
+    win_dacl
     win_dns_client
     win_firewall
     win_network
     win_path
+    win_powercfg
     win_servermanager
     win_system
     win_update
     winrepo
+    x509
     xmpp
     zcbuildout
+    zenoss
     zk_concurrency

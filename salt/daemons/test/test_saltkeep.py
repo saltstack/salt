@@ -236,7 +236,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertTrue(main.keep.dirpath.endswith(
                 os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.never)
+        self.assertIs(main.keep.auto, raeting.AutoMode.never.value)
         self.assertDictEqual(main.keep.loadLocalData(), {'name': mainData['name'],
                                                          'uid': 1,
                                                          'ha': ['127.0.0.1', 7530],
@@ -358,7 +358,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith(os.path.join('other', 'raet', 'other_minion')))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto, raeting.autoModes.never)
+        self.assertIs(other.keep.auto, raeting.AutoMode.never.value)
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -475,7 +475,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.always)
+        self.assertIs(main.keep.auto, raeting.AutoMode.always.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -596,7 +596,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith(os.path.join('other', 'raet', 'other_minion')))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto,raeting.autoModes.always)
+        self.assertIs(other.keep.auto,raeting.AutoMode.always.value)
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -713,7 +713,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto,  raeting.autoModes.once)
+        self.assertIs(main.keep.auto,  raeting.AutoMode.once.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -836,7 +836,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith(os.path.join('other', 'raet', 'other_minion')))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto, raeting.autoModes.once)
+        self.assertIs(other.keep.auto, raeting.AutoMode.once.value)
 
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
@@ -954,7 +954,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.never)
+        self.assertIs(main.keep.auto, raeting.AutoMode.never.value)
         self.assertDictEqual(main.keep.loadLocalData(), {'name': mainData['name'],
                                                          'uid': 1,
                                                          'ha': ['127.0.0.1', 7530],
@@ -1057,7 +1057,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.local.uid, 1)
         self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
-        self.assertIs(main.keep.auto, raeting.autoModes.never)
+        self.assertIs(main.keep.auto, raeting.AutoMode.never.value)
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -1102,7 +1102,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.always)
+        self.assertIs(main.keep.auto, raeting.AutoMode.always.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -1200,7 +1200,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.local.uid, 1)
         self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
-        self.assertIs(main.keep.auto, raeting.autoModes.always)
+        self.assertIs(main.keep.auto, raeting.AutoMode.always.value)
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -1246,7 +1246,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.once)
+        self.assertIs(main.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -1351,7 +1351,7 @@ class BasicTestCase(unittest.TestCase):
         self.assertEqual(main.local.uid, 1)
         self.assertEqual(main.main, True)
         self.assertEqual(main.local.role, mainData['role'])
-        self.assertIs(main.keep.auto, raeting.autoModes.once)
+        self.assertIs(main.keep.auto, raeting.AutoMode.once.value)
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
         self.assertEqual(main.local.priver.keyhex, mainData['prihex'])
         self.assertEqual(main.local.signer.keyhex, mainData['sighex'])
@@ -1398,7 +1398,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.never)
+        self.assertIs(main.keep.auto, raeting.AutoMode.never.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -1439,7 +1439,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith(os.path.join('other', 'raet', 'other_minion')))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto,  raeting.autoModes.once)
+        self.assertIs(other.keep.auto,  raeting.AutoMode.once.value)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'name': otherData['name'],
@@ -1524,7 +1524,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.always)
+        self.assertIs(main.keep.auto, raeting.AutoMode.always.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -1565,7 +1565,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith(os.path.join('other', 'raet', 'other_minion')))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto, raeting.autoModes.once)
+        self.assertIs(other.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'name': otherData['name'],
@@ -1646,7 +1646,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertEqual(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.once)
+        self.assertIs(main.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -1687,7 +1687,7 @@ class BasicTestCase(unittest.TestCase):
                 other.name, other.keep.dirpath))
         self.assertTrue(other.keep.dirpath.endswith(os.path.join('other', 'raet', 'other_minion')))
         self.assertEqual(other.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other.keep.auto, raeting.autoModes.once)
+        self.assertIs(other.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other.keep.loadLocalData(),
                             {
                                 'name': otherData['name'],
@@ -1768,7 +1768,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.never)
+        self.assertIs(main.keep.auto, raeting.AutoMode.never.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -1809,7 +1809,7 @@ class BasicTestCase(unittest.TestCase):
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_minion')))
         self.assertEqual(other1.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other1.keep.auto, raeting.autoModes.once)
+        self.assertIs(other1.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
                                 'name': other1Data['name'],
@@ -1877,7 +1877,7 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_caller')))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
-        self.assertIs(other2.keep.auto, raeting.autoModes.once)
+        self.assertIs(other2.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
                                 'name': other2Data['name'],
@@ -1937,7 +1937,7 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_caller')))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
-        self.assertIs(other2.keep.auto, raeting.autoModes.once)
+        self.assertIs(other2.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
                                 'name': other2Data['name'],
@@ -2023,7 +2023,7 @@ class BasicTestCase(unittest.TestCase):
                 main.name, main.keep.dirpath))
         self.assertTrue(main.keep.dirpath.endswith(os.path.join('main', 'raet', 'main_master')))
         self.assertTrue(main.ha, ("0.0.0.0", raeting.RAET_PORT))
-        self.assertIs(main.keep.auto, raeting.autoModes.once)
+        self.assertIs(main.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(main.keep.loadLocalData(), {
                                                          'name': mainData['name'],
                                                          'uid': 1,
@@ -2064,7 +2064,7 @@ class BasicTestCase(unittest.TestCase):
                 other1.name, other1.keep.dirpath))
         self.assertTrue(other1.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_minion')))
         self.assertEqual(other1.ha, ("0.0.0.0", raeting.RAET_TEST_PORT))
-        self.assertIs(other1.keep.auto, raeting.autoModes.once)
+        self.assertIs(other1.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other1.keep.loadLocalData(),
                             {
                                 'name': other1Data['name'],
@@ -2131,7 +2131,7 @@ class BasicTestCase(unittest.TestCase):
                 other2.name, other2.keep.dirpath))
         self.assertTrue(other2.keep.dirpath.endswith(os.path.join('primary', 'raet', 'primary_caller')))
         self.assertEqual(other2.ha, ("0.0.0.0", 7532))
-        self.assertIs(other2.keep.auto, raeting.autoModes.once)
+        self.assertIs(other2.keep.auto, raeting.AutoMode.once.value)
         self.assertDictEqual(other2.keep.loadLocalData(),
                             {
                                 'name': other2Data['name'],

@@ -1,13 +1,13 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#/usr/bin/env python
 '''
 The minionswarm script will start a group of salt minions with different ids
 on a single system to test scale capabilities
 '''
 
 # Import Python Libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import pwd
 import time
@@ -23,6 +23,8 @@ import salt
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def parse():
@@ -96,7 +98,7 @@ def parse():
 
     opts = {}
 
-    for key, val in options.__dict__.items():
+    for key, val in six.iteritems(options.__dict__):
         opts[key] = val
 
     return opts
@@ -261,6 +263,8 @@ class MinionSwarm(Swarm):
             data['raet_port'] = self.raet_port
             data['pki_dir'] = os.path.join(dpath, 'pki')
             self.raet_port += 1
+        elif self.opts['transport'] == 'tcp':
+            data['transport'] = 'tcp'
 
         if self.opts['root_dir']:
             data['root_dir'] = self.opts['root_dir']

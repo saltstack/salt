@@ -3,11 +3,13 @@
 Managing Ruby installations with rbenv
 ======================================
 
-This module is used to install and manage ruby installations with rbenv.
-Different versions of ruby can be installed, and uninstalled. Rbenv will
-be installed automatically the first time it is needed and can be updated
-later. This module will *not* automatically install packages which rbenv
-will need to compile the versions of ruby.
+This module is used to install and manage ruby installations with rbenv and the
+ruby-build plugin. Different versions of ruby can be installed, and uninstalled.
+Rbenv will be installed automatically the first time it is needed and can be
+updated later. This module will *not* automatically install packages which rbenv
+will need to compile the versions of ruby. If your version of ruby fails to
+install, refer to the ruby-build documentation to verify you are not missing any
+dependencies: https://github.com/sstephenson/ruby-build/wiki
 
 If rbenv is run as the root user then it will be installed to /usr/local/rbenv,
 otherwise it will be installed to the users ~/.rbenv directory. To make
@@ -16,25 +18,35 @@ directories to the users PATH. If you are installing as root and want other
 users to be able to access rbenv then you will need to add RBENV_ROOT to
 their environment.
 
-This is how a state configuration could look like:
+The following state configuration demonstrates how to install Ruby 1.9.x
+and 2.x using rbenv on Ubuntu/Debian:
 
 .. code-block:: yaml
 
     rbenv-deps:
       pkg.installed:
-        - pkgs:
+        - names:
           - bash
           - git
           - openssl
-          - gmake
+          - libssl-dev
+          - make
           - curl
+          - autoconf
+          - bison
+          - build-essential
+          - libffi-dev
+          - libyaml-dev
+          - libreadline6-dev
+          - zlib1g-dev
+          - libncurses5-dev
 
-    ruby-1.9.3-p392:
+    ruby-1.9.3-p429:
       rbenv.absent:
         - require:
           - pkg: rbenv-deps
 
-    ruby-1.9.3-p429:
+    ruby-2.0.0-p598:
       rbenv.installed:
         - default: True
         - require:

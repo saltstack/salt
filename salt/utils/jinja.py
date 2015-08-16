@@ -2,16 +2,17 @@
 '''
 Jinja loading utils to enable a more powerful backend for jinja templates
 '''
-from __future__ import absolute_import
 
 # Import python libs
-from os import path
-import logging
+from __future__ import absolute_import
 import json
 import pprint
+import logging
+from os import path
 from functools import wraps
 
 # Import third party libs
+import salt.ext.six as six
 from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.ext import Extension
@@ -21,9 +22,10 @@ import yaml
 
 # Import salt libs
 import salt
+import salt.utils
+import salt.utils.url
 import salt.fileclient
 from salt.utils.odict import OrderedDict
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +54,8 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None, pillar_rend=False):
+    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None,
+                 pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
                 'Boron',
@@ -65,7 +68,7 @@ class SaltCacheLoader(BaseLoader):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
-        if opts.get('file_client', 'remote') == 'local':
+        if self.opts['file_roots'] is self.opts['pillar_roots']:
             self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
@@ -80,15 +83,14 @@ class SaltCacheLoader(BaseLoader):
         '''
         if not self._file_client:
             self._file_client = salt.fileclient.get_file_client(
-                    self.opts,
-                    self.pillar_rend)
+                self.opts, self.pillar_rend)
         return self._file_client
 
     def cache_file(self, template):
         '''
         Cache a file from the salt master
         '''
-        saltpath = path.join('salt://', template)
+        saltpath = salt.utils.url.create(template)
         self.file_client().get_file(saltpath, '', True, self.saltenv)
 
     def check_cache(self, template):
@@ -109,6 +111,15 @@ class SaltCacheLoader(BaseLoader):
             raise TemplateNotFound(template)
 
         self.check_cache(template)
+
+        if environment and template:
+            tpldir = path.dirname(template).replace('\\', '/')
+            tpldata = {
+                'tplfile': template,
+                'tpldir': tpldir,
+                'tpldot': tpldir.replace('/', '.'),
+            }
+            environment.globals.update(tpldata)
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
@@ -149,8 +160,8 @@ class PrintableDict(OrderedDict):
     '''
     def __str__(self):
         output = []
-        for key, value in self.items():
-            if isinstance(value, string_types):
+        for key, value in six.iteritems(self):
+            if isinstance(value, six.string_types):
                 # keeps quotes around strings
                 output.append('{0!r}: {1!r}'.format(key, value))
             else:
@@ -160,7 +171,7 @@ class PrintableDict(OrderedDict):
 
     def __repr__(self):  # pylint: disable=W0221
         output = []
-        for key, value in self.items():
+        for key, value in six.iteritems(self):
             output.append('{0!r}: {1!r}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
@@ -198,8 +209,8 @@ def ensure_sequence_filter(data):
 
 
 @jinja2.contextfunction
-def show_full_context(c):
-    return c
+def show_full_context(ctx):
+    return ctx
 
 
 class SerializerExtension(Extension, object):
@@ -236,7 +247,7 @@ class SerializerExtension(Extension, object):
 
     .. code-block:: jinja
 
-        {{ data|yaml(False)}}
+        {{ data|yaml(False) }}
 
     will be rendered as:
 
@@ -330,7 +341,7 @@ class SerializerExtension(Extension, object):
     '''
 
     tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-        'load_text', 'import_text'])
+                'load_text', 'import_text'])
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -359,18 +370,23 @@ class SerializerExtension(Extension, object):
         '''
         def explore(data):
             if isinstance(data, (dict, OrderedDict)):
-                return PrintableDict([(key, explore(value)) for key, value in data.items()])
+                return PrintableDict(
+                    [(key, explore(value)) for key, value in six.iteritems(data)]
+                )
             elif isinstance(data, (list, tuple, set)):
                 return data.__class__([explore(value) for value in data])
             return data
         return explore(data)
 
-    def format_json(self, value, sort_keys=True):
-        return Markup(json.dumps(value, sort_keys=sort_keys).strip())
+    def format_json(self, value, sort_keys=True, indent=None):
+        return Markup(json.dumps(value, sort_keys=sort_keys, indent=indent).strip())
 
     def format_yaml(self, value, flow_style=True):
-        return Markup(yaml.dump(value, default_flow_style=flow_style,
-                                Dumper=OrderedDictDumper).strip())
+        yaml_txt = yaml.dump(value, default_flow_style=flow_style,
+                             Dumper=OrderedDictDumper).strip()
+        if yaml_txt.endswith('\n...\n'):
+            yaml_txt = yaml_txt[:len(yaml_txt-5)]
+        return Markup(yaml_txt)
 
     def format_python(self, value):
         return Markup(pprint.pformat(value).strip())
@@ -382,7 +398,7 @@ class SerializerExtension(Extension, object):
             return yaml.safe_load(value)
         except AttributeError:
             raise TemplateRuntimeError(
-                    'Unable to load yaml from {0}'.format(value))
+                'Unable to load yaml from {0}'.format(value))
 
     def load_json(self, value):
         if isinstance(value, TemplateModule):
@@ -391,13 +407,15 @@ class SerializerExtension(Extension, object):
             return json.loads(value)
         except (ValueError, TypeError, AttributeError):
             raise TemplateRuntimeError(
-                    'Unable to load json from {0}'.format(value))
+                'Unable to load json from {0}'.format(value))
 
     def load_text(self, value):
         if isinstance(value, TemplateModule):
             value = str(value)
 
         return value
+
+    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':
@@ -406,7 +424,7 @@ class SerializerExtension(Extension, object):
             return self.parse_json(parser)
         elif parser.stream.current.value == 'import_text':
             return self.parse_text(parser)
-        elif parser.stream.current.value in ('load_yaml', 'load_json', 'load_text'):
+        elif parser.stream.current.value in self._load_parsers:
             return self.parse_load(parser)
 
         parser.fail('Unknown format ' + parser.stream.current.value,
@@ -422,8 +440,8 @@ class SerializerExtension(Extension, object):
         parser.stream.expect('name:as')
         target = parser.parse_assign_target()
         macro_name = '_' + parser.free_identifier().name
-        macro_body = parser.parse_statements(('name:endload',),
-                                          drop_needle=True)
+        macro_body = parser.parse_statements(
+            ('name:endload',), drop_needle=True)
 
         return [
             nodes.Macro(

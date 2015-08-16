@@ -3,14 +3,17 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from StringIO import StringIO
 
 ensure_in_syspath('../../')
 
+from salt.ext.six.moves import StringIO
 from salt.modules import cron as cronmod
 from salt.states import cron as cron
 
@@ -64,6 +67,7 @@ def get_crontab(*args, **kw):
 
 
 def set_crontab(val):
+    CRONTAB.seek(0)
     CRONTAB.truncate(0)
     CRONTAB.write(val)
 

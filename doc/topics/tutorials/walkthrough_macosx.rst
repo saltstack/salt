@@ -92,7 +92,7 @@ have to do it all over again. It also lets you *uninstall* things easily.
 .. note::
 
     Brew is a Ruby program (Ruby is installed by default with your Mac). Brew
-    downloads, compiles and links software. The linking phase is when compiled
+    downloads, compiles, and links software. The linking phase is when compiled
     software is deployed on your machine. It may conflict with manually
     installed software, especially in the /usr/local directory. It's ok,
     remove the manually installed version then refresh the link by typing
@@ -496,4 +496,4 @@ Where To Go From Here
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:
-http://docs.saltstack.com/index.html#configuration-management
+http://docs.saltstack.com/en/latest/index.html#configuration-management
