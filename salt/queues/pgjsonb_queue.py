@@ -4,6 +4,39 @@
 
 This is a queue with postgres as the backend.  It uses the jsonb store to
 store information for queues.
+
+:depends:       python-psycopg2
+
+To enable this queue, the following needs to be configured in your master
+config. These are the defaults:
+
+.. code-block:: yaml
+
+    queue.pgjsonb.host: 'salt'
+    queue.pgjsonb.user: 'salt'
+    queue.pgjsonb.pass: 'salt'
+    queue.pgjsonb.db: 'salt'
+    queue.pgjsonb.port: 5432
+
+Use the following Pg database schema:
+
+.. code-block:: sql
+
+    CREATE DATABASE  salt WITH ENCODING 'utf-8';
+
+    --
+    -- Table structure for table `salt`
+    --
+    DROP TABLE IF EXISTS salt;
+    CREATE OR REPLACE TABLE salt(
+       id SERIAL PRIMARY KEY,
+       data jsonb NOT NULL
+    );
+
+.. code-block:: bash
+
+    salt-run queue.insert test '{"name": "redis", "host": "172.16.0.8", "port": 6379}' backend=pgjsonb
+    salt-run queue.process_queue test all backend=pgjsonb
 '''
 
 # Import python libs
