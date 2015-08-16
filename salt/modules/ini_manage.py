@@ -66,17 +66,15 @@ def set_option(file_name, sections=None):
 
         salt '*' ini.set_option /path/to/ini '{section_foo: {key: value}}'
     '''
-    if sections is None:
-        sections = {}
-    ret = {'file_name': file_name}
+    sections = sections or {}
+    changes = {}
     inifile = _Ini.get_ini_file(file_name)
     if not inifile:
-        ret.update({'error': 'ini file not found'})
-        return ret
+        changes.update({'error': 'ini file not found'})
+        return changes
     changes = inifile.update(sections)
-    ret.update({'changes': changes})
     inifile.flush()
-    return ret
+    return changes
 
 
 def get_option(file_name, section, option):
@@ -124,8 +122,9 @@ def remove_option(file_name, section, option):
         salt '*' ini.remove_option /path/to/ini section_name option_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    inifile.get(section, {}).pop(option)
+    value = inifile.get(section, {}).pop(option, None)
     inifile.flush()
+    return value
 
 
 def get_section(file_name, section):
@@ -173,8 +172,9 @@ def remove_section(file_name, section):
         salt '*' ini.remove_section /path/to/ini section_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    inifile.pop(section, None)
+    value = inifile.pop(section, {})
     inifile.flush()
+    return value
 
 
 class _Section(OrderedDict):
@@ -187,6 +187,7 @@ class _Section(OrderedDict):
 
     def refresh(self, inicontents=None):
         comment_count = 1
+        unknown_count = 1
         curr_indent = ''
         inicontents = inicontents or self.inicontents
         if not inicontents:
@@ -197,10 +198,9 @@ class _Section(OrderedDict):
             com_match = com_regx.match(opt_str)
             if com_match:
                 name = '#comment{}'.format(comment_count)
-                value = com_match.group(2)
                 self.com = com_match.group(1)
                 comment_count += 1
-                self.update({name: value})
+                self.update({name: opt_str})
                 continue
             indented_match = indented_regx.match(opt_str)
             if indented_match:
@@ -218,6 +218,9 @@ class _Section(OrderedDict):
                 curr_indent = curr_indent.replace('\t', '    ')
                 self.update({name: value})
                 continue
+            name = '#unknown{}'.format(unknown_count)
+            self.update({name: opt_str})
+            unknown_count += 1
 
     def _uncomment_if_commented(self, opt_key):
         # should be called only if opt_key is not already present
@@ -271,7 +274,7 @@ class _Section(OrderedDict):
         yield '[{}]\n'.format(self.name)
         for name, value in self.iteritems():
             if com_regx.match(name):
-                yield '{} {}\n'.format(self.com, value)
+                yield '{}\n'.format(value)
             elif isinstance(value, _Section):
                 for line in value.gen_ini():
                     yield line
