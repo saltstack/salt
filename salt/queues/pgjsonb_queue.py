@@ -43,10 +43,9 @@ Use the following Pg database schema:
 from __future__ import absolute_import
 from contextlib import contextmanager
 import json
-import re
 import sys
 
-import salt.exceptions
+from salt.exceptions import SaltInvocationError, SaltMasterError
 
 try:
     import psycopg2
@@ -84,7 +83,7 @@ def _conn(commit=False):
     try:
         conn = psycopg2.connect(**conn_kwargs)
     except psycopg2.OperationalError as exc:
-        raise salt.exceptions.SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
+        raise SaltMasterError('pgjsonb returner could not connect to database: {exc}'.format(exc=exc))
 
     cursor = conn.cursor()
 
