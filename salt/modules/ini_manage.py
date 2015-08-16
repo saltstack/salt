@@ -30,7 +30,7 @@ def __virtual__():
     return __virtualname__
 
 
-ini_regx = re.compile('^\s*\[(\w+)\]\s*$', flags=re.M)
+ini_regx = re.compile('^\s*\[(.+?)\]\s*$', flags=re.M)
 com_regx = re.compile(r'^\s*(#|;)\s*(.*)')
 indented_regx = re.compile(r'(\s+)(.*)')
 opt_regx = re.compile(r'(\s*)(.+?)\s*(\=|\:)\s*(.*)\s*')
@@ -194,7 +194,7 @@ class _Section(OrderedDict):
             return
         for opt in self:
             self.pop(opt)
-        for opt_str in inicontents.split('\n'):
+        for opt_str in (line for line in inicontents.split('\n') if line):
             com_match = com_regx.match(opt_str)
             if com_match:
                 name = '#comment{}'.format(comment_count)
@@ -235,7 +235,7 @@ class _Section(OrderedDict):
                 continue
             if '#comment' not in key:
                 continue
-            opt_match = opt_regx.match(value)
+            opt_match = opt_regx.match(value.lstrip('#'))
             if opt_match and opt_match.group(2) == opt_key:
                 comment_index = key
         for key in backup_dict.keys():
