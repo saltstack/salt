@@ -1547,6 +1547,7 @@ def sanitize_win_path_string(winpath):
         winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
+
 @real_memoize
 def is_proxy():
     '''

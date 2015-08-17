@@ -392,7 +392,6 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
             logger.exception('Failed to prepare salt environment')
             sys.exit(err.errno)
 
-
         self.setup_logfile_logger()
         logger.info(
             'Setting up a Salt Proxy Minion "{0}"'.format(
@@ -419,7 +418,6 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
             self.set_pidfile()
             self.minion = salt.daemons.flo.IofloMinion(self.config)
 
-
     def start(self):
         '''
         Start the actual minion.
@@ -443,7 +441,6 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
                 logger.error(str(exc))
         finally:
             self.shutdown()
-
 
     def shutdown(self):
         '''

@@ -27,7 +27,6 @@ if six.PY3:
 else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
-from salt.utils import reinit_crypto
 # pylint: enable=no-name-in-module,redefined-builtin
 
 # Import third party libs
@@ -677,7 +676,6 @@ class Minion(MinionBase):
             }, persist=True)
 
         self.grains_cache = self.opts['grains']
-
 
     @tornado.gen.coroutine
     def eval_master(self,
@@ -2540,4 +2538,3 @@ class ProxyMinion(Minion):
             }, persist=True)
 
         self.grains_cache = self.opts['grains']
-

@@ -260,6 +260,7 @@ def salt_proxy_minion():
             rlogger.removeHandler(handler)
         logging.basicConfig()
 
+
 def salt_syndic():
     '''
     Start the salt syndic.

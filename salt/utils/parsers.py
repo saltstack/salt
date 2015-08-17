@@ -999,6 +999,7 @@ class ArgsStdinMixIn(six.with_metaclass(MixInMeta, object)):
                   'Each entry is newline separated.')
         )
 
+
 class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio = 40
 
@@ -1510,6 +1511,7 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
                                    cache_minion_id=False)
+
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
