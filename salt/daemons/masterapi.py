@@ -328,7 +328,7 @@ class AutoKey(object):
         autosign_dir = os.path.join(self.opts['pki_dir'], 'minions_autosign')
 
         # cleanup expired files
-        expire_minutes = self.opts.get('autosign_expire_minutes', 10)
+        expire_minutes = self.opts.get('autosign_timeout', 120)
         if expire_minutes > 0:
             min_time = time.time() - (60 * int(expire_minutes))
             for root, dirs, filenames in os.walk(autosign_dir):
