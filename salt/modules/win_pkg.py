@@ -675,7 +675,7 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
         cmd.append(expanded_cached_pkg)
         cmd.extend(shlex.split(uninstall_flags))
         if extra_uninstall_flags:
-            cmd.extend(str(extra_uninstall_flags).split())
+            cmd.extend(shlex.split(extra_uninstall_flags))
 
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
 
