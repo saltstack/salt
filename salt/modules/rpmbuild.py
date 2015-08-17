@@ -231,7 +231,7 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
     return ret
 
 
-def make_repo(repodir):
+def make_repo(repodir, keyid=None, env=None):
     '''
     Given the repodir, create a yum repository out of the rpms therein
 

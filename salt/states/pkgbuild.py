@@ -161,7 +161,7 @@ def built(
     return ret
 
 
-def repo(name):
+def repo(name, keyid=None, env=None):
     '''
     Make a package repository, the name is directoty to turn into a repo.
     This state is best used with onchanges linked to your package building
@@ -169,6 +169,30 @@ def repo(name):
 
     name
         The directory to find packages that will be in the repository
+
+    keyid
+        Optional Key ID to use in signing repository
+
+    env
+        A dictionary of environment variables to be utlilized in creating the repository.
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                    OPTIONS: 'ask-passphrase'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+            Use of OPTIONS on some platforms, for example: ask-passphrase, will
+            require gpg-agent or similar to cache passphrases.
     '''
     ret = {'name': name,
            'changes': {},
@@ -178,6 +202,14 @@ def repo(name):
         ret['result'] = None
         ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
         return ret
-    __salt__['pkgbuild.make_repo'](name)
+
+    # Need the check for None here, if env is not provided then it falls back
+    # to None and it is assumed that the environment is not being overridden.
+    if env is not None and not isinstance(env, dict):
+        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+                          'documentation.')
+        return ret
+
+    __salt__['pkgbuild.make_repo'](name, keyid, env)
     ret['changes'] = {'refresh': True}
     return ret

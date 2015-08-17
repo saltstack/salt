@@ -35,9 +35,9 @@ def __virtual__():
     return False
 
 
-def _get_env(env):
+def _get_build_env(env):
     '''
-    Get environment overrides dictionary to use in build process
+    Get build environment overrides dictionary to use in build process
     '''
     env_override = ""
     if env is None:
@@ -50,6 +50,22 @@ def _get_env(env):
         env_override += '{0}={1}\n'.format(key, value)
         env_override += 'export {0}\n'.format(key)
     return env_override
+
+
+def _get_repo_env(env):
+    '''
+    Get repo environment overrides dictionary to use in repo process
+    '''
+    env_options = ""
+    if env is None:
+        return env_options
+    if not isinstance(env, dict):
+        raise SaltInvocationError(
+            '\'env\' must be a Python dictionary'
+        )
+    for key, value in env.items():
+        env_options += '{0}\n'.format(value)
+    return env_options
 
 
 def _create_pbuilders(env):
@@ -138,7 +154,7 @@ OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free 
     with open(pbuilderrc, "w") as fow:
         fow.write('{0}'.format(pbldrc_text))
 
-    env_overrides = _get_env(env)
+    env_overrides = _get_build_env(env)
     if env_overrides and not env_overrides.isspace():
         with open(pbuilderrc, "a") as fow:
             fow.write('{0}'.format(env_overrides))
@@ -319,7 +335,7 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
     return ret
 
 
-def make_repo(repodir):
+def make_repo(repodir, keyid=None, env=None):
     '''
     Given the repodir, create a Debian repository out of the dsc therein
 
@@ -343,6 +359,15 @@ Pull: jessie
     repoconfdist = os.path.join(repoconf, 'distributions')
     with open(repoconfdist, "w") as fow:
         fow.write('{0}'.format(repocfg_text))
+
+    if keyid is not None:
+        with open(repoconfdist, "a") as fow:
+            fow.write('Signwith: {0}\n'.format(keyid))
+
+    repocfg_opts = _get_repo_env(env)
+    repoconfopts = os.path.join(repoconf, 'options')
+    with open(repoconfopts, "w") as fow:
+        fow.write('{0}'.format(repocfg_opts))
 
     for debfile in os.listdir(repodir):
         if debfile.endswith('.changes'):
