@@ -1269,6 +1269,17 @@ class DictItem(BaseSchemaItem):
         self.__flatten__ = flatten
         return self
 
+    def serialize(self):
+        result = super(DictItem, self).serialize()
+        required = []
+        if self.properties is not None:
+            for key, prop in self.properties.items():
+                if prop.required:
+                    required.append(key)
+        if required:
+            result['required'] = required
+        return result
+
 
 class RequirementsItem(SchemaItem):
     __type__ = 'object'

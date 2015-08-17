@@ -1586,6 +1586,52 @@ class ConfigTestCase(TestCase):
                 }
             }
         )
+        class TestConf(schema.Schema):
+            item = schema.DictItem(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties={
+                    'sides': schema.IntegerItem(required=True)
+                },
+                additional_properties=schema.OneOfItem(items=[schema.BooleanItem(),
+                                                              schema.StringItem()])
+            )
+
+        self.assertDictContainsSubset(
+            TestConf.serialize(), {
+                '$schema': 'http://json-schema.org/draft-04/schema#',
+                'type': 'object',
+                'properties': {
+                    'item': {
+                        'title': 'Poligon',
+                        'description': 'Describe the Poligon',
+                        'type': 'object',
+                        'properties': {
+                            'sides': {
+                                'type': 'integer'
+                            }
+                        },
+                        'additionalProperties': {
+                            'oneOf': [
+                                {
+                                    'type': 'boolean'
+                                },
+                                {
+                                    'type': 'string'
+                                }
+                            ]
+                        },
+                        'required': [
+                            'sides'
+                        ],
+                    }
+                },
+                'x-ordering': [
+                    'item'
+                ],
+                'additionalProperties': False
+            }
+        )
 
     @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
     def test_dict_config_validation(self):
