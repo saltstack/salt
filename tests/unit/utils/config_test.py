@@ -1778,6 +1778,24 @@ class ConfigTestCase(TestCase):
                                           'opaque': True}}, TestConf.serialize())
         self.assertIn('\'sides\' is a required property', excinfo.exception.message)
 
+        class Props(schema.Schema):
+            sides = schema.IntegerItem(required=True)
+
+        class TestConf(schema.Schema):
+            item = schema.DictItem(
+                title='Poligon',
+                description='Describe the Poligon',
+                properties=Props(),
+                additional_properties=schema.OneOfItem(items=[schema.BooleanItem(),
+                                                              schema.StringItem()])
+            )
+
+        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+            jsonschema.validate({'item': {'color': 'blue',
+                                          'rugged_surface': False,
+                                          'opaque': True}}, TestConf.serialize())
+        self.assertIn('\'sides\' is a required property', excinfo.exception.message)
+
     def test_oneof_config(self):
         item = schema.OneOfItem(
             items=(schema.StringItem(title='Yes', enum=['yes']),
