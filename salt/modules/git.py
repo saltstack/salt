@@ -31,6 +31,100 @@ def __virtual__():
     return True if salt.utils.which('git') else False
 
 
+def _add_http_basic_auth(url, https_user=None, https_pass=None):
+    if https_user is None and https_pass is None:
+        return url
+    else:
+        urltuple = _urlparse(url)
+        if urltuple.scheme == 'https':
+            netloc = '{0}:{1}@{2}'.format(
+                https_user,
+                https_pass,
+                urltuple.netloc
+            )
+            urltuple = urltuple._replace(netloc=netloc)
+            return _urlunparse(urltuple)
+        else:
+            raise SaltInvocationError('Basic Auth only supported for HTTPS')
+
+
+def _check_abs(*paths):
+    '''
+    Ensure that the path is absolute
+    '''
+    for path in paths:
+        if not isinstance(path, six.string_types) or not os.path.isabs(path):
+            raise SaltInvocationError(
+                'Path \'{0}\' is not absolute'.format(path)
+            )
+
+
+def _config_getter(get_opt,
+                   cwd,
+                   key,
+                   value_regex=None,
+                   user=None,
+                   ignore_retcode=False,
+                   **kwargs):
+    '''
+    Common code for config.get_* functions, builds and runs the git CLI command
+    and returns the result dict for the calling function to parse.
+    '''
+    if cwd != 'global':
+        _check_abs(cwd)
+
+    if get_opt == '--get-regexp':
+        if value_regex is not None \
+                and not isinstance(value_regex, six.string_types):
+            value_regex = str(value_regex)
+    else:
+        # Ignore value_regex
+        value_regex = None
+
+    command = ['git', 'config', get_opt]
+    if cwd == 'global':
+        command.append('--global')
+    command.append(key)
+    if value_regex is not None:
+        command.append(value_regex)
+    return _git_run(command,
+                    cwd=cwd if cwd != 'global' else None,
+                    runas=user,
+                    ignore_retcode=ignore_retcode,
+                    failhard=False)
+
+
+def _format_opts(opts):
+    '''
+    Common code to inspect opts and split them if necessary
+    '''
+    if opts is None:
+        return []
+    elif isinstance(opts, list):
+        new_opts = []
+        for item in opts:
+            if isinstance(item, six.string_types):
+                new_opts.append(item)
+            else:
+                new_opts.append(str(item))
+        return new_opts
+    else:
+        if not isinstance(opts, six.string_types):
+            opts = [str(opts)]
+        else:
+            opts = shlex.split(opts)
+    try:
+        if opts[-1] == '--':
+            # Strip the '--' if it was passed at the end of the opts string,
+            # it'll be added back (if necessary) in the calling function.
+            # Putting this check here keeps it from having to be repeated every
+            # time _format_opts() is invoked.
+            return opts[:-1]
+    except IndexError:
+        pass
+    return opts
+
+
 def _git_run(command, cwd=None, runas=None, identity=None,
              ignore_retcode=False, failhard=True, **kwargs):
     '''
@@ -127,65 +221,6 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                     msg += ': {0}'.format(result['stderr'])
                 raise CommandExecutionError(msg)
             return result
-
-
-def _check_abs(*paths):
-    '''
-    Ensure that the path is absolute
-    '''
-    for path in paths:
-        if not isinstance(path, six.string_types) or not os.path.isabs(path):
-            raise SaltInvocationError(
-                'Path \'{0}\' is not absolute'.format(path)
-            )
-
-
-def _format_opts(opts):
-    '''
-    Common code to inspect opts and split them if necessary
-    '''
-    if opts is None:
-        return []
-    elif isinstance(opts, list):
-        new_opts = []
-        for item in opts:
-            if isinstance(item, six.string_types):
-                new_opts.append(item)
-            else:
-                new_opts.append(str(item))
-        return new_opts
-    else:
-        if not isinstance(opts, six.string_types):
-            opts = [str(opts)]
-        else:
-            opts = shlex.split(opts)
-    try:
-        if opts[-1] == '--':
-            # Strip the '--' if it was passed at the end of the opts string,
-            # it'll be added back (if necessary) in the calling function.
-            # Putting this check here keeps it from having to be repeated every
-            # time _format_opts() is invoked.
-            return opts[:-1]
-    except IndexError:
-        pass
-    return opts
-
-
-def _add_http_basic_auth(url, https_user=None, https_pass=None):
-    if https_user is None and https_pass is None:
-        return url
-    else:
-        urltuple = _urlparse(url)
-        if urltuple.scheme == 'https':
-            netloc = '{0}:{1}@{2}'.format(
-                https_user,
-                https_pass,
-                urltuple.netloc
-            )
-            urltuple = urltuple._replace(netloc=netloc)
-            return _urlunparse(urltuple)
-        else:
-            raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
 
 def _get_toplevel(path, user=None):
@@ -660,41 +695,6 @@ def commit(cwd,
                     cwd=cwd,
                     runas=user,
                     ignore_retcode=ignore_retcode)['stdout']
-
-
-def _config_getter(get_opt,
-                   cwd,
-                   key,
-                   value_regex=None,
-                   user=None,
-                   ignore_retcode=False,
-                   **kwargs):
-    '''
-    Common code for config.get_* functions, builds and runs the git CLI command
-    and returns the result dict for the calling function to parse.
-    '''
-    if cwd != 'global':
-        _check_abs(cwd)
-
-    if get_opt == '--get-regexp':
-        if value_regex is not None \
-                and not isinstance(value_regex, six.string_types):
-            value_regex = str(value_regex)
-    else:
-        # Ignore value_regex
-        value_regex = None
-
-    command = ['git', 'config', get_opt]
-    if cwd == 'global':
-        command.append('--global')
-    command.append(key)
-    if value_regex is not None:
-        command.append(value_regex)
-    return _git_run(command,
-                    cwd=cwd if cwd != 'global' else None,
-                    runas=user,
-                    ignore_retcode=ignore_retcode,
-                    failhard=False)
 
 
 def config_get(cwd,
