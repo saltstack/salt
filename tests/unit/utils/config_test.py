@@ -1586,6 +1586,7 @@ class ConfigTestCase(TestCase):
                 }
             }
         )
+
         class TestConf(schema.Schema):
             item = schema.DictItem(
                 title='Poligon',
