@@ -19,8 +19,6 @@ from salttesting.helpers import (
     ensure_in_syspath,
     skip_if_binaries_missing
 )
-from salt.exceptions import SaltInvocationError
-from salt.modules import git
 ensure_in_syspath('../..')
 
 # Import salt libs
@@ -150,7 +148,6 @@ class GitModuleTest(integration.ModuleCase):
                  'foo/qux/bar', 'foo/qux/baz', 'foo/qux/foo']
             )
         os.unlink(tar_archive)
-
 
     def test_archive_subdir(self):
         '''

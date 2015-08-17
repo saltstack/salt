@@ -512,8 +512,7 @@ def latest(name,
                                     # locally but account for this just in
                                     # case.
                                     local_tag_sha1 = None
-                                if local_tag_sha1 != remote_rev \
-                                        and fast_forward is False:
+                                if local_tag_sha1 != remote_rev:
                                     # Remote tag is different than local tag,
                                     # unless we're doing a hard reset then we
                                     # don't need to proceed as we know that the
