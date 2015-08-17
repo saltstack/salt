@@ -9,8 +9,9 @@ import re
 
 try:
     import pwd
+    HAS_PWD = True
 except ImportError:
-    pass
+    HAS_PWD = False
 import logging
 import copy
 
@@ -32,10 +33,9 @@ __virtualname__ = 'user'
 def __virtual__():
     '''
     Set the user module if the kernel is Linux, OpenBSD or NetBSD
-    and remove some of the functionality on OS X
     '''
 
-    if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
+    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
         return __virtualname__
     return False
 
