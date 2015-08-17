@@ -449,6 +449,10 @@ def log_handlers(opts):
 
     :param dict opts: The Salt options dictionary
     '''
+    pack = {
+        '__grains__': grains(opts),
+        '__salt__': minion_mods(opts)
+    }
     ret = LazyLoader(_module_dirs(opts,
                                   'log_handlers',
                                   'log_handlers',
@@ -456,6 +460,7 @@ def log_handlers(opts):
                                   base_path=os.path.join(SALT_BASE_PATH, 'log')),
                      opts,
                      tag='log_handlers',
+                     pack=pack
                      )
     return FilterDictWrapper(ret, '.setup_handlers')
 
