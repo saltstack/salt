@@ -20,6 +20,7 @@ import resource
 import multiprocessing
 import sys
 import tempfile
+import traceback
 
 # Import third party libs
 import zmq
@@ -2143,9 +2144,6 @@ class ClearFuncs(object):
             clear_load['groups'] = groups
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
-            import sys
-            import traceback
-
             type_, value_, traceback_ = sys.exc_info()
             log.error(
                 'Exception occurred while authenticating: {0}'.format(exc)
@@ -2322,9 +2320,6 @@ class ClearFuncs(object):
                     return ''
 
             except Exception as exc:
-                import sys
-                import traceback
-
                 type_, value_, traceback_ = sys.exc_info()
                 log.error(
                     'Exception occurred while authenticating: {0}'.format(exc)
