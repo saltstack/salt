@@ -126,6 +126,8 @@ def present(
     vpc_name
         The name of the VPC to create the security group in, if any.
 
+        .. versionadded:: Boron
+
     rules
         A list of ingress rule dicts.
 
@@ -144,6 +146,8 @@ def present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+        .. versionadded:: Boron
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _security_group_present(name, description, vpc_id, region, key,
@@ -487,6 +491,8 @@ def absent(
     vpc_name
         The name of the VPC to create the security group in, if any.
 
+        .. versionadded:: Boron
+
     region
         Region to connect to.
 
@@ -499,6 +505,8 @@ def absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
+
+        .. versionadded:: Boron
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 

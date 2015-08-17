@@ -139,6 +139,8 @@ def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None, keyid=None,
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
