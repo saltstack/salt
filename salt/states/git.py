@@ -741,7 +741,7 @@ def latest(name,
                             else:
                                 msg += (
                                     ', but this update would not be made (and '
-                                    'the state will fail) if it is not a '
+                                    'the state would fail) if it is not a '
                                     'fast-forward'
                                 )
                             actions.append(msg)
