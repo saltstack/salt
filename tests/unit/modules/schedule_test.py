@@ -33,7 +33,7 @@ schedule.__opts__ = {}
 schedule.__pillar__ = {}
 
 JOB1 = {'function': 'test.ping', 'maxrunning': 1, 'name': 'job1',
-        'jid_include': True}
+        'jid_include': True, 'enabled': True}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -47,13 +47,13 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it list the jobs currently scheduled on the minion.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': []}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': {'enabled': True}}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {'_seconds': []}}
+                _ret_value = {'complete': True, 'schedule': {'_seconds': {'enabled': True}}}
                 with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertEqual(schedule.list_(), 'schedule:\n  _seconds: []\n')
-                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': []})
+                    self.assertEqual(schedule.list_(), "schedule:\n  _seconds:\n    enabled: true\n")
+                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': {'enabled': True}})
 
         with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
@@ -109,7 +109,8 @@ class ScheduleTestCase(TestCase):
             self.assertDictEqual(schedule.build_schedule_item
                                  ('job1', function='test.ping'),
                                  {'function': 'test.ping', 'maxrunning': 1,
-                                  'name': 'job1', 'jid_include': True})
+                                  'name': 'job1', 'jid_include': True,
+                                  'enabled': True})
 
             self.assertDictEqual(schedule.build_schedule_item
                                  ('job1', function='test.ping', seconds=3600,
