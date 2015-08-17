@@ -131,12 +131,19 @@ def __init__(opts):
         __utils__['boto.assign_funcs'](__name__, 'vpc')
 
 
-def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
+def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None, keyid=None,
+              profile=None):
     '''
     Check whether a VPC with the given name or id exists.
     Returns the vpc_id or None. Raises SaltInvocationError if
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.check_vpc vpc_name=myvpc profile=awsprofile
     '''
 
     if not _exactly_one((vpc_name, vpc_id)):
@@ -633,7 +640,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'vpc': None}
 
@@ -768,7 +775,7 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     '''
 
     try:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
     except BotoServerError as e:
@@ -1026,7 +1033,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
 
     try:
         if vpc_id or vpc_name:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
             if not vpc_id:
                 return {'created': False,
                         'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
@@ -1196,7 +1203,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
 
     try:
         if vpc_id or vpc_name:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
             if not vpc_id:
                 return {'created': False,
                         'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
@@ -1254,7 +1261,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
 
     '''
     try:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'associated': False,
                     'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
@@ -1352,7 +1359,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
     _id = vpc_name or vpc_id
 
     try:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
@@ -1563,7 +1570,7 @@ def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_
                         'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
 
         if vpc_name or vpc_id:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
 
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         association_id = conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
@@ -1725,7 +1732,7 @@ def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
         salt myminion boto_vpc.create_route_table vpc_name='myvpc' \\
                 route_table_name='myroutetable'
     '''
-    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     if not vpc_id:
         return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
 
