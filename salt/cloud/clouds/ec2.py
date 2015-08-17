@@ -2428,7 +2428,7 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
         )
 
     if 'instance_id' not in kwargs:
-        kwargs['instance_id'] = _get_node(name)[name]['instanceId']
+        kwargs['instance_id'] = _get_node(name)['instanceId']
 
     if isinstance(kwargs['volumes'], str):
         volumes = yaml.safe_load(kwargs['volumes'])
@@ -2505,7 +2505,7 @@ def stop(name, call=None):
 
     log.info('Stopping node {0}'.format(name))
 
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'StopInstances',
               'InstanceId.1': instance_id}
@@ -2529,7 +2529,7 @@ def start(name, call=None):
 
     log.info('Starting node {0}'.format(name))
 
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'StartInstances',
               'InstanceId.1': instance_id}
@@ -2669,9 +2669,7 @@ def get_tags(name=None,
     if instance_id is None:
         if resource_id is None:
             if name:
-                instances = list_nodes_full(location)
-                if name in instances:
-                    instance_id = instances[name]['instanceId']
+                instance_id = _get_node(name)['instanceId']
             elif 'instance_id' in kwargs:
                 instance_id = kwargs['instance_id']
             elif 'resource_id' in kwargs:
@@ -2722,7 +2720,7 @@ def del_tags(name=None,
         del kwargs['resource_id']
 
     if not instance_id:
-        instance_id = _get_node(name)[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'DeleteTags',
               'ResourceId.1': instance_id}
@@ -2784,7 +2782,7 @@ def destroy(name, call=None):
         )
 
     node_metadata = _get_node(name)
-    instance_id = node_metadata[name]['instanceId']
+    instance_id = node_metadata['instanceId']
     sir_id = node_metadata.get('spotInstanceRequestId')
     protected = show_term_protect(
         name=name,
@@ -2878,7 +2876,7 @@ def reboot(name, call=None):
 
         salt-cloud -a reboot mymachine
     '''
-    instance_id = _get_node(name)[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     params = {'Action': 'RebootInstances',
               'InstanceId.1': instance_id}
 
@@ -2981,7 +2979,7 @@ def _get_node(name=None, instance_id=None, location=None):
                                   provider=provider,
                                   opts=__opts__,
                                   sigver='4')
-            return _extract_instance_info(instances)
+            return _extract_instance_info(instances).values()[0]
         except KeyError:
             attempts -= 1
             log.debug(
@@ -3143,11 +3141,13 @@ def list_nodes_min(location=None, call=None):
             for item in instance['instancesSet']['item']:
                 state = item['instanceState']['name']
                 name = _extract_name_tag(item)
+                id = item['instanceId']
         else:
             item = instance['instancesSet']['item']
             state = item['instanceState']['name']
             name = _extract_name_tag(item)
-        ret[name] = {'state': state}
+            id = item['instanceId']
+        ret[name] = {'state': state, 'id': id}
     return ret
 
 
@@ -3199,8 +3199,7 @@ def show_term_protect(name=None, instance_id=None, call=None, quiet=False):
         )
 
     if not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
     params = {'Action': 'DescribeInstanceAttribute',
               'InstanceId': instance_id,
               'Attribute': 'disableApiTermination'}
@@ -3276,8 +3275,7 @@ def _toggle_term_protect(name, value):
 
         salt-cloud -a disable_term_protect mymachine
     '''
-    instances = list_nodes_full(get_location())
-    instance_id = instances[name]['instanceId']
+    instance_id = _get_node(name)['instanceId']
     params = {'Action': 'ModifyInstanceAttribute',
               'InstanceId': instance_id,
               'DisableApiTermination.Value': value}
@@ -3317,8 +3315,7 @@ def show_delvol_on_destroy(name, kwargs=None, call=None):
     volume_id = kwargs.get('volume_id', None)
 
     if instance_id is None:
-        instances = list_nodes_full()
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     params = {'Action': 'DescribeInstances',
               'InstanceId.1': instance_id}
@@ -3410,8 +3407,7 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
                    value=None, requesturl=None):
 
     if not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if requesturl:
         data = aws.query(requesturl=requesturl,
@@ -3561,8 +3557,7 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
         instance_id = kwargs['instance_id']
 
     if name and not instance_id:
-        instances = list_nodes_full(get_location())
-        instance_id = instances[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if not name and not instance_id:
         log.error('Either a name or an instance_id is required.')
@@ -3987,7 +3982,7 @@ def get_console_output(
         location = get_location()
 
     if not instance_id:
-        instance_id = _get_node(name)[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if kwargs is None:
         kwargs = {}
@@ -4049,7 +4044,7 @@ def get_password_data(
         )
 
     if not instance_id:
-        instance_id = _get_node(name)[name]['instanceId']
+        instance_id = _get_node(name)['instanceId']
 
     if kwargs is None:
         kwargs = {}
