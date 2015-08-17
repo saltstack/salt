@@ -2279,7 +2279,7 @@ def ps_(**kwargs):
                 continue
             for item in container:
                 c_state = 'running' \
-                    if container['Status'].lower().startswith('up ') \
+                    if container.get('Status', '').lower().startswith('up ') \
                     else 'stopped'
                 bucket = __context__.setdefault('docker.ps', {}).setdefault(
                     c_state, {})
