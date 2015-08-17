@@ -702,6 +702,42 @@ def sdb(opts, functions=None, whitelist=None):
                      )
 
 
+def pkgdb(opts):
+    '''
+    Return modules for SPM's package database
+
+    .. versionadded:: 2015.8.0
+    '''
+    return LazyLoader(
+        _module_dirs(
+            opts,
+            'pkgdb',
+            'pkgdb',
+            base_path=os.path.join(SALT_BASE_PATH, 'spm')
+        ),
+        opts,
+        tag='pkgdb'
+    )
+
+
+def pkgfiles(opts):
+    '''
+    Return modules for SPM's file handling
+
+    .. versionadded:: 2015.8.0
+    '''
+    return LazyLoader(
+        _module_dirs(
+            opts,
+            'pkgfiles',
+            'pkgfiles',
+            base_path=os.path.join(SALT_BASE_PATH, 'spm')
+        ),
+        opts,
+        tag='pkgfiles'
+    )
+
+
 def clouds(opts):
     '''
     Return the cloud functions
