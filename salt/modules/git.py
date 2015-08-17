@@ -410,7 +410,7 @@ def archive(cwd,
             if not isinstance(prefix, six.string_types):
                 prefix = str(prefix)
         else:
-            prefix = os.path.basename(cwd)
+            prefix = os.path.basename(cwd) + '/'
         command.extend(['--prefix', prefix])
 
     if format_:
