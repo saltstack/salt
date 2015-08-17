@@ -84,11 +84,13 @@ class NovaServer(object):
         return self.__dict__
 
 
-def get_entry(dict_, key, value):
+def get_entry(dict_, key, value, raise_error=True):
     for entry in dict_:
         if entry[key] == value:
             return entry
-    raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+    if raise_error is True:
+        raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+    return {}
 
 
 def sanatize_novaclient(kwargs):
@@ -191,25 +193,25 @@ class SaltNova(OpenStackComputeShell):
 
         self.compute_conn = client.Client(**self.kwargs)
 
-        if region_name is not None:
-            servers_endpoints = get_entry(
-                self.catalog,
-                'type',
-                'volume'
-            )['endpoints']
-            self.kwargs['bypass_url'] = get_entry(
-                servers_endpoints,
-                'region',
-                region_name
-            )['publicURL']
+        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
+        if volume_endpoints:
+            if region_name is not None:
+                self.kwargs['bypass_url'] = get_entry(
+                    volume_endpoints,
+                    'region',
+                    region_name
+                )['publicURL']
 
-        self.kwargs['service_type'] = 'volume'
-        self.volume_conn = client.Client(**self.kwargs)
-        if hasattr(self, 'extensions'):
-            self.expand_extensions()
+            self.volume_conn = client.Client(**self.kwargs)
+            if hasattr(self, 'extensions'):
+                self.expand_extensions()
+        else:
+            self.volume_conn = None
 
     def expand_extensions(self):
         for connection in (self.compute_conn, self.volume_conn):
+            if connection is None:
+                continue
             for extension in self.extensions:
                 for attr in extension.module.__dict__:
                     if not inspect.isclass(getattr(extension.module, attr)):
@@ -298,6 +300,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Organize information about a volume from the volume_id
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volume = nt_ks.volumes.get(volume_id)
         response = {'name': volume.display_name,
@@ -313,6 +317,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         List all block volumes
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volumes = nt_ks.volumes.list(search_opts=search_opts)
         response = {}
@@ -331,6 +337,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Show one volume
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volumes = self.volume_list(
             search_opts={'display_name': name},
@@ -348,6 +356,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Create a block device
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         response = nt_ks.volumes.create(
             size=size,
@@ -363,6 +373,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Delete a block device
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         try:
             volume = self.volume_show(name)
