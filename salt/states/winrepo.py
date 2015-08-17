@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Windows Package Repository
-
-.. note::
-
-    This state only loads on minions that have the ``roles: salt-master`` grain
-    set.
 '''
 from __future__ import absolute_import
 
