@@ -427,16 +427,19 @@ def latest(name,
                 desired_upstream = False
                 remote_rev_type = 'tag'
         else:
-            if len(rev) <= 40 \
-                    and all(x in string.hexdigits for x in rev):
-                # git ls-remote did not find the rev, and because it's a
-                # hex string <= 40 chars we're going to assume that the
-                # desired rev is a SHA1
-                remote_rev = rev
-                desired_upstream = False
-                remote_rev_type = 'sha1'
-            else:
+            if rev is None:
                 remote_rev = None
+            else:
+                if len(rev) <= 40 \
+                        and all(x in string.hexdigits for x in rev):
+                    # git ls-remote did not find the rev, and because it's a
+                    # hex string <= 40 chars we're going to assume that the
+                    # desired rev is a SHA1
+                    remote_rev = rev
+                    desired_upstream = False
+                    remote_rev_type = 'sha1'
+                else:
+                    remote_rev = None
 
     if rev and remote_rev is None:
         # A specific rev is desired, but that rev doesn't exist on the
@@ -593,7 +596,8 @@ def latest(name,
                             target,
                             local_branch + '@{upstream}',
                             opts=['--abbrev-ref'],
-                            user=user)
+                            user=user,
+                            ignore_retcode=True)
                     except CommandExecutionError:
                         # There is a local branch but the rev-parse command
                         # failed, so that means there is no upstream tracking
