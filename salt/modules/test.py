@@ -110,7 +110,6 @@ def ping():
 
         salt '*' test.ping
     '''
-
     if 'proxymodule' in __opts__:
         ping_cmd = __opts__['proxymodule'].loaded_base_name + '.ping'
         return __opts__['proxymodule'][ping_cmd]()

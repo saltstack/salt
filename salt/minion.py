@@ -27,7 +27,6 @@ if six.PY3:
 else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range
-from salt.utils import reinit_crypto
 # pylint: enable=no-name-in-module,redefined-builtin
 
 # Import third party libs
@@ -554,7 +553,6 @@ class Minion(MinionBase):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-
     def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None):  # pylint: disable=W0231
         '''
         Pass in the options dict
@@ -591,13 +589,15 @@ class Minion(MinionBase):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        self.opts['grains'] = salt.loader.grains(opts)
+        if 'proxyid' not in self.opts:
+            self.opts['grains'] = salt.loader.grains(opts)
 
     # TODO: remove?
     def sync_connect_master(self):
         '''
         Block until we are connected to a master
         '''
+        log.debug("sync_connect_master")
         self._connect_master_future = self.connect_master()
         # finish connecting to master
         self._connect_master_future.add_done_callback(lambda f: self.io_loop.stop())
@@ -642,6 +642,7 @@ class Minion(MinionBase):
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
         uid = salt.utils.get_uid(user=self.opts.get('user', None))
         self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
+
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -675,24 +676,6 @@ class Minion(MinionBase):
             }, persist=True)
 
         self.grains_cache = self.opts['grains']
-
-        if 'proxy' in self.opts['pillar']:
-            log.info('I am {0} and I need to start some proxies for {1}'.format(self.opts['id'],
-                                                                                self.opts['pillar']['proxy'].keys()))
-            for p in self.opts['pillar']['proxy']:
-                log.info('Starting {0} proxy.'.format(p))
-                pid = os.fork()
-                if pid > 0:
-                    reinit_crypto()
-                    continue
-                else:
-                    reinit_crypto()
-                    proxyminion = salt.cli.daemons.ProxyMinion(self.opts)
-                    proxyminion.start(self.opts['pillar']['proxy'][p])
-                    self.clean_die(signal.SIGTERM, None)
-        else:
-            log.info('I am {0} and I am not supposed to start any proxies. '
-                     '(Likely not a problem)'.format(self.opts['id']))
 
     @tornado.gen.coroutine
     def eval_master(self,
@@ -2483,62 +2466,45 @@ class ProxyMinion(Minion):
     This class instantiates a 'proxy' minion--a minion that does not manipulate
     the host it runs on, but instead manipulates a device that cannot run a minion.
     '''
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None):  # pylint: disable=W0231
-        '''
-        Pass in the options dict
-        '''
-        self._running = None
-        self.win_proc = []
-        self.loaded_base_name = loaded_base_name
 
-        # Warn if ZMQ < 3.2
-        if HAS_ZMQ:
-            try:
-                zmq_version_info = zmq.zmq_version_info()
-            except AttributeError:
-                # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
-                # using zmq.zmq_version() and build a version info tuple.
-                zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]
-                )
-            if zmq_version_info < (3, 2):
-                log.warning(
-                    'You have a version of ZMQ less than ZMQ 3.2! There are '
-                    'known connection keep-alive issues with ZMQ < 3.2 which '
-                    'may result in loss of contact with minions. Please '
-                    'upgrade your ZMQ!'
-                )
-        # Late setup the of the opts grains, so we can log from the grains
-        # module
-        opts['master'] = self.eval_master(opts,
-                                          timeout,
-                                          safe)
-        fq_proxyname = opts['proxy']['proxytype']
-        # Need to match the function signature of the other loader fns
-        # which is def proxy(opts, functions, whitelist=None, loaded_base_name=None)
-        # 'functions' for other loaders is a LazyLoader object
-        # but since we are not needing to merge functions into another fn dictionary
-        # we will pass 'None' in
-        self.proxymodule = salt.loader.proxy(opts, None, loaded_base_name=fq_proxyname)
-        opts['proxymodule'] = self.proxymodule
-        opts['grains'] = salt.loader.grains(opts)
-        opts['id'] = opts['proxymodule'][fq_proxyname+'.id'](opts)
-        opts.update(resolve_dns(opts))
-        self.opts = opts
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            opts,
-            opts['grains'],
-            opts['id'],
-            opts['environment'],
-            pillarenv=opts.get('pillarenv'),
+    # TODO: better name...
+    @tornado.gen.coroutine
+    def _post_master_init(self, master):
+        '''
+        Function to finish init after connecting to a master
+
+        This is primarily loading modules, pillars, etc. (since they need
+        to know which master they connected to)
+        '''
+        log.debug("subclassed _post_master_init")
+        self.opts['master'] = master
+
+        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+            pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
-        opts['proxymodule'][fq_proxyname+'.init'](opts)
+
+        fq_proxyname = self.opts['pillar']['proxy']['proxytype']
+        self.opts['proxy'] = self.opts['pillar']['proxy']
+
+        # We need to do this again, because we are going to throw out a lot of grains.
+        self.opts['grains'] = salt.loader.grains(self.opts)
+
+        self.opts['proxymodule'] = salt.loader.proxy(self.opts, None, loaded_base_name=fq_proxyname)
         self.functions, self.returners, self.function_errors = self._load_modules()
+        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
+        self.opts['proxymodule'][proxy_fn](self.opts)
+
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
-        uid = salt.utils.get_uid(user=opts.get('user', None))
-        self.proc_dir = get_proc_dir(opts['cachedir'], uid=uid)
+        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        uid = salt.utils.get_uid(user=self.opts.get('user', None))
+        self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
+
         self.schedule = salt.utils.schedule.Schedule(
             self.opts,
             self.functions,
@@ -2551,25 +2517,24 @@ class ProxyMinion(Minion):
                 '__mine_interval':
                     {
                         'function': 'mine.update',
-                        'minutes': opts['mine_interval'],
+                        'minutes': self.opts['mine_interval'],
                         'jid_include': True,
                         'maxrunning': 2
                     }
-            })
+            }, persist=True)
+
+        # add master_alive job if enabled
+        if self.opts['master_alive_interval'] > 0:
+            self.schedule.add_job({
+                '__master_alive':
+                    {
+                        'function': 'status.master',
+                        'seconds': self.opts['master_alive_interval'],
+                        'jid_include': True,
+                        'maxrunning': 1,
+                        'kwargs': {'master': self.opts['master'],
+                                   'connected': True}
+                    }
+            }, persist=True)
 
         self.grains_cache = self.opts['grains']
-
-        # self._running = True
-
-    def _prep_mod_opts(self):
-        '''
-        Returns a copy of the opts with key bits stripped out
-        '''
-        return super(ProxyMinion, self)._prep_mod_opts()
-
-    def _load_modules(self, force_refresh=False, notify=False):
-        '''
-        Return the functions and the returners loaded up from the loader
-        module
-        '''
-        return super(ProxyMinion, self)._load_modules(force_refresh=force_refresh, notify=notify)
