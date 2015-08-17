@@ -16,7 +16,7 @@ them.
 An example Django module that registers a function called
 'returner_callback' with this module's 'returner' function:
 
-    .. code-block:: python
+.. code-block:: python
 
     import salt.returners.django_return
     from django.dispatch import receiver
@@ -78,7 +78,7 @@ def save_load(jid, load):
                   'which responded with {1}'.format(signal[0], signal[1]))
 
 
-def prep_jid(nocache, passed_jid=None):
+def prep_jid(nocache=False, passed_jid=None):
     '''
     Do any work necessary to prepare a JID, including sending a custom ID
     '''

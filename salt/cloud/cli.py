@@ -44,8 +44,11 @@ class SaltCloud(parsers.SaltCloudParser):
         # Parse shell arguments
         self.parse_args()
 
-        salt_master_user = self.config.get('user', salt.utils.get_user())
-        if salt_master_user is not None and not check_user(salt_master_user):
+        salt_master_user = self.config.get('user')
+        if salt_master_user is None:
+            salt_master_user = salt.utils.get_user()
+
+        if not check_user(salt_master_user):
             self.error(
                 'If salt-cloud is running on a master machine, salt-cloud '
                 'needs to run as the same user as the salt-master, {0!r}. If '
@@ -84,7 +87,11 @@ class SaltCloud(parsers.SaltCloudParser):
             self.exit(salt.defaults.exitcodes.EX_OK)
 
         log.info('salt-cloud starting')
-        mapper = salt.cloud.Map(self.config)
+        try:
+            mapper = salt.cloud.Map(self.config)
+        except SaltCloudException as exc:
+            msg = 'There was an error generating the mapper.'
+            self.handle_exception(msg, exc)
 
         names = self.config.get('names', None)
         if names is not None:
@@ -163,12 +170,21 @@ class SaltCloud(parsers.SaltCloudParser):
 
         elif self.options.destroy and (self.config.get('names', None) or
                                        self.config.get('map', None)):
-            if self.config.get('map', None):
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+            map_file = self.config.get('map', None)
+            names = self.config.get('names', ())
+            if map_file is not None:
+                if names != ():
+                    msg = 'Supplying a mapfile, \'{0}\', in addition to instance names {1} ' \
+                          'with the \'--destroy\' or \'-d\' function is not supported. ' \
+                          'Please choose to delete either the entire map file or individual ' \
+                          'instances.'.format(map_file, names)
+                    self.handle_exception(msg, SaltCloudSystemExit)
+
+                log.info('Applying map from \'{0}\'.'.format(map_file))
                 matching = mapper.delete_map(query='list_nodes')
             else:
                 matching = mapper.get_running_by_names(
-                    self.config.get('names', ()),
+                    names,
                     profile=self.options.profile
                 )
 
@@ -196,7 +212,11 @@ class SaltCloud(parsers.SaltCloudParser):
                                       self.config.get('map', None)):
             if self.config.get('map', None):
                 log.info('Applying map from {0!r}.'.format(self.config['map']))
-                names = mapper.get_vmnames_by_action(self.options.action)
+                try:
+                    names = mapper.get_vmnames_by_action(self.options.action)
+                except SaltCloudException as exc:
+                    msg = 'There was an error actioning virtual machines.'
+                    self.handle_exception(msg, exc)
             else:
                 names = self.config.get('names', None)
 
@@ -211,8 +231,8 @@ class SaltCloud(parsers.SaltCloudParser):
             for name in names:
                 if '=' in name:
                     # This is obviously not a machine name, treat it as a kwarg
-                    comps = name.split('=')
-                    kwargs[comps[0]] = comps[1]
+                    key, value = name.split('=', 1)
+                    kwargs[key] = value
                 else:
                     msg += '  {0}\n'.format(name)
                     machines.append(name)
@@ -230,7 +250,7 @@ class SaltCloud(parsers.SaltCloudParser):
             args = self.args[:]
             for arg in args[:]:
                 if '=' in arg:
-                    key, value = arg.split('=')
+                    key, value = arg.split('=', 1)
                     kwargs[key] = value
                     args.remove(arg)
 

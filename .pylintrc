@@ -31,7 +31,8 @@ load-plugins=saltpylint.pep8,
   saltpylint.strings,
   saltpylint.fileperms,
   saltpylint.py3modernize,
-  salttesting.pylintplugins.smartup
+  saltpylint.smartup,
+  saltpylint.minpyver
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -53,6 +54,8 @@ fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests
 # Py3 Modernize PyLint Plugin Settings
 modernize-nofix = libmodernize.fixes.fix_dict_six
 
+# Minimum Python Version To Enforce
+minimum-python-version = 2.6
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -77,7 +80,9 @@ disable=W0142,
   C0330,
   I0011,
   I0012,
-  W1202
+  W1202,
+  E8402,
+  E8731
 #  E8121,
 #  E8122,
 #  E8123,
@@ -90,8 +95,11 @@ disable=W0142,
 # Disabled Checks
 #
 # W0142 (star-args)
+# W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
 # E812* All PEP8 E12*
+# E8402 module level import not at top of file
 # E8501 PEP8 line too long
+# E8731 do not assign a lambda expression, use a def
 # C0330 (bad-continuation)
 # I0011 (locally-disabling)
 # I0012 (locally-enabling)
@@ -139,6 +147,7 @@ dummy-variables-rgx=_|dummy
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
 additional-builtins=__opts__,
+  __utils__,
   __salt__,
   __pillar__,
   __grains__,
@@ -152,7 +161,8 @@ additional-builtins=__opts__,
   __active_provider_name__,
   __master_opts__,
   __jid_event__,
-  __instance_id__
+  __instance_id__,
+  __salt_system_encoding__
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.

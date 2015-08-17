@@ -5,7 +5,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-from StringIO import StringIO
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -16,6 +15,7 @@ ensure_in_syspath('../../')
 
 # Import Salt libs
 from salt.modules import cron
+from salt.ext.six.moves import builtins, StringIO
 
 STUB_USER = 'root'
 STUB_PATH = '/tmp'
@@ -41,6 +41,7 @@ def get_crontab(*args, **kw):
 
 
 def set_crontab(val):
+    CRONTAB.seek(0)
     CRONTAB.truncate(0)
     CRONTAB.write(val)
 
@@ -137,11 +138,14 @@ class CronTestCase(TestCase):
         )
 
     def test__unicode_match(self):
+        encoding = builtins.__salt_system_encoding__
+        builtins.__salt_system_encoding__ = 'utf-8'
         self.assertTrue(cron._cron_matched({'identifier': '1'}, 'foo', 1))
         self.assertTrue(cron._cron_matched({'identifier': 'é'}, 'foo', 'é'))
         self.assertTrue(cron._cron_matched({'identifier': u'é'}, 'foo', 'é'))
         self.assertTrue(cron._cron_matched({'identifier': 'é'}, 'foo', u'é'))
         self.assertTrue(cron._cron_matched({'identifier': u'é'}, 'foo', u'é'))
+        builtins.__salt_system_encoding__ = encoding
 
     @patch('salt.modules.cron._write_cron_lines',
            new=MagicMock(side_effect=write_crontab))
@@ -475,7 +479,7 @@ class CronTestCase(TestCase):
                 self.assertEqual(
                     get_crontab(),
                     inc_tests[idx], (
-                        "idx {0}\n '{1}'\n != \n'{2}'\n\n\n"
+                        "idx {0}\n'{1}'\n != \n'{2}'\n\n\n"
                         "{1!r} != {2!r}"
                     ).format(
                         idx, get_crontab(), inc_tests[idx]))
@@ -546,17 +550,8 @@ class PsTestCase(TestCase):
     ## Still trying to figure this one out.
     # def test__render_tab(self):
     #     pass
-    def test__get_cron_cmdstr_solaris(self):
-        cron.__grains__ = __grains__
-        with patch.dict(cron.__grains__, {'os_family': 'Solaris'}):
-            self.assertEqual('su - root -c "crontab /tmp"',
-                             cron._get_cron_cmdstr(STUB_USER, STUB_PATH))
-
     def test__get_cron_cmdstr(self):
-        cron.__grains__ = __grains__
-        with patch.dict(cron.__grains__, {'os_family': None}):
-            self.assertEqual('crontab -u root /tmp',
-                             cron._get_cron_cmdstr(STUB_USER, STUB_PATH))
+        self.assertEqual('crontab /tmp', cron._get_cron_cmdstr(STUB_PATH))
 
     def test__date_time_match(self):
         '''

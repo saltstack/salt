@@ -33,11 +33,9 @@ configuration management system called ``Salt States``.
 Installing Salt
 ---------------
 
-SaltStack has been made to be very easy to install and get started. Setting up
-Salt should be as easy as installing Salt via distribution packages on Linux or
-via the Windows installer. The :doc:`installation documents
-</topics/installation/index>` cover platform-specific installation in depth.
-
+SaltStack has been made to be very easy to install and get started. The
+:doc:`installation documents </topics/installation/index>` contain instructions
+for all supported platforms.
 
 Starting Salt
 -------------
@@ -193,9 +191,13 @@ The easiest way to accept the minion key is to accept all pending keys:
 
 .. note::
 
-    Keys should be verified! The secure thing to do before accepting a key is
-    to run ``salt-key -f minion-id`` to print the fingerprint of the minion's
-    public key. This fingerprint can then be compared against the fingerprint
+    Keys should be verified! Print the master key fingerprint by running ``salt-key -F master``
+    on the Salt master. Copy the ``master.pub`` fingerprint from the Local Keys section,
+    and then set this value as the :conf_minion:`master_finger` in the minion configuration
+    file. Restart the Salt minion.
+
+    On the minion, run ``salt-key -f minion-id`` to print the fingerprint of the
+    minion's public key. This fingerprint can then be compared against the fingerprint
     generated on the minion.
 
     On the master:
@@ -636,9 +638,8 @@ Getting Deeper Into States
 Two more in-depth States tutorials exist, which delve much more deeply into States
 functionality.
 
-1. Thomas' original states tutorial, :doc:`How Do I Use Salt
-   States?</topics/tutorials/starting_states>`, covers much more to get off the
-   ground with States.
+1. :doc:`How Do I Use Salt States? </topics/tutorials/starting_states>`, covers much
+   more to get off the ground with States.
 
 2. The :doc:`States Tutorial</topics/tutorials/states_pt1>` also provides a
    fantastic introduction.

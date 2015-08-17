@@ -91,8 +91,13 @@ class MasterACLTestCase(integration.ModuleCase):
                                                        '*': [{'my_minion': ['my_mod.my_func']}],
                                          }
                                  }
+        self.clear = salt.master.ClearFuncs(opts, MagicMock())
 
-        self.clear = salt.master.ClearFuncs(opts, MagicMock(), MagicMock(), MagicMock())
+        # overwrite the _send_pub method so we don't have to serialize MagicMock
+        self.clear._send_pub = lambda payload: True
+
+        # make sure to return a JID, instead of a mock
+        self.clear.mminion.returners = {'.prep_jid': lambda x: 1}
 
         self.valid_clear_load = {'tgt_type': 'glob',
                                 'jid': '',
@@ -217,4 +222,5 @@ class MasterACLTestCase(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(LoadAuthTestCase, needs_daemon=False)
+    tests = [LoadAuthTestCase, MasterACLTestCase]
+    run_tests(*tests, needs_daemon=False)

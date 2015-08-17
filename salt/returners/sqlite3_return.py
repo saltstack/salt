@@ -12,19 +12,25 @@ In order to use this returner the database file must exist,
 have the appropriate schema defined, and be accessible to the
 user whom the minion process is running as. This returner
 requires the following values configured in the master or
-minion config::
+minion config:
+
+.. code-block:: yaml
 
     returner.sqlite3.database: /usr/lib/salt/salt.db
     returner.sqlite3.timeout: 5.0
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.returner.sqlite3.database: /usr/lib/salt/salt.db
     alternative.returner.sqlite3.timeout: 5.0
 
-Use the commands to create the sqlite3 database and tables::
+Use the commands to create the sqlite3 database and tables:
+
+.. code-block:: sql
 
     sqlite3 /usr/lib/salt/salt.db << EOF
     --
@@ -51,11 +57,17 @@ Use the commands to create the sqlite3 database and tables::
       );
     EOF
 
-  To use the sqlite returner, append '--return sqlite3' to the salt command. ex:
+To use the sqlite returner, append '--return sqlite3' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return sqlite3
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return sqlite3 --return_config alternative
 
@@ -272,7 +284,7 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''

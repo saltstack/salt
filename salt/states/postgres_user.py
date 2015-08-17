@@ -19,7 +19,7 @@ import logging
 
 # Salt imports
 from salt.modules import postgres
-
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -159,6 +159,7 @@ def present(name,
     cret = None
     update = {}
     if mode == 'update':
+        user_groups = user_attr.get('groups', [])
         if (
             createdb is not None
             and user_attr['can create databases'] != createdb
@@ -185,6 +186,13 @@ def present(name,
             update['superuser'] = superuser
         if password is not None and (refresh_password or user_attr['password'] != password):
             update['password'] = True
+        if groups is not None:
+            lgroups = groups
+            if isinstance(groups, (six.string_types, six.text_type)):
+                lgroups = lgroups.split(',')
+            if isinstance(lgroups, list):
+                if [a for a in lgroups if a not in user_groups]:
+                    update = True
 
     if mode == 'create' or (mode == 'update' and update):
         if __opts__['test']:

@@ -39,6 +39,16 @@ def installed(name,
     mirrors : None
         List of mirrors to check.
         None will use a default mirror (kernel.org)
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        rsync:
+          cyg.installed:
+            - mirrors:
+              - http://mirror/without/public/key: ""
+              - http://mirror/with/public/key: http://url/of/public/key
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -95,6 +105,16 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
     mirrors : None
         List of mirrors to check.
         None will use a default mirror (kernel.org)
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        rsync:
+          cyg.removed:
+            - mirrors:
+              - http://mirror/without/public/key: ""
+              - http://mirror/with/public/key: http://url/of/public/key
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -111,7 +131,7 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
         ret['comment'] = 'Invalid package name.'
         return ret
 
-    if name not in __salt__['cyg.list'](name, cyg_arch, mirrors):
+    if name not in __salt__['cyg.list'](name, cyg_arch):
         ret['result'] = True
         ret['comment'] = 'Package is not installed.'
         return ret
@@ -143,6 +163,16 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
     mirrors : None
         List of mirrors to check.
         None will use a default mirror (kernel.org)
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        rsync:
+          cyg.updated:
+            - mirrors:
+              - http://mirror/without/public/key: ""
+              - http://mirror/with/public/key: http://url/of/public/key
     '''
     ret = {'name': 'cyg.updated', 'result': None, 'comment': '', 'changes': {}}
 

@@ -18,6 +18,7 @@ import salt.daemons.masterapi
 import salt.utils.args
 import salt.utils.process
 import salt.transport
+import salt.engines
 from raet import raeting
 from raet.road.stacking import RoadStack
 from raet.road.estating import RemoteEstate
@@ -25,7 +26,7 @@ from raet.lane.stacking import LaneStack
 
 from salt import daemons
 from salt.daemons import salting
-from salt.utils import kinds
+from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
@@ -39,7 +40,7 @@ console = getConsole()
 # pylint: disable=import-error
 HAS_PSUTIL = False
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
     HAS_PSUTIL = True
 except ImportError:
     pass
@@ -75,7 +76,7 @@ class SaltRaetCleanup(ioflo.base.deeding.Deed):
         '''
         Should only run once to cleanup stale lane uxd files.
         '''
-        if self.opts.value.get('sock_dir'):
+        if not is_windows() and self.opts.value.get('sock_dir'):
             sockdirpath = os.path.abspath(self.opts.value['sock_dir'])
             console.concise("Cleaning up uxd files in {0}\n".format(sockdirpath))
             protecteds = self.opts.value.get('raet_cleanup_protecteds', [])
@@ -237,7 +238,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                'uid': None,
                                'role': 'master',
                                'sighex': None,
-                               'prihex': None}},
+                               'prihex': None,
+                               'bufcnt': 2}},
             }
 
     def _prepare(self):
@@ -291,6 +293,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
         sighex = roledata['sighex'] or self.local.data.sighex
         prihex = roledata['prihex'] or self.local.data.prihex
 
+        bufcnt = self.opts.value.get('raet_road_bufcnt', self.local.data.bufcnt)
+
         self.stack.value = RoadStack(store=self.store,
                                      keep=keep,
                                      name=name,
@@ -305,7 +309,8 @@ class SaltRaetRoadStackSetup(ioflo.base.deeding.Deed):
                                      txMsgs=txMsgs,
                                      rxMsgs=rxMsgs,
                                      period=3.0,
-                                     offset=0.5)
+                                     offset=0.5,
+                                     bufcnt=bufcnt)
 
         if self.opts.value.get('raet_clear_remotes'):
             for remote in list(self.stack.value.remotes.values()):
@@ -617,6 +622,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
+               'utils': '.salt.loader.utils',
                'modules': '.salt.loader.modules',
                'grain_time': '.salt.var.grain_time',
                'module_refresh': '.salt.var.module_refresh',
@@ -646,7 +652,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                     )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
-            rss, vms = psutil.Process(os.getpid()).get_memory_info()
+            rss, vms = psutil.Process(os.getpid()).memory_info()
             mem_limit = rss + vms + self.opts.value['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
         elif self.opts.value.get('modules_max_memory', -1) > 0:
@@ -659,9 +665,11 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
             self.opts.value['grains'] = salt.loader.grains(self.opts.value)
             self.grain_time.value = time.time()
             self.grains.value = self.opts.value['grains']
-        self.modules.value = salt.loader.minion_mods(self.opts.value)
+        self.utils.value = salt.loader.utils(self.opts.value)
+        self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
 
+        self.utils.value.clear()
         self.modules.value.clear()
         self.returners.value.clear()
 
@@ -738,6 +746,7 @@ class SaltSchedule(ioflo.base.deeding.Deed):
     '''
     Ioinits = {'opts': '.salt.opts',
                'grains': '.salt.grains',
+               'utils': '.salt.loader.utils',
                'modules': '.salt.loader.modules',
                'returners': '.salt.loader.returners'}
 
@@ -745,7 +754,8 @@ class SaltSchedule(ioflo.base.deeding.Deed):
         '''
         Map opts and make the schedule object
         '''
-        self.modules.value = salt.loader.minion_mods(self.opts.value)
+        self.utils.value = salt.loader.utils(self.opts.value)
+        self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
         self.schedule = salt.utils.schedule.Schedule(
                 self.opts.value,
@@ -783,7 +793,8 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
                'inode': '.salt.lane.manor.',
                'stack': 'stack',
                'local': {'ipath': 'local',
-                          'ival': {'lanename': 'master'}},
+                          'ival': {'lanename': 'master',
+                                   'bufcnt': 100}},
             }
 
     def _prepare(self):
@@ -818,11 +829,14 @@ class SaltRaetManorLaneSetup(ioflo.base.deeding.Deed):
             log.error(emsg + '\n')
             raise ValueError(emsg)
 
+        bufcnt = self.opts.value.get('raet_lane_bufcnt', self.local.data.bufcnt)
+
         name = 'manor'
         self.stack.value = LaneStack(
                                     name=name,
                                     lanename=lanename,
-                                    sockdirpath=self.opts.value['sock_dir'])
+                                    sockdirpath=self.opts.value['sock_dir'],
+                                    bufcnt=bufcnt)
         self.stack.value.Pk = raeting.PackKind.pack.value
         self.event_yards.value = set()
         self.local_cmd.value = deque()
@@ -1651,18 +1665,35 @@ class SaltRaetPublisher(ioflo.base.deeding.Deed):
                     )
 
 
+class SaltRaetSetupEngines(ioflo.base.deeding.Deed):
+    '''
+    Start the engines!
+    '''
+    Ioinits = {'opts': '.salt.opts',
+               'proc_mgr': '.salt.usr.proc_mgr'}
+
+    def action(self):
+        '''
+        Only call once, this will start the engine processes
+        '''
+        salt.engines.start_engines(self.opts.value, self.proc_mgr.value)
+
+
 class SaltRaetSetupBeacon(ioflo.base.deeding.Deed):
     '''
     Create the Beacon subsystem
     '''
     Ioinits = {'opts': '.salt.opts',
-               'beacon': '.salt.beacon'}
+               'beacon': '.salt.beacon',
+               'modules': '.salt.loader.modules'}
 
     def action(self):
         '''
         Run the beacons
         '''
-        self.beacon.value = salt.beacons.Beacon(self.opts.value)
+        self.beacon.value = salt.beacons.Beacon(
+                self.opts.value,
+                self.modules.value)
 
 
 class SaltRaetBeacon(ioflo.base.deeding.Deed):
@@ -1700,7 +1731,7 @@ class SaltRaetMasterEvents(ioflo.base.deeding.Deed):
                'road_stack': '.salt.road.manor.stack',
                'master_events': '.salt.var.master_events'}
 
-    def postinitio(self):
+    def _prepare(self):
         self.master_events.value = deque()
 
     def action(self):

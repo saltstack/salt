@@ -19,10 +19,11 @@ DEVICE={{name}}
 {%endif%}{%endif%}{% if srcaddr %}SRCADDR={{srcaddr}}
 {%endif%}{% if peerdns %}PEERDNS={{peerdns}}
 {%endif%}{% if bridge %}BRIDGE={{bridge}}
-{%endif%}{% if delay %}DELAY={{delay}}
+{%endif%}{% if stp %}STP={{stp}}
+{%endif%}{% if delay or delay == 0 %}DELAY={{delay}}
+{%endif%}{% if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
 {%endif%}{% if my_inner_ipaddr %}MY_INNER_IPADDR={{my_inner_ipaddr}}
 {%endif%}{% if my_outer_ipaddr %}MY_OUTER_IPADDR={{my_outer_ipaddr}}
-{%endif%}{%if bonding %}BONDING_OPTS="{%for item in bonding %}{{item}}={{bonding[item]}} {%endfor%}"
 {%endif%}{% if ethtool %}ETHTOOL_OPTS="{%for item in ethtool %}{{item}} {{ethtool[item]}} {%endfor%}"
 {%endif%}{% if domain %}DOMAIN="{{ domain|join(' ') }}"
 {% endif %}{% for server in dns -%}

@@ -2,8 +2,18 @@
 '''
 The default file server backend
 
-Based on the environments in the :conf_master:`file_roots` configuration
-option.
+This fileserver backend serves files from the Master's local filesystem. If
+:conf_master:`fileserver_backend` is not defined in the Master config file,
+then this backend is enabled by default. If it *is* defined then ``roots`` must
+be in the :conf_master:`fileserver_backend` list to enable this backend.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Fileserver environments are defined using the :conf_master:`file_roots`
+configuration option.
 '''
 from __future__ import absolute_import
 
@@ -121,7 +131,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.split(':', 1)
@@ -186,12 +196,12 @@ def file_hash(load, fnd):
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots/hash',
                               load['saltenv'],
-                              '{0}.hash.{1}'.format(fnd['rel'],
+                              u'{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -290,9 +300,13 @@ def _file_lists(load, form):
                             rel_fn = rel_fn.replace('\\', '/')
                         ret['files'].append(rel_fn)
         if save_cache:
-            salt.fileserver.write_file_list_cache(
-                __opts__, ret, list_cache, w_lock
-            )
+            try:
+                salt.fileserver.write_file_list_cache(
+                    __opts__, ret, list_cache, w_lock
+                )
+            except NameError:
+                # Catch msgpack error in salt-ssh
+                pass
         return ret.get(form, [])
     # Shouldn't get here, but if we do, this prevents a TypeError
     return []

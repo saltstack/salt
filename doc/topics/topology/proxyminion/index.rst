@@ -39,7 +39,7 @@ any way with the minion that started it.
 
 To create support for a proxied device one needs to create four things:
 
-1. The `proxytype connection class`_ (located in salt/proxy).
+1. The `proxy_connection_module`_ (located in salt/proxy).
 2. The `grains support code`_ (located in salt/grains).
 3. :ref:`Salt modules <all-salt.modules>` specific to the controlled
    device.
@@ -156,118 +156,289 @@ to control a particular device.  That proxy-minion process will initiate
 a connection back to the master to enable control.
 
 
-.. _proxytype connection class:
+.. _proxy_connection_module:
 
-Proxytypes
-##########
+Proxymodules
+############
 
-A proxytype is a Python class called 'Proxyconn' that encapsulates all the code
-necessary to interface with a device.  Proxytypes are located inside the
-salt.proxy module.  At a minimum a proxytype object must implement the
-following methods:
+A proxy module encapsulates all the code necessary to interface with a device.
+Proxymodules are located inside the salt.proxy module.  At a minimum
+a proxymodule object must implement the following functions:
 
-``proxytype(self)``: Returns a string with the name of the proxy type.
+``__virtual__()``: This function performs the same duty that it does for other
+types of Salt modules.  Logic goes here to determine if the module can be
+loaded, checking for the presence of Python modules on which the proxy deepends.
+Returning ``False`` will prevent the module from loading.
 
-``proxyconn(self, **kwargs)``: Provides the primary way to connect and communicate
-with the device. Some proxyconns instantiate a particular object that opens a
-network connection to a device and leaves the connection open for communication.
-Others simply abstract a serial connection or even implement endpoints to communicate
-via REST over HTTP.
+``init(opts)``: Perform any initialization that the device needs.  This is
+a good place to bring up a persistent connection to a device, or authenticate
+to create a persistent authorization token.
 
-``id(self, opts)``: Returns a unique, unchanging id for the controlled device.  This is
+``id(opts)``: Returns a unique, unchanging id for the controlled device.  This is
 the "name" of the device, and is used by the salt-master for targeting and key
 authentication.
 
-Optionally, the class may define a ``shutdown(self, opts)`` method if the
-controlled device should be informed when the minion goes away cleanly.
+``shutdown()``: Code to cleanly shut down or close a connection to
+a controlled device goes here.  This function must exist, but can contain only
+the keyword ``pass`` if there is no shutdown logic required.
 
-It is highly recommended that the ``test.ping`` execution module also be defined
-for a proxytype. The code for ``ping`` should contact the controlled device and make
-sure it is really available.
+``ping()``: While not required, it is highly recommended that this function also
+be defined in the proxymodule. The code for ``ping`` should contact the
+controlled device and make sure it is really available.
 
-Here is an example proxytype used to interface to Juniper Networks devices that run
-the Junos operating system.  Note the additional library requirements--most of the
-"hard part" of talking to these devices is handled by the jnpr.junos, jnpr.junos.utils,
-and jnpr.junos.cfg modules.
+Here is an example proxymodule used to interface to a *very* simple REST
+server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
 
+This proxymodule enables "service" enumration, starting, stopping, restarting,
+and status; "package" installation, and a ping.
 
 .. code-block:: python
 
+
+    # -*- coding: utf-8 -*-
+    '''
+    This is a simple proxy-minion designed to connect to and communicate with
+    the bottle-based web service contained in 
+    https://github.com/saltstack/salt-contrib/proxyminion_rest_example
+    '''
+    from __future__ import absolute_import
+
     # Import python libs
     import logging
-    import os
+    import salt.utils.http
 
-    import jnpr.junos
-    import jnpr.junos.utils
-    import jnpr.junos.cfg
-    HAS_JUNOS = True
+    HAS_REST_EXAMPLE = True
 
-    class Proxyconn(object):
+    # This must be present or the Salt loader won't load this module
+    __proxyenabled__ = ['rest_sample']
 
 
-        def __init__(self, details):
-            self.conn = jnpr.junos.Device(user=details['username'], host=details['host'], password=details['passwd'])
-            self.conn.open()
-            self.conn.bind(cu=jnpr.junos.cfg.Resource)
+    # Variables are scoped to this module so we can have persistent data
+    # across calls to fns in here.
+    GRAINS_CACHE = {}
+    DETAILS = {}
+
+    # Want logging!
+    log = logging.getLogger(__file__)
 
 
-        def proxytype(self):
-            return 'junos'
+    # This does nothing, it's here just as an example and to provide a log
+    # entry when the module is loaded.
+    def __virtual__():
+        '''
+        Only return if all the modules are available
+        '''
+        log.debug('rest_sample proxy __virtual__() called...')
+        return True
+
+    # Every proxy module needs an 'init', though you can 
+    # just put a 'pass' here if it doesn't need to do anything.
+    def init(opts):
+        log.debug('rest_sample proxy init() called...')
+
+        # Save the REST URL 
+        DETAILS['url'] = opts['proxy']['url']
+
+        # Make sure the REST URL ends with a '/'
+        if not DETAILS['url'].endswith('/'):
+            DETAILS['url'] += '/'
 
 
-        def id(self, opts):
-            return self.conn.facts['hostname']
+    def id(opts):
+        '''
+        Return a unique ID for this proxy minion.  This ID MUST NOT CHANGE.
+        If it changes while the proxy is running the salt-master will get 
+        really confused and may stop talking to this minion
+        '''
+        r = salt.utils.http.query(opts['proxy']['url']+'id', decode_type='json', decode=True)
+        return r['dict']['id'].encode('ascii', 'ignore')
 
 
-        def ping(self):
-            return self.conn.connected
+    def grains():
+        '''
+        Get the grains from the proxied device
+        '''
+        if not GRAINS_CACHE:
+            r = salt.utils.http.query(DETAILS['url']+'info', decode_type='json', decode=True)
+            GRAINS_CACHE = r['dict']
+        return GRAINS_CACHE
 
 
-        def shutdown(self, opts):
+    def grains_refresh():
+        '''
+        Refresh the grains from the proxied device
+        '''
+        GRAINS_CACHE = {}
+        return grains()
 
-            print('Proxy module {} shutting down!!'.format(opts['id']))
-            try:
-                self.conn.close()
-            except Exception:
-                pass
+
+    def service_start(name):
+        '''
+        Start a "service" on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'service/start/'+name, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def service_stop(name):
+        '''
+        Stop a "service" on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'service/stop/'+name, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def service_restart(name):
+        '''
+        Restart a "service" on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'service/restart/'+name, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def service_list():
+        '''
+        List "services" on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'service/list', decode_type='json', decode=True)
+        return r['dict']
+
+
+    def service_status(name):
+        '''
+        Check if a service is running on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'service/status/'+name, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def package_list():
+        '''
+        List "packages" installed on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'package/list', decode_type='json', decode=True)
+        return r['dict']
+
+
+    def package_install(name, **kwargs):
+        '''
+        Install a "package" on the REST server
+        '''
+        cmd = DETAILS['url']+'package/install/'+name
+        if 'version' in kwargs:
+            cmd += '/'+kwargs['version']
+        else:
+            cmd += '/1.0'
+        r = salt.utils.http.query(cmd, decode_type='json', decode=True)
+
+
+    def package_remove(name):
+
+        '''
+        Remove a "package" on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def package_status(name):
+        '''
+        Check the installation status of a package on the REST server
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'package/status/'+name, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def ping():
+        '''
+        Is the REST server up?
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
+        try:
+            return r['dict'].get('ret', False)
+        except Exception:
+            return False
+
+
+    def shutdown(opts):
+        '''
+        For this proxy shutdown is a no-op
+        '''
+        log.debug('rest_sample proxy shutdown() called...')
+        pass
 
 
 .. _grains support code:
 
 Grains are data about minions.  Most proxied devices will have a paltry amount
-of data as compared to a typical Linux server.  Because proxy-minions are
-started by a regular minion, they inherit a sizeable number of grain settings
-which can be useful, especially when targeting (PYTHONPATH, for example).
+of data as compared to a typical Linux server.  By default, a proxy minion will
+have no grains set at all.  Salt core code requires values for ``kernel``,
+``os``, and ``os_family``.  To add them (and others) to your proxy minion for
+a particular device, create a file in salt/grains named [proxytype].py and place
+inside it the different functions that need to be run to collect the data you
+are interested in.  Here's an example:
 
-All proxy minions set a grain called 'proxy'.  If it is present, you know the
-minion is controlling another device.  To add more grains to your proxy minion
-for a particular device, create a file in salt/grains named [proxytype].py and
-place inside it the different functions that need to be run to collect the data
-you are interested in.  Here's an example:
 
+.. code: python::
+
+    # -*- coding: utf-8 -*-
+    '''
+    Generate baseline proxy minion grains
+    '''
+    __proxyenabled__ = ['rest_sample']
+
+    __virtualname__ = 'rest_sample'
+
+
+    def __virtual__():
+        if 'proxy' not in __opts__:
+            return False
+        else:
+            return __virtualname__
+
+    def kernel():
+        return {'kernel':'proxy'}
+
+    def os():
+        return {'os':'proxy'}
+
+    def location():
+        return {'location': 'In this darn virtual machine.  Let me out!'}
+
+
+    def os_family():
+        return {'os_family': 'proxy'}
+
+
+    def os_data():
+        return {'os_data': 'funkyHttp release 1.0.a.4.g'}
 
 
 The __proxyenabled__ directive
 ------------------------------
 
-Salt states and execution modules, by, and large, cannot "automatically" work
+Salt execution moduless, by, and large, cannot "automatically" work
 with proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no
-meaning on a network switch or a housecat.  For a state/execution module to be
+meaning on a network switch or a housecat.  For an execution module to be
 available to a proxy-minion, the ``__proxyenabled__`` variable must be defined
 in the module as an array containing the names of all the proxytypes that this
 module can support.  The array can contain the special value ``*`` to indicate
 that the module supports all proxies.
 
 If no ``__proxyenabled__`` variable is defined, then by default, the
-state/execution module is unavailable to any proxy.
+execution module is unavailable to any proxy.
 
 Here is an excerpt from a module that was modified to support proxy-minions:
 
 .. code-block:: python
 
+   __proxyenabled__ = ['*']
+   
+   [...]
+
     def ping():
 
-        if 'proxyobject' in __opts__:
+        if 'proxymodule' in __opts__:
             if 'ping' in __opts__['proxyobject'].__attr__():
                 return __opts['proxyobject'].ping()
             else:
@@ -275,15 +446,18 @@ Here is an excerpt from a module that was modified to support proxy-minions:
         else:
             return True
 
-And then in salt.proxy.junos we find
+And then in salt.proxy.rest_sample.py we find
 
 .. code-block:: python
 
-     def ping(self):
+    def ping():
+        '''
+        Is the REST server up?
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
+        try:
+            return r['dict'].get('ret', False)
+        except Exception:
+            return False
 
-        return self.connected
 
-
-The Junos API layer lacks the ability to do a traditional 'ping', so the
-example simply checks the connection object field that indicates
-if the ssh connection was successfully made to the device.

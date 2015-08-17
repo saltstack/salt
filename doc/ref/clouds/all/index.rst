@@ -27,8 +27,12 @@ Full list of Salt Cloud modules
     openstack
     parallels
     proxmox
+    pyrax
+    qingcloud
     rackspace
     saltify
+    scaleway
     softlayer
     softlayer_hw
+    vmware
     vsphere

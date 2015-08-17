@@ -43,10 +43,13 @@ from __future__ import absolute_import
 # Import python libs
 import glob
 import os
+import re
+import itertools
 
 # Import salt libs
 import salt.utils
 import salt.modules.cmdmod
+import salt.utils.systemd
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -61,7 +64,9 @@ def __virtual__():
     Only work on Ubuntu
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
+    if salt.utils.systemd.booted(__context__):
+        return False
+    elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
     elif __grains__['os'] in ('Debian', 'Raspbian'):
         debian_initctl = '/sbin/initctl'
@@ -167,7 +172,12 @@ def _upstart_is_disabled(name):
     NOTE: An Upstart service can also be disabled by placing "manual"
     in /etc/init/[name].conf.
     '''
-    return os.access('/etc/init/{0}.override'.format(name), os.R_OK)
+    files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
+    for file_name in itertools.ifilter(os.path.isfile, files):
+        with salt.utils.fopen(file_name) as fp_:
+            if re.search(r'^\s*manual', fp_.read(), re.MULTILINE):
+                return True
+    return False
 
 
 def _upstart_is_enabled(name):
@@ -408,8 +418,15 @@ def status(name, sig=None):
         return bool(__salt__['status.pid'](sig))
     cmd = ['service', name, 'status']
     if _service_is_upstart(name):
-        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False)
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False))
+        # decide result base on cmd output, thus ignore retcode,
+        # which makes cmd output not at error lvl even when cmd fail.
+        return 'start/running' in __salt__['cmd.run'](cmd, python_shell=False,
+                                                      ignore_retcode=True)
+    # decide result base on retcode, thus ignore output (set quite)
+    # because there is no way to avoid logging at error lvl when
+    # service is not running - retcode != 0 (which is totally relevant).
+    return not bool(__salt__['cmd.retcode'](cmd, python_shell=False,
+                                            quite=True))
 
 
 def _get_service_exec():
@@ -426,9 +443,11 @@ def _upstart_disable(name):
     '''
     Disable an Upstart service.
     '''
+    if _upstart_is_disabled(name):
+        return _upstart_is_disabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    with salt.utils.fopen(override, 'w') as ofile:
-        ofile.write('manual')
+    with salt.utils.fopen(override, 'a') as ofile:
+        ofile.write('manual\n')
     return _upstart_is_disabled(name)
 
 
@@ -436,8 +455,17 @@ def _upstart_enable(name):
     '''
     Enable an Upstart service.
     '''
+    if _upstart_is_enabled(name):
+        return _upstart_is_enabled(name)
     override = '/etc/init/{0}.override'.format(name)
-    if os.access(override, os.R_OK):
+    files = ['/etc/init/{0}.conf'.format(name), override]
+    for file_name in itertools.ifilter(os.path.isfile, files):
+        with salt.utils.fopen(file_name, 'r+') as fp_:
+            new_text = re.sub(r'^\s*manual\n?', '', fp_.read(), 0, re.MULTILINE)
+            fp_.seek(0)
+            fp_.write(new_text)
+            fp_.truncate()
+    if os.access(override, os.R_OK) and os.path.getsize(override) == 0:
         os.unlink(override)
     return _upstart_is_enabled(name)
 
@@ -455,7 +483,7 @@ def enable(name, **kwargs):
     if _service_is_upstart(name):
         return _upstart_enable(name)
     executable = _get_service_exec()
-    cmd = '{0} -f {1} enable'.format(executable, name)
+    cmd = '{0} -f {1} defaults'.format(executable, name)
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 

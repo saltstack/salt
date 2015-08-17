@@ -5,19 +5,21 @@ Module for fetching artifacts from Artifactory
 
 # Import python libs
 from __future__ import absolute_import
-import urllib2
 import os
+import base64
 import xml.etree.ElementTree as ET
-from urllib2 import HTTPError
 import logging
 
 # Import Salt libs
 import salt.utils
+import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-builtin,no-name-in-module
+from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
+from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
 
 log = logging.getLogger(__name__)
 
 
-def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None):
+def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
     '''
        Gets latest snapshot of the given artifact
 
@@ -35,19 +37,28 @@ def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, pack
            Target directory to download artifact to (default: /tmp)
        target_file
            Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+       username
+           Artifactory username. Optional parameter.
+       password
+           Artifactory password. Optional parameter.
        '''
-    log.debug("======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s)",
-                    artifactory_url, repository, group_id, artifact_id, packaging, target_dir)
-    artifact_metadata = _get_artifact_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
-    version = artifact_metadata['latest_version']
+    log.debug("======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+                    artifactory_url, repository, group_id, artifact_id, packaging, target_dir, classifier)
 
-    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging)
+    headers = {}
+    if username and password:
+        headers['Authorization'] = 'Basic {0}'.format(base64.encodestring('{0}:{1}'.format(username, password)).replace('\n', ''))
+    artifact_metadata = _get_artifact_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, headers=headers)
+    version = artifact_metadata['latest_version']
+    snapshot_url, file_name = _get_snapshot_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, packaging=packaging, classifier=classifier, headers=headers)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
-    return __save_artifact(snapshot_url, target_file)
+    return __save_artifact(snapshot_url, target_file, headers)
 
 
-def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None):
+def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, version, snapshot_version=None, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
     '''
        Gets snapshot of the desired version of the artifact
 
@@ -67,17 +78,25 @@ def get_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, 
            Target directory to download artifact to (default: /tmp)
        target_file
            Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+       username
+           Artifactory username. Optional parameter.
+       password
+           Artifactory password. Optional parameter.
        '''
-    log.debug('======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s)',
-              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir)
-
-    snapshot_url, file_name = _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version)
+    log.debug('======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)',
+              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir, classifier)
+    headers = {}
+    if username and password:
+        headers['Authorization'] = 'Basic {0}'.format(base64.encodestring('{0}:{1}'.format(username, password)).replace('\n', ''))
+    snapshot_url, file_name = _get_snapshot_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, packaging=packaging, snapshot_version=snapshot_version, classifier=classifier, headers=headers)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
-    return __save_artifact(snapshot_url, target_file)
+    return __save_artifact(snapshot_url, target_file, headers)
 
 
-def get_release(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None):
+def get_release(artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
     '''
        Gets the specified release of the artifact
 
@@ -97,14 +116,22 @@ def get_release(artifactory_url, repository, group_id, artifact_id, packaging, v
            Target directory to download artifact to (default: /tmp)
        target_file
            Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+       classifier
+           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+       username
+           Artifactory username. Optional parameter.
+       password
+           Artifactory password. Optional parameter.
        '''
-    log.debug('======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s)',
-              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir)
-
-    release_url, file_name = _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url)
+    log.debug('======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)',
+              artifactory_url, repository, group_id, artifact_id, packaging, version, target_dir, classifier)
+    headers = {}
+    if username and password:
+        headers['Authorization'] = 'Basic {0}'.format(base64.encodestring('{0}:{1}'.format(username, password)).replace('\n', ''))
+    release_url, file_name = _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
-    return __save_artifact(release_url, target_file)
+    return __save_artifact(release_url, target_file, headers)
 
 
 def __resolve_target_file(file_name, target_dir, target_file=None):
@@ -113,9 +140,14 @@ def __resolve_target_file(file_name, target_dir, target_file=None):
     return target_file
 
 
-def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None):
+def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, version, packaging, snapshot_version=None, classifier=None, headers=None):
+    if headers is None:
+        headers = {}
+    has_classifier = classifier is not None and classifier != ""
+
     if snapshot_version is None:
-        snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
+        snapshot_version_metadata = _get_snapshot_version_metadata(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, headers=headers)
+
         if packaging not in snapshot_version_metadata['snapshot_versions']:
             error_message = '''Cannot find requested packaging '{packaging}' in the snapshot version metadata.
                       artifactory_url: {artifactory_url}
@@ -123,22 +155,45 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
                       group_id: {group_id}
                       artifact_id: {artifact_id}
                       packaging: {packaging}
+                      classifier: {classifier}
                       version: {version}'''.format(
                         artifactory_url=artifactory_url,
                         repository=repository,
                         group_id=group_id,
                         artifact_id=artifact_id,
                         packaging=packaging,
+                        classifier=classifier,
                         version=version)
             raise ArtifactoryError(error_message)
+
+        if has_classifier and classifier not in snapshot_version_metadata['snapshot_versions']:
+            error_message = '''Cannot find requested classifier '{classifier}' in the snapshot version metadata.
+                      artifactory_url: {artifactory_url}
+                      repository: {repository}
+                      group_id: {group_id}
+                      artifact_id: {artifact_id}
+                      packaging: {packaging}
+                      classifier: {classifier}
+                      version: {version}'''.format(
+                        artifactory_url=artifactory_url,
+                        repository=repository,
+                        group_id=group_id,
+                        artifact_id=artifact_id,
+                        packaging=packaging,
+                        classifier=classifier,
+                        version=version)
+            raise ArtifactoryError(error_message)
+
         snapshot_version = snapshot_version_metadata['snapshot_versions'][packaging]
 
     group_url = __get_group_id_subpath(group_id)
 
-    file_name = '{artifact_id}-{snapshot_version}.{packaging}'.format(
+    file_name = '{artifact_id}-{snapshot_version}{classifier}.{packaging}'.format(
         artifact_id=artifact_id,
         snapshot_version=snapshot_version,
-        packaging=packaging)
+        packaging=packaging,
+        classifier=__get_classifier_url(classifier))
+
     snapshot_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/{file_name}'.format(
                         artifactory_url=artifactory_url,
                         repository=repository,
@@ -151,13 +206,15 @@ def _get_snapshot_url(artifactory_url, repository, group_id, artifact_id, versio
     return snapshot_url, file_name
 
 
-def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url):
+def _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier=None):
     group_url = __get_group_id_subpath(group_id)
+
     # for released versions the suffix for the file is same as version
-    file_name = '{artifact_id}-{version}.{packaging}'.format(
+    file_name = '{artifact_id}-{version}{classifier}.{packaging}'.format(
         artifact_id=artifact_id,
         version=version,
-        packaging=packaging)
+        packaging=packaging,
+        classifier=__get_classifier_url(classifier))
 
     release_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/{file_name}'.format(
                         artifactory_url=artifactory_url,
@@ -182,19 +239,21 @@ def _get_artifact_metadata_url(artifactory_url, repository, group_id, artifact_i
     return artifact_metadata_url
 
 
-def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_id):
+def _get_artifact_metadata_xml(artifactory_url, repository, group_id, artifact_id, headers):
     artifact_metadata_url = _get_artifact_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
     try:
-        artifact_metadata_xml = urllib2.urlopen(artifact_metadata_url).read()
-    except HTTPError as e:
-        raise Exception("Could not fetch data from url: {url}, HTTPError: {message}".format(url=artifact_metadata_url, message=e.message))
+        request = urllib.request.Request(artifact_metadata_url, None, headers)
+        artifact_metadata_xml = urllib.request.urlopen(request).read()
+    except HTTPError as http_error:
+        message = 'Could not fetch data from url: {url}, HTTPError: {error}'
+        raise Exception(message.format(url=artifact_metadata_url, error=http_error))
 
     log.debug('artifact_metadata_xml=%s', artifact_metadata_xml)
     return artifact_metadata_xml
 
 
-def _get_artifact_metadata(artifactory_url, repository, group_id, artifact_id):
-    metadata_xml = _get_artifact_metadata_xml(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id)
+def _get_artifact_metadata(artifactory_url, repository, group_id, artifact_id, headers):
+    metadata_xml = _get_artifact_metadata_xml(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, headers=headers)
     root = ET.fromstring(metadata_xml)
 
     assert group_id == root.find('groupId').text
@@ -219,18 +278,20 @@ def _get_snapshot_version_metadata_url(artifactory_url, repository, group_id, ar
     return snapshot_version_metadata_url
 
 
-def _get_snapshot_version_metadata_xml(artifactory_url, repository, group_id, artifact_id, version):
+def _get_snapshot_version_metadata_xml(artifactory_url, repository, group_id, artifact_id, version, headers):
     snapshot_version_metadata_url = _get_snapshot_version_metadata_url(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
     try:
-        snapshot_version_metadata_xml = urllib2.urlopen(snapshot_version_metadata_url).read()
-    except HTTPError as e:
-        raise Exception("Could not fetch data from url: {url}, HTTPError: {message}".format(url=snapshot_version_metadata_url, message=e.message))
+        request = urllib.request.Request(snapshot_version_metadata_url, None, headers)
+        snapshot_version_metadata_xml = urllib.request.urlopen(request).read()
+    except HTTPError as http_error:
+        message = 'Could not fetch data from url: {url}, HTTPError: {error}'
+        raise Exception(message.format(url=snapshot_version_metadata_url, error=http_error))
     log.debug('snapshot_version_metadata_xml=%s', snapshot_version_metadata_xml)
     return snapshot_version_metadata_xml
 
 
-def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifact_id, version):
-    metadata_xml = _get_snapshot_version_metadata_xml(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version)
+def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifact_id, version, headers):
+    metadata_xml = _get_snapshot_version_metadata_xml(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, version=version, headers=headers)
     metadata = ET.fromstring(metadata_xml)
 
     assert group_id == metadata.find('groupId').text
@@ -249,7 +310,7 @@ def _get_snapshot_version_metadata(artifactory_url, repository, group_id, artifa
     }
 
 
-def __save_artifact(artifact_url, target_file):
+def __save_artifact(artifact_url, target_file, headers):
     log.debug("__save_artifact(%s, %s)", artifact_url, target_file)
     result = {
         'status': False,
@@ -258,10 +319,10 @@ def __save_artifact(artifact_url, target_file):
     }
 
     if os.path.isfile(target_file):
-        log.debug("File %s already exists, checking checksum...")
+        log.debug("File {0} already exists, checking checksum...".format(target_file))
         checksum_url = artifact_url + ".sha1"
 
-        checksum_success, artifact_sum, checksum_comment = __download(checksum_url)
+        checksum_success, artifact_sum, checksum_comment = __download(checksum_url, headers)
         if checksum_success:
             log.debug("Downloaded SHA1 SUM: %s", artifact_sum)
             file_sum = __salt__['file.get_hash'](path=target_file, form='sha1')
@@ -283,15 +344,17 @@ def __save_artifact(artifact_url, target_file):
             return result
 
     log.debug('Downloading: {url} -> {target_file}'.format(url=artifact_url, target_file=target_file))
+
     try:
-        f = urllib2.urlopen(artifact_url)
+        request = urllib.request.Request(artifact_url, None, headers)
+        f = urllib.request.urlopen(request)
         with salt.utils.fopen(target_file, "wb") as local_file:
             local_file.write(f.read())
         result['status'] = True
         result['comment'] = __append_comment(('Artifact downloaded from URL: {0}'.format(artifact_url)), result['comment'])
         result['changes']['downloaded_file'] = target_file
         result['target_file'] = target_file
-    except (HTTPError, urllib2.URLError) as e:
+    except (HTTPError, URLError) as e:
         result['status'] = False
         result['comment'] = __get_error_comment(e, artifact_url)
 
@@ -303,14 +366,20 @@ def __get_group_id_subpath(group_id):
     return group_url
 
 
-def __download(request_url):
+def __get_classifier_url(classifier):
+    has_classifier = classifier is not None and classifier != ""
+    return "-" + classifier if has_classifier else ""
+
+
+def __download(request_url, headers):
     log.debug('Downloading content from {0}'.format(request_url))
 
     success = False
     content = None
     comment = None
     try:
-        url = urllib2.urlopen(request_url)
+        request = urllib.request.Request(request_url, None, headers)
+        url = urllib.request.urlopen(request)
         content = url.read()
         success = True
     except HTTPError as e:
@@ -320,9 +389,9 @@ def __download(request_url):
 
 
 def __get_error_comment(http_error, request_url):
-    if http_error.code == 404:
+    if http_error.code == salt.ext.six.moves.http_client.NOT_FOUND:
         comment = 'HTTP Error 404. Request URL: ' + request_url
-    elif http_error.code == 409:
+    elif http_error.code == salt.ext.six.moves.http_client.CONFLICT:
         comment = 'HTTP Error 409: Conflict. Requested URL: {0}. \n' \
                   'This error may be caused by reading snapshot artifact from non-snapshot repository.'.format(request_url)
     else:

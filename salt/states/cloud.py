@@ -55,6 +55,15 @@ def _valid(name, comment='', changes=None):
             'comment': comment}
 
 
+def _get_instance(names):
+    # for some reason loader overwrites __opts__['test'] with default
+    # value of False, thus store and then load it again after action
+    test = __opts__.get('test', False)
+    instance = __salt__['cloud.action'](fun='show_instance', names=names)
+    __opts__['test'] = test
+    return instance
+
+
 def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
     '''
     Spin up a single instance on a cloud provider, using salt-cloud. This state
@@ -90,14 +99,14 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
         elif isinstance(onlyif, six.string_types):
-            if retcode(onlyif) != 0:
+            if retcode(onlyif, python_shell=True) != 0:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
         elif isinstance(unless, six.string_types):
-            if retcode(unless) == 0:
+            if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
 
     # provider=None not cloud_provider because
@@ -167,14 +176,14 @@ def absent(name, onlyif=None, unless=None):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
         elif isinstance(onlyif, six.string_types):
-            if retcode(onlyif) != 0:
+            if retcode(onlyif, python_shell=True) != 0:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
         elif isinstance(unless, six.string_types):
-            if retcode(unless) == 0:
+            if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
 
     if not __salt__['cloud.has_instance'](name=name, provider=None):
@@ -241,16 +250,16 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
         elif isinstance(onlyif, six.string_types):
-            if retcode(onlyif) != 0:
+            if retcode(onlyif, python_shell=True) != 0:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
         if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
         elif isinstance(unless, six.string_types):
-            if retcode(unless) == 0:
+            if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
-    instance = __salt__['cloud.action'](fun='show_instance', names=[name])
+    instance = _get_instance([name])
     prov = str(next(six.iterkeys(instance)))
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
@@ -390,8 +399,9 @@ def volume_attached(name, server_name, provider=None, **kwargs):
 
     if name in volumes and volumes[name]['attachments']:
         volume = volumes[name]
-        ret['comment'] = ('Volume {name} is already'
-                          'attached: {attachments}').format(**volumes[name])
+        ret['comment'] = (
+                          'Volume {name} is already attached: {attachments}'
+                          ).format(**volumes[name])
         ret['result'] = True
         return ret
     elif name not in volumes:

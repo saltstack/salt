@@ -6,6 +6,7 @@ Manage Kerberos KDC
 that can authenticate without requireing a password.
 
     .. code-block:: bash
+
         # ktadd -k /root/secure.keytab kadmin/admin kadmin/changepw
 
 On the KDC minion you will need to add the following to the minion
@@ -13,6 +14,7 @@ configuration file so Salt knows what keytab to use and what principal to
 authenticate as.
 
     .. code-block:: yaml
+
         auth_keytab: /root/auth.keytab
         auth_principal: kadmin/admin
 '''

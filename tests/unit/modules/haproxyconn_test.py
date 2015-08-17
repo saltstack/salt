@@ -98,11 +98,12 @@ class MockHaConn(object):
     def __init__(self):
         self.ha_cmd = None
 
-    def sendCmd(self, ha_cmd):
+    def sendCmd(self, ha_cmd, objectify=False):
         """
         Mock of sendCmd method
         """
         self.ha_cmd = ha_cmd
+        self.objectify = objectify
         return True
 
 

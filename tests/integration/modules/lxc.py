@@ -8,7 +8,12 @@ Test the lxc module
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath, skip_if_not_root, skip_if_binaries_missing
+from salttesting.helpers import (
+    ensure_in_syspath,
+    skip_if_not_root,
+    skip_if_binaries_missing
+)
+from salttesting import skipIf
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -18,13 +23,15 @@ import integration
 import salt.ext.six as six
 
 
+@skipIf(True,
+        'Needs rewrite to be more distro agnostic. Also, the tearDown '
+        'function destroys ALL containers on the box, which is BAD.')
 @skip_if_not_root
 @skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
 class LXCModuleTest(integration.ModuleCase):
     '''
     Test the lxc module
     '''
-
     prefix = '_salttesting'
 
     def setUp(self):
@@ -56,7 +63,8 @@ class LXCModuleTest(integration.ModuleCase):
 
         r = self.run_function('lxc.create', [self.prefix],
                               template='sshd')
-        self.assertEqual(r, {'created': True})
+        self.assertEqual(r, {'state': {'new': 'stopped', 'old': None},
+                             'result': True})
         self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
         r = self.run_function('lxc.destroy', [self.prefix])
         self.assertEqual(r, {'state': None, 'change': True})

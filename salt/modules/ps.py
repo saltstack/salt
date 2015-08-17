@@ -19,7 +19,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
-    import psutil
+    import salt.utils.psutil_compat as psutil
 
     HAS_PSUTIL = True
     PSUTIL2 = psutil.version_info >= (2, 0)
@@ -50,7 +50,10 @@ def _get_proc_cmdline(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.cmdline() if PSUTIL2 else proc.cmdline
+    try:
+        return proc.cmdline() if PSUTIL2 else proc.cmdline
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return ''
 
 
 def _get_proc_create_time(proc):
@@ -59,7 +62,10 @@ def _get_proc_create_time(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.create_time() if PSUTIL2 else proc.create_time
+    try:
+        return proc.create_time() if PSUTIL2 else proc.create_time
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_name(proc):
@@ -68,12 +74,10 @@ def _get_proc_name(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    ret = []
     try:
-        ret = proc.name() if PSUTIL2 else proc.name
+        return proc.name() if PSUTIL2 else proc.name
     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        pass
-    return ret
+        return []
 
 
 def _get_proc_status(proc):
@@ -82,7 +86,10 @@ def _get_proc_status(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.status() if PSUTIL2 else proc.status
+    try:
+        return proc.status() if PSUTIL2 else proc.status
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_username(proc):
@@ -91,7 +98,10 @@ def _get_proc_username(proc):
 
     It's backward compatible with < 2.0 versions of psutil.
     '''
-    return proc.username() if PSUTIL2 else proc.username
+    try:
+        return proc.username() if PSUTIL2 else proc.username
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return None
 
 
 def _get_proc_pid(proc):
@@ -119,10 +129,10 @@ def top(num_processes=5, interval=3):
     '''
     result = []
     start_usage = {}
-    for pid in psutil.get_pid_list():
+    for pid in psutil.pids():
         try:
             process = psutil.Process(pid)
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         start_usage[process] = user + system
@@ -130,7 +140,7 @@ def top(num_processes=5, interval=3):
     usage = set()
     for process, start in six.iteritems(start_usage):
         try:
-            user, system = process.get_cpu_times()
+            user, system = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         now = user + system
@@ -141,7 +151,7 @@ def top(num_processes=5, interval=3):
         if num_processes and idx >= num_processes:
             break
         if len(_get_proc_cmdline(process)) == 0:
-            cmdline = [_get_proc_name(process)]
+            cmdline = _get_proc_name(process)
         else:
             cmdline = _get_proc_cmdline(process)
         info = {'cmd': cmdline,
@@ -152,9 +162,9 @@ def top(num_processes=5, interval=3):
                 'cpu': {},
                 'mem': {},
         }
-        for key, value in six.iteritems(process.get_cpu_times()._asdict()):
+        for key, value in six.iteritems(process.cpu_times()._asdict()):
             info['cpu'][key] = value
-        for key, value in six.iteritems(process.get_memory_info()._asdict()):
+        for key, value in six.iteritems(process.memory_info()._asdict()):
             info['mem'][key] = value
         result.append(info)
 
@@ -171,7 +181,7 @@ def get_pid_list():
 
         salt '*' ps.get_pid_list
     '''
-    return psutil.get_pid_list()
+    return psutil.pids()
 
 
 def proc_info(pid, attrs=None):
@@ -531,7 +541,7 @@ def boot_time(time_format=None):
     except AttributeError:
         # get_boot_time() has been removed in newer psutil versions, and has
         # been replaced by boot_time() which provides the same information.
-        b_time = int(psutil.get_boot_time())
+        b_time = int(psutil.boot_time())
     if time_format:
         # Load epoch timestamp as a datetime.datetime object
         b_time = datetime.datetime.fromtimestamp(b_time)
@@ -555,9 +565,9 @@ def network_io_counters(interface=None):
         salt '*' ps.network_io_counters interface=eth0
     '''
     if not interface:
-        return dict(psutil.network_io_counters()._asdict())
+        return dict(psutil.net_io_counters()._asdict())
     else:
-        stats = psutil.network_io_counters(pernic=True)
+        stats = psutil.net_io_counters(pernic=True)
         if interface in stats:
             return dict(stats[interface]._asdict())
         else:
@@ -597,7 +607,7 @@ def get_users():
         salt '*' ps.get_users
     '''
     try:
-        recs = psutil.get_users()
+        recs = psutil.users()
         return [dict(x._asdict()) for x in recs]
     except AttributeError:
         # get_users is only present in psutil > v0.5.0

@@ -12,6 +12,7 @@ from yaml.scanner import ScannerError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
+import salt.utils.url
 from salt.utils.yamlloader import SaltYamlSafeLoader, load
 from salt.utils.odict import OrderedDict
 from salt.exceptions import SaltRenderError
@@ -49,7 +50,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         try:
             data = load(yaml_data, Loader=get_yaml_loader(argline))
         except ScannerError as exc:
-            err_type = _ERROR_MAP.get(exc.problem, 'Unknown yaml render error')
+            err_type = _ERROR_MAP.get(exc.problem, exc.problem)
             line_num = exc.problem_mark.line + 1
             raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
         except ConstructorError as exc:
@@ -57,8 +58,8 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
-                    '{warn} found in salt://{sls} environment={saltenv}'.format(
-                        warn=item.message, sls=sls, saltenv=saltenv
+                    '{warn} found in {sls} environment={env}'.format(
+                        warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                     )
                 )
         if not data:

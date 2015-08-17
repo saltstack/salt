@@ -36,6 +36,13 @@ Salt-Master Customizations
 
 To run salt-master on OS X, the root user maxfiles limit must be increased:
 
+.. note::
+
+    On OS X 10.10 (Yosemite) and higher, maxfiles should not be adjusted. The
+    default limits are sufficient in all but the most extreme scenarios.
+    Overriding these values with the setting below will cause system
+    instability!
+
 .. code-block:: bash
 
     sudo launchctl limit maxfiles 4096 8192

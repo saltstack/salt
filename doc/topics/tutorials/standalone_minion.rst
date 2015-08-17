@@ -1,3 +1,5 @@
+.. _tutorial-standalone-minion:
+
 =================
 Standalone Minion
 =================
@@ -78,3 +80,9 @@ it unnecessary to change the configuration file:
 .. code-block:: bash
 
     salt-call state.highstate --local
+
+External Pillars
+================
+
+:ref:`External pillars <external-pillars>` are supported when running in masterless mode.
+

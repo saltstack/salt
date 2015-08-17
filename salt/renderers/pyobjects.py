@@ -291,21 +291,15 @@ def load_states():
     states = {}
 
     # the loader expects to find pillar & grain data
-    __opts__['grains'] = __grains__
+    __opts__['grains'] = salt.loader.grains(__opts__)
     __opts__['pillar'] = __pillar__
-
-    # TODO: honor __virtual__? The old one didn't...
-    # create our own loader that ignores __virtual__()
-    lazy_states = salt.loader.LazyLoader(
-        salt.loader._module_dirs(__opts__, 'states', 'states'),
-        __opts__,
-        tag='states',
-        pack={'__salt__': __salt__},
-        virtual_enable=False,
-    )
+    lazy_funcs = salt.loader.minion_mods(__opts__)
+    lazy_states = salt.loader.states(__opts__, lazy_funcs)
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
     for key, func in six.iteritems(lazy_states):
+        if '.' not in key:
+            continue
         mod_name, func_name = key.split('.', 1)
         if mod_name not in states:
             states[mod_name] = {}
@@ -319,7 +313,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
         load_states()
 
     # these hold the scope that our sls file will be executed with
-    _locals = {}
     _globals = {}
 
     # create our StateFactory objects
@@ -441,6 +434,6 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     Registry.enabled = True
 
     # now exec our template using our created scopes
-    exec_(final_template, _globals, _locals)
+    exec_(final_template, _globals)
 
     return Registry.salt_data()

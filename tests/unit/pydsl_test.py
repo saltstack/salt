@@ -8,7 +8,6 @@ import shutil
 import tempfile
 import textwrap
 import copy
-from cStringIO import StringIO
 
 # Import Salt Testing libs
 from salttesting.unit import TestCase
@@ -27,6 +26,7 @@ from salt.utils.pydsl import PyDslError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import StringIO
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
@@ -371,10 +371,9 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
             self.state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'r') as f:
-
+            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
-            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'r') as f:
+            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
@@ -549,4 +548,5 @@ def write_to(fpath, content):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(PyDSLRendererTestCase, needs_daemon=False)
+    tests = [PyDSLRendererTestCase, PyDSLRendererIncludeTestCase]
+    run_tests(*tests, needs_daemon=False)

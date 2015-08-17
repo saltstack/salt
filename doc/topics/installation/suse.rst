@@ -144,6 +144,14 @@ For bleeding edge python Factory run the following as root:
 Suse Linux Enterprise
 ---------------------
 
+For SLE 12 run the following as root:
+
+.. code-block:: bash
+
+    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/SLE_12/devel:languages:python.repo
+    zypper refresh
+    zypper install salt salt-minion salt-master
+
 For SLE 11 SP3 run the following as root:
 
 .. code-block:: bash

@@ -32,6 +32,14 @@ channels:
 
 .. __: http://software.opensuse.org/package/winexe
 
+Optionally WinRM can be used instead of `winexe` if the python module `pywinrm`
+is available and WinRM is supported on the target Windows version. Information
+on pywinrm can be found at the project home:
+
+* `pywinrm project home`__
+
+.. __: https://github.com/diyan/pywinrm
+
 Additionally, a copy of the Salt Minion Windows installer must be present on
 the system on which Salt Cloud is running. This installer may be downloaded
 from saltstack.com:
@@ -52,7 +60,7 @@ If supported by the cloud provider, a PowerShell script may be used to open up
 this port automatically, using the cloud provider's `userdata`. The following
 script would open up port 445, and apply the changes:
 
-.. code-block:: other
+.. code-block:: powershell
 
     <powershell>
     New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
@@ -68,6 +76,7 @@ profile configuration as `userdata_file`. For instance:
     userdata_file: /etc/salt/windows-firewall.ps1
 
 
+
 Configuration
 =============
 Configuration is set as usual, with some extra configuration settings. The
@@ -80,7 +89,7 @@ Setting the installer in ``/etc/salt/cloud.providers``:
 .. code-block:: yaml
 
     my-softlayer:
-      provider: softlayer
+      driver: softlayer
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
       minion:
@@ -88,9 +97,12 @@ Setting the installer in ``/etc/salt/cloud.providers``:
       win_installer: /root/Salt-Minion-2014.7.0-AMD64-Setup.exe
       win_username: Administrator
       win_password: letmein
+      smb_port: 445
 
 The default Windows user is `Administrator`, and the default Windows password
 is blank.
+
+If WinRM is to be used ``use_winrm`` needs to be set to `True`.
 
 
 Auto-Generated Passwords on EC2

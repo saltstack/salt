@@ -90,8 +90,8 @@ def get_returner_options(virtualname=None,
     _options.update(
         _fetch_profile_opts(
             cfg,
-            __salt__,
             virtualname,
+            __salt__,
             _options,
             profile_attr,
             profile_attrs

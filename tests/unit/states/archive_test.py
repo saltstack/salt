@@ -5,20 +5,34 @@
 
 # Import python libs
 from __future__ import absolute_import
+import os
+import tempfile
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
+)
 
 ensure_in_syspath('../../')
 
+# Import Salt Libs
 from salt.states import archive as archive
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Globals
 archive.__salt__ = {}
 archive.__opts__ = {"cachedir": "/tmp", "test": False}
-archive.__env__ = 'base'
+archive.__env__ = 'test'
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -29,6 +43,58 @@ class ArchiveTestCase(TestCase):
 
     def tearDown(self):
         super(ArchiveTestCase, self).tearDown()
+
+    def test_extracted_tar(self):
+        '''
+        archive.extracted tar options
+        '''
+
+        source = 'file.tar.gz'
+        tmp_dir = os.path.join(tempfile.gettempdir(), 'test_archive', '')
+        test_tar_opts = [
+            '--no-anchored foo',
+            'v -p --opt',
+            '-v -p',
+            '--long-opt -z',
+            'z -v -weird-long-opt arg',
+        ]
+        ret_tar_opts = [
+            ['tar', 'x', '--no-anchored', 'foo', '-f'],
+            ['tar', 'xv', '-p', '--opt', '-f'],
+            ['tar', 'x', '-v', '-p', '-f'],
+            ['tar', 'x', '--long-opt', '-z', '-f'],
+            ['tar', 'xz', '-v', '-weird-long-opt', 'arg', '-f'],
+        ]
+
+        mock_true = MagicMock(return_value=True)
+        mock_false = MagicMock(return_value=False)
+        ret = {'stdout': ['saltines', 'cheese'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
+        mock_run = MagicMock(return_value=ret)
+
+        with patch('os.path.exists', mock_true):
+            with patch.dict(archive.__opts__, {'test': False,
+                                               'cachedir': tmp_dir}):
+                with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
+                                                   'file.file_exists': mock_false,
+                                                   'file.makedirs': mock_true,
+                                                   'cmd.run_all': mock_run}):
+                    if HAS_PWD:
+                        running_as = pwd.getpwuid(os.getuid()).pw_name
+                    else:
+                        running_as = 'root'
+                    filename = os.path.join(
+                        tmp_dir,
+                        'files/test/_tmp{0}_test_archive_.tar'.format(
+                            '' if running_as == 'root' else '_{0}'.format(running_as)
+                        )
+                    )
+                    for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
+                        ret = archive.extracted(tmp_dir,
+                                                source,
+                                                'tar',
+                                                tar_options=test_opts)
+                        ret_opts.append(filename)
+                        mock_run.assert_called_with(ret_opts, cwd=tmp_dir, python_shell=False)
 
     def test_tar_gnutar(self):
         '''

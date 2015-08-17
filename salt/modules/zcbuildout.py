@@ -736,7 +736,7 @@ def bootstrap(directory='.',
     with salt.utils.fopen(b_py) as fic:
         content = fic.read()
     if (
-        (False != test_release)
+        (test_release is not False)
         and ' --accept-buildout-test-releases' in content
     ):
         bootstrap_args += ' --accept-buildout-test-releases'

@@ -92,7 +92,7 @@ def items(*args, **kwargs):
         will also override any variables of the same name in pillar or
         ext_pillar.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Example:
 
@@ -136,7 +136,7 @@ def _obfuscate_inner(var):
 
 def obfuscate(*args):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Same as :py:func:`items`, but replace pillar values with a simple type indication.
 
@@ -168,7 +168,7 @@ def obfuscate(*args):
 # identifier rule.
 def ls(*args):
     '''
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     Calls the master for a fresh pillar, generates the pillar data on the
     fly (same as :py:func:`items`), but only shows the available main keys.
@@ -195,7 +195,7 @@ def item(*args, **kwargs):
         will also override any variables of the same name in pillar or
         ext_pillar.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     CLI Examples:
 
@@ -205,12 +205,18 @@ def item(*args, **kwargs):
         salt '*' pillar.item foo bar baz
     '''
     ret = {}
-    pillar = items(**kwargs)
-    for arg in args:
-        try:
-            ret[arg] = pillar[arg]
-        except KeyError:
-            pass
+    default = kwargs.get('default', '')
+    delimiter = kwargs.get('delimiter', ':')
+
+    try:
+        for arg in args:
+            ret[arg] = salt.utils.traverse_dict_and_list(__pillar__,
+                                                        arg,
+                                                        default,
+                                                        delimiter)
+    except KeyError:
+        pass
+
     return ret
 
 
@@ -252,7 +258,7 @@ def ext(external, pillar=None):
         will also override any variables of the same name in pillar or
         ext_pillar.
 
-        .. versionadded:: 2015.2.0
+        .. versionadded:: 2015.5.0
 
     .. code-block:: bash
 
@@ -271,3 +277,33 @@ def ext(external, pillar=None):
     ret = pillar_obj.compile_pillar()
 
     return ret
+
+
+def keys(key, delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Attempt to retrieve a list of keys from the named value from the pillar.
+
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict, similar to how pillar.get works.
+
+    delimiter
+        Specify an alternate delimiter to use when traversing a nested dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.keys web:sites
+    '''
+    ret = salt.utils.traverse_dict_and_list(
+        __pillar__, key, KeyError, delimiter)
+
+    if ret is KeyError:
+        raise KeyError("Pillar key not found: {0}".format(key))
+
+    if not isinstance(ret, dict):
+        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+
+    return ret.keys()

@@ -24,7 +24,7 @@ from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
 
-from salt.utils import kinds
+from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 from salt.exceptions import (
@@ -56,7 +56,7 @@ def jobber_check(self):
             rms.append(jid)
             data = self.shells.value[jid]
             stdout, stderr = data['proc'].communicate()
-            ret = json.loads(stdout, object_hook=salt.utils.decode_dict)['local']
+            ret = json.loads(salt.utils.to_str(stdout), object_hook=salt.utils.decode_dict)['local']
             route = {'src': (self.stack.value.local.name, 'manor', 'jid_ret'),
                      'dst': (data['msg']['route']['src'][0], None, 'remote_cmd')}
             ret['cmd'] = '_return'
@@ -237,12 +237,25 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                         )
             log.debug('Command details {0}'.format(data))
 
-            process = multiprocessing.Process(
-                    target=self.proc_run,
-                    kwargs={'msg': msg}
-                    )
-            process.start()
-            process.join()
+            if is_windows():
+                # SaltRaetNixJobber is not picklable. Pickling is necessary
+                # when spawning a process in Windows. Since the process will
+                # be spawned and joined on non-Windows platforms, instead of
+                # this, just run the function directly and absorb any thrown
+                # exceptions.
+                try:
+                    self.proc_run(msg)
+                except Exception as exc:
+                    log.error(
+                            'Exception caught by jobber: {0}'.format(exc),
+                            exc_info=True)
+            else:
+                process = multiprocessing.Process(
+                        target=self.proc_run,
+                        kwargs={'msg': msg}
+                        )
+                process.start()
+                process.join()
 
     def proc_run(self, msg):
         '''
@@ -261,7 +274,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
-        with salt.utils.fopen(fn_, 'w+') as fp_:
+        with salt.utils.fopen(fn_, 'w+b') as fp_:
             fp_.write(self.serial.dumps(sdata))
         ret = {'success': False}
         function_name = data['fun']

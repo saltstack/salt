@@ -131,12 +131,15 @@ def add(name,
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    if createhome:
-        cmd.append('-m')
-    elif (createhome is False
-          and __grains__['kernel'] != 'NetBSD'
-          and __grains__['kernel'] != 'OpenBSD'):
-        cmd.append('-M')
+    if isinstance(createhome, bool):
+        if createhome:
+            cmd.append('-m')
+        elif (__grains__['kernel'] != 'NetBSD'
+                and __grains__['kernel'] != 'OpenBSD'):
+            cmd.append('-M')
+    else:
+        log.error('Value passes to ``createhome`` must be a boolean')
+        return False
 
     if home is not None:
         cmd.extend(['-d', home])
@@ -310,8 +313,8 @@ def chshell(name, shell):
 
 def chhome(name, home, persist=False):
     '''
-    Change the home directory of the user, pass True for persist to copy files
-    to the new home dir
+    Change the home directory of the user, pass True for persist to move files
+    to the new home directory if the old home directory exist.
 
     CLI Example:
 
@@ -386,7 +389,11 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo "Foo Bar"
     '''
-    fullname = str(fullname)
+    if fullname is None:
+        fullname = ''
+    else:
+        fullname = str(fullname)
+
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -412,7 +419,11 @@ def chroomnumber(name, roomnumber):
 
         salt '*' user.chroomnumber foo 123
     '''
-    roomnumber = str(roomnumber)
+    if roomnumber is None:
+        roomnumber = ''
+    else:
+        roomnumber = str(roomnumber)
+
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -438,7 +449,11 @@ def chworkphone(name, workphone):
 
         salt '*' user.chworkphone foo "7735550123"
     '''
-    workphone = str(workphone)
+    if workphone is None:
+        workphone = ''
+    else:
+        workphone = str(workphone)
+
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
@@ -464,7 +479,11 @@ def chhomephone(name, homephone):
 
         salt '*' user.chhomephone foo "7735551234"
     '''
-    homephone = str(homephone)
+    if homephone is None:
+        homephone = ''
+    else:
+        homephone = str(homephone)
+
     pre_info = _get_gecos(name)
     if not pre_info:
         return False

@@ -1,25 +1,34 @@
 # -*- coding: utf-8 -*-
 '''
-Control the state system on the minion
+Control the state system on the minion.
+
+State Caching
+-------------
+
+When a highstate is called, the minion automatically caches a copy of the last
+high data. If you then run a highstate with cache=True it will use that cached
+highdata and won't hit the fileserver except for ``salt://`` links in the
+states themselves.
 '''
 
 # Import python libs
 from __future__ import absolute_import
-import os
-import json
 import copy
-import shutil
-import time
+import json
 import logging
+import os
+import shutil
 import tarfile
 import tempfile
+import time
 
 # Import salt libs
 import salt.config
+import salt.payload
+import salt.state
 import salt.utils
 import salt.utils.jid
-import salt.state
-import salt.payload
+import salt.utils.url
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -36,6 +45,11 @@ __outputter__ = {
     'highstate': 'highstate',
     'template': 'highstate',
     'template_str': 'highstate',
+    'apply': 'highstate',
+    'apply_': 'highstate',
+    'request': 'highstate',
+    'check_request': 'highstate',
+    'run_request': 'highstate',
 }
 
 __func_alias__ = {
@@ -90,9 +104,9 @@ def _wait(jid):
 
 def running(concurrent=False):
     '''
-    Return a dict of state return data if a state function is already running.
-    This function is used to prevent multiple state calls from being run at
-    the same time.
+    Return a list of strings that contain state return data if a state function is
+    already running. This function is used to prevent multiple state calls from being
+    run at the same time.
 
     CLI Example:
 
@@ -183,7 +197,7 @@ def low(data, queue=False, **kwargs):
     return ret
 
 
-def high(data, queue=False, **kwargs):
+def high(data, test=False, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
     This function is mostly intended for testing the state system
@@ -197,7 +211,21 @@ def high(data, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
+    opts = _get_opts(kwargs.get('localconfig'))
+
+    if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+    elif test is not None:
+        opts['test'] = test
+    else:
+        opts['test'] = __opts__.get('test', None)
+
+    pillar = kwargs.get('pillar')
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError(
+            'Pillar data must be formatted as a dictionary'
+        )
+    st_ = salt.state.State(__opts__, pillar)
     ret = st_.call_high(data)
     _set_retcode(ret)
     return ret
@@ -216,13 +244,25 @@ def template(tem, queue=False, **kwargs):
 
         salt '*' state.template '<Path to template on the minion>'
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        saltenv = kwargs['env']
+    elif 'saltenv' in kwargs:
+        saltenv = kwargs['saltenv']
+    else:
+        saltenv = ''
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
     st_ = salt.state.HighState(__opts__)
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
-    high_state, errors = st_.render_state(tem, None, '', None, local=True)
+    high_state, errors = st_.render_state(tem, saltenv, '', None, local=True)
     if errors:
         __context__['retcode'] = 1
         return errors
@@ -253,6 +293,8 @@ def template_str(tem, queue=False, **kwargs):
 def apply_(mods=None,
           **kwargs):
     '''
+    .. versionadded:: 2015.5.0
+
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, state.apply is intended to be the main gateway for
     all state executions.
@@ -273,8 +315,10 @@ def apply_(mods=None,
 def request(mods=None,
             **kwargs):
     '''
+    .. versionadded:: 2015.5.0
+
     Request that the local admin execute a state run via
-    `salt-callstate.apply_request`
+    `salt-call state.run_request`
     All arguments match state.apply
 
     CLI Example:
@@ -312,6 +356,8 @@ def request(mods=None,
 
 def check_request(name=None):
     '''
+    .. versionadded:: 2015.5.0
+
     Return the state request information, if any
 
     CLI Example:
@@ -333,6 +379,8 @@ def check_request(name=None):
 
 def clear_request(name=None):
     '''
+    .. versionadded:: 2015.5.0
+
     Clear out the state execution request without executing it
 
     CLI Example:
@@ -372,6 +420,8 @@ def clear_request(name=None):
 
 def run_request(name='default', **kwargs):
     '''
+    .. versionadded:: 2015.5.0
+
     Execute the pending state request
 
     CLI Example:
@@ -386,7 +436,9 @@ def run_request(name='default', **kwargs):
     n_req = req[name]
     if 'mods' not in n_req or 'kwargs' not in n_req:
         return {}
-    req['kwargs'].update(kwargs)
+    req[name]['kwargs'].update(kwargs)
+    if 'test' in n_req['kwargs']:
+        n_req['kwargs'].pop('test')
     if req:
         ret = apply_(n_req['mods'], **n_req['kwargs'])
         try:
@@ -436,6 +488,7 @@ def highstate(test=None,
         salt '*' state.highstate pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     if _disabled(['highstate']):
+        log.debug('Salt highstate run is disabled. To re-enable, run state.enable highstate')
         ret = {
             'name': 'Salt highstate run is disabled. To re-enable, run state.enable highstate',
             'result': 'False',
@@ -474,6 +527,9 @@ def highstate(test=None,
             'Pillar data must be formatted as a dictionary'
         )
 
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
+
     st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
     st_.push_active()
     try:
@@ -507,6 +563,7 @@ def sls(mods,
         exclude=None,
         queue=False,
         env=None,
+        pillarenv=None,
         **kwargs):
     '''
     Execute a set list of state files from an environment.
@@ -534,6 +591,9 @@ def sls(mods,
             Defaults to None. If no saltenv is specified, the minion config will
             be checked for a saltenv and if found, it will be used. If none is found,
             base will be used.
+    pillarenv : None
+        Specify a ``pillar_roots`` environment. By default all pillar environments
+        merged together will be used.
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
@@ -563,10 +623,18 @@ def sls(mods,
         # Backwards compatibility
         saltenv = env
     if not saltenv:
-        if __opts__.get('saltenv', None):
-            saltenv = __opts__['saltenv']
+        if __opts__.get('environment', None):
+            saltenv = __opts__['environment']
         else:
             saltenv = 'base'
+    else:
+        __opts__['environment'] = saltenv
+
+    if not pillarenv:
+        if __opts__.get('pillarenv', None):
+            pillarenv = __opts__['pillarenv']
+    else:
+        __opts__['pillarenv'] = pillarenv
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
@@ -582,6 +650,8 @@ def sls(mods,
         disabled = _disabled([mods])
 
     if disabled:
+        for state in disabled:
+            log.debug('Salt state {0} run is disabled. To re-enable, run state.enable {0}'.format(state))
         __context__['retcode'] = 1
         return disabled
 
@@ -676,6 +746,7 @@ def sls(mods,
 def top(topfn,
         test=None,
         queue=False,
+        saltenv=None,
         **kwargs):
     '''
     Execute a specific top file instead of the default
@@ -711,7 +782,9 @@ def top(topfn,
 
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
-    st_.opts['state_top'] = os.path.join('salt://', topfn)
+    st_.opts['state_top'] = salt.utils.url.create(topfn)
+    if saltenv:
+        st_.opts['state_top_saltenv'] = saltenv
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
@@ -809,6 +882,8 @@ def sls_id(
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
@@ -871,6 +946,8 @@ def show_low_sls(mods,
         opts['test'] = True
     else:
         opts['test'] = __opts__.get('test', None)
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -932,6 +1009,9 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
             'Pillar data must be formatted as a dictionary'
         )
 
+    if 'pillarenv' in kwargs:
+        opts['pillarenv'] = kwargs['pillarenv']
+
     st_ = salt.state.HighState(opts, pillar)
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
@@ -960,10 +1040,20 @@ def show_top(queue=False, **kwargs):
 
         salt '*' state.show_top
     '''
+    opts = copy.deepcopy(__opts__)
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        opts['environment'] = kwargs['env']
+    elif 'saltenv' in kwargs:
+        opts['environment'] = kwargs['saltenv']
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(__opts__)
+    st_ = salt.state.HighState(opts)
     errors = []
     top_ = st_.get_top()
     errors += st_.verify_tops(top_)

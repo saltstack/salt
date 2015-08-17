@@ -14,7 +14,7 @@ to pass arguments to the deploy script:
 .. code-block:: yaml
 
     ec2-amazon:
-        provider: ec2
+        provider: my-ec2-config
         image: ami-1624987f
         size: t1.micro
         ssh_username: ec2-user
@@ -28,14 +28,16 @@ This has also been tested to work with pipes, if needed:
     script_args: | head
 
 
-Use SFTP to transfer files
-==========================
-Some distributions do not have scp distributed with the ssh package.  The
-solution is to use sftp with the `use_sftp` flag
+Selecting the File Transport
+============================
+By default, Salt Cloud uses SFTP to transfer files to Linux hosts. However, if
+SFTP is not available, or specific SCP functionality is needed, Salt Cloud can
+be configured to use SCP instead.
 
 .. code-block:: yaml
 
-    use_sftp: True
+    file_transport: sftp
+    file_transport: scp
 
 
 Sync After Install
@@ -93,7 +95,7 @@ Delete SSH Keys
 ===============
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
 to the known_hosts file for the user that ran the salt-cloud command. When an
-instance is deployed, a cloud provider generally recycles the IP address for
+instance is deployed, a cloud host generally recycles the IP address for
 the instance.  When Salt Cloud attempts to deploy an instance using a recycled
 IP address that has previously been accessed from the same machine, the old key
 in the known_hosts file will cause a conflict.
@@ -159,7 +161,7 @@ wait_for_ip_timeout
 ~~~~~~~~~~~~~~~~~~~
 
 The amount of time Salt Cloud should wait for a VM to start and get an IP back
-from the cloud provider. 
+from the cloud host.
 Default: varies by cloud provider ( between 5 and 25 minutes)
 
 
@@ -230,7 +232,7 @@ diff_cache_events
 ~~~~~~~~~~~~~~~~~
 
 When the cloud cachedir is being managed, if differences are encountered
-between the data that is returned live from the cloud provider and the data in
+between the data that is returned live from the cloud host and the data in
 the cache, fire events which describe the changes. This setting can be True or
 False.
 
@@ -249,20 +251,20 @@ The following are events that can be fired based on this data.
 
 salt/cloud/minionid/cache_node_new
 **********************************
-A new node was found on the cloud provider which was not listed in the cloud
+A new node was found on the cloud host which was not listed in the cloud
 cachedir. A dict describing the new node will be contained in the event.
 
 
 salt/cloud/minionid/cache_node_missing
 **************************************
 A node that was previously listed in the cloud cachedir is no longer available
-on the cloud provider.
+on the cloud host.
 
 
 salt/cloud/minionid/cache_node_diff
 ***********************************
 One or more pieces of data in the cloud cachedir has changed on the cloud
-provider. A dict containing both the old and the new data will be contained in
+host. A dict containing both the old and the new data will be contained in
 the event.
 
 
@@ -296,7 +298,7 @@ only the EC2 driver supports this functionality.
 SSH Agent
 =========
 
-.. versionadded:: Lithium
+.. versionadded:: 2015.5.0
 
 If the ssh key is not stored on the server salt-cloud is being run on, set
 ssh_agent, and salt-cloud will use the forwarded ssh-agent to authenticate.
@@ -304,3 +306,29 @@ ssh_agent, and salt-cloud will use the forwarded ssh-agent to authenticate.
 .. code-block:: yaml
 
     ssh_agent: True
+
+File Map Upload
+===============
+
+.. versionadded:: 2014.7.0
+
+The ``file_map`` option allows an arbitrary group of files to be uploaded to the
+target system before running the deploy script. This functionality requires a
+provider uses salt.utils.cloud.bootstrap(), which is currently limited to the ec2,
+gce, openstack and nova drivers.
+
+The ``file_map`` can be configured globally in ``/etc/salt/cloud``, or in any cloud
+provider or profile file. For example, to upload an extra package or a custom deploy
+script, a cloud profile using ``file_map`` might look like:
+
+.. code-block:: yaml
+
+    ubuntu14:
+      provider: ec2-config
+      image: ami-98aa1cf0
+      size: t1.micro
+      ssh_username: root
+      securitygroup: default
+      file_map:
+        /local/path/to/custom/script: /remote/path/to/use/custom/script
+        /local/path/to/package: /remote/path/to/store/package

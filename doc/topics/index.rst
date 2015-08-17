@@ -118,6 +118,12 @@ https://groups.google.com/forum/#!forum/salt-users
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
+There is also a low-traffic list used to announce new releases
+called `salt-announce`_
+
+https://groups.google.com/forum/#!forum/salt-announce
+
+.. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 
 IRC
 ===
@@ -169,7 +175,6 @@ A few examples of salt states from the community:
 
 * https://github.com/blast-hardcheese/blast-salt-states
 * https://github.com/kevingranade/kevingranade-salt-state
-* https://github.com/uggedal/states
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
 * https://github.com/rentalita/ubuntu-setup/
 * https://github.com/brutasse/states

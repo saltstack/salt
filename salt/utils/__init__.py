@@ -4,7 +4,7 @@ Some of the utils used by salt
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 import contextlib
 import copy
 import collections
@@ -25,29 +25,38 @@ import shutil
 import socket
 import stat
 import sys
+import pstats
 import tempfile
 import time
 import types
 import warnings
 import string
-import locale
-from calendar import month_abbr as months
+import subprocess
 
 # Import 3rd-party libs
-import salt.ext.six as six
-# pylint: disable=import-error,redefined-builtin
+from salt.ext import six
+# pylint: disable=import-error
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=no-name-in-module
+# pylint: disable=redefined-builtin
 from salt.ext.six.moves import range
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import map
-# pylint: disable=import-error,redefined-builtin
+from stat import S_IMODE
+# pylint: enable=import-error,redefined-builtin
 
-# Try to load pwd, fallback to getpass if unsuccessful
+
 try:
-    import pwd
+    import cProfile
+    HAS_CPROFILE = True
 except ImportError:
-    import getpass
-    pwd = None
+    HAS_CPROFILE = False
+
+# Import 3rd-party libs
+try:
+    import Crypto.Random
+    HAS_CRYPTO = True
+except ImportError:
+    HAS_CRYPTO = False
 
 try:
     import timelib
@@ -94,6 +103,15 @@ try:
     HAS_SETPROCTITLE = True
 except ImportError:
     HAS_SETPROCTITLE = False
+
+try:
+    import ctypes
+    import ctypes.util
+    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
+    res_init = libc.__res_init
+    HAS_RESINIT = True
+except (ImportError, OSError, AttributeError):
+    HAS_RESINIT = False
 
 # Import salt libs
 from salt.defaults import DEFAULT_TARGET_DELIM
@@ -242,7 +260,7 @@ def get_context(template, line, num_lines=5, marker=None):
 
     # warning: jinja content may contain unicode strings
     # instead of utf-8.
-    buf = [i.encode('UTF-8') if isinstance(i, six.text_type) else i for i in buf]
+    buf = [to_str(i) if isinstance(i, six.text_type) else i for i in buf]
 
     return '---\n{0}\n---'.format('\n'.join(buf))
 
@@ -251,10 +269,10 @@ def get_user():
     '''
     Get the current user
     '''
-    if pwd is not None:
+    if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
     else:
-        return getpass.getuser()
+        return win32api.GetUserName()
 
 
 def get_uid(user=None):
@@ -265,7 +283,7 @@ def get_uid(user=None):
     systems which do not support pwd or os.geteuid
     it will return None.
     """
-    if pwd is None:
+    if not HAS_PWD:
         result = None
     elif user is None:
         try:
@@ -307,18 +325,89 @@ def get_gid(group=None):
     return result
 
 
+def _win_user_token_is_admin(user_token):
+    '''
+    Using the win32 api, determine if the user with token 'user_token' has
+    administrator rights.
+
+    See MSDN entry here:
+        http://msdn.microsoft.com/en-us/library/aa376389(VS.85).aspx
+    '''
+    class SID_IDENTIFIER_AUTHORITY(ctypes.Structure):
+        _fields_ = [
+            ("byte0", ctypes.c_byte),
+            ("byte1", ctypes.c_byte),
+            ("byte2", ctypes.c_byte),
+            ("byte3", ctypes.c_byte),
+            ("byte4", ctypes.c_byte),
+            ("byte5", ctypes.c_byte),
+        ]
+    nt_authority = SID_IDENTIFIER_AUTHORITY()
+    nt_authority.byte5 = 5
+
+    SECURITY_BUILTIN_DOMAIN_RID = 0x20
+    DOMAIN_ALIAS_RID_ADMINS = 0x220
+    administrators_group = ctypes.c_void_p()
+    if ctypes.windll.advapi32.AllocateAndInitializeSid(
+            ctypes.byref(nt_authority),
+            2,
+            SECURITY_BUILTIN_DOMAIN_RID,
+            DOMAIN_ALIAS_RID_ADMINS,
+            0, 0, 0, 0, 0, 0,
+            ctypes.byref(administrators_group)) == 0:
+        raise Exception("AllocateAndInitializeSid failed")
+
+    try:
+        is_admin = ctypes.wintypes.BOOL()
+        if ctypes.windll.advapi32.CheckTokenMembership(
+                user_token,
+                administrators_group,
+                ctypes.byref(is_admin)) == 0:
+            raise Exception("CheckTokenMembership failed")
+        return is_admin.value != 0
+
+    finally:
+        ctypes.windll.advapi32.FreeSid(administrators_group)
+
+
+def _win_current_user_is_admin():
+    '''
+    ctypes.windll.shell32.IsUserAnAdmin() is intentionally avoided due to this
+    function being deprecated.
+    '''
+    return _win_user_token_is_admin(0)
+
+
 def get_specific_user():
     '''
     Get a user name for publishing. If you find the user is "root" attempt to be
     more specific
     '''
     user = get_user()
-    env_vars = ('SUDO_USER',)
-    if user == 'root':
-        for evar in env_vars:
-            if evar in os.environ:
-                return 'sudo_{0}'.format(os.environ[evar])
+    if is_windows():
+        if _win_current_user_is_admin():
+            return 'sudo_{0}'.format(user)
+    else:
+        env_vars = ('SUDO_USER',)
+        if user == 'root':
+            for evar in env_vars:
+                if evar in os.environ:
+                    return 'sudo_{0}'.format(os.environ[evar])
     return user
+
+
+def reinit_crypto():
+    '''
+    When a fork arrises, pycrypto needs to reinit
+    From its doc::
+
+        Caveat: For the random number generator to work correctly,
+        you must call Random.atfork() in both the parent and
+        child processes after using os.fork()
+
+    '''
+    if HAS_CRYPTO:
+        Crypto.Random.atfork()
 
 
 def daemonize(redirect_out=True):
@@ -329,6 +418,7 @@ def daemonize(redirect_out=True):
         pid = os.fork()
         if pid > 0:
             # exit first parent
+            reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
@@ -346,6 +436,7 @@ def daemonize(redirect_out=True):
     try:
         pid = os.fork()
         if pid > 0:
+            reinit_crypto()
             sys.exit(salt.defaults.exitcodes.EX_OK)
     except OSError as exc:
         log.error(
@@ -354,6 +445,8 @@ def daemonize(redirect_out=True):
             )
         )
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+    reinit_crypto()
 
     # A normal daemonization redirects the process output to /dev/null.
     # Unfortunately when a python multiprocess is called the output is
@@ -386,7 +479,6 @@ def profile_func(filename=None):
     '''
     def proffunc(fun):
         def profiled_func(*args, **kwargs):
-            import cProfile
             logging.info('Profiling function {0}'.format(fun.__name__))
             try:
                 profiler = cProfile.Profile()
@@ -403,12 +495,28 @@ def profile_func(filename=None):
     return proffunc
 
 
+def rand_str(size=9999999999, hash_type=None):
+    '''
+    Return a random string
+    '''
+    if not hash_type:
+        hash_type = 'md5'
+    hasher = getattr(hashlib, hash_type)
+    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
+
+
 def which(exe=None):
     '''
     Python clone of /usr/bin/which
     '''
+    def _is_executable_file_or_link(exe):
+        # check for os.X_OK doesn't suffice because directory may executable
+        return (os.access(exe, os.X_OK) and
+                (os.path.isfile(exe) or os.path.islink(exe)))
+
     if exe:
-        if os.access(exe, os.X_OK):
+        if _is_executable_file_or_link(exe):
+            # executable in cwd or fullpath
             return exe
 
         # default path based on busybox's default
@@ -433,22 +541,9 @@ def which(exe=None):
             return False
 
         search_path = search_path.split(os.pathsep)
-        if not is_windows():
-            # Add any dirs in the default_path which are not in search_path. If
-            # there was no PATH variable found in os.environ, then this will be
-            # a no-op. This ensures that all dirs in the default_path are
-            # searched, which lets salt.utils.which() work well when invoked by
-            # salt-call running from cron (which, depending on platform, may
-            # have a severely limited PATH).
-            search_path.extend(
-                [
-                    x for x in default_path.split(os.pathsep)
-                    if x not in search_path
-                ]
-            )
         for path in search_path:
             full_path = os.path.join(path, exe)
-            if os.access(full_path, os.X_OK):
+            if _is_executable_file_or_link(full_path):
                 return full_path
             elif is_windows() and not _exe_has_ext():
                 # On Windows, check for any extensions in PATHEXT.
@@ -456,7 +551,7 @@ def which(exe=None):
                 for ext in ext_list:
                     # Windows filesystem is case insensitive so we
                     # safely rely on that behavior
-                    if os.access(full_path + ext, os.X_OK):
+                    if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
         log.trace(
             '{0!r} could not be found in the following search '
@@ -483,6 +578,62 @@ def which_bin(exes):
             continue
         return path
     return None
+
+
+def activate_profile(test=True):
+    pr = None
+    if test:
+        if HAS_CPROFILE:
+            pr = cProfile.Profile()
+            pr.enable()
+        else:
+            log.error('cProfile is not available on your platform')
+    return pr
+
+
+def output_profile(pr, stats_path='/tmp/stats', stop=False, id_=None):
+    if pr is not None and HAS_CPROFILE:
+        try:
+            pr.disable()
+            if not os.path.isdir(stats_path):
+                os.makedirs(stats_path)
+            date = datetime.datetime.now().isoformat()
+            if id_ is None:
+                id_ = rand_str(size=32)
+            ficp = os.path.join(stats_path, '{0}.{1}.pstats'.format(id_, date))
+            fico = os.path.join(stats_path, '{0}.{1}.dot'.format(id_, date))
+            ficn = os.path.join(stats_path, '{0}.{1}.stats'.format(id_, date))
+            if not os.path.exists(ficp):
+                pr.dump_stats(ficp)
+                with open(ficn, 'w') as fic:
+                    pstats.Stats(pr, stream=fic).sort_stats('cumulative')
+            log.info('PROFILING: {0} generated'.format(ficp))
+            log.info('PROFILING (cumulative): {0} generated'.format(ficn))
+            pyprof = which('pyprof2calltree')
+            cmd = [pyprof, '-i', ficp, '-o', fico]
+            if pyprof:
+                failed = False
+                try:
+                    pro = subprocess.Popen(
+                        cmd, shell=False,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except OSError:
+                    failed = True
+                if pro.returncode:
+                    failed = True
+                if failed:
+                    log.error('PROFILING (dot problem')
+                else:
+                    log.info('PROFILING (dot): {0} generated'.format(fico))
+                log.trace('pyprof2calltree output:')
+                log.trace(to_str(pro.stdout.read()).strip() +
+                          to_str(pro.stderr.read()).strip())
+            else:
+                log.info('You can run {0} for additional stats.'.format(cmd))
+        finally:
+            if not stop:
+                pr.enable()
+    return pr
 
 
 def list_files(directory):
@@ -524,6 +675,29 @@ def gen_mac(prefix='AC:DE:48'):
                                                 random.randint(0, 0xff))
 
 
+def mac_str_to_bytes(mac_str):
+    '''
+    Convert a MAC address string into bytes. Works with or without separators:
+
+    b1 = mac_str_to_bytes('08:00:27:13:69:77')
+    b2 = mac_str_to_bytes('080027136977')
+    assert b1 == b2
+    assert isinstance(b1, bytes)
+    '''
+    if len(mac_str) == 12:
+        pass
+    elif len(mac_str) == 17:
+        sep = mac_str[2]
+        mac_str = mac_str.replace(sep, '')
+    else:
+        raise ValueError('Invalid MAC address')
+    if six.PY3:
+        mac_bytes = bytes(int(mac_str[s:s+2], 16) for s in range(0, 12, 2))
+    else:
+        mac_bytes = ''.join(chr(int(mac_str[s:s+2], 16)) for s in range(0, 12, 2))
+    return mac_bytes
+
+
 def ip_bracket(addr):
     '''
     Convert IP address representation to ZMQ (URL) format. ZMQ expects
@@ -541,6 +715,9 @@ def dns_check(addr, safe=False, ipv6=False):
     '''
     error = False
     try:
+        # issue #21397: force glibc to re-read resolv.conf
+        if HAS_RESINIT:
+            res_init()
         hostnames = socket.getaddrinfo(
             addr, None, socket.AF_UNSPEC, socket.SOCK_STREAM
         )
@@ -781,7 +958,9 @@ def format_call(fun,
 
     aspec = salt.utils.args.get_function_argspec(fun)
 
-    args, kwargs = six.itervalues(arg_lookup(fun))
+    arg_data = arg_lookup(fun)
+    args = arg_data['args']
+    kwargs = arg_data['kwargs']
 
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
@@ -836,6 +1015,17 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
+    # We'll be showing errors to the users until Salt Carbon comes out, after
+    # which, errors will be raised instead.
+    warn_until(
+        'Carbon',
+        'It\'s time to start raising `SaltInvocationError` instead of '
+        'returning warnings',
+        # Let's not show the deprecation warning on the console, there's no
+        # need.
+        _dont_call_warnings=True
+    )
+
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
@@ -849,7 +1039,7 @@ def format_call(fun,
                 )
             )
         else:
-            msg = '{0} and {1!r} are invalid keyword arguments for {2}'.format(
+            msg = '{0} and {1!r} are invalid keyword arguments for {2!r}'.format(
                 ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
@@ -859,14 +1049,20 @@ def format_call(fun,
                     '{0}.{1}'.format(fun.__module__, fun.__name__)
                 )
             )
-        raise SaltInvocationError(
+
+        # Return a warning to the user explaining what's going on
+        ret.setdefault('warnings', []).append(
             '{0}. If you were trying to pass additional data to be used '
             'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs.{1}'.format(
+            '\'key: value\' pairs. Your approach will work until Salt '
+            'Carbon is out.{1}'.format(
                 msg,
                 '' if 'full' not in ret else ' Please update your state files.'
             )
         )
+
+        # Lets pack the current extra kwargs as template context
+        ret.setdefault('context', {}).update(extra)
     return ret
 
 
@@ -890,8 +1086,7 @@ def istextfile(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     '''
-    PY3 = sys.version_info[0] == 3  # pylint: disable=C0103
-    int2byte = (lambda x: bytes((x,))) if PY3 else chr
+    int2byte = (lambda x: bytes((x,))) if six.PY3 else chr
     text_characters = (
         b''.join(int2byte(i) for i in range(32, 127)) +
         b'\n\r\t\f\b')
@@ -912,6 +1107,11 @@ def istextfile(fp_, blocksize=512):
     elif not block:
         # An empty file is considered a valid text file
         return True
+    try:
+        block.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
 
     nontext = block.translate(None, text_characters)
     return float(len(nontext)) / len(block) <= 0.30
@@ -994,9 +1194,56 @@ def fopen(*args, **kwargs):
 
     NB! We still have small race condition between open and fcntl.
 
-    Supported optional Keyword Arguments:
+    '''
+    # ensure 'binary' mode is always used on windows
+    if kwargs.pop('binary', True):
+        if is_windows():
+            if len(args) > 1:
+                args = list(args)
+                if 'b' not in args[1]:
+                    args[1] += 'b'
+            elif kwargs.get('mode', None):
+                if 'b' not in kwargs['mode']:
+                    kwargs['mode'] += 'b'
+            else:
+                # the default is to read
+                kwargs['mode'] = 'rb'
 
-      lock: lock the file with fcntl
+    fhandle = open(*args, **kwargs)
+    if is_fcntl_available():
+        # modify the file descriptor on systems with fcntl
+        # unix and unix-like systems only
+        try:
+            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
+        except AttributeError:
+            FD_CLOEXEC = 1                  # pylint: disable=C0103
+        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
+        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+
+    return fhandle
+
+
+@contextlib.contextmanager
+def flopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with lock and context manager
+    '''
+    with fopen(*args, **kwargs) as fhandle:
+        try:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
+            yield fhandle
+        finally:
+            if is_fcntl_available(check_sunos=True):
+                fcntl.flock(fhandle.fileno(), fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def fpopen(*args, **kwargs):
+    '''
+    Shortcut for fopen with extra uid, gid and mode options.
+
+    Supported optional Keyword Arguments:
 
       mode: explicit mode to set. Mode is anything os.chmod
             would accept as input for mode. Works only on unix/unix
@@ -1011,60 +1258,27 @@ def fopen(*args, **kwargs):
            gid. Must be int. Works only on unix/unix like systems.
 
     '''
-    # Remove lock, uid, gid and mode from kwargs if present
-    lock = kwargs.pop('lock', False)
-    uid = kwargs.pop('uid', False)
-    gid = kwargs.pop('gid', False)
-    mode = kwargs.pop('mode', False)
+    # Remove uid, gid and mode from kwargs if present
+    uid = kwargs.pop('uid', -1)  # -1 means no change to current uid
+    gid = kwargs.pop('gid', -1)  # -1 means no change to current gid
+    mode = kwargs.pop('mode', None)
+    with fopen(*args, **kwargs) as fhandle:
+        path = args[0]
+        d_stat = os.stat(path)
 
-    fhandle = open(*args, **kwargs)
-    if is_fcntl_available():
-        # modify the file descriptor on systems with fcntl
-        # unix and unix-like systems only
-        try:
-            FD_CLOEXEC = fcntl.FD_CLOEXEC   # pylint: disable=C0103
-        except AttributeError:
-            FD_CLOEXEC = 1                  # pylint: disable=C0103
-        old_flags = fcntl.fcntl(fhandle.fileno(), fcntl.F_GETFD)
-        if lock and is_fcntl_available(check_sunos=True):
-            fcntl.flock(fhandle.fileno(), fcntl.LOCK_SH)
-        fcntl.fcntl(fhandle.fileno(), fcntl.F_SETFD, old_flags | FD_CLOEXEC)
+        if hasattr(os, 'chown'):
+            # if uid and gid are both -1 then go ahead with
+            # no changes at all
+            if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
+                    [i for i in (uid, gid) if i != -1]:
+                os.chown(path, uid, gid)
 
-    path = args[0]
-    d_stat = os.stat(path)
+        if mode is not None:
+            mode_part = S_IMODE(d_stat.st_mode)
+            if mode_part != mode:
+                os.chmod(path, (d_stat.st_mode ^ mode_part) | mode)
 
-    if hasattr(os, 'chown'):
-        if uid is None:
-            # -1 means no change to current uid
-            uid = -1
-        if gid is None:
-            # -1 means no change to current gid
-            gid = -1
-
-        # if uid and gid are both -1 then go ahead with
-        # no changes at all
-        if (d_stat.st_uid != uid or d_stat.st_gid != gid) and \
-                [i for i in (uid, gid) if i != -1]:
-            os.chown(path, uid, gid)
-
-    if mode is not None:
-        if d_stat.st_mode | mode != d_stat.st_mode:
-            os.chmod(path, d_stat.st_mode | mode)
-
-    return fhandle
-
-
-@contextlib.contextmanager
-def flopen(*args, **kwargs):
-    '''
-    Shortcut for fopen with lock and context manager
-    '''
-    with fopen(*args, lock=True, **kwargs) as fp_:
-        try:
-            yield fp_
-        finally:
-            if is_fcntl_available(check_sunos=True):
-                fcntl.flock(fp_.fileno(), fcntl.LOCK_UN)
+        yield fhandle
 
 
 def expr_match(line, expr):
@@ -1097,7 +1311,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if whitelist:
         try:
             for expr in whitelist:
-                if expr_match(expr, value):
+                if expr_match(value, expr):
                     in_whitelist = True
                     break
         except TypeError:
@@ -1109,7 +1323,7 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     if blacklist:
         try:
             for expr in blacklist:
-                if expr_match(expr, value):
+                if expr_match(value, expr):
                     in_blacklist = True
                     break
         except TypeError:
@@ -1154,6 +1368,42 @@ def subdict_match(data,
         else:
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
+    def _dict_match(target, pattern, regex_match=False, exact_match=False):
+        if pattern.startswith('*:'):
+            pattern = pattern[2:]
+
+        if pattern == '*':
+            # We are just checking that the key exists
+            return True
+        elif pattern in target:
+            # We might want to search for a key
+            return True
+        elif subdict_match(target,
+                         pattern,
+                         regex_match=regex_match,
+                         exact_match=exact_match):
+            return True
+        for key in target.keys():
+            if _match(key,
+                      pattern,
+                      regex_match=regex_match,
+                      exact_match=exact_match):
+                return True
+            if isinstance(target[key], dict):
+                if _dict_match(target[key],
+                               pattern,
+                               regex_match=regex_match,
+                               exact_match=exact_match):
+                    return True
+            elif isinstance(target[key], list):
+                for item in target[key]:
+                    if _match(item,
+                              pattern,
+                              regex_match=regex_match,
+                              exact_match=exact_match):
+                        return True
+        return False
+
     for idx in range(1, expr.count(delimiter) + 1):
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
@@ -1164,20 +1414,20 @@ def subdict_match(data,
         if match == {}:
             continue
         if isinstance(match, dict):
-            if matchstr == '*':
-                # We are just checking that the key exists
+            if _dict_match(match,
+                           matchstr,
+                           regex_match=regex_match,
+                           exact_match=exact_match):
                 return True
             continue
         if isinstance(match, list):
             # We are matching a single component to a single list member
             for member in match:
                 if isinstance(member, dict):
-                    if matchstr.startswith('*:'):
-                        matchstr = matchstr[2:]
-                    if subdict_match(member,
-                                     matchstr,
-                                     regex_match=regex_match,
-                                     exact_match=exact_match):
+                    if _dict_match(member,
+                                   matchstr,
+                                   regex_match=regex_match,
+                                   exact_match=exact_match):
                         return True
                 if _match(member,
                           matchstr,
@@ -1268,14 +1518,15 @@ def mkstemp(*args, **kwargs):
 
 def clean_kwargs(**kwargs):
     '''
-    Clean out the __pub* keys from the kwargs dict passed into the execution
-    module functions. The __pub* keys are useful for tracking what was used to
-    invoke the function call, but they may not be desierable to have if
-    passing the kwargs forward wholesale.
+    Return a dict without any of the __pub* keys (or any other keys starting
+    with a dunder) from the kwargs dict passed into the execution module
+    functions. These keys are useful for tracking what was used to invoke
+    the function call, but they may not be desierable to have if passing the
+    kwargs forward wholesale.
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):
-        if not key.startswith('__pub'):
+        if not key.startswith('__'):
             ret[key] = val
     return ret
 
@@ -1294,7 +1545,7 @@ def sanitize_win_path_string(winpath):
     '''
     intab = '<>:|?*'
     outtab = '_' * len(intab)
-    trantab = string.maketrans(intab, outtab)
+    trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)
     if isinstance(winpath, str):
         winpath = winpath.translate(trantab)
     elif isinstance(winpath, six.text_type):
@@ -1341,6 +1592,63 @@ def is_sunos():
 
 
 @real_memoize
+def is_smartos():
+    '''
+    Simple function to return if host is SmartOS (Illumos) or not
+    '''
+    if not is_sunos():
+        return False
+    else:
+        return os.uname()[3].startswith('joyent_')
+
+
+@real_memoize
+def is_smartos_globalzone():
+    '''
+    Function to return if host is SmartOS (Illumos) global zone or not
+    '''
+    if not is_smartos():
+        return False
+    else:
+        cmd = ['zonename']
+        try:
+            zonename = subprocess.Popen(
+                cmd, shell=False,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except OSError:
+            return False
+        if zonename.returncode:
+            return False
+        if zonename.stdout.read().strip() == 'global':
+            return True
+
+        return False
+
+
+@real_memoize
+def is_smartos_zone():
+    '''
+    Function to return if host is SmartOS (Illumos) and not the gz
+    '''
+    if not is_smartos():
+        return False
+    else:
+        cmd = ['zonename']
+        try:
+            zonename = subprocess.Popen(
+                cmd, shell=False,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except OSError:
+            return False
+        if zonename.returncode:
+            return False
+        if zonename.stdout.read().strip() == 'global':
+            return False
+
+        return True
+
+
+@real_memoize
 def is_freebsd():
     '''
     Simple function to return if host is FreeBSD or not
@@ -1348,18 +1656,23 @@ def is_freebsd():
     return sys.platform.startswith('freebsd')
 
 
+@real_memoize
+def is_openbsd():
+    '''
+    Simple function to return if host is OpenBSD or not
+    '''
+    return sys.platform.startswith('openbsd')
+
+
 def is_fcntl_available(check_sunos=False):
     '''
     Simple function to check if the `fcntl` module is available or not.
 
     If `check_sunos` is passed as `True` an additional check to see if host is
-    SunOS is also made. For additional information check commit:
-        http://goo.gl/159FF8
+    SunOS is also made. For additional information see: http://goo.gl/159FF8
     '''
-    if HAS_FCNTL is False:
+    if check_sunos and is_sunos():
         return False
-    if check_sunos is True:
-        return HAS_FCNTL and is_sunos()
     return HAS_FCNTL
 
 
@@ -1496,6 +1809,19 @@ def is_true(value=None):
         return bool(value)
 
 
+def exactly_n(l, n=1):
+    '''
+    Tests that exactly N items in an iterable are "truthy" (neither None,
+    False, nor 0).
+    '''
+    i = iter(l)
+    return all(any(i) for j in range(n)) and not any(i)
+
+
+def exactly_one(l):
+    return exactly_n(l)
+
+
 def rm_rf(path):
     '''
     Platform-independent recursive delete. Includes code from
@@ -1540,23 +1866,6 @@ def option(value, default='', opts=None, pillar=None):
         if out is not default:
             return out
     return default
-
-
-def valid_url(url, protos):
-    '''
-    Return true if the passed URL is in the list of accepted protos
-    '''
-    if urlparse(url).scheme in protos:
-        return True
-    return False
-
-
-def strip_proto(uri):
-    '''
-    Return a copy of the string with the protocol designation stripped, if one
-    was present.
-    '''
-    return re.sub('^[^:/]+://', '', uri)
 
 
 def parse_docstring(docstring):
@@ -1675,7 +1984,7 @@ def get_hash(path, form='md5', chunk_size=65536):
     '''
     try:
         hash_type = getattr(hashlib, form)
-    except AttributeError:
+    except (AttributeError, TypeError):
         raise ValueError('Invalid hash type: {0}'.format(form))
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
@@ -1731,7 +2040,8 @@ def date_cast(date):
         if isinstance(date, six.string_types):
             try:
                 if HAS_TIMELIB:
-                    return timelib.strtodatetime(date)
+                    # py3: yes, timelib.strtodatetime wants bytes, not str :/
+                    return timelib.strtodatetime(to_bytes(date))
             except ValueError:
                 pass
 
@@ -1851,7 +2161,7 @@ def warn_until(version,
             Replacement for warnings.formatwarning that disables the echoing of
             the 'line' parameter.
             '''
-            return '{0}:{1}: {2}: {3}'.format(
+            return '{0}:{1}: {2}: {3}\n'.format(
                 filename, lineno, category.__name__, message
             )
         saved = warnings.formatwarning
@@ -1953,7 +2263,6 @@ def version_cmp(pkg1, pkg2):
         elif distutils.version.LooseVersion(pkg1) > \
                 distutils.version.LooseVersion(pkg2):
             return 1
-        # pylint: disable=no-member
     except Exception as exc:
         log.exception(exc)
     return None
@@ -2067,7 +2376,7 @@ def decode_list(data):
     '''
     rv = []
     for item in data:
-        if isinstance(item, six.text_type):
+        if isinstance(item, six.text_type) and six.PY2:
             item = item.encode('utf-8')
         elif isinstance(item, list):
             item = decode_list(item)
@@ -2083,9 +2392,9 @@ def decode_dict(data):
     '''
     rv = {}
     for key, value in six.iteritems(data):
-        if isinstance(key, six.text_type):
+        if isinstance(key, six.text_type) and six.PY2:
             key = key.encode('utf-8')
-        if isinstance(value, six.text_type):
+        if isinstance(value, six.text_type) and six.PY2:
             value = value.encode('utf-8')
         elif isinstance(value, list):
             value = decode_list(value)
@@ -2137,15 +2446,35 @@ def is_bin_str(data):
     if not data:
         return False
 
-    text_characters = ''.join(list(map(chr, list(range(32, 127)))) + list('\n\r\t\b'))
-    _null_trans = string.maketrans('', '')
-    # Get the non-text characters (maps a character to itself then
-    # use the 'remove' option to get rid of the text characters.)
-    text = data.translate(_null_trans, text_characters)
+    text_characters = ''.join([chr(x) for x in range(32, 127)] + list('\n\r\t\b'))
+    # Get the non-text characters (map each character to itself then use the
+    # 'remove' option to get rid of the text characters.)
+    if six.PY3:
+        trans = ''.maketrans('', '', text_characters)
+        nontext = data.translate(trans)
+    else:
+        trans = string.maketrans('', '')
+        nontext = data.translate(trans, text_characters)
 
     # If more than 30% non-text characters, then
     # this is considered a binary file
-    if len(text) / len(data) > 0.30:
+    if len(nontext) / len(data) > 0.30:
+        return True
+    return False
+
+
+def is_dictlist(data):
+    '''
+    Returns True if data is a list of one-element dicts (as found in many SLS
+    schemas), otherwise returns False
+    '''
+    if isinstance(data, list):
+        for element in data:
+            if isinstance(element, dict):
+                if len(element) != 1:
+                    return False
+            else:
+                return False
         return True
     return False
 
@@ -2199,14 +2528,17 @@ def get_group_list(user=None, include_default=True):
         # Try os.getgrouplist, available in python >= 3.3
         log.trace('Trying os.getgrouplist for {0!r}'.format(user))
         try:
-            group_names = list(os.getgrouplist(user, pwd.getpwnam(user).pw_gid))
+            group_names = [
+                grp.getgrgid(grpid).gr_name for grpid in
+                os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
+            ]
         except Exception:
             pass
     else:
         # Try pysss.getgrouplist
         log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
         try:
-            import pysss
+            import pysss  # pylint: disable=import-error
             group_names = list(pysss.getgrouplist(user))
         except Exception:
             pass
@@ -2378,40 +2710,6 @@ def rand_string(size=32):
     return key.encode('base64').replace('\n', '')
 
 
-@real_memoize
-def get_encodings():
-    '''
-    return a list of string encodings to try
-    '''
-    encodings = []
-    loc = locale.getdefaultlocale()[-1]
-    if loc:
-        encodings.append(loc)
-    encodings.append(sys.getdefaultencoding())
-    encodings.extend(['utf-8', 'latin-1'])
-    return encodings
-
-
-def sdecode(string_):
-    '''
-    Since we don't know where a string is coming from and that string will
-    need to be safely decoded, this function will attempt to decode the string
-    until if has a working string that does not stack trace
-    '''
-    if not isinstance(string_, str):
-        return string_
-    encodings = get_encodings()
-    for encoding in encodings:
-        try:
-            decoded = string_.decode(encoding)
-            # Make sure unicode string ops work
-            u' ' + decoded  # pylint: disable=W0104
-            return decoded
-        except UnicodeDecodeError:
-            continue
-    return string_
-
-
 def relpath(path, start='.'):
     '''
     Work around Python bug #5117, which is not (and will not be) patched in
@@ -2439,3 +2737,74 @@ def relpath(path, start='.'):
         return os.path.join(*rel_list)
 
     return os.path.relpath(path, start=start)
+
+
+def human_size_to_bytes(human_size):
+    '''
+    Convert human-readable units to bytes
+    '''
+    size_exp_map = {'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}
+    human_size_str = str(human_size)
+    match = re.match(r'^(\d+)([KMGTP])?$', human_size_str)
+    if not match:
+        raise ValueError(
+            'Size must be all digits, with an optional unit type '
+            '(K, M, G, T, or P)'
+        )
+    size_num = int(match.group(1))
+    unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
+    return size_num * unit_multiplier
+
+
+def to_str(s, encoding=None):
+    '''
+    Given str, bytes, bytearray, or unicode (py2), return str
+    '''
+    if isinstance(s, str):
+        return s
+    if six.PY3:
+        if isinstance(s, (bytes, bytearray)):
+            return s.decode(encoding or __salt_system_encoding__)
+        raise TypeError('expected str, bytes, or bytearray')
+    else:
+        if isinstance(s, bytearray):
+            return str(s)
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+            return s.encode(encoding or __salt_system_encoding__)
+        raise TypeError('expected str, bytearray, or unicode')
+
+
+def to_bytes(s, encoding=None):
+    '''
+    Given bytes, bytearray, str, or unicode (python 2), return bytes (str for
+    python 2)
+    '''
+    if six.PY3:
+        if isinstance(s, bytes):
+            return s
+        if isinstance(s, bytearray):
+            return bytes(s)
+        if isinstance(s, str):
+            return s.encode(encoding or __salt_system_encoding__)
+        raise TypeError('expected bytes, bytearray, or str')
+    else:
+        return to_str(s, encoding)
+
+
+def to_unicode(s, encoding=None):
+    '''
+    Given str or unicode, return unicode (str for python 3)
+    '''
+    if six.PY3:
+        return to_str(s, encoding)
+    else:
+        if isinstance(s, str):
+            return s.decode(encoding or __salt_system_encoding__)
+        return unicode(s)  # pylint: disable=incompatible-py3-code
+
+
+def is_list(value):
+    '''
+    Check if a variable is a list.
+    '''
+    return isinstance(value, list)

@@ -214,11 +214,11 @@ def _raise_error_routes(iface, option, expected):
 
 def _read_file(path):
     '''
-    Reads and returns the contents of a file
+    Reads and returns the contents of a text file
     '''
     try:
         with salt.utils.flopen(path, 'rb') as contents:
-            return contents.readlines()
+            return [salt.utils.to_str(line) for line in contents.readlines()]
     except (OSError, IOError):
         return ''
 
@@ -427,7 +427,7 @@ IPV4_ATTR_MAP = {
     'server':  __ipv4_quad,
     'hwaddr':  __mac,
     # tunnel
-    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP'], dtype=str),
+    'mode':  __within(['gre', 'GRE', 'ipip', 'IPIP', '802.3ad'], dtype=str),
     'endpoint':  __ipv4_quad,
     'dstaddr':  __ipv4_quad,
     'local':  __ipv4_quad,
@@ -582,11 +582,10 @@ def _parse_interfaces(interface_files=None):
 
                     attr, valuestr = line.rstrip().split(None, 1)
                     if _attrmaps_contain_attr(attr):
-                        _attr = DEBIAN_ATTR_TO_SALT_ATTR_MAP.get(attr, attr)
-                        if '-' in _attr:
-                            attrname = _attr.replace('-', '_')
+                        if '-' in attr:
+                            attrname = attr.replace('-', '_')
                         else:
-                            attrname = _attr
+                            attrname = attr
                         (valid, value, errmsg) = _validate_interface_option(
                             attr, valuestr, addrfam)
                         iface_dict[attrname] = value
@@ -597,13 +596,13 @@ def _parse_interfaces(interface_files=None):
                         iface_dict['ethtool'][attr] = valuestr
 
                     elif attr.startswith('bond'):
-                        opt = attr.split('_', 1)[1]
+                        opt = re.split(r'[_-]', attr, maxsplit=1)[1]
                         if 'bonding' not in iface_dict:
                             iface_dict['bonding'] = salt.utils.odict.OrderedDict()
                         iface_dict['bonding'][opt] = valuestr
 
                     elif attr.startswith('bridge'):
-                        opt = attr.split('_', 1)[1]
+                        opt = re.split(r'[_-]', attr, maxsplit=1)[1]
                         if 'bridging' not in iface_dict:
                             iface_dict['bridging'] = salt.utils.odict.OrderedDict()
                         iface_dict['bridging'][opt] = valuestr
@@ -642,6 +641,11 @@ def _parse_interfaces(interface_files=None):
     # ensure a consistent order
     for iface_name in adapters:
         if iface_name == 'source':
+            continue
+        if 'data' not in adapters[iface_name]:
+            msg = 'Interface file malformed for interface: {0}.'.format(iface_name)
+            log.error(msg)
+            adapters.pop(iface_name)
             continue
         for opt in ['ethtool', 'bonding', 'bridging']:
             if 'inet' in adapters[iface_name]['data']:
@@ -1201,12 +1205,14 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'bridge':
         bridging = _parse_bridge_opts(opts, iface)
         if bridging:
+            opts.pop('mode', None)
             iface_data['inet']['bridging'] = bridging
             iface_data['inet']['bridging_keys'] = sorted(bridging)
 
     elif iface_type == 'bond':
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
+            opts.pop('mode', None)
             iface_data['inet']['bonding'] = bonding
             iface_data['inet']['bonding']['slaves'] = opts['slaves']
             iface_data['inet']['bonding_keys'] = sorted(bonding)
@@ -1440,15 +1446,15 @@ def _write_file_ifaces(iface, data, **settings):
     for adapter in adapters:
         if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'slave':
             # Override values so the interfaces file is correct
-            adapters[adapter]['enabled'] = False
             adapters[adapter]['data']['inet']['addrfam'] = 'inet'
             adapters[adapter]['data']['inet']['proto'] = 'manual'
+            adapters[adapter]['data']['inet']['master'] = adapters[adapter]['master']
 
         if 'type' in adapters[adapter] and adapters[adapter]['type'] == 'source':
             tmp = source_template.render({'name': adapter, 'data': adapters[adapter]})
         else:
             tmp = eth_template.render({'name': adapter, 'data': adapters[adapter]})
-        ifcfg = tmp + ifcfg
+        ifcfg = ifcfg + tmp
         if adapter == iface:
             saved_ifcfg = tmp
 
@@ -1460,8 +1466,8 @@ def _write_file_ifaces(iface, data, **settings):
             filename = settings['filename']
         _SEPERATE_FILE = True
     else:
-        if 'filename' in adapter[adapter]['data']:
-            filename = adapter[adapter]['data']
+        if 'filename' in adapters[adapter]['data']:
+            filename = adapters[adapter]['data']
         else:
             filename = _DEB_NETWORK_FILE
 
@@ -1572,6 +1578,9 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     if iface_type not in _IFACE_TYPES:
         _raise_error_iface(iface, iface_type, _IFACE_TYPES)
+
+    if 'proto' not in settings:
+        settings['proto'] = 'static'
 
     if iface_type == 'slave':
         settings['slave'] = 'yes'
@@ -1784,7 +1793,7 @@ def get_routes(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.get_interface eth0
+        salt '*' ip.get_routes eth0
     '''
 
     filename = os.path.join(_DEB_NETWORK_UP_DIR, 'route-{0}'.format(iface))
@@ -1888,7 +1897,8 @@ def build_network_settings(**settings):
 
     # Write hostname to /etc/hostname
     sline = opts['hostname'].split('.', 1)
-    hostname = '{0}\n' . format(sline[0])
+    opts['hostname'] = sline[0]
+    hostname = '{0}\n' . format(opts['hostname'])
     current_domainname = current_network_settings['domainname']
 
     # Only write the hostname if it has changed

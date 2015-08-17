@@ -46,18 +46,22 @@ def present(
     user
         The user who owns the ssh authorized keys file to modify
 
-    enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
-
     fingerprint
         The fingerprint of the key which must be presented in the known_hosts
-        file
+        file (optional if key specified)
+
+    key
+        The public key which must be presented in the known_hosts file
+        (optional if fingerprint specified)
 
     port
         optional parameter, denoting the port of the remote host, which will be
         used in case, if the public key will be requested from it. By default
         the port 22 is used.
+
+    enc
+        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
+        or ssh-dss
 
     config
         The location of the authorized keys file relative to the user's home
@@ -88,22 +92,16 @@ def present(
             comment = 'Specify either "key" or "fingerprint", not both.'
             ret['result'] = False
             return dict(ret, comment=comment)
-        elif key:
-            if not enc:
-                comment = 'Required argument "enc" if using "key" argument.'
-                ret['result'] = False
-                return dict(ret, comment=comment)
-            result = __salt__['ssh.check_known_host'](user, name,
-                                                      key=key,
-                                                      config=config)
-        elif fingerprint:
-            result = __salt__['ssh.check_known_host'](user, name,
-                                                      fingerprint=fingerprint,
-                                                      config=config)
-        else:
-            comment = 'Arguments key or fingerprint required.'
+        elif key and not enc:
+            comment = 'Required argument "enc" if using "key" argument.'
             ret['result'] = False
             return dict(ret, comment=comment)
+
+        result = __salt__['ssh.check_known_host'](user, name,
+                                                  key=key,
+                                                  fingerprint=fingerprint,
+                                                  config=config)
+
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
             ret['result'] = True
@@ -126,7 +124,7 @@ def present(
                 hash_hostname=hash_hostname)
     if result['status'] == 'exists':
         return dict(ret,
-                    Gcomment='{0} already exists in {1}'.format(name, config))
+                    comment='{0} already exists in {1}'.format(name, config))
     elif result['status'] == 'error':
         return dict(ret, result=False, comment=result['error'])
     else:  # 'updated'
@@ -162,7 +160,7 @@ def absent(name, user=None, config=None):
     '''
     ret = {'name': name,
            'changes': {},
-           'result': None if __opts__['test'] else True,
+           'result': True,
            'comment': ''}
 
     if not user:
@@ -182,6 +180,7 @@ def absent(name, user=None, config=None):
     if __opts__['test']:
         comment = 'Key for {0} is set to be removed from {1}'.format(name,
                                                                      config)
+        ret['result'] = None
         return dict(ret, comment=comment)
 
     rm_result = __salt__['ssh.rm_known_host'](user=user, hostname=name, config=config)

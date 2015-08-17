@@ -130,15 +130,20 @@ strftime
   Converts any time related object into a time based string. It requires a
   valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
   :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-  the official Python documentation. Fuzzy dates are parsed by `timelib`_ python
-  module. Some examples are available on this pages.
+  the official Python documentation.
+
+  .. code-block:: yaml
+
+      {% set curtime = None | strftime() %}
+
+  Fuzzy dates require the `timelib`_ Python module is installed.
 
   .. code-block:: yaml
 
       {{ "2002/12/25"|strftime("%y") }}
       {{ "1040814000"|strftime("%Y-%m-%d") }}
       {{ datetime|strftime("%u") }}
-      {{ "now"|strftime }}
+      {{ "tomorrow"|strftime }}
 
 sequence
   Ensure that parsed data is a sequence.

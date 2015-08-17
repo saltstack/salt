@@ -117,7 +117,7 @@ def ext_pillar(minion_id,
     host = __opts__['mongo.host']
     port = __opts__['mongo.port']
     log.info('connecting to {0}:{1} for mongo ext_pillar'.format(host, port))
-    conn = pymongo.Connection(host, port)
+    conn = pymongo.MongoClient(host, port)
 
     log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
     mdb = conn[__opts__['mongo.db']]
@@ -140,7 +140,7 @@ def ext_pillar(minion_id,
         )
     )
 
-    result = mdb[collection].find_one({id_field: minion_id}, fields=fields)
+    result = mdb[collection].find_one({id_field: minion_id}, projection=fields)
     if result:
         if fields:
             log.debug(

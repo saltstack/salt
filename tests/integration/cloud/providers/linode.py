@@ -10,24 +10,14 @@ import random
 import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
-import integration  # pylint: disable=import-error
+import integration
 from salt.config import cloud_providers_config
-
-# Import Third-Party Libs
-# pylint: disable=import-error
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-try:
-    import libcloud  # pylint: disable=unused-import
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
-# pylint: enable=import-error
+from salt.ext.six.moves import range
 
 
 def __random_name(size=6):
@@ -41,9 +31,9 @@ def __random_name(size=6):
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
+PROVIDER_NAME = 'linode'
 
 
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
 class LinodeTest(integration.ShellCase):
     '''
     Integration tests for the Linode cloud provider in Salt-Cloud
@@ -57,29 +47,32 @@ class LinodeTest(integration.ShellCase):
         super(LinodeTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'linode-config:'
-        provider = 'linode'
+        profile_str = 'linode-config'
         providers = self.run_cloud('--list-providers')
-        if profile_str not in providers:
+        if profile_str + ':'not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(provider)
+                .format(PROVIDER_NAME)
             )
 
-        # check if apikey and password are present
-        path = os.path.join(integration.FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            provider + '.conf')
-        config = cloud_providers_config(path)
-        api = config['linode-config']['linode']['apikey']
-        password = config['linode-config']['linode']['password']
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                integration.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        api = config[profile_str][PROVIDER_NAME]['apikey']
+        password = config[profile_str][PROVIDER_NAME]['password']
         if api == '' or password == '':
             self.skipTest(
                 'An api key and password must be provided to run these tests. Check '
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(
-                    provider
+                    PROVIDER_NAME
                 )
             )
 
@@ -87,22 +80,22 @@ class LinodeTest(integration.ShellCase):
         '''
         Test creating an instance on Linode
         '''
-        # create the instance
-        instance = self.run_cloud('-p linode-test {0}'.format(INSTANCE_NAME))
-        ret_str = '        {0}'.format(INSTANCE_NAME)
-
         # check if instance with salt installed returned
         try:
-            self.assertIn(ret_str, instance)
+            self.assertIn(
+                INSTANCE_NAME,
+                [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(INSTANCE_NAME))]
+            )
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        ret_str = '            True'
         try:
-            self.assertIn(ret_str, delete)
+            self.assertIn(
+                INSTANCE_NAME + ':',
+                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
+            )
         except AssertionError:
             raise
 

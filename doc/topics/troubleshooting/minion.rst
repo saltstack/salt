@@ -66,6 +66,8 @@ check that no additional access control system such as `SELinux`_ or
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
 .. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
 
+.. _troubleshooting-minion-salt-call:
+
 Using salt-call
 ===============
 

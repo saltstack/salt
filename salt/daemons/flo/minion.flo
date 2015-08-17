@@ -24,12 +24,20 @@ framer minionudpstack be active first setup
     frame setupbeacon
         do salt raet setup beacon at enter
         go spawnreactor
+        go startengines
         go start
 
     frame spawnreactor
         let me if .salt.etc.reactor
         enter
             do salt raet reactor fork
+        go startengines
+        go start
+
+    frame startengines
+        let me if .salt.etc.engines
+        enter
+            do salt raet setup engines
         go start
 
     # OK, let's start the minion up

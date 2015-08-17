@@ -15,6 +15,7 @@ import salt.utils.args
 import salt.utils.event
 from salt.client import mixins
 from salt.output import display_output
+from salt.utils.lazy import verify_fun
 
 log = logging.getLogger(__name__)
 
@@ -58,8 +59,24 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         auth_creds = dict([(i, low.pop(i)) for i in [
                 'username', 'password', 'eauth', 'token', 'client',
             ] if i in low])
-        reformatted_low = {'fun': low.pop('fun')}
+        fun = low.pop('fun')
+        reformatted_low = {'fun': fun}
         reformatted_low.update(auth_creds)
+        # Support old style calls where arguments could be specified in 'low' top level
+        if not low.get('args') and not low.get('kwargs'):  # not specified or empty
+            verify_fun(self.functions, fun)
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.functions[fun],
+                salt.utils.args.condition_input([], low),
+                self.opts,
+                ignore_invalid=True
+            )
+            low['args'] = args
+            low['kwargs'] = kwargs
+        if 'kwargs' not in low:
+            low['kwargs'] = {}
+        if 'args' not in low:
+            low['args'] = []
         reformatted_low['kwarg'] = low
         return reformatted_low
 
@@ -100,7 +117,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             })
         '''
         reformatted_low = self._reformat_low(low)
-        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low)
+        return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout)
 
 
 class Runner(RunnerClient):
@@ -131,11 +148,13 @@ class Runner(RunnerClient):
         if self.opts.get('doc', False):
             self.print_docs()
         else:
+            low = {'fun': self.opts['fun']}
             try:
-                low = {'fun': self.opts['fun']}
+                verify_fun(self.functions, low['fun'])
                 args, kwargs = salt.minion.load_args_and_kwargs(
                     self.functions[low['fun']],
                     salt.utils.args.parse_input(self.opts['arg']),
+                    self.opts,
                 )
                 low['args'] = args
                 low['kwargs'] = kwargs
@@ -155,16 +174,15 @@ class Runner(RunnerClient):
                 # otherwise run it in the main process
                 async_pub = self._gen_async_pub()
                 ret = self._proc_function(self.opts['fun'],
-                                           low,
-                                           user,
-                                           async_pub['tag'],
-                                           async_pub['jid'],
-                                           False,  # Don't daemonize
-                                           )
+                                          low,
+                                          user,
+                                          async_pub['tag'],
+                                          async_pub['jid'],
+                                          False)  # Don't daemonize
             except salt.exceptions.SaltException as exc:
-                ret = str(exc)
+                ret = '{0}'.format(exc)
                 if not self.opts.get('quiet', False):
-                    print(ret)
+                    display_output(ret, 'nested', self.opts)
                 return ret
             log.debug('Runner return: {0}'.format(ret))
             return ret

@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import re
 
 # Import salt libs
 import salt.utils
@@ -91,13 +90,10 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    badvar = ("_timeout", "_user")
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} getall'.format(service)).splitlines():
-        svc = re.sub('(_flags|)=.*$', '', svc)
-        if not svc.endswith(badvar):
-            ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls all'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -111,14 +107,10 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    badvar = ("_timeout", "_user")
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} getall'.format(service)).splitlines():
-        if svc.endswith("=NO"):
-            svc = re.sub('(_flags|)=.*$', '', svc)
-            if not svc.endswith(badvar):
-                ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls off'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -132,14 +124,10 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    badvar = ("_timeout", "_user")
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} getall'.format(service)).splitlines():
-        if not svc.endswith("=NO"):
-            svc = re.sub('(_flags|)=.*$', '', svc)
-            if not svc.endswith(badvar):
-                ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls on'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -233,13 +221,17 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
         salt '*' service.enable <service name> flags=<flags>
     '''
-    cmd = '{0} set {1} status on'.format(_cmd(), name)
+    stat_cmd = '{0} set {1} status on'.format(_cmd(), name)
+    stat_retcode = __salt__['cmd.retcode'](stat_cmd)
+
+    flag_retcode = None
     # only (re)set flags for services that have an rc.d(8) script
     if os.path.exists('/etc/rc.d/{0}'.format(name)):
         flags = _get_flags(**kwargs)
-        cmd = cmd + ' && {0} set {1} flags {2}'.format(_cmd(), name, flags)
+        flag_cmd = '{0} set {1} flags {2}'.format(_cmd(), name, flags)
+        flag_retcode = __salt__['cmd.retcode'](flag_cmd)
 
-    return not __salt__['cmd.retcode'](cmd)
+    return not any([stat_retcode, flag_retcode])
 
 
 def disable(name, **kwargs):

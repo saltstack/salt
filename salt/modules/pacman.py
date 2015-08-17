@@ -128,10 +128,7 @@ def list_upgrades(refresh=False):
     if refresh:
         options.append('-y')
 
-    cmd = (
-        'pacman {0} | egrep -v '
-        r'"^\s|^:"'
-    ).format(' '.join(options))
+    cmd = ('pacman {0}').format(' '.join(options))
 
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
@@ -147,9 +144,9 @@ def list_upgrades(refresh=False):
     else:
         out = call['stdout']
 
-    for line in out.splitlines():
+    for line in iter(out.splitlines()):
         comps = line.split(' ')
-        if len(comps) < 2:
+        if len(comps) != 2:
             continue
         upgrades[comps[0]] = comps[1]
     return upgrades
@@ -232,7 +229,8 @@ def refresh_db():
     '''
     cmd = 'LANG=C pacman -Sy'
     ret = {}
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
+            python_shell=True)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:

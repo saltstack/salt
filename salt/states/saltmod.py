@@ -95,7 +95,7 @@ def state(
         The default salt environment to pull sls files from
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
 
     roster
         In the event of using salt-ssh, a roster system can be set
@@ -198,8 +198,8 @@ def state(
         ret['result'] = False
         return ret
 
-    if test:
-        cmd_kw['kwarg']['test'] = test
+    if test or __opts__.get('test'):
+        cmd_kw['kwarg']['test'] = True
 
     if pillar:
         cmd_kw['kwarg']['pillar'] = pillar
@@ -213,14 +213,6 @@ def state(
         ret['result'] = False
         return ret
 
-    if __opts__['test'] is True:
-        ret['comment'] = (
-                '{0} will be run on target {1} as test={2}'
-                ).format(fun == 'state.highstate' and 'Highstate'
-                    or 'States '+','.join(cmd_kw['arg']),
-                tgt, str(test))
-        ret['result'] = None
-        return ret
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
 
     changes = {}
@@ -244,6 +236,9 @@ def state(
             log.warning("Output from salt state not highstate")
 
         m_ret = False
+
+        if 'return' in mdata and 'ret' not in mdata:
+            mdata['ret'] = mdata.pop('return')
 
         if mdata.get('failed', False):
             m_state = False
@@ -286,6 +281,10 @@ def state(
                         ).splitlines()
                     )
             ret['comment'] += '\n'
+    if test or __opts__.get('test'):
+        if ret['changes'] and ret['result'] is True:
+            # Test mode with changes is the only case where result should ever be none
+            ret['result'] = None
     return ret
 
 
@@ -334,7 +333,7 @@ def function(
         based on the returned data dict for individual minions
 
     ssh
-        Set to `True` to use the ssh client instaed of the standard salt client
+        Set to `True` to use the ssh client instead of the standard salt client
     '''
     ret = {'name': name,
            'changes': {},
@@ -372,7 +371,12 @@ def function(
                 ).format(fun, tgt, str(False))
         ret['result'] = None
         return ret
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    try:
+        cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    except Exception as exc:
+        ret['result'] = False
+        ret['comment'] = str(exc)
+        return ret
 
     changes = {}
     fail = set()
@@ -388,7 +392,6 @@ def function(
             'string. Ignored.'
         )
         fail_minions = ()
-
     for minion, mdata in six.iteritems(cmd_ret):
         m_ret = False
         if mdata.get('retcode'):
@@ -397,6 +400,8 @@ def function(
         if mdata.get('failed', False):
             m_func = False
         else:
+            if 'return' in mdata and 'ret' not in mdata:
+                mdata['ret'] = mdata.pop('return')
             m_ret = mdata['ret']
             m_func = (not fail_function and True) or __salt__[fail_function](m_ret)
 
@@ -406,28 +411,31 @@ def function(
             failures[minion] = m_ret and m_ret or 'Minion did not respond'
             continue
         changes[minion] = m_ret
-
-    if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
-    if fail:
+    if not cmd_ret:
         ret['result'] = False
-        ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+        ret['command'] = 'No minions responded'
     else:
-        ret['comment'] = 'Function ran successfully.'
-    if changes:
-        ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
-    if failures:
-        ret['comment'] += '\nFailures:\n'
-        for minion, failure in six.iteritems(failures):
-            ret['comment'] += '\n'.join(
-                    (' ' * 4 + l)
-                    for l in salt.output.out_format(
-                        {minion: failure},
-                        'highstate',
-                        __opts__,
-                        ).splitlines()
-                    )
-            ret['comment'] += '\n'
+        if changes:
+            ret['changes'] = {'out': 'highstate', 'ret': changes}
+        if fail:
+            ret['result'] = False
+            ret['comment'] = 'Running function {0} failed on minions: {1}'.format(name, ', '.join(fail))
+        else:
+            ret['comment'] = 'Function ran successfully.'
+        if changes:
+            ret['comment'] += ' Function {0} ran on {1}.'.format(name, ', '.join(changes))
+        if failures:
+            ret['comment'] += '\nFailures:\n'
+            for minion, failure in six.iteritems(failures):
+                ret['comment'] += '\n'.join(
+                        (' ' * 4 + l)
+                        for l in salt.output.out_format(
+                            {minion: failure},
+                            'highstate',
+                            __opts__,
+                            ).splitlines()
+                        )
+                ret['comment'] += '\n'
     return ret
 
 
@@ -484,7 +492,8 @@ def wait_for_event(
             'master',
             __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     del_counter = 0
     starttime = time.time()
@@ -546,6 +555,12 @@ def runner(name, **kwargs):
         The name of the function to run
     kwargs
         Any keyword arguments to pass to the runner function
+
+    .. code-block:: yaml
+
+         run-manage-up:
+          salt.runner:
+            - name: manage.up
     '''
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
     out = __salt__['saltutil.runner'](name, **kwargs)

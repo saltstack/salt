@@ -34,9 +34,9 @@ Variables:
     minions can be defined in pillar and then accessed inside sls formulas
     and template files.
 Arbitrary Data:
-    Pillar can contain any basic data structure, so a list of values, or a
-    key/value store can be defined making it easy to iterate over a group
-    of values in sls formulas
+    Pillar can contain any basic data structure in dictionary format,
+    so a key/value store can be defined making it easy to iterate over a group
+    of values in sls formulas.
 
 Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
@@ -308,12 +308,6 @@ line:
 .. code-block:: bash
 
     salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
-
-Lists can be passed in pillar as well:
-
-.. code-block:: bash
-
-    salt '*' state.highstate pillar='["foo", "bar", "baz"]'
 
 .. note::
 

@@ -7,17 +7,23 @@ Connection module for Amazon Autoscale Groups
 :configuration: This module accepts explicit autoscale credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
-    further configuration is necessary. More Information available at::
+    further configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         asg.keyid: GKTADJGHEIQSXMKKRBJ08H
         asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         asg.region: us-east-1
 
@@ -26,6 +32,8 @@ Connection module for Amazon Autoscale Groups
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
+    .. code-block:: yaml
+
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -33,11 +41,14 @@ Connection module for Amazon Autoscale Groups
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
 import logging
 import json
+import sys
 import email.mime.multipart
 
 log = logging.getLogger(__name__)
@@ -66,6 +77,10 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+
+    __utils__['boto.assign_funcs'](__name__, 'asg', module='ec2.autoscale')
+    setattr(sys.modules[__name__], '_get_ec2_conn',
+            __utils__['boto.get_connection_func']('ec2'))
     return True
 
 
@@ -77,9 +92,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_asg.exists myasg region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         _conn = conn.get_all_groups(names=[name])
         if _conn:
@@ -101,9 +114,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_asg.get_config myasg region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return None
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         asg = conn.get_all_groups(names=[name])
         if asg:
@@ -163,8 +174,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None, region=None, key=None, keyid=None,
-           profile=None):
+           scaling_policies=None, region=None,
+           notification_arn=None, notification_types=None,
+           key=None, keyid=None, profile=None):
     '''
     Create an autoscale group.
 
@@ -172,9 +184,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
 
         salt myminion boto_asg.create myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if isinstance(availability_zones, six.string_types):
         availability_zones = json.loads(availability_zones)
     if isinstance(load_balancers, six.string_types):
@@ -221,6 +231,9 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         # create scaling policies
         _create_scaling_policies(conn, name, scaling_policies)
+        # create notifications
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         log.info('Created ASG {0}'.format(name))
         return True
     except boto.exception.BotoServerError as e:
@@ -236,8 +249,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
            scaling_policies=None,
-           region=None, key=None, keyid=None,
-           profile=None):
+           notification_arn=None, notification_types=None,
+           region=None, key=None, keyid=None, profile=None):
     '''
     Update an autoscale group.
 
@@ -246,7 +259,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         salt myminion boto_asg.update myasg mylc '["us-east-1a", "us-east-1e"]' 1 10 load_balancers='["myelb", "myelb2"]' tags='[{"key": "Name", value="myasg", "propagate_at_launch": True}]'
     '''
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False, "failed to connect to AWS"
     if isinstance(availability_zones, six.string_types):
@@ -292,6 +305,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
             placement_group=placement_group, tags=_tags,
             vpc_zone_identifier=vpc_zone_identifier,
             termination_policies=termination_policies)
+        if notification_arn and notification_types:
+            conn.put_notification_configuration(_asg, notification_arn, notification_types)
         _asg.update()
         # Seems the update call doesn't handle tags, so we'll need to update
         # that separately.
@@ -340,9 +355,7 @@ def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_asg.delete myasg region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.delete_auto_scaling_group(name, force)
         msg = 'Deleted autoscale group {0}.'.format(name)
@@ -398,9 +411,7 @@ def launch_configuration_exists(name, region=None, key=None, keyid=None,
 
         salt myminion boto_asg.launch_configuration_exists mylc
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         lc = conn.get_all_launch_configurations(names=[name])
         if lc:
@@ -433,9 +444,7 @@ def create_launch_configuration(name, image_id, key_name=None,
 
         salt myminion boto_asg.create_launch_configuration mylc image_id=ami-0b9c9f62 key_name='mykey' security_groups='["mygroup"]' instance_type='c3.2xlarge'
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if isinstance(security_groups, six.string_types):
         security_groups = json.loads(security_groups)
     if isinstance(block_device_mappings, six.string_types):
@@ -482,9 +491,7 @@ def delete_launch_configuration(name, region=None, key=None, keyid=None,
 
         salt myminion boto_asg.delete_launch_configuration mylc
     '''
-    conn = _get_conn(region, key, keyid, profile)
-    if not conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn.delete_launch_configuration(name)
         log.info('Deleted LC {0}'.format(name))
@@ -507,81 +514,13 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
 
         salt '*' boto_asg.get_scaling_policy_arn mygroup mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     policies = conn.get_all_policies(as_group=as_group)
     for policy in policies:
         if policy.name == scaling_policy_name:
             return policy.policy_arn
     log.error('Could not convert: {0}'.format(as_group))
     return None
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to autoscale.
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('asg.region'):
-        region = __salt__['config.option']('asg.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('asg.key'):
-        key = __salt__['config.option']('asg.key')
-    if not keyid and __salt__['config.option']('asg.keyid'):
-        keyid = __salt__['config.option']('asg.keyid')
-
-    try:
-        conn = autoscale.connect_to_region(region, aws_access_key_id=keyid,
-                                           aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make boto autoscale connection.')
-        return None
-    return conn
-
-
-def _get_ec2_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to ec2.   Needed for get_instances
-    '''
-    if profile:
-        if isinstance(profile, six.string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    if not region and __salt__['config.option']('secgroup.region'):
-        region = __salt__['config.option']('secgroup.region')
-
-    if not region:
-        region = 'us-east-1'
-
-    if not key and __salt__['config.option']('secgroup.key'):
-        key = __salt__['config.option']('secgroup.key')
-    if not keyid and __salt__['config.option']('secgroup.keyid'):
-        keyid = __salt__['config.option']('secgroup.keyid')
-
-    try:
-        conn = boto.ec2.connect_to_region(region, aws_access_key_id=keyid,
-                                          aws_secret_access_key=key)
-    except boto.exception.NoAuthHandlerFound:
-        log.error('No authentication credentials found when attempting to'
-                  ' make ec2 connection for security groups.')
-        return None
-    return conn
 
 
 def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
@@ -592,10 +531,8 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy", at
         salt-call boto_asg.get_instances my_autoscale_group_name
 
     """
-    conn = _get_conn(region, key, keyid, profile)
-    ec2_conn = _get_ec2_conn(region, key, keyid, profile)
-    if not conn or not ec2_conn:
-        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    ec2_conn = _get_ec2_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         asgs = conn.get_all_groups(names=[name])
     except boto.exception.BotoServerError as e:

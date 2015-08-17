@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 AliYun ECS Cloud Module
-==========================
+=======================
 
 .. versionadded:: 2014.7.0
 
@@ -20,7 +20,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       # aliyun Access Key Secret
       key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
       location: cn-qingdao
-      provider: aliyun
+      driver: aliyun
 
 :depends: requests
 '''
@@ -38,8 +38,13 @@ import base64
 from hashlib import sha1
 
 # Import 3rd-party libs
-import requests
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -65,12 +70,17 @@ DEFAULT_LOCATION = 'cn-hangzhou'
 
 DEFAULT_ALIYUN_API_VERSION = '2013-01-10'
 
+__virtualname__ = 'aliyun'
+
 
 # Only load in this module if the aliyun configurations are in place
 def __virtual__():
     '''
     Check for aliyun configurations
     '''
+    if not HAS_REQUESTS:
+        return False
+
     if get_configured_provider() is False:
         return False
 
@@ -443,7 +453,9 @@ def start(name, call=None):
     '''
     Start a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a start myinstance
     '''
@@ -467,7 +479,9 @@ def stop(name, force=False, call=None):
     '''
     Stop a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a stop myinstance
         salt-cloud -a stop myinstance force=True
@@ -495,7 +509,9 @@ def reboot(name, call=None):
     '''
     Reboot a node
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a reboot myinstance
     '''
@@ -552,6 +568,20 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'aliyun',
+                                        vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -559,7 +589,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -644,7 +674,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -721,7 +751,7 @@ def query(params=None):
     signature = _compute_signature(parameters, access_key_secret)
     parameters['Signature'] = signature
 
-    request = requests.get(path, params=parameters, verify=False)
+    request = requests.get(path, params=parameters, verify=True)
     if request.status_code != 200:
         raise SaltCloudSystemExit(
             'An error occurred while querying aliyun ECS. HTTP Code: {0}  '
@@ -734,7 +764,6 @@ def query(params=None):
     log.debug(request.url)
 
     content = request.text
-    #print content
 
     result = json.loads(content, object_hook=salt.utils.decode_dict)
     if 'Code' in result:
@@ -764,7 +793,9 @@ def show_disk(name, call=None):
     '''
     Show the disk details of the instance
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -a show_disk aliyun myinstance
     '''
@@ -793,7 +824,9 @@ def list_monitor_data(kwargs=None, call=None):
     Get monitor data of the instance. If instance name is
     missing, will show all the instance monitor data on the region.
 
-    CLI Examples::
+    CLI Examples:
+
+    .. code-block:: bash
 
         salt-cloud -f list_monitor_data aliyun
         salt-cloud -f list_monitor_data aliyun name=AY14051311071990225bd

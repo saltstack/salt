@@ -55,7 +55,7 @@ def _get_modules_conf():
     Return location of modules config file.
     Default: /etc/modules
     '''
-    if __grains__['os'] == 'Arch':
+    if 'systemd' in __grains__:
         return '/etc/modules-load.d/salt_managed.conf'
     return '/etc/modules'
 
@@ -86,9 +86,9 @@ def _set_persistent_module(mod):
         return set()
     escape_mod = re.escape(mod)
     # If module is commented only uncomment it
-    if __salt__['file.contains_regex_multiline'](conf,
-                                                 '^#[\t ]*{0}[\t ]*$'.format(
-                                                     escape_mod)):
+    if __salt__['file.search'](conf,
+                               '^#[\t ]*{0}[\t ]*$'.format(escape_mod),
+                               multiline=True):
         __salt__['file.uncomment'](conf, escape_mod)
     else:
         __salt__['file.append'](conf, mod)
@@ -267,7 +267,7 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('modprobe -r {0}'.format(mod), python_shell=False)
+    __salt__['cmd.run_all']('rmmod {0}'.format(mod), python_shell=False)
     post_mods = lsmod()
     mods = _rm_mods(pre_mods, post_mods)
     persist_mods = set()

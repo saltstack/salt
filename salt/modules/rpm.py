@@ -2,13 +2,22 @@
 '''
 Support for rpm
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import os
+import re
 
 # Import Salt libs
 import salt.utils
+import salt.utils.decorators as decorators
+import salt.utils.pkg.rpm
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves import zip
+# pylint: enable=import-error,redefined-builtin
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +42,67 @@ def __virtual__():
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
     return False
+
+
+def bin_pkg_info(path, saltenv='base'):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Parses RPM metadata and returns a dictionary of information about the
+    package (name, version, etc.).
+
+    path
+        Path to the file. Can either be an absolute path to a file on the
+        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).
+        If a salt fileserver URL is passed, the file will be cached to the
+        minion so that it can be examined.
+
+    saltenv : base
+        Salt fileserver envrionment from which to retrieve the package. Ignored
+        if ``path`` is a local file path on the minion.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.bin_pkg_info /root/salt-2015.5.1-2.el7.noarch.rpm
+        salt '*' lowpkg.bin_pkg_info salt://salt-2015.5.1-2.el7.noarch.rpm
+    '''
+    # If the path is a valid protocol, pull it down using cp.cache_file
+    if __salt__['config.valid_fileproto'](path):
+        newpath = __salt__['cp.cache_file'](path, saltenv)
+        if not newpath:
+            raise CommandExecutionError(
+                'Unable to retrieve {0} from saltenv \'{1}\''
+                .format(path, saltenv)
+            )
+        path = newpath
+    else:
+        if not os.path.exists(path):
+            raise CommandExecutionError(
+                '{0} does not exist on minion'.format(path)
+            )
+        elif not os.path.isabs(path):
+            raise SaltInvocationError(
+                '{0} does not exist on minion'.format(path)
+            )
+
+    # REPOID is not a valid tag for the rpm command. Remove it and replace it
+    # with 'none'
+    queryformat = salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', 'none')
+    output = __salt__['cmd.run_stdout'](
+        'rpm -qp --queryformat {0} {1}'.format(_cmd_quote(queryformat), path),
+        output_loglevel='trace',
+        ignore_retcode=True
+    )
+    ret = {}
+    pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+        output,
+        osarch=__grains__['osarch']
+    )
+    for field in pkginfo._fields:
+        ret[field] = getattr(pkginfo, field)
+    return ret
 
 
 def list_pkgs(*packages):
@@ -126,6 +196,79 @@ def verify(*package, **kwargs):
                 fdict['mismatch'].append('capabilities')
             ret[fname] = fdict
     return ret
+
+
+def modified(*packages, **flags):
+    '''
+    List the modified files that belong to a package. Not specifying any packages
+    will return a list of _all_ modified files on the system's RPM database.
+
+    .. versionadded:: 2015.5.0
+
+    CLI examples:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.modified httpd
+        salt '*' lowpkg.modified httpd postfix
+        salt '*' lowpkg.modified
+    '''
+    ret = __salt__['cmd.run_all'](
+        ['rpm', '-Va'] + list(packages),
+        python_shell=False,
+        output_loglevel='trace')
+
+    data = {}
+
+    # If verification has an output, then it means it failed
+    # and the return code will be 1. We are interested in any bigger
+    # than 1 code.
+    if ret['retcode'] > 1:
+        del ret['stdout']
+        return ret
+    elif not ret['retcode']:
+        return data
+
+    ptrn = re.compile(r"\s+")
+    changes = cfg = f_name = None
+    for f_info in ret['stdout'].splitlines():
+        f_info = ptrn.split(f_info)
+        if len(f_info) == 3:  # Config file
+            changes, cfg, f_name = f_info
+        else:
+            changes, f_name = f_info
+            cfg = None
+        keys = ['size', 'mode', 'checksum', 'device', 'symlink',
+                'owner', 'group', 'time', 'capabilities']
+        changes = list(changes)
+        if len(changes) == 8:  # Older RPMs do not support capabilities
+            changes.append(".")
+        stats = []
+        for k, v in zip(keys, changes):
+            if v != '.':
+                stats.append(k)
+        if cfg is not None:
+            stats.append('config')
+        data[f_name] = stats
+
+    if not flags:
+        return data
+
+    # Filtering
+    filtered_data = {}
+    for f_name, stats in data.items():
+        include = True
+        for param, pval in flags.items():
+            if param.startswith("_"):
+                continue
+            if (not pval and param in stats) or \
+               (pval and param not in stats):
+                include = False
+                break
+        if include:
+            filtered_data[f_name] = stats
+
+    return filtered_data
 
 
 def file_list(*packages):
@@ -222,3 +365,33 @@ def owner(*paths):
     if len(ret) == 1:
         return list(ret.values())[0]
     return ret
+
+
+@decorators.which('rpm2cpio')
+@decorators.which('cpio')
+@decorators.which('diff')
+def diff(package, path):
+    '''
+    Return a formatted diff between current file and original in a package.
+    NOTE: this function includes all files (configuration and not), but does
+    not work on binary content.
+
+    :param package: The name of the package
+    :param path: Full path to the installed file
+    :return: Difference or empty string. For binary files only a notification.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
+    '''
+
+    cmd = "rpm2cpio {0} " \
+          "| cpio -i --quiet --to-stdout .{1} " \
+          "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
+    res = __salt__['cmd.shell'](cmd.format(package, path), output_loglevel='trace')
+    if res and res.startswith('Binary file'):
+        return 'File "{0}" is binary and its content has been modified.'.format(path)
+
+    return res

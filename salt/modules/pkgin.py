@@ -32,20 +32,22 @@ def _check_pkgin():
     ppath = salt.utils.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
-        localbase = __salt__['cmd.run'](
-            'pkg_info -Q LOCALBASE pkgin',
-            output_loglevel='trace'
-        )
-        if localbase is not None:
-            ppath = '{0}/bin/pkgin'.format(localbase)
-            if not os.path.exists(ppath):
-                return None
-
+        try:
+            localbase = __salt__['cmd.run'](
+               'pkg_info -Q LOCALBASE pkgin',
+                output_loglevel='trace'
+            )
+            if localbase is not None:
+                ppath = '{0}/bin/pkgin'.format(localbase)
+                if not os.path.exists(ppath):
+                    return None
+        except CommandExecutionError:
+            return None
     return ppath
 
 
 @decorators.memoize
-def _supports_regex():
+def _get_version():
     '''
     Get the pkgin version
     '''
@@ -61,7 +63,25 @@ def _supports_regex():
     if not version_match:
         return False
 
-    return tuple([int(i) for i in version_match.group(1).split('.')]) > (0, 5)
+    return version_match.group(1).split('.')
+
+
+@decorators.memoize
+def _supports_regex():
+    '''
+    Check support of regexp
+    '''
+
+    return tuple([int(i) for i in _get_version()]) > (0, 5)
+
+
+@decorators.memoize
+def _supports_parsing():
+    '''
+    Check support of parsing
+    '''
+
+    return tuple([int(i) for i in _get_version()]) > (0, 7)
 
 
 def __virtual__():
@@ -78,7 +98,7 @@ def __virtual__():
 def _splitpkg(name):
     # name is in the format foobar-1.0nb1, already space-splitted
     if name[0].isalnum() and name != 'No':  # avoid < > = and 'No result'
-        return name.rsplit('-', 1)
+        return name.split(';', 1)[0].rsplit('-', 1)
 
 
 def search(pkg_name):
@@ -243,7 +263,10 @@ def list_pkgs(versions_as_list=False, **kwargs):
     out = __salt__['cmd.run'](pkg_command, output_loglevel='trace')
     for line in out.splitlines():
         try:
-            pkg, ver = line.split(' ')[0].rsplit('-', 1)
+            if _supports_parsing():
+                pkg, ver = line.split(';', 1)[0].rsplit('-', 1)
+            else:
+                pkg, ver = line.split(' ', 1)[0].rsplit('-', 1)
         except ValueError:
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)

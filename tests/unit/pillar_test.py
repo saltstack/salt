@@ -103,7 +103,7 @@ class PillarTestCase(TestCase):
         )
 
     @patch('salt.pillar.salt.fileclient.get_file_client', autospec=True)
-    @patch('salt.pillar.salt.minion.Matcher', autospec=True)
+    @patch('salt.pillar.salt.minion.Matcher')  # autospec=True disabled due to py3 mock bug
     def test_topfile_order(self, Matcher, get_file_client):
         opts = {
             'renderer': 'yaml',
@@ -134,7 +134,7 @@ class PillarTestCase(TestCase):
             nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
         self.top_file = tempfile.NamedTemporaryFile()
-        self.top_file.write('''
+        s = '''
 base:
     group:
         - match: nodegroup
@@ -143,16 +143,17 @@ base:
     minion:
         - order: {glob_order}
         - ssh.minion
-'''.format(nodegroup_order=nodegroup_order, glob_order=glob_order))
+'''.format(nodegroup_order=nodegroup_order, glob_order=glob_order)
+        self.top_file.write(salt.utils.to_bytes(s))
         self.top_file.flush()
         self.ssh_file = tempfile.NamedTemporaryFile()
-        self.ssh_file.write('''
+        self.ssh_file.write(b'''
 ssh:
     foo
 ''')
         self.ssh_file.flush()
         self.ssh_minion_file = tempfile.NamedTemporaryFile()
-        self.ssh_minion_file.write('''
+        self.ssh_minion_file.write(b'''
 ssh:
     bar
 ''')

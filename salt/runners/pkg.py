@@ -2,7 +2,7 @@
 '''
 Package helper functions using ``salt.modules.pkg``
 
-.. versionadded:: FIXME
+.. versionadded:: 2015.8.0
 '''
 
 # Import python libs

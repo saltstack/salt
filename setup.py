@@ -105,7 +105,6 @@ SALT_VERSION = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', 'version.py'
 SALT_VERSION_HARDCODED = os.path.join(os.path.abspath(SETUP_DIRNAME), 'salt', '_version.py')
 SALT_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'base.txt')
 SALT_ZEROMQ_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'zeromq.txt')
-SALT_CLOUD_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'cloud.txt')
 SALT_RAET_REQS = os.path.join(os.path.abspath(SETUP_DIRNAME), 'requirements', 'raet.txt')
 
 # Salt SSH Packaging Detection
@@ -137,6 +136,7 @@ def _parse_requirements_file(requirements_file):
 class WriteSaltVersion(Command):
 
     description = 'Write salt\'s hardcoded version file'
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -164,6 +164,7 @@ class WriteSaltVersion(Command):
 class WriteSaltSshPackaingFile(Command):
 
     description = 'Write salt\'s ssh packaging file'
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -188,7 +189,7 @@ class Sdist(sdist):
     def make_release_tree(self, base_dir, files):
         if self.distribution.ssh_packaging:
             self.distribution.salt_ssh_packaging_file = PACKAGED_FOR_SALT_SSH_FILE
-            self.run_command('write-salt-ssh-packaging-file')
+            self.run_command('write_salt_ssh_packaging_file')
             self.filelist.files.append(os.path.basename(PACKAGED_FOR_SALT_SSH_FILE))
 
         sdist.make_release_tree(self, base_dir, files)
@@ -198,7 +199,7 @@ class Sdist(sdist):
         self.distribution.salt_version_hardcoded_path = os.path.join(
             base_dir, 'salt', '_version.py'
         )
-        self.run_command('write-salt-version')
+        self.run_command('write_salt_version')
 
     def make_distribution(self):
         sdist.make_distribution(self)
@@ -385,7 +386,7 @@ class Build(build):
             # ahead and write our install time python modules.
 
             # Write the hardcoded salt version module salt/_version.py
-            self.run_command('write-salt-version')
+            self.run_command('write_salt_version')
 
             # Write the system paths file
             system_paths_file_path = os.path.join(
@@ -410,6 +411,8 @@ class Build(build):
 
 class Install(install):
     user_options = install.user_options + [
+        ('salt-transport=', None, 'The transport to prepare salt for. Choices are \'zeromq\' '
+                                  '\'raet\' or \'both\'. Defaults to \'zeromq\'', 'zeromq'),
         ('salt-root-dir=', None,
          'Salt\'s pre-configured root directory'),
         ('salt-config-dir=', None,
@@ -452,6 +455,7 @@ class Install(install):
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
+        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
@@ -595,7 +599,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
-        self.version = __version__  # pylint: disable=undefined-variable
+        self.salt_version = __version__  # pylint: disable=undefined-variable
         self.description = 'Portable, distributed, remote execution and configuration management system'
         self.author = 'Thomas S Hatch'
         self.author_email = 'thatch45@gmail.com'
@@ -605,8 +609,8 @@ class SaltDistribution(distutils.dist.Distribution):
                               'build': Build,
                               'sdist': Sdist,
                               'install': Install,
-                              'write-salt-version': WriteSaltVersion,
-                              'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
+                              'write_salt_version': WriteSaltVersion,
+                              'write_salt_ssh_packaging_file': WriteSaltSshPackaingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
@@ -627,6 +631,8 @@ class SaltDistribution(distutils.dist.Distribution):
             attrvalue = getattr(self, attrname, None)
             if attrvalue == 0:
                 continue
+            if attrname == 'salt_version':
+                attrname = 'version'
             if hasattr(self.metadata, 'set_{0}'.format(attrname)):
                 getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
@@ -714,6 +720,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-run.1',
+                                 'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])
@@ -736,8 +743,7 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_extras_require(self):
         if self.ssh_packaging:
             return {}
-        return {'RAET': _parse_requirements_file(SALT_RAET_REQS),
-                'Cloud': _parse_requirements_file(SALT_CLOUD_REQS)}
+        return {'RAET': _parse_requirements_file(SALT_RAET_REQS)}
 
     @property
     def _property_scripts(self):
@@ -747,7 +753,7 @@ class SaltDistribution(distutils.dist.Distribution):
             scripts.append('scripts/salt-ssh')
             if IS_WINDOWS_PLATFORM:
                 return scripts
-            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run'])
+            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run', 'scripts/spm'])
             return scripts
 
         if IS_WINDOWS_PLATFORM:
@@ -767,7 +773,8 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-run',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
-                        'scripts/salt-unity'])
+                        'scripts/salt-unity',
+                        'scripts/spm'])
         return scripts
 
     @property
@@ -785,7 +792,8 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['salt-cp = salt.scripts:salt_cp',
                             'salt-minion = salt.scripts:salt_minion',
-                            'salt-unity = salt.scripts:salt_unity'])
+                            'salt-unity = salt.scripts:salt_unity',
+                            'spm = salt.scripts:salt_spm'])
             return {'console_scripts': scripts}
 
         # *nix, so, we need all scripts
@@ -799,7 +807,8 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-run = salt.scripts:salt_run',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
-                        'salt-unity = salt.scripts:salt_unity'])
+                        'salt-unity = salt.scripts:salt_unity',
+                        'spm = salt.scripts:salt_spm'])
         return {'console_scripts': scripts}
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 
@@ -849,6 +858,7 @@ class SaltDistribution(distutils.dist.Distribution):
 
         if IS_WINDOWS_PLATFORM:
             freezer_includes.extend([
+                'imp',
                 'win32api',
                 'win32file',
                 'win32con',

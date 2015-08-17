@@ -13,7 +13,6 @@ Follow one of the below links for further information and examples
     :template: autosummary.rst.tmpl
 
     compact
-    grains
     highstate
     json_out
     key

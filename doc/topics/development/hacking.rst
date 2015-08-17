@@ -35,8 +35,12 @@ Create a new `virtualenv`_:
 .. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
 Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
+
 On Arch Linux, where Python 3 is the default installation of Python, use
 the ``virtualenv2`` command instead of ``virtualenv``.
+
+On Gentoo you must use ``--system-site-packages`` to enable pkg and portage_config
+functionality
 
 .. note:: Using system Python modules in the virtualenv
 
@@ -267,7 +271,7 @@ Change to salt documentation directory, then:
 
 .. code-block:: bash
 
-    make SPHINXBUILD=sphinx-1.0-build html
+    make SPHINXBUILD=sphinx-build html
 
 Once you've updated the documentation, you can run the following command to
 launch a simple Python HTTP server to see your changes:
@@ -286,3 +290,10 @@ Run the test suite with following command:
     ./setup.py test
 
 See :doc:`here <tests/index>` for more information regarding the test suite.
+
+Issue and Pull Request Labeling System
+--------------------------------------
+
+SaltStack uses several labeling schemes to help facilitate code contributions
+and bug resolution. See the :ref:`Labels and Milestones
+<labels-and-milestones>` documentation for more information.

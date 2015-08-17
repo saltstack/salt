@@ -21,7 +21,6 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import iptables
-import salt.modules.cmdmod as salt_cmd
 
 # Globals
 iptables.__grains__ = {}
@@ -125,6 +124,16 @@ class IptablesTestCase(TestCase):
         self.assertEqual(iptables.build_rule(jump='LOG',
                                              **{'log-prefix': 'spam: '}),
                          '--jump LOG --log-prefix "spam: "')
+
+        # Should allow no-arg jump options
+        self.assertEqual(iptables.build_rule(jump='CLUSTERIP',
+                                             **{'new': ''}),
+                         '--jump CLUSTERIP --new ')
+
+        # Should allow the --save jump option to CONNSECMARK
+        #self.assertEqual(iptables.build_rule(jump='CONNSECMARK',
+        #                                     **{'save': ''}),
+        #                 '--jump CONNSECMARK --save ')
 
         ret = '/sbin/iptables --wait -t salt -I INPUT 3 -m state --jump ACCEPT'
         with patch.object(iptables, '_iptables_cmd',
@@ -246,7 +255,6 @@ class IptablesTestCase(TestCase):
 
     # 'check' function tests: 1
 
-    @patch.object(iptables, '_has_option', MagicMock(return_value=True))
     def test_check(self):
         '''
         Test if it check for the existence of a rule in the table and chain
@@ -266,25 +274,37 @@ class IptablesTestCase(TestCase):
         mock_uuid = 31337
         mock_cmd = MagicMock(return_value='-A {0}\n-A {1}'.format(mock_chain,
                                                                  hex(mock_uuid)))
-        with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
-            with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
-                self.assertTrue(iptables.check(table='filter', chain=mock_chain,
-                                                rule=mock_rule, family='ipv4'))
+        mock_has = MagicMock(return_value=True)
+        mock_not = MagicMock(return_value=False)
 
-        mock = MagicMock(return_value='')
-        with patch.object(salt_cmd, 'run', mock):
-            mock_cmd = MagicMock(return_value='')
-            with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
-                self.assertFalse(iptables.check(table='filter', chain='INPUT',
-                                            rule=mock_rule, family='ipv4'))
+        with patch.object(iptables, '_has_option', mock_not):
+            with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
+                with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
+                    self.assertTrue(iptables.check(table='filter', chain=mock_chain,
+                                                   rule=mock_rule, family='ipv4'))
 
-            mock_uuid = MagicMock(return_value=1234)
+        mock_cmd = MagicMock(return_value='')
+
+        with patch.object(iptables, '_has_option', mock_not):
+            with patch.object(uuid, 'getnode', MagicMock(return_value=mock_uuid)):
+                with patch.dict(iptables.__salt__, {'cmd.run': MagicMock(return_value='')}):
+                    self.assertFalse(iptables.check(table='filter', chain=mock_chain,
+                                                    rule=mock_rule, family='ipv4'))
+
+        with patch.object(iptables, '_has_option', mock_has):
+            with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
+                self.assertTrue(iptables.check(table='filter', chain='INPUT',
+                                               rule=mock_rule, family='ipv4'))
+
+        mock_cmd = MagicMock(return_value='-A 0x4d2')
+        mock_uuid = MagicMock(return_value=1234)
+
+        with patch.object(iptables, '_has_option', mock_has):
             with patch.object(uuid, 'getnode', mock_uuid):
-                mock_cmd = MagicMock(return_value='-A 0x4d2')
                 with patch.dict(iptables.__salt__, {'cmd.run': mock_cmd}):
                     self.assertTrue(iptables.check(table='filter',
-                                                    chain='0x4d2',
-                                                    rule=mock_rule, family='ipv4'))
+                                                   chain='0x4d2',
+                                                   rule=mock_rule, family='ipv4'))
 
     # 'check_chain' function tests: 1
 
@@ -337,6 +357,7 @@ class IptablesTestCase(TestCase):
     # 'append' function tests: 1
 
     @patch.object(iptables, '_has_option', MagicMock(return_value=True))
+    @patch.object(iptables, 'check', MagicMock(return_value=False))
     def test_append(self):
         '''
         Test if it append a rule to the specified table/chain.
@@ -363,6 +384,7 @@ class IptablesTestCase(TestCase):
     # 'insert' function tests: 1
 
     @patch.object(iptables, '_has_option', MagicMock(return_value=True))
+    @patch.object(iptables, 'check', MagicMock(return_value=False))
     def test_insert(self):
         '''
         Test if it insert a rule into the specified table/chain,

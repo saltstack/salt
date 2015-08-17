@@ -8,7 +8,7 @@ import hashlib
 import os
 
 import salt.utils
-from salt.ext.six import string_types
+from salt.ext import six
 
 
 def gen_jid():
@@ -22,7 +22,7 @@ def is_jid(jid):
     '''
     Returns True if the passed in value is a job id
     '''
-    if not isinstance(jid, string_types):
+    if not isinstance(jid, six.string_types):
         return False
     if len(jid) != 20:
         return False
@@ -43,7 +43,7 @@ def jid_dir(jid, cachedir, sum_type):
     'returner, this util function will be removed-- please use '
     'the returner'
     )
-    jid = str(jid)
+    jid = salt.utils.to_bytes(str(jid)) if six.PY3 else str(jid)
     jhash = getattr(hashlib, sum_type)(jid).hexdigest()
     return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
 
@@ -88,4 +88,44 @@ def jid_to_time(jid):
                                                 minute,
                                                 second,
                                                 micro)
+    return ret
+
+
+def format_job_instance(job):
+    '''
+    Format the job instance correctly
+    '''
+    ret = {'Function': job.get('fun', 'unknown-function'),
+           'Arguments': list(job.get('arg', [])),
+           # unlikely but safeguard from invalid returns
+           'Target': job.get('tgt', 'unknown-target'),
+           'Target-type': job.get('tgt_type', []),
+           'User': job.get('user', 'root')}
+
+    if 'metadata' in job:
+        ret['Metadata'] = job.get('metadata', {})
+    else:
+        if 'kwargs' in job:
+            if 'metadata' in job['kwargs']:
+                ret['Metadata'] = job['kwargs'].get('metadata', {})
+    return ret
+
+
+def format_jid_instance(jid, job):
+    '''
+    Format the jid correctly
+    '''
+    ret = format_job_instance(job)
+    ret.update({'StartTime': jid_to_time(jid)})
+    return ret
+
+
+def format_jid_instance_ext(jid, job):
+    '''
+    Format the jid correctly with jid included
+    '''
+    ret = format_job_instance(job)
+    ret.update({
+        'JID': jid,
+        'StartTime': jid_to_time(jid)})
     return ret

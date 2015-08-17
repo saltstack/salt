@@ -18,6 +18,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.exceptions
 import salt.utils.event
 import salt.daemons.masterapi
 from salt.utils import kinds
@@ -27,7 +28,7 @@ from salt.utils.event import tagify
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import input
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 try:
     import msgpack
 except ImportError:
@@ -37,7 +38,7 @@ log = logging.getLogger(__name__)
 
 
 def get_key(opts):
-    if opts['transport'] == 'zeromq':
+    if opts['transport'] in ('zeromq', 'tcp'):
         return Key(opts)
     else:
         return RaetKey(opts)
@@ -49,7 +50,7 @@ class KeyCLI(object):
     '''
     def __init__(self, opts):
         self.opts = opts
-        if self.opts['transport'] == 'zeromq':
+        if self.opts['transport'] in ('zeromq', 'tcp'):
             self.key = Key(opts)
         else:
             self.key = RaetKey(opts)
@@ -127,7 +128,7 @@ class KeyCLI(object):
                 .format(match, 'or rejected ' if include_rejected else '')
             )
             print(msg)
-            return
+            raise salt.exceptions.SaltSystemExit(code=1)
         if not self.opts.get('yes', False):
             print('The following keys are going to be accepted:')
             salt.output.display_output(
@@ -191,7 +192,7 @@ class KeyCLI(object):
                 'The key glob {0!r} does not match any accepted, unaccepted '
                 'or rejected keys.'.format(match)
             )
-            return
+            raise salt.exceptions.SaltSystemExit(code=1)
         if not self.opts.get('yes', False):
             print('The following keys are going to be deleted:')
             salt.output.display_output(
@@ -650,7 +651,7 @@ class Key(object):
         # We have to differentiate between RaetKey._check_minions_directories
         # and Zeromq-Keys. Raet-Keys only have three states while ZeroMQ-keys
         # havd an additional 'denied' state.
-        if self.opts['transport'] == 'zeromq':
+        if self.opts['transport'] in ('zeromq', 'tcp'):
             key_dirs = self._check_minions_directories()
         else:
             key_dirs = self._check_minions_directories()
@@ -661,8 +662,9 @@ class Key(object):
             ret[os.path.basename(dir_)] = []
             try:
                 for fn_ in salt.utils.isorted(os.listdir(dir_)):
-                    if os.path.isfile(os.path.join(dir_, fn_)):
-                        ret[os.path.basename(dir_)].append(fn_)
+                    if not fn_.startswith('.'):
+                        if os.path.isfile(os.path.join(dir_, fn_)):
+                            ret[os.path.basename(dir_)].append(fn_)
             except (OSError, IOError):
                 # key dir kind is not created yet, just skip
                 continue
@@ -685,23 +687,27 @@ class Key(object):
         if match.startswith('acc'):
             ret[os.path.basename(acc)] = []
             for fn_ in salt.utils.isorted(os.listdir(acc)):
-                if os.path.isfile(os.path.join(acc, fn_)):
-                    ret[os.path.basename(acc)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(acc, fn_)):
+                        ret[os.path.basename(acc)].append(fn_)
         elif match.startswith('pre') or match.startswith('un'):
             ret[os.path.basename(pre)] = []
             for fn_ in salt.utils.isorted(os.listdir(pre)):
-                if os.path.isfile(os.path.join(pre, fn_)):
-                    ret[os.path.basename(pre)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(pre, fn_)):
+                        ret[os.path.basename(pre)].append(fn_)
         elif match.startswith('rej'):
             ret[os.path.basename(rej)] = []
             for fn_ in salt.utils.isorted(os.listdir(rej)):
-                if os.path.isfile(os.path.join(rej, fn_)):
-                    ret[os.path.basename(rej)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(rej, fn_)):
+                        ret[os.path.basename(rej)].append(fn_)
         elif match.startswith('den'):
             ret[os.path.basename(den)] = []
             for fn_ in salt.utils.isorted(os.listdir(den)):
-                if os.path.isfile(os.path.join(den, fn_)):
-                    ret[os.path.basename(den)].append(fn_)
+                if not fn_.startswith('.'):
+                    if os.path.isfile(os.path.join(den, fn_)):
+                        ret[os.path.basename(den)].append(fn_)
         elif match.startswith('all'):
             return self.all_keys()
         return ret
@@ -825,6 +831,24 @@ class Key(object):
             self.name_match(match) if match is not None
             else self.dict_match(matches)
         )
+
+    def delete_den(self):
+        '''
+        Delete all denied keys
+        '''
+        keys = self.list_keys()
+        for status, keys in six.iteritems(self.list_keys()):
+            for key in keys[self.DEN]:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                                 'act': 'delete',
+                                 'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
+        self.check_minion_cache()
+        return self.list_keys()
 
     def delete_all(self):
         '''

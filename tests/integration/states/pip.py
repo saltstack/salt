@@ -343,7 +343,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Let's install a fixed version pip over whatever pip was
             # previously installed
             ret = self.run_function(
-                'pip.install', ['pip==1.3.1'], upgrade=True,
+                'pip.install', ['pip==6.0'], upgrade=True,
                 ignore_installed=True,
                 bin_env=venv_dir
             )
@@ -358,15 +358,15 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 pprint.pprint(ret)
                 raise
 
-            # Le't make sure we have pip 1.3.1 installed
+            # Le't make sure we have pip 6.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
-                {'pip': '1.3.1'}
+                {'pip': '6.0'}
             )
 
             # Now the actual pip upgrade pip test
             ret = self.run_state(
-                'pip.installed', name='pip==1.4.1', upgrade=True,
+                'pip.installed', name='pip==6.0.7', upgrade=True,
                 bin_env=venv_dir
             )
             try:
@@ -374,7 +374,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 self.assertInSaltReturn(
                     'Installed',
                     ret,
-                    ['changes', 'pip==1.4.1']
+                    ['changes', 'pip==6.0.7']
                 )
             except AssertionError:
                 import pprint
@@ -437,6 +437,30 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(venv_dir)
             if os.path.isfile(requirements_file):
                 os.unlink(requirements_file)
+
+    def test_22359_pip_installed_unless_does_not_trigger_warnings(self):
+        # This test case should be moved to a format_call unit test specific to
+        # the state internal keywords
+        venv_dir = venv_dir = os.path.join(
+            integration.TMP, 'pip-installed-unless'
+        )
+        venv_create = self.run_function('virtualenv.create', [venv_dir])
+        if venv_create['retcode'] > 0:
+            self.skipTest(
+                'Failed to create testcase virtual environment: {0}'.format(
+                    venv_create
+                )
+            )
+
+        try:
+            ret = self.run_state(
+                'pip.installed', name='pep8', bin_env=venv_dir, unless='/bin/false'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertNotIn('warnings', next(ret.itervalues()))
+        finally:
+            if os.path.isdir(venv_dir):
+                shutil.rmtree(venv_dir)
 
 
 if __name__ == '__main__':

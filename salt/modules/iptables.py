@@ -17,6 +17,9 @@ import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     '''
@@ -102,9 +105,8 @@ def version(family='ipv4'):
 def build_rule(table='filter', chain=None, command=None, position='', full=None, family='ipv4',
                **kwargs):
     '''
-    Build a well-formatted iptables rule based on kwargs. Long options must be
-    used (`--jump` instead of `-j`) because they will have the `--` added to
-    them. A `table` and `chain` are not required, unless `full` is True.
+    Build a well-formatted iptables rule based on kwargs. A `table` and `chain`
+    are not required, unless `full` is True.
 
     If `full` is `True`, then `table`, `chain` and `command` are required.
     `command` may be specified as either a short option ('I') or a long option
@@ -115,6 +117,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     `position`. This will only be useful if `full` is True.
 
     If `connstate` is passed in, it will automatically be changed to `state`.
+
+    To pass in jump options that doesn't take arguments, pass in an empty
+    string.
 
     CLI Examples:
 
@@ -184,10 +189,22 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
-    if 'proto' in kwargs:
-        rule.append('{0}-p {1}'.format(maybe_add_negation('proto'), kwargs['proto']))
-        proto = True
+    if 'protocol' in kwargs:
+        proto = kwargs['protocol']
+        proto_negation = maybe_add_negation('protocol')
+        del kwargs['protocol']
+    elif 'proto' in kwargs:
+        proto = kwargs['proto']
+        proto_negation = maybe_add_negation('proto')
         del kwargs['proto']
+
+    if proto:
+        if proto.startswith('!') or proto.startswith('not'):
+            proto = re.sub(bang_not_pat, '', proto)
+            rule += '! '
+
+        rule.append('{0}-p {1}'.format(proto_negation, proto))
+        proto = True
 
     if 'match' in kwargs:
         match_value = kwargs['match']
@@ -200,7 +217,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         del kwargs['match']
 
     if 'connstate' in kwargs:
+        if '-m state' not in rule:
+            rule.append('-m state')
+
         rule.append('{0}--state {1}'.format(maybe_add_negation('connstate'), kwargs['connstate']))
+
         del kwargs['connstate']
 
     if 'dport' in kwargs:
@@ -247,21 +268,130 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     # Jumps should appear last, except for any arguments that are passed to
     # jumps, which of course need to follow.
     after_jump = []
+    # All jump arguments as extracted from man iptables-extensions, man iptables,
+    # man xtables-addons and http://www.iptables.info/en/iptables-targets-and-jumps.html
     after_jump_arguments = (
+        'j',  # j and jump needs to be first
         'jump',
-        'j',
-        'to-port',
-        'to-ports',
-        'to-destination',
-        'to-source',
-        'reject-with',
-        'set-mark',
-        'set-xmark',
-        'log-level',
+
+        # IPTABLES
+        'add-set',
+        'and-mark',
+        'and-tos',
+        'checksum-fill',
+        'clamp-mss-to-pmtu',
+        'clustermac',
+        'ctevents',
+        'ctmask',
+        'del-set',
+        'ecn-tcp-remove',
+        'exist',
+        'expevents',
+        'gateway',
+        'hash-init',
+        'hashmode',
+        'helper',
+        'label',
+        'local-node',
         'log-ip-options',
+        'log-level',
         'log-prefix',
         'log-tcp-options',
         'log-tcp-sequence',
+        'log-uid',
+        'mask',
+        'new',
+        'nfmask',
+        'nflog-group',
+        'nflog-prefix',
+        'nflog-range',
+        'nflog-threshold',
+        'nodst',
+        'notrack',
+        'on-ip',
+        'on-port',
+        'or-mark',
+        'or-tos',
+        'persistent',
+        'queue-balance',
+        'queue-bypass',
+        'queue-num',
+        'random',
+        'rateest-ewmalog',
+        'rateest-interval',
+        'rateest-name',
+        'reject-with',
+        'restore',
+        'restore-mark',
+        #'save',  # no arg, problematic name: How do we avoid collision with this?
+        'save-mark',
+        'selctx',
+        'set-class',
+        'set-dscp',
+        'set-dscp-class',
+        'set-mark',
+        'set-mss',
+        'set-tos',
+        'set-xmark',
+        'strip-options',
+        'timeout',
+        'to',
+        'to-destination',
+        'to-ports',
+        'to-source',
+        'total-nodes',
+        'tproxy-mark',
+        'ttl-dec',
+        'ttl-inc',
+        'ttl-set',
+        'type',
+        'ulog-cprange',
+        'ulog-nlgroup',
+        'ulog-prefix',
+        'ulog-qthreshold',
+        'xor-mark',
+        'xor-tos',
+        'zone',
+
+        # IPTABLES-EXTENSIONS
+        'dst-pfx',
+        'hl-dec',
+        'hl-inc',
+        'hl-set',
+        'hmark-dport-mask',
+        'hmark-dst-prefix',
+        'hmark-mod',
+        'hmark-offset',
+        'hmark-proto-mask',
+        'hmark-rnd',
+        'hmark-spi-mask',
+        'hmark-sport-mask',
+        'hmark-src-prefix',
+        'hmark-tuple',
+        'led-always-blink',
+        'led-delay',
+        'led-trigger-id',
+        'queue-cpu-fanout',
+        'src-pfx',
+
+        # WEB
+        'to-port',
+
+        # XTABLES
+        'addr',
+        'and-mask',
+        'delude',
+        'honeypot',
+        'or-mask',
+        'prefix',
+        'reset',
+        'reuse',
+        'set-mac',
+        'shift',
+        'static',
+        'tarpit',
+        'tname',
+        'ttl',
     )
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
@@ -271,6 +401,34 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             else:
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
+
+    if 'log' in kwargs:
+        after_jump.append('--log {0} '.format(kwargs['log']))
+        del kwargs['log']
+
+    if 'log-level' in kwargs:
+        after_jump.append('--log-level {0} '.format(kwargs['log-level']))
+        del kwargs['log-level']
+
+    if 'log-prefix' in kwargs:
+        after_jump.append('--log-prefix {0} '.format(kwargs['log-prefix']))
+        del kwargs['log-prefix']
+
+    if 'log-tcp-sequence' in kwargs:
+        after_jump.append('--log-tcp-sequence {0} '.format(kwargs['log-tcp-sequence']))
+        del kwargs['log-tcp-sequence']
+
+    if 'log-tcp-options' in kwargs:
+        after_jump.append('--log-tcp-options {0} '.format(kwargs['log-tcp-options']))
+        del kwargs['log-tcp-options']
+
+    if 'log-ip-options' in kwargs:
+        after_jump.append('--log-ip-options {0} '.format(kwargs['log-ip-options']))
+        del kwargs['log-ip-options']
+
+    if 'log-uid' in kwargs:
+        after_jump.append('--log-uid {0} '.format(kwargs['log-uid']))
+        del kwargs['log-uid']
 
     for item in kwargs:
         rule.append(maybe_add_negation(item))
@@ -427,6 +585,8 @@ def save(filename=None, family='ipv4'):
     if _conf() and not filename:
         filename = _conf(family)
 
+    log.debug('Saving rules to {0}'.format(filename))
+
     parent_dir = os.path.dirname(filename)
     if not os.path.isdir(parent_dir):
         os.makedirs(parent_dir)
@@ -464,6 +624,9 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
     ipt_cmd = _iptables_cmd(family)
 
     if _has_option('--check', family):
+        cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
+        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
+    else:
         _chain_name = hex(uuid.getnode())
 
         # Create temporary table
@@ -482,9 +645,6 @@ def check(table='filter', chain=None, rule=None, family='ipv4'):
                     return True
 
         return False
-    else:
-        cmd = '{0} -t {1} -C {2} {3}'.format(ipt_cmd, table, chain, rule)
-        out = __salt__['cmd.run'](cmd, output_loglevel='quiet')
 
     if not out:
         return True
@@ -606,6 +766,9 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
@@ -652,8 +815,13 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         rules = get_rules(family='ipv4')
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
+        if position is 0:
+            position = 1
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
             _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
@@ -805,7 +973,7 @@ def _parser():
         parser = optparse.OptionParser()
         add_arg = parser.add_option
     else:
-        import argparse
+        import argparse  # pylint: disable=minimum-python-version
         parser = argparse.ArgumentParser()
         add_arg = parser.add_argument
 

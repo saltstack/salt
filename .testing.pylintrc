@@ -31,7 +31,8 @@ load-plugins=saltpylint.pep8,
   saltpylint.strings,
   saltpylint.fileperms,
   saltpylint.py3modernize,
-  saltpylint.smartup
+  saltpylint.smartup,
+  saltpylint.minpyver
 
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
@@ -53,6 +54,8 @@ fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests
 # Py3 Modernize PyLint Plugin Settings
 modernize-nofix = libmodernize.fixes.fix_dict_six
 
+# Minimum Python Version To Enforce
+minimum-python-version = 2.6
 
 [MESSAGES CONTROL]
 # Only show warnings with the listed confidence levels. Leave empty to show
@@ -102,9 +105,11 @@ disable=R,
   W0631,
   W0704,
   W1202,
+  W1307,
   F0220,
   F0401,
   E8501,
+  E8116,
   E8121,
   E8122,
   E8123,
@@ -115,7 +120,10 @@ disable=R,
   E8128,
   E8129,
   E8131,
-  E8265
+  E8265,
+  E8266,
+  E8402,
+  E8731
 
 # Disabled:
 # R* [refactoring suggestions & reports]
@@ -148,10 +156,16 @@ disable=R,
 # W0704 (pointless-except) [misnomer; "ignores the exception" rather than "pointless"]
 # F0220 (unresolved-interface)
 # F0401 (import-error)
+# W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
+# W1307 (invalid-format-index) Using invalid lookup key '%s' in format specifier "0['%s']"
 #
+# E8116 PEP8 E116: unexpected indentation (comment)
 # E812* All PEP8 E12*
 # E8265 PEP8 E265 - block comment should start with "# "
+# E8266 PEP8 E266 - too many leading '#' for block comment
 # E8501 PEP8 line too long
+# E8402 module level import not at top of file
+# E8731 do not assign a lambda expression, use a def
 
 
 [REPORTS]
@@ -196,6 +210,7 @@ dummy-variables-rgx=_|dummy
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
 additional-builtins=__opts__,
+  __utils__,
   __salt__,
   __pillar__,
   __grains__,
@@ -209,7 +224,9 @@ additional-builtins=__opts__,
   __active_provider_name__,
   __master_opts__,
   __jid_event__,
-  __instance_id__
+  __instance_id__,
+  __salt_system_encoding__
+
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.

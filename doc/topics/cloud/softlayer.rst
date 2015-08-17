@@ -2,7 +2,7 @@
 Getting Started With SoftLayer
 ==============================
 
-SoftLayer is a public cloud provider, and baremetal hardware hosting provider.
+SoftLayer is a public cloud host, and baremetal hardware hosting service.
 
 Dependencies
 ============
@@ -36,7 +36,7 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-      provider: softlayer
+      driver: softlayer
 
 
     my-softlayer-hw:
@@ -48,8 +48,16 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
       user: MYUSER1138
       apikey: 'e3b68aa711e6deadc62d5b76355674beef7cc3116062ddbacafe5f7e465bfdc9'
 
-      provider: softlayer_hw
+      driver: softlayer_hw
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
@@ -384,7 +392,7 @@ The `globalIdentifier` returned in this list is necessary for the
 
 Optional Products for SoftLayer HW
 ==================================
-The softlayer_hw provider supports the ability to add optional products, which
+The softlayer_hw driver supports the ability to add optional products, which
 are supported by SoftLayer's API. These products each have an ID associated with
 them, that can be passed into Salt Cloud with the `optional_products` option:
 

@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 import integration
+from salttesting import skipIf
 
 # Import Salt libs
 import salt.runner
@@ -56,6 +57,7 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
             'token': token['token'],
         })
 
+    @skipIf(True, 'to be reenabled when #23623 is merged')
     def test_cmd_sync(self):
         low = {
             'client': 'runner',
@@ -74,6 +76,7 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
 
         self.runner.cmd_async(low)
 
+    @skipIf(True, 'to be reenabled when #23623 is merged')
     def test_cmd_sync_w_arg(self):
         low = {
             'fun': 'test.arg',
@@ -86,6 +89,7 @@ class RunnerModuleTest(integration.TestCase, integration.AdaptedConfigurationTes
         self.assertEqual(ret['kwargs']['foo'], 'Foo!')
         self.assertEqual(ret['kwargs']['bar'], 'Bar!')
 
+    @skipIf(True, 'to be reenabled when #23623 is merged')
     def test_wildcard_auth(self):
         low = {
             'username': 'the_s0und_of_t3ch',

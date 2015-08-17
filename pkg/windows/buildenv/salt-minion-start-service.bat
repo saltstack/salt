@@ -1,0 +1,1 @@
+net start salt-minion

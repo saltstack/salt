@@ -24,6 +24,21 @@ The cp module is the home of minion side file server operations. The cp module
 is used by the Salt state system, salt-cp, and can be used to distribute files
 presented by the Salt file server.
 
+Escaping Special Characters
+```````````````````````````
+
+The ``salt://`` url format can potentially contain a query string, for example
+``salt://dir/file.txt?saltenv=base``. You can prevent the fileclient/fileserver from
+interpreting ``?`` as the initial token of a query string by referencing the file
+with ``salt://|`` rather than ``salt://``.
+
+.. code-block:: yaml
+
+    /etc/marathon/conf/?checkpoint:
+      file.managed:
+        - source: salt://|hw/config/?checkpoint
+        - makedirs: True
+
 Environments
 ````````````
 

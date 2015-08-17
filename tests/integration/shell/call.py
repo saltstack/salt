@@ -34,18 +34,14 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         out = self.run_call('-l quiet test.fib 3')
 
         expect = ['local:',
-                  '    |_',
-                  '      - 0',
-                  '      - 1',
-                  '      - 1',
-                  '      - 2']
+                  '    - 2']
         self.assertEqual(expect, out[:-1])
 
     def test_text_output(self):
         out = self.run_call('-l quiet --out txt test.fib 3')
 
         expect = [
-            'local: ([0, 1, 1, 2]'
+            'local: (2'
         ]
 
         self.assertEqual(''.join(expect), ''.join(out).rsplit(",", 1)[0])
@@ -107,6 +103,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertNotEqual(0, retcode)
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    @skipIf(True, 'to be reenabled when #23623 is merged')
     def test_return(self):
         self.run_call('cmd.run "echo returnTOmaster"')
         jobs = [a for a in self.run_run('jobs.list_jobs')]
@@ -300,7 +297,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

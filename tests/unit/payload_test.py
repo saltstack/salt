@@ -126,6 +126,7 @@ class SREQTestCase(TestCase):
         sreq = self.get_sreq()
         assert sreq.send('clear', 'foo') == {'enc': 'clear', 'load': 'foo'}
 
+    @skipIf(True, 'Disabled until we can figure out how to make this more reliable.')
     def test_timeout(self):
         '''
         Test SREQ Timeouts

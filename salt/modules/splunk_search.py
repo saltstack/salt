@@ -2,7 +2,7 @@
 '''
 Module for interop with the Splunk API
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.5.0
 
 :depends:   - splunk-sdk python module
 :configuration: Configure this module by specifying the name of a configuration
@@ -165,7 +165,7 @@ def create(name, profile="splunk", **kwargs):
     _req_url = "{0}/servicesNS/{1}/search/saved/searches/{2}/acl".format(
         url, config.get("username"), urllib.quote(name)
     )
-    requests.post(_req_url, auth=auth, verify=False, data=data)
+    requests.post(_req_url, auth=auth, verify=True, data=data)
     return _get_splunk_search_props(search)
 
 

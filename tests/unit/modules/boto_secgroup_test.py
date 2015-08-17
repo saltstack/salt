@@ -14,6 +14,10 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
+import salt.config
+import salt.loader
+
 # Import Third Party Libs
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
@@ -39,7 +43,7 @@ except ImportError:
         def stub_function(self):
             pass
         return stub_function
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import Salt Libs
 from salt.utils.odict import OrderedDict
@@ -53,6 +57,11 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key': secret_key}
+
+opts = salt.config.DEFAULT_MASTER_OPTS
+utils = salt.loader.utils(opts, whitelist=['boto'])
+boto_secgroup.__utils__ = utils
+boto_secgroup.__virtual__()
 
 
 def _random_group_id():
@@ -198,7 +207,8 @@ class BotoSecgroupTestCase(TestCase):
         expected_get_config_result = OrderedDict([('name', group.name), ('group_id', group.id), ('owner_id', u'111122223333'),
                                                  ('description', group.description),
                                                  ('rules', [{'to_port': to_port, 'from_port': from_port,
-                                                  'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}])])
+                                                  'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]),
+                                                 ('rules_egress', [])])
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 
@@ -310,5 +320,5 @@ class BotoSecgroupTestCase(TestCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoSecgroupTestCase, needs_daemon=False)

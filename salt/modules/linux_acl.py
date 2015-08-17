@@ -217,9 +217,11 @@ def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
 
     _raise_on_no_files(*args)
 
-    cmd = 'setfacl -m'
+    cmd = 'setfacl'
     if recursive:
-        cmd += ' -R'
+        cmd += ' -R'  # -R must come first as -m needs the acl_* arguments that come later
+
+    cmd += ' -m'
 
     cmd = '{0} {1}:{2}:{3}'.format(cmd, _acl_prefix(acl_type), acl_name, perms)
 

@@ -73,9 +73,9 @@ class TestModuleTest(integration.ModuleCase,
         self.assertEqual(
                 self.run_function(
                     'test.fib',
-                    ['40'],
-                    )[0][-1],
-                34
+                    ['20'],
+                    )[0],
+                6765
                 )
 
     def test_collatz(self):

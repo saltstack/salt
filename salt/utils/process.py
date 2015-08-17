@@ -5,15 +5,20 @@ from __future__ import absolute_import
 import os
 import sys
 import time
+import types
 import signal
+import subprocess
 import logging
 import multiprocessing
+import multiprocessing.util
 
 import threading
 
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
+import salt.log.setup
+from salt.log.mixins import NewStyleClassMixIn
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -29,12 +34,21 @@ try:
 except ImportError:
     pass
 
-try:
-    import systemd.daemon
-    HAS_PYTHON_SYSTEMD = True
-except ImportError:
-    HAS_PYTHON_SYSTEMD = False
-# pylint: enable=import-error
+
+def notify_systemd():
+    '''
+    Notify systemd that this process has started
+    '''
+    try:
+        import systemd.daemon
+    except ImportError:
+        return False
+    if systemd.daemon.booted():
+        try:
+            return systemd.daemon.notify('READY=1')
+        except SystemError:
+            # Daemon was not started by systemd
+            pass
 
 
 def set_pidfile(pidfile, user):
@@ -222,13 +236,26 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
-        if type(multiprocessing.Process) == type(tgt) and issubclass(tgt, multiprocessing.Process):
+        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)
         else:
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
         process.start()
-        log.debug("Started '{0}' with pid {1}".format(tgt.__name__, process.pid))
+
+        # create a nicer name for the debug log
+        if isinstance(tgt, types.FunctionType):
+            name = '{0}.{1}'.format(
+                tgt.__module__,
+                tgt.__name__,
+            )
+        else:
+            name = '{0}.{1}.{2}'.format(
+                tgt.__module__,
+                tgt.__class__,
+                tgt.__name__,
+            )
+        log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
                                           'kwargs': kwargs,
@@ -260,24 +287,21 @@ class ProcessManager(object):
         # make sure to kill the subprocesses if the parent is killed
         signal.signal(signal.SIGTERM, self.kill_children)
 
-        try:
-            if HAS_PYTHON_SYSTEMD and systemd.daemon.booted():
-                systemd.daemon.notify('READY=1')
-        except SystemError:
-            # Daemon wasn't started by systemd
-            pass
-
         while True:
             try:
                 # in case someone died while we were waiting...
                 self.check_children()
 
-                pid, exit_status = os.wait()
-                if pid not in self._process_map:
-                    log.debug(('Process of pid {0} died, not a known'
-                               ' process, will not restart').format(pid))
-                    continue
-                self.restart_process(pid)
+                if not salt.utils.is_windows():
+                    pid, exit_status = os.wait()
+                    if pid not in self._process_map:
+                        log.debug('Process of pid {0} died, not a known'
+                                  ' process, will not restart'.format(pid))
+                        continue
+                    self.restart_process(pid)
+                else:
+                    # os.wait() is not supported on Windows.
+                    time.sleep(10)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
@@ -303,9 +327,24 @@ class ProcessManager(object):
                 return signal.default_int_handler(signal.SIGTERM)(*args)
             else:
                 return
-
-        for p_map in six.itervalues(self._process_map):
-            p_map['Process'].terminate()
+        if salt.utils.is_windows():
+            with open(os.devnull, 'wb') as devnull:
+                for pid, p_map in six.iteritems(self._process_map):
+                    # On Windows, we need to explicitly terminate sub-processes
+                    # because the processes don't have a sigterm handler.
+                    subprocess.call(
+                        ['taskkill', '/F', '/T', '/PID', str(pid)],
+                        stdout=devnull, stderr=devnull
+                        )
+                    p_map['Process'].terminate()
+        else:
+            for pid, p_map in six.iteritems(self._process_map.copy()):
+                try:
+                    p_map['Process'].terminate()
+                except OSError as exc:
+                    if exc.errno != 3:
+                        raise
+                    del self._process_map[pid]
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
@@ -325,3 +364,13 @@ class ProcessManager(object):
             # in case the process has since decided to die, os.kill returns OSError
             except OSError:
                 pass
+
+
+class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
+    def __init__(self, *args, **kwargs):
+        self.log_queue = kwargs.pop('log_queue', salt.log.setup.get_multiprocessing_logging_queue())
+        multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
+        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
+
+    def __setup_process_logging(self):
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)

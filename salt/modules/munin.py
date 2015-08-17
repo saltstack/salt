@@ -101,7 +101,10 @@ def list_plugins():
     for plugin in pluginlist:
         # Check if execute bit
         statf = os.path.join(PLUGINDIR, plugin)
-        executebit = stat.S_IXUSR & os.stat(statf)[stat.ST_MODE]
+        try:
+            executebit = stat.S_IXUSR & os.stat(statf)[stat.ST_MODE]
+        except OSError:
+            pass
         if executebit:
             ret.append(plugin)
     return ret

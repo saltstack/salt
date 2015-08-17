@@ -47,7 +47,7 @@ class ArchiveTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             ret = archive.tar(
-                'zcvf', 'foo.tar',
+                '-zcvf', 'foo.tar',
                 ['/tmp/something-to-compress-1',
                  '/tmp/something-to-compress-2'],
                 template=None
@@ -62,7 +62,7 @@ class ArchiveTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             ret = archive.tar(
-                'zcvf', 'foo.tar',
+                '-zcvf', 'foo.tar',
                 '/tmp/something-to-compress-1,/tmp/something-to-compress-2',
                 template=None
             )
@@ -222,7 +222,7 @@ class ArchiveTestCase(TestCase):
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                 template='jinja',
-                options='fo'
+                options='-fo'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
@@ -238,7 +238,7 @@ class ArchiveTestCase(TestCase):
                 '/tmp/dest',
                 excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                 template='jinja',
-                options='fo'
+                options='-fo'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
@@ -313,8 +313,8 @@ class ArchiveTestCase(TestCase):
             self.assertFalse(mock.called)
 
     @skipIf(which_bin(('unrar', 'rar')) is None, 'unrar not installed')
-    @patch('salt.utils.which', lambda exe: exe)
-    @patch('salt.utils.which_bin', lambda exe: exe)
+    @patch('salt.utils.which', lambda exe: exe[0] if isinstance(exe, (list, tuple)) else exe)
+    @patch('salt.utils.which_bin', lambda exe: exe[0] if isinstance(exe, (list, tuple)) else exe)
     def test_unrar(self):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):

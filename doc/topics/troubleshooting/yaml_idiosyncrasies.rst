@@ -33,8 +33,8 @@ fact that the data is uniform and not deeply nested.
 
 .. _nested-dict-indentation:
 
-Nested Dicts (key=value)
-------------------------
+Nested Dictionaries
+-------------------
 
 When :ref:`dicts <python2:typesmapping>` are nested within other data
 structures (particularly lists), the indentation logic sometimes changes.
@@ -61,8 +61,8 @@ Notice that while the indentation is two spaces per level, for the values under
 the ``context`` and ``defaults`` options there is a four-space indent. If only
 two spaces are used to indent, then those keys will be considered part of the
 same dictionary that contains the ``context`` key, and so the data will not be
-loaded correctly.  If using a double indent is not desirable, then a deeply-nested dict
-can be declared with curly braces:
+loaded correctly. If using a double indent is not desirable, then a
+deeply-nested dict can be declared with curly braces:
 
 .. code-block:: yaml
 

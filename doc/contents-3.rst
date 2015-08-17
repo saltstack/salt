@@ -5,7 +5,6 @@ Salt Table of Contents
 .. toctree::
     :maxdepth: 3
     :glob:
-    :numbered:
 
     topics/master_tops/index
     topics/ssh/*

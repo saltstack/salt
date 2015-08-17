@@ -33,12 +33,14 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4505 and "tcp[tcpflags] & tcp-ac
 For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 '''
+
+# Import Python Libs
 from __future__ import absolute_import, print_function
 import socket
 from struct import unpack
 import pcapy
 import sys
-import argparse
+import argparse  # pylint: disable=minimum-python-version
 import time
 
 
@@ -122,7 +124,7 @@ class PCAPParser(object):
                            'tcp': {}
                           }
 
-            (header, packet) = next(cap)
+            (header, packet) = cap.next()  # pylint: disable=W1699
 
             eth_length, eth_protocol = self.parse_ether(packet)
 

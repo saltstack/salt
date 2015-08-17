@@ -59,7 +59,7 @@ def __virtual__():
     '''
     Only load if the pip module is available in __salt__
     '''
-    if HAS_PIP and 'pip.list' in __salt__:
+    if 'pip.list' in __salt__:
         return __virtualname__
     return False
 
@@ -100,6 +100,16 @@ def _check_pkg_version_format(pkg):
 
     ret = {'result': False, 'comment': None,
            'prefix': None, 'version_spec': None}
+
+    if not HAS_PIP:
+        ret['comment'] = (
+            'An importable pip module is required but could not be found on '
+            'your system. This usually means that the system''s pip package '
+            'is not installed properly.'
+        )
+
+        return ret
+
     from_vcs = False
     try:
         # Get the requirement object from the pip library
@@ -235,7 +245,8 @@ def installed(name,
               allow_unverified=None,
               process_dependency_links=False,
               env_vars=None,
-              use_vt=False):
+              use_vt=False,
+              trusted_host=None):
     '''
     Make sure the package is installed
 
@@ -384,6 +395,10 @@ def installed(name,
     use_vt
         Use VT terminal emulation (see ouptut while installing)
 
+    trusted_host
+        Mark this host as trusted, even though it does not have valid or any
+        HTTPS.
+
     Example:
 
     .. code-block:: yaml
@@ -457,6 +472,24 @@ def installed(name,
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
 
+
+    .. admonition:: Attention
+
+        Please set ``reload_modules: True`` to have the salt minion
+        import this module after installation.
+
+
+    Example:
+
+    .. code-block:: yaml
+
+        pyopenssl:
+            pip.installed:
+                - name: pyOpenSSL
+                - reload_modules: True
+                - exists_action: i
+
+
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
 
@@ -473,7 +506,7 @@ def installed(name,
     # prepro = lambda pkg: pkg if type(pkg) == str else \
     #     ' '.join((pkg.items()[0][0], pkg.items()[0][1].replace(',', ';')))
     # pkgs = ','.join([prepro(pkg) for pkg in pkgs])
-    prepro = lambda pkg: pkg if type(pkg) == str else \
+    prepro = lambda pkg: pkg if isinstance(pkg, str) else \
         ' '.join((six.iteritems(pkg)[0][0], six.iteritems(pkg)[0][1]))
     pkgs = [prepro(pkg) for pkg in pkgs]
 
@@ -519,9 +552,9 @@ def installed(name,
         name = repo
 
     # Get the packages parsed name and version from the pip library.
-    # This only is done when there is no requirements parameter.
+    # This only is done when there is no requirements or editable parameter.
     pkgs_details = []
-    if pkgs and not requirements:
+    if pkgs and not (requirements or editable):
         comments = []
         for pkg in iter(pkgs):
             out = _check_pkg_version_format(pkg)
@@ -645,7 +678,8 @@ def installed(name,
         process_dependency_links=process_dependency_links,
         saltenv=__env__,
         env_vars=env_vars,
-        use_vt=use_vt
+        use_vt=use_vt,
+        trusted_host=trusted_host
     )
 
     if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
@@ -719,7 +753,7 @@ def installed(name,
             comments = []
             if requirements:
                 comments.append('Unable to process requirements file '
-                                '{0}.'.format(requirements))
+                                '"{0}".'.format(requirements))
             if editable:
                 comments.append('Unable to install from VCS checkout'
                                 '{0}.'.format(editable))
@@ -802,7 +836,7 @@ def uptodate(name,
              cwd=None,
              use_vt=False):
     '''
-    .. versionadded:: Lithium
+    .. versionadded:: 2015.5.0
 
     Verify that the system is completely up to date.
 

@@ -746,7 +746,9 @@ def install(name=None,
 
     if pkg_type == 'file':
         pkg_cmd = 'add'
-        targets = list(pkg_params.keys())
+        # pkg add has smaller set of options (i.e. no -y or -n), filter below
+        opts = ''.join([opt for opt in opts if opt in 'AfIMq'])
+        targets = pkg_params
     elif pkg_type == 'repository':
         pkg_cmd = 'install'
         if pkgs is None and kwargs.get('version') and len(pkg_params) == 1:
@@ -763,6 +765,11 @@ def install(name=None,
     cmd = '{0} {1} {2} {3} {4}'.format(
         _pkg(jail, chroot), pkg_cmd, repo_opts, opts, ' '.join(targets)
     )
+
+    if pkg_cmd == 'add' and salt.utils.is_true(dryrun):
+        # pkg add doesn't have a dryrun mode, so echo out what will be run
+        return cmd
+
     __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
@@ -877,8 +884,17 @@ def remove(name=None,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    old = list_pkgs(jail=jail, chroot=chroot)
-    targets = [x for x in pkg_params if x in old]
+    targets = []
+    old = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
+    for pkg in pkg_params.items():
+        # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
+        if pkg[0].find("/") > 0:
+            origin = pkg[0]
+            pkg = [k for k, v in old.iteritems() if v['origin'] == origin][0]
+
+        if pkg[0] in old:
+            targets.append(pkg[0])
+
     if not targets:
         return {}
 
@@ -908,7 +924,7 @@ def remove(name=None,
     __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
-    new = list_pkgs(jail=jail, chroot=chroot)
+    new = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
     return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages, since this is the CLI usage

@@ -24,6 +24,20 @@ def __virtual__():
     return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
 
 
+def _parse_args(arg):
+    '''
+    yamlify `arg` and ensure it's outermost datatype is a list
+    '''
+    yaml_args = salt.utils.args.yamlify_arg(arg)
+
+    if yaml_args is None:
+        return []
+    elif not isinstance(yaml_args, list):
+        return [yaml_args]
+    else:
+        return yaml_args
+
+
 def _publish(
         tgt,
         fun,
@@ -56,12 +70,7 @@ def _publish(
         log.info('Cannot publish publish calls. Returning {}')
         return {}
 
-    if not isinstance(arg, list):
-        arg = [salt.utils.args.yamlify_arg(arg)]
-    else:
-        arg = [salt.utils.args.yamlify_arg(x) for x in arg]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
@@ -87,17 +96,27 @@ def _publish(
     # CLI args are passed as strings, re-cast to keep time.sleep happy
     if wait:
         loop_interval = 0.3
-        matched_minions = peer_data['minions']
-        returned_minions = []
+        matched_minions = set(peer_data['minions'])
+        returned_minions = set()
         loop_counter = 0
-        while len(returned_minions) < len(matched_minions):
+        while len(returned_minions ^ matched_minions) > 0:
             load = {'cmd': 'pub_ret',
                     'id': __opts__['id'],
                     'tok': tok,
                     'jid': peer_data['jid']}
             ret = channel.send(load)
-            returned_minions = list(ret.keys())
+            returned_minions = set(ret.keys())
+
+            end_loop = False
             if returned_minions >= matched_minions:
+                end_loop = True
+            elif (loop_interval * loop_counter) > timeout:
+                # This may be unnecessary, but I am paranoid
+                if len(returned_minions) < 1:
+                    return {}
+                end_loop = True
+
+            if end_loop:
                 if form == 'clean':
                     cret = {}
                     for host in ret:
@@ -105,8 +124,6 @@ def _publish(
                     return cret
                 else:
                     return ret
-            if (loop_interval * loop_counter) > timeout:
-                return {}
             loop_counter = loop_counter + 1
             time.sleep(loop_interval)
     else:
@@ -143,6 +160,7 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - grain
     - grain_pcre
     - pillar
+    - pillar_pcre
     - ipcidr
     - range
     - compound
@@ -238,12 +256,7 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    if not isinstance(arg, list):
-        arg = [salt.utils.args.yamlify_arg(arg)]
-    else:
-        arg = [salt.utils.args.yamlify_arg(x) for x in arg]
-    if len(arg) == 1 and arg[0] is None:
-        arg = []
+    arg = _parse_args(arg)
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'

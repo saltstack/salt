@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Manage DynamoDB Tables
-=================
+======================
 
-.. versionadded:: 2015.2
+.. versionadded:: 2015.5.0
 
 Create and destroy DynamoDB tables. Be aware that this interacts with Amazon's
 services, and so may incur charges.

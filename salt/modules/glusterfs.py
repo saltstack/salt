@@ -104,7 +104,7 @@ def peer(name):
 
 
 def create(name, bricks, stripe=False, replica=False, device_vg=False,
-           transport='tcp', start=False):
+           transport='tcp', start=False, force=False):
     '''
     Create a glusterfs volume.
 
@@ -134,6 +134,9 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
 
     start
         Start the volume after creation
+
+    force
+        Force volume creation, this works even if creating in root FS
 
     CLI Example:
 
@@ -173,6 +176,8 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     if transport != 'tcp':
         cmd += 'transport {0} '.format(transport)
     cmd += ' '.join(bricks)
+    if force:
+        cmd += ' force'
 
     log.debug('Clustering command:\n{0}'.format(cmd))
     ret = __salt__['cmd.run'](cmd)

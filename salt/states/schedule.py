@@ -62,7 +62,7 @@ Management of the Salt scheduler
         - args:
           - httpd
         - kwargs:
-          test: True
+            test: True
         - when:
             - Monday 5:00pm
             - Tuesday 3:00pm
@@ -140,12 +140,34 @@ def present(name,
         The range parameter must be a dictionary with the date strings
         using the dateutil format. Requires python-dateutil.
 
+    once
+        This will schedule a job to run once on the specified date.
+
+    once_fmt
+        The default date format is ISO 8601 but can be overridden by
+        also specifying the ``once_fmt`` option.
+
+    enabled
+        Whether the job should be enabled or disabled.  Value should be a boolean.
+
+    return_job
+        Whether to return information to the Salt master upon job completion.
+
+    metadata
+        Using the metadata parameter special values can be associated with
+        a scheduled job.  These values are not used in the execution of the job,
+        but can be used to search for specific jobs later if combined with the
+        return_job parameter.  The metadata parameter must be specified as a
+        dictionary, othewise it will be ignored.
+
     returner
         The returner to use to return the results of the scheduled job.
 
     return_config
         The alternative configuration to use for returner configuration options.
 
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
     '''
 
     ret = {'name': name,
@@ -207,10 +229,9 @@ def absent(name, **kwargs):
     name
         The unique name that is given to the scheduled job.
 
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
     '''
-    ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
-    ###       cannot be removed from the function definition, otherwise the use
-    ###       of unsupported arguments will result in a traceback.
 
     ret = {'name': name,
            'result': True,
@@ -231,6 +252,82 @@ def absent(name, **kwargs):
                 return ret
             else:
                 ret['comment'].append('Removed job {0} from schedule'.format(name))
+    else:
+        ret['comment'].append('Job {0} not present in schedule'.format(name))
+
+    ret['comment'] = '\n'.join(ret['comment'])
+    return ret
+
+
+def enabled(name, **kwargs):
+    '''
+    Ensure a job is enabled in the schedule
+
+    name
+        The unique name that is given to the scheduled job.
+
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
+
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': []}
+
+    current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
+    if name in current_schedule:
+        if 'test' in __opts__ and __opts__['test']:
+            kwargs['test'] = True
+            result = __salt__['schedule.enable_job'](name, **kwargs)
+            ret['comment'].append(result['comment'])
+        else:
+            result = __salt__['schedule.enable_job'](name, **kwargs)
+            if not result['result']:
+                ret['result'] = result['result']
+                ret['comment'] = result['comment']
+                return ret
+            else:
+                ret['comment'].append('Enabled job {0} from schedule'.format(name))
+    else:
+        ret['comment'].append('Job {0} not present in schedule'.format(name))
+
+    ret['comment'] = '\n'.join(ret['comment'])
+    return ret
+
+
+def disabled(name, **kwargs):
+    '''
+    Ensure a job is disabled in the schedule
+
+    name
+        The unique name that is given to the scheduled job.
+
+    persist
+        Whether the job should persist between minion restarts, defaults to True.
+
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': []}
+
+    current_schedule = __salt__['schedule.list'](show_all=True, return_yaml=False)
+    if name in current_schedule:
+        if 'test' in __opts__ and __opts__['test']:
+            kwargs['test'] = True
+            result = __salt__['schedule.disable_job'](name, **kwargs)
+            ret['comment'].append(result['comment'])
+        else:
+            result = __salt__['schedule.disable_job'](name, **kwargs)
+            if not result['result']:
+                ret['result'] = result['result']
+                ret['comment'] = result['comment']
+                return ret
+            else:
+                ret['comment'].append('Disabled job {0} from schedule'.format(name))
     else:
         ret['comment'].append('Job {0} not present in schedule'.format(name))
 

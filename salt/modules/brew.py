@@ -45,7 +45,7 @@ def _tap(tap, runas=None):
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if __salt__['cmd.retcode'](cmd, python_shell=False, runas=runas):
+    if _call_brew(cmd)['retcode']:
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -63,11 +63,12 @@ def _homebrew_bin():
 
 def _call_brew(cmd):
     '''
-    Calls the brew command with the user user account of brew
+    Calls the brew command with the user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
+    runas = user if user != __opts__['user'] else None
     return __salt__['cmd.run_all'](cmd,
-                                   runas=user,
+                                   runas=runas,
                                    output_loglevel='trace',
                                    python_shell=False)
 

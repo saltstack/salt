@@ -252,7 +252,7 @@ Use ``module.function`` notation
 
 So-called "short-declaration" notation is preferred for referencing state
 modules and state functions. It provides a consistent pattern of
-``module.function`` shared between Salt States, the Reactor, Overstate, Salt
+``module.function`` shared between Salt States, the Reactor, Salt
 Mine, the Scheduler, as well as with the CLI.
 
 .. code-block:: yaml
@@ -680,10 +680,11 @@ example, the following macro could be used to write a php.ini config file:
 
 .. code-block:: yaml
 
-    PHP:
-      engine: 'On'
-      short_open_tag: 'Off'
-      error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
+    php_ini:
+      PHP:
+        engine: 'On'
+        short_open_tag: 'Off'
+        error_reporting: 'E_ALL & ~E_DEPRECATED & ~E_STRICT'
 
 ``/srv/salt/php.ini.tmpl``:
 
@@ -691,8 +692,8 @@ example, the following macro could be used to write a php.ini config file:
 
     {% macro php_ini_serializer(data) %}
     {% for section_name, name_val_pairs in data.items() %}
-    [{{ section }}]
-    {% for name, val in name_val_pairs.items() %}
+    [{{ section_name }}]
+    {% for name, val in name_val_pairs.items() -%}
     {{ name }} = "{{ val }}"
     {% endfor %}
     {% endfor %}
@@ -879,7 +880,7 @@ When to use lookup tables
 The ``map.jinja`` file is only a convention within Salt Formulas. This greater
 pattern is useful for a wide variety of data in a wide variety of workflows.
 This pattern is not limited to pulling data from a single file or data source.
-This pattern is useful in States, Pillar, the Reactor, and Overstate as well.
+This pattern is useful in States, Pillar and the Reactor, for example.
 
 Working with a data structure instead of, say, a config file allows the data to
 be cobbled together from multiple sources (local files, remote Pillar, database
@@ -944,7 +945,7 @@ XML.)
 
 .. code-block:: yaml
 
-    {% load_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
+    {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
         'appX:server_xml_overrides', 
         default=server_xml_defaults,
@@ -980,7 +981,7 @@ example:
 .. code-block:: yaml
 
     {# Load the map file. #}
-    {% load_yaml 'app/defaults.yaml' as app_defaults %}
+    {% import_yaml 'app/defaults.yaml' as app_defaults %}
 
     {# Extract the relevant subset for the app configured on the current
        machine (configured via a grain in this example). #}

@@ -67,7 +67,7 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
-	test -d 'locale' && find locale/ -name *.mo -exec rm {} \;
+	test -d 'locale' && find locale/ -name *.mo -exec rm {} \; || true
 
 html: translations
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

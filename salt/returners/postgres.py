@@ -8,7 +8,9 @@ Return data to a postgresql server
 :platform:      all
 
 To enable this returner the minion will need the psycopg2 installed and
-the following values configured in the minion or master config::
+the following values configured in the minion or master config:
+
+.. code-block:: yaml
 
     returner.postgres.host: 'salt'
     returner.postgres.user: 'salt'
@@ -18,7 +20,9 @@ the following values configured in the minion or master config::
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
+
+.. code-block:: yaml
 
     alternative.returner.postgres.host: 'salt'
     alternative.returner.postgres.user: 'salt'
@@ -27,7 +31,9 @@ the default location::
     alternative.returner.postgres.port: 5432
 
 Running the following commands as the postgres user should create the database
-correctly::
+correctly:
+
+.. code-block:: sql
 
     psql << EOF
     CREATE ROLE salt WITH PASSWORD 'salt';
@@ -66,11 +72,17 @@ correctly::
 
 Required python modules: psycopg2
 
-  To use the postgres returner, append '--return postgres' to the salt command. ex:
+To use the postgres returner, append '--return postgres' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return postgres
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return postgres --return_config alternative
 '''
@@ -273,7 +285,7 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''

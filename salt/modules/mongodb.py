@@ -17,11 +17,12 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import json
-from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 from salt.ext.six import string_types
+
 
 # Import third party libs
 try:
@@ -58,7 +59,7 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
         port = __salt__['config.option']('mongodb.port')
 
     try:
-        conn = pymongo.connection.Connection(host=host, port=port)
+        conn = pymongo.MongoClient(host=host, port=port)
         mdb = pymongo.database.Database(conn, database)
         if user and password:
             mdb.authenticate(user, password)
@@ -172,7 +173,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin'):
         output = []
         mongodb_version = mdb.eval('db.version()')
 
-        if StrictVersion(mongodb_version) >= StrictVersion('2.6'):
+        if LooseVersion(mongodb_version) >= LooseVersion('2.6'):
             for user in mdb.eval('db.getUsers()'):
                 output.append([
                     ('user', user['user']),
@@ -412,7 +413,7 @@ def insert(objects, collection, user=None, password=None,
     try:
         objects = _to_dict(objects)
     except Exception as err:
-        return err.message
+        return err
 
     try:
         log.info("Inserting %r into %s.%s", objects, database, collection)
@@ -421,20 +422,20 @@ def insert(objects, collection, user=None, password=None,
         ids = col.insert(objects)
         return ids
     except pymongo.errors.PyMongoError as err:
-        log.error("Inserting objects %r failed with error %s", objects, err.message)
-        return err.message
+        log.error("Inserting objects %r failed with error %s", objects, err)
+        return err
 
 
 def find(collection, query=None, user=None, password=None,
          host=None, port=None, database='admin'):
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, database)
     if not conn:
         return 'Failed to connect to mongo database'
 
     try:
         query = _to_dict(query)
     except Exception as err:
-        return err.message
+        return err
 
     try:
         log.info("Searching for %r in %s", query, collection)
@@ -443,8 +444,8 @@ def find(collection, query=None, user=None, password=None,
         ret = col.find(query)
         return list(ret)
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err.message)
-        return err.message
+        log.error("Removing objects failed with error: %s", err)
+        return err
 
 
 def remove(collection, query=None, user=None, password=None,
@@ -459,7 +460,7 @@ def remove(collection, query=None, user=None, password=None,
         salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database>
 
     """
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, database)
     if not conn:
         return 'Failed to connect to mongo database'
 

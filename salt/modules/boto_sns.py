@@ -5,17 +5,23 @@ Connection module for Amazon SNS
 :configuration: This module accepts explicit sns credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+    configuration is necessary. More Information available at:
 
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    .. code-block:: text
+
+        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         sns.keyid: GKTADJGHEIQSXMKKRBJ08H
         sns.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration::
+    A region may also be specified in the configuration:
+
+    .. code-block:: yaml
 
         sns.region: us-east-1
 
@@ -24,6 +30,8 @@ Connection module for Amazon SNS
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
+    .. code-block:: yaml
+
         myprofile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -31,6 +39,9 @@ Connection module for Amazon SNS
 
 :depends: boto
 '''
+# keep lint from choking on _get_conn and _cache_id
+#pylint: disable=E0602
+
 from __future__ import absolute_import
 
 import logging
@@ -39,14 +50,14 @@ log = logging.getLogger(__name__)
 
 # Import third party libs
 try:
+    #pylint: disable=unused-import
     import boto
     import boto.sns
+    #pylint: enable=unused-import
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-from salt.ext.six import string_types
 
 
 def __virtual__():
@@ -55,6 +66,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
+    __utils__['boto.assign_funcs'](__name__, 'sns')
     return True
 
 
@@ -72,7 +84,7 @@ def get_all_topics(region=None, key=None, keyid=None, profile=None):
     except KeyError:
         pass
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     __context__[cache_key] = {}
     # TODO: support >100 SNS topics (via NextToken)
     topics = conn.get_all_topics()
@@ -106,7 +118,7 @@ def create(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sns.create mytopic region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.create_topic(name)
     log.info('Created SNS topic {0}'.format(name))
     _invalidate_cache()
@@ -121,7 +133,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_sns.delete mytopic region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.delete_topic(get_arn(name, region, key, keyid, profile))
     log.info('Deleted SNS topic {0}'.format(name))
     _invalidate_cache()
@@ -142,7 +154,7 @@ def get_all_subscriptions_by_topic(name, region=None, key=None, keyid=None, prof
     except KeyError:
         pass
 
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ret = conn.get_all_subscriptions_by_topic(get_arn(name, region, key, keyid, profile))
     __context__[cache_key] = ret['ListSubscriptionsByTopicResponse']['ListSubscriptionsByTopicResult']['Subscriptions']
     return __context__[cache_key]
@@ -156,7 +168,7 @@ def subscribe(topic, protocol, endpoint, region=None, key=None, keyid=None, prof
 
         salt myminion boto_sns.subscribe mytopic https https://www.example.com/sns-endpoint region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     conn.subscribe(get_arn(topic, region, key, keyid, profile), protocol, endpoint)
     log.info('Subscribe {0} {1} to {2} topic'.format(protocol, endpoint, topic))
     try:
@@ -176,45 +188,22 @@ def get_arn(name, region=None, key=None, keyid=None, profile=None):
     '''
     if name.startswith('arn:aws:sns:'):
         return name
+
     account_id = __salt__['boto_iam.get_account_id'](
         region=region, key=key, keyid=keyid, profile=profile
     )
-    return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region), account_id,
-                                            name)
+    return 'arn:aws:sns:{0}:{1}:{2}'.format(_get_region(region, profile),
+                                            account_id, name)
 
 
-def _get_region(region=None):
+def _get_region(region=None, profile=None):
+    if profile and 'region' in profile:
+        return profile['region']
     if not region and __salt__['config.option']('sns.region'):
         region = __salt__['config.option']('sns.region')
     if not region:
         region = 'us-east-1'
     return region
-
-
-def _get_conn(region, key, keyid, profile):
-    '''
-    Get a boto connection to SNS.
-    '''
-    if profile:
-        if isinstance(profile, string_types):
-            _profile = __salt__['config.option'](profile)
-        elif isinstance(profile, dict):
-            _profile = profile
-        key = _profile.get('key', None)
-        keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
-
-    region = _get_region(region)
-
-    if not key and __salt__['config.option']('sns.key'):
-        key = __salt__['config.option']('sns.key')
-    if not keyid and __salt__['config.option']('sns.keyid'):
-        keyid = __salt__['config.option']('sns.keyid')
-
-    conn = boto.sns.connect_to_region(region,
-                                      aws_access_key_id=keyid,
-                                      aws_secret_access_key=key)
-    return conn
 
 
 def _subscriptions_cache_key(name):

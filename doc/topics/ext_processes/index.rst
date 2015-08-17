@@ -15,7 +15,7 @@ Processes started in this way will be restarted if they die and will be
 killed when the Salt Master is shut down.
 
 
-Example Configureation
+Example Configuration
 ======================
 
 Processes are declared in the master config file with the `ext_processes`

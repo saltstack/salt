@@ -44,7 +44,8 @@ def _list_mounts():
 
     for line in mounts.split('\n'):
         comps = re.sub(r"\s+", " ", line).split()
-        ret[comps[2]] = comps[0]
+        if len(comps) >= 3:
+            ret[comps[2]] = comps[0]
     return ret
 
 
@@ -388,6 +389,7 @@ def set_fstab(
         # Try to guess right criteria for auto....
         # NOTE: missing some special fstypes here
         specialFSes = frozenset([
+            'none',
             'tmpfs',
             'sysfs',
             'proc',
@@ -696,7 +698,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         opts = opts.split(',')
 
     if not os.path.exists(name) and mkmnt:
-        __salt__['file.mkdir'](name=name, user=user)
+        __salt__['file.mkdir'](name, user=user)
 
     args = ''
     if opts is not None:
@@ -765,7 +767,7 @@ def umount(name, device=None, user=None):
 
         salt '*' mount.umount /mnt/foo
 
-        .. versionadded:: Lithium
+        .. versionadded:: 2015.5.0
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''

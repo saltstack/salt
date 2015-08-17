@@ -26,7 +26,7 @@ try:
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
-# pylint: disable=import-error
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
@@ -302,7 +302,7 @@ class PyWinUpdater(object):
             if update.InstallationBehavior.CanRequestUserInput:
                 log.debug('Skipped update {0}'.format(str(update)))
                 continue
-            updates.append(str(update))
+            updates.append(salt.utils.sdecode(update))
             log.debug('added update {0}'.format(str(update)))
         return updates
 

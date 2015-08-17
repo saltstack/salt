@@ -1,3 +1,5 @@
+.. _raet:
+
 ==================
 The RAET Transport
 ==================
@@ -66,7 +68,7 @@ Limitations
 ===========
 
 The 2014.7 release of RAET is not complete! The Syndic and Multi Master have
-not been completed yet and these are slated for completion in the Lithium
+not been completed yet and these are slated for completion in the 2015.5.0
 release.
 
 Also, Salt-Raet allows for more control over the client but these hooks have
@@ -135,3 +137,8 @@ externally developed cryptography system.
 For more information on libsodium and CurveCP please see:
 http://doc.libsodium.org/
 http://curvecp.org/
+
+Programming Intro
+=================
+
+:ref:`Raet Programming Introduction <raet-programming>`

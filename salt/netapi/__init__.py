@@ -16,7 +16,7 @@ import salt.syspaths
 import salt.wheel
 import salt.utils
 import salt.client.ssh.client
-from salt.exceptions import SaltException, EauthAuthenticationError
+import salt.exceptions
 
 
 class NetapiClient(object):
@@ -31,16 +31,34 @@ class NetapiClient(object):
     def __init__(self, opts):
         self.opts = opts
 
+    def _is_master_running(self):
+        '''
+        Perform a lightweight check to see if the master daemon is running
+
+        Note, this will return an invalid success if the master crashed or was
+        not shut down cleanly.
+        '''
+        return os.path.exists(os.path.join(
+            self.opts['sock_dir'],
+            'workers.ipc'))
+
     def run(self, low):
         '''
         Execute the specified function in the specified client by passing the
         lowstate
         '''
+        # Eauth currently requires a running daemon and commands run through
+        # this method require eauth so perform a quick check to raise a
+        # more meaningful error.
+        if not self._is_master_running():
+            raise salt.exceptions.SaltDaemonNotRunning(
+                    'Salt Master is not available.')
+
         if 'client' not in low:
-            raise SaltException('No client specified')
+            raise salt.exceptions.SaltException('No client specified')
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
-            raise EauthAuthenticationError(
+            raise salt.exceptions.EauthAuthenticationError(
                     'No authentication credentials given')
 
         l_fun = getattr(self, low['client'])
@@ -123,10 +141,6 @@ class NetapiClient(object):
         :return: Returns the result from the runner module
         '''
         kwargs['fun'] = fun
-        if 'kwargs' not in kwargs:
-            kwargs['kwargs'] = {}
-        if 'args' not in kwargs:
-            kwargs['args'] = []
         runner = salt.runner.RunnerClient(self.opts)
         return runner.cmd_sync(kwargs, timeout=timeout)
 
@@ -142,10 +156,6 @@ class NetapiClient(object):
         :return: event data and a job ID for the executed function.
         '''
         kwargs['fun'] = fun
-        if 'kwargs' not in kwargs:
-            kwargs['kwargs'] = {}
-        if 'args' not in kwargs:
-            kwargs['args'] = []
         runner = salt.runner.RunnerClient(self.opts)
         return runner.cmd_async(kwargs)
 

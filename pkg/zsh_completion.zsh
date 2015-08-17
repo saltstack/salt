@@ -1,38 +1,72 @@
 #compdef salt salt-call salt-cp
+# The use-cache style is checked in a few places to allow caching minions, modules,
+# or the directory salt is installed in.
+# you can cache those three with:
+# zstyle ':completion:*:salt(|-cp|-call):*' use-cache true
+# or selectively:
+# zstyle ':completion::complete:salt(|-cp|-call):minions:'  use-cache true
+# zstyle ':completion::complete:salt(|-cp|-call):modules:'  use-cache true
+# zstyle ':completion::complete:salt(|-cp|-call):salt_dir:' use-cache true
 
-local state line curcontext="$curcontext"
 
-salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+local state line curcontext="$curcontext" salt_dir cachefn
+
 _modules(){
-    typeset -a _funcs
-    for file in $salt_dir/modules/*${words[CURRENT]%.*}*.py; do
-        module=${${file##*/}%.py}
-        if ! grep '__virtual__' $file &> /dev/null; then
-            continue
-        fi
-        mod=$(python2 -c "import salt.modules.$module as tmp; print(getattr(tmp, '__virtualname__', '$module'));")
-        for func in $(awk -F'[ (]' '/^def [^_]/ {print $2}' $file); do
-            _funcs+=($mod.$func)
-        done
-    done
-    _describe modules _funcs
+    local _funcs cachefn expl curcontext=${curcontext%:*}:modules
+
+    zstyle -s ":completion:$curcontext:" cache-policy cachefn
+    if [[ -z $cachefn ]]; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
+        _funcs=( ${(M)${(f)"$(command salt-call --local -d 2>/dev/null)"}##[[:alnum:]._]##} )
+        _store_cache salt/modules _funcs
+    fi
+
+    _wanted modules expl modules _multi_parts "$@" . _funcs
 }
 
 _minions(){
-    _peons=($(salt-key 2>/dev/null | tail -n +2))
-    _describe Minions _peons
+    local _peons cachefn expl curcontext=${curcontext%:*}:minions
+
+    zstyle -s ":completion:$curcontext:" cache-policy cachefn
+    if [[ -z $cachefn ]]; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/minions || ! _retrieve_cache salt/minions; then
+        _peons=( ${(f)"$(command salt-key -l acc 2>/dev/null)"} )
+        _peons[(I)Accepted[[:space:]]Keys:]=()
+        _store_cache salt/minions _peons
+    fi
+
+    _wanted minions expl minions compadd "$@" -a _peons
 }
 
+(( $+functions[_salt_caching_policy] )) ||
+_salt_caching_policy() {
+    local -a oldp
+    oldp=( "$1"(Nm+7) )
+    (( $#oldp ))
+}
+
+local -a _{target,master,logging,minion}_options _{common,out}_opts _target_opt_pat
+_target_opt_pat=(
+  '(-[ELGNRCIS]|--(pcre|list|grain(|-pcre)|nodegroup|range|compound|pillar|ipcidr))'
+  '(-E --pcre -L --list -G --grain --grain-pcre -N --nodegroup -R --range -C --compound -I --pillar -S --ipcidr)'
+)
+
 _target_options=(
-    '(-E --pcre)'{-E,--pcre}'[use pcre regular expressions]:pcre:'
-    '(-L --list)'{-L,--list}'[take a comma or space delimited list of servers.]:list:'
-    '(-G --grain)'{-G,--grain}'[use a grain value to identify targets]:Grains:'
-    '--grain-pcre[use a grain value to identify targets.]:pcre:'
-    '(-N --nodegroup)'{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
-    '(-R --range)'{-R,--range}'[use a range expression to identify targets.]:Range:'
-    '(-C --compound)'{-C,--compound}'[Use multiple targeting options.]:Compound:'
-    '(-I --pillar)'{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
-    '(-S --ipcidr)'{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
+    "$_target_opt_pat[2]"{-E,--pcre}'[use pcre regular expressions]:pcre:'
+    "$_target_opt_pat[2]"{-L,--list}'[take a comma or space delimited list of servers.]:list:'
+    "$_target_opt_pat[2]"{-G,--grain}'[use a grain value to identify targets]:Grains:'
+    "$_target_opt_pat[2]--grain-pcre[use a grain value to identify targets.]:pcre:"
+    "$_target_opt_pat[2]"{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
+    "$_target_opt_pat[2]"{-R,--range}'[use a range expression to identify targets.]:Range:'
+    "$_target_opt_pat[2]"{-C,--compound}'[Use multiple targeting options.]:Compound:'
+    "$_target_opt_pat[2]"{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
+    "$_target_opt_pat[2]"{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
 )
 
 _common_opts=(
@@ -53,14 +87,14 @@ _master_options=(
     '(-b --batch --batch-size)'{-b,--batch,--batch-size}'[Execute the salt job in batch mode, pass number or percentage to batch.]:Batch Size:'
     '(-a --auth --eauth --extrenal-auth)'{-a,--auth,--eauth,--external-auth}'[Specify an external authentication system to use.]:eauth:'
     '(-T --make-token)'{-T,--make-token}'[Generate and save an authentication token for re-use.]'
-    "--return[Set an alternative return method.]:Returners:_path_files -W '$salt_dir/returners' -g '[^_]*.py(\:r)'"
-    '(-d --doc --documentation)'{-d,--doc,--documentation}"[Return the documentation for the specified module]:Module:_path_files -W '$salt_dir/modules' -g '[^_]*.py(\:r)'"
+    '--return[Set an alternative return method.]:Returners:_path_files -W "$salt_dir/returners" -g "[^_]*.py(\:r)"'
+    '(-d --doc --documentation)'{-d,--doc,--documentation}'[Return the documentation for the specified module]:Module:_path_files -W "$salt_dir/modules" -g "[^_]*.py(\:r)"'
     '--args-separator[Set the special argument used as a delimiter between command arguments of compound commands.]:Arg separator:'
 )
 
 _minion_options=(
-    "--return[Set an alternative return method.]:Returners:_path_files -W '$salt_dir/returners' -g '[^_]*.py(\:r)'"
-    '(-d --doc --documentation)'{-d,--doc,--documentation}"[Return the documentation for the specified module]:Module:_path_files -W '$salt_dir/modules' -g '[^_]*.py(\:r)'"
+    '--return[Set an alternative return method.]:Returners:_path_files -W "$salt_dir"/returners" -g "[^_]*.py(\:r)"'
+    '(-d --doc --documentation)'{-d,--doc,--documentation}'[Return the documentation for the specified module]:Module:_path_files -W "$salt_dir/modules" -g "[^_]*.py(\:r)"'
     '(-g --grains)'{-g,--grains}'[Return the information generated by the salt grains]'
     {*-m,*--module-dirs}'[Specify an additional directory to pull modules from.]:Module Dirs:_files -/'
     '--master[Specify the master to use.]:Master:'
@@ -80,7 +114,7 @@ _logging_options=(
 )
 
 _out_opts=(
-    '(--out --output)'{--out,--output}"[Print the output using the specified outputter.]:Outputters:_path_files -W '$salt_dir/output' -g '[^_]*.py(\:r)'"
+    '(--out --output)'{--out,--output}'[Print the output using the specified outputter.]:Outputters:_path_files -W "$salt_dir/output" -g "[^_]*.py(\:r)"'
     '(--out-indent --output-indent)'{--out-indent,--output-indent}'[Print the output indented by the provided value in spaces.]:Number:'
     '(--out-file --output-file)'{--out-file,--output-file}'[Write the output to the specified file]:Output File:_files'
     '(--no-color --no-colour)'{--no-color,--no-colour}'[Disable all colored output]'
@@ -91,7 +125,7 @@ _salt_comp(){
     case "$service" in
         salt)
             _arguments -C \
-                ':minions:_minions' \
+                "${words[(r)$_target_opt_pat[1]]+!}:minions:_minions" \
                 ':modules:_modules' \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
@@ -109,7 +143,7 @@ _salt_comp(){
             ;;
         salt-cp)
             _arguments -C \
-                ':minions:_minions' \
+                "${words[(r)$_target_opt_pat[1]]+!}:minions:_minions" \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
                 "$_logging_options[@]" \
@@ -117,6 +151,19 @@ _salt_comp(){
                 ':Destination File:_files'
             ;;
     esac
+}
+
+() {
+    local curcontext=${curcontext%:*}:salt_dir
+    zstyle -s ":completion:$curcontext:" cache-policy cachefn
+    if [[ -z $cachefn ]]; then
+        zstyle ":completion:${curcontext%:*}:salt_dir:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/salt_dir || ! _retrieve_cache salt/salt_dir; then
+        salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+        _store_cache salt/salt_dir salt_dir
+    fi
 }
 
 _salt_comp "$@"

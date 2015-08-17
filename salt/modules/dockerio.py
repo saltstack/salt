@@ -4,6 +4,11 @@ Management of Docker Containers
 
 .. versionadded:: 2014.1.0
 
+.. deprecated:: 2015.8.0
+    Future feature development will be done only in :mod:`docker-ng
+    <salt.modules.dockerng>`. See the documentation for this module for
+    information on the deprecation path.
+
 .. note::
 
     The DockerIO integration is still in beta; the API is subject to change
@@ -247,7 +252,7 @@ def _valid(m, id_=NOTSET, comment=VALID_RESPONSE, out=None):
     return _set_status(m, status=True, id_=id_, comment=comment, out=out)
 
 
-def _get_client(version=None, timeout=None):
+def _get_client(timeout=None):
     '''
     Get a connection to a docker API (socket or URL)
     based on config.get mechanism (pillar -> grains)
@@ -274,14 +279,16 @@ def _get_client(version=None, timeout=None):
         # only if defined by user.
         kwargs['timeout'] = timeout
 
+    if 'version' not in kwargs:
+        # Let docker-py auto detect docker version incase
+        # it's not defined by user.
+        kwargs['version'] = 'auto'
+
     if 'base_url' not in kwargs and 'DOCKER_HOST' in os.environ:
         # Check if the DOCKER_HOST environment variable has been set
         kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
     client = docker.Client(**kwargs)
-    if not version:
-        # set version that match docker daemon
-        client._version = client.version()['ApiVersion']
 
     # try to authenticate the client using credentials
     # found in pillars
@@ -399,29 +406,22 @@ def get_containers(all=True,
         status['host'] = {}
         status['host']['interfaces'] = __salt__['network.interfaces']()
 
-    containers = ret = client.containers(all=all,
-                                         trunc=trunc,
-                                         since=since,
-                                         before=before,
-                                         limit=limit)
+    containers = client.containers(all=all,
+                                   trunc=trunc,
+                                   since=since,
+                                   before=before,
+                                   limit=limit)
 
     # Optionally for each container get more granular information from them
     # by inspecting the container
     if inspect:
-        ret = []
         for container in containers:
             container_id = container.get('Id')
             if container_id:
                 inspect = _get_container_infos(container_id)
-                container['detail'] = {}
-                for key, value in six.iteritems(inspect):
-                    container['detail'][key] = value
-            ret.append(container)
+                container['detail'] = inspect.copy()
 
-    if ret:
-        _valid(status, comment='All containers in out', out=ret)
-    else:
-        _invalid(status)
+    _valid(status, comment='All containers in out', out=containers)
 
     return status
 
@@ -577,7 +577,8 @@ def create_container(image,
                      volumes_from=None,
                      name=None,
                      cpu_shares=None,
-                     cpuset=None):
+                     cpuset=None,
+                     binds=None):
     '''
     Create a new container
 
@@ -596,10 +597,26 @@ def create_container(image,
     ports
         port redirections ``({'222': {}})``
     volumes
-        list of volume mappings::
+        list of volume mappings in either local volume, bound volume, or read-only
+        bound volume form::
 
-            (['/mountpoint/in/container:/guest/foo', '/same/path/mounted/point'])
+            (['/var/lib/mysql/', '/usr/local/etc/ssl:/etc/ssl', '/etc/passwd:/etc/passwd:ro'])
+    binds
+        complete dictionary of bound volume mappings::
 
+            { '/usr/local/etc/ssl/certs/internal.crt': {
+                'bind': '/etc/ssl/certs/com.example.internal.crt',
+                'ro': True
+                },
+              '/var/lib/mysql': {
+                'bind': '/var/lib/mysql/',
+                'ro': False
+                }
+            }
+
+        This dictionary is suitable for feeding directly into the Docker API, and all
+        keys are required.
+        (see http://docker-py.readthedocs.org/en/latest/volumes/)
     tty
         attach ttys, Default is ``False``
     stdin_open
@@ -618,23 +635,31 @@ def create_container(image,
         salt '*' docker.create_container o/ubuntu volumes="['/s','/m:/f']"
 
     '''
+    log.trace("modules.dockerio.create_container() called for image " + image)
     status = base_status.copy()
     client = _get_client()
+
+    # In order to permit specification of bind volumes in the volumes field,
+    #  we'll look through it for bind-style specs and move them. This is purely
+    #  for CLI convenience and backwards-compatibility, as states.dockerio
+    #  should parse volumes before this, and the binds argument duplicates this.
+    # N.B. this duplicates code in states.dockerio._parse_volumes()
+    if isinstance(volumes, list):
+        for volume in volumes:
+            if ':' in volume:
+                volspec = volume.split(':')
+                source = volspec[0]
+                target = volspec[1]
+                ro = False
+                try:
+                    if len(volspec) > 2:
+                        ro = volspec[2] == "ro"
+                except IndexError:
+                    pass
+                binds[source] = {'bind': target, 'ro': ro}
+                volumes.remove(volume)
+
     try:
-        mountpoints = {}
-        binds = {}
-        # create empty mountpoints for them to be
-        # editable
-        # either we have a list of guest or host:guest
-        if isinstance(volumes, list):
-            for mountpoint in volumes:
-                mounted = mountpoint
-                if ':' in mountpoint:
-                    parts = mountpoint.split(':')
-                    mountpoint = parts[1]
-                    mounted = parts[0]
-                mountpoints[mountpoint] = {}
-                binds[mounted] = mountpoint
         container_info = client.create_container(
             image=image,
             command=command,
@@ -647,12 +672,14 @@ def create_container(image,
             ports=ports,
             environment=environment,
             dns=dns,
-            volumes=mountpoints,
+            volumes=volumes,
             volumes_from=volumes_from,
             name=name,
             cpu_shares=cpu_shares,
-            cpuset=cpuset
+            cpuset=cpuset,
+            host_config=docker.utils.create_host_config(binds=binds)
         )
+        log.trace("docker.client.create_container returned: " + str(container_info))
         container = container_info['Id']
         callback = _valid
         comment = 'Container created'
@@ -660,11 +687,12 @@ def create_container(image,
             'info': _get_container_infos(container),
             'out': container_info
         }
-        __salt__['mine.send']('docker.get_containers', host=True)
+        __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
         return callback(status, id_=container, comment=comment, out=out)
-    except Exception:
+    except Exception as e:
         _invalid(status, id_=image, out=traceback.format_exc())
-    __salt__['mine.send']('docker.get_containers', host=True)
+        raise e
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -778,16 +806,20 @@ def stop(container, timeout=10):
                  comment=(
                      'An exception occurred while stopping '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
-def kill(container):
+def kill(container, signal=None):
     '''
     Kill a running container
 
     container
         container id
+    signal
+        signal to send
+
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -800,16 +832,23 @@ def kill(container):
     try:
         dcontainer = _get_container_infos(container)['Id']
         if is_running(dcontainer):
-            client.kill(dcontainer)
-            if not is_running(dcontainer):
+            client.kill(dcontainer, signal=signal)
+            if signal:
+                # no need to check if container is running
+                # because some signals might not stop the container.
                 _valid(status,
-                       comment='Container {0} was killed'.format(
-                           container),
+                       comment='Kill signal {0!r} successfully'
+                       ' sent to the container {1!r}'.format(signal, container),
                        id_=container)
             else:
-                _invalid(status,
-                         comment='Container {0} was not killed'.format(
-                             container))
+                if not is_running(dcontainer):
+                    _valid(status,
+                           comment='Container {0} was killed'.format(container),
+                           id_=container)
+                else:
+                    _invalid(status,
+                             comment='Container {0} was not killed'.format(
+                                 container))
         else:
             _valid(status,
                    comment='Container {0} was already stopped'.format(
@@ -822,7 +861,7 @@ def kill(container):
                  comment=(
                      'An exception occurred while killing '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -858,7 +897,7 @@ def restart(container, timeout=10):
                  comment=(
                      'An exception occurred while restarting '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -887,11 +926,9 @@ def start(container,
 
         salt '*' docker.start <container id>
     '''
-    if not binds:
-        binds = {}
-
-    if not isinstance(binds, dict):
-        raise SaltInvocationError('binds must be formatted as a dictionary')
+    if binds:
+        if not isinstance(binds, dict):
+            raise SaltInvocationError('binds must be formatted as a dictionary')
 
     client = _get_client()
     status = base_status.copy()
@@ -940,7 +977,7 @@ def start(container,
                  comment=(
                      'An exception occurred while starting '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -978,7 +1015,7 @@ def wait(container):
                  comment=(
                      'An exception occurred while waiting '
                      'your container {0}').format(container))
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -1038,7 +1075,7 @@ def remove_container(container, force=False, v=False):
         remove a running container, Default is ``False``
 
     v
-        verbose mode, Default is ``False``
+        remove the volumes associated to the container, Default is ``False``
 
     CLI Example:
 
@@ -1058,7 +1095,7 @@ def remove_container(container, force=False, v=False):
                          comment=(
                              'Container {0} is running, '
                              'won\'t remove it').format(container))
-                __salt__['mine.send']('docker.get_containers', host=True)
+                __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
                 return status
             else:
                 kill(dcontainer)
@@ -1072,7 +1109,7 @@ def remove_container(container, force=False, v=False):
             status['comment'] = 'Container {0} was removed'.format(container)
     except Exception:
         _invalid(status, id_=container, out=traceback.format_exc())
-    __salt__['mine.send']('docker.get_containers', host=True)
+    __salt__['mine.send']('dockerng.ps', verbose=True, all=True, host=True)
     return status
 
 
@@ -1719,7 +1756,7 @@ def push(repo, tag=None, quiet=False, insecure_registry=False):
                                        oper='>=',
                                        ver2='0.5.0'):
             kwargs['insecure_registry'] = insecure_registry
-        ret = client.pull(repo, **kwargs)
+        ret = client.push(repo, **kwargs)
         if ret:
             image_logs, infos = _parse_image_multilogs_string(ret)
             if image_logs:
@@ -1781,14 +1818,22 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     container_id = container_info['Id']
     if driver.startswith('lxc-'):
         full_cmd = 'lxc-attach -n {0} -- {1}'.format(container_id, cmd)
-    elif driver.startswith('native-') and HAS_NSENTER:
-        # http://jpetazzo.github.io/2014/03/23/lxc-attach-nsinit-nsenter-docker-0-9/
-        container_pid = container_info['State']['Pid']
-        if container_pid == 0:
-            _invalid(status, id_=container, comment='Container is not running')
-            return status
-        full_cmd = ('nsenter --target {pid} --mount --uts --ipc --net --pid'
-                    ' -- {cmd}'.format(pid=container_pid, cmd=cmd))
+    elif driver.startswith('native-'):
+        if HAS_NSENTER:
+            # http://jpetazzo.github.io/2014/03/23/lxc-attach-nsinit-nsenter-docker-0-9/
+            container_pid = container_info['State']['Pid']
+            if container_pid == 0:
+                _invalid(status, id_=container,
+                         comment='Container is not running')
+                return status
+            full_cmd = (
+                'nsenter --target {pid} --mount --uts --ipc --net --pid'
+                ' -- {cmd}'.format(pid=container_pid, cmd=cmd)
+            )
+        else:
+            raise CommandExecutionError(
+                'nsenter is not installed on the minion, cannot run command'
+            )
     else:
         raise NotImplementedError(
             'Unknown docker ExecutionDriver {0!r}. Or didn\'t find command'
@@ -1813,7 +1858,8 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
 
 def load(imagepath):
     '''
-    Load the specified file at imagepath into docker that was generated from a docker save command
+    Load the specified file at imagepath into docker that was generated from
+    a docker save command
     e.g. `docker load < imagepath`
 
     imagepath
@@ -1829,7 +1875,8 @@ def load(imagepath):
     status = base_status.copy()
     if os.path.isfile(imagepath):
         try:
-            ret = __salt__['cmd.run']('docker load < ' + imagepath)
+            dockercmd = ['docker', 'load', '-i', imagepath]
+            ret = __salt__['cmd.run'](dockercmd, python_shell=False)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
@@ -1852,6 +1899,8 @@ def load(imagepath):
 
 def save(image, filename):
     '''
+    .. versionadded:: 2015.5.0
+
     Save the specified image to filename from docker
     e.g. `docker save image > filename`
 
@@ -1879,7 +1928,8 @@ def save(image, filename):
 
     if ok:
         try:
-            ret = __salt__['cmd.run']('docker save ' + image + ' > ' + filename)
+            dockercmd = ['docker', 'save', '-o', filename, image]
+            ret = __salt__['cmd.run'](dockercmd)
             if ((isinstance(ret, dict) and
                 ('retcode' in ret) and
                 (ret['retcode'] != 0))):
@@ -2065,7 +2115,7 @@ def get_container_root(container):
         'containers',
         _get_container_infos(container)['Id'],
     )
-    default_rootfs = os.path.join(default_path, 'roofs')
+    default_rootfs = os.path.join(default_path, 'rootfs')
     rootfs_re = re.compile(r'^lxc.rootfs\s*=\s*(.*)\s*$', re.U)
     try:
         lxcconfig = os.path.join(default_path, 'config.lxc')

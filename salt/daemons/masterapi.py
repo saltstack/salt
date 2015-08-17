@@ -12,12 +12,6 @@ import os
 import re
 import time
 import stat
-try:
-    import pwd
-except ImportError:
-    # In case a non-master needs to import this module
-    pass
-
 import tempfile
 
 # Import salt libs
@@ -47,6 +41,13 @@ from salt.exceptions import SaltMasterError
 # Import 3rd-party libs
 import salt.ext.six as six
 
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
+
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
@@ -57,31 +58,41 @@ def init_git_pillar(opts):
     '''
     Clear out the ext pillar caches, used when the master starts
     '''
-    pillargitfs = []
+    ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            try:
-                import git
-            except ImportError:
-                return pillargitfs
-            parts = opts_dict['git'].strip().split()
-            try:
-                br = parts[0]
-                loc = parts[1]
-            except IndexError:
-                log.critical(
-                    'Unable to extract external pillar data: {0}'
-                    .format(opts_dict['git'])
-                )
-            else:
-                pillargitfs.append(
-                    git_pillar.GitPillar(
-                        br,
-                        loc,
-                        opts
+            if isinstance(opts_dict['git'], six.string_types):
+                # Legacy git pillar code
+                try:
+                    import git
+                except ImportError:
+                    return ret
+                parts = opts_dict['git'].strip().split()
+                try:
+                    br = parts[0]
+                    loc = parts[1]
+                except IndexError:
+                    log.critical(
+                        'Unable to extract external pillar data: {0}'
+                        .format(opts_dict['git'])
                     )
+                else:
+                    ret.append(
+                        git_pillar.LegacyGitPillar(
+                            br,
+                            loc,
+                            opts
+                        )
+                    )
+            else:
+                # New git_pillar code
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_PARAMS
                 )
-    return pillargitfs
+                ret.append(pillar)
+    return ret
 
 
 def clean_fsbackend(opts):
@@ -187,8 +198,9 @@ def access_keys(opts):
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
-    for user in pwd.getpwall():
-        users.append(user.pw_name)
+    if HAS_PWD:
+        for user in pwd.getpwall():
+            users.append(user.pw_name)
     for user in acl_users:
         log.info(
             'Preparing the {0} key for local communication'.format(
@@ -196,12 +208,13 @@ def access_keys(opts):
             )
         )
 
-        if user not in users:
-            try:
-                user = pwd.getpwnam(user).pw_name
-            except KeyError:
-                log.error('ACL user {0} is not available'.format(user))
-                continue
+        if HAS_PWD:
+            if user not in users:
+                try:
+                    user = pwd.getpwnam(user).pw_name
+                except KeyError:
+                    log.error('ACL user {0} is not available'.format(user))
+                    continue
         keyfile = os.path.join(
             opts['cachedir'], '.{0}_key'.format(user)
         )
@@ -215,13 +228,17 @@ def access_keys(opts):
         with salt.utils.fopen(keyfile, 'w+') as fp_:
             fp_.write(key)
         os.umask(cumask)
-        os.chmod(keyfile, 256)
-        try:
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-        except OSError:
-            # The master is not being run as root and can therefore not
-            # chown the key file
-            pass
+        # 600 octal: Read and write access to the owner only.
+        # Write access is necessary since on subsequent runs, if the file
+        # exists, it needs to be written to again. Windows enforces this.
+        os.chmod(keyfile, 0o600)
+        if HAS_PWD:
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
         keys[user] = key
     return keys
 
@@ -233,8 +250,10 @@ def fileserver_update(fileserver):
     '''
     try:
         if not fileserver.servers:
-            log.error('No fileservers loaded, the master will not be'
-                      'able to serve files to minions')
+            log.error(
+                'No fileservers loaded, the master will not be able to '
+                'serve files to minions'
+            )
             raise SaltMasterError('No fileserver backends available')
         fileserver.update()
     except Exception as exc:
@@ -456,11 +475,14 @@ class RemoteFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
+        mopts['env_order'] = self.opts['env_order']
+        mopts['top_file_merging_strategy'] = self.opts['top_file_merging_strategy']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']
         mopts['failhard'] = self.opts['failhard']
         mopts['state_top'] = self.opts['state_top']
+        mopts['state_top_saltenv'] = self.opts['state_top_saltenv']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
@@ -700,7 +722,8 @@ class RemoteFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
-            os.rename(tmpfname, datap)
+            # On Windows, os.rename will fail if the destination file exists.
+            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
         return data
 
     def _minion_event(self, load):
@@ -716,7 +739,10 @@ class RemoteFuncs(object):
             for event in load['events']:
                 self.event.fire_event(event, event['tag'])  # old dup event
                 if load.get('pretag') is not None:
-                    self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
+                    if 'data' in event:
+                        self.event.fire_event(event['data'], tagify(event['tag'], base=load['pretag']))
+                    else:
+                        self.event.fire_event(event, tagify(event['tag'], base=load['pretag']))
         else:
             tag = load['tag']
             self.event.fire_event(load, tag)
@@ -726,6 +752,8 @@ class RemoteFuncs(object):
         '''
         Handle the return data sent from the minions
         '''
+        # Generate EndTime
+        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
@@ -743,6 +771,11 @@ class RemoteFuncs(object):
         self.event.fire_ret_load(load)
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
+
+        fstr = '{0}.update_endtime'.format(self.opts['master_job_cache'])
+        if (self.opts.get('job_cache_store_endtime')
+                and fstr in self.mminion.returners):
+            self.mminion.returners[fstr](load['jid'], endtime)
 
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
         self.mminion.returners[fstr](load)

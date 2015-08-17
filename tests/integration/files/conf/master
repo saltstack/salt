@@ -37,6 +37,10 @@ external_auth:
       - '@wheel'
       - '@runner'
       - test.*
+    saltops%:
+      - '@wheel'
+      - '@runner'
+      - 'test.*'
   auto:
     saltdev_auto:
       - '@wheel'
@@ -54,3 +58,15 @@ external_auth:
 
 master_tops:
   master_tops_test: True
+
+nodegroups:
+  min: minion
+  sub_min: sub_minion
+  mins: N@min or N@sub_min
+  multiline_nodegroup:
+    - 'minion'
+    - 'or'
+    - 'sub_minion'
+  redundant_minions: N@min or N@mins
+  nodegroup_loop_a: N@nodegroup_loop_b
+  nodegroup_loop_b: N@nodegroup_loop_a

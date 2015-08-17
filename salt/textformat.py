@@ -163,10 +163,9 @@ class TextFormat(object):
             self.codes.extend((codes['extended'], '2'))
             self.codes.extend(*qualify_triple_int(kwargs['bg_rgb']))
 
-        self.sequence = '{p}{c}{s}'.format(
-                p=graph_prefix,
-                c=';'.join(self.codes),
-                s=graph_suffix)
+        self.sequence = '%s%s%s' % (graph_prefix,  # pylint: disable=E1321
+                                    ';'.join(self.codes),
+                                    graph_suffix)
 
     def __call__(self, text, reset=True):
         '''
@@ -181,7 +180,7 @@ class TextFormat(object):
             'The answer is: {0}'.format(green_blink_text(42))
         '''
         end = TextFormat('reset') if reset else ''
-        return '{s}{t}{e}'.format(s=self.sequence, t=text, e=end)
+        return '%s%s%s' % (self.sequence, text, end)  # pylint: disable=E1321
 
     def __str__(self):
         return self.sequence

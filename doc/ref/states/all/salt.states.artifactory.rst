@@ -1,6 +1,6 @@
-========================
-salt.states.jboss7
-========================
+=======================
+salt.states.artifactory
+=======================
 
 .. automodule:: salt.states.artifactory
     :members:

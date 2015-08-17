@@ -1,0 +1,234 @@
+==============================================
+Salt 2015.5.0 Release Notes - Codename Lithium
+==============================================
+
+The 2015.5.0 feature release of Salt is focused on hardening Salt and mostly
+on improving existing systems. A few major additions are present, primarily
+the new Beacon system. Most enhancements have been focused around improving
+existing features and interfaces.
+
+As usual the release notes are not exhaustive and primarily include the most
+notable additions and improvements. Hundreds of bugs have been fixed and many
+modules have been substantially updated and added.
+
+.. warning::
+
+    In order to fix potential shell injection vulnerabilities in salt modules,
+    a change has been made to the various ``cmd`` module functions. These
+    functions now default to ``python_shell=False``, which means that the
+    commands will not be sent to an actual shell.
+
+    The largest side effect of this change is that "shellisms", such as pipes,
+    will not work by default. The modules shipped with salt have been audited
+    to fix any issues that might have arisen from this change.  Additionally,
+    the ``cmd`` state module has been unaffected, and use of ``cmd.run`` in
+    jinja is also unaffected. ``cmd.run`` calls on the CLI will also allow
+    shellisms.
+
+    However, custom execution modules which use shellisms in ``cmd`` calls
+    will break, unless you pass ``python_shell=True`` to these calls.
+
+    As a temporary workaround, you can set ``cmd_safe: False`` in your minion
+    and master configs. This will revert the default, but is also less secure,
+    as it will allow shell injection vulnerabilities to be written in custom
+    code. We recommend you only set this setting for as long as it takes to
+    resolve these issues in your custom code, then remove the override.
+
+
+.. note::
+
+    Starting in this version of salt, ``pillar_opts`` defaults to False instead
+    of True. This means that master opts will not be present in minion pillar,
+    and as a result, ``config.get`` calls will not include master opts.
+
+    We recommend pillar is used for configuration options which need to make it
+    to the minion.
+
+
+Beacons
+=======
+
+The beacon system allows the minion to hook into system processes and
+continually translate external events into the salt event bus. The primary
+example of this is the :py:mod:`~salt.beacons.inotify` beacon. This beacon uses
+inotify to watch configured files or directories on the minion for changes,
+creation, deletion etc.
+
+This allows for the changes to be sent up to the master where the reactor can
+respond to changes.
+
+Sudo Minion Settings
+====================
+
+It is now possible to run the minion as a non-root user and for the minion to
+execute commands via sudo. Simply add `sudo_user: root` to the minion config,
+run the minion as a non-root user and grant that user sudo rights to execute
+salt-call.
+
+Lazy Loader
+===========
+
+The Lazy Loader is a significant overhaul of Salt's module loader system. The
+Lazy Loader will lazily load modules on access instead of all on start. In
+addition to a major performance improvement, this "sandboxes" modules so a
+bad/broken import of a single module will only affect jobs that require
+accessing the broken module. (:issue: `20274`)
+
+Enhanced Active Directory Support
+=================================
+
+The eauth system for LDAP has been extended to support Microsoft Active
+Directory out of the box. This includes Active Directory and LDAP group support
+for eauth.
+
+Salt LXC Enhancements
+=====================
+
+The LXC systems have been overhauled to be more consistent and to fix many
+bugs.
+
+This overhaul makes using LXC with Salt much easier and substantially improves
+the underlying capabilities of Salt's LXC integration.
+
+Salt SSH
+========
+
+- Additional configuration options and command line flags have been added to
+  configure the scan roster on the fly
+
+- Added support for ``state.single`` in ``salt-ssh``
+
+- Added support for ``publish.publish``, ``publish.full_data``, and
+  ``publish.runner`` in ``salt-ssh``
+
+- Added support for ``mine.get`` in ``salt-ssh``
+
+New Windows Installer
+=====================
+
+The new Windows installer changes how Salt is installed on Windows.
+The old installer used bbfreeze to create an isolated python environment to
+execute in. This made adding modules and python libraries difficult. The new
+installer sets up a more flexible python environment making it easy to manage
+the python install and add python modules.
+
+Instead of frozen packages, a full python implementation resides in the bin
+directory (``C:\salt\bin``). By executing pip or easy_install from within the
+Scripts directory (``C:\salt\bin\Scripts``) you can install any additional
+python modules you may need for your custom environment.
+
+The .exe's that once resided at the root of the salt directory (``C:\salt``)
+have been replaced by .bat files and should function the same way as the .exe's
+in previous versions.
+
+The new Windows Installer will not replace the minion config file and key if
+they already exist on the target system. Only the salt program files will be
+replaced. ``C:\salt\conf`` and ``C:\salt\var`` will remain unchanged.
+
+Removed Requests Dependency
+===========================
+
+The hard dependency on the requests library has been removed. Requests is still
+required by a number of cloud modules but is no longer required for normal Salt
+operations.
+
+This removal fixes issues that were introduced with requests and salt-ssh, as
+well as issues users experienced from the many different packaging methods used
+by requests package maintainers.
+
+Python 3 Updates
+================
+
+While Salt does not YET run on Python 3 it has been updated to INSTALL on
+Python 3, taking us one step closer. What remains is getting the test suite to
+the point where it can run on Python 3 so that we can verify compatibility.
+
+RAET Additions
+==============
+
+The RAET support continues to improve. RAET now supports multi-master and many
+bugs and performance issues have been fixed. RAET is much closer to being a
+first class citizen.
+
+Modified File Detection
+=======================
+
+A number of functions have been added to the RPM-based package managers to
+detect and diff files that are modified from the original package installs.
+This can be found in the new pkg.modified functions.
+
+Reactor Update
+==============
+
+Fix an infinite recursion problem for runner/wheel reactor jobs by passing a
+"user" (Reactor) to all jobs that the reactor starts. The reactor skips all
+events created by that username -- thereby only reacting to events not caused
+by itself. Because of this, runner and wheel executions from the runner will
+have user "Reactor" in the job cache.
+
+Misc Fixes/Additions
+====================
+
+- SDB driver for etcd. (:issue: `22043`)
+
+- Add ``only_upgrade`` argument to apt-based ``pkg.install`` to only install a
+  package version if the package is already installed. (Great for security
+  updates!)
+
+- Joyent now requires a ``keyname`` to be specified in the provider
+  configuration. This change was necessitated upstream by the 7.0+ API.
+
+- Add ``args`` argument to ``cmd.script_retcode`` to match ``cmd.script`` in
+  the :py:mod:`cmd module <salt.cmd.cmdmod>`. (:issue: `21122`)
+
+- Fixed bug where TCP keepalive was not being sent on the defined interval on
+  the return port (4506) from minion to master. (:issue: `21465`)
+
+- LocalClient may now optionally raise SaltClientError exceptions. If using
+  this class directly, checking for and handling this exception is recommended.
+  (:issue: `21501`)
+
+- The SAuth object is now a singleton, meaning authentication state is global
+  (per master) on each minion. This reduces sign-ins of minions from 3->1 per
+  startup.
+
+- Nested outputter has been optimized, it is now much faster.
+
+- Extensive fileserver backend updates.
+
+Deprecations
+============
+
+- Removed ``parameter`` keyword argument from ``eselect.exec_action`` execution
+  module.
+
+- Removed ``runas`` parameter from the following ``pip``` execution module
+  functions: ``install``, ``uninstall``, ``freeze``, ``list_``,
+  ``list_upgrades``, ``upgrade_available``, ``upgrade``. Please migrate to
+  ``user``.
+
+- Removed ``runas`` parameter from the following ``pip`` state module
+  functions: ``installed``, ``removed``, ``uptodate`` . Please migrate to
+  ``user``.
+
+- Removed ``quiet`` option from all functions in ``cmdmod`` execution module.
+  Please use ``output_loglevel=quiet`` instead.
+
+- Removed ``parameter`` argument from ``eselect.set_`` state. Please migrate to
+  ``module_parameter`` or ``action_parameter``.
+
+- The ``salt_events`` table schema has changed to include an additional field
+  called ``master_id`` to distinguish between events flowing into a database
+  from multiple masters. If ``event_return`` is enabled in the master config,
+  the database schema must first be updated to add the ``master_id`` field.
+  This alteration can be accomplished as follows:
+
+    ``ALTER TABLE salt_events ADD master_id VARCHAR(255) NOT NULL;``
+
+Known Issues
+============
+
+- In multi-master mode, a minion may become temporarily unresponsive if modules
+  or pillars are refreshed at the same time that one or more masters are down.
+  This can be worked around by setting 'auth_timeout' and 'auth_tries' down to
+  shorter periods.

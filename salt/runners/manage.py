@@ -25,6 +25,7 @@ import salt.utils.minions
 import salt.wheel
 import salt.version
 from salt.utils.event import tagify
+from salt.exceptions import SaltClientError
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 
@@ -39,13 +40,17 @@ def status(output=True):
 
         salt-run manage.status
     '''
+    ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
-    minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
+    try:
+        minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print(client_error)
+        return ret
 
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
 
-    ret = {}
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     return ret
@@ -77,7 +82,11 @@ def key_regen():
         salt-run manage.key_regen
     '''
     client = salt.client.get_local_client(__opts__['conf_file'])
-    client.cmd('*', 'saltutil.regen_keys')
+    try:
+        client.cmd('*', 'saltutil.regen_keys')
+    except SaltClientError as client_error:
+        print(client_error)
+        return False
 
     for root, _, files in os.walk(__opts__['pki_dir']):
         for fn_ in files:
@@ -135,6 +144,8 @@ def up():  # pylint: disable=C0103
 
 def list_state(subset=None, show_ipv4=False, state=None):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -179,6 +190,8 @@ def list_state(subset=None, show_ipv4=False, state=None):
 
 def list_not_state(subset=None, show_ipv4=False, state=None):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -240,6 +253,8 @@ def present(subset=None, show_ipv4=False):
 
 def not_present(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.5.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -260,6 +275,8 @@ def not_present(subset=None, show_ipv4=False):
 
 def joined(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -280,6 +297,8 @@ def joined(subset=None, show_ipv4=False):
 
 def not_joined(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -300,6 +319,8 @@ def not_joined(subset=None, show_ipv4=False):
 
 def allowed(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -320,6 +341,8 @@ def allowed(subset=None, show_ipv4=False):
 
 def not_allowed(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -340,6 +363,8 @@ def not_allowed(subset=None, show_ipv4=False):
 
 def alived(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -360,6 +385,8 @@ def alived(subset=None, show_ipv4=False):
 
 def not_alived(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -380,6 +407,8 @@ def not_alived(subset=None, show_ipv4=False):
 
 def reaped(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are up according to Salt's presence
     detection (no commands will be sent to minions)
 
@@ -400,6 +429,8 @@ def reaped(subset=None, show_ipv4=False):
 
 def not_reaped(subset=None, show_ipv4=False):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are NOT up according to Salt's presence
     detection (no commands will be sent)
 
@@ -542,8 +573,13 @@ def versions():
 
         salt-run manage.versions
     '''
+    ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
-    minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
+    try:
+        minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
+    except SaltClientError as client_error:
+        print(client_error)
+        return ret
 
     labels = {
         -1: 'Minion requires update',
@@ -567,7 +603,6 @@ def versions():
     # Add version of Master to output
     version_status[2] = master_version.string
 
-    ret = {}
     for key in version_status:
         if key == 2:
             ret[labels[key]] = version_status[2]

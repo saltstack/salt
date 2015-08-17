@@ -57,18 +57,20 @@ def present(name, persist=False):
         ret['comment'] = 'Kernel module {0} is unavailable'.format(name)
         ret['result'] = False
         return ret
-    for mod in __salt__['kmod.load'](name, persist):
-        if not mod:
-            # It's compiled into the kernel
-            ret['comment'] = 'Kernel module {0} is compiled in'.format(name)
+
+    load_result = __salt__['kmod.load'](name, persist)
+    if isinstance(load_result, list):
+        if len(load_result) > 0:
+            for mod in load_result:
+                ret['changes'][mod] = 'loaded'
+            ret['comment'] = 'Loaded kernel module {0}'.format(name)
             return ret
         else:
-            ret['changes'][mod] = 'loaded'
-    if not ret['changes']:
+            ret['result'] = False
+            ret['comment'] = 'Failed to load kernel module {0}'.format(name)
+    else:
         ret['result'] = False
-        ret['comment'] = 'Failed to load kernel module {0}'.format(name)
-        return ret
-    ret['comment'] = 'Loaded kernel module {0}'.format(name)
+        ret['comment'] = load_result
     return ret
 
 

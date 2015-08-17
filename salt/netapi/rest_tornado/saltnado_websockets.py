@@ -305,11 +305,11 @@ import logging
 logger = logging.getLogger()
 
 
-class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W0232
+class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W0223,W0232
     '''
     Server side websocket handler.
     '''
-    def open(self, token):
+    def open(self, token):  # pylint: disable=W0221
         '''
         Return a websocket connection to Salt
         representing Salt's "real time" event stream.
@@ -363,7 +363,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
         self.close()
 
 
-class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0232
+class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
 
     @tornado.gen.coroutine
     def on_message(self, message):

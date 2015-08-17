@@ -330,6 +330,9 @@ def append(name, table='filter', family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -346,6 +349,7 @@ def append(name, table='filter', family='ipv4', **kwargs):
             if '__agg__' in rule:
                 del rule['__agg__']
             if 'save' in rule and rule['save']:
+                save = True
                 if rule['save'] is not True:
                     save_file = rule['save']
                 else:
@@ -397,9 +401,9 @@ def append(name, table='filter', family='ipv4', **kwargs):
                     __saved_rules.append(saved_rules[table][chain].get('rules'))
             # Only save if rules in memory are different than saved rules
             if __rules != __saved_rules:
-                __salt__['iptables.save'](filename, family=family)
-                ret['comment'] += ('\nSaved iptables rule for {0} to: '
-                                   '{1} for {2}'.format(name, command.strip(), family))
+                out = __salt__['iptables.save'](filename, family=family)
+                ret['comment'] += ('\nSaved iptables rule {0} for {1}\n'
+                                   '{2}\n{3}').format(name, family, command.strip(), out)
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set ({1}) for {2}'.format(
@@ -420,9 +424,9 @@ def append(name, table='filter', family='ipv4', **kwargs):
                     filename = kwargs['save']
                 else:
                     filename = None
-                __salt__['iptables.save'](filename, family=family)
-                ret['comment'] = ('Set and Saved iptables rule for {0} to: '
-                                  '{1} for {2}'.format(name, command.strip(), family))
+                out = __salt__['iptables.save'](filename, family=family)
+                ret['comment'] = ('Set and saved iptables rule {0} for {1}\n'
+                                  '{2}\n{3}').format(name, family, command.strip(), out)
         return ret
     else:
         ret['result'] = False
@@ -453,6 +457,9 @@ def insert(name, table='filter', family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -469,6 +476,7 @@ def insert(name, table='filter', family='ipv4', **kwargs):
             if '__agg__' in rule:
                 del rule['__agg__']
             if 'save' in rule and rule['save']:
+                save = True
                 if rule['save'] is not True:
                     save_file = rule['save']
                 else:
@@ -520,9 +528,9 @@ def insert(name, table='filter', family='ipv4', **kwargs):
                     __saved_rules.append(saved_rules[table][chain].get('rules'))
             # Only save if rules in memory are different than saved rules
             if __rules != __saved_rules:
-                __salt__['iptables.save'](filename, family=family)
-                ret['comment'] += ('\nSaved iptables rule for {0} to: '
-                                   '{1} for {2}').format(name, command.strip(), family)
+                out = __salt__['iptables.save'](filename, family=family)
+                ret['comment'] += ('\nSaved iptables rule {0} for {1}\n'
+                                   '{2}\n{3}').format(name, family, command.strip(), out)
         return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be set for {1} ({2})'.format(
@@ -539,9 +547,9 @@ def insert(name, table='filter', family='ipv4', **kwargs):
             family)
         if 'save' in kwargs:
             if kwargs['save']:
-                __salt__['iptables.save'](filename=None, family=family)
-                ret['comment'] = ('Set and Saved iptables rule for {0} to: '
-                                  '{1} for {2}').format(name, command.strip(), family)
+                out = __salt__['iptables.save'](filename=None, family=family)
+                ret['comment'] = ('Set and saved iptables rule {0} for {1}\n'
+                                  '{2}\n{3}').format(name, family, command.strip(), out)
         return ret
     else:
         ret['result'] = False
@@ -572,6 +580,9 @@ def delete(name, table='filter', family='ipv4', **kwargs):
     that would normally be used for iptables, with one exception: ``--state`` is
     specified as `connstate` instead of `state` (not to be confused with
     `ctstate`).
+
+    Jump options that doesn't take arguments should be passed in with an empty
+    string.
     '''
     ret = {'name': name,
            'changes': {},
@@ -613,16 +624,18 @@ def delete(name, table='filter', family='ipv4', **kwargs):
     kwargs['name'] = name
     rule = __salt__['iptables.build_rule'](family=family, **kwargs)
     command = __salt__['iptables.build_rule'](full=True, family=family, command='D', **kwargs)
+
     if not __salt__['iptables.check'](table,
                                       kwargs['chain'],
                                       rule,
                                       family) is True:
-        ret['result'] = True
-        ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
-            name,
-            family,
-            command.strip())
-        return ret
+        if 'position' not in kwargs:
+            ret['result'] = True
+            ret['comment'] = 'iptables rule for {0} already absent for {1} ({2})'.format(
+                name,
+                family,
+                command.strip())
+            return ret
     if __opts__['test']:
         ret['comment'] = 'iptables rule for {0} needs to be deleted for {1} ({2})'.format(
             name,
@@ -651,9 +664,9 @@ def delete(name, table='filter', family='ipv4', **kwargs):
             command.strip())
         if 'save' in kwargs:
             if kwargs['save']:
-                __salt__['iptables.save'](filename=None, family=family)
-                ret['comment'] = ('Deleted and Saved iptables rule for {0} for {1}'
-                                  '{2}'.format(name, command.strip(), family))
+                out = __salt__['iptables.save'](filename=None, family=family)
+                ret['comment'] = ('Deleted and saved iptables rule {0} for {1}\n'
+                                  '{2}\n{3}').format(name, family, command.strip(), out)
         return ret
     else:
         ret['result'] = False
@@ -720,7 +733,7 @@ def set_policy(name, table='filter', family='ipv4', **kwargs):
         if 'save' in kwargs:
             if kwargs['save']:
                 __salt__['iptables.save'](filename=None, family=family)
-                ret['comment'] = 'Set and Saved default policy for {0} to {1} family {2}'.format(
+                ret['comment'] = 'Set and saved default policy for {0} to {1} family {2}'.format(
                     kwargs['chain'],
                     kwargs['policy'],
                     family

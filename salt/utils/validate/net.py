@@ -10,6 +10,11 @@ import socket
 
 # Import salt libs
 from salt.ext.six import string_types
+import salt.utils
+
+# Import third party libs
+if salt.utils.is_windows():
+    from salt.ext import win_inet_pton  # pylint: disable=unused-import
 
 
 def mac(addr):

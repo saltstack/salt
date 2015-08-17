@@ -278,6 +278,31 @@ class PipStateTest(TestCase, integration.SaltReturnAssertsMixIn):
         if hasattr(pip, '__version__'):
             pip.__version__ = original_pip_version
 
+    def test_install_in_editable_mode(self):
+        '''
+        Check that `name` parameter containing bad characters is not parsed by
+        pip when package is being installed in editable mode.
+        For more information, see issue #21890.
+        '''
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        pip_list = MagicMock(return_value={})
+        pip_install = MagicMock(return_value={
+            'retcode': 0,
+            'stderr': '',
+            'stdout': 'Cloned!'
+        })
+        with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
+                                             'pip.list': pip_list,
+                                             'pip.install': pip_install}):
+            ret = pip_state.installed('state@name',
+                                      cwd='/path/to/project',
+                                      editable=['.'])
+            self.assertSaltTrueReturn({'test': ret})
+            self.assertInSaltComment(
+                'successfully installed',
+                {'test': ret}
+            )
+
 
 if __name__ == '__main__':
     from integration import run_tests

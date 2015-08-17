@@ -6,6 +6,8 @@ import os
 import sys
 
 # Import Salt libs
+import salt.utils.job
+from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
 from salt.exceptions import (
         SaltClientError,
@@ -46,7 +48,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             self.exit(2, '{0}\n'.format(exc))
             return
 
-        if self.options.batch:
+        if self.options.batch or self.options.static:
             import salt.cli.batch
             eauth = {}
             if 'token' in self.config:
@@ -65,13 +67,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if tok:
                         eauth['token'] = tok.get('token', '')
                 if not res:
+                    sys.stderr.write('ERROR: Authentication failed\n')
                     sys.exit(2)
                 eauth.update(res)
                 eauth['eauth'] = self.options.eauth
 
             if self.options.static:
 
-                batch = salt.cli.batch.Batch(self.config, quiet=True)
+                if not self.options.batch:
+                    self.config['batch'] = '100%'
+
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
 
                 ret = {}
 
@@ -81,10 +87,15 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 self._output_ret(ret, '')
 
             else:
-                batch = salt.cli.batch.Batch(self.config)
+                batch = salt.cli.batch.Batch(self.config, eauth=eauth)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
-                    pass
+                    if self.options.failhard:
+                        for ret in six.itervalues(res):
+                            retcode = salt.utils.job.get_retcode(ret)
+                            if retcode != 0:
+                                sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
+                                sys.exit(retcode)
 
         else:
             if self.options.timeout <= 0:
@@ -134,6 +145,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     if tok:
                         kwargs['token'] = tok.get('token', '')
                 if not res:
+                    sys.stderr.write('ERROR: Authentication failed\n')
                     sys.exit(2)
                 kwargs.update(res)
                 kwargs['eauth'] = self.options.eauth
@@ -153,19 +165,17 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         kwargs['cli'] = True
                     else:
                         cmd_func = local.cmd_cli
-                    if self.options.static:
-                        if self.options.verbose:
-                            kwargs['verbose'] = True
-                        full_ret = local.cmd_full_return(**kwargs)
-                        ret, out, retcode = self._format_ret(full_ret)
-                        self._output_ret(ret, out)
+
                     if self.options.progress:
                         kwargs['progress'] = True
                         self.config['progress'] = True
                         ret = {}
                         for progress in cmd_func(**kwargs):
                             out = 'progress'
-                            self._progress_ret(progress, out)
+                            try:
+                                self._progress_ret(progress, out)
+                            except salt.exceptions.LoaderError as exc:
+                                raise salt.exceptions.SaltSystemExit(exc)
                             if 'return_count' not in progress:
                                 ret.update(progress)
                         self._progress_end(out)
@@ -202,9 +212,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     # This is the final point before the 'salt' cmd returns,
                     # which is why we set the retcode here.
                     if retcodes.count(0) < len(retcodes):
+                        sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
                         sys.exit(11)
 
-            except (SaltInvocationError, EauthAuthenticationError) as exc:
+            except (SaltInvocationError, EauthAuthenticationError, SaltClientError) as exc:
                 ret = str(exc)
                 out = ''
                 self._output_ret(ret, out)
@@ -225,8 +236,18 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         return_counter = 0
         not_return_counter = 0
         not_return_minions = []
+        not_response_minions = []
+        not_connected_minions = []
         for each_minion in ret:
-            if ret[each_minion] == "Minion did not return":
+            minion_ret = ret[each_minion]
+            if (
+                    isinstance(minion_ret, string_types)
+                    and minion_ret.startswith("Minion did not return")
+                    ):
+                if "Not connected" in ret[each_minion]:
+                    not_connected_minions.append(each_minion)
+                elif "No response" in ret[each_minion]:
+                    not_response_minions.append(each_minion)
                 not_return_counter += 1
                 not_return_minions.append(each_minion)
             else:
@@ -235,11 +256,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('-------------------------------------------')
         print_cli('Summary')
         print_cli('-------------------------------------------')
-        print_cli('# of Minions Targeted: {0}'.format(return_counter + not_return_counter))
-        print_cli('# of Minions Returned: {0}'.format(return_counter))
-        print_cli('# of Minions Did Not Return: {0}'.format(not_return_counter))
+        print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
+        print_cli('# of minions returned: {0}'.format(return_counter))
+        print_cli('# of minions that did not return: {0}'.format(not_return_counter))
         if self.options.verbose:
-            print_cli('Minions Which Did Not Return: {0}'.format(" ".join(not_return_minions)))
+            if not_connected_minions:
+                print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
+            if not_response_minions:
+                print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
         print_cli('-------------------------------------------')
 
     def _progress_end(self, out):
@@ -253,7 +277,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         import salt.output
         # Get the progress bar
         if not hasattr(self, 'progress_bar'):
-            self.progress_bar = salt.output.get_progress(self.config, out, progress)
+            try:
+                self.progress_bar = salt.output.get_progress(self.config, out, progress)
+            except Exception as exc:
+                raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
+                                                  'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
     def _output_ret(self, ret, out):
@@ -268,6 +296,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             # Determine the proper output method and run it
             salt.output.display_output(ret, out, self.config)
         if not ret:
+            sys.stderr.write('ERROR: No return received\n')
             sys.exit(2)
 
     def _format_ret(self, full_ret):
@@ -281,8 +310,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             ret[key] = data['ret']
             if 'out' in data:
                 out = data['out']
-            if 'retcode' in data:
-                retcode = data['retcode']
+            ret_retcode = salt.utils.job.get_retcode(data)
+            if ret_retcode > retcode:
+                retcode = ret_retcode
         return ret, out, retcode
 
     def _format_error(self, minion_error):

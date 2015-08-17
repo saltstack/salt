@@ -45,7 +45,7 @@ The following example installs all driver updates that don't require a reboot:
 .. code-block:: yaml
 
     gryffindor:
-      win_update.install:
+      win_update.installed:
         - includes:
           - driver: True
           - software: False

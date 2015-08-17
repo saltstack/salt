@@ -24,7 +24,7 @@ def output(data):
     ident = 0
     if __opts__.get('__multi_key'):
         ident = 4
-    if __opts__['transport'] == 'zeromq':
+    if __opts__['transport'] in ('zeromq', 'tcp'):
         acc = 'minions'
         pend = 'minions_pre'
         den = 'minions_denied'
@@ -87,7 +87,7 @@ def output(data):
 
     for status in sorted(data):
         ret += u'{0}\n'.format(trans[status])
-        for key in data[status]:
+        for key in sorted(data[status]):
             skey = key
             if strip_colors:
                 skey = salt.output.strip_esc_sequence(key)

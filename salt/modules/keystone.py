@@ -52,17 +52,19 @@ Module for handling openstack keystone calls.
 # Import Python libs
 from __future__ import absolute_import
 
-# Import third party libs
+# Import Salt Libs
 import salt.ext.six as six
-# pylint: disable=import-error
+
+# Import third party libs
 HAS_KEYSTONE = False
 try:
+    # pylint: disable=import-error
     from keystoneclient.v2_0 import client
     import keystoneclient.exceptions
+    # pylint: enable=import-error
     HAS_KEYSTONE = True
 except ImportError:
     pass
-# pylint: disable=import-error
 
 
 def __virtual__():
@@ -79,9 +81,13 @@ __opts__ = {}
 
 def auth(profile=None, **connection_args):
     '''
-    Set up keystone credentials
+    Set up keystone credentials. Only intended to be used within Keystone-enabled modules.
 
-    Only intended to be used within Keystone-enabled modules
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keystone.auth
     '''
 
     if profile:
@@ -335,7 +341,9 @@ def endpoint_delete(service, profile=None, **connection_args):
 
 def role_create(name, profile=None, **connection_args):
     '''
-    Create named role
+    Create a named role.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -830,7 +838,8 @@ def user_verify_password(user_id=None, name=None, password=None,
               'auth_url': auth_url}
     try:
         userauth = client.Client(**kwargs)
-    except keystoneclient.exceptions.Unauthorized:
+    except (keystoneclient.exceptions.Unauthorized,
+            keystoneclient.exceptions.AuthorizationFailure):
         return False
     return True
 

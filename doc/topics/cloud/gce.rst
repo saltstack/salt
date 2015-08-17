@@ -49,13 +49,20 @@ Google Compute Engine Setup
    To set up authorization, navigate to *APIs & auth* section and then the
    *Credentials* link and click the *CREATE NEW CLIENT ID* button. Select
    *Service Account* and click the *Create Client ID* button. This will
-   automatically download a ``.json`` file, which should be ignored. Look for
-   a new *Service Account* section in the page and record the generated email
+   automatically download a ``.json`` file which can be ignored.
+   
+   Look for a new *Service Account* section in the page and record the generated email
    address for the matching key/fingerprint. The email address will be used
    in the ``service_account_email_address`` of the ``/etc/salt/cloud`` file.
 
 #. Key Format
 
+   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON 
+   format`` file you downloaded above and skip to the "Configuration" section below, using 
+   the JSON file **_in place of 'NEW.pem'_** in the documentation.
+   If you are using an older version of libcloud or are unsure of the version you 
+   have, please follow the instructions below to generate and format a new P12 key.*
+ 
    In the new *Service Account* section, click *Generate new P12 key*, which
    will automatically download a ``.p12`` private key file. The ``.p12``
    private key needs to be converted to a format compatible with libcloud.
@@ -69,7 +76,7 @@ Google Compute Engine Setup
        openssl pkcs12 -in ORIG.p12 -passin pass:notasecret \
        -nodes -nocerts | openssl rsa -out NEW.pem
 
-
+ 
 
 Configuration
 =============
@@ -99,13 +106,21 @@ Set up the cloud config at ``/etc/salt/cloud``:
           node_type: broker
           release: 1.0.1
 
-        provider: gce
+        driver: gce
 
 .. note::
 
     The value provided for ``project`` must not contain underscores or spaces and
     is labeled as "Project ID" on the Google Developers Console.
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Cloud Profiles
 ==============

@@ -13,6 +13,9 @@ class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this
     '''
+    def __init__(self, message=''):
+        super(SaltException, self).__init__(message)
+        self.strerror = message
 
     def pack(self):
         '''
@@ -31,6 +34,12 @@ class SaltClientError(SaltException):
 class SaltMasterError(SaltException):
     '''
     Problem reading the master root key
+    '''
+
+
+class SaltNoMinionsFound(SaltException):
+    '''
+    An attempt to retrieve a list of minions failed
     '''
 
 
@@ -71,9 +80,21 @@ class LoaderError(SaltException):
     '''
 
 
+class PublishError(SaltException):
+    '''
+    Problems encountered when trying to publish a command
+    '''
+
+
 class MinionError(SaltException):
     '''
     Minion problems reading uris such as salt:// or http://
+    '''
+
+
+class FileserverConfigError(SaltException):
+    '''
+    Used when invalid fileserver settings are detected
     '''
 
 
@@ -98,13 +119,13 @@ class SaltRenderError(SaltException):
     of the error.
     '''
     def __init__(self,
-                 error,
+                 message,
                  line_num=None,
                  buf='',
                  marker='    <======================',
                  trace=None):
-        self.error = error
-        exc_str = copy.deepcopy(error)
+        self.error = message
+        exc_str = copy.deepcopy(message)
         self.line_num = line_num
         self.buffer = buf
         self.context = ''
@@ -164,6 +185,13 @@ class TokenAuthenticationError(SaltException):
 class AuthorizationError(SaltException):
     '''
     Thrown when runner or wheel execution fails due to permissions
+    '''
+
+
+class SaltDaemonNotRunning(SaltException):
+    '''
+    Throw when a running master/minion/syndic is not running but is needed to
+    perform the requested operation (e.g., eauth).
     '''
 
 
@@ -233,4 +261,11 @@ class SaltCloudExecutionFailure(SaltCloudException):
 class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
+    '''
+
+
+class NotImplemented(SaltException):
+    '''
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
     '''

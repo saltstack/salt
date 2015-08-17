@@ -40,7 +40,7 @@ from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name
 # pylint: enable=import-error
 
 
-@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
 class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     '''
     Mixin to hold some shared things
@@ -63,6 +63,10 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.get_config('master', from_scratch=True)
 
     @property
+    def mod_opts(self):
+        return self.get_config('minion', from_scratch=True)
+
+    @property
     def auth(self):
         if not hasattr(self, '__auth'):
             self.__auth = salt.auth.LoadAuth(self.opts)
@@ -75,16 +79,29 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 
     def setUp(self):
         super(SaltnadoTestCase, self).setUp()
+        self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
         os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
 
     def tearDown(self):
         super(SaltnadoTestCase, self).tearDown()
-        os.environ.pop('ASYNC_TEST_TIMEOUT', None)
+        if self.async_timeout_prev is None:
+            os.environ.pop('ASYNC_TEST_TIMEOUT', None)
+        else:
+            os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
+
+    def build_tornado_app(self, urls):
+        application = tornado.web.Application(urls, debug=True)
+
+        application.auth = self.auth
+        application.opts = self.opts
+        application.mod_opts = self.mod_opts
+
+        return application
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
-        class StubHandler(saltnado.BaseSaltAPIHandler):
+        class StubHandler(saltnado.BaseSaltAPIHandler):  # pylint: disable=W0223
             def get(self):
                 return self.echo_stuff()
 
@@ -102,8 +119,8 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                     ret_dict[attr] = getattr(self, attr)
 
                 self.write(self.serialize(ret_dict))
-
-        return tornado.web.Application([('/', StubHandler)], debug=True)
+        urls = [('/', StubHandler)]
+        return self.build_tornado_app(urls)
 
     def test_content_type(self):
         '''
@@ -224,14 +241,10 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
 
 
 class TestSaltAuthHandler(SaltnadoTestCase):
+
     def get_app(self):
-
-        # TODO: make a "GET APPPLICATION" func
-        application = tornado.web.Application([('/login', saltnado.SaltAuthHandler)], debug=True)
-
-        application.auth = self.auth
-        application.opts = self.opts
-        return application
+        urls = [('/login', saltnado.SaltAuthHandler)]
+        return self.build_tornado_app(urls)
 
     def test_get(self):
         '''

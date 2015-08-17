@@ -20,11 +20,11 @@ Example output::
 from __future__ import absolute_import
 
 # Import Salt libs
-import salt.utils
+import salt.utils.locales
 
 
 def output(data):
     '''
     Rather basic....
     '''
-    return salt.utils.sdecode(str(data))
+    return salt.utils.locales.sdecode(str(data))

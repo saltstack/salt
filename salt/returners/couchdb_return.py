@@ -23,7 +23,9 @@ To use the couchdb returner, append ``--return couchdb`` to the salt command. Ex
 
     salt '*' test.ping --return couchdb
 
-To use the alternative configuration, append ``--return_config alternative`` to the salt command. Example:
+To use the alternative configuration, append ``--return_config alternative`` to the salt command.
+
+.. versionadded:: 2015.5.0
 
 .. code-block:: bash
 
@@ -360,7 +362,7 @@ def set_salt_view():
     return True
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''

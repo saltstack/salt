@@ -54,7 +54,7 @@ class IncronTestCase(TestCase):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(incron.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(incron.write_cron_file_verbose
+            self.assertTrue(incron.write_incron_file_verbose
                             ('cybage', '/home/cybage/new_cron'))
 
     # 'raw_system_incron' function tests: 1

@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Beacon to fire events at login of users as registered in the wtmp file
+
+.. code-block:: yaml
+
+    beacons:
+      wtmp: {}
 '''
 
 # Import Python libs
@@ -25,9 +30,12 @@ FIELDS = [
           'session',
           'time',
           'addr'
-          ]
+]
 SIZE = struct.calcsize(FMT)
 LOC_KEY = 'wtmp.loc'
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -44,9 +52,26 @@ def _get_loc():
         return __context__[LOC_KEY]
 
 
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for wtmp beacon should be a list of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for wtmp beacon must be a dictionary.')
+        return False
+    return True
+
+
+# TODO: add support for only firing events for specific users and login times
 def beacon(config):
     '''
     Read the last wtmp file and return information on the logins
+
+    .. code-block:: yaml
+
+        beacons:
+          wtmp: {}
     '''
     ret = []
     with open(WTMP, 'rb') as fp_:

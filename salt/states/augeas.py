@@ -55,8 +55,15 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         State name
 
     context
-        The context to use. Set this to a file path, prefixed by ``/files``, to
-        avoid redundancy, e.g.:
+        A file path, prefixed by ``/files``. Should resolve to an actual file
+        (not an arbitrary augeas path). This is used to avoid duplicating the
+        file name for each item in the changes list (for example, ``set bind 0.0.0.0``
+        in the example below operates on the file specified by ``context``). If
+        ``context`` is not specified, a file path prefixed by ``/files`` should be
+        included with the ``set`` command.
+
+        The file path is examined to determine if the
+        specified changes are already present.
 
         .. code-block:: yaml
 
@@ -69,7 +76,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
     changes
         List of changes that are issued to Augeas. Available commands are
-        ``set``, ``mv``/``move``, ``ins``/``insert``, and ``rm``/``remove``.
+        ``set``, ``setm``, ``mv``/``move``, ``ins``/``insert``, and ``rm``/``remove``.
 
     lens
         The lens to use, needs to be suffixed with `.lns`, e.g.: `Nginx.lns`. See
@@ -194,12 +201,12 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
         if diff:
             ret['comment'] = 'Changes have been saved'
-            ret['changes'] = diff
+            ret['changes'] = {'diff': diff}
         else:
             ret['comment'] = 'No changes made'
 
     else:
         ret['comment'] = 'Changes have been saved'
-        ret['changes'] = changes
+        ret['changes'] = {'updates': changes}
 
     return ret

@@ -164,7 +164,7 @@ elasticsearch profile via pillars:
 The behavior of this module is to create dashboards if they do not exist, to
 add rows if they do not exist in existing dashboards, and to update rows if
 they exist in dashboards. The module will not manage rows that are not defined,
- allowing users to manage their own custom rows.
+allowing users to manage their own custom rows.
 '''
 from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
@@ -190,6 +190,8 @@ def _parse_profile(profile):
         if not _profile:
             msg = 'Pillar key for profile {0} not found.'.format(profile)
             raise SaltInvocationError(msg)
+    else:
+        _profile = profile
     hosts = _profile.get('hosts')
     index = _profile.get('index')
     return (hosts, index)

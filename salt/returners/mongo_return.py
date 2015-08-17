@@ -7,7 +7,9 @@ Required python modules: pymongo
 
 This returner will send data from the minions to a MongoDB server. To
 configure the settings for your MongoDB server, add the following lines
-to the minion config files::
+to the minion config files.
+
+.. code-block:: yaml
 
     mongo.db: <database name>
     mongo.host: <server ip address>
@@ -17,7 +19,9 @@ to the minion config files::
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location.
+
+.. code-block:: yaml
 
     alternative.mongo.db: <database name>
     alternative.mongo.host: <server ip address>
@@ -25,11 +29,17 @@ the default location::
     alternative.mongo.password: <MongoDB user password>
     alternative.mongo.port: 27017
 
-  To use the mongo returner, append '--return mongo' to the salt command. ex:
+To use the mongo returner, append '--return mongo' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return mongo_return
 
-  To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
 
     salt '*' test.ping --return mongo_return --return_config alternative
 '''
@@ -46,6 +56,7 @@ import salt.ext.six as six
 # Import third party libs
 try:
     import pymongo
+    version = pymongo.version
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -83,7 +94,7 @@ def _get_options(ret):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db',
-             'username': 'username',
+             'user': 'user',
              'password': 'password'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
@@ -106,7 +117,10 @@ def _get_conn(ret):
     user = _options.get('user')
     password = _options.get('password')
 
-    conn = pymongo.Connection(host, port)
+    if float(version) > 2.3:
+        conn = pymongo.MongoClient(host, port)
+    else:
+        conn = pymongo.Connection(host, port)
     mdb = conn[db_]
 
     if user and password:
@@ -168,7 +182,7 @@ def get_fun(fun):
     return ret
 
 
-def prep_jid(nocache, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id
     '''

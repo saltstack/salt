@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.utils.cloud
 import salt.ext.six
 
@@ -17,6 +18,9 @@ try:
     HAS_SYSTEMD = True
 except ImportError:
     HAS_SYSTEMD = False
+
+import logging
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'journald'
 
@@ -40,9 +44,25 @@ def _get_journal():
     return __context__['systemd.journald']
 
 
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for journald beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False
+    else:
+        for item in config:
+            if not isinstance(config[item], dict):
+                log.info('Configuration for journald beacon must '
+                         'be a dictionary of dictionaries.')
+                return False
+    return True
+
+
 def beacon(config):
     '''
-    The journald beacon allows for the systemd jornal to be parsed and linked
+    The journald beacon allows for the systemd journal to be parsed and linked
     objects to be turned into events.
 
     This beacons config will return all sshd jornal entries
@@ -50,10 +70,10 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-            journald:
-                sshd:
-                    SYSLOG_IDENTIFIER: sshd
-                    PRIORITY: 6
+          journald:
+            sshd:
+              SYSLOG_IDENTIFIER: sshd
+              PRIORITY: 6
     '''
     ret = []
     journal = _get_journal()
@@ -65,7 +85,7 @@ def beacon(config):
             n_flag = 0
             for key in config[name]:
                 if isinstance(key, salt.ext.six.string_types):
-                    key = salt.utils.sdecode(key)
+                    key = salt.utils.locales.sdecode(key)
                 if key in cur:
                     if config[name][key] == cur[key]:
                         n_flag += 1

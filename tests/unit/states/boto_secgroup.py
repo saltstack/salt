@@ -2,13 +2,16 @@
 
 # import Python Libs
 from __future__ import absolute_import
-from collections import OrderedDict
+
+# Import Salt Testing Libs
+from salttesting.case import TestCase
+from salttesting.helpers import ensure_in_syspath
+
+ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import boto_secgroup
-
-# Import Salt Testing Libs
-from salttesting import TestCase
+from salt.utils.odict import OrderedDict
 
 
 class Boto_SecgroupTestCase(TestCase):

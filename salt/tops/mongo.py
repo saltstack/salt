@@ -103,7 +103,7 @@ def top(**kwargs):
     environment_field = __opts__['master_tops']['mongo'].get('environment_field', 'environment')
 
     log.info('connecting to {0}:{1} for mongo ext_tops'.format(host, port))
-    conn = pymongo.Connection(host, port)
+    conn = pymongo.MongoClient(host, port)
 
     log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
     mdb = conn[__opts__['mongo.db']]
@@ -127,7 +127,7 @@ def top(**kwargs):
         )
     )
 
-    result = mdb[collection].find_one({id_field: minion_id}, fields=[states_field, environment_field])
+    result = mdb[collection].find_one({id_field: minion_id}, projection=[states_field, environment_field])
     if result and states_field in result:
         if environment_field in result:
             environment = result[environment_field]

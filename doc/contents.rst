@@ -5,7 +5,6 @@ Salt Table of Contents
 .. toctree::
     :maxdepth: 2
     :glob:
-    :numbered:
 
     topics/index
     topics/installation/index
@@ -15,9 +14,17 @@ Salt Table of Contents
     topics/reactor/index
     topics/mine/index
     topics/eauth/index
+    topics/eauth/access_control
     topics/jobs/index
+    topics/jobs/job_cache
+    topics/jobs/external_cache
+    topics/sdb/index
     topics/event/index
+    topics/beacons/index
+    topics/ext_processes/index
+    topics/highavailability/index
     topics/topology/index
+    topics/transports/raet/index
     topics/windows/index
     topics/cloud/index
     topics/netapi/index

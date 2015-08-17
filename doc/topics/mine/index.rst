@@ -34,8 +34,10 @@ an empty list must be added:
 Mine Functions Aliases
 ----------------------
 
-Function aliases can be used to provide usage intentions or to allow multiple
-calls of the same function with different arguments.
+Function aliases can be used to provide friendly names, usage intentions or to allow 
+multiple calls of the same function with different arguments.  There is a different
+syntax for passing positional and key-value arguments.  Mixing positional and
+key-value arguments is not supported.
 
 .. versionadded:: 2014.7
 
@@ -47,9 +49,10 @@ calls of the same function with different arguments.
       internal_ip_addrs:
         mine_function: network.ip_addrs
         cidr: 192.168.0.0/16
-      loopback_ip_addrs:
-        mine_function: network.ip_addrs
-        lo: True
+      ip_list:
+        - mine_function: grains.get
+        - ip_interfaces
+        
 
 Mine Interval
 =============
@@ -65,7 +68,7 @@ be adjusted for the minion via the `mine_interval` option:
 Mine in Salt-SSH
 ================
 
-As of the 2015.2 release of salt, salt-ssh supports ``mine.get``.
+As of the 2015.5.0 release of salt, salt-ssh supports ``mine.get``.
 
 Because the minions cannot provide their own ``mine_functions`` configuration,
 we retrieve the args for specified mine functions in one of three places,
@@ -144,7 +147,7 @@ to add them to the pool of load balanced servers.
 
     <...file contents snipped...>
 
-    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', expr_form='grain').items() %}
+    {% for server, addrs in salt['mine.get']('roles:web', 'network.ip_addrs', expr_form='pillar').items() %}
     server {{ server }} {{ addrs[0] }}:80 check
     {% endfor %}
 

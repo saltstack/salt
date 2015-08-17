@@ -13,6 +13,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.utils.odict import OrderedDict
 from salt._compat import string_io
 from salt.ext.six import string_types
 
@@ -31,6 +32,7 @@ def compile_template(template,
                      default,
                      saltenv='base',
                      sls='',
+                     input_data='',
                      **kwargs):
     '''
     Take the path to a template and return the high data structure
@@ -50,36 +52,40 @@ def compile_template(template,
         _dont_call_warnings=True
     )
 
-    # Template was specified incorrectly
-    if not isinstance(template, string_types):
-        log.error('Template was specified incorrectly: {0}'.format(template))
-        return ret
-    # Template does not exist
-    if not os.path.isfile(template):
-        log.error('Template does not exist: {0}'.format(template))
-        return ret
-    # Template is an empty file
-    if salt.utils.is_empty(template):
-        log.warn('Template is an empty file: {0}'.format(template))
-        return ret
+    if template != ':string:':
+        # Template was specified incorrectly
+        if not isinstance(template, string_types):
+            log.error('Template was specified incorrectly: {0}'.format(template))
+            return ret
+        # Template does not exist
+        if not os.path.isfile(template):
+            log.error('Template does not exist: {0}'.format(template))
+            return ret
+        # Template is an empty file
+        if salt.utils.is_empty(template):
+            log.warn('Template is an empty file: {0}'.format(template))
+            return ret
+
+        with codecs.open(template, encoding=SLS_ENCODING) as ifile:
+            # data input to the first render function in the pipe
+            input_data = ifile.read()
+            if not input_data.strip():
+                # Template is nothing but whitespace
+                log.error('Template is nothing but whitespace: {0}'.format(template))
+                return ret
 
     # Get the list of render funcs in the render pipe line.
-    render_pipe = template_shebang(template, renderers, default)
-
-    with codecs.open(template, encoding=SLS_ENCODING) as ifile:
-        # data input to the first render function in the pipe
-        input_data = ifile.read()
-        if not input_data.strip():
-            # Template is nothing but whitespace
-            log.error('Template is nothing but whitespace: {0}'.format(template))
-            return ret
+    render_pipe = template_shebang(template, renderers, default, input_data)
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        try:
-            input_data.seek(0)
-        except Exception as exp:
-            log.error('error: {0}'.format(exp))
+        # For GPG renderer, input_data can be an OrderedDict. Repress the
+        # error.
+        if not isinstance(input_data, OrderedDict):
+            try:
+                input_data.seek(0)
+            except Exception as exp:
+                log.error('error: {0}'.format(exp))
 
         render_kwargs = dict(renderers=renderers, tmplpath=template)
         render_kwargs.update(kwargs)
@@ -117,7 +123,7 @@ def compile_template_str(template, renderers, default):
     return compile_template(fn_, renderers, default)
 
 
-def template_shebang(template, renderers, default):
+def template_shebang(template, renderers, default, input_data):
     '''
     Check the template shebang line and return the list of renderers specified
     in the pipe.
@@ -137,15 +143,19 @@ def template_shebang(template, renderers, default):
     '''
     render_pipe = []
 
+    line = ''
     # Open up the first line of the sls template
-    with salt.utils.fopen(template, 'r') as ifile:
-        line = ifile.readline()
+    if template == ':string:':
+        line = input_data.split()[0]
+    else:
+        with salt.utils.fopen(template, 'r') as ifile:
+            line = ifile.readline()
 
-        # Check if it starts with a shebang and not a path
-        if line.startswith('#!') and not line.startswith('#!/'):
+    # Check if it starts with a shebang and not a path
+    if line.startswith('#!') and not line.startswith('#!/'):
 
-            # pull out the shebang data
-            render_pipe = check_render_pipe_str(line.strip()[2:], renderers)
+        # pull out the shebang data
+        render_pipe = check_render_pipe_str(line.strip()[2:], renderers)
 
     if not render_pipe:
         render_pipe = check_render_pipe_str(default, renderers)

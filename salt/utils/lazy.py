@@ -4,8 +4,23 @@
 from __future__ import absolute_import
 import logging
 import collections
+import salt.exceptions
 
 log = logging.getLogger(__name__)
+
+
+def verify_fun(lazy_obj, fun):
+    '''
+    Check that the function passed really exists
+    '''
+    if not fun:
+        raise salt.exceptions.SaltInvocationError(
+            'Must specify a function to run!\n'
+            'ex: manage.up'
+        )
+    if fun not in lazy_obj:
+        # If the requested function isn't available, lets say why
+        raise salt.exceptions.CommandExecutionError(lazy_obj.missing_fun_string(fun))
 
 
 class LazyDict(collections.MutableMapping):
@@ -18,6 +33,14 @@ class LazyDict(collections.MutableMapping):
     '''
     def __init__(self):
         self.clear()
+
+    def __nonzero__(self):
+        # we are zero if dict is empty and loaded is true
+        return bool(self._dict or not self.loaded)
+
+    def __bool__(self):
+        # we are zero if dict is empty and loaded is true
+        return self.__nonzero__()
 
     def clear(self):
         '''
