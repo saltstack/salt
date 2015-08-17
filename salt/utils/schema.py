@@ -1273,9 +1273,14 @@ class DictItem(BaseSchemaItem):
         result = super(DictItem, self).serialize()
         required = []
         if self.properties is not None:
-            for key, prop in self.properties.items():
-                if prop.required:
-                    required.append(key)
+            if isinstance(self.properties, Schema):
+                serialized = self.properties.serialize()
+                if 'required' in serialized:
+                    required.extend(serialized['required'])
+            else:
+                for key, prop in self.properties.items():
+                    if prop.required:
+                        required.append(key)
         if required:
             result['required'] = required
         return result
