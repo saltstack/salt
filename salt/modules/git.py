@@ -48,21 +48,10 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
             raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
 
-def _check_abs(*paths):
-    '''
-    Ensure that the path is absolute
-    '''
-    for path in paths:
-        if not isinstance(path, six.string_types) or not os.path.isabs(path):
-            raise SaltInvocationError(
-                'Path \'{0}\' is not absolute'.format(path)
-            )
-
-
 def _config_getter(get_opt,
-                   cwd,
                    key,
                    value_regex=None,
+                   cwd=None,
                    user=None,
                    ignore_retcode=False,
                    **kwargs):
@@ -70,8 +59,18 @@ def _config_getter(get_opt,
     Common code for config.get_* functions, builds and runs the git CLI command
     and returns the result dict for the calling function to parse.
     '''
-    if cwd != 'global':
-        _check_abs(cwd)
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    global_ = kwargs.pop('global', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    if cwd is None:
+        if not global_:
+            raise SaltInvocationError(
+                '\'cwd\' argument required unless global=True'
+            )
+    else:
+        cwd = _expand_path(cwd, user)
 
     if get_opt == '--get-regexp':
         if value_regex is not None \
@@ -81,17 +80,33 @@ def _config_getter(get_opt,
         # Ignore value_regex
         value_regex = None
 
-    command = ['git', 'config', get_opt]
-    if cwd == 'global':
+    command = ['git', 'config']
+    if global_:
         command.append('--global')
+    else:
+        command.append('--local')
+    command.append(get_opt)
     command.append(key)
     if value_regex is not None:
         command.append(value_regex)
     return _git_run(command,
-                    cwd=cwd if cwd != 'global' else None,
+                    cwd=cwd,
                     runas=user,
                     ignore_retcode=ignore_retcode,
                     failhard=False)
+
+
+def _expand_path(cwd, user):
+    try:
+        to_expand = '~' + user if user else '~'
+    except TypeError:
+        # Users should never be numeric but if we don't account for this then
+        # we're going to get a traceback
+        to_expand = '~' + str(user) if user else '~'
+    try:
+        return os.path.join(os.path.expanduser(to_expand), cwd)
+    except AttributeError:
+        return os.path.join(os.path.expanduser(to_expand), str(cwd))
 
 
 def _format_opts(opts):
@@ -275,7 +290,7 @@ def add(cwd, filename, opts='', user=None, ignore_retcode=False):
         salt myminion git.add /path/to/repo foo/bar.py
         salt myminion git.add /path/to/repo foo/bar.py opts='--dry-run'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if not isinstance(filename, six.string_types):
         filename = str(filename)
     command = ['git', 'add', '--verbose']
@@ -385,7 +400,8 @@ def archive(cwd,
 
         salt myminion git.archive /path/to/repo /path/to/archive.tar
     '''
-    _check_abs(cwd, output)
+    cwd = _expand_path(cwd, user)
+    output = _expand_path(output, user)
     # Sanitize kwargs and make sure that no invalid ones were passed. This
     # allows us to accept 'format' as an argument to this function without
     # shadowing the format() global, while also not allowing unwanted arguments
@@ -474,7 +490,7 @@ def branch(cwd, name, opts='', user=None, ignore_retcode=False):
         # Rename branch (2015.8.0 and later)
         salt myminion git.branch /path/to/repo newbranch opts='-m oldbranch'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'branch']
     command.extend(_format_opts(opts))
     command.append(name)
@@ -537,7 +553,7 @@ def checkout(cwd,
         # Checking out current revision into new branch (2015.8.0 and later)
         salt myminion git.checkout /path/to/repo opts='-b newbranch'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'checkout']
     if force:
         command.append('--force')
@@ -574,11 +590,11 @@ def clone(cwd,
     Interface to `git-clone(1)`_
 
     cwd
-        Parent directory from which to run the git command
+        Location of git clone
 
         .. versionchanged:: 2015.8.0
-            Clone is now created within this directory instead of *at* this
-            exact path. This makes this function behave more like the git CLI.
+            If ``name`` is passed, then the clone will be made *within* this
+            directory.
 
     url
         The URL of the repository to be cloned
@@ -637,7 +653,7 @@ def clone(cwd,
 
         salt myminion git.clone /path/to/repo_parent_dir git://github.com/saltstack/salt.git
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if repository is not None:
         salt.utils.warn_until(
             'Nitrogen',
@@ -657,8 +673,10 @@ def clone(cwd,
         if not isinstance(name, six.string_types):
             name = str(name)
         command.append(name)
+    else:
+        command.append(cwd)
     return _git_run(command,
-                    cwd=cwd,
+                    cwd=None if name is None else cwd,
                     runas=user,
                     identity=identity,
                     ignore_retcode=ignore_retcode)['stderr']
@@ -699,6 +717,10 @@ def commit(cwd,
         This argument is optional, and can be used to commit a file without
         first staging it.
 
+        .. note::
+            This argument only works on files which are already tracked by the
+            git repository.
+
         .. versionadded:: 2015.8.0
 
     ignore_retcode : False
@@ -717,7 +739,7 @@ def commit(cwd,
         salt myminion git.commit /path/to/repo 'The commit message'
         salt myminion git.commit /path/to/repo 'The commit message' filename=foo/bar.py
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'commit', '-m', message]
     command.extend(_format_opts(opts))
     if filename:
@@ -732,35 +754,33 @@ def commit(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def config_get(cwd,
-               key,
+def config_get(key,
+               cwd=None,
                user=None,
                ignore_retcode=False,
                **kwargs):
     '''
     Get the value of a key in the git configuration file
 
-    cwd
-        The path to the git checkout. Must be an absolute path, or the word
-        ``global`` to indicate that a global key should be queried.
-
-        .. versionchanged:: 2015.8.0
-            Can now be set to ``global`` instead of an absolute path, to get
-            the value from the global git configuration.
-
     key
-        The name of the configuration key to get. Can also be a regex if
-        ``value_regex`` is specified.
+        The name of the configuration key to get
 
         .. versionchanged:: 2015.8.0
-            Argument renamed from ``setting_name`` to ``key``, and regex
-            support added.
+            Argument renamed from ``setting_name`` to ``key``
+
+    cwd
+        The path to the git checkout
+
+        .. versionchanged:: 2015.8.0
+            Now optional if ``global`` is set to ``True``
+
+    global : False
+        If ``True``, query the global git configuraton. Otherwise, only the
+        local git configuration will be queried.
 
     all : False
         If ``True``, return a list of all values set for ``key``. If the key
         does not exist, ``None`` will be returned.
-
-        This argument will be ignored if ``value_regex`` is specified.
 
         .. versionadded:: 2015.8.0
 
@@ -779,23 +799,21 @@ def config_get(cwd,
 
     .. code-block:: bash
 
-        salt myminion git.config_get /path/to/repo user.name
-        salt myminion git.config_get global user.email
-        salt myminion git.config_get core.gitproxy all=True
+        salt myminion git.config_get user.name cwd=/path/to/repo
+        salt myminion git.config_get user.email global=True
+        salt myminion git.config_get core.gitproxy cwd=/path/to/repo all=True
     '''
     # Sanitize kwargs and make sure that no invalid ones were passed. This
     # allows us to accept 'all' as an argument to this function without
     # shadowing all(), while also not allowing unwanted arguments to be passed.
-    kwargs = salt.utils.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
-    if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
 
     result = _config_getter('--get-all',
-                            cwd,
                             key,
+                            cwd=cwd,
                             user=user,
-                            ignore_retcode=ignore_retcode)
+                            ignore_retcode=ignore_retcode,
+                            **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
     if result['retcode'] == 1:
@@ -811,11 +829,12 @@ def config_get(cwd,
             return ''
 
 
-def config_get_regexp(cwd,
-                      key,
+def config_get_regexp(key,
                       value_regex=None,
+                      cwd=None,
                       user=None,
-                      ignore_retcode=False):
+                      ignore_retcode=False,
+                      **kwargs):
     r'''
     .. versionaded:: 2015.8.0
 
@@ -823,10 +842,6 @@ def config_get_regexp(cwd,
     for more flexible matching. The return data is a dictionary mapping keys to
     lists of values matching the ``value_regex``. If no values match, an empty
     dictionary will be returned.
-
-    cwd
-        The path to the git checkout. Must be an absolute path, or the word
-        ``global`` to indicate that a global key should be queried.
 
     key
         Regex on which key names will be matched
@@ -841,6 +856,16 @@ def config_get_regexp(cwd,
             data. So, if ``key`` matches a multivar, then it is possible that
             not all of the values will be returned. To get all values set for a
             multivar, simply omit the ``value_regex`` argument.
+
+    cwd
+        The path to the git checkout
+
+        .. versionchanged:: 2015.8.0
+            Now optional if ``global`` is set to ``True``
+
+    global : False
+        If ``True``, query the global git configuraton. Otherwise, only the
+        local git configuration will be queried.
 
     user
         User under which to run the git command. By default, the command is run
@@ -860,14 +885,15 @@ def config_get_regexp(cwd,
         # Matches any value starting with 'baz' set for key 'foo.bar'
         salt myminion git.config_get_regexp /path/to/repo foo.bar 'baz.*'
         # Matches any key starting with 'user.'
-        salt myminion git.config_get_regexp global '^user\.'
+        salt myminion git.config_get_regexp '^user\.' global=True
     '''
     result = _config_getter('--get-regexp',
-                            cwd,
                             key,
                             value_regex=value_regex,
+                            cwd=cwd,
                             user=user,
-                            ignore_retcode=ignore_retcode)
+                            ignore_retcode=ignore_retcode,
+                            **kwargs)
 
     # git config --get exits with retcode of 1 when key does not exist
     ret = {}
@@ -884,14 +910,17 @@ def config_get_regexp(cwd,
 config_get_regex = config_get_regexp
 
 
-def config_set(cwd,
-               key,
+def config_set(key,
                value=None,
                multivar=None,
+               cwd=None,
                user=None,
                ignore_retcode=False,
-               is_global=False):
+               **kwargs):
     '''
+    .. versionchanged:: 2015.8.0
+        Return the value(s) of the key being set
+
     Set a key in the git configuration file
 
     cwd
@@ -913,10 +942,22 @@ def config_set(cwd,
             Argument renamed from ``setting_name`` to ``key``
 
     value
-        The value to set for the specified key
+        The value to set for the specified key. Incompatible with the
+        ``multivar`` argument.
 
         .. versionchanged:: 2015.8.0
             Argument renamed from ``setting_value`` to ``value``
+
+    add : False
+        Add a value to a multivar
+
+        .. versionadded:: 2015.8.0
+
+    multivar
+        Set a multivar all at once. Values can be comma-separated or passed as
+        a Python list. Incompatible with the ``value`` argument.
+
+        .. versionadded:: 2015.8.0
 
     user
         User under which to run the git command. By default, the command is run
@@ -928,22 +969,29 @@ def config_set(cwd,
 
         .. versionadded:: 2015.8.0
 
+    global : False
+        If ``True``, set a global variable
+
     is_global : False
-        Set to True to use the '--global' flag with 'git config'
+        If ``True``, set a global variable
 
         .. deprecated:: 2015.8.0
-            Pass ``global`` as the value of ``cwd`` instead
+            Use ``global`` instead
 
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion git.config_set /path/to/repo user.email me@example.com
-        salt myminion git.config_set global user.email foo@bar.com
+        salt myminion git.config_set user.email me@example.com cwd=/path/to/repo
+        salt myminion git.config_set user.email foo@bar.com global=True
     '''
-    if cwd != 'global':
-        _check_abs(cwd)
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    global_ = kwargs.pop('global', False)
+    is_global = kwargs.pop('is_global', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     if is_global:
         salt.utils.warn_until(
             'Nitrogen',
@@ -951,12 +999,24 @@ def config_set(cwd,
             'deprecated, please set the \'cwd\' argument to \'global\' '
             'instead.'
         )
-        cwd = 'global'
+        global_ = True
+
+    if cwd is None:
+        if not global_:
+            raise SaltInvocationError(
+                '\'cwd\' argument required unless global=True'
+            )
+    else:
+        cwd = _expand_path(cwd, user)
+
+    if all(x is not None for x in (value, multivar)):
+        raise SaltInvocationError(
+            'Only one of \'value\' and \'multivar\' is permitted'
+        )
 
     if value is not None:
         if not isinstance(value, six.string_types):
             value = str(value)
-        desired = [value]
     if multivar is not None:
         if not isinstance(multivar, list):
             try:
@@ -971,30 +1031,41 @@ def config_set(cwd,
                 else:
                     new_multivar.append(str(item))
             multivar = new_multivar
-        desired = multivar
 
     command_prefix = ['git', 'config']
-    if cwd == 'global':
+    if global_:
         command_prefix.append('--global')
-    first = True
-    for target in desired:
+
+    if value is not None:
         command = copy.copy(command_prefix)
-        if first is True:
-            command.append('--replace-all')
-            first = False
-        else:
-            command.append('--add')
-        command.extend([key, target])
+        command.append('--add')
+        command.extend([key, value])
         _git_run(command,
-                 cwd=cwd if cwd != 'global' else None,
+                 cwd=cwd,
                  runas=user,
                  ignore_retcode=ignore_retcode)
-    return True
+    else:
+        for idx, target in enumerate(multivar):
+            command = copy.copy(command_prefix)
+            if idx == 0:
+                command.append('--replace-all')
+            else:
+                command.append('--add')
+            command.extend([key, target])
+            _git_run(command,
+                     cwd=cwd,
+                     runas=user,
+                     ignore_retcode=ignore_retcode)
+    return config_get(key,
+                      user=user,
+                      cwd=cwd,
+                      ignore_retcode=ignore_retcode,
+                      **{'all': True, 'global': global_})
 
 
-def config_unset(cwd,
-                 key,
+def config_unset(key,
                  value_regex=None,
+                 cwd=None,
                  user=None,
                  ignore_retcode=False,
                  **kwargs):
@@ -1018,6 +1089,10 @@ def config_unset(cwd,
         If ``True`` unset all values for a multivar. If ``False``, and ``key``
         is a multivar, an error will be raised.
 
+    global : False
+        If ``True``, unset set a global variable. Otherwise, a local variable
+        will be unset.
+
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
@@ -1034,11 +1109,9 @@ def config_unset(cwd,
         salt myminion git.config_unset /path/to/repo foo.bar
         salt myminion git.config_unset /path/to/repo foo.bar all=True
     '''
-    if cwd != 'global':
-        _check_abs(cwd)
-
     kwargs = salt.utils.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
+    global_ = kwargs.pop('global', False)
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
@@ -1048,13 +1121,19 @@ def config_unset(cwd,
     else:
         command.append('--unset')
 
-    if cwd == 'global':
+    if global_:
         command.append('--global')
-    elif not os.path.isabs(cwd):
-        raise SaltInvocationError(
-            'Path must be either \'global\' or an absolute path to a git '
-            'checkout'
-        )
+    else:
+        command.append('--local')
+
+    if cwd is None:
+        if not global_:
+            raise SaltInvocationError(
+                '\'cwd\' argument required unless global=True'
+            )
+    else:
+        cwd = _expand_path(cwd, user)
+
     if not isinstance(key, six.string_types):
         key = str(key)
     command.append(key)
@@ -1122,7 +1201,7 @@ def current_branch(cwd, user=None, ignore_retcode=False):
 
         salt myminion git.current_branch /path/to/repo
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
     return _git_run(command,
                     cwd=cwd,
@@ -1161,7 +1240,7 @@ def describe(cwd, rev='HEAD', user=None, ignore_retcode=False):
         salt myminion git.describe /path/to/repo
         salt myminion git.describe /path/to/repo develop
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
     command = ['git', 'describe', rev]
@@ -1229,7 +1308,7 @@ def fetch(cwd,
         salt myminion git.fetch /path/to/repo upstream
         salt myminion git.fetch /path/to/repo identity=/root/.ssh/id_rsa
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'fetch']
     if not isinstance(remote, six.string_types):
         remote = str(remote)
@@ -1310,7 +1389,7 @@ def init(cwd,
         # Init a bare repo (2015.8.0 and later)
         salt myminion git.init /path/to/bare/repo.git bare=True
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'init']
     if bare:
         command.append('--bare')
@@ -1337,19 +1416,19 @@ def init(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def is_worktree(worktree_path, user=None):
+def is_worktree(cwd, user=None):
     '''
     .. versionadded:: 2015.8.0
 
-    This function will attempt to determine if ``worktree_path`` is part of a
+    This function will attempt to determine if ``cwd`` is part of a
     worktree by checking its ``.git`` to see if it is a file containing a
     reference to another gitdir.
 
-    worktree_path
+    cwd
         path to the worktree to be removed
 
     user
-        user under which to run the git command. by default, the command is run
+        User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
 
 
@@ -1359,9 +1438,9 @@ def is_worktree(worktree_path, user=None):
 
         salt myminion git.is_worktree /path/to/repo
     '''
-    _check_abs(worktree_path)
+    cwd = _expand_path(cwd, user)
     try:
-        toplevel = _get_toplevel(worktree_path)
+        toplevel = _get_toplevel(cwd)
     except CommandExecutionError:
         return False
     gitdir = os.path.join(toplevel, '.git')
@@ -1424,7 +1503,7 @@ def list_branches(cwd, remote=False, user=None, ignore_retcode=False):
         salt myminion git.list_branches /path/to/repo
         salt myminion git.list_branches /path/to/repo remote=True
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'for-each-ref', '--format', '%(refname:short)',
                'refs/{0}/'.format('heads' if not remote else 'remotes')]
     return _git_run(command,
@@ -1459,7 +1538,7 @@ def list_tags(cwd, user=None, ignore_retcode=False):
 
         salt myminion git.list_tags /path/to/repo
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'for-each-ref', '--format', '%(refname:short)',
                'refs/tags/']
     return _git_run(command,
@@ -1549,7 +1628,7 @@ def ls_remote(cwd=None,
         salt myminion git.ls_remote remote=https://mydomain.tld/repo.git ref=mytag opts='--tags'
     '''
     if cwd is not None:
-        _check_abs(cwd)
+        cwd = _expand_path(cwd, user)
     remote = _add_http_basic_auth(remote, https_user, https_pass)
     command = ['git', 'ls-remote']
     command.extend(_format_opts(opts))
@@ -1635,7 +1714,7 @@ def merge(cwd,
         # .. or merge another rev
         salt myminion git.merge /path/to/repo rev=upstream/foo
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if branch:
         salt.utils.warn_until(
             'Nitrogen',
@@ -1644,11 +1723,11 @@ def merge(cwd,
         )
         rev = branch
     command = ['git', 'merge']
+    command.extend(_format_opts(opts))
     if rev:
         if not isinstance(rev, six.string_types):
             rev = str(rev)
         command.append(rev)
-    command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -1744,7 +1823,7 @@ def merge_base(cwd,
         salt myminion git.merge_base /path/to/repo fork_point=upstream/master
         salt myminion git.merge_base /path/to/repo refs=mybranch fork_point=upstream/master
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
     if kwargs:
@@ -1870,8 +1949,7 @@ def merge_tree(cwd,
         salt myminion git.merge_tree /path/to/repo HEAD upstream/dev
         salt myminion git.merge_tree /path/to/repo HEAD upstream/dev base=aaf3c3d
     '''
-    _check_abs(cwd)
-
+    cwd = _expand_path(cwd, user)
     command = ['git', 'merge-tree']
     if not isinstance(ref1, six.string_types):
         ref1 = str(ref1)
@@ -1937,7 +2015,7 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
         salt myminion git.pull /path/to/repo opts='--rebase origin master'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'pull']
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -2025,7 +2103,7 @@ def push(cwd,
         # Delete remote branch 'upstream/temp'
         salt myminion git.push /path/to/repo upstream :temp
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if branch:
         salt.utils.warn_until(
             'Nitrogen',
@@ -2086,7 +2164,7 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
         salt myminion git.rebase /path/to/repo 'origin master'
         salt myminion git.rebase /path/to/repo origin/master opts='--onto newbranch'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     opts = _format_opts(opts)
     if any(x for x in opts if x in ('-i', '--interactive')):
         raise SaltInvocationError('Interactive rebases are not supported')
@@ -2128,7 +2206,7 @@ def remote_get(cwd, remote='origin', user=None, ignore_retcode=False):
         salt myminion git.remote_get /path/to/repo
         salt myminion git.remote_get /path/to/repo upstream
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     all_remotes = remotes(cwd, user=user, ignore_retcode=ignore_retcode)
     if remote not in all_remotes:
         raise CommandExecutionError(
@@ -2260,7 +2338,7 @@ def remotes(cwd, user=None, ignore_retcode=False):
 
         salt myminion git.remotes /path/to/repo
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'remote', '--verbose']
     ret = {}
     output = _git_run(command,
@@ -2325,7 +2403,7 @@ def reset(cwd, opts='', user=None, ignore_retcode=False):
         # Hard reset
         salt myminion git.reset /path/to/repo opts='--hard origin/master'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'reset']
     command.extend(_format_opts(opts))
     return _git_run(command,
@@ -2377,7 +2455,7 @@ def rev_parse(cwd, rev, opts='', user=None, ignore_retcode=False):
         # Get the SHA1 for the commit corresponding to tag v1.2.3
         salt myminion git.rev_parse /path/to/repo 'v1.2.3^{commit}'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'rev-parse']
     command.extend(_format_opts(opts))
     command.append(rev)
@@ -2416,7 +2494,7 @@ def revision(cwd, rev='HEAD', short=False, user=None, ignore_retcode=False):
 
         salt myminion git.revision /path/to/repo mybranch
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
     command = ['git', 'rev-parse']
@@ -2472,7 +2550,7 @@ def rm_(cwd, filename, opts='', user=None, ignore_retcode=False):
         salt myminion git.rm /path/to/repo foo/bar.py opts='--dry-run'
         salt myminion git.rm /path/to/repo foo/baz opts='-r'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'rm']
     command.extend(_format_opts(opts))
     command.extend(['--', filename])
@@ -2482,7 +2560,7 @@ def rm_(cwd, filename, opts='', user=None, ignore_retcode=False):
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def stash(cwd, opts='', user=None, ignore_retcode=False):
+def stash(cwd, action='save', opts='', user=None, ignore_retcode=False):
     '''
     Interface to `git-stash(1)`_, returns the stdout from the git command
 
@@ -2513,12 +2591,17 @@ def stash(cwd, opts='', user=None, ignore_retcode=False):
 
     .. code-block:: bash
 
-        salt myminion git.stash /path/to/repo 'save work in progress'
-        salt myminion git.stash /path/to/repo apply
+        salt myminion git.stash /path/to/repo save opts='work in progress'
+        salt myminion git.stash /path/to/repo apply opts='stash@{1}'
+        salt myminion git.stash /path/to/repo drop opts='stash@{1}'
         salt myminion git.stash /path/to/repo list
     '''
-    _check_abs(cwd)
-    command = ['git', 'stash']
+    cwd = _expand_path(cwd, user)
+    if not isinstance(action, six.string_types):
+        # No numeric actions but this will prevent a traceback when the git
+        # command is run.
+        action = str(action)
+    command = ['git', 'stash', action]
     command.extend(_format_opts(opts))
     return _git_run(command,
                     cwd=cwd,
@@ -2553,7 +2636,7 @@ def status(cwd, user=None, ignore_retcode=False):
 
         salt myminion git.status /path/to/repo
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     state_map = {
         'M': 'modified',
         'A': 'new',
@@ -2659,7 +2742,7 @@ def submodule(cwd,
         # Unregister submodule (2015.8.0 and later)
         salt myminion git.submodule /path/to/repo/sub/repo deinit
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if init:
         raise SaltInvocationError(
             'The \'init\' argument is no longer supported. Either set '
@@ -2729,7 +2812,7 @@ def symbolic_ref(cwd,
         # Delete symbolic ref 'FOO'
         salt myminion git.symbolic_ref /path/to/repo FOO opts='--delete'
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'symbolic-ref']
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ('-d', '--delete')):
@@ -2745,6 +2828,8 @@ def symbolic_ref(cwd,
                     cwd=cwd,
                     runas=user,
                     ignore_retcode=ignore_retcode)['stdout']
+
+
 def version(versioninfo=False, user=None):
     '''
     Returns the version of Git installed on the minion
@@ -2875,7 +2960,7 @@ def worktree_add(cwd,
         salt myminion git.worktree_add /path/to/repo/main ../hotfix ref=origin/master
         salt myminion git.worktree_add /path/to/repo/main ../hotfix branch=hotfix21 ref=v2.1.9.3
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     if branch and detach:
         raise SaltInvocationError(
             'Only one of \'branch\' and \'detach\' is allowed'
@@ -2969,11 +3054,11 @@ def worktree_prune(cwd,
 
     .. code-block:: bash
 
-        salt myminion git.worktree_prune /path/to/worktree
-        salt myminion git.worktree_prune /path/to/worktree dry_run=True
-        salt myminion git.worktree_prune /path/to/worktree expire=1.day.ago
+        salt myminion git.worktree_prune /path/to/repo
+        salt myminion git.worktree_prune /path/to/repo dry_run=True
+        salt myminion git.worktree_prune /path/to/repo expire=1.day.ago
     '''
-    _check_abs(cwd)
+    cwd = _expand_path(cwd, user)
     command = ['git', 'worktree', 'prune']
     if dry_run:
         command.append('--dry-run')
@@ -2990,27 +3075,26 @@ def worktree_prune(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def worktree_rm(worktree_path, user=None):
+def worktree_rm(cwd, user=None):
     '''
     .. versionadded:: 2015.8.0
 
-    Recursively removes the worktree located at ``worktree_path``, returning
-    ``True`` if successful. This function will attempt to determine if
-    ``worktree_path`` is actually a worktree by invoking
-    :py:func:`git.is_worktree <salt.modules.git.is_worktree>`. If the path does
-    not correspond to a worktree, then an error will be raised and no action will
-    be taken.
+    Recursively removes the worktree located at ``cwd``, returning ``True`` if
+    successful. This function will attempt to determine if ``cwd`` is actually
+    a worktree by invoking :py:func:`git.is_worktree
+    <salt.modules.git.is_worktree>`. If the path does not correspond to a
+    worktree, then an error will be raised and no action will be taken.
 
     .. warning::
 
         There is no undoing this action. Be **VERY** careful before running
         this function.
 
-    worktree_path
-        path to the worktree to be removed
+    cwd
+        Path to the worktree to be removed
 
     user
-        user under which to run the git command. by default, the command is run
+        User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
 
 
@@ -3020,16 +3104,15 @@ def worktree_rm(worktree_path, user=None):
 
         salt myminion git.worktree_rm /path/to/worktree
     '''
-    # No need to run _check_abs on the worktree_path since that will be done
-    # when is_worktree is invoked.
-    if not os.path.exists(worktree_path):
-        raise CommandExecutionError(worktree_path + ' does not exist')
-    elif not is_worktree(worktree_path):
-        raise CommandExecutionError(worktree_path + ' is not a git worktree')
+    cwd = _expand_path(cwd, user)
+    if not os.path.exists(cwd):
+        raise CommandExecutionError(cwd + ' does not exist')
+    elif not is_worktree(cwd):
+        raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
-        salt.utils.rm_rf(worktree_path)
+        salt.utils.rm_rf(cwd)
     except Exception as exc:
         raise CommandExecutionError(
-            'Unable to remove {0}: {1}'.format(worktree_path, exc)
+            'Unable to remove {0}: {1}'.format(cwd, exc)
         )
     return True
