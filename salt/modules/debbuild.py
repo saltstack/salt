@@ -39,7 +39,7 @@ def _get_build_env(env):
     '''
     Get build environment overrides dictionary to use in build process
     '''
-    env_override = ""
+    env_override = ''
     if env is None:
         return env_override
     if not isinstance(env, dict):
@@ -56,7 +56,7 @@ def _get_repo_env(env):
     '''
     Get repo environment overrides dictionary to use in repo process
     '''
-    env_options = ""
+    env_options = ''
     if env is None:
         return env_options
     if not isinstance(env, dict):
@@ -147,16 +147,16 @@ OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free 
         os.makedirs(pbuilder_hooksdir)
 
     d05hook = os.path.join(pbuilder_hooksdir, 'D05apt-preferences')
-    with open(d05hook, "w") as fow:
+    with salt.utils.fopen(d05hook, 'w') as fow:
         fow.write('{0}'.format(hook_text))
 
     pbuilderrc = os.path.join(home, '.pbuilderrc')
-    with open(pbuilderrc, "w") as fow:
+    with salt.utils.fopen(pbuilderrc, 'w') as fow:
         fow.write('{0}'.format(pbldrc_text))
 
     env_overrides = _get_build_env(env)
     if env_overrides and not env_overrides.isspace():
-        with open(pbuilderrc, "a") as fow:
+        with salt.utils.fopen(pbuilderrc, 'a') as fow:
             fow.write('{0}'.format(env_overrides))
 
 
@@ -357,16 +357,16 @@ Pull: jessie
         os.makedirs(repoconf)
 
     repoconfdist = os.path.join(repoconf, 'distributions')
-    with open(repoconfdist, "w") as fow:
+    with salt.utils.fopen(repoconfdist, 'w') as fow:
         fow.write('{0}'.format(repocfg_text))
 
     if keyid is not None:
-        with open(repoconfdist, "a") as fow:
+        with salt.utils.fopen(repoconfdist, 'a') as fow:
             fow.write('Signwith: {0}\n'.format(keyid))
 
     repocfg_opts = _get_repo_env(env)
     repoconfopts = os.path.join(repoconf, 'options')
-    with open(repoconfopts, "w") as fow:
+    with salt.utils.fopen(repoconfopts, 'w') as fow:
         fow.write('{0}'.format(repocfg_opts))
 
     for debfile in os.listdir(repodir):

@@ -47,7 +47,7 @@ def _create_rpmmacros():
         os.makedirs(mockdir)
 
     rpmmacros = os.path.join(home, '.rpmmacros')
-    with open(rpmmacros, "w") as afile:
+    with salt.utils.fopen(rpmmacros, 'w') as afile:
         afile.write('%_topdir {0}\n'.format(rpmbuilddir))
         afile.write('%signature gpg\n')
         afile.write('%_gpg_name packaging@saltstack.com\n')
@@ -100,7 +100,7 @@ def _get_distset(tgt):
     if tgtattrs[1] in ['5', '6', '7']:
         distset = '--define "dist .el{0}"'.format(tgtattrs[1])
     else:
-        distset = ""
+        distset = ''
 
     return distset
 
@@ -109,7 +109,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
     '''
     Get include string for list of dependent rpms to build package
     '''
-    deps_list = ""
+    deps_list = ''
     if deps is None:
         return deps_list
     if not isinstance(deps, list):
@@ -174,7 +174,7 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
         salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for rhel 7 using user
-    "mock" and place it in /var/www/html/ on the minion
+    mock and place it in /var/www/html/ on the minion
     '''
     ret = {}
     if not os.path.isdir(dest_dir):
@@ -187,13 +187,13 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
 
     distset = _get_distset(tgt)
 
-    noclean = ""
+    noclean = ''
     deps_dir = tempfile.mkdtemp()
     deps_list = _get_deps(deps, deps_dir, saltenv)
     if deps_list and not deps_list.isspace():
         cmd = 'mock --root={0} {1}'.format(tgt, deps_list)
         __salt__['cmd.run'](cmd, runas=runas)
-        noclean += " --no-clean"
+        noclean += ' --no-clean'
 
     for srpm in srpms:
         dbase = os.path.dirname(srpm)
