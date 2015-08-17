@@ -74,7 +74,7 @@ start() {
         else 
             daemon --pidfile=$PID_FILE --check $SERVICE $SALTAPI $CONFIG_ARGS
             RETVAL=$?
-            [ $RETVAL = 0 ] && touch /var/lock/subsys/$SERVICE
+            [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$SERVICE
             echo
             return $RETVAL
         fi
@@ -102,7 +102,7 @@ stop() {
         killproc $PROCESS
         RETVAL=$?
         echo
-        [ $RETVAL = 0 ] && rm -f /var/lock/subsys/$SERVICE
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$SERVICE
         return $RETVAL
     fi
     RETVAL=$?

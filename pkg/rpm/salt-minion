@@ -70,7 +70,7 @@ start() {
         else
             daemon --check $SERVICE $SALTMINION -d $MINION_ARGS
             RETVAL=$?
-            [ $RETVAL = 0 ] && touch /var/lock/subsys/$SERVICE
+            [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$SERVICE
             echo
             return $RETVAL
         fi
@@ -98,7 +98,7 @@ stop() {
     else
         killproc $PROCESS
         RETVAL=$?
-        [ $RETVAL = 0 ] && rm -f /var/lock/subsys/$SERVICE
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$SERVICE
         # tidy up any rogue processes:
         PROCS=`ps -ef | grep "$SALTMINION" | grep -v grep | awk '{print $2}'`
         if [ -n "$PROCS" ]; then

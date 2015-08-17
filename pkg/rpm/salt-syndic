@@ -66,7 +66,7 @@ start() {
     else
         daemon --check $SERVICE $SALTSYNDIC -d $SYNDIC_ARGS
         RETVAL=$?
-        [ $RETVAL = 0 ] && touch /var/lock/subsys/$SERVICE
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$SERVICE
         echo
         return $RETVAL
     fi
@@ -93,7 +93,7 @@ stop() {
         killproc $PROCESS
         RETVAL=$?
         echo
-        [ $RETVAL = 0 ] && rm -f /var/lock/subsys/$SERVICE
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$SERVICE
         return $RETVAL
     fi
     RETVAL=$?
