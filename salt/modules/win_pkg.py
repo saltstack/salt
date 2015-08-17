@@ -673,7 +673,7 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
         if pkginfo[version].get('msiexec'):
             cmd.extend(['msiexec', '/x'])
         cmd.append(expanded_cached_pkg)
-        cmd.extend(uninstall_flags.split())
+        cmd.extend(shlex.split(uninstall_flags))
         if extra_uninstall_flags:
             cmd.extend(str(extra_uninstall_flags).split())
 
