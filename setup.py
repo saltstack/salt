@@ -138,10 +138,14 @@ class WriteSaltVersion(Command):
     description = 'Write salt\'s hardcoded version file'
 
     def initialize_options(self):
-        pass
+        '''
+        Abstract method that is required to be overwritten
+        '''
 
     def finalize_options(self):
-        pass
+        '''
+        Abstract method that is required to be overwritten
+        '''
 
     def run(self):
         if not os.path.exists(SALT_VERSION_HARDCODED):
@@ -160,15 +164,19 @@ class WriteSaltVersion(Command):
             # pylint: enable=E0602
 
 
-class WriteSaltSshPackaingFile(Command):
+class WriteSaltSshPackagingFile(Command):
 
     description = 'Write salt\'s ssh packaging file'
 
     def initialize_options(self):
-        pass
+        '''
+        Abstract method that is required to be overwritten
+        '''
 
     def finalize_options(self):
-        pass
+        '''
+        Abstract method that is required to be overwritten
+        '''
 
     def run(self):
         if not os.path.exists(PACKAGED_FOR_SALT_SSH_FILE):
@@ -316,7 +324,9 @@ class TestCommand(Command):
         self.runtests_opts = None
 
     def finalize_options(self):
-        pass
+        '''
+        Abstract method that is required to be overwritten
+        '''
 
     def run(self):
         from subprocess import Popen
