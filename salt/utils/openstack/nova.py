@@ -196,13 +196,11 @@ class SaltNova(OpenStackComputeShell):
         volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
         if volume_endpoints:
             if region_name is not None:
-                if server_endpoints:
-                    self.kwargs['bypass_url'] = get_entry(
-                        servers_endpoints,
-                        'region',
-                        region_name
-                    )['publicURL']
-                    volume_endpoint = True
+                self.kwargs['bypass_url'] = get_entry(
+                    volume_endpoints,
+                    'region',
+                    region_name
+                )['publicURL']
 
             self.volume_conn = client.Client(**self.kwargs)
             if hasattr(self, 'extensions'):
