@@ -482,7 +482,12 @@ def branch(cwd, name, opts='', user=None, ignore_retcode=False):
     return True
 
 
-def checkout(cwd, rev, force=False, opts='', user=None, ignore_retcode=False):
+def checkout(cwd,
+             rev=None,
+             force=False,
+             opts='',
+             user=None,
+             ignore_retcode=False):
     '''
     Interface to `git-checkout(1)`_
 
@@ -498,7 +503,10 @@ def checkout(cwd, rev, force=False, opts='', user=None, ignore_retcode=False):
             below) to avoid causing errors with Salt's own argument parsing.
 
     rev
-        The remote branch or revision to checkout
+        The remote branch or revision to checkout.
+
+        .. versionchanged:: 2015.8.0
+            Optional when using ``-b`` or ``-B`` in ``opts``.
 
     force : False
         Force a checkout even if there might be overwritten changes
@@ -526,15 +534,25 @@ def checkout(cwd, rev, force=False, opts='', user=None, ignore_retcode=False):
         salt myminion git.checkout /path/to/repo rev=origin/mybranch opts='--track'
         # Checking out remote revision into new branch
         salt myminion git.checkout /path/to/repo upstream/master opts='-b newbranch'
+        # Checking out current revision into new branch (2015.8.0 and later)
+        salt myminion git.checkout /path/to/repo opts='-b newbranch'
     '''
     _check_abs(cwd)
     command = ['git', 'checkout']
     if force:
         command.append('--force')
-    if not isinstance(rev, six.string_types):
-        rev = str(rev)
-    command.extend(_format_opts(opts))
-    command.append(rev)
+    opts = _format_opts(opts)
+    command.extend(opts)
+    checkout_branch = any(x in opts for x in ('-b', '-B'))
+    if rev is None:
+        if not checkout_branch:
+            raise SaltInvocationError(
+                '\'rev\' argument is required unless -b or -B in opts'
+            )
+    else:
+        if not isinstance(rev, six.string_types):
+            rev = str(rev)
+        command.append(rev)
     # Checkout message goes to stderr
     return _git_run(command,
                     cwd=cwd,
@@ -544,6 +562,7 @@ def checkout(cwd, rev, force=False, opts='', user=None, ignore_retcode=False):
 
 def clone(cwd,
           url=None,  # Remove default value once 'repository' arg is removed
+          name=None,
           opts='',
           user=None,
           identity=None,
@@ -555,13 +574,23 @@ def clone(cwd,
     Interface to `git-clone(1)`_
 
     cwd
-        The path to the git checkout
+        Parent directory from which to run the git command
+
+        .. versionchanged:: 2015.8.0
+            Clone is now created within this directory instead of *at* this
+            exact path. This makes this function behave more like the git CLI.
 
     url
         The URL of the repository to be cloned
 
         .. versionchanged:: 2015.8.0
             Argument renamed from ``repository`` to ``url``
+
+    name
+        Optional alternate name for the top-level directory to be created by
+        the clone
+
+        .. versionadded:: 2015.8.0
 
     opts
         Any additional options to add to the command line, in a single string
@@ -606,7 +635,7 @@ def clone(cwd,
 
     .. code-block:: bash
 
-        salt myminion git.clone /path/to/repo git://github.com/saltstack/salt.git
+        salt myminion git.clone /path/to/repo_parent_dir git://github.com/saltstack/salt.git
     '''
     _check_abs(cwd)
     if repository is not None:
@@ -621,12 +650,18 @@ def clone(cwd,
         raise SaltInvocationError('Missing \'url\' argument')
 
     url = _add_http_basic_auth(url, https_user, https_pass)
-    command = ['git', 'clone', url, cwd]
+    command = ['git', 'clone']
     command.extend(_format_opts(opts))
+    command.extend(['--', url])
+    if name is not None:
+        if not isinstance(name, six.string_types):
+            name = str(name)
+        command.append(name)
     return _git_run(command,
+                    cwd=cwd,
                     runas=user,
                     identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+                    ignore_retcode=ignore_retcode)['stderr']
 
 
 def commit(cwd,
