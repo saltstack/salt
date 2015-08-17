@@ -227,22 +227,31 @@ class _Section(OrderedDict):
         # will uncomment the key if commented and create a place holder
         # for the key where the correct value can be update later
         # used to preserve the ordering of comments and commented options
-        backup_dict = OrderedDict()
+        # and to make sure options without sectons go above any section
+        sections_backup = OrderedDict()
+        options_backup = OrderedDict()
         comment_index = None
         for key, value in self.iteritems():
+            if hasattr(value, 'iteritems'):
+                sections_backup.update({key: value})
+        for key in sections_backup:
+            self.pop(key)
+        for key, value in self.iteritems():
             if comment_index is not None:
-                backup_dict.update({key: value})
+                options_backup.update({key: value})
                 continue
             if '#comment' not in key:
                 continue
             opt_match = opt_regx.match(value.lstrip('#'))
             if opt_match and opt_match.group(2) == opt_key:
                 comment_index = key
-        for key in backup_dict.keys():
+        for key in options_backup:
             self.pop(key)
         self.pop(comment_index, None)
         super(_Section, self).update({opt_key: None})
-        for key, value in backup_dict.iteritems():
+        for key, value in options_backup.iteritems():
+            super(_Section, self).update({key: value})
+        for key, value in sections_backup.iteritems():
             super(_Section, self).update({key: value})
 
     def update(self, update_dict):
