@@ -1547,6 +1547,17 @@ def sanitize_win_path_string(winpath):
         winpath = winpath.translate(dict((ord(c), u'_') for c in intab))
     return winpath
 
+@real_memoize
+def is_proxy():
+    '''
+    Return True if this minion is a proxy minion.
+    Leverages the fact that is_linux() returns False
+    for proxies.
+    TODO: Need to extend this for proxies that might run on
+    other Unices or Windows.
+    '''
+    return not is_linux()
+
 
 @real_memoize
 def is_linux():
@@ -1560,7 +1571,7 @@ def is_linux():
     # then this will fail.
     is_proxy = False
     try:
-        if 'salt-proxy-minion' in main.__file__:
+        if 'salt-proxy' in main.__file__:
             is_proxy = True
     except AttributeError:
         pass

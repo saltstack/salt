@@ -19,6 +19,21 @@ your typical housecat would be excellent source material for a PhD thesis.
 Salt proxy-minions provide the 'plumbing' that allows device enumeration
 and discovery, control, status, remote execution, and state management.
 
+
+New in 2015.8
+-------------
+
+Starting with the 2015.8 release of Salt, proxy processes are no longer forked off from a controlling minion.
+Instead, they have their own script ``salt-proxy`` which takes mostly the same arguments that the
+standard Salt minion does with the addition of ``--proxyid``.  This is the id that the salt-proxy will
+use to identify itself to the master.  Proxy configurations are still best kept in Pillar and their format
+has not changed.
+
+This change allows for better process control and logging.  Proxy processes can now be listed with standard
+process management utilities (``ps`` from the command line).  Also, a full Salt minion is no longer
+required (though it is still strongly recommended) on machines hosting proxies.
+
+
 Getting Started
 ---------------
 
@@ -29,13 +44,11 @@ installation that includes proxy-minions:
 
 The key thing to remember is the left-most section of the diagram.  Salt's
 nature is to have a minion connect to a master, then the master may control
-the minion.  However, for proxy minions, the target device cannot run a minion,
-and thus must rely on a separate minion to fire up the proxy-minion and make the
-initial and persistent connection.
+the minion.  However, for proxy minions, the target device cannot run a minion.
 
 After the proxy minion is started and initiates its connection to the 'dumb'
-device, it connects back to the salt-master and ceases to be affiliated in
-any way with the minion that started it.
+device, it connects back to the salt-master and for all intents and purposes
+looks like just another minion to the Salt master.
 
 To create support for a proxied device one needs to create four things:
 
@@ -46,8 +59,8 @@ To create support for a proxied device one needs to create four things:
 4. :ref:`Salt states <all-salt.states>` specific to the controlled device.
 
 
-Configuration parameters on the master
-######################################
+Configuration parameters
+########################
 
 Proxy minions require no configuration parameters in /etc/salt/master.
 
@@ -136,7 +149,7 @@ In the above example
 - dumbdevice7 is an SMS gateway connected to machine minioncontroller3 via a
   serial port.
 
-Because of the way pillar works, each of the salt-minions that fork off the
+Because of the way pillar works, each of the salt-proxy processes that fork off the
 proxy minions will only see the keys specific to the proxies it will be
 handling.  In other words, from the above example, only minioncontroller1 will
 see the connection information for dumbdevices 1, 2, and 3.  Minioncontroller2
@@ -150,10 +163,6 @@ many machines if necessary, or intentionally run on machines that need to
 control devices because of some physical interface (e.g. i2c and serial above).
 Another reason to divide proxy services might be security.  In more secure
 environments only certain machines may have a network path to certain devices.
-
-Now our salt-minions know if they are supposed to spawn a proxy-minion process
-to control a particular device.  That proxy-minion process will initiate
-a connection back to the master to enable control.
 
 
 .. _proxy_connection_module:
@@ -174,10 +183,6 @@ Returning ``False`` will prevent the module from loading.
 a good place to bring up a persistent connection to a device, or authenticate
 to create a persistent authorization token.
 
-``id(opts)``: Returns a unique, unchanging id for the controlled device.  This is
-the "name" of the device, and is used by the salt-master for targeting and key
-authentication.
-
 ``shutdown()``: Code to cleanly shut down or close a connection to
 a controlled device goes here.  This function must exist, but can contain only
 the keyword ``pass`` if there is no shutdown logic required.
@@ -186,10 +191,17 @@ the keyword ``pass`` if there is no shutdown logic required.
 be defined in the proxymodule. The code for ``ping`` should contact the
 controlled device and make sure it is really available.
 
+Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and following don't use
+this function because the proxy's id is required on the command line.
+
+``id(opts)``: Returns a unique, unchanging id for the controlled device.  This is
+the "name" of the device, and is used by the salt-master for targeting and key
+authentication.
+
 Here is an example proxymodule used to interface to a *very* simple REST
 server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
 
-This proxymodule enables "service" enumration, starting, stopping, restarting,
+This proxymodule enables "service" enumeration, starting, stopping, restarting,
 and status; "package" installation, and a ping.
 
 .. code-block:: python
@@ -372,8 +384,9 @@ and status; "package" installation, and a ping.
 
 Grains are data about minions.  Most proxied devices will have a paltry amount
 of data as compared to a typical Linux server.  By default, a proxy minion will
-have no grains set at all.  Salt core code requires values for ``kernel``,
-``os``, and ``os_family``.  To add them (and others) to your proxy minion for
+have several grains taken from the host.  Salt core code requires values for ``kernel``,
+``os``, and ``os_family``--all of these are forced to be ``proxy`` for proxy-minions.
+To add others to your proxy minion for
 a particular device, create a file in salt/grains named [proxytype].py and place
 inside it the different functions that need to be run to collect the data you
 are interested in.  Here's an example:
@@ -439,10 +452,8 @@ Here is an excerpt from a module that was modified to support proxy-minions:
     def ping():
 
         if 'proxymodule' in __opts__:
-            if 'ping' in __opts__['proxyobject'].__attr__():
-                return __opts['proxyobject'].ping()
-            else:
-                return False
+            ping_cmd = __opts__['proxymodule'].loaded_base_name + '.ping'
+            return __opts__['proxymodule'][ping_cmd]()
         else:
             return True
 
