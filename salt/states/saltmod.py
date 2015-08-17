@@ -56,7 +56,8 @@ def state(
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
-        timeout=None):
+        timeout=None,
+        batch=None):
     '''
     Invoke a state run on a given target
 
@@ -213,6 +214,9 @@ def state(
         ret['result'] = False
         return ret
 
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
+
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
 
     changes = {}
@@ -300,7 +304,8 @@ def function(
         fail_function=None,
         arg=None,
         kwarg=None,
-        timeout=None):
+        timeout=None,
+        batch=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -360,6 +365,9 @@ def function(
     elif not tgt_type and not expr_form:
         tgt_type = 'glob'
 
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
+
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
@@ -371,6 +379,7 @@ def function(
                 ).format(fun, tgt, str(False))
         ret['result'] = None
         return ret
+    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     try:
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
