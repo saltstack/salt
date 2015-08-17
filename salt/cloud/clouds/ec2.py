@@ -3457,6 +3457,81 @@ def _toggle_delvol(name=None, instance_id=None, device=None, volume_id=None,
     return show_delvol_on_destroy(name, kwargs, call='action')
 
 
+def register_image(kwargs=None, call=None):
+    '''
+    Create an ami from a snapshot
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f register_image my-ec2-config ami_name=my_ami description="my description" root_device_name=/dev/xvda snapshot_id=snap-xxxxxxxx
+    '''
+
+    if call != 'function':
+        log.error(
+            'The create_volume function must be called with -f or --function.'
+        )
+        return False
+
+    if 'ami_name' not in kwargs:
+        log.error('ami_name must be specified to register an image.')
+        return False
+
+    block_device_mapping = kwargs.get('block_device_mapping', None)
+    if not block_device_mapping:
+        if 'snapshot_id' not in kwargs:
+            log.error('snapshot_id or block_device_mapping must be specified to register an image.')
+            return False
+        if 'root_device_name' not in kwargs:
+            log.error('root_device_name or block_device_mapping must be specified to register an image.')
+            return False
+        block_device_mapping = [{
+            'DeviceName': kwargs['root_device_name'],
+            'Ebs': {
+                'VolumeType': kwargs.get('volume_type', 'gp2'),
+                'SnapshotId': kwargs['snapshot_id'],
+             }
+        }]
+
+    if not isinstance(block_device_mapping, list):
+        block_device_mapping = [block_device_mapping]
+
+    params = {'Action': 'RegisterImage',
+              'Name': kwargs['ami_name']}
+
+    params.update(_param_from_config('BlockDeviceMapping', block_device_mapping))
+
+    if 'root_device_name' in kwargs:
+        params['RootDeviceName'] = kwargs['root_device_name']
+
+    if 'description' in kwargs:
+        params['Description'] = kwargs['description']
+
+    if 'virtualization_type' in kwargs:
+        params['VirtualizationType'] = kwargs['virtualization_type']
+
+    if 'architecture' in kwargs:
+        params['Architecture'] = kwargs['architecture']
+
+    log.debug(params)
+
+    data = aws.query(params,
+                     return_url=True,
+                     return_root=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+
+    r_data = {}
+    for d in data[0]:
+        for k, v in d.items():
+            r_data[k] = v
+
+    return r_data
+
+
 def create_volume(kwargs=None, call=None, wait_to_finish=False):
     '''
     Create a volume
