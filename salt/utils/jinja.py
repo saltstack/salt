@@ -272,7 +272,7 @@ class SerializerExtension(Extension, object):
         {%- set json_src = "{'bar': 'for real'}"|load_json %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
-    will be rendered has::
+    will be rendered as::
 
         Dude, it works for real!
 
@@ -298,7 +298,7 @@ class SerializerExtension(Extension, object):
         {% endload %}
         Dude, {{ yaml_src.foo }} {{ json_src.bar }}!
 
-    will be rendered has::
+    will be rendered as::
 
         Dude, it works for real!
 
