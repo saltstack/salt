@@ -403,8 +403,11 @@ def query(url,
         if isinstance(data, dict):
             data = urllib.urlencode(data)
 
+        max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
+
         try:
-            result = HTTPClient(max_body_size=opts['http_max_body']).fetch(
+            result = HTTPClient(max_body_size=max_body).fetch(
                 url_full,
                 method=method,
                 headers=header_dict,
@@ -414,7 +417,7 @@ def query(url,
                 validate_cert=verify_ssl,
                 allow_nonstandard_methods=True,
                 streaming_callback=streaming_callback,
-                request_timeout=opts['http_request_timeout'],
+                request_timeout=timeout,
                 **req_kwargs
             )
         except tornado.httpclient.HTTPError as exc:
