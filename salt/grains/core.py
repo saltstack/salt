@@ -1071,7 +1071,7 @@ def os_data():
         try:
             os.stat('/run/systemd/system')
             grains['init'] = 'systemd'
-        except OSError:
+        except (OSError, IOError):
             if os.path.exists('/proc/1/cmdline'):
                 with salt.utils.fopen('/proc/1/cmdline') as fhr:
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
