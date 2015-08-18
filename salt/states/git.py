@@ -417,7 +417,8 @@ def latest(name,
         remote_rev = None
     else:
         if rev is None:
-            remote_rev = None
+            remote_rev = 'HEAD'
+            remote_rev_type = 'sha1'
         elif remote_rev_matches:
             ref_name = 'refs/heads/' + rev
             if 'refs/heads/' + rev in remote_rev_matches:
