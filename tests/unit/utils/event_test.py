@@ -95,8 +95,10 @@ class TestSaltEvent(TestCase):
     def assertGotEvent(self, evt, data, msg=None):
         self.assertIsNotNone(evt, msg)
         for key in data:
-            self.assertIn(key, evt, msg)
-            self.assertEqual(data[key], evt[key], msg)
+            self.assertIn(key, evt, '{0}: Key {1} missing'.format(msg, key))
+            assertMsg = '{0}: Key {1} value mismatch, {2} != {3}'
+            assertMsg.format(msg, key, data[key], evt[key])
+            self.assertEqual(data[key], evt[key], assertMsg)
 
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR, listen=False)
@@ -198,7 +200,7 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
-            evt1 = me.get_event(tag='not', tags_regex=['^ev'])
+            evt1 = me.get_event(tag='^ev', match_type='regex')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_matching_all(self):
@@ -236,7 +238,7 @@ class TestSaltEvent(TestCase):
         '''Test regex subscriptions cache a message until requested'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe_regex('1$')
+            me.subscribe('e..1$', 'regex')
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='evt2')
@@ -244,8 +246,6 @@ class TestSaltEvent(TestCase):
             self.assertGotEvent(evt2, {'data': 'foo2'})
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    # TODO: @driskell fix these up please
-    @skipIf(True, '@driskell will fix these up')
     def test_event_multiple_clients(self):
         '''Test event is received by multiple clients'''
         with eventpublisher_process():
@@ -279,8 +279,6 @@ class TestSaltEvent(TestCase):
                 evt = me.get_event(tag='testevents')
                 self.assertGotEvent(evt, {'data': '{0}'.format(i)}, 'Event {0}'.format(i))
 
-    # TODO: @driskell fix these up please
-    @skipIf(True, '@driskell will fix these up')
     def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process():
