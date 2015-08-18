@@ -246,9 +246,8 @@ class GitModuleTest(integration.ModuleCase):
         Test cloning an existing repo
         '''
         clone_parent_dir = tempfile.mkdtemp(dir=integration.TMP)
-        self.assertEqual(
-            self.run_function('git.clone', [clone_parent_dir, self.repo]),
-            'Cloning into \'' + clone_parent_dir + '\'...\ndone.'
+        self.assertTrue(
+            self.run_function('git.clone', [clone_parent_dir, self.repo])
         )
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir)
@@ -260,13 +259,12 @@ class GitModuleTest(integration.ModuleCase):
         clone_parent_dir = tempfile.mkdtemp(dir=integration.TMP)
         clone_name = os.path.basename(self.repo)
         # Change to newly-created temp dir
-        self.assertEqual(
+        self.assertTrue(
             self.run_function(
                 'git.clone',
                 [clone_parent_dir, self.repo],
                 name=clone_name
-            ),
-            'Cloning into \'' + clone_name + '\'...\ndone.'
+            )
         )
         # Cleanup after yourself
         shutil.rmtree(clone_parent_dir)
