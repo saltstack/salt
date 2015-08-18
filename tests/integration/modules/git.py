@@ -106,6 +106,31 @@ class GitModuleTest(integration.ModuleCase):
         # Go back to original cwd
         os.chdir(self.orig_cwd)
 
+    def test_add_dir(self):
+        '''
+        Test git.add with a directory
+        '''
+        newdir = 'quux'
+        # Change to the repo dir
+        newdir_path = os.path.join(self.repo, newdir)
+        _makedirs(newdir_path)
+        files = [os.path.join(newdir_path, x) for x in self.files]
+        files_relpath = [os.path.join(newdir, x) for x in self.files]
+        for path in files:
+            with open(path, 'w') as fp_:
+                fp_.write(
+                    'This is a test file with relative path {0}.\n'
+                    .format(path)
+                )
+        ret = self.run_function('git.add', [self.repo, newdir])
+        self.assertEqual(
+            ret,
+            '\n'.join(
+                sorted(['add \'{0}\''.format(x)
+                        for x in files_relpath])
+            )
+        )
+
     def test_add_file(self):
         '''
         Test git.add with a file
@@ -116,27 +141,6 @@ class GitModuleTest(integration.ModuleCase):
             fp_.write('This is a test file named ' + filename + '.\n')
         ret = self.run_function('git.add', [self.repo, filename])
         self.assertEqual(ret, 'add \'{0}\''.format(filename))
-
-    def test_add_dir(self):
-        '''
-        Test git.add with a directory
-        '''
-        newdir = 'quux'
-        # Change to the repo dir
-        newdir_path = os.path.join(self.repo, newdir)
-        _makedirs(newdir_path)
-        files = [os.path.join(newdir_path, x) for x in self.files]
-        for path in files:
-            with open(path, 'w') as fp_:
-                fp_.write(
-                    'This is a test file with relative path {0}.\n'
-                    .format(path)
-                )
-        ret = self.run_function('git.add', [self.repo, newdir])
-        self.assertEqual(
-            ret,
-            '\n'.join(sorted(['add \'{0}\''.format(x) for x in files]))
-        )
 
     def test_archive(self):
         '''
