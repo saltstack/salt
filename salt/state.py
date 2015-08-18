@@ -2329,15 +2329,15 @@ class BaseHighState(object):
             for ord_env in env_order:
                 if ord_env in env_intersection:
                     final_list.append(ord_env)
-            return final_list
+            return set(final_list)
 
         elif env_order:
-            return env_order
+            return set(env_order)
         else:
             for cenv in client_envs:
                 if cenv not in envs:
                     envs.append(cenv)
-            return envs
+            return set(envs)
 
     def get_tops(self):
         '''
