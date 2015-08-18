@@ -827,8 +827,8 @@ def list_nodes(call=None, **kwargs):
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
             'state': server_tmp['state'],
-            'private_ips': public,
-            'public_ips': private,
+            'private_ips': private,
+            'public_ips': public,
         }
     return ret
 
