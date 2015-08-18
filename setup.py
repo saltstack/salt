@@ -854,7 +854,7 @@ class SaltDistribution(distutils.dist.Distribution):
                               'install': Install,
                               'write-salt-version': WriteSaltVersion,
                               'generate-salt-syspaths': GenerateSaltSyspaths,
-                              'write-salt-ssh-packaging-file': WriteSaltSshPackaingFile})
+                              'write-salt-ssh-packaging-file': WriteSaltSshPackagingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})
