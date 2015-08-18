@@ -29,6 +29,7 @@ try:
 except ImportError:
     import msgpack_pure as msgpack
 # pylint: enable=import-error
+import shlex
 
 # Import salt libs
 from salt.exceptions import SaltRenderError
@@ -566,7 +567,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         if msiexec:
             cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
-        cmd.extend(install_flags.split())
+        cmd.extend(shlex.split(install_flags))
         if msiexec and allusers:
             cmd.append('ALLUSERS="1"')
 
@@ -672,7 +673,7 @@ def remove(name=None, pkgs=None, version=None, extra_uninstall_flags=None, **kwa
         if pkginfo[version].get('msiexec'):
             cmd.extend(['msiexec', '/x'])
         cmd.append(expanded_cached_pkg)
-        cmd.extend(uninstall_flags.split())
+        cmd.extend(shlex.split(uninstall_flags))
         if extra_uninstall_flags:
             cmd.extend(str(extra_uninstall_flags).split())
 

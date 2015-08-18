@@ -139,9 +139,11 @@ class WriteSaltVersion(Command):
     user_options = []
 
     def initialize_options(self):
+        """Abstract method that is required to be overwritten"""
         pass
 
     def finalize_options(self):
+        """Abstract method that is required to be overwritten"""
         pass
 
     def run(self):
@@ -161,15 +163,17 @@ class WriteSaltVersion(Command):
             # pylint: enable=E0602
 
 
-class WriteSaltSshPackaingFile(Command):
+class WriteSaltSshPackagingFile(Command):
 
     description = 'Write salt\'s ssh packaging file'
     user_options = []
 
     def initialize_options(self):
+        """Abstract method that is required to be overwritten"""
         pass
 
     def finalize_options(self):
+        """Abstract method that is required to be overwritten"""
         pass
 
     def run(self):
@@ -318,6 +322,7 @@ class TestCommand(Command):
         self.runtests_opts = None
 
     def finalize_options(self):
+        """Abstract method that is required to be overwritten"""
         pass
 
     def run(self):
@@ -610,7 +615,7 @@ class SaltDistribution(distutils.dist.Distribution):
                               'sdist': Sdist,
                               'install': Install,
                               'write_salt_version': WriteSaltVersion,
-                              'write_salt_ssh_packaging_file': WriteSaltSshPackaingFile})
+                              'write_salt_ssh_packaging_file': WriteSaltSshPackagingFile})
         if not IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'sdist': CloudSdist,
                                   'install_lib': InstallLib})

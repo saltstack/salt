@@ -784,8 +784,21 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
     ret = {}
     seen = 0
-    for ret_comp in client.cmd_iter(
-            tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+    if 'batch' in kwargs:
+        _cmd = client.cmd_batch
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'expr_form': expr_form,
+            'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
+        }
+        del kwargs['batch']
+    else:
+        _cmd = client.cmd_iter
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
+            'expr_form': expr_form, 'ret': ret, 'kwarg': kwarg,
+        }
+    cmd_kwargs.update(kwargs)
+    for ret_comp in _cmd(**cmd_kwargs):
         ret.update(ret_comp)
         seen += 1
         # ret can be empty, so we cannot len the whole return dict
@@ -830,6 +843,14 @@ def cmd(tgt,
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
         ret = _exec(
             client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+    if 'batch' in kwargs:
+        old_ret, ret = ret, {}
+        for key, value in old_ret.items():
+            ret[key] = {
+                'out': value.get('out', 'highstate') if isinstance(value, dict) else 'highstate',
+                'ret': value,
+            }
+
     return ret
 
 
