@@ -1336,7 +1336,7 @@ def get_route(ip):
         # recvpipe  sendpipe  ssthresh    rtt,ms rttvar,ms  hopcount      mtu     expire
         #       0         0         0         0         0         0      1500         0
         cmd = '/usr/sbin/route -n get {0}'.format(ip)
-        out = __salt__['cmd.run'](cmd, python_shell=True)
+        out = __salt__['cmd.run'](cmd, python_shell=False)
 
         ret = {
             'destination': ip,
@@ -1370,7 +1370,7 @@ def get_route(ip):
         #     use       mtu    expire
         # 8352657         0         0
         cmd = 'route -n get {0}'.format(ip)
-        out = __salt__['cmd.run'](cmd, python_shell=True)
+        out = __salt__['cmd.run'](cmd, python_shell=False)
 
         ret = {
             'destination': ip,
