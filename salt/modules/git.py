@@ -675,11 +675,12 @@ def clone(cwd,
         command.append(name)
     else:
         command.append(cwd)
-    return _git_run(command,
-                    cwd=None if name is None else cwd,
-                    runas=user,
-                    identity=identity,
-                    ignore_retcode=ignore_retcode)['stderr']
+    _git_run(command,
+             cwd=None if name is None else cwd,
+             runas=user,
+             identity=identity,
+             ignore_retcode=ignore_retcode)
+    return True
 
 
 def commit(cwd,
