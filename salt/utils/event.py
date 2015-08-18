@@ -175,7 +175,8 @@ class SaltEvent(object):
         self.pending_events = []
         # since ZMQ connect()  has no guarantees about the socket actually being
         # connected this is a hack to attempt to do so.
-        self.connect_pub()
+        if not self.cpub:
+            self.connect_pub()
         self.fire_event({}, tagify('event/new_client'), 0)
         self.get_event(wait=1)
 
