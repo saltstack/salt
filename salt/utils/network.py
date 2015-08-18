@@ -210,6 +210,16 @@ def get_hostnames():
     except (IOError, OSError):
         pass
 
+    # try /etc/nodename (SunOS only)
+    if salt.utils.is_sunos():
+        try:
+            name = ''
+            with salt.utils.fopen('/etc/nodename') as hfl:
+                name = hfl.read()
+            h.append(name)
+        except (IOError, OSError):
+            pass
+
     # try /etc/hosts
     try:
         with salt.utils.fopen('/etc/hosts') as hfl:
