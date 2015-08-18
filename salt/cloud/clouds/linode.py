@@ -279,7 +279,7 @@ def boot(name=None, kwargs=None, call=None):
     return True
 
 
-def clone(linode_id, datacenter_id, plan_id):
+def clone(kwargs=None, call=None):
     '''
     Clone a Linode.
 
@@ -291,7 +291,33 @@ def clone(linode_id, datacenter_id, plan_id):
 
     plan_id
         The ID of the plan (size) of the Linode. Required.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f clone my-linode-config linode_id=1234567 datacenter_id=2 plan_id=5
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The clone function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    linode_id = kwargs.get('linode_id', None)
+    datacenter_id = kwargs.get('datacenter_id', None)
+    plan_id = kwargs.get('plan_id', None)
+    required_params = [linode_id, datacenter_id, plan_id]
+
+    for item in required_params:
+        if item is None:
+            raise SaltCloudSystemExit(
+                'The clone function requires a \'linode_id\', \'datacenter_id\', '
+                'and \'plan_id\' to be provided.'
+            )
+
     clone_args = {
         'LinodeID': linode_id,
         'DatacenterID': datacenter_id,
@@ -357,7 +383,9 @@ def create(vm_):
         kwargs['size'] = clone_source['TOTALRAM']
 
         try:
-            result = clone(linode_id, datacenter_id, plan_id)
+            result = clone(kwargs={'linode_id': linode_id,
+                                   'datacenter_id': datacenter_id,
+                                   'plan_id': plan_id})
         except Exception:
             log.error(
                 'Error cloning {0} on Linode\n\n'
@@ -417,11 +445,10 @@ def create(vm_):
         create_private_ip(vm_, node_id)
 
     # Create a ConfigID using disk ids
-    config_id = create_config(vm_,
-                              node_id,
-                              root_disk_id,
-                              swap_disk_id)['ConfigID']
-
+    config_id = create_config(kwargs={'name': vm_['name'],
+                                      'linode_id': node_id,
+                                      'root_disk_id': root_disk_id,
+                                      'swap_disk_id': swap_disk_id})['ConfigID']
     # Boot the Linode
     boot(kwargs={'linode_id': node_id,
                  'config_id': config_id,
@@ -470,12 +497,12 @@ def create(vm_):
     return ret
 
 
-def create_config(vm_, linode_id, root_disk_id, swap_disk_id, kernel_id=None):
+def create_config(kwargs=None, call=None):
     '''
     Creates a Linode Configuration Profile.
 
-    vm_
-        The VM profile to create the config for.
+    name
+        The name of the VM to create the config for.
 
     linode_id
         The ID of the Linode to create the configuration for.
@@ -489,14 +516,35 @@ def create_config(vm_, linode_id, root_disk_id, swap_disk_id, kernel_id=None):
     kernel_id
         The ID of the kernel to use for this configuration profile.
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The create_config function must be called with -f or --function.'
+        )
+
+    if kwargs is None:
+        kwargs = {}
+
+    name = kwargs.get('name', None)
+    linode_id = kwargs.get('linode_id', None)
+    root_disk_id = kwargs.get('root_disk_id', None)
+    swap_disk_id = kwargs.get('swap_disk_id', None)
+    kernel_id = kwargs.get('kernel_id', None)
 
     if kernel_id is None:
         # 138 appears to always be the latest 64-bit kernel for Linux
         kernel_id = 138
 
+    required_params = [name, linode_id, root_disk_id, swap_disk_id]
+    for item in required_params:
+        if item is None:
+            raise SaltCloudSystemExit(
+                'The create_config functions requires a \'name\', \'linode_id\', '
+                '\'root_disk_id\', and \'swap_disk_id\'.'
+            )
+
     config_args = {'LinodeID': linode_id,
                    'KernelID': kernel_id,
-                   'Label': vm_['name'],
+                   'Label': name,
                    'DiskList': '{0},{1}'.format(root_disk_id, swap_disk_id)
                    }
 
