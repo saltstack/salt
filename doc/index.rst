@@ -223,7 +223,7 @@ The following links explore various Salt topics in depth.
 :doc:`Testing Salt <topics/development/tests/index>`
     This is a  tutorial for writing unit tests and integration tests.
 
-:doc:`Salt Proxy Minions <topics/topology/proxyminion/index>`
+:doc:`Salt Proxy Minions <topics/proxyminion/index>`
     Proxy minions allow for the control of devices and machines which are
     unable to run a salt-minion.
 
