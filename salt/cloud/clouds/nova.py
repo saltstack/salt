@@ -1054,3 +1054,111 @@ def virtual_interface_create(name, net_name, **kwargs):
     '''
     conn = get_conn()
     return conn.virtual_interface_create(name, net_name)
+
+
+def floating_ip_pool_list(call=None):
+    '''
+    List all floating IP pools
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_pool_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_pool_list()
+
+
+def floating_ip_list(call=None):
+    '''
+    List floating IPs
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_list()
+
+
+def floating_ip_create(kwargs, call=None):
+    '''
+    Allocate a floating IP
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_create action must be called with -f or --function'
+        )
+
+    if 'pool' not in kwargs:
+        log.error('pool is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_create(kwargs['pool'])
+
+
+def floating_ip_delete(kwargs, call=None):
+    '''
+    De-allocate floating IP
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_delete action must be called with -f or --function'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_delete(kwargs['floating_ip'])
+
+
+def floating_ip_associate(name, kwargs, call=None):
+    '''
+    Associate a floating IP address to a server
+
+    .. versionadded:: Boron
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_associate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_associate(name, kwargs['floating_ip'])
+    return list_nodes()[name]
+
+
+def floating_ip_disassociate(name, kwargs, call=None):
+    '''
+    Disassociate a floating IP from a server
+
+    .. versionadded:: Boron
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_disassociate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_disassociate(name, kwargs['floating_ip'])
+    return list_nodes()[name]
