@@ -890,6 +890,8 @@ class SaltNova(OpenStackComputeShell):
     def floating_ip_pool_list(self):
         '''
         List all floating IP pools
+
+        .. versionadded:: Boron
         '''
         nt_ks = self.compute_conn
         pools = nt_ks.floating_ip_pools.list()
@@ -903,6 +905,8 @@ class SaltNova(OpenStackComputeShell):
     def floating_ip_list(self):
         '''
         List floating IPs
+
+        .. versionadded:: Boron
         '''
         nt_ks = self.compute_conn
         floating_ips = nt_ks.floating_ips.list()
@@ -918,6 +922,11 @@ class SaltNova(OpenStackComputeShell):
         return response
 
     def floating_ip_show(self, ip):
+        '''
+        Show info on specific floating IP
+
+        .. versionadded:: Boron
+        '''
         nt_ks = self.compute_conn
         floating_ips = nt_ks.floating_ips.list()
         for floating_ip in floating_ips:
@@ -928,6 +937,8 @@ class SaltNova(OpenStackComputeShell):
     def floating_ip_create(self, pool=None):
         '''
         Allocate a floating IP
+
+        .. versionadded:: Boron
         '''
         nt_ks = self.compute_conn
         floating_ip = nt_ks.floating_ips.create(pool)
@@ -943,6 +954,8 @@ class SaltNova(OpenStackComputeShell):
     def floating_ip_delete(self, floating_ip):
         '''
         De-allocate a floating IP
+
+        .. versionadded:: Boron
         '''
         ip = self.floating_ip_show(floating_ip)
         nt_ks = self.compute_conn
@@ -951,6 +964,8 @@ class SaltNova(OpenStackComputeShell):
     def floating_ip_associate(self, server_name, floating_ip):
         '''
         Associate floating IP address to server
+
+        .. versionadded:: Boron
         '''
         nt_ks = self.compute_conn
         server_ = self.server_by_name(server_name)
@@ -961,6 +976,8 @@ class SaltNova(OpenStackComputeShell):
     def floating_ip_disassociate(self, server_name, floating_ip):
         '''
         Disassociate a floating IP from server
+
+        .. versionadded:: Boron
         '''
         nt_ks = self.compute_conn
         server_ = self.server_by_name(server_name)
