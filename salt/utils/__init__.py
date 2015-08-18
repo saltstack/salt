@@ -2815,3 +2815,45 @@ def is_list(value):
     Check if a variable is a list.
     '''
     return isinstance(value, list)
+
+
+def invalid_kwargs(invalid_kwargs, raise_exc=True):
+    '''
+    Raise a SaltInvocationError if invalid_kwargs is non-empty
+    '''
+    if invalid_kwargs:
+        if isinstance(invalid_kwargs, dict):
+            new_invalid = [
+                '{0}={1}'.format(x, y)
+                for x, y in six.iteritems(invalid_kwargs)
+            ]
+            invalid_kwargs = new_invalid
+    msg = (
+        'The following keyword arguments are not valid: {0}'
+        .format(', '.join(invalid_kwargs))
+    )
+    if raise_exc:
+        raise SaltInvocationError(msg)
+    else:
+        return msg
+
+
+def itersplit(orig, sep=None):
+    '''
+    Generator function for iterating through large strings, particularly useful
+    as a replacement for str.splitlines() if the string is expected to contain
+    a lot of lines.
+
+    See http://stackoverflow.com/a/3865367
+    '''
+    exp = re.compile(r'\s+' if sep is None else re.escape(sep))
+    pos = 0
+    while True:
+        match = exp.search(orig, pos)
+        if not match:
+            if pos < len(orig) or sep is not None:
+                yield orig[pos:]
+            break
+        if pos < match.start() or sep is not None:
+            yield orig[pos:match.start()]
+        pos = match.end()
