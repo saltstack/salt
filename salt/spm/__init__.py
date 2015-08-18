@@ -12,7 +12,6 @@ import yaml
 import tarfile
 import shutil
 import msgpack
-import sqlite3
 import datetime
 import hashlib
 import logging
@@ -21,6 +20,7 @@ import grp
 
 # Import Salt libs
 import salt.config
+import salt.loader
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
@@ -42,6 +42,18 @@ class SPMClient(object):
                 os.path.join(syspaths.CONFIG_DIR, 'spm')
             )
         self.opts = opts
+
+        self.db_prov = opts.get('spm_db_provider', 'sqlite3')
+        db_fun = '{0}.init'.format(self.db_prov)
+
+        self.pkgdb = salt.loader.pkgdb(self.opts)
+        self.db_conn = self.pkgdb[db_fun]()
+
+        self.files_prov = opts.get('spm_files_provider', 'roots')
+        files_fun = '{0}.init'.format(self.files_prov)
+
+        self.pkgfiles = salt.loader.pkgfiles(self.opts)
+        self.files_conn = self.pkgfiles[files_fun]()
 
     def run(self, args):
         '''
@@ -87,31 +99,20 @@ class SPMClient(object):
             return False
 
         pkg_file = args[1]
-
-        self._init_db()
-        roots_path = self.opts['file_roots']['base'][0]
-        pillar_path = self.opts['pillar_roots']['base'][0]
-        comps = pkg_file.split('-')
-        comps = '-'.join(comps[:-2]).split('/')
-        name = comps[-1]
-
         if not os.path.exists(pkg_file):
             log.error('File {0} not found'.format(pkg_file))
             return False
 
-        if not os.path.exists(roots_path):
-            os.makedirs(roots_path)
-
-        sqlite3.enable_callback_tracebacks(True)
-        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
-        cur = conn.cursor()
+        comps = pkg_file.split('-')
+        comps = '-'.join(comps[:-2]).split('/')
+        name = comps[-1]
 
         formula_tar = tarfile.open(pkg_file, 'r:bz2')
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = yaml.safe_load(formula_ref)
 
-        data = conn.execute('SELECT package FROM packages WHERE package=?', (formula_def['name'], ))
-        if data.fetchone() and not self.opts['force']:
+        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](name, self.db_conn)
+        if pkg_info is not None and not self.opts['force']:
             print('Package {0} already installed, not installing again'.format(formula_def['name']))
             return
 
@@ -122,8 +123,8 @@ class SPMClient(object):
             for dep in formula_def['dependencies']:
                 if not isinstance(dep, string_types):
                     continue
-                data = conn.execute('SELECT package FROM packages WHERE package=?', (dep, ))
-                if data.fetchone():
+                data = self.pkgdb['{0}.info'.format(self.db_prov)](dep, self.db_conn)
+                if data is not None:
                     continue
                 needs.append(dep)
             print('Cannot install {0}, the following dependencies are needed: '
@@ -143,8 +144,6 @@ class SPMClient(object):
 
         print('... installing')
 
-        log.debug('Locally installing package file {0} to {1}'.format(pkg_file, roots_path))
-
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
                 log.error('Invalid package: the {0} was not found'.format(field))
@@ -152,42 +151,15 @@ class SPMClient(object):
 
         pkg_files = formula_tar.getmembers()
         # First pass: check for files that already exist
-        existing_files = []
-        for member in pkg_files:
-            if member.isdir():
-                continue
-            if member.name.startswith('{0}/_'.format(name)):
-                # Module files are distributed via _modules, _states, etc
-                new_name = member.name.replace('{0}/'.format(name), '')
-                out_file = os.path.join(roots_path, new_name)
-            elif member.name == '{0}/pillar.example'.format(name):
-                # Pillars are automatically put in the pillar_roots
-                new_name = '{0}.sls.orig'.format(name)
-                out_file = os.path.join(pillar_path, new_name)
-            else:
-                out_file = os.path.join(roots_path, member.name)
-            if os.path.exists(out_file):
-                existing_files.append(out_file)
-                if not self.opts['force']:
-                    log.error('{0} already exists, not installing'.format(out_file))
+        existing_files = self.pkgfiles['{0}.check_existing'.format(self.files_prov)](
+            name, pkg_files
+        )
 
         if existing_files and not self.opts['force']:
             return
 
         # We've decided to install
-        conn.execute('INSERT INTO packages VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
-            name,
-            formula_def['version'],
-            formula_def['release'],
-            datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'),
-            formula_def.get('os', None),
-            formula_def.get('os_family', None),
-            formula_def.get('dependencies', None),
-            formula_def.get('os_dependencies', None),
-            formula_def.get('os_family_dependencies', None),
-            formula_def['summary'],
-            formula_def['description'],
-        ))
+        self.pkgdb['{0}.register_pkg'.format(self.db_prov)](name, formula_def, self.db_conn)
 
         # No defaults for this in config.py; default to the current running
         # user and group
@@ -198,42 +170,31 @@ class SPMClient(object):
 
         # Second pass: install the files
         for member in pkg_files:
-            out_path = roots_path
-            file_ref = formula_tar.extractfile(member)
             member.uid = uid
             member.gid = gid
             member.uname = uname
             member.gname = gname
+
+            file_ref = formula_tar.extractfile(member)
             if member.isdir():
                 digest = ''
             else:
                 file_hash = hashlib.sha1()
                 file_hash.update(file_ref.read())
                 digest = file_hash.hexdigest()
-            if member.name.startswith('{0}/_'.format(name)):
-                # Module files are distributed via _modules, _states, etc
-                member.name = member.name.replace('{0}/'.format(name), '')
-            elif member.name == '{0}/pillar.example'.format(name):
-                # Pillars are automatically put in the pillar_roots
-                member.name = '{0}.sls.orig'.format(name)
-                out_path = pillar_path
-            formula_tar.extract(member, out_path)
-            conn.execute('INSERT INTO files VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+
+            out_path = self.pkgfiles['{0}.install_file'.format(self.files_prov)](
+                name, formula_tar, member, self.files_conn
+            )
+            self.pkgdb['{0}.register_file'.format(self.db_prov)](
                 name,
-                '{0}/{1}'.format(out_path, member.path),
-                member.size,
-                member.mode,
+                member,
+                out_path,
                 digest,
-                member.devmajor,
-                member.devminor,
-                member.linkname,
-                member.linkpath,
-                member.uname,
-                member.gname,
-                member.mtime
-            ))
+                self.db_conn
+            )
+
         formula_tar.close()
-        conn.close()
 
     def _traverse_repos(self, callback, repo_name=None):
         '''
@@ -294,11 +255,17 @@ class SPMClient(object):
         '''
         metadata = {}
 
+        if not os.path.exists(self.opts['spm_cache_dir']):
+            os.makedirs(self.opts['spm_cache_dir'])
+
         def _read_metadata(repo, repo_info):
             cache_path = '{0}/{1}.p'.format(
                 self.opts['spm_cache_dir'],
                 repo
             )
+
+            if not os.path.exists(cache_path):
+                return
 
             with salt.utils.fopen(cache_path, 'r') as cph:
                 metadata[repo] = {
@@ -379,6 +346,7 @@ class SPMClient(object):
 
                 self._local_install((None, out_file), package)
                 return
+        log.error('Cannot install package {0}, no source package'.format(package))
 
     def _remove(self, args):
         '''
@@ -404,19 +372,15 @@ class SPMClient(object):
             return
 
         # Look at local repo index
-        sqlite3.enable_callback_tracebacks(True)
-        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
-        cur = conn.cursor()
-
-        data = conn.execute('SELECT * FROM packages WHERE package=?', (package, ))
-        if not data.fetchone():
-            log.error('Package {0} not installed'.format(package))
+        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](package, self.db_conn)
+        if pkg_info is None:
+            print('package {0} not installed'.format(package))
             return
 
         # Find files that have not changed and remove them
-        data = conn.execute('SELECT path, sum FROM files WHERE package=?', (package, ))
+        files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
         dirs = []
-        for filerow in data.fetchall():
+        for filerow in files:
             if os.path.isdir(filerow[0]):
                 dirs.append(filerow[0])
                 continue
@@ -426,14 +390,14 @@ class SPMClient(object):
                 digest = file_hash.hexdigest()
                 if filerow[1] == digest:
                     log.trace('Removing file {0}'.format(filerow[0]))
-                    os.remove(filerow[0])
+                    self.pkgfiles['{0}.remove_file'.format(self.files_prov)](filerow[0], self.files_conn)
                 else:
                     log.trace('Not removing file {0}'.format(filerow[0]))
-                conn.execute('DELETE FROM files WHERE path=?', (filerow[0], ))
+                self.pkgdb['{0}.unregister_file'.format(self.db_prov)](filerow[0], self.db_conn)
 
         # Clean up directories
         for dir_ in sorted(dirs, reverse=True):
-            conn.execute('DELETE FROM files WHERE path=?', (dir_, ))
+            self.pkgdb['{0}.unregister_file'.format(self.db_prov)](dir_, self.db_conn)
             try:
                 log.trace('Removing directory {0}'.format(dir_))
                 os.rmdir(dir_)
@@ -441,7 +405,7 @@ class SPMClient(object):
                 # Leave directories in place that still have files in them
                 log.trace('Cannot remove directory {0}, probably not empty'.format(dir_))
 
-        conn.execute('DELETE FROM packages WHERE package=?', (package, ))
+        self.pkgdb['{0}.unregister_pkg'.format(self.db_prov)](package, self.db_conn)
 
     def _local_info(self, args):
         '''
@@ -473,40 +437,18 @@ class SPMClient(object):
 
         package = args[1]
 
-        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
-        cur = conn.cursor()
-
-        fields = (
-            'package',
-            'version',
-            'release',
-            'installed',
-            'os',
-            'os_family',
-            'dependencies',
-            'os_dependencies',
-            'os_family_dependencies',
-            'summary',
-            'description',
-        )
-        data = conn.execute(
-            'SELECT {0} FROM packages WHERE package=?'.format(','.join(fields)),
-            (package, )
-        )
-        row = data.fetchone()
-        if not row:
-            print('Package {0} not installed'.format(package))
-            return
-
-        formula_def = dict(list(zip(fields, row)))
-        formula_def['name'] = formula_def['package']
-
-        self._print_info(formula_def)
+        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](package, self.db_conn)
+        if pkg_info is None:
+            print('package {0} not installed'.format(package))
+        else:
+            self._print_info(pkg_info)
 
     def _print_info(self, formula_def):
         '''
         Print package info
         '''
+        import pprint
+        pprint.pprint(formula_def)
         fields = (
             'name',
             'os',
@@ -565,17 +507,12 @@ Description:
 
         package = args[1]
 
-        conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
-        cur = conn.cursor()
-
-        data = conn.execute('SELECT package FROM packages WHERE package=?', (package, ))
-        if not data.fetchone():
+        files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
+        if files is None:
             print('Package {0} not installed'.format(package))
-            return
-
-        data = conn.execute('SELECT path FROM files WHERE package=?', (package, ))
-        for file_ in data.fetchall():
-            print(file_[0])
+        else:
+            for file_ in files:
+                print(file_[0])
 
     def _build(self, args):
         '''
@@ -629,40 +566,3 @@ Description:
             if name.startswith(exclude_name):
                 return True
         return False
-
-    def _init_db(self):
-        '''
-        Initialize the package database
-        '''
-        if not os.path.exists(self.opts['spm_db']):
-            log.debug('Creating new package database at {0}'.format(self.opts['spm_db']))
-            conn = sqlite3.connect(self.opts['spm_db'], isolation_level=None)
-            cur = conn.cursor()
-            conn.execute('''CREATE TABLE packages (
-                package text,
-                version text,
-                release text,
-                installed text,
-                os text,
-                os_family text,
-                dependencies text,
-                os_dependencies text,
-                os_family_dependencies text,
-                summary text,
-                description text
-            )''')
-            conn.execute('''CREATE TABLE files (
-                package text,
-                path text,
-                size real,
-                mode text,
-                sum text,
-                major text,
-                minor text,
-                linkname text,
-                linkpath text,
-                uname text,
-                gname text,
-                mtime text
-            )''')
-            conn.close()

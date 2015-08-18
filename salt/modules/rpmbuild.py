@@ -130,7 +130,7 @@ def _get_deps(deps, tree_base, saltenv='base'):
     return deps_list
 
 
-def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
+def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base'):
     '''
     Create a source rpm from the given spec file and sources
 
@@ -164,7 +164,7 @@ def make_src_pkg(dest_dir, spec, sources, template=None, saltenv='base'):
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, deps, template, saltenv='base'):
+def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='base'):
     '''
     Given the package destination directory, the spec file source and package
     sources, use mock to safely build the rpm defined in the spec file
@@ -183,7 +183,7 @@ def build(runas, tgt, dest_dir, spec, sources, deps, template, saltenv='base'):
         except (IOError, OSError):
             pass
     srpm_dir = tempfile.mkdtemp()
-    srpms = make_src_pkg(srpm_dir, spec, sources, template, saltenv)
+    srpms = make_src_pkg(srpm_dir, spec, sources, env, template, saltenv)
 
     distset = _get_distset(tgt)
 

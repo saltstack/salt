@@ -21,6 +21,8 @@ automatically
         - dest_dir: /tmp/pkg
         - spec: salt://pkg/salt/spec/salt.spec
         - template: jinja
+        - deps:
+          - salt://pkg/salt/sources/required_dependency.rpm
         - tgt: epel-7-x86_64
         - sources:
           - salt://pkg/salt/sources/logrotate.salt
@@ -54,6 +56,7 @@ def built(
         template,
         tgt,
         deps=None,
+        env=None,
         results=None,
         always=False,
         saltenv='base'):
@@ -88,6 +91,24 @@ def built(
         downloading directly from Amazon S3 compatible URLs with both
         pre-configured and automatic IAM credentials
 
+    env
+        A dictionary of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                    DEB_BUILD_OPTIONS: 'nocheck'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
     results
         The names of the expected rpms that will be built
 
@@ -118,6 +139,14 @@ def built(
         ret['comment'] = 'Packages need to be built'
         ret['result'] = None
         return ret
+
+    # Need the check for None here, if env is not provided then it falls back
+    # to None and it is assumed that the environment is not being overridden.
+    if env is not None and not isinstance(env, dict):
+        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+                          'documentation.')
+        return ret
+
     ret['changes'] = __salt__['pkgbuild.build'](
         runas,
         tgt,
@@ -125,6 +154,7 @@ def built(
         spec,
         sources,
         deps,
+        env,
         template,
         saltenv)
     ret['comment'] = 'Packages Built'
