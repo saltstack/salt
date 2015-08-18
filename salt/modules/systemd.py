@@ -437,6 +437,7 @@ def start(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
+    unmask(name)
     return not __salt__['cmd.retcode'](_systemctl_cmd('start', name))
 
 
@@ -467,6 +468,7 @@ def restart(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
+    unmask(name)
     return not __salt__['cmd.retcode'](_systemctl_cmd('restart', name))
 
 
@@ -482,6 +484,7 @@ def reload_(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
+    unmask(name)
     return not __salt__['cmd.retcode'](_systemctl_cmd('reload', name))
 
 
@@ -497,6 +500,7 @@ def force_reload(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
+    unmask(name)
     return not __salt__['cmd.retcode'](_systemctl_cmd('force-reload', name))
 
 
@@ -531,8 +535,7 @@ def enable(name, **kwargs):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    if masked(name):
-        unmask(name)
+    unmask(name)
     if _service_is_sysv(name):
         executable = _get_service_exec()
         cmd = '{0} -f {1} defaults 99'.format(executable, name)
