@@ -115,6 +115,10 @@ except ImportError:
 try:
     import pygit2
     HAS_PYGIT2 = True
+    try:
+        GitError = pygit2.errors.GitError
+    except AttributeError:
+        GitError = Exception
 except ImportError:
     HAS_PYGIT2 = False
 
@@ -1159,7 +1163,7 @@ def update():
                     pass
                 try:
                     fetch = origin.fetch()
-                except pygit2.errors.GitError as exc:
+                except GitError as exc:
                     # Using exc.__str__() here to avoid deprecation warning
                     # when referencing exc.message
                     if 'unsupported url protocol' in exc.__str__().lower() \
