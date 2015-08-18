@@ -2483,7 +2483,6 @@ class ProxyMinion(Minion):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
-
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 

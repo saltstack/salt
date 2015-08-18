@@ -77,58 +77,89 @@ based on the diagram above:
 .. code-block:: yaml
 
     base:
-      minioncontroller1:
-        - networkswitches
-      minioncontroller2:
-        - reallydumbdevices
-      minioncontroller3:
-        - smsgateway
-
-
-``/srv/pillar/networkswitches.sls``
-
-.. code-block:: yaml
-
-    proxy:
       dumbdevice1:
-        proxytype: networkswitch
-        host: 172.23.23.5
-        username: root
-        passwd: letmein
+        - dumbdevice1
       dumbdevice2:
-        proxytype: networkswitch
-        host: 172.23.23.6
-        username: root
-        passwd: letmein
+        - dumbdevice2
       dumbdevice3:
-        proxytype: networkswitch
-        host: 172.23.23.7
-        username: root
-        passwd: letmein
+        - dumbdevice3
+      dumbdevice4:
+        - dumbdevice4
+      dumbdevice5:
+        - dumbdevice5
+      dumbdevice6:
+        - dumbdevice6
+      dumbdevice7:
+        - dumbdevice7
 
-``/srv/pillar/reallydumbdevices.sls``
+
+``/srv/pillar/dumbdevice1.sls``
 
 .. code-block:: yaml
 
     proxy:
-      dumbdevice4:
-        proxytype: i2c_lightshow
-        i2c_address: 1
-      dumbdevice5:
+      proxytype: networkswitch
+      host: 172.23.23.5
+      username: root
+      passwd: letmein
+
+
+``/srv/pillar/dumbdevice2.sls``
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: networkswitch
+      host: 172.23.23.6
+      username: root
+      passwd: letmein
+
+
+``/srv/pillar/dumbdevice3.sls``
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: networkswitch
+      host: 172.23.23.7
+      username: root
+      passwd: letmein
+
+
+``/srv/pillar/dumbdevice4.sls``
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: i2c_lightshow
+      i2c_address: 1
+
+
+``/srv/pillar/dumbdevice5.sls``
+
+.. code-block:: yaml
+
+      proxy:
         proxytype: i2c_lightshow
         i2c_address: 2
-      dumbdevice6:
+
+
+``/srv/pillar/dumbdevice6.sls``
+
+.. code-block:: yaml
+
+      proxy:
         proxytype: 433mhz_wireless
 
-``/srv/pillar/smsgateway.sls``
+
+``/srv/pillar/dumbdevice7.sls``
 
 .. code-block:: yaml
 
     proxy:
-      minioncontroller3:
-        dumbdevice7:
-          proxytype: sms_serial
-          deventry: /dev/tty04
+      proxytype: sms_serial
+      deventry: /dev/tty04
+
 
 Note the contents of each minioncontroller key may differ widely based on
 the type of device that the proxy-minion is managing.
@@ -151,14 +182,13 @@ In the above example
 
 Because of the way pillar works, each of the salt-proxy processes that fork off the
 proxy minions will only see the keys specific to the proxies it will be
-handling.  In other words, from the above example, only minioncontroller1 will
-see the connection information for dumbdevices 1, 2, and 3.  Minioncontroller2
-will see configuration data for dumbdevices 4, 5, and 6, and minioncontroller3
-will be privy to dumbdevice7.
+handling.
 
 Also, in general, proxy-minions are lightweight, so the machines that run them
-could conceivably control a large number of devices.  The example above is just
-to illustrate that it is possible for the proxy services to be spread across
+could conceivably control a large number of devices.  To run more than one proxy from
+a single machine, simply start an additional proxy process with ``--proxyid``
+set to the id to which you want the proxy to bind.
+It is possible for the proxy services to be spread across
 many machines if necessary, or intentionally run on machines that need to
 control devices because of some physical interface (e.g. i2c and serial above).
 Another reason to divide proxy services might be security.  In more secure
@@ -176,7 +206,7 @@ a proxymodule object must implement the following functions:
 
 ``__virtual__()``: This function performs the same duty that it does for other
 types of Salt modules.  Logic goes here to determine if the module can be
-loaded, checking for the presence of Python modules on which the proxy deepends.
+loaded, checking for the presence of Python modules on which the proxy depends.
 Returning ``False`` will prevent the module from loading.
 
 ``init(opts)``: Perform any initialization that the device needs.  This is
