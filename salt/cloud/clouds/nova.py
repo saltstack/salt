@@ -1115,6 +1115,7 @@ def floating_ip_delete(kwargs, call=None):
     conn = get_conn()
     return conn.floating_ip_delete(kwargs['floating_ip'])
 
+
 def floating_ip_associate(name, kwargs, call=None):
     '''
     Associate a floating IP address to a server
