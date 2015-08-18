@@ -416,7 +416,10 @@ def latest(name,
     if bare:
         remote_rev = None
     else:
-        if remote_rev_matches:
+        if rev is None:
+            remote_rev = 'HEAD'
+            remote_rev_type = 'sha1'
+        elif remote_rev_matches:
             ref_name = 'refs/heads/' + rev
             if 'refs/heads/' + rev in remote_rev_matches:
                 remote_rev = remote_rev_matches['refs/heads/' + rev]
@@ -427,19 +430,16 @@ def latest(name,
                 desired_upstream = False
                 remote_rev_type = 'tag'
         else:
-            if rev is None:
-                remote_rev = None
+            if len(rev) <= 40 \
+                    and all(x in string.hexdigits for x in rev):
+                # git ls-remote did not find the rev, and because it's a
+                # hex string <= 40 chars we're going to assume that the
+                # desired rev is a SHA1
+                remote_rev = rev
+                desired_upstream = False
+                remote_rev_type = 'sha1'
             else:
-                if len(rev) <= 40 \
-                        and all(x in string.hexdigits for x in rev):
-                    # git ls-remote did not find the rev, and because it's a
-                    # hex string <= 40 chars we're going to assume that the
-                    # desired rev is a SHA1
-                    remote_rev = rev
-                    desired_upstream = False
-                    remote_rev_type = 'sha1'
-                else:
-                    remote_rev = None
+                remote_rev = None
 
     if rev and remote_rev is None:
         # A specific rev is desired, but that rev doesn't exist on the
