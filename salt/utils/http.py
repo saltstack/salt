@@ -118,6 +118,7 @@ def query(url,
           headers_out=None,
           decode_out=None,
           stream=False,
+          streaming_callback=None,
           handle=False,
           agent=USERAGENT,
           hide_fields=None,
@@ -399,8 +400,11 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
+        max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
+
         try:
-            result = HTTPClient().fetch(
+            result = HTTPClient(max_body_size=max_body).fetch(
                 url_full,
                 method=method,
                 headers=header_dict,
@@ -409,6 +413,8 @@ def query(url,
                 body=data,
                 validate_cert=verify_ssl,
                 allow_nonstandard_methods=True,
+                streaming_callback=streaming_callback,
+                request_timeout=timeout,
                 **req_kwargs
             )
         except tornado.httpclient.HTTPError as exc:
