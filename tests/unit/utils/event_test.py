@@ -97,7 +97,7 @@ class TestSaltEvent(TestCase):
         for key in data:
             self.assertIn(key, evt, '{0}: Key {1} missing'.format(msg, key))
             assertMsg = '{0}: Key {1} value mismatch, {2} != {3}'
-            assertMsg.format(msg, key, data[key], evt[key])
+            assertMsg = assertMsg.format(msg, key, data[key], evt[key])
             self.assertEqual(data[key], evt[key], assertMsg)
 
     def test_master_event(self):
