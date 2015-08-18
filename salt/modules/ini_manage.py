@@ -228,14 +228,8 @@ class _Section(OrderedDict):
         # for the key where the correct value can be update later
         # used to preserve the ordering of comments and commented options
         # and to make sure options without sectons go above any section
-        sections_backup = OrderedDict()
         options_backup = OrderedDict()
         comment_index = None
-        for key, value in self.iteritems():
-            if hasattr(value, 'iteritems'):
-                sections_backup.update({key: value})
-        for key in sections_backup:
-            self.pop(key)
         for key, value in self.iteritems():
             if comment_index is not None:
                 options_backup.update({key: value})
@@ -250,8 +244,6 @@ class _Section(OrderedDict):
         self.pop(comment_index, None)
         super(_Section, self).update({opt_key: None})
         for key, value in options_backup.iteritems():
-            super(_Section, self).update({key: value})
-        for key, value in sections_backup.iteritems():
             super(_Section, self).update({key: value})
 
     def update(self, update_dict):
@@ -281,14 +273,17 @@ class _Section(OrderedDict):
 
     def gen_ini(self):
         yield '[{}]\n'.format(self.name)
+        sections_dict = OrderedDict()
         for name, value in self.iteritems():
             if com_regx.match(name):
                 yield '{}\n'.format(value)
             elif isinstance(value, _Section):
-                for line in value.gen_ini():
-                    yield line
+                sections_dict.update({name: value})
             else:
                 yield '{} {} {}\n'.format(name, self.sep, value)
+        for name, value in sections_dict.iteritems():
+            for line in value.gen_ini():
+                yield line
         yield '\n'
 
     def as_ini(self):
