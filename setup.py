@@ -239,17 +239,17 @@ class WriteSaltSshPackaingFile(Command):
 if WITH_SETUPTOOLS:
     class Develop(develop):
         user_options = develop.user_options + [
-            ('write_salt_version', None,
+            ('write-salt-version', None,
              'Generate Salt\'s _version.py file which allows proper version '
              'reporting. This defaults to False on develop/editable setups. '
              'If WRITE_SALT_VERSION is found in the environment this flag is '
              'switched to True.'),
-            ('generate_salt_syspaths', None,
+            ('generate-salt-syspaths', None,
              'Generate Salt\'s _syspaths.py file which allows tweaking some '
              'common paths that salt uses. This defaults to False on '
              'develop/editable setups. If GENERATE_SALT_SYSPATHS is found in '
              'the environment this flag is switched to True.'),
-            ('mimic_salt_install', None,
+            ('mimic-salt-install', None,
              'Mimmic the install command when running the develop command. '
              'This will generate salt\'s _version.py and _syspaths.py files. '
              'Generate Salt\'s _syspaths.py file which allows tweaking some '
@@ -258,9 +258,9 @@ if WITH_SETUPTOOLS:
              'switched to True.')
         ]
         boolean_options = develop.boolean_options + [
-            'write_salt_version',
-            'generate_salt_syspaths',
-            'mimic_salt_install'
+            'write-salt-version',
+            'generate-salt-syspaths',
+            'mimic-salt-install'
         ]
 
         def initialize_options(self):
