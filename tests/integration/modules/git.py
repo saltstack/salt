@@ -46,11 +46,22 @@ def _worktrees_supported():
         return False
 
 
+def _makedirs(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        # Don't raise an exception if the directory exists
+        if exc.errno != errno.EEXIST:
+            raise
+
+
 @skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
 
     def setUp(self):
         super(GitModuleTest, self).setUp()
+        self.orig_cwd = os.getcwd()
+        self.addCleanup(os.chdir, self.orig_cwd)
         self.repo = tempfile.mkdtemp(dir=integration.TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
         self.files = ('foo', 'bar', 'baz')
@@ -58,20 +69,18 @@ class GitModuleTest(integration.ModuleCase):
         self.branches = ('master', 'iamanewbranch')
         self.tags = ('git_testing',)
         for dirname in self.dirs:
-            full_path = os.path.join(self.repo, dirname)
-            try:
-                os.makedirs(full_path)
-            except OSError as exc:
-                # Don't raise an exception if the directory exists
-                if exc.errno != errno.EEXIST:
-                    raise
-            os.chdir(full_path)
+            dir_path = os.path.join(self.repo, dirname)
+            _makedirs(dir_path)
             for filename in self.files:
-                with open(filename, 'w') as fp_:
+                with open(os.path.join(dir_path, filename), 'w') as fp_:
                     fp_.write('This is a test file named ' + filename + '.')
-        # Navigate back to the root of the repo to init, stage, and commit
+        # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
         subprocess.check_call(['git', 'init', '--quiet', self.repo])
+        subprocess.check_call(
+            ['git', 'config', '--global', 'user.name', 'Jenkins'])
+        subprocess.check_call(
+            ['git', 'config', '--global', 'user.email', 'qa@saltstack.com'])
         subprocess.check_call(['git', 'add', '.'])
         subprocess.check_call(
             ['git', 'commit', '--quiet', '--message', 'Initial commit']
@@ -94,16 +103,17 @@ class GitModuleTest(integration.ModuleCase):
         )
         # Switch back to master
         subprocess.check_call(['git', 'checkout', '--quiet', 'master'])
+        # Go back to original cwd
+        os.chdir(self.orig_cwd)
 
     def test_add_file(self):
         '''
         Test git.add with a file
         '''
         filename = 'quux'
-        # Change to the repo dir
-        os.chdir(self.repo)
-        with open(filename, 'w') as fp_:
-            fp_.write('This is a test file named qux.\n')
+        file_path = os.path.join(self.repo, filename)
+        with open(file_path, 'w') as fp_:
+            fp_.write('This is a test file named ' + filename + '.\n')
         ret = self.run_function('git.add', [self.repo, filename])
         self.assertEqual(ret, 'add \'{0}\''.format(filename))
 
@@ -113,9 +123,9 @@ class GitModuleTest(integration.ModuleCase):
         '''
         newdir = 'quux'
         # Change to the repo dir
-        os.chdir(self.repo)
-        os.mkdir(newdir)
-        files = [os.path.join(newdir, x) for x in self.files]
+        newdir_path = os.path.join(self.repo, newdir)
+        _makedirs(newdir_path)
+        files = [os.path.join(newdir_path, x) for x in self.files]
         for path in files:
             with open(path, 'w') as fp_:
                 fp_.write(
@@ -174,23 +184,22 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Test creating, renaming, and deleting a branch using git.branch
         '''
-        branch = 'iamanewbranch'
         renamed_branch = 'ihavebeenrenamed'
         self.assertTrue(
-            self.run_function('git.branch', [self.repo, branch])
+            self.run_function('git.branch', [self.repo, self.branches[1]])
         )
         self.assertTrue(
             self.run_function(
                 'git.branch',
                 [self.repo, renamed_branch],
-                opts='-m ' + branch
+                opts='-m ' + self.branches[1]
             )
         )
         self.assertTrue(
             self.run_function(
                 'git.branch',
                 [self.repo, renamed_branch],
-                opts='-d'
+                opts='-D'
             )
         )
 
@@ -223,10 +232,9 @@ class GitModuleTest(integration.ModuleCase):
             ),
             'Switched to a new branch \'' + new_branch + '\''
         )
-        self.assertEqual(
-            self.run_function('git.checkout', [self.repo]),
-            'ERROR executing \'git.checkout\': \'rev\' argument is required '
-            'unless -b or -B in opts'
+        self.assertTrue(
+            '\'rev\' argument is required unless -b or -B in opts' in
+            self.run_function('git.checkout', [self.repo])
         )
 
     def test_clone(self):
@@ -243,33 +251,16 @@ class GitModuleTest(integration.ModuleCase):
 
     def test_clone_with_alternate_name(self):
         '''
-        Test cloning an existing repo using an alternate name
+        Test cloning an existing repo with an alternate name for the repo dir
         '''
         clone_parent_dir = tempfile.mkdtemp(dir=integration.TMP)
         clone_name = os.path.basename(self.repo)
         # Change to newly-created temp dir
-        os.chdir(clone_parent_dir)
         self.assertEqual(
             self.run_function(
                 'git.clone',
                 [clone_parent_dir, self.repo],
                 name=clone_name
-            ),
-            'Cloning into \'' + clone_name + '\'...\ndone.'
-        )
-        # Cleanup after yourself
-        shutil.rmtree(clone_parent_dir)
-
-    def test_clone_alternate_name(self):
-        '''
-        Test cloning an existing repo with an alternate name for the repo dir
-        '''
-        clone_parent_dir = tempfile.mkdtemp(dir=integration.TMP)
-        clone_name = 'newclone'
-        os.chdir(clone_parent_dir)
-        self.assertEqual(
-            self.run_function(
-                'git.clone', [clone_parent_dir, self.repo], name=clone_name,
             ),
             'Cloning into \'' + clone_name + '\'...\ndone.'
         )
@@ -338,26 +329,24 @@ class GitModuleTest(integration.ModuleCase):
         _clear_config()
         try:
             # Try to specify both single and multivar (error raised)
-            self.assertEqual(
+            self.assertTrue(
+                'Only one of \'value\' and \'multivar\' is permitted' in
                 self.run_function(
                     'git.config_set',
                     ['foo.single'],
                     value=cfg_local['foo.single'][0],
                     multivar=cfg_local['foo.multi'],
                     cwd=self.repo
-                ),
-                'ERROR executing \'git.config_set\': '
-                'Only one of \'value\' and \'multivar\' is permitted'
+                )
             )
             # Set single local value without cwd (error raised)
-            self.assertEqual(
+            self.assertTrue(
+                '\'cwd\' argument required unless global=True' in
                 self.run_function(
                     'git.config_set',
                     ['foo.single'],
                     value=cfg_local['foo.single'][0],
-                ),
-                'ERROR executing \'git.config_set\': '
-                '\'cwd\' argument required unless global=True'
+                )
             )
             # Set single local value
             self.assertEqual(
@@ -651,10 +640,9 @@ class GitModuleTest(integration.ModuleCase):
         '''
         Test git.rebase
         '''
-        # Change to the repo dir
-        os.chdir(self.repo)
         # Make a change to a different file than the one modifed in setUp
-        with open(self.files[1], 'a') as fp_:
+        file_path = os.path.join(self.repo, self.files[1])
+        with open(file_path, 'a') as fp_:
             fp_.write('Added a line\n')
         # Commit the change
         self.assertTrue(
@@ -795,8 +783,8 @@ class GitModuleTest(integration.ModuleCase):
 
         # TODO: test more stash actions
         '''
-        os.chdir(self.repo)
-        with open(self.files[0], 'a') as fp_:
+        file_path = os.path.join(self.repo, self.files[0])
+        with open(file_path, 'a') as fp_:
             fp_.write('Temp change to be stashed')
         self.assertTrue(
             'ERROR' not in self.run_function('git.stash', [self.repo])
@@ -834,13 +822,11 @@ class GitModuleTest(integration.ModuleCase):
             'deleted': ['bar'],
             'untracked': ['thisisalsoanewfile']
         }
-        # Change to the repo dir
-        os.chdir(self.repo)
         for filename in changes['modified']:
-            with open(filename, 'a') as fp_:
+            with open(os.path.join(self.repo, filename), 'a') as fp_:
                 fp_.write('Added a line\n')
         for filename in changes['new']:
-            with open(filename, 'w') as fp_:
+            with open(os.path.join(self.repo, filename), 'w') as fp_:
                 fp_.write('This is a new file named ' + filename + '.')
             # Stage the new file so it shows up as a 'new' file
             self.assertTrue(
@@ -852,7 +838,7 @@ class GitModuleTest(integration.ModuleCase):
         for filename in changes['deleted']:
             self.run_function('git.rm', [self.repo, filename])
         for filename in changes['untracked']:
-            with open(filename, 'w') as fp_:
+            with open(os.path.join(self.repo, filename), 'w') as fp_:
                 fp_.write('This is a new file named ' + filename + '.')
         self.assertEqual(
             self.run_function('git.status', [self.repo]),
