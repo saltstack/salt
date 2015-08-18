@@ -220,8 +220,7 @@ def absent(name, destructive=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __grains__.get(name)
-    if grain:
+    if name in __grains__:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:

@@ -1,29 +1,36 @@
 # -*- coding: utf-8 -*-
 '''
-Manage the registry on Windows.
+===========================
+Manage the Windows registry
+===========================
 
 The read_key and set_key functions will be updated in Boron to reflect proper
 registry usage. The registry has three main components. Hives, Keys, and Values.
 
-### Hives
+-----
+Hives
+-----
 Hives are the main sections of the registry and all begin with the word HKEY.
 - HKEY_LOCAL_MACHINE
 - HKEY_CURRENT_USER
 - HKEY_USER
 
-### Keys
+----
+Keys
+----
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
 can have a value assigned to them under the (Default)
 
-### Values
-Values are name/data pairs. There can be many values in a key. The (Default)
-value corresponds to the Key, the rest are their own value pairs.
+-----------------
+Values or Entries
+-----------------
+Values/Entries are name/data pairs. There can be many values in a key. The
+(Default) value corresponds to the Key, the rest are their own value pairs.
 
 :depends:   - winreg Python module
 '''
 
-# TODO: Figure out the exceptions _winreg can raise and properly  catch
-#       them instead of a bare except that catches any exception at all
+# TODO: Figure out the exceptions _winreg can raise and properly catch them
 
 # Import python libs
 from __future__ import absolute_import
@@ -142,44 +149,35 @@ def read_key(hkey, path, key=None):
                           key=path,
                           vname=key)
 
-    registry = Registry()
-    hive = registry.hkeys[hkey]
-
-    try:
-        value = _winreg.QueryValue(hive, path)
-        if value:
-            ret['vdata'] = value
-        else:
-            ret['vdata'] = None
-            ret['comment'] = 'Empty Value'
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.debug(exc)
-        ret['comment'] = '{0}'.format(exc)
-        ret['success'] = False
-
-    return ret
+    return read_value(hive=hkey, key=path)
 
 
 def read_value(hive, key, vname=None):
     r'''
-    Reads a registry value or the default value for a key.
+    Reads a registry value entry or the default value for a key.
 
-    :param hive: string
-    The name of the hive. Can be one of the following
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+    :param str hive:
+        The name of the hive. Can be one of the following
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
-    :param key: string
-    The key (looks like a path) to the value name.
+    :param str key:
+        The key (looks like a path) to the value name.
 
-    :param vname: string
-    The value name. These are the individual name/data pairs under the key. If
-    not passed, the key (Default) value will be returned
+    :param str vname:
+        The value name. These are the individual name/data pairs under the key.
+        If not passed, the key (Default) value will be returned
 
-    :return: dict
-    A dictionary containing the passed settings as well as the value_data if
-    successful. If unsuccessful, sets success to False
+    :return:
+        A dictionary containing the passed settings as well as the value_data if
+        successful. If unsuccessful, sets success to False
+
+        If vname is not passed:
+        - Returns the first unnamed value (Default) as a string.
+        - Returns none if first unnamed value is empty.
+        - Returns False if key not found.
+    :rtype: dict
 
     CLI Example:
 
@@ -205,9 +203,9 @@ def read_value(hive, key, vname=None):
 
     try:
         handle = _winreg.OpenKey(hive, key)
-        value, vtype = _winreg.QueryValueEx(handle, vname)
-        if value:
-            ret['vdata'] = value
+        vdata, vtype = _winreg.QueryValueEx(handle, vname)
+        if vdata:
+            ret['vdata'] = vdata
             ret['vtype'] = registry.vtype_reverse[vtype]
         else:
             ret['comment'] = 'Empty Value'
@@ -257,53 +255,45 @@ def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
                          vdata=value,
                          vtype=vtype)
 
-    registry = Registry()
-    hive = registry.hkeys[hkey]
-    vtype = registry.vtype['REG_SZ']
-
-    try:
-        _winreg.SetValue(hive, path, vtype, value)
-        return True
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc)
-        return False
+    return set_value(hive=hkey, key=path, vdata=value, vtype=vtype)
 
 
 def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True):
     '''
-    Sets a registry value.
+    Sets a registry value entry or the default value for a key.
 
-    :param hive: string
-    The name of the hive. Can be one of the following
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+    :param str hive:
+        The name of the hive. Can be one of the following
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
-    :param key: string
-    The key (looks like a path) to the value name.
+    :param str key:
+        The key (looks like a path) to the value name.
 
-    :param vname: string
-    The value name. These are the individual name/data pairs under the key. If
-    not passed, the key (Default) value will be set.
+    :param str vname:
+        The value name. These are the individual name/data pairs under the key.
+        If not passed, the key (Default) value will be set.
 
-    :param vdata: string
-    The value data to be set.
+    :param str vdata:
+        The value data to be set.
 
-    :param vtype: string
-    The value type. Can be one of the following:
-    - REG_BINARY
-    - REG_DWORD
-    - REG_EXPAND_SZ
-    - REG_MULTI_SZ
-    - REG_SZ
+    :param str vtype:
+        The value type. Can be one of the following:
+        - REG_BINARY
+        - REG_DWORD
+        - REG_EXPAND_SZ
+        - REG_MULTI_SZ
+        - REG_SZ
 
-    :param reflection: boolean
-    A boolean value indicating that the value should also be set in the
-    Wow6432Node portion of the registry. Only applies to 64 bit Windows. This
-    setting is ignored for 32 bit Windows.
+    :param bool reflection:
+        A boolean value indicating that the value should also be set in the
+        Wow6432Node portion of the registry. Only applies to 64 bit Windows.
+        This setting is ignored for 32 bit Windows.
 
-    :return: boolean
-    Returns True if successful, False if not
+    :return:
+        Returns True if successful, False if not
+    :rtype: bool
 
     CLI Example:
 
@@ -321,7 +311,7 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError as exc:  # pylint: disable=E0602
+    except (WindowsError, ValueError) as exc:  # pylint: disable=E0602
         log.error(exc)
         return False
 
@@ -353,7 +343,7 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
     if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
+        salt.utils.warn_until('Boron', 'Use reg.set_value to create a registry '
                                        'value. This functionality will be '
                                        'removed in Salt Boron')
         return set_value(hive=hkey,
@@ -362,21 +352,10 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
                          vdata=value,
                          vtype='REG_SZ')
 
-    registry = Registry()
-    hive = registry.hkeys[hkey]
-    key = path
-    access_mask = registry.reflection_mask[reflection]
-
-    try:
-        handle = _winreg.CreateKeyEx(hive, key, 0, access_mask)
-        _winreg.CloseKey(handle)
-        return True
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc)
-        return False
+    return set_value(hive=hkey, key=path)
 
 
-def delete_key(hkey, path, key=None, reflection=True):
+def delete_key(hkey, path, key=None, reflection=True, force=False):
     '''
     *** Incorrect Usage ***
     The name of this function is misleading and will be changed to reflect
@@ -396,29 +375,62 @@ def delete_key(hkey, path, key=None, reflection=True):
 
     Delete a registry key
 
-    Note: This cannot delete a key with subkeys
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt'
+
+    :param str hkey: (will be changed to hive)
+        The name of the hive. Can be one of the following
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
+
+    :param str path: (will be changed to key)
+        The key (looks like a path) to remove.
+
+    :param str key: (used incorrectly)
+        Will be removed in Boron
+
+    :param bool reflection:
+        A boolean value indicating that the value should also be removed from
+        the Wow6432Node portion of the registry. Only applies to 64 bit Windows.
+        This setting is ignored for 32 bit Windows.
+
+        Only applies to delete value. If the key parameter is passed, this
+        function calls delete_value instead. Will be changed in Boron.
+
+    :param bool force:
+        A boolean value indicating that all subkeys should be removed as well.
+        If this is set to False (default) and there are subkeys, the delete_key
+        function will fail.
+
+    :return:
+        Returns True if successful, False if not
+        If force=True, the results of delete_key_recursive are returned.
+    :rtype: bool
     '''
 
     if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Boron')
+        salt.utils.warn_until('Boron',
+                              'Variable names will be changed to match Windows '
+                              'Registry terminology. These changes will be '
+                              'made in Boron')
         return delete_value(hive=hkey,
                             key=path,
                             vname=key,
                             reflection=reflection)
+
+    if force:
+        return delete_key_recursive(hkey, path)
 
     registry = Registry()
     hive = registry.hkeys[hkey]
     key = path
 
     try:
+        # Can't use delete_value to delete a key
         _winreg.DeleteKey(hive, key)
         return True
     except WindowsError as exc:  # pylint: disable=E0602
@@ -426,30 +438,102 @@ def delete_key(hkey, path, key=None, reflection=True):
         return False
 
 
+def delete_key_recursive(hive, key):
+    '''
+    .. versionadded:: 2015.5.4
+
+    Delete a registry key to include all subkeys.
+
+    :param hive:
+        The name of the hive. Can be one of the following
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
+
+    :param key:
+        The key to remove (looks like a path)
+
+    :return:
+        A dictionary listing the keys that deleted successfully as well as those
+        that failed to delete.
+    :rtype: dict
+    '''
+    # Functions for traversing the registry tree
+    def subkeys(key):
+        i = 0
+        while True:
+            try:
+                subkey = _winreg.EnumKey(key, i)
+                yield subkey
+                i += 1
+            except WindowsError:  # pylint: disable=E0602
+                break
+
+    def traverse_registry_tree(hkey, keypath, ret):
+        key = _winreg.OpenKey(hkey, keypath, 0, _winreg.KEY_READ)
+        for subkeyname in subkeys(key):
+            subkeypath = r'{0}\{1}'.format(keypath, subkeyname)
+            ret = traverse_registry_tree(hkey, subkeypath, ret)
+            ret.append('{0}'.format(subkeypath))
+        return ret
+
+    # Instantiate the registry object
+    registry = Registry()
+    hkey = registry.hkeys[hive]
+    keypath = key
+
+    # Get a reverse list of registry keys to be deleted
+    key_list = []
+    key_list = traverse_registry_tree(hkey, keypath, key_list)
+
+    ret = {'Deleted': [],
+           'Failed': []}
+
+    # Delete all subkeys
+    for keypath in key_list:
+        try:
+            _winreg.DeleteKey(hkey, keypath)
+            ret['Deleted'].append(r'{0}\{1}'.format(hive, keypath))
+        except WindowsError as exc:  # pylint: disable=E0602
+            log.error(exc)
+            ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
+
+    # Delete the key now that all the subkeys are deleted
+    try:
+        _winreg.DeleteKey(hkey, key)
+        ret['Deleted'].append(r'{0}\{1}'.format(hive, key))
+    except WindowsError as exc:  # pylint: disable=E0602
+        log.error(exc)
+        ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
+
+    return ret
+
+
 def delete_value(hive, key, vname=None, reflection=True):
     '''
-    Deletes a registry value.
+    Delete a registry value entry or the default value for a key.
 
-    :param hive: string
-    The name of the hive. Can be one of the following
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+    :param str hive:
+        The name of the hive. Can be one of the following
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
-    :param key: string
-    The key (looks like a path) to the value name.
+    :param str key:
+        The key (looks like a path) to the value name.
 
-    :param vname: string
-    The value name. These are the individual name/data pairs under the key. If
-    not passed, the key (Default) value will be deleted.
+    :param str vname:
+        The value name. These are the individual name/data pairs under the key.
+        If not passed, the key (Default) value will be deleted.
 
-    :param reflection: boolean
-    A boolean value indicating that the value should also be set in the
-    Wow6432Node portion of the registry. Only applies to 64 bit Windows. This
-    setting is ignored for 32 bit Windows.
+    :param bool reflection:
+        A boolean value indicating that the value should also be set in the
+        Wow6432Node portion of the registry. Only applies to 64 bit Windows.
+        This setting is ignored for 32 bit Windows.
 
-    :return: boolean
-    Returns True if successful, False if not
+    :return:
+        Returns True if successful, False if not
+    :rtype: bool
 
     CLI Example:
 

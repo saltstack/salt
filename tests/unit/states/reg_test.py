@@ -36,28 +36,43 @@ class RegTestCase(TestCase):
         '''
         Test to set a registry entry.
         '''
-        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version'
-        value = '0.15.3'
+        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt'
+        vname = 'version'
+        vdata = '0.15.3'
 
         ret = {'name': name,
                'changes': {},
                'result': True,
-               'comment': '{0} is already configured'.format(name)}
+               'comment': '{0} in {1} is already configured'.format(vname, name)}
 
-        mock = MagicMock(side_effect=[{'vdata': value}, {'vdata': 'a'}, {'vdata': 'a'}])
+        mock_read = MagicMock(side_effect=[{'vdata': vdata, 'success': True},
+                                           {'vdata': 'a', 'success': True},
+                                           {'vdata': 'a', 'success': True}])
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_value': mock,
+        with patch.dict(reg.__salt__, {'reg.read_value': mock_read,
                                        'reg.set_value': mock_t}):
-            self.assertDictEqual(reg.present(name, value), ret)
+            self.assertDictEqual(reg.present(name,
+                                             vname=vname,
+                                             vdata=vdata), ret)
 
             with patch.dict(reg.__opts__, {'test': True}):
                 ret.update({'comment': '', 'result': None,
-                            'changes': {'reg': 'configured to 0.15.3'}})
-                self.assertDictEqual(reg.present(name, value), ret)
+                            'changes': {'reg': {'Will add': {'Key': name,
+                                                             'Entry': vname,
+                                                             'Value': vdata}}}})
+                self.assertDictEqual(reg.present(name,
+                                                 vname=vname,
+                                                 vdata=vdata), ret)
 
             with patch.dict(reg.__opts__, {'test': False}):
-                ret.update({'result': True})
-                self.assertDictEqual(reg.present(name, value), ret)
+                ret.update({'comment': 'Added {0} to {0}'.format(name),
+                            'result': True,
+                            'changes': {'reg': {'Added': {'Key': name,
+                                                          'Entry': vname,
+                                                          'Value': vdata}}}})
+                self.assertDictEqual(reg.present(name,
+                                                 vname=vname,
+                                                 vdata=vdata), ret)
 
     # 'absent' function tests: 1
 
@@ -65,27 +80,35 @@ class RegTestCase(TestCase):
         '''
         Test to remove a registry entry.
         '''
-        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version'
+        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt'
+        vname = 'version'
 
         ret = {'name': name,
                'changes': {},
                'result': True,
                'comment': '{0} is already absent'.format(name)}
 
-        mock = MagicMock(side_effect=[{'success': False}, {'success': True}, {'success': True}])
+        mock_read = MagicMock(side_effect=[{'success': False},
+                                           {'success': False},
+                                           {'success': True},
+                                           {'success': True}])
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_value': mock,
+        with patch.dict(reg.__salt__, {'reg.read_value': mock_read,
                                        'reg.delete_value': mock_t}):
-            self.assertDictEqual(reg.absent(name), ret)
+            self.assertDictEqual(reg.absent(name, vname), ret)
 
             with patch.dict(reg.__opts__, {'test': True}):
                 ret.update({'comment': '', 'result': None,
-                            'changes': {'reg': 'Removed {0}'.format(name)}})
-                self.assertDictEqual(reg.absent(name), ret)
+                            'changes': {'reg': {'Will remove': {'Entry': vname,
+                                                                'Key': name}}}})
+                self.assertDictEqual(reg.absent(name, vname), ret)
 
             with patch.dict(reg.__opts__, {'test': False}):
-                ret.update({'result': True})
-                self.assertDictEqual(reg.absent(name), ret)
+                ret.update({'result': True,
+                            'changes': {'reg': {'Removed': {'Entry': vname,
+                                                            'Key': name}}},
+                            'comment': 'Removed {0} from {0}'.format(name)})
+                self.assertDictEqual(reg.absent(name, vname), ret)
 
 
 if __name__ == '__main__':

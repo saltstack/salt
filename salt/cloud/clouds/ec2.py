@@ -1654,7 +1654,6 @@ def request_instance(vm_=None, call=None):
         }
         try:
             rd_data = aws.query(rd_params,
-                                return_root=True,
                                 location=get_location(),
                                 provider=get_provider(),
                                 opts=__opts__,
@@ -2363,7 +2362,7 @@ def create(vm_=None, call=None):
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
                 'instance_id': ret['instanceId'],
-                'del_all_vols_on_destroy': vm_.get('set_del_all_vols_on_destroy', False)
+                'del_all_vols_on_destroy': vm_.get('del_all_vols_on_destroy', False)
             },
             call='action'
         )
@@ -3780,38 +3779,52 @@ def delete_keypair(kwargs=None, call=None):
 
 def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     '''
-    Create a snapshot
+    Create a snapshot.
+
+    volume_id
+        The ID of the Volume from which to create a snapshot.
+
+    description
+        The optional description of the snapshot.
+
+    CLI Exampe:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_snapshot my-ec2-config volume_id=vol-351d8826
+        salt-cloud -f create_snapshot my-ec2-config volume_id=vol-351d8826 \\
+            description="My Snapshot Description"
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The create_snapshot function must be called with -f '
             'or --function.'
         )
-        return False
 
-    if 'volume_id' not in kwargs:
-        log.error('A volume_id must be specified to create a snapshot.')
-        return False
+    if kwargs is None:
+        kwargs = {}
 
-    if 'description' not in kwargs:
-        kwargs['description'] = ''
+    volume_id = kwargs.get('volume_id', None)
+    description = kwargs.get('description', '')
 
-    params = {'Action': 'CreateSnapshot'}
+    if volume_id is None:
+        raise SaltCloudSystemExit(
+            'A volume_id must be specified to create a snapshot.'
+        )
 
-    if 'volume_id' in kwargs:
-        params['VolumeId'] = kwargs['volume_id']
-
-    if 'description' in kwargs:
-        params['Description'] = kwargs['description']
+    params = {'Action': 'CreateSnapshot',
+              'VolumeId': volume_id,
+              'Description': description}
 
     log.debug(params)
 
     data = aws.query(params,
                      return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
-                     sigver='4')
+                     sigver='4')[0]
 
     r_data = {}
     for d in data:
@@ -3827,7 +3840,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
                                                 argument_being_watched='status',
                                                 required_argument_response='completed')
 
-    return data
+    return r_data
 
 
 def delete_snapshot(kwargs=None, call=None):
