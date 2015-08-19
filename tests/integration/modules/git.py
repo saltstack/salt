@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+from contextlib import closing
 import errno
 import logging
 import os
@@ -87,7 +88,7 @@ class GitModuleTest(integration.ModuleCase):
         )
         # Add a tag
         subprocess.check_call(
-            ['git', 'tag', '--annotate', self.tags[0], '--message', 'Add tag']
+            ['git', 'tag', '-a', self.tags[0], '-m', 'Add tag']
         )
         # Checkout a second branch
         subprocess.check_call(
@@ -155,7 +156,7 @@ class GitModuleTest(integration.ModuleCase):
             )
         )
         self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with tarfile.open(tar_archive, 'r') as tar_obj:
+        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
             self.assertEqual(
                 tar_obj.getnames(),
                 ['foo', 'foo/bar', 'foo/baz', 'foo/foo', 'foo/qux',
@@ -177,7 +178,7 @@ class GitModuleTest(integration.ModuleCase):
             )
         )
         self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with tarfile.open(tar_archive, 'r') as tar_obj:
+        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
             self.assertEqual(
                 tar_obj.getnames(),
                 ['foo', 'foo/bar', 'foo/baz', 'foo/foo']
