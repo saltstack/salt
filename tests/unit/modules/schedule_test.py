@@ -139,56 +139,6 @@ class ScheduleTestCase(TestCase):
                                                       test=True),
                                          {'comment': comm4, 'result': True})
 
-    # 'modify' function tests: 1
-
-    def test_modify(self):
-        '''
-        Test if it modify an existing job in the schedule.
-        '''
-        comm1 = ('Error: Unable to use "seconds", "minutes", "hours",'
-                 ' or "days" with "when" option.')
-        comm2 = 'Unable to use "when" and "cron" options together.  Ignoring.'
-        comm3 = 'Job job2 does not exist in schedule.'
-        comm4 = 'Job: job3 would be modified in schedule.'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1,
-                                                         'job3': {}},
-                                            'sock_dir': SOCK_DIR}):
-
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {'job1': JOB1,
-                                                             'job3': {}}}
-                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping',
-                                                         seconds=3600, when='2400'),
-                                         {'changes': {}, 'comment': comm1,
-                                          'result': False})
-
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping',
-                                                         when='2400', cron='2'),
-                                         {'changes': {}, 'comment': comm2,
-                                          'result': False})
-
-                    self.assertDictEqual(schedule.modify('job2'), {'changes': {},
-                                                                   'comment': comm3,
-                                                                   'result': False})
-
-                    if sys.version_info[1] >= 7:
-                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                             {'changes': {'diff': '--- \n+++ \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
-                                              'comment': 'Modified job: job1 in schedule.',
-                                              'result': True})
-                    elif sys.version_info[1] >= 6:
-                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                {'changes': {'diff': '---  \n+++  \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
-                                              'comment': 'Modified job: job1 in schedule.',
-                                              'result': True})
-
-                    ret = schedule.modify('job3', function='test.ping', test=True)
-                    if 'diff' in ret['changes']:
-                        del ret['changes']['diff']  # difflib formatting changes between 2.6 and 2.7
-                    self.assertDictEqual(ret, {'changes': {}, 'comment': comm4, 'result': True})
-
     # 'run_job' function tests: 1
 
     def test_run_job(self):
