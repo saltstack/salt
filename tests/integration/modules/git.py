@@ -87,7 +87,7 @@ class GitModuleTest(integration.ModuleCase):
         )
         # Add a tag
         subprocess.check_call(
-            ['git', 'tag', '--annotate', self.tags[0], '--message', 'Add tag']
+            ['git', 'tag', '-a', self.tags[0], '-m', 'Add tag']
         )
         # Checkout a second branch
         subprocess.check_call(
