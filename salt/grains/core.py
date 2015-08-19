@@ -1077,20 +1077,26 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None:
-                        supported_inits = ('upstart', 'sysvinit', 'systemd')
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
                         edge_len = max(len(x) for x in supported_inits) - 1
-                        buf_size = __opts__['file_buffer_size']
+                        try:
+                            buf_size = __opts__['file_buffer_size']
+                        except KeyError:
+                            # Default to the value of file_buffer_size for the minion
+                            buf_size = 262144
                         try:
                             with open(init_bin, 'rb') as fp_:
                                 buf = True
-                                edge = ''
+                                edge = six.b('')
                                 buf = fp_.read(buf_size).lower()
                                 while buf:
                                     buf = edge + buf
                                     for item in supported_inits:
                                         if item in buf:
+                                            if six.PY3:
+                                                item = item.decode('utf-8')
                                             grains['init'] = item
-                                            buf = ''
+                                            buf = six.b('')
                                             break
                                     edge = buf[-edge_len:]
                                     buf = fp_.read(buf_size).lower()
