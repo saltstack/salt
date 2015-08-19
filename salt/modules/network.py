@@ -63,7 +63,7 @@ def wol(mac, bcast='255.255.255.255', destport=9):
 
 def ping(host, timeout=False, return_boolean=False):
     '''
-    Performs a ping to a host
+    Performs an ICMP ping to a host
 
     CLI Example:
 
