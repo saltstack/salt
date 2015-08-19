@@ -18,7 +18,6 @@ from salttesting.mock import (
 from salttesting.helpers import ensure_in_syspath
 
 import os
-import sys
 import integration
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
