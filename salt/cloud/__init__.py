@@ -1378,14 +1378,7 @@ class Cloud(object):
         del provider_details['profiles']
 
         for name in names:
-            name_exists = False
             if name in vms:
-                if 'state' in vms[name]:
-                    if vms[name]['state'].lower() != 'terminated':
-                        name_exists = True
-                else:
-                    name_exists = True
-            if name_exists:
                 msg = '{0} already exists under {1}:{2}'.format(
                     name, alias, driver
                 )
