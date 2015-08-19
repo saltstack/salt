@@ -2,28 +2,6 @@
 RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
 ==============================================================
 
-Installation Using pip
-======================
-
-Since Salt is on `PyPI`_, it can be installed using pip, though most users
-prefer to install using RPMs (which can be installed from `EPEL`_).
-Installation from pip is easy:
-
-.. _`PyPI`: https://pypi.python.org/pypi/salt
-
-.. code-block:: bash
-
-    pip install salt
-
-.. warning::
-
-    If installing from pip (or from source using ``setup.py install``), be
-    advised that the ``yum-utils`` package is needed for Salt to manage
-    packages. Also, if the Python dependencies are not already installed, then
-    you will need additional libraries/tools installed to build some of them.
-    More information on this can be found :ref:`here
-    <installing-for-development>`.
-
 Installation from Repository
 ============================
 
@@ -105,6 +83,37 @@ To install from ``epel-testing``, use the ``enablerepo`` argument for yum:
 
     yum --enablerepo=epel-testing install salt-minion
 
+Installation Using pip
+======================
+
+Since Salt is on `PyPI`_, it can be installed using pip, though most users
+prefer to install using RPMs (which can be installed from `EPEL`_).
+
+Installing from pip has a few additional requirements:
+
+* Install the group 'Development Tools', ``yum groupinstall 'Development Tools'``
+* Install the 'zeromq-devel' package if it fails on linking against that
+  afterwards as well.
+
+A pip install does not make the init scripts or the /etc/salt directory, and you
+will need to provide your own systemd service unit.
+
+Installation from pip:
+
+.. _`PyPI`: https://pypi.python.org/pypi/salt
+
+.. code-block:: bash
+
+    pip install salt
+
+.. warning::
+
+    If installing from pip (or from source using ``setup.py install``), be
+    advised that the ``yum-utils`` package is needed for Salt to manage
+    packages. Also, if the Python dependencies are not already installed, then
+    you will need additional libraries/tools installed to build some of them.
+    More information on this can be found :ref:`here
+    <installing-for-development>`.
 
 ZeroMQ 4
 ========

@@ -6,17 +6,16 @@ Grains
 
 Salt comes with an interface to derive information about the underlying system.
 This is called the grains interface, because it presents salt with grains of
-information.
+information. Grains are collected for the operating system, domain name,
+IP address, kernel, OS type, memory, and many other system properties.
 
 The grains interface is made available to Salt modules and components so that
 the right salt minion commands are automatically available on the right
 systems.
 
-It is important to remember that grains are bits of information loaded when
-the salt minion starts, so this information is static. This means that the
-information in grains is unchanging, therefore the nature of the data is
-static. So grains information are things like the running kernel, or the
-operating system.
+Grain data is relatively static, though if system information changes
+(for example, if network settings are changed), or if a new value is assigned
+to a custom grain, grain data is refreshed.
 
 .. note::
 
