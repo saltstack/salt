@@ -209,7 +209,7 @@ class GenerateSaltSyspaths(Command):
         )
 
 
-class WriteSaltSshPackaingFile(Command):
+class WriteSaltSshPackagingFile(Command):
 
     description = 'Write salt\'s ssh packaging file'
     user_options = []
