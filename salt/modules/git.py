@@ -123,8 +123,11 @@ def _add_http_basic_auth(repository, https_user=None, https_pass=None):
     else:
         urltuple = _urlparse(repository)
         if urltuple.scheme == 'https':
-            netloc = "{0}:{1}@{2}".format(https_user, https_pass,
-                                          urltuple.netloc)
+            if https_pass:
+                auth_string = "{0}:{1}".format(https_user, https_pass)
+            else:
+                auth_string = https_user
+            netloc = "{0}@{1}".format(auth_string, urltuple.netloc)
             urltuple = urltuple._replace(netloc=netloc)
             return _urlunparse(urltuple)
         else:
