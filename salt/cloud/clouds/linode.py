@@ -1372,6 +1372,7 @@ def _query(action=None,
         decode_type='json',
         text=True,
         status=True,
+        hide_fields=['api_key'],
         opts=__opts__,
     )
     log.debug(
