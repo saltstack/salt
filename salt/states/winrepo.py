@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Windows Package Repository
-
-.. note::
-
-    This state only loads on minions that have the ``roles: salt-master`` grain
-    set.
 '''
 from __future__ import absolute_import
 
@@ -21,15 +16,7 @@ import salt.config
 
 
 def __virtual__():
-    '''
-    Load this state if this is the salt-master
-    '''
-    try:
-        return ('winrepo'
-                if 'salt-master' in __grains__.get('roles', [])
-                else False)
-    except TypeError:
-        return False
+    return 'winrepo'
 
 
 def genrepo(name, force=False, allow_empty=False):
