@@ -420,7 +420,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
 
     def start(self):
         '''
-        Start the actual minion.
+        Start the actual proxy minion.
 
         If sub-classed, don't **ever** forget to run:
 
