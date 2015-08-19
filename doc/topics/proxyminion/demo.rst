@@ -9,7 +9,8 @@ and configure one or more proxy minions to talk to and control it.
    is not strictly required, but without a virtualenv you will need to install
    ``bottle`` via pip globally on your system
 
-2. Clone https://github.com/saltstack/salt-contrib/proxyminion_rest_example
+2. Clone https://github.com/saltstack/salt-contrib
+   and copy the contents of the directory ``proxyminion_rest_example``
    somewhere on a machine that is reachable from the machine on which you want to
    run the salt-proxy.  This machine needs Python 2.7 or later.
 
