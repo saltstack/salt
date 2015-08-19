@@ -519,10 +519,20 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     ret = {}
-    for pkginfo in _repoquery_pkginfo('--all --pkgnarrow=installed'):
-        if pkginfo is None:
-            continue
-        __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, pkginfo.version)
+    cmd = ['rpm', '-qa', '--queryformat',
+           salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', '(none)\n')]
+    output = __salt__['cmd.run'](cmd,
+                                 python_shell=False,
+                                 output_loglevel='trace')
+    for line in output.splitlines():
+        pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+            line,
+            osarch=__grains__['osarch']
+        )
+        if pkginfo is not None:
+            __salt__['pkg_resource.add_pkg'](ret,
+                                             pkginfo.name,
+                                             pkginfo.version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
