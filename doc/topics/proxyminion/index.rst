@@ -460,7 +460,7 @@ are interested in.  Here's an example:
 The __proxyenabled__ directive
 ------------------------------
 
-Salt execution moduless, by, and large, cannot "automatically" work
+Salt execution modules, by, and large, cannot "automatically" work
 with proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no
 meaning on a network switch or a housecat.  For an execution module to be
 available to a proxy-minion, the ``__proxyenabled__`` variable must be defined
