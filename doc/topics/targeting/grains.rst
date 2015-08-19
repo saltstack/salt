@@ -13,7 +13,7 @@ the right salt minion commands are automatically available on the right
 systems.
 
 It is important to remember that grains are bits of information loaded when
-the salt minion starts, so this information is static. This means that the
+the salt minion starts, so this information is static, until explicitly changed, and then it needs refreshing for the changes to show in the grains. This means that the
 information in grains is unchanging, therefore the nature of the data is
 static. So grains information are things like the running kernel, or the
 operating system.
