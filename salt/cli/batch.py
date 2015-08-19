@@ -13,6 +13,7 @@ import copy
 # Import salt libs
 import salt.client
 import salt.output
+import salt.exceptions
 from salt.utils import print_cli
 from salt.ext.six.moves import range
 
@@ -47,11 +48,14 @@ class Batch(object):
         ping_gen = self.local.cmd_iter(*args, **self.eauth)
 
         fret = set()
-        for ret in ping_gen:
-            m = next(ret.iterkeys())
-            if m is not None:
-                fret.add(m)
-        return (list(fret), ping_gen)
+        try:
+            for ret in ping_gen:
+                m = next(ret.iterkeys())
+                if m is not None:
+                    fret.add(m)
+            return (list(fret), ping_gen)
+        except StopIteration:
+            raise salt.exceptions.SaltClientError('No minions matched the target.')
 
     def get_bnum(self):
         '''
