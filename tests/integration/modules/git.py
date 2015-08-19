@@ -178,7 +178,7 @@ class GitModuleTest(integration.ModuleCase):
             )
         )
         self.assertTrue(tarfile.is_tarfile(tar_archive))
-        with tarfile.open(tar_archive, 'r') as tar_obj:
+        with closing(tarfile.open(tar_archive, 'r')) as tar_obj:
             self.assertEqual(
                 tar_obj.getnames(),
                 ['foo', 'foo/bar', 'foo/baz', 'foo/foo']
