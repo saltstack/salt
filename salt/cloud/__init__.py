@@ -1878,32 +1878,17 @@ class Map(Cloud):
                         continue
 
                     # A machine by the same name exists
-                    for mdriver, state in six.iteritems(matching):
+                    for item in matching:
                         if name not in ret['create']:
                             # Machine already removed
                             break
 
-                        if mdriver not in ('aws', 'ec2') and \
-                                state.lower() != 'terminated':
-                            # Regarding other providers, simply remove
-                            # them for the create map.
-                            log.warn(
-                                '{0!r} already exists, removing from '
-                                'the create map'.format(name)
-                            )
-                            if 'existing' not in ret:
-                                ret['existing'] = {}
-                            ret['existing'][name] = ret['create'].pop(name)
-                            continue
-
-                        if state.lower() != 'terminated':
-                            log.info(
-                                '{0!r} already exists, removing '
-                                'from the create map'.format(name)
-                            )
-                            if 'existing' not in ret:
-                                ret['existing'] = {}
-                            ret['existing'][name] = ret['create'].pop(name)
+                        log.warn('{0!r} already exists, removing from '
+                                 'the create map.'.format(name))
+                        
+                        if 'existing' not in ret:
+                            ret['existing'] = {}
+                        ret['existing'][name] = ret['create'].pop(name)
 
         if 'hard' in self.opts and self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
