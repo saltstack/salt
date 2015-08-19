@@ -196,9 +196,9 @@ The easiest way to accept the minion key is to accept all pending keys:
     and then set this value as the :conf_minion:`master_finger` in the minion configuration
     file. Restart the Salt minion.
 
-    On the minion, run ``salt-key -f minion-id`` to print the fingerprint of the
-    minion's public key. This fingerprint can then be compared against the fingerprint
-    generated on the minion.
+    On the master, run ``salt-key -f minion-id`` to print the fingerprint of the
+    minion's public key that was received by the master. On the minion, run
+    ``salt-call key.finger --local`` to print the fingerprint of the minion key.
 
     On the master:
 
