@@ -544,6 +544,7 @@ def versions_information(include_salt_cloud=False):
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
         ('timelib', 'timelib', 'version'),
+        ('dateutil', 'dateutil', '__version__'),
     ]
 
     if include_salt_cloud:
