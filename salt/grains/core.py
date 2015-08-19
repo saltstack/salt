@@ -1085,7 +1085,7 @@ def os_data():
                             # Default to the value of file_buffer_size for the minion
                             buf_size = 262144
                         try:
-                            with open(init_bin, 'rb') as fp_:
+                            with salt.utils.fopen(init_bin, 'rb') as fp_:
                                 buf = True
                                 edge = six.b('')
                                 buf = fp_.read(buf_size).lower()
