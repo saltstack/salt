@@ -779,6 +779,8 @@ def config_get(key,
         If ``True``, query the global git configuraton. Otherwise, only the
         local git configuration will be queried.
 
+        .. versionadded:: 2015.8.0
+
     all : False
         If ``True``, return a list of all values set for ``key``. If the key
         does not exist, ``None`` will be returned.
@@ -861,9 +863,6 @@ def config_get_regexp(key,
     cwd
         The path to the git checkout
 
-        .. versionchanged:: 2015.8.0
-            Now optional if ``global`` is set to ``True``
-
     global : False
         If ``True``, query the global git configuraton. Otherwise, only the
         local git configuration will be queried.
@@ -928,11 +927,6 @@ def config_set(key,
         The path to the git checkout. Must be an absolute path, or the word
         ``global`` to indicate that a global key should be set.
 
-        .. versionchanged:: 2015.8.0
-            Can now be set to ``global`` instead of an absolute path, to set a
-            global git configuration parameter, deprecating the ``is_global``
-            parameter.
-
         .. versionchanged:: 2014.7.0
             Made ``cwd`` argument optional if ``is_global=True``
 
@@ -950,7 +944,7 @@ def config_set(key,
             Argument renamed from ``setting_value`` to ``value``
 
     add : False
-        Add a value to a multivar
+        Add a value to a key, creating/updating a multivar
 
         .. versionadded:: 2015.8.0
 
@@ -1675,11 +1669,6 @@ def merge(cwd,
         The remote branch or revision to merge into the current branch
         Revision to merge into the current branch
 
-        .. versionchanged:: 2015.8.0
-            Default value changed from ``'@{upstream}'`` to ``None`` (unset),
-            allowing this function to merge the remote tracking branch without
-            having to specify it
-
         .. deprecated:: 2015.8.0
             Use ``rev`` instead.
 
@@ -2035,8 +2024,6 @@ def push(cwd,
          ignore_retcode=False,
          branch=None):
     '''
-    .. versionchanged:: 2015.8.0
-
     Interface to `git-push(1)`_
 
     cwd
@@ -2613,7 +2600,7 @@ def stash(cwd, action='save', opts='', user=None, ignore_retcode=False):
 def status(cwd, user=None, ignore_retcode=False):
     '''
     .. versionchanged:: 2015.8.0
-        Return data has changed from a list of tuples to a dictionary
+        Return data has changed from a list of lists to a dictionary
 
     Returns the changes to the repository
 
@@ -2833,6 +2820,8 @@ def symbolic_ref(cwd,
 
 def version(versioninfo=False, user=None):
     '''
+    .. versionadded:: 2015.8.0
+
     Returns the version of Git installed on the minion
 
     versioninfo : False
