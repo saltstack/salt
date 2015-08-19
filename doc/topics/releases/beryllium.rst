@@ -31,13 +31,182 @@ A new docker :mod:`state <salt.states.dockerng>` and :mod:`execution module
 of the existing state and execution module, but for now will exist alongside
 them.
 
+Git State and Execution Modules Rewritten
+=========================================
+
+The git state and execution modules have gone through an extensive overhaul.
+
+Changes in the :py:func:`git.latest <salt.states.git.latest>` State
+-------------------------------------------------------------------
+
+- The ``branch`` parameter has been added, allowing for a custom branch name to
+  be used in the local checkout maintained by the :py:func:`git.latest
+  <salt.states.git.latest>` state. This can be helpful in avoiding ambiguous
+  refs in the local checkout when a tag is used as the ``rev`` parameter. If no
+  ``branch`` is specified, then the state uses the value of ``rev`` as the
+  branch name.
+- The ``remote_name`` parameter has been deprecated and renamed to ``remote``.
+- The ``force`` parameter has been deprecated and renamed to ``force_clone`` to
+  reduce ambiguity with the other "force" parameters.
+- Using SHA1 hashes (full or shortened) in the ``rev`` parameter is now
+  properly supported.
+- Non-fast-forward merges are now detected before the repository is updated,
+  and the state will not update the repository if the change is not a
+  fast-forward. Non-fast-forward updates must be overridden with the
+  ``force_reset`` parameter. If ``force_reset`` is set to ``True``, the state
+  will only reset the repository if it cannot be fast-forwarded. This is in
+  contrast to the earlier behavior, in which a hard-reset would be performed
+  every time the state was run if ``force_reset`` was set to ``True``.
+- A ``git pull`` is no longer performed by this state, dropped in favor of a
+  fetch-and-merge (or fetch-and-reset) workflow.
+
+:py:func:`git.config_unset <salt.states.git.config_unset>` state added
+----------------------------------------------------------------------
+
+This state allows for configuration values (or entire keys) to be unset. See
+:py:func:`here <salt.states.git.config_unset>` for more information and example
+SLS.
+
+git.config State Renamed to :py:func:`git.config_set <salt.states.git.config_set>`
+----------------------------------------------------------------------------------
+
+To reduce confusion after the addition of :py:func:`git.config_unset
+<salt.states.git.config_unset>`, the git.config state has been renamed to
+:py:func:`git.config_set <salt.states.git.config_set>`. The old config.get name
+will still work for a couple releases, allowing time for SLS files to be
+updated.
+
+In addition, this state now supports managing multivar git configuration
+values. See :py:func:`here <salt.states.git.config_set>` for more information
+and example SLS.
+
+Initial Support for Git Worktrees in Execution Module
+-----------------------------------------------------
+
+Several functions have been added to the execution module to manage worktrees_
+(a feature new to Git 2.5.0). State support does not exist yet, but will follow
+soon.
+
+.. _worktrees: http://git-scm.com/docs/git-worktree
+
+New Functions in Git Execution Module
+-------------------------------------
+
+- :py:func:`git.config_get_regexp <salt.states.git.config_regexp>`
+- :py:func:`git.config_unset <salt.states.git.config_unset>`
+- :py:func:`git.is_worktree <salt.states.git.is_worktree>`
+- :py:func:`git.list_branches <salt.states.git.list_branches>`
+- :py:func:`git.list_tags <salt.states.git.list_tags>`
+- :py:func:`git.list_worktrees <salt.states.git.list_worktrees>`
+- :py:func:`git.merge_base <salt.states.git.merge_base>`
+- :py:func:`git.merge_tree <salt.states.git.merge_tree>`
+- :py:func:`git.rev_parse <salt.states.git.rev_parse>`
+- :py:func:`git.version <salt.states.git.version>`
+- :py:func:`git.worktree_rm <salt.states.git.worktree_rm>`
+- :py:func:`git.worktree_add <salt.states.git.worktree_add>`
+- :py:func:`git.worktree_prune <salt.states.git.worktree_prune>`
+
+Changes to Functions in Git Execution Module
+--------------------------------------------
+
+:py:func:`git.add <salt.states.git.add>`
+****************************************
+
+- ``--verbose`` is now implied when running the ``git add`` command, to provide
+  a list of the files added in the return data.
+
+:py:func:`git.archive <salt.modules.git.archive>`
+*************************************************
+
+- Now returns ``True`` when the ``git archive`` command was successful, and
+  otherwise raises an error.
+- ``overwrite`` argument added to prevent an exixting archive from being
+  overwritten by this function.
+- ``fmt`` argument deprecated and renamed to ``format``
+- Trailing slash no longer implied in ``prefix`` argument, must be included if
+  this argument is passed.
+
+:py:func:`git.checkout <salt.modules.git.checkout>`
+***************************************************
+
+- The ``rev`` argument is now optional when using ``-b`` or ``-B`` in ``opts``,
+  allowing for a branch to be created (or reset) using ``HEAD`` as the starting
+  point.
+
+:py:func:`git.clone <salt.modules.git.clone>`
+*********************************************
+
+- The ``name`` argument has been added to specify the name of the directory in
+  which to clone the repository. If this option is specified, then the clone
+  will be made within the directory specified by the ``cwd``, instead of at
+  that location.
+- ``repository`` argument deprecated and renamed to ``url``
+
+:py:func:`git.config_get <salt.modules.git.config_get>`
+*******************************************************
+
+- ``setting_name`` argument deprecated and renamed to ``key``
+- The ``global`` argument has been added, to query the global git configuration
+- The ``all`` argument has been added to return a list of all values for the
+  specified key, allowing for all values in a multivar to be returned.
+- ``cwd`` argument is now optional if ``global`` is set to ``True``
+
+:py:func:`git.config_set <salt.modules.git.config_set>`
+*******************************************************
+
+- The value(s) of the key being set are now returned
+- ``setting_name`` argument deprecated and renamed to ``key``
+- ``setting_value`` argument deprecated and renamed to ``value``
+- ``is_global`` argument deprecated and renamed to ``global``
+- The ``multivar`` argument has been added to specify a list of values to set
+  for the specified key. The ``value`` argument is not compatible with
+  ``multivar``.
+- The ``add`` argument has been added to add a value to a key (this essentially
+  just adds an ``--add`` to the ``git config`` command that is run to set the
+  value).
+
+:py:func:`git.ls_remote <salt.modules.git.ls_remote>`
+*****************************************************
+
+- ``repository`` argument deprecated and renamed to ``remote``
+- ``branch`` argument deprecated and renamed to ``ref``
+- The ``opts`` argument has been added to allow for additional CLI options to
+  be passed to the ``git ls-remote`` command.
+
+:py:func:`git.merge <salt.modules.git.merge>`
+*********************************************
+
+- The ``branch`` argument deprecated and renamed to ``rev``
+
+:py:func:`git.status <salt.modules.git.status>`
+***********************************************
+
+- Return data has been changed from a list of lists to a dictionary containing
+  lists of files in the modified, added, deleted, and untracked states.
+
+:py:func:`git.submodule <salt.modules.git.submodule>`
+*****************************************************
+
+- Added the ``command`` argument to allow for operations other than ``update``
+  to be run on submodules, and deprecated the ``init`` argument. To do a
+  submodule update with ``init=True`` moving forward, use ``command=update
+  opts='--init'``
+
+
 Git Pillar Rewritten
 ====================
 
-The Git external pillar has been rewritten to bring it up to feature parity
-with :mod:`gitfs <salt.fileserver.gitfs>`. See :mod:`here
-<salt.pillar.git_pillar>` for more information on the new git_pillar
-functionality.
+The git external pillar has been rewritten to bring it up to feature parity
+with :mod:`gitfs <salt.fileserver.gitfs>`. Support for pygit2_ has been added,
+bring with it the ability to access authenticated repositories.
+
+Using the new features will require updates to the git ext_pillar
+configuration, further details can be found :ref:`here
+<git-pillar-2015-8-0-and-later>`.
+
+.. note::
+    As with :mod:`gitfs <salt.fileserver.gitfs>`, pygit2_ 0.20.3 is required to
+    use pygit2_ with the git external pillar.
 
 Windows Software Repo Changes
 =============================
