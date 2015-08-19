@@ -139,8 +139,8 @@ Install the following software:
 Download the Prerequisite zip file for your CPU architecture from the
 SaltStack download site:
 
-* `Salt32.zip <http://docs.saltstack.com/downloads/windows-deps/Salt32.zip/>`_
-* `Salt64.zip <http://docs.saltstack.com/downloads/windows-deps/Salt64.zip/>`_
+* `Salt32.zip <http://repo.saltstack.com/windows/dependencies/Salt32.zip/>`_
+* `Salt64.zip <http://repo.saltstack.com/windows/dependencies/Salt64.zip/>`_
 
 These files contain all sofware required to build and develop salt. Unzip the
 contents of the file to ``C:\Salt-Dev\temp``.

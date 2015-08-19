@@ -65,6 +65,9 @@ def ping(host, timeout=False, return_boolean=False):
     '''
     Performs an ICMP ping to a host
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
+
     CLI Example:
 
     .. code-block:: bash
@@ -86,7 +89,10 @@ def ping(host, timeout=False, return_boolean=False):
         salt '*' network.ping archlinux.org timeout=3
     '''
     if timeout:
-        cmd = 'ping -W {0} -c 4 {1}'.format(timeout, salt.utils.network.sanitize_host(host))
+        if __grains__['kernel'] == 'SunOS':
+            cmd = 'ping -c 4 {1} {0}'.format(timeout, salt.utils.network.sanitize_host(host))
+        else:
+            cmd = 'ping -W {0} -c 4 {1}'.format(timeout, salt.utils.network.sanitize_host(host))
     else:
         cmd = 'ping -c 4 {0}'.format(salt.utils.network.sanitize_host(host))
     if return_boolean:
@@ -210,7 +216,10 @@ def _ppid():
     Return a dict of pid to ppid mappings
     '''
     ret = {}
-    cmd = 'ps -ax -o pid,ppid | tail -n+2'
+    if __grains__['kernel'] == 'SunOS':
+        cmd = 'ps -a -o pid,ppid | tail -n+2'
+    else:
+        cmd = 'ps -ax -o pid,ppid | tail -n+2'
     out = __salt__['cmd.run'](cmd, python_shell=True)
     for line in out.splitlines():
         pid, ppid = line.split()
@@ -292,6 +301,38 @@ def _netstat_bsd():
             continue
         ret[idx]['user'] = ptr[master_pid]['user']
         ret[idx]['program'] = '/'.join((master_pid, ptr[master_pid]['cmd']))
+    return ret
+
+
+def _netstat_sunos():
+    '''
+    Return netstat information for SunOS flavors
+    '''
+    log.warning('User and program not (yet) supported on SunOS')
+    ret = []
+    for addr_family in ('inet', 'inet6'):
+        # Lookup TCP connections
+        cmd = 'netstat -f {0} -P tcp -an | tail -n+5'.format(addr_family)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        for line in out.splitlines():
+            comps = line.split()
+            ret.append({
+                'proto': 'tcp6' if addr_family == 'inet6' else 'tcp',
+                'recv-q': comps[5],
+                'send-q': comps[4],
+                'local-address': comps[0],
+                'remote-address': comps[1],
+                'state': comps[6]})
+        # Lookup UDP connections
+        cmd = 'netstat -f {0} -P udp -an | tail -n+5'.format(addr_family)
+        out = __salt__['cmd.run'](cmd, python_shell=True)
+        for line in out.splitlines():
+            comps = line.split()
+            ret.append({
+                'proto': 'udp6' if addr_family == 'inet6' else 'udp',
+                'local-address': comps[0],
+                'remote-address': comps[1] if len(comps) > 2 else ''})
+
     return ret
 
 
@@ -426,6 +467,36 @@ def _netstat_route_openbsd():
     return ret
 
 
+def _netstat_route_sunos():
+    '''
+    Return netstat routing information for SunOS
+    '''
+    ret = []
+    cmd = 'netstat -f inet -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[5]})
+    cmd = 'netstat -f inet6 -rn | tail -n+5'
+    out = __salt__['cmd.run'](cmd, python_shell=True)
+    for line in out.splitlines():
+        comps = line.split()
+        ret.append({
+            'addr_family': 'inet6',
+            'destination': comps[0],
+            'gateway': comps[1],
+            'netmask': '',
+            'flags': comps[2],
+            'interface': comps[5]})
+    return ret
+
+
 def netstat():
     '''
     Return information on open ports and states
@@ -437,6 +508,9 @@ def netstat():
     .. versionchanged:: 2014.1.4
         Added support for OpenBSD, FreeBSD, and NetBSD
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
+
     CLI Example:
 
     .. code-block:: bash
@@ -447,6 +521,8 @@ def netstat():
         return _netstat_linux()
     elif __grains__['kernel'] in ('OpenBSD', 'FreeBSD', 'NetBSD'):
         return _netstat_bsd()
+    elif __grains__['kernel'] == 'SunOS':
+        return _netstat_sunos()
     raise CommandExecutionError('Not yet supported on this platform')
 
 
@@ -467,6 +543,9 @@ def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
+
     CLI Example:
 
     .. code-block:: bash
@@ -483,29 +562,32 @@ def traceroute(host):
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
-    cmd2 = 'traceroute --version'
-    out2 = __salt__['cmd.run'](cmd2)
-    try:
-        # Linux traceroute version looks like:
-        #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
-        # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
-
-        traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-        log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
-        traceroute_version = []
-        for t in traceroute_version_raw:
-            try:
-                traceroute_version.append(int(t))
-            except ValueError:
-                traceroute_version.append(t)
-
-        if len(traceroute_version) < 3:
-            traceroute_version.append(0)
-
-        log.debug('traceroute_version: {0}'.format(traceroute_version))
-
-    except IndexError:
+    if salt.utils.is_sunos():
         traceroute_version = [0, 0, 0]
+    else:
+        cmd2 = 'traceroute --version'
+        out2 = __salt__['cmd.run'](cmd2)
+        try:
+            # Linux traceroute version looks like:
+            #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
+            # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
+
+            traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
+            log.debug('traceroute_version_raw: {0}'.format(traceroute_version_raw))
+            traceroute_version = []
+            for t in traceroute_version_raw:
+                try:
+                    traceroute_version.append(int(t))
+                except ValueError:
+                    traceroute_version.append(t)
+
+            if len(traceroute_version) < 3:
+                traceroute_version.append(0)
+
+            log.debug('traceroute_version: {0}'.format(traceroute_version))
+
+        except IndexError:
+            traceroute_version = [0, 0, 0]
 
     for line in out.splitlines():
         if ' ' not in line:
@@ -513,7 +595,8 @@ def traceroute(host):
         if line.startswith('traceroute'):
             continue
 
-        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]):
+        if 'Darwin' in str(traceroute_version[1]) or 'FreeBSD' in str(traceroute_version[1]) or \
+            __grains__['kernel'] == 'SunOS':
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:
@@ -591,6 +674,9 @@ def arp():
     '''
     Return the arp table from the minion
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS
+
     CLI Example:
 
     .. code-block:: bash
@@ -603,12 +689,16 @@ def arp():
         comps = line.split()
         if len(comps) < 4:
             continue
-        if not __grains__['kernel'] == 'OpenBSD':
-            ret[comps[3]] = comps[1].strip('(').strip(')')
-        else:
+        if __grains__['kernel'] == 'SunOS':
+            if ':' not in comps[-1]:
+                continue
+            ret[comps[-1]] = comps[1]
+        elif __grains__['kernel'] == 'OpenBSD':
             if comps[0] == 'Host' or comps[1] == '(incomplete)':
                 continue
             ret[comps[1]] = comps[0]
+        else:
+            ret[comps[3]] = comps[1].strip('(').strip(')')
     return ret
 
 
@@ -809,16 +899,31 @@ def mod_hostname(hostname):
     '''
     Modify hostname
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.mod_hostname master.saltstack.com
     '''
+    #
+    # SunOS tested on SmartOS and OmniOS (Solaris 10 compatible)
+    # Oracle Solaris 11 uses smf, currently not supported
+    #
+    # /etc/nodename is the hostname only, not fqdn
+    # /etc/defaultdomain is the domain
+    # /etc/hosts should have both fqdn and hostname entries
+    #
+
     if hostname is None:
         return False
 
     hostname_cmd = salt.utils.which('hostnamectl') or salt.utils.which('hostname')
+    if salt.utils.is_sunos():
+        uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
+        check_hostname_cmd = salt.utils.which('check-hostname')
 
     if hostname_cmd.endswith('hostnamectl'):
         __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
@@ -826,9 +931,16 @@ def mod_hostname(hostname):
 
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
-    o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
+    if not salt.utils.is_sunos():
+        o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
+    else:
+        # output: Hostname core OK: fully qualified as core.acheron.be
+        o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
-    __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
+    if not salt.utils.is_sunos():
+        __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
+    else:
+        __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
 
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
@@ -840,6 +952,9 @@ def mod_hostname(hostname):
 
             try:
                 host[host.index(o_hostname)] = hostname
+                if salt.utils.is_sunos():
+                    # also set a copy of the hostname
+                    host[host.index(o_hostname.split('.')[0])] = hostname.split('.')[0]
             except ValueError:
                 pass
 
@@ -862,6 +977,13 @@ def mod_hostname(hostname):
     elif __grains__['os_family'] == 'OpenBSD':
         with salt.utils.fopen('/etc/myname', 'w') as fh_:
             fh_.write(hostname + '\n')
+
+    # Update /etc/nodename and /etc/defaultdomain on SunOS
+    if salt.utils.is_sunos():
+        with salt.utils.fopen('/etc/nodename', 'w') as fh_:
+            fh_.write(hostname.split('.')[0] + '\n')
+        with salt.utils.fopen('/etc/defaultdomain', 'w') as fh_:
+            fh_.write(".".join(hostname.split('.')[1:]) + '\n')
 
     return True
 
@@ -1101,6 +1223,9 @@ def routes(family=None):
     '''
     Return currently configured routes from routing table
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1112,6 +1237,8 @@ def routes(family=None):
 
     if __grains__['kernel'] == 'Linux':
         routes_ = _netstat_route_linux()
+    elif __grains__['kernel'] == 'SunOS':
+        routes_ = _netstat_route_sunos()
     elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
         routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
@@ -1132,6 +1259,9 @@ def default_route(family=None):
     '''
     Return default route(s) from routing table
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+
     CLI Example:
 
     .. code-block:: bash
@@ -1147,7 +1277,8 @@ def default_route(family=None):
     if __grains__['kernel'] == 'Linux':
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
-    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin']:
+    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin'] or \
+        __grains__['kernel'] == 'SunOS':
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']
     else:
@@ -1172,6 +1303,10 @@ def get_route(ip):
 
     .. versionadded:: 2015.5.3
 
+    .. versionchanged:: 2015.8.0
+        Added support for SunOS (Solaris 10, Illumos, SmartOS)
+        Added support for OpenBSD
+
     CLI Example::
 
         salt '*' network.get_route 10.10.10.10
@@ -1186,8 +1321,76 @@ def get_route(ip):
             'destination': ip,
             'gateway': m.group('gateway'),
             'interface': m.group('interface'),
-            'source': m.group('source')}
+            'source': m.group('source')
+        }
 
         return ret
+
+    if __grains__['kernel'] == 'SunOS':
+        # [root@nacl ~]# route -n get 172.16.10.123
+        #   route to: 172.16.10.123
+        #destination: 172.16.10.0
+        #       mask: 255.255.255.0
+        #  interface: net0
+        #      flags: <UP,DONE,KERNEL>
+        # recvpipe  sendpipe  ssthresh    rtt,ms rttvar,ms  hopcount      mtu     expire
+        #       0         0         0         0         0         0      1500         0
+        cmd = '/usr/sbin/route -n get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=False)
+
+        ret = {
+            'destination': ip,
+            'gateway': None,
+            'interface': None,
+            'source': None
+        }
+
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'route to' in line[0]:
+                ret['destination'] = line[1].strip()
+            if 'gateway' in line[0]:
+                ret['gateway'] = line[1].strip()
+            if 'interface' in line[0]:
+                ret['interface'] = line[1].strip()
+                ret['source'] = salt.utils.network.interface_ip(line[1].strip())
+
+        return ret
+
+    if __grains__['kernel'] == 'OpenBSD':
+        # [root@exosphere] route -n get blackdot.be
+        #   route to: 5.135.127.100
+        #destination: default
+        #       mask: default
+        #    gateway: 192.168.0.1
+        #  interface: vio0
+        # if address: 192.168.0.2
+        #   priority: 8 (static)
+        #      flags: <UP,GATEWAY,DONE,STATIC>
+        #     use       mtu    expire
+        # 8352657         0         0
+        cmd = 'route -n get {0}'.format(ip)
+        out = __salt__['cmd.run'](cmd, python_shell=False)
+
+        ret = {
+            'destination': ip,
+            'gateway': None,
+            'interface': None,
+            'source': None
+        }
+
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'route to' in line[0]:
+                ret['destination'] = line[1].strip()
+            if 'gateway' in line[0]:
+                ret['gateway'] = line[1].strip()
+            if 'interface' in line[0]:
+                ret['interface'] = line[1].strip()
+            if 'if address' in line[0]:
+                ret['source'] = line[1].strip()
+
+        return ret
+
     else:
         raise CommandExecutionError('Not yet supported on this platform')

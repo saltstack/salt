@@ -68,7 +68,7 @@ def get_iam_region(version='latest', url='http://169.254.169.254',
     '''
     Gets instance identity document and returns region
     '''
-    instance_identity_url = '{0}/{1}/latest/dynamic/instance-identity/document'.format(url, version)
+    instance_identity_url = '{0}/{1}/dynamic/instance-identity/document'.format(url, version)
 
     region = None
     try:

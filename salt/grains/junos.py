@@ -44,9 +44,11 @@ def defaults():
 
 def facts():
     log.debug('----------- Trying to get facts')
-    facts = __opts__['proxymodule']['junos.facts']()
-    facts['version_info'] = 'override'
-    return facts
+    if 'proxymodule' in __opts__:
+        facts = __opts__['proxymodule']['junos.facts']()
+        facts['version_info'] = 'override'
+        return facts
+    return None
 
 
 def os_family():

@@ -125,8 +125,7 @@ from salt.ext.six import string_types
 import salt.utils
 from salt.modules.cron import (
     _needs_change,
-    _cron_matched,
-    SALT_CRON_NO_IDENTIFIER
+    _cron_matched
 )
 
 
@@ -217,7 +216,7 @@ def present(name,
             month='*',
             dayweek='*',
             comment=None,
-            identifier=None):
+            identifier=False):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -257,8 +256,8 @@ def present(name,
         edits. This defaults to the state id
     '''
     name = ' '.join(name.strip().split())
-    if not identifier:
-        identifier = SALT_CRON_NO_IDENTIFIER
+    if identifier is False:
+        identifier = name
     ret = {'changes': {},
            'comment': '',
            'name': name,
@@ -313,7 +312,7 @@ def present(name,
 
 def absent(name,
            user='root',
-           identifier=None,
+           identifier=False,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -335,8 +334,8 @@ def absent(name,
     ###       of unsupported arguments will result in a traceback.
 
     name = ' '.join(name.strip().split())
-    if not identifier:
-        identifier = SALT_CRON_NO_IDENTIFIER
+    if identifier is False:
+        identifier = name
     ret = {'name': name,
            'result': True,
            'changes': {},
