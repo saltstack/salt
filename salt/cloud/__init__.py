@@ -1885,7 +1885,7 @@ class Map(Cloud):
 
                         log.warn('{0!r} already exists, removing from '
                                  'the create map.'.format(name))
-                        
+
                         if 'existing' not in ret:
                             ret['existing'] = {}
                         ret['existing'][name] = ret['create'].pop(name)
