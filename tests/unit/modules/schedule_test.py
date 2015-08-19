@@ -18,6 +18,7 @@ from salttesting.mock import (
 from salttesting.helpers import ensure_in_syspath
 
 import os
+import sys
 import integration
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
@@ -171,10 +172,17 @@ class ScheduleTestCase(TestCase):
                                                                    'comment': comm3,
                                                                    'result': False})
 
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                         {'changes': {'diff': '--- \n+++ \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
-                                          'comment': 'Modified job: job1 in schedule.',
-                                          'result': True})
+                    if sys.version_info[1] >= 7:
+                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
+                                             {'changes': {'diff': '--- \n+++ \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
+                                              'comment': 'Modified job: job1 in schedule.',
+                                              'result': True})
+                    elif sys.version_info[1] >= 6:
+                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
+                                {'changes': {'diff': '---  \n+++  \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
+                                              'comment': 'Modified job: job1 in schedule.',
+                                              'result': True})
+
 
                     ret = schedule.modify('job3', function='test.ping', test=True)
                     if 'diff' in ret['changes']:
