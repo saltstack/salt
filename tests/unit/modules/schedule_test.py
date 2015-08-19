@@ -183,7 +183,6 @@ class ScheduleTestCase(TestCase):
                                               'comment': 'Modified job: job1 in schedule.',
                                               'result': True})
 
-
                     ret = schedule.modify('job3', function='test.ping', test=True)
                     if 'diff' in ret['changes']:
                         del ret['changes']['diff']  # difflib formatting changes between 2.6 and 2.7
