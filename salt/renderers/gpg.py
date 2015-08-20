@@ -48,7 +48,7 @@ To generate a cipher from a secret:
 
 .. code-block:: bash
 
-   $ echo -n "supersecret" | gpg --homedir --armor --encrypt -r <KEY-name>
+   $ echo -n "supersecret" | gpg --armor --encrypt -r <KEY-name>
 
 Set up the renderer on your master by adding something like this line to your
 config:
