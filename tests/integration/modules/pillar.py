@@ -107,9 +107,9 @@ class PillarModuleTest(integration.ModuleCase):
             'cachedir': self.master_opts['cachedir'],
         }
 
-        git_pillar.LegacyGitPillar('master', original_url, opts)
+        git_pillar._LegacyGitPillar('master', original_url, opts)
         opts['ext_pillar'] = [{'git': 'master {0}'.format(changed_url)}]
-        grepo = git_pillar.LegacyGitPillar('master', changed_url, opts)
+        grepo = git_pillar._LegacyGitPillar('master', changed_url, opts)
         repo = git.Repo(rp_location)
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
@@ -123,7 +123,7 @@ class PillarModuleTest(integration.ModuleCase):
         pillar = self.run_function('pillar.data')
 
         for branch, env in [('dev', 'testing')]:
-            repo = git_pillar.LegacyGitPillar(branch, repo_url, self.master_opts)
+            repo = git_pillar._LegacyGitPillar(branch, repo_url, self.master_opts)
 
             self.assertIn(repo.working_dir,
                     pillar['test_ext_pillar_opts']['pillar_roots'][env])
