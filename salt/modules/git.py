@@ -1607,7 +1607,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
     for worktree_name in os.listdir(worktree_root):
         gitdir_file = os.path.join(worktree_root, worktree_name, 'gitdir')
         try:
-            with open(gitdir_file, 'r') as fp_:
+            with salt.utils.fopen(gitdir_file, 'r') as fp_:
                 for line in fp_:
                     worktree_loc = line.rstrip('\n')
                     if worktree_loc.endswith('/.git'):
