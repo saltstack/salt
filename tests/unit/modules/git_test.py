@@ -31,9 +31,9 @@ class GitTestCase(TestCase):
         ]
         for (user, password), expected in test_inputs:
             kwargs = {
+                'url': 'https://example.com',
                 'https_user': user,
                 'https_pass': password,
-                'repository': 'https://example.com',
             }
             result = git._add_http_basic_auth(**kwargs)
             self.assertEqual(result, expected)
