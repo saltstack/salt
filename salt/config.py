@@ -874,7 +874,7 @@ DEFAULT_MINION_OPTS = {
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
     'winrepo_source_dir': 'salt://win/repo/',
-    'winrepo_dir': 'c:\\salt\\file_roots\\winrepo',
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
