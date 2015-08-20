@@ -419,7 +419,7 @@ class SaltEvent(object):
 
             log.trace('get_event() received = {0}'.format(ret))
             return ret
-       log.trace('_get_event() waited {0} seconds and received nothing'.format(wait * 1000))
+        log.trace('_get_event() waited {0} seconds and received nothing'.format(wait * 1000))
         return None
 
     def get_event(self, wait=5, tag='', full=False, match_type=None):
