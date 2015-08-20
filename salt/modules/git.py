@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import re
 import shlex
 
 # Import salt libs
@@ -199,6 +200,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 result = __salt__['cmd.run_all'](command,
                                                  cwd=cwd,
                                                  runas=runas,
+                                                 output_loglevel='quiet',
                                                  env=env,
                                                  python_shell=False,
                                                  ignore_retcode=ignore_retcode,
@@ -211,7 +213,8 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             if result['retcode'] == 0:
                 return result
             else:
-                stderrs.append(result['stderr'])
+                stderr = _remove_sensitive_data(result['stderr'])
+                stderrs.append(stderr)
 
         # we've tried all IDs and still haven't passed, so error out
         if failhard:
@@ -222,6 +225,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
         result = __salt__['cmd.run_all'](command,
                                          cwd=cwd,
                                          runas=runas,
+                                         output_loglevel='quiet',
                                          env=env,
                                          python_shell=False,
                                          ignore_retcode=ignore_retcode,
@@ -233,7 +237,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             if failhard:
                 msg = 'Command \'{0}\' failed'.format(command)
                 if result['stderr']:
-                    msg += ': {0}'.format(result['stderr'])
+                    msg += ': {0}'.format(
+                        _remove_sensitive_data(result['stderr'])
+                    )
                 raise CommandExecutionError(msg)
             return result
 
@@ -247,6 +253,13 @@ def _get_toplevel(path, user=None):
         cwd=path,
         runas=user
     )['stdout']
+
+
+def _remove_sensitive_data(sensitive_output):
+    '''
+        Remove HTTP user and password
+    '''
+    return re.sub('(https?)://.*@', r'\1://<redacted>@', sensitive_output)
 
 
 def add(cwd, filename, opts='', user=None, ignore_retcode=False):

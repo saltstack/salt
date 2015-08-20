@@ -190,7 +190,8 @@ class SaltEvent(object):
             self.connect_pub()
         self.pending_tags = []
         self.pending_events = []
-        self.connect_pub()
+        if not self.cpub:
+            self.connect_pub()
         self.__load_cache_regex()
 
     @classmethod
