@@ -123,6 +123,15 @@ def setup_handlers():
                 'Raven failed to parse the configuration provided '
                 'DSN: {0}'.format(exc)
             )
+        except AttributeError:
+            from raven.transport import TransportRegistry, default_transports
+            transport_registry = TransportRegistry(default_transports)
+            url = urlparse(dsn)
+            if not transport_registry.supported_scheme(url.scheme):
+                raise ValueError('Unsupported Sentry DSN scheme: %r' % url.scheme)
+            dsn_config = {}
+            conf_extras = transport_registry.compute_scope(url, dsn_config)
+            dsn_config.update(conf_extras)
 
     # Allow options to be overridden if previously parsed, or define them
     for key in ('project', 'servers', 'public_key', 'secret_key'):
