@@ -123,6 +123,7 @@ def setup_handlers():
                 'Raven failed to parse the configuration provided '
                 'DSN: {0}'.format(exc)
             )
+        # support ver 5.5.0
         except AttributeError:
             from raven.transport import TransportRegistry, default_transports
             transport_registry = TransportRegistry(default_transports)
