@@ -2489,10 +2489,13 @@ def replace(name,
             # <...snip...>
             - pattern: |
                 CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
-    '''
+
     .. note::
-       When using YAML multiline string syntax in ```pattern:```, make sure to also use that syntax in the ```repl:``` part, or you might loose line feeds.  
-    '''    
+
+       When using YAML multiline string syntax in ``pattern:``, make sure to
+       also use that syntax in the ``repl:`` part, or you might loose line
+       feeds.
+    '''
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
