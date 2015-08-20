@@ -26,6 +26,7 @@ def __virtual__():
     # Enable on these platforms only.
     enable = set((
         'RestExampleOS',
+        'proxy',
     ))
     if __grains__['os'] in enable:
         return __virtualname__
@@ -40,9 +41,9 @@ def start(name):
 
     .. code-block:: bash
 
-        salt '*' rest_service.start <service name>
+        salt '*' service.start <service name>
     '''
-    return __opts__['proxyobject'].service_start(name)
+    return __opts__['proxymodule']['rest_sample.service_start'](name)
 
 
 def stop(name):
@@ -53,9 +54,9 @@ def stop(name):
 
     .. code-block:: bash
 
-        salt '*' rest_service.stop <service name>
+        salt '*' service.stop <service name>
     '''
-    return __opts__['proxyobject'].service_stop(name)
+    return __opts__['proxymodule']['rest_sample.service_stop'](name)
 
 
 def restart(name):
@@ -66,10 +67,10 @@ def restart(name):
 
     .. code-block:: bash
 
-        salt '*' rest_service.restart <service name>
+        salt '*' service.restart <service name>
     '''
 
-    return __opts__['proxyobject'].service_restart(name)
+    return __opts__['proxymodule']['rest_sample.service_restart'](name)
 
 
 def status(name):
@@ -81,9 +82,9 @@ def status(name):
 
     .. code-block:: bash
 
-        salt '*' rest_service.status <service name>
+        salt '*' service.status <service name>
     '''
-    return __opts__['proxyobject'].service_status(name)
+    return __opts__['proxymodule']['rest_sample.service_status'](name)
 
 
 def list_():
@@ -94,6 +95,6 @@ def list_():
 
     .. code-block:: bash
 
-        salt '*' rest_service.list <service name>
+        salt '*' service.list <service name>
     '''
-    return __opts__['proxyobject'].service_list()
+    return __opts__['proxymodule']['rest_sample.service_list']()

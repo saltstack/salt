@@ -208,10 +208,8 @@ def cql_query(query, contact_points=None, port=None, cql_user=None, cql_pass=Non
                 if not isinstance(value, six.text_type):
                     # Must support Cassandra collection types.
                     # Namely, Cassandras set, list, and map collections.
-                    if not isinstance(value, set):
-                        if not isinstance(value, list):
-                            if not isinstance(value, dict):
-                                value = str(value)
+                    if not isinstance(value, (set, list, dict)):
+                        value = str(value)
                 values[key] = value
             ret.append(values)
 
@@ -289,8 +287,8 @@ def info(contact_points=None, port=None, cql_user=None, cql_pass=None):
                       release_version,
                       cql_version,
                       schema_version,
-                      thrift_version 
-                 from system.local 
+                      thrift_version
+                 from system.local
                 limit 1;'''
 
     ret = {}
@@ -490,7 +488,7 @@ def create_keyspace(keyspace, replication_strategy='SimpleStrategy', replication
             replication_map['replication_factor'] = replication_factor
 
         query = '''create keyspace {0}
-                     with replication = {1} 
+                     with replication = {1}
                       and durable_writes = true;'''.format(keyspace, replication_map)
 
         try:

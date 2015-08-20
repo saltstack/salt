@@ -409,7 +409,9 @@ def mask(name):
 
 def masked(name):
     '''
-    Return if the named service is masked
+    Return if the named service is masked.
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
