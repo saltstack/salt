@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import re
 import subprocess
 
 # Import salt libs
@@ -62,6 +63,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                 result = __salt__['cmd.run_all'](cmd,
                                                  cwd=cwd,
                                                  runas=runas,
+                                                 output_loglevel='quiet',
                                                  env=env,
                                                  python_shell=False,
                                                  **kwargs)
@@ -73,7 +75,8 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
             if result['retcode'] == 0:
                 return result['stdout']
             else:
-                stderrs.append(result['stderr'])
+                stderr = _remove_sensitive_data(result['stderr'])
+                stderrs.append(stderr)
 
         # we've tried all IDs and still haven't passed, so error out
         raise CommandExecutionError("\n\n".join(stderrs))
@@ -82,6 +85,7 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         result = __salt__['cmd.run_all'](cmd,
                                          cwd=cwd,
                                          runas=runas,
+                                         output_loglevel='quiet',
                                          env=env,
                                          python_shell=False,
                                          **kwargs)
@@ -90,9 +94,16 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         if retcode == 0:
             return result['stdout']
         else:
+            stderr = _remove_sensitive_data(result['stderr'])
             raise CommandExecutionError(
-                'Command {0!r} failed. Stderr: {1!r}'.format(cmd,
-                                                             result['stderr']))
+                'Command {0!r} failed. Stderr: {1!r}'.format(cmd, stderr))
+
+
+def _remove_sensitive_data(sensitive_output):
+    '''
+        Remove HTTP user and password.
+    '''
+    return re.sub('(https?)://.*@', r'\1://<redacted>@', sensitive_output)
 
 
 def _git_getdir(cwd, user=None):

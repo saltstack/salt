@@ -37,6 +37,24 @@ class GitTestCase(TestCase):
             result = git._add_http_basic_auth(**kwargs)
             self.assertEqual(result, expected)
 
+    def test_https_user_and_pw_is_confidential(self):
+        sensitive_outputs = (
+            'https://deadbeaf@example.com',
+            'https://user:pw@example.com',
+        )
+        sanitized = 'https://<redacted>@example.com'
+        for sensitive_output in sensitive_outputs:
+            result = git._remove_sensitive_data(sensitive_output)
+            self.assertEqual(result, sanitized)
+
+    def test_git_ssh_user_is_not_treated_as_sensitive(self):
+        not_sensitive_outputs = (
+            'ssh://user@example.com',
+        )
+        for not_sensitive_output in not_sensitive_outputs:
+            result = git._remove_sensitive_data(not_sensitive_output)
+            self.assertEqual(result, not_sensitive_output)
+
 
 if __name__ == '__main__':
     from integration import run_tests
