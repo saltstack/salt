@@ -55,6 +55,7 @@ from salt.ext.six.moves.urllib.error import URLError
 
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
+import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
@@ -404,8 +405,8 @@ def query(url,
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
-        client_argspec = inspect.getargspec(HTTPClient.__init__)
-        supports_max_body_size = 'kwargs' in client_argspec.keywords or 'max_body_size' in client_argspec.args
+        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
             if supports_max_body_size:
