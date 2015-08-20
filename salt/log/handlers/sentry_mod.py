@@ -126,6 +126,7 @@ def setup_handlers():
         # support ver 5.5.0
         except AttributeError:
             from raven.transport import TransportRegistry, default_transports
+            from raven.utils.urlparse import urlparse
             transport_registry = TransportRegistry(default_transports)
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
