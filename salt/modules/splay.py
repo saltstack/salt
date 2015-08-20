@@ -38,7 +38,16 @@ def _get_hash(hashable, size):
     return (h & (size - 1)) & bitmask
 
 
-def _calc_splay(hashable, splaytime=_DEFAULT_SPLAYTIME, size=_DEFAULT_SIZE):
+def calc_splay(hashable, splaytime=_DEFAULT_SPLAYTIME, size=_DEFAULT_SIZE):
+    '''
+    Use directly to get a value from the Jenkins One-At-A-Time Hash Function using an
+    arbitrary key.
+
+
+    CLI Example:
+      # Get a value from the hash function between 1 and 60 using key 'foobar'
+      salt example-host calc_splay 'foobar' 60
+    '''
     hash_val = _get_hash(hashable, size)
     return int(splaytime * hash_val / float(size))
 
@@ -81,7 +90,7 @@ def splay(*args, **kwargs):
     if func not in __salt__:
         raise CommandExecutionError('Unable to find module function {0}'.format(func))
 
-    my_delay = _calc_splay(__grains__['id'], splaytime=splaytime)
+    my_delay = calc_splay(__grains__['id'], splaytime=splaytime)
     time.sleep(my_delay)
     # Get rid of the hidden kwargs that salt injects
     func_kwargs = dict((k, v) for k, v in six.iteritems(kwargs) if not k.startswith('__'))
@@ -106,4 +115,4 @@ def show(splaytime=_DEFAULT_SPLAYTIME):
     if not isinstance(splaytime, int):
         splaytime = int(splaytime)
 
-    return str(_calc_splay(__grains__['id'], splaytime=splaytime))
+    return str(calc_splay(__grains__['id'], splaytime=splaytime))
