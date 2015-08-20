@@ -675,8 +675,11 @@ def clone(cwd,
         command.append(name)
     else:
         command.append(cwd)
+    # Use '/tmp' instead of $HOME (/root for root user) to work around upstream
+    # git bug. See the following comment on the Salt bug tracker for more info:
+    # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
     _git_run(command,
-             cwd=None if name is None else cwd,
+             cwd='/tmp' if name is None else cwd,
              runas=user,
              identity=identity,
              ignore_retcode=ignore_retcode)
