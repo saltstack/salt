@@ -16,6 +16,7 @@ import hashlib
 import imp
 import json
 import logging
+import numbers
 import os
 import pprint
 import random
@@ -2297,6 +2298,12 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
 
     cmp_result = cmp_func(ver1, ver2)
     if cmp_result is None:
+        return False
+
+    # Check if integer/long
+    if not isinstance(cmp_result, numbers.Integral):
+        log.error('The version comparison function did not return an '
+                  'integer/long.')
         return False
 
     if oper == '!=':
