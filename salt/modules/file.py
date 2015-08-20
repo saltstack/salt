@@ -3337,6 +3337,37 @@ def check_file_meta(
 
         Supported hash types include sha512, sha384, sha256, sha224, sha1, and
         md5.
+
+    name
+        Path to file destination
+
+    sfn
+        Template-processed source file contents
+
+    source
+        URL to file source
+
+    source_sum
+        File checksum information as a dictionary
+
+        .. code-block:: yaml
+
+            {hash_type: md5, hsum: <md5sum>}
+
+    user
+        Destination file user owner
+
+    group
+        Destination file group owner
+
+    mode
+        Destination file permissions mode
+
+    saltenv
+        Salt environment used to resolve source files
+
+    contents
+        File contents
     '''
     changes = {}
     if not source_sum:
