@@ -2484,6 +2484,13 @@ class ProxyMinion(Minion):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
+
+        if 'proxy' not in self.opts['pillar']:
+            log.error('No proxy key found in pillar for id '+self.opts['id']+'.')
+            log.error('Check your pillar configuration and contents.  Salt-proxy aborted.')
+            self._running = False
+            raise SaltSystemExit(code=-1)
+
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 

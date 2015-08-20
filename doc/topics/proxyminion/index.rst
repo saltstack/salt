@@ -19,6 +19,9 @@ your typical housecat would be excellent source material for a PhD thesis.
 Salt proxy-minions provide the 'plumbing' that allows device enumeration
 and discovery, control, status, remote execution, and state management.
 
+See the :doc:`Proxy Minion Walkthrough </topics/proxyminion/demo>` for an end-to-end
+demonstration of a working proxy minion.
+
 
 New in 2015.8
 -------------
