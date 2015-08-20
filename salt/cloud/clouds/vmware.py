@@ -2154,7 +2154,7 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and config.is_profile_configured(__opts__,
+        if config.is_profile_configured(__opts__,
                                         __active_provider_name__ or 'vmware',
                                         vm_['profile']) is False:
             return False
@@ -2228,6 +2228,9 @@ def create(vm_):
     )
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
+    )
+    hardware_version = config.get_cloud_config_value(
+        'hardware_version', vm_, __opts__, search_global=False, default=None
     )
 
     if 'clonefrom' in vm_:
@@ -2313,6 +2316,19 @@ def create(vm_):
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
+
+        # If the hardware version is specified and if it is different from the current
+        # hardware version, then schedule a hardware version upgrade
+        if hardware_version:
+            hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
+            if hardware_version != object_ref.config.version:
+                log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
+                scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
+                scheduled_hardware_upgrade.upgradePolicy = 'always'
+                scheduled_hardware_upgrade.versionKey = hardware_version
+                config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
+            else:
+                log.debug("Virtual hardware version already set to {1}".format(hardware_version))
 
         if num_cpus:
             log.debug("Setting cpu to: {0}".format(num_cpus))
