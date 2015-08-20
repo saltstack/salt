@@ -354,7 +354,7 @@ def highstate(test=None,
 
 
 def sls(mods,
-        saltenv='base',
+        saltenv=None,
         test=None,
         exclude=None,
         queue=False,
@@ -410,6 +410,9 @@ def sls(mods,
         )
         # Backwards compatibility
         saltenv = env
+
+    if saltenv is None:
+        saltenv = __opts__['environment'] or 'base'
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
