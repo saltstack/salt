@@ -2302,6 +2302,12 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
     if oper == '!=':
         return cmp_result not in cmp_map['==']
     else:
+        # Gracefully handle cmp_result not in (-1, 0, 1).
+        if cmp_result < -1:
+            cmp_result = -1
+        elif cmp_result > 1:
+            cmp_result = 1
+
         return cmp_result in cmp_map[oper]
 
 
