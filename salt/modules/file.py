@@ -3249,7 +3249,7 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, template, contents)
+                              group, mode, saltenv, contents)
     __clean_tmp(sfn)
     if changes:
         log.info(changes)
@@ -3308,7 +3308,7 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, template, contents)
+                              group, mode, saltenv, contents)
     __clean_tmp(sfn)
     return changes
 
@@ -3322,7 +3322,6 @@ def check_file_meta(
         group,
         mode,
         saltenv,
-        template=None,
         contents=None):
     '''
     Check for the changes in the file metadata.
