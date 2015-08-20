@@ -167,6 +167,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /path/to/local/file: /path/to/remote/file
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
+      hardware_version: 10
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -388,3 +389,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     and salt is installed. A good example of using this would be if you need to put
     custom repo files on the server in case your server will be in a private network
     and cannot reach external networks.
+
+``hardware_version``
+    Specify the virtual hardware version for the vm/template that is supported by the
+    host.
