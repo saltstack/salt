@@ -10,6 +10,7 @@ A module to manage software on Windows
 
 # Import python libs
 from __future__ import absolute_import
+import errno
 import os
 import locale
 import logging
@@ -32,7 +33,7 @@ except ImportError:
 import shlex
 
 # Import salt libs
-from salt.exceptions import SaltRenderError
+from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils
 import salt.syspaths
 
@@ -734,7 +735,8 @@ def get_repo_data(saltenv='base'):
     repocache_dir = _get_local_repo_dir(saltenv=saltenv)
     winrepo = 'winrepo.p'
     try:
-        with salt.utils.fopen(os.path.join(repocache_dir, winrepo), 'rb') as repofile:
+        with salt.utils.fopen(
+                os.path.join(repocache_dir, winrepo), 'rb') as repofile:
             try:
                 repodata = msgpack.loads(repofile.read()) or {}
                 return repodata
@@ -742,6 +744,12 @@ def get_repo_data(saltenv='base'):
                 log.exception(exc)
                 return {}
     except IOError as exc:
+        if exc.errno == errno.ENOENT:
+            # File doesn't exist
+            raise CommandExecutionError(
+                'Windows repo cache doesn\'t exist, pkg.refresh_db likely '
+                'needed'
+            )
         log.error('Not able to read repo file')
         log.exception(exc)
         return {}
