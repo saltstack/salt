@@ -259,7 +259,7 @@ def _remove_sensitive_data(sensitive_output):
     '''
         Remove HTTP user and password
     '''
-    return re.sub('(https?)://.*@', r'\1://<redacted>@', sensitive_output)
+    return re.sub('(https?)://.*@', r'\1://<redacted>@', sensitive_output.lower())
 
 
 def add(cwd, filename, opts='', user=None, ignore_retcode=False):
