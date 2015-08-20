@@ -249,8 +249,12 @@ class TestSaltEvent(TestCase):
     def test_event_multiple_clients(self):
         '''Test event is received by multiple clients'''
         with eventpublisher_process():
-            me1 = event.MasterEvent(SOCK_DIR)
-            me2 = event.MasterEvent(SOCK_DIR)
+            me1 = event.MasterEvent(SOCK_DIR, listen=True)
+            me2 = event.MasterEvent(SOCK_DIR, listen=True)
+           # We need to sleep here to avoid a race condition wherein
+           # the second socket may not be connected by the time the first socket
+           # sends the event.
+            time.sleep(0.5)
             me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})

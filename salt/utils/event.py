@@ -186,11 +186,10 @@ class SaltEvent(object):
         if salt.utils.is_windows() and not hasattr(opts, 'ipc_mode'):
             opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
-        if listen:
+        if listen and not self.cpub:
             self.connect_pub()
         self.pending_tags = []
         self.pending_events = []
-        self.connect_pub()
         self.__load_cache_regex()
 
     @classmethod
@@ -420,7 +419,7 @@ class SaltEvent(object):
 
             log.trace('get_event() received = {0}'.format(ret))
             return ret
-
+       log.trace('_get_event() waited {0} seconds and received nothing'.format(wait * 1000))
         return None
 
     def get_event(self, wait=5, tag='', full=False, match_type=None):
