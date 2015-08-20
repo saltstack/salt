@@ -508,7 +508,7 @@ class SMinion(MinionBase):
     def __init__(self, opts):
         # Late setup of the opts grains, so we can log from the grains module
         opts['grains'] = salt.loader.grains(opts)
-        self.opts = opts
+        super(SMinion, self).__init__(opts)
 
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
@@ -788,8 +788,6 @@ class Minion(MinionBase):
             }, persist=True)
 
         self.grains_cache = self.opts['grains']
-
-
 
     def _prep_mod_opts(self):
         '''
