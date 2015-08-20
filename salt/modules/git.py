@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import shlex
+import sys
 
 # Import salt libs
 import salt.utils
@@ -255,11 +256,27 @@ def _get_toplevel(path, user=None):
     )['stdout']
 
 
-def _remove_sensitive_data(sensitive_output):
+def _remove_sensitive_data(output):
     '''
-        Remove HTTP user and password
+    Remove HTTP user and password
     '''
-    return re.sub('(https?)://.*@', r'\1://<redacted>@', sensitive_output.lower())
+    # We can't use re.compile because re.compile(someregex).sub() doesn't
+    # support flags even in Python 2.7.
+    url_re = '(https?)://.*@'
+    redacted = r'\1://<redacted>@'
+    if sys.version_info[0] > 2 \
+            or (sys.version_info[0] == 2 and sys.version_info[1] >= 7):
+        # re.sub() supports flags as of 2.7, use this to do a case-insensitive
+        # match.
+        return re.sub(url_re, redacted, output, flags=re.IGNORECASE)
+    else:
+        # We're on python 2.6, test if a lowercased version of the output
+        # string matches the regex...
+        if re.search(url_re, output.lower()):
+            # ... and if it does, perform the regex substitution.
+            return re.sub(url_re, redacted, output.lower())
+    # No match, just return the original string
+    return output
 
 
 def add(cwd, filename, opts='', user=None, ignore_retcode=False):
