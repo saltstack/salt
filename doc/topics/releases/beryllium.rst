@@ -17,6 +17,12 @@ Core Changes
 Salt Cloud Changes
 ==================
 
+- Changed the default behavior of ``rename_on_destroy`` to be set to ``True``
+  in the EC2 and AWS drivers.
+- Changed the default behavior of the EC2 and AWS drivers to always check for
+  duplicate names of VMs before trying to create a new VM. Will now throw an
+  error similarly to other salt-cloud drivers when trying to create a VM of the
+  same name, even if the VM is in the ``terminated`` state.
 - Modified the Linode Salt Cloud driver to use Linode's native API instead of
   depending on apache-libcloud or linode-python.
 - When querying for VMs in ``ditigal_ocean.py``, the number of VMs to include in
