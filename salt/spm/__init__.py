@@ -367,7 +367,7 @@ class SPMClient(object):
 
         print('... removing')
 
-        if not self.pkgfiles['{0}.path_exists'.format(self.files_prov)](self.opts['spm_db']):
+        if not self.pkgfiles['{0}.db_exists'.format(self.db_prov)](self.opts['spm_db']):
             log.error('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
             return
 
@@ -381,7 +381,7 @@ class SPMClient(object):
         files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
         dirs = []
         for filerow in files:
-            if not self.pkgfiles['{0}.path_isdir'.format(self.files_prov)](filerow[0]):
+            if self.pkgfiles['{0}.path_isdir'.format(self.files_prov)](filerow[0]):
                 dirs.append(filerow[0])
                 continue
             with salt.utils.fopen(filerow[0], 'r') as fh_:
