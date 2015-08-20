@@ -187,9 +187,20 @@ comment support')
 
         with patch.object(ipset, '_find_set_type', return_value=True):
             with patch.object(ipset, '_find_set_members',
-                              side_effect=['entry', '']):
+                              side_effect=['entry', '',
+                                           ["192.168.0.4", "192.168.0.5"],
+                                           ["192.168.0.3"], ["192.168.0.6"],
+                                           ["192.168.0.4", "192.168.0.5"],
+                                           ["192.168.0.3"], ["192.168.0.6"],
+                                           ]):
                 self.assertTrue(ipset.check('set', 'entry'))
                 self.assertFalse(ipset.check('set', 'entry'))
+                self.assertTrue(ipset.check('set', '192.168.0.4/31'))
+                self.assertFalse(ipset.check('set', '192.168.0.4/31'))
+                self.assertFalse(ipset.check('set', '192.168.0.4/31'))
+                self.assertTrue(ipset.check('set', '192.168.0.4-192.168.0.5'))
+                self.assertFalse(ipset.check('set', '192.168.0.4-192.168.0.5'))
+                self.assertFalse(ipset.check('set', '192.168.0.4-192.168.0.5'))
 
     def test_test(self):
         '''
