@@ -92,19 +92,19 @@ soon.
 New Functions in Git Execution Module
 -------------------------------------
 
-- :py:func:`git.config_get_regexp <salt.states.git.config_regexp>`
-- :py:func:`git.config_unset <salt.states.git.config_unset>`
-- :py:func:`git.is_worktree <salt.states.git.is_worktree>`
-- :py:func:`git.list_branches <salt.states.git.list_branches>`
-- :py:func:`git.list_tags <salt.states.git.list_tags>`
-- :py:func:`git.list_worktrees <salt.states.git.list_worktrees>`
-- :py:func:`git.merge_base <salt.states.git.merge_base>`
-- :py:func:`git.merge_tree <salt.states.git.merge_tree>`
-- :py:func:`git.rev_parse <salt.states.git.rev_parse>`
-- :py:func:`git.version <salt.states.git.version>`
-- :py:func:`git.worktree_rm <salt.states.git.worktree_rm>`
-- :py:func:`git.worktree_add <salt.states.git.worktree_add>`
-- :py:func:`git.worktree_prune <salt.states.git.worktree_prune>`
+- :py:func:`git.config_get_regexp <salt.modules.git.config_regexp>`
+- :py:func:`git.config_unset <salt.modules.git.config_unset>`
+- :py:func:`git.is_worktree <salt.modules.git.is_worktree>`
+- :py:func:`git.list_branches <salt.modules.git.list_branches>`
+- :py:func:`git.list_tags <salt.modules.git.list_tags>`
+- :py:func:`git.list_worktrees <salt.modules.git.list_worktrees>`
+- :py:func:`git.merge_base <salt.modules.git.merge_base>`
+- :py:func:`git.merge_tree <salt.modules.git.merge_tree>`
+- :py:func:`git.rev_parse <salt.modules.git.rev_parse>`
+- :py:func:`git.version <salt.modules.git.version>`
+- :py:func:`git.worktree_rm <salt.modules.git.worktree_rm>`
+- :py:func:`git.worktree_add <salt.modules.git.worktree_add>`
+- :py:func:`git.worktree_prune <salt.modules.git.worktree_prune>`
 
 Changes to Functions in Git Execution Module
 --------------------------------------------
