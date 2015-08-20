@@ -130,7 +130,7 @@ def setup_handlers():
             transport_registry = TransportRegistry(default_transports)
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
-                raise ValueError('Unsupported Sentry DSN scheme: %r' % url.scheme)
+                raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
             dsn_config = {}
             conf_extras = transport_registry.compute_scope(url, dsn_config)
             dsn_config.update(conf_extras)
