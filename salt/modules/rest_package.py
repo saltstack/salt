@@ -19,11 +19,7 @@ def __virtual__():
     '''
     Only work on proxy
     '''
-    # Enable on these platforms only.
-    enable = set((
-        'proxy',
-    ))
-    if __grains__['os'] in enable:
+    if 'proxymodule' in __opts__:
         return __virtualname__
     return False
 
