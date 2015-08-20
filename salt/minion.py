@@ -1528,7 +1528,7 @@ class Minion(MinionBase):
                     log.info('Trying to tune in to next master from master-list')
 
                     # if eval_master finds a new master for us, self.connected
-                    # will be True again on successfull master authentication
+                    # will be True again on successful master authentication
                     self.opts['master'] = self.eval_master(opts=self.opts,
                                                            failed=True)
                     if self.connected:
