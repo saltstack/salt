@@ -101,7 +101,7 @@ def _strip_exc(exc):
     Strip the actual command that was run from exc.strerror to leave just the
     error message
     '''
-    return re.sub('^Command [\'"].+[\'"] failed: ', '', exc.strerror)
+    return re.sub(r'^Command [\'"].+[\'"] failed: ', '', exc.strerror)
 
 
 def _neutral_test(ret, comment):
