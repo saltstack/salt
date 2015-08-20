@@ -42,6 +42,12 @@ def __virtual__():
     Provides virt on SmartOS
     '''
     if salt.utils.is_smartos_globalzone() and _check_vmadm():
+        # Warn about deprication
+        salt.utils.warn_until(
+            'Aluminum',
+            'The \'virt\' module on SmartOS has been depricated'
+            'please use the smartos module or vmadm wrapper module.'
+        )
         return __virtualname__
     return False
 
