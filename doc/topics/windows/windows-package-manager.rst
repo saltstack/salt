@@ -233,9 +233,9 @@ Now you can query the available version of Firefox using the Salt pkg module.
 
 .. code-block:: bash
 
-    salt '*' pkg.available_version Firefox
+    salt '*' pkg.available_version firefox
 
-    {'Firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
+    {'firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
                      '16.0.2': 'Mozilla Firefox 16.0.2 (x86 en-US)',
                      '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
 
@@ -245,13 +245,13 @@ by single quotes.
 
 .. code-block:: bash
 
-    salt '*' pkg.install 'Firefox'
+    salt '*' pkg.install 'firefox'
 
 The above line will install the latest version of Firefox.
 
 .. code-block:: bash
 
-    salt '*' pkg.install 'Firefox' version=16.0.2
+    salt '*' pkg.install 'firefox' version=16.0.2
 
 The above line will install version 16.0.2 of Firefox.
 
@@ -273,9 +273,9 @@ Uninstall software using the pkg module:
 
 .. code-block:: bash
 
-    salt '*' pkg.remove 'Firefox'
+    salt '*' pkg.remove 'firefox'
 
-    salt '*' pkg.purge 'Firefox'
+    salt '*' pkg.purge 'firefox'
 
 ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
 future ``pkg.purge`` may direct the installer to remove all configs and
@@ -316,7 +316,7 @@ this option was called ``win_gitrepos`` in Salt versions prior to 2015.8.0).
 
 Use the :py:func:`winrepo.update_git_repos
 <salt.runners.winrepo.update_git_repos>` runner to clone/update the configured
-reops, then use :py:func:`winrepo.genrepo <salt.runners.winrepo.genrepo>`
+repos, then use :py:func:`winrepo.genrepo <salt.runners.winrepo.genrepo>`
 runner to compile the repository cache. Finally, use :py:func:`pkg.refresh_db
 <salt.modules.win_pkg.refresh_db>` on each minion to have them update their
 copy of the repository cache. Command examples are as follows:

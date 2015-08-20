@@ -196,20 +196,13 @@ class SystemdTestCase(TestCase):
         exe = MagicMock(return_value='foo')
         tmock = MagicMock(return_value=True)
         mock = MagicMock(return_value=False)
-        disabled_mock = MagicMock(return_value={'retcode': 1, 'stdout': 'disabled', 'stderr': ''})
-        masked_mock = MagicMock(return_value={'retcode': 1, 'stdout': 'masked', 'stderr': ''})
         with patch.object(systemd, '_untracked_custom_unit_found', mock):
             with patch.object(systemd, '_unit_file_changed', mock):
                 with patch.dict(systemd.__salt__, {'cmd.retcode': mock}):
-                    with patch.dict(systemd.__salt__, {'cmd.run_all': disabled_mock}):
-                        with patch.object(systemd, "_service_is_sysv", mock):
-                            self.assertTrue(systemd.enable("sshd"))
-                        with patch.object(systemd, "_get_service_exec", exe):
-                            with patch.object(systemd, "_service_is_sysv", tmock):
-                                self.assertTrue(systemd.enable("sshd"))
-
-                    with patch.dict(systemd.__salt__, {'cmd.run_all': masked_mock}):
-                        with patch.object(systemd, "_service_is_sysv", mock):
+                    with patch.object(systemd, "_service_is_sysv", mock):
+                        self.assertTrue(systemd.enable("sshd"))
+                    with patch.object(systemd, "_get_service_exec", exe):
+                        with patch.object(systemd, "_service_is_sysv", tmock):
                             self.assertTrue(systemd.enable("sshd"))
 
     def test_disable(self):
