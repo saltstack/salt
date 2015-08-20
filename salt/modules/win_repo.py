@@ -41,6 +41,10 @@ def __virtual__():
     Set the winrepo module if the OS is Windows
     '''
     if salt.utils.is_windows():
+        global _genrepo, _update_git_repos
+        _genrepo = salt.utils.namespaced_function(_genrepo, globals())
+        _update_git_repos = \
+            salt.utils.namespaced_function(_update_git_repos, globals())
         return __virtualname__
     return False
 
