@@ -148,7 +148,8 @@ def get_section(file_name, section):
         salt '*' ini.get_section /path/to/ini section_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    return inifile.get(section, {})
+    return {key: value for key, value in inifile.get(section, {}).iteritems()
+            if key[0] != '#'}
 
 
 def remove_section(file_name, section):
@@ -190,11 +191,12 @@ class _Section(OrderedDict):
         unknown_count = 1
         curr_indent = ''
         inicontents = inicontents or self.inicontents
+        inicontents = inicontents.strip('\n')
         if not inicontents:
             return
         for opt in self:
             self.pop(opt)
-        for opt_str in (line for line in inicontents.split('\n') if line):
+        for opt_str in inicontents.split('\n'):
             com_match = com_regx.match(opt_str)
             if com_match:
                 name = '#comment{}'.format(comment_count)
@@ -250,7 +252,8 @@ class _Section(OrderedDict):
         changes = {}
         for key, value in update_dict.iteritems():
             if key not in self:
-                changes.update({key: value})
+                changes.update({key: {'before': None,
+                                      'after': value}})
                 if hasattr(value, 'iteritems'):
                     sect = _Section(key, '', self.sep, self.com)
                     sect.update(value)
@@ -267,12 +270,12 @@ class _Section(OrderedDict):
                 else:
                     if not curr_value == value:
                         changes.update({key: {'before': curr_value,
-                                              'now': value}})
+                                              'after': value}})
                         super(_Section, self).update({key: value})
         return changes
 
     def gen_ini(self):
-        yield '[{}]\n'.format(self.name)
+        yield '\n[{}]\n'.format(self.name)
         sections_dict = OrderedDict()
         for name, value in self.iteritems():
             if com_regx.match(name):
@@ -284,7 +287,6 @@ class _Section(OrderedDict):
         for name, value in sections_dict.iteritems():
             for line in value.gen_ini():
                 yield line
-        yield '\n'
 
     def as_ini(self):
         return ''.join(self.gen_ini())

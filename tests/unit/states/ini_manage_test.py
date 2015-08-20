@@ -93,8 +93,7 @@ class IniManageTestCase(TestCase):
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
             comt = (('ini file {0} shall be validated for '
-                     'presence of given sections with the '
-                     'exact contents').format(name))
+                     'presence of given sections').format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(ini_manage.sections_present(name), ret)
 

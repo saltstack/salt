@@ -126,7 +126,7 @@ def sections_present(name, sections=None):
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = ('ini file {0} shall be validated for presence of '
-                          'given sections with empty options').format(name)
+                          'given sections').format(name)
         return ret
     sections = {section_name: {} for section_name in sections or []}
     changes = __salt__['ini.set_option'](name, sections)
