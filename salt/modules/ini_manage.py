@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import re
 import json
 from salt.utils.odict import OrderedDict
-from salt.utils import fopen
+from salt.utils import fopen as _fopen
 
 
 __virtualname__ = 'ini'
@@ -303,7 +303,8 @@ class _Section(OrderedDict):
     def dump(self):
         print(str(self))
 
-    def __repr__(self, _repr_running={}):
+    def __repr__(self, _repr_running=None):
+        _repr_running = _repr_running or {}
         super_repr = super(_Section, self).__repr__(_repr_running)
         return '\n'.join((super_repr, json.dumps(self, indent=4)))
 
@@ -324,7 +325,7 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, seperator, commenter)
 
     def refresh(self, inicontents=None):
-        inicontents = inicontents or fopen(self.name).read()
+        inicontents = inicontents or _fopen(self.name).read()
         if not inicontents:
             return
         for opt in self:
@@ -338,7 +339,7 @@ class _Ini(_Section):
             self.update({sect_obj.name: sect_obj})
 
     def flush(self):
-        with fopen(self.name, 'w') as outfile:
+        with _fopen(self.name, 'w') as outfile:
             ini_gen = self.gen_ini()
             next(ini_gen)
             outfile.writelines(ini_gen)

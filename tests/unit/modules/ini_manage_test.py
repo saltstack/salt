@@ -105,8 +105,8 @@ empty_option=
                          'test_set_option': {'after': 'test_set_value',
                                              'before': None}
             },
-            'SectionD': {'test_set_option2': {'after': 'test_set_value1',
-                                              'before': None}
+            'SectionD': {'after': {'test_set_option2': 'test_set_value1',
+                         'before': None}
             }
         })
         # Check existing option updated
