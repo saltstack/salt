@@ -39,13 +39,21 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
     else:
         urltuple = _urlparse(url)
         if urltuple.scheme == 'https':
-            netloc = '{0}:{1}@{2}'.format(
-                https_user,
-                https_pass,
-                urltuple.netloc
-            )
-            urltuple = urltuple._replace(netloc=netloc)
-            return _urlunparse(urltuple)
+            if https_pass is None:
+                netloc = '{0}@{2}'.format(
+                    https_user,
+                    urltuple.netloc
+                )
+                urltuple = urltuple._replace(netloc=netloc)
+                return _urlunparse(urltuple)
+            else:
+                netloc = '{0}:{1}@{2}'.format(
+                    https_user,
+                    https_pass,
+                    urltuple.netloc
+                )
+                urltuple = urltuple._replace(netloc=netloc)
+                return _urlunparse(urltuple)
         else:
             raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
