@@ -131,26 +131,32 @@ def __virtual__():
         return False
 
     for provider, details in __opts__['providers'].iteritems():
-        if 'provider' not in details or details['provider'] != 'gce':
+        if 'gce' not in details:
             continue
 
-        pathname = os.path.expanduser(details['service_account_private_key'])
+        parameters = details['gce']
+        pathname = os.path.expanduser(parameters['service_account_private_key'])
+
         if not os.path.exists(pathname):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
                 'the {1!r} provider configuration does not exist\n'.format(
-                    details['service_account_private_key'], provider
+                    parameters['service_account_private_key'],
+                    provider
                 )
             )
+
         keymode = str(
             oct(stat.S_IMODE(os.stat(pathname).st_mode))
         )
+
         if keymode not in ('0400', '0600'):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
                 'the {1!r} provider configuration needs to be set to '
                 'mode 0400 or 0600\n'.format(
-                    details['service_account_private_key'], provider
+                    parameters['service_account_private_key'],
+                    provider
                 )
             )
 
