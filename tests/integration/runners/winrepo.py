@@ -7,18 +7,10 @@ import shutil
 import tempfile
 
 # Import Salt Testing Libs
-import salt.loader
-#import salt.output
 from salt.runners import winrepo
-from salttesting import TestCase, skipIf
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import (
-    mock_open,
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../../')
 # Import Salt Libs
@@ -82,6 +74,7 @@ winrepo.__opts__ = {
     'renderer': 'yaml'
 }
 winrepo.__salt__ = {}
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinrepoTest(integration.ShellCase):

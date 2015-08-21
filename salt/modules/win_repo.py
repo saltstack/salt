@@ -2,11 +2,10 @@
 r'''
 Module to manage Windows software repo on a Standalone Minion
 
-``file_client: local`` must be set in the minion config file. Other config
-options of interest include:
+``file_client: local`` must be set in the minion config file.
 
-* :conf_minion:`winrepo_dir`
-* :conf_minion:`winrepo_cachefile`
+For documentation on Salt's Windows Repo feature, see :ref:`here
+<windows-package-manager`
 '''
 
 # Import python libs
@@ -14,19 +13,12 @@ from __future__ import absolute_import, print_function
 import os
 import logging
 
-# Import third party libs
-import salt.ext.six as six
-# pylint: disable=import-error
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack
-
 # Import salt libs
 import salt.output
 import salt.utils
 import salt.loader
 import salt.template
+from salt.exceptions import CommandExecutionError
 from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos

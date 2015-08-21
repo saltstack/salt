@@ -15,7 +15,7 @@ except ImportError:
     import msgpack_pure as msgpack  # pylint: disable=import-error
 
 # Import salt libs
-from salt.exceptions import SaltRenderError
+from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils
 import salt.utils.gitfs
 import logging
