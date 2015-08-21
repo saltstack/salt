@@ -24,8 +24,8 @@ from salt.exceptions import SaltCloudSystemExit
 # Attempt to import pyVim and pyVmomi libs
 HAS_LIBS = True
 try:
-    from pyVim.connect import SmartConnect, Disconnect
-    from pyVmomi import vim, vmodl
+    from pyVim.connect import SmartConnect, Disconnect  # pylint: disable=W0611
+    from pyVmomi import vim, vmodl  # pylint: disable=W0611
 except Exception:
     HAS_LIBS = False
 
