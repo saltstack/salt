@@ -10,7 +10,6 @@ For documentation on Salt's Windows Repo feature, see :ref:`here
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import os
 import logging
 
 # Import salt libs
