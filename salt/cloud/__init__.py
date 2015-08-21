@@ -76,7 +76,8 @@ def enter_mainloop(target,
                    pool_size=None,
                    callback=None,
                    queue=None):
-    '''Manage a multiprocessing pool
+    '''
+    Manage a multiprocessing pool
 
     - If the queue does not output anything, the pool runs indefinitely
 
@@ -1172,12 +1173,11 @@ class Cloud(object):
         )
 
         if deploy:
-            if make_master is False and 'master' not in minion_dict:
+            if make_master is not True and 'master' not in minion_dict:
                 raise SaltCloudConfigError(
-                    (
-                        'There\'s no master defined on the '
-                        '{0!r} VM settings'
-                    ).format(vm_['name'])
+                    'There\'s no master defined on the {0!r} VM settings'.format(
+                        vm_['name']
+                    )
                 )
 
             if 'pub_key' not in vm_ and 'priv_key' not in vm_:
