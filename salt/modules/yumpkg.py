@@ -136,9 +136,9 @@ def _repoquery(repoquery_args,
     _check_repoquery()
 
     if _yum() == 'dnf':
-      _query_format = query_format.replace('-%{VERSION}_', '-%{EPOCH}:%{VERSION}_')
+        _query_format = query_format.replace('-%{VERSION}_', '-%{EPOCH}:%{VERSION}_')
     else:
-      _query_format = query_format
+        _query_format = query_format
 
     cmd = 'repoquery --plugins --queryformat {0} {1}'.format(
         _cmd_quote(_query_format), repoquery_args
@@ -159,11 +159,11 @@ def _repoquery(repoquery_args,
         )
     else:
         if _yum() == 'dnf':
-          # Remove the epoch when it is zero to maintain backward compatibility
-          remove_zero_epoch = call['stdout'].replace('-0:', '-')
-          out = remove_zero_epoch
+            # Remove the epoch when it is zero to maintain backward compatibility
+            remove_zero_epoch = call['stdout'].replace('-0:', '-')
+            out = remove_zero_epoch
         else:
-          out = call['stdout']
+            out = call['stdout']
         return out.splitlines()
 
 
