@@ -9,7 +9,9 @@ import copy
 import errno
 import logging
 import os
+import re
 import shlex
+import sys
 
 # Import salt libs
 import salt.utils
@@ -38,13 +40,21 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
     else:
         urltuple = _urlparse(url)
         if urltuple.scheme == 'https':
-            netloc = '{0}:{1}@{2}'.format(
-                https_user,
-                https_pass,
-                urltuple.netloc
-            )
-            urltuple = urltuple._replace(netloc=netloc)
-            return _urlunparse(urltuple)
+            if https_pass is None:
+                netloc = '{0}@{1}'.format(
+                    https_user,
+                    urltuple.netloc
+                )
+                urltuple = urltuple._replace(netloc=netloc)
+                return _urlunparse(urltuple)
+            else:
+                netloc = '{0}:{1}@{2}'.format(
+                    https_user,
+                    https_pass,
+                    urltuple.netloc
+                )
+                urltuple = urltuple._replace(netloc=netloc)
+                return _urlunparse(urltuple)
         else:
             raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
@@ -200,6 +210,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 result = __salt__['cmd.run_all'](command,
                                                  cwd=cwd,
                                                  runas=runas,
+                                                 output_loglevel='quiet',
                                                  env=env,
                                                  python_shell=False,
                                                  ignore_retcode=ignore_retcode,
@@ -212,7 +223,8 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             if result['retcode'] == 0:
                 return result
             else:
-                stderrs.append(result['stderr'])
+                stderr = _remove_sensitive_data(result['stderr'])
+                stderrs.append(stderr)
 
         # we've tried all IDs and still haven't passed, so error out
         if failhard:
@@ -223,6 +235,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
         result = __salt__['cmd.run_all'](command,
                                          cwd=cwd,
                                          runas=runas,
+                                         output_loglevel='quiet',
                                          env=env,
                                          python_shell=False,
                                          ignore_retcode=ignore_retcode,
@@ -237,7 +250,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                     else command
                 msg = 'Command \'{0}\' failed'.format(gitcommand)
                 if result['stderr']:
-                    msg += ': {0}'.format(result['stderr'])
+                    msg += ': {0}'.format(
+                        _remove_sensitive_data(result['stderr'])
+                    )
                 raise CommandExecutionError(msg)
             return result
 
@@ -251,6 +266,29 @@ def _get_toplevel(path, user=None):
         cwd=path,
         runas=user
     )['stdout']
+
+
+def _remove_sensitive_data(output):
+    '''
+    Remove HTTP user and password
+    '''
+    # We can't use re.compile because re.compile(someregex).sub() doesn't
+    # support flags even in Python 2.7.
+    url_re = '(https?)://.*@'
+    redacted = r'\1://<redacted>@'
+    if sys.version_info[0] > 2 \
+            or (sys.version_info[0] == 2 and sys.version_info[1] >= 7):
+        # re.sub() supports flags as of 2.7, use this to do a case-insensitive
+        # match.
+        return re.sub(url_re, redacted, output, flags=re.IGNORECASE)
+    else:
+        # We're on python 2.6, test if a lowercased version of the output
+        # string matches the regex...
+        if re.search(url_re, output.lower()):
+            # ... and if it does, perform the regex substitution.
+            return re.sub(url_re, redacted, output.lower())
+    # No match, just return the original string
+    return output
 
 
 def add(cwd, filename, opts='', user=None, ignore_retcode=False):
