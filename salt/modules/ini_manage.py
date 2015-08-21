@@ -15,10 +15,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 import re
 import json
-from collections import OrderedDict
+from salt.utils.odict import OrderedDict
+from salt.utils import fopen
 
-# Import Salt libs
-import salt.utils
 
 __virtualname__ = 'ini'
 
@@ -148,8 +147,11 @@ def get_section(file_name, section):
         salt '*' ini.get_section /path/to/ini section_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    return {key: value for key, value in inifile.get(section, {}).iteritems()
-            if key[0] != '#'}
+    ret = {}
+    for key, value in inifile.get(section, {}).iteritems():
+        if key[0] != '#':
+            ret.update({key: value})
+    return ret
 
 
 def remove_section(file_name, section):
@@ -173,9 +175,13 @@ def remove_section(file_name, section):
         salt '*' ini.remove_section /path/to/ini section_name
     '''
     inifile = _Ini.get_ini_file(file_name)
-    value = inifile.pop(section, {})
+    section = inifile.pop(section, {})
     inifile.flush()
-    return value
+    ret = {}
+    for key, value in section.iteritems():
+        if key[0] != '#':
+            ret.update({key: value})
+    return ret
 
 
 class _Section(OrderedDict):
@@ -297,8 +303,9 @@ class _Section(OrderedDict):
     def dump(self):
         print(str(self))
 
-    def __repr__(self):
-        return json.dumps(self, indent=4)
+    def __repr__(self, _repr_running={}):
+        super_repr = super(_Section, self).__repr__(_repr_running)
+        return '\n'.join((super_repr, json.dumps(self, indent=4)))
 
     def __str__(self):
         return json.dumps(self, indent=4)
@@ -317,7 +324,7 @@ class _Ini(_Section):
         super(_Ini, self).__init__(name, inicontents, seperator, commenter)
 
     def refresh(self, inicontents=None):
-        inicontents = inicontents or salt.utils.fopen(self.name).read()
+        inicontents = inicontents or fopen(self.name).read()
         if not inicontents:
             return
         for opt in self:
@@ -331,9 +338,9 @@ class _Ini(_Section):
             self.update({sect_obj.name: sect_obj})
 
     def flush(self):
-        with salt.utils.fopen(self.name, 'w') as outfile:
+        with fopen(self.name, 'w') as outfile:
             ini_gen = self.gen_ini()
-            ini_gen.next()
+            next(ini_gen)
             outfile.writelines(ini_gen)
 
     @staticmethod

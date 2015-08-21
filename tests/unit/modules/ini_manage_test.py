@@ -99,7 +99,7 @@ empty_option=
                 'test_set_option2': 'test_set_value1'
             }
         })
-        self.assertEqual(result['changes'], {
+        self.assertEqual(result, {
             'SectionB': {'test3': {'after': 'new value 3B',
                                    'before': 'value 3B'},
                          'test_set_option': {'after': 'test_set_value',
