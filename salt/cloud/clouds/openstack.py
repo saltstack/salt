@@ -6,7 +6,7 @@ OpenStack Cloud Module
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
-:depends: libcloud >- 0.13.2
+:depends: libcloud >= 0.13.2
 
 OpenStack provides a number of ways to authenticate. This module uses password-
 based authentication, using auth v2.0. It is likely to start supporting other
@@ -784,7 +784,7 @@ def _assign_floating_ips(vm_, conn, kwargs):
                     pool = OpenStack_1_1_FloatingIpPool(
                         net['floating'], conn.connection
                     )
-                    for idx in pool.list_floating_ips():
+                    for idx in [pool.create_floating_ip()]:
                         if idx.node_id is None:
                             floating.append(idx)
                     if not floating:
@@ -808,7 +808,7 @@ def _assign_floating_ips(vm_, conn, kwargs):
                 pool = OpenStack_1_1_FloatingIpPool(
                     '', conn.connection
                 )
-                for idx in pool.list_floating_ips():
+                for idx in [pool.create_floating_ip()]:
                     if idx.node_id is None:
                         floating.append(idx)
                 if not floating:
