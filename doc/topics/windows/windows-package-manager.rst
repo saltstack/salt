@@ -342,10 +342,10 @@ list of the winrepo config options, see :ref:`here <winrepo-config-opts>`.
 Starting in version 2015.8.0, the :py:func:`winrepo.update_git_repos
 <salt.runners.winrepo.update_git_repos>` runner now makes use of the same
 underlying code used by the :ref:`Git Fileserver Backend <tutorial-gitfs>` and
-:ref:`Git External Pillar <tutorial-git_pillar>` to maintain and update its
-local clones of git repositories. If a compatible version of either pygit2_
-(0.20.3 and later) or GitPython_ (0.3.0 or later) is installed, then Salt will
-use it instead of the old method (which invokes the :py:func:`git.latest
+:ref:`Git External Pillar <git-as-ext_pillar>` to maintain and update its local
+clones of git repositories. If a compatible version of either pygit2_ (0.20.3
+and later) or GitPython_ (0.3.0 or later) is installed, then Salt will use it
+instead of the old method (which invokes the :py:func:`git.latest
 <salt.states.git.latest>` state).
 
 .. note::
@@ -388,7 +388,7 @@ example of this would be the following:
         - passphrase: myaw3s0m3pa$$phr4$3
       - https://github.com/myuser/privaterepo.git:
         - user: mygithubuser
-        - password: correcthorsebatterystaple
+        - password: CorrectHorseBatteryStaple
 
 .. note::
     Per-remote configuration settings work in the same fashion as they do in

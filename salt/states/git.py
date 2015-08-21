@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Interaction with Git repositories
-=================================
+States to manage git repositories and git configuration
 
-Important: Before using git over ssh, make sure your remote host fingerprint
-exists in your ``~/.ssh/known_hosts`` file. To avoid requiring password
-authentication, it is also possible to pass private keys to use explicitly.
-
-.. code-block:: yaml
-
-    https://github.com/saltstack/salt.git:
-      git.latest:
-        - rev: develop
-        - target: /tmp/salt
+.. important::
+    Before using git over ssh, make sure your remote host fingerprint exists in
+    your ``~/.ssh/known_hosts`` file.
 '''
 from __future__ import absolute_import
 
@@ -109,7 +101,7 @@ def _strip_exc(exc):
     Strip the actual command that was run from exc.strerror to leave just the
     error message
     '''
-    return re.sub('^Command [\'"].+[\'"] failed: ', '', exc.strerror)
+    return re.sub(r'^Command [\'"].+[\'"] failed: ', '', exc.strerror)
 
 
 def _neutral_test(ret, comment):

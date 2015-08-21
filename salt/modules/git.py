@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import errno
 import logging
 import os
 import shlex
@@ -231,7 +232,10 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             return result
         else:
             if failhard:
-                msg = 'Command \'{0}\' failed'.format(command)
+                gitcommand = ' '.join(command) \
+                    if isinstance(command, list) \
+                    else command
+                msg = 'Command \'{0}\' failed'.format(gitcommand)
                 if result['stderr']:
                     msg += ': {0}'.format(result['stderr'])
                 raise CommandExecutionError(msg)
@@ -782,6 +786,8 @@ def config_get(key,
         If ``True``, query the global git configuraton. Otherwise, only the
         local git configuration will be queried.
 
+        .. versionadded:: 2015.8.0
+
     all : False
         If ``True``, return a list of all values set for ``key``. If the key
         does not exist, ``None`` will be returned.
@@ -864,9 +870,6 @@ def config_get_regexp(key,
     cwd
         The path to the git checkout
 
-        .. versionchanged:: 2015.8.0
-            Now optional if ``global`` is set to ``True``
-
     global : False
         If ``True``, query the global git configuraton. Otherwise, only the
         local git configuration will be queried.
@@ -931,11 +934,6 @@ def config_set(key,
         The path to the git checkout. Must be an absolute path, or the word
         ``global`` to indicate that a global key should be set.
 
-        .. versionchanged:: 2015.8.0
-            Can now be set to ``global`` instead of an absolute path, to set a
-            global git configuration parameter, deprecating the ``is_global``
-            parameter.
-
         .. versionchanged:: 2014.7.0
             Made ``cwd`` argument optional if ``is_global=True``
 
@@ -953,7 +951,7 @@ def config_set(key,
             Argument renamed from ``setting_value`` to ``value``
 
     add : False
-        Add a value to a multivar
+        Add a value to a key, creating/updating a multivar
 
         .. versionadded:: 2015.8.0
 
@@ -1551,6 +1549,103 @@ def list_tags(cwd, user=None, ignore_retcode=False):
                     ignore_retcode=ignore_retcode)['stdout'].splitlines()
 
 
+def list_worktrees(cwd, stale=False, user=None, **kwargs):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Return a dictionary mapping worktrees to their locations.
+
+    .. note::
+        This information is compiled by analyzing the administrative data in
+        $GIT_DIR/worktrees. By default, only worktrees for which the gitdir is
+        still present are returned, but this can be changed using the ``all``
+        and ``stale`` arguments (described below).
+
+    cwd
+        The path to the git checkout
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    all : False
+        If ``True``, then return all worktrees, including ones whose gitdir is
+        no longer present.
+
+    stale : False
+        If ``True``, return only worktrees whose gitdir is no longer present.
+
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion git.list_worktrees /path/to/repo
+        salt myminion git.list_worktrees /path/to/repo all=True
+        salt myminion git.list_worktrees /path/to/repo stale=True
+    '''
+    cwd = _expand_path(cwd, user)
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    all_ = kwargs.pop('all', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
+    if all_ and stale:
+        raise CommandExecutionError(
+            '\'all\' and \'stale\' cannot both be set to True'
+        )
+
+    try:
+        worktree_root = rev_parse(cwd, opts=['--git-path', 'worktrees'])
+    except CommandExecutionError as exc:
+        msg = 'Failed to find worktree location for ' + cwd
+        log.error(msg, exc_info_on_loglevel=logging.DEBUG)
+        raise CommandExecutionError(msg)
+    if worktree_root.startswith('.git'):
+        worktree_root = os.path.join(cwd, worktree_root)
+    if not os.path.isdir(worktree_root):
+        return {}
+
+    worktree_info = {}
+    for worktree_name in os.listdir(worktree_root):
+        gitdir_file = os.path.join(worktree_root, worktree_name, 'gitdir')
+        try:
+            with salt.utils.fopen(gitdir_file, 'r') as fp_:
+                for line in fp_:
+                    worktree_loc = line.rstrip('\n')
+                    if worktree_loc.endswith('/.git'):
+                        worktree_loc = worktree_loc[:-5]
+                    worktree_info[worktree_name] = worktree_loc
+                    break
+        except (IOError, OSError) as exc:
+            if exc.errno == errno.EEXIST:
+                log.warning(
+                    gitdir_file + ' does not exist, data for worktree ' +
+                    worktree_name + ' may be corrupted. Try pruning worktrees.'
+                )
+            elif exc.errno == errno.EACCES:
+                raise CommandExecutionError(
+                    'Permission denied reading from ' + gitdir_file
+                )
+            else:
+                raise CommandExecutionError(
+                    'Error {0} encountered reading from {1}: {2}'.format(
+                        exc.errno, gitdir_file, exc.strerror
+                    )
+                )
+
+    if all_ or not worktree_info:
+        return worktree_info
+
+    ret = {}
+    for worktree_name, worktree_loc in six.iteritems(worktree_info):
+        worktree_is_stale = not os.path.isdir(worktree_loc)
+        if (stale and worktree_is_stale) \
+                or (not stale and not worktree_is_stale):
+            ret[worktree_name] = worktree_loc
+    return ret
+
+
 def ls_remote(cwd=None,
               remote='origin',
               ref='master',
@@ -1677,11 +1772,6 @@ def merge(cwd,
     branch
         The remote branch or revision to merge into the current branch
         Revision to merge into the current branch
-
-        .. versionchanged:: 2015.8.0
-            Default value changed from ``'@{upstream}'`` to ``None`` (unset),
-            allowing this function to merge the remote tracking branch without
-            having to specify it
 
         .. deprecated:: 2015.8.0
             Use ``rev`` instead.
@@ -2038,8 +2128,6 @@ def push(cwd,
          ignore_retcode=False,
          branch=None):
     '''
-    .. versionchanged:: 2015.8.0
-
     Interface to `git-push(1)`_
 
     cwd
@@ -2416,7 +2504,7 @@ def reset(cwd, opts='', user=None, ignore_retcode=False):
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def rev_parse(cwd, rev, opts='', user=None, ignore_retcode=False):
+def rev_parse(cwd, rev=None, opts='', user=None, ignore_retcode=False):
     '''
     .. versionadded:: 2015.8.0
 
@@ -2429,6 +2517,9 @@ def rev_parse(cwd, rev, opts='', user=None, ignore_retcode=False):
         Revision to parse. See the `SPECIFYING REVISIONS`_ section of the
         `git-rev-parse(1)`_ manpage for details on how to format this argument.
 
+        This argument is optional when using the options in the `Options for
+        Files` section of the `git-rev-parse(1)`_ manpage.
+
     opts
         Any additional options to add to the command line, in a single string
 
@@ -2440,10 +2531,9 @@ def rev_parse(cwd, rev, opts='', user=None, ignore_retcode=False):
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
-        .. versionadded:: 2015.8.0
-
     .. _`git-rev-parse(1)`: http://git-scm.com/docs/git-rev-parse
     .. _`SPECIFYING REVISIONS`: http://git-scm.com/docs/git-rev-parse#_specifying_revisions
+    .. _`Options for Files`: http://git-scm.com/docs/git-rev-parse#_options_for_files
 
 
     CLI Examples:
@@ -2458,11 +2548,16 @@ def rev_parse(cwd, rev, opts='', user=None, ignore_retcode=False):
         salt myminion git.rev_parse /path/to/repo 'develop@{upstream}' opts='--abbrev-ref'
         # Get the SHA1 for the commit corresponding to tag v1.2.3
         salt myminion git.rev_parse /path/to/repo 'v1.2.3^{commit}'
+        # Find out whether or not the repo at /path/to/repo is a bare repository
+        salt myminion git.rev_parse /path/to/repo opts='--is-bare-repository'
     '''
     cwd = _expand_path(cwd, user)
     command = ['git', 'rev-parse']
     command.extend(_format_opts(opts))
-    command.append(rev)
+    if rev is not None:
+        if not isinstance(rev, six.string_types):
+            rev = str(rev)
+        command.append(rev)
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -2616,7 +2711,7 @@ def stash(cwd, action='save', opts='', user=None, ignore_retcode=False):
 def status(cwd, user=None, ignore_retcode=False):
     '''
     .. versionchanged:: 2015.8.0
-        Return data has changed from a list of tuples to a dictionary
+        Return data has changed from a list of lists to a dictionary
 
     Returns the changes to the repository
 
@@ -2836,6 +2931,8 @@ def symbolic_ref(cwd,
 
 def version(versioninfo=False, user=None):
     '''
+    .. versionadded:: 2015.8.0
+
     Returns the version of Git installed on the minion
 
     versioninfo : False
