@@ -35,6 +35,9 @@ The above configuration allows the user ``thatch`` to execute functions
 in the test and network modules on the minions that match the web* target.
 User ``steve`` is given unrestricted access to minion commands.
 
+Salt respects the current PAM configuration in place, and uses the 'login'
+service to authenticate.
+
 .. note:: The PAM module does not allow authenticating as ``root``.
 
 To allow access to :ref:`wheel modules <all-salt.wheel>` or :ref:`runner
