@@ -1074,7 +1074,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
-            if suffix == '.zip':
+            elif suffix == '.o':
+                top_mod = __import__(fpath, globals(), locals(), [])
+                comps = fpath.split('.')
+                if len(comps) < 2:
+                    mod = top_mod
+                else:
+                    mod = top_mod
+                    for subname in comps[1:]:
+                        mod = getattr(mod, subname)
+            elif suffix == '.zip':
                 mod = zipimporter(fpath).load_module(name)
             else:
                 desc = self.suffix_map[suffix]
