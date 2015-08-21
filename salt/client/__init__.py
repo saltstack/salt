@@ -1573,7 +1573,7 @@ class Caller(object):
 
     def cmd(self, fun, *args, **kwargs):
         '''
-        Call an execution module with the given arguments and keword arguments
+        Call an execution module with the given arguments and keyword arguments
 
         .. versionchanged:: 2015.8.0
             Added the ``cmd`` method for consistency with the other Salt clients.
