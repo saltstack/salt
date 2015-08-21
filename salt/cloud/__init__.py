@@ -1173,9 +1173,9 @@ class Cloud(object):
         )
 
         if deploy:
-            if make_master is not True and 'master' not in minion_dict:
+            if not make_master and 'master' not in minion_dict:
                 raise SaltCloudConfigError(
-                    'There\'s no master defined on the {0!r} VM settings'.format(
+                    'There\'s no master defined on the {0!r} VM settings.'.format(
                         vm_['name']
                     )
                 )
