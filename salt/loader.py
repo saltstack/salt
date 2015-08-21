@@ -17,6 +17,7 @@ import logging
 import inspect
 import tempfile
 from collections import MutableMapping
+from zipimport import zipimporter
 
 # Import salt libs
 from salt.exceptions import LoaderError
@@ -947,6 +948,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except ImportError:
                 log.info('Cython is enabled in the options but not present '
                     'in the system path. Skipping Cython modules.')
+        # Allow for zipimport of modules
+        if self.opts.get('enable_zipmodules', True) is True:
+            self.suffix_map['.zip'] = tuple()
         # allow for module dirs
         self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
 
@@ -1077,7 +1081,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
-            if suffix == '.o':
+            elif suffix == '.o':
                 top_mod = __import__(fpath, globals(), locals(), [])
                 comps = fpath.split('.')
                 if len(comps) < 2:
@@ -1086,6 +1090,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     mod = top_mod
                     for subname in comps[1:]:
                         mod = getattr(mod, subname)
+            elif suffix == '.zip':
+                mod = zipimporter(fpath).load_module(name)
             else:
                 desc = self.suffix_map[suffix]
                 # if it is a directory, we dont open a file
