@@ -280,6 +280,7 @@ def load_args_and_kwargs(func, args, data=None):
                 # salt.utils.cli.yamlify_arg(), which could mangle the input.
                 _args.append(arg)
             elif string_kwarg:
+                import traceback; traceback.print_stack()
                 salt.utils.warn_until(
                     'Boron',
                     'The list of function args and kwargs should be parsed '
@@ -1013,7 +1014,7 @@ class Minion(MinionBase):
                 func = minion_instance.functions[data['fun']]
                 args, kwargs = load_args_and_kwargs(
                     func,
-                    data['arg'],
+                    salt.utils.args.parse_input(data['arg']),
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
                 if opts.get('sudo_user', ''):
