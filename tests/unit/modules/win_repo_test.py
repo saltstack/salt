@@ -33,7 +33,7 @@ class WinRepoTestCase(TestCase):
         Test cases for salt.modules.win_repo
     '''
 
-    @patch('salt.loader.render', MagicMock(return_valu=''))
+    @patch('salt.loader.render', MagicMock(return_value=''))
     def test_genrepo(self):
         '''
         Test to generate winrepo_cachefile based on sls files in the
