@@ -112,6 +112,12 @@ def setup_handlers():
     if dsn is not None:
         try:
             dsn_config = raven.load(dsn)
+            options.update({
+            'project': dsn_config['SENTRY_PROJECT'],
+            'servers': dsn_config['SENTRY_SERVERS'],
+            'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
+            'secret_key': dsn_config['SENTRY_SECRET_KEY']
+            })
         except ValueError as exc:
             log.info(
                 'Raven failed to parse the configuration provided '
@@ -128,13 +134,12 @@ def setup_handlers():
             dsn_config = {}
             conf_extras = transport_registry.compute_scope(url, dsn_config)
             dsn_config.update(conf_extras)
-        
-        options.update({
+            options.update({
             'project': dsn_config['SENTRY_PROJECT'],
             'servers': dsn_config['SENTRY_SERVERS'],
             'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
             'secret_key': dsn_config['SENTRY_SECRET_KEY']
-        })
+            })
 
     # Allow options to be overridden if previously parsed, or define them
     for key in ('project', 'servers', 'public_key', 'secret_key'):
