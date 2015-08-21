@@ -199,7 +199,7 @@ class _Section(OrderedDict):
         for opt_str in inicontents.split('\n'):
             com_match = com_regx.match(opt_str)
             if com_match:
-                name = '#comment{1}'.format(comment_count)
+                name = '#comment{0}'.format(comment_count)
                 self.com = com_match.group(1)
                 comment_count += 1
                 self.update({name: opt_str})
@@ -220,7 +220,7 @@ class _Section(OrderedDict):
                 curr_indent = curr_indent.replace('\t', '    ')
                 self.update({name: value})
                 continue
-            name = '#unknown{1}'.format(unknown_count)
+            name = '#unknown{0}'.format(unknown_count)
             self.update({name: opt_str})
             unknown_count += 1
 
@@ -275,15 +275,15 @@ class _Section(OrderedDict):
         return changes
 
     def gen_ini(self):
-        yield '\n[{1}]\n'.format(self.name)
+        yield '\n[{0}]\n'.format(self.name)
         sections_dict = OrderedDict()
         for name, value in self.iteritems():
             if com_regx.match(name):
-                yield '{1}\n'.format(value)
+                yield '{0}\n'.format(value)
             elif isinstance(value, _Section):
                 sections_dict.update({name: value})
             else:
-                yield '{1} {2} {3}\n'.format(name, self.sep, value)
+                yield '{0} {1} {2}\n'.format(name, self.sep, value)
         for name, value in sections_dict.iteritems():
             for line in value.gen_ini():
                 yield line

@@ -132,7 +132,7 @@ def sections_present(name, sections=None):
     changes = __salt__['ini.set_option'](name, sections)
     if 'error' in changes:
         ret['result'] = False
-        ret['changes'] = 'Errors encountered {1}'.format(changes['error'])
+        ret['changes'] = 'Errors encountered {0}'.format(changes['error'])
         return ret
     ret['changes'] = changes
     ret['comment'] = 'Changes take effect'
