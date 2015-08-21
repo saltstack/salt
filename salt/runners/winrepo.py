@@ -202,7 +202,7 @@ def update_git_repos(opts=None, masterless=False):
                 rev, remote_url = remote_info.strip().split()
             except ValueError:
                 remote_url = remote_info
-            gittarget = os.path.join(winrepo_dir, targetname)
+            gittarget = os.path.join(winrepo_dir, targetname).replace('.', '_')
             if masterless:
                 result = __salt__['state.single']('git.latest',
                                                   name=remote_url,
