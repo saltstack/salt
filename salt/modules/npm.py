@@ -15,6 +15,7 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
+import salt.modules.cmdmod
 from salt.exceptions import CommandExecutionError
 
 
@@ -32,7 +33,7 @@ def __virtual__():
     '''
     try:
         if salt.utils.which('npm') is not None:
-            _check_valid_version(__salt__)
+            _check_valid_version()
             return True
         else:
             return (False, 'npm execution module could not be loaded '
@@ -41,14 +42,14 @@ def __virtual__():
         return (False, str(exc))
 
 
-def _check_valid_version(salt):
+def _check_valid_version():
     '''
     Check the version of npm to ensure this module will work. Currently
     npm must be at least version 1.2.
     '''
     # pylint: disable=no-member
     npm_version = distutils.version.LooseVersion(
-        salt['cmd.run']('npm --version', python_shell=True))
+        salt.modules.cmdmod.run('npm --version', python_shell=True))
     valid_version = distutils.version.LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
