@@ -389,7 +389,8 @@ def unmask(name):
     '''
     if _untracked_custom_unit_found(name) or _unit_file_changed(name):
         systemctl_reload()
-    return not __salt__['cmd.retcode'](_systemctl_cmd('unmask', name))
+    return not (__salt__['cmd.retcode'](_systemctl_cmd('unmask', name))
+                or __salt__['cmd.retcode'](_systemctl_cmd('unmask --runtime', name)))
 
 
 def mask(name):

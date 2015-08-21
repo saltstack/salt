@@ -8,6 +8,7 @@ files for SPM.
 
 from __future__ import absolute_import
 import os
+import os.path
 import logging
 
 # Get logging started
@@ -90,3 +91,17 @@ def remove_file(path, conn=None):
 
     log.debug('Removing package file {0}'.format(path))
     os.remove(path)
+
+
+def path_exists(path):
+    '''
+    Check to see whether the file already exists
+    '''
+    return os.path.exists(path)
+
+
+def path_isdir(path):
+    '''
+    Check to see whether the file already exists
+    '''
+    return os.path.isdir(path)

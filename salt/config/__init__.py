@@ -1146,6 +1146,16 @@ DEFAULT_MASTER_OPTS = {
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
 }
 
+
+# ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
+# Note that proxies use the same config path as regular minions.  DEFAULT_MINION_OPTS
+# is loaded first, then if we are setting up a proxy, the config is overwritten with
+# these settings.
+DEFAULT_PROXY_MINION_OPTS = {
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
+}
+
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 CLOUD_CONFIG_DEFAULTS = {
     'verify_env': True,
@@ -1493,6 +1503,9 @@ def minion_config(path,
     '''
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
+
+    if path is not None and path.endswith('proxy'):
+        defaults.update(DEFAULT_PROXY_MINION_OPTS)
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.

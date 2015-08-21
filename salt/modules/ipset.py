@@ -388,6 +388,22 @@ def check(set=None, entry=None, family='ipv4'):
     '''
     Check that an entry exists in the specified set.
 
+    set
+        The ipset name
+
+    entry
+        An entry in the ipset.  This parameter can be a single IP address, a
+        range of IP addresses, or a subnet block.  Example:
+
+        .. code-block::
+
+            192.168.0.1
+            192.168.0.2-192.168.0.19
+            192.168.0.0/25
+
+    family
+        IP protocol version: ipv4 or ipv6
+
     CLI Example:
 
     .. code-block:: bash

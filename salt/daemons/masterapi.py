@@ -78,7 +78,7 @@ def init_git_pillar(opts):
                     )
                 else:
                     ret.append(
-                        git_pillar.LegacyGitPillar(
+                        git_pillar._LegacyGitPillar(
                             br,
                             loc,
                             opts

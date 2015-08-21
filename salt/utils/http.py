@@ -14,6 +14,7 @@ import os.path
 import pprint
 import socket
 import urllib
+import inspect
 
 import ssl
 try:
@@ -54,6 +55,7 @@ from salt.ext.six.moves.urllib.error import URLError
 
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
+import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
@@ -406,20 +408,38 @@ def query(url,
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
+        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        supports_max_body_size = 'max_body_size' in client_argspec.args
+
         try:
-            result = HTTPClient(max_body_size=max_body).fetch(
-                url_full,
-                method=method,
-                headers=header_dict,
-                auth_username=username,
-                auth_password=password,
-                body=data,
-                validate_cert=verify_ssl,
-                allow_nonstandard_methods=True,
-                streaming_callback=streaming_callback,
-                request_timeout=timeout,
-                **req_kwargs
-            )
+            if supports_max_body_size:
+                result = HTTPClient(max_body_size=max_body).fetch(
+                    url_full,
+                    method=method,
+                    headers=header_dict,
+                    auth_username=username,
+                    auth_password=password,
+                    body=data,
+                    validate_cert=verify_ssl,
+                    allow_nonstandard_methods=True,
+                    streaming_callback=streaming_callback,
+                    request_timeout=timeout,
+                    **req_kwargs
+                )
+            else:
+                result = HTTPClient().fetch(
+                    url_full,
+                    method=method,
+                    headers=header_dict,
+                    auth_username=username,
+                    auth_password=password,
+                    body=data,
+                    validate_cert=verify_ssl,
+                    allow_nonstandard_methods=True,
+                    streaming_callback=streaming_callback,
+                    request_timeout=timeout,
+                    **req_kwargs
+                )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = str(exc)
