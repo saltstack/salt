@@ -138,3 +138,8 @@ instead.
 
 - The use of ``delim`` was removed from the following functions in the ``match``
 execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,
+
+Known Issues
+============
+
+- The TCP transport does not function on FreeBSD.

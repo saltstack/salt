@@ -41,26 +41,6 @@ class ScheduleTestCase(TestCase):
     '''
     Test cases for salt.modules.schedule
     '''
-    # 'list_' function tests: 1
-
-    def test_list(self):
-        '''
-        Test if it list the jobs currently scheduled on the minion.
-        '''
-        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': {'enabled': True}}, 'sock_dir': SOCK_DIR}):
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {'_seconds': {'enabled': True}}}
-                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertEqual(schedule.list_(), "schedule:\n  _seconds:\n    enabled: true\n")
-                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': {'enabled': True}})
-
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {}}
-                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertDictEqual(schedule.list_(), {'schedule': {}})
 
     # 'purge' function tests: 1
 
@@ -158,50 +138,6 @@ class ScheduleTestCase(TestCase):
                                                       test=True),
                                          {'comment': comm4, 'result': True})
 
-    # 'modify' function tests: 1
-
-    def test_modify(self):
-        '''
-        Test if it modify an existing job in the schedule.
-        '''
-        comm1 = ('Error: Unable to use "seconds", "minutes", "hours",'
-                 ' or "days" with "when" option.')
-        comm2 = 'Unable to use "when" and "cron" options together.  Ignoring.'
-        comm3 = 'Job job2 does not exist in schedule.'
-        comm4 = 'Job: job3 would be modified in schedule.'
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1,
-                                                         'job3': {}},
-                                            'sock_dir': SOCK_DIR}):
-
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {'job1': JOB1,
-                                                             'job3': {}}}
-                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping',
-                                                         seconds=3600, when='2400'),
-                                         {'changes': {}, 'comment': comm1,
-                                          'result': False})
-
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping',
-                                                         when='2400', cron='2'),
-                                         {'changes': {}, 'comment': comm2,
-                                          'result': False})
-
-                    self.assertDictEqual(schedule.modify('job2'), {'changes': {},
-                                                                   'comment': comm3,
-                                                                   'result': False})
-
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                         {'changes': {},
-                                          'comment': 'Job job1 in correct state',
-                                          'result': True})
-
-                    ret = schedule.modify('job3', function='test.ping', test=True)
-                    if 'diff' in ret['changes']:
-                        del ret['changes']['diff']  # difflib formatting changes between 2.6 and 2.7
-                    self.assertDictEqual(ret, {'changes': {}, 'comment': comm4, 'result': True})
-
     # 'run_job' function tests: 1
 
     def test_run_job(self):
@@ -284,19 +220,6 @@ class ScheduleTestCase(TestCase):
         self.assertDictEqual(schedule.disable(test=True),
                              {'comment': 'Schedule would be disabled.',
                               'result': True})
-
-    # 'reload_' function tests: 1
-
-    def test_reload_(self):
-        '''
-        Test if it reload saved scheduled jobs on the minion.
-        '''
-        mock = MagicMock(return_value=True)
-        with patch.dict(schedule.__opts__, {'config_dir': '',
-                                            'default_include': '/tmp'}):
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                self.assertDictEqual(schedule.reload_(),
-                                     {'comment': [], 'result': True})
 
     # 'move' function tests: 1
 

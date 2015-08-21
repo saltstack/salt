@@ -26,6 +26,14 @@ from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
+from salt.exceptions import (
+    SaltInvocationError
+)
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611

@@ -13,7 +13,7 @@ Here is a simple example scenario. In this example ``ca`` is the ca server,
 and ``www`` is a web server that needs a certificate signed by ``ca``.
 
 For remote signing, peers must be permitted to remotely call the
-:mod:`pem_managed <salt.states.x509.pem_managed>` function.
+:mod:`sign_remote_certificate <salt.modules.x509.sign_remote_certificate>` function.
 
 
 /etc/salt/master.d/peer.sls
