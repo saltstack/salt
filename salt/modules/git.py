@@ -40,7 +40,7 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
         urltuple = _urlparse(url)
         if urltuple.scheme == 'https':
             if https_pass is None:
-                netloc = '{0}@{2}'.format(
+                netloc = '{0}@{1}'.format(
                     https_user,
                     urltuple.netloc
                 )
