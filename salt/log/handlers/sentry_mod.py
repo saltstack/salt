@@ -113,10 +113,10 @@ def setup_handlers():
         try:
             dsn_config = raven.load(dsn)
             options.update({
-            'project': dsn_config['SENTRY_PROJECT'],
-            'servers': dsn_config['SENTRY_SERVERS'],
-            'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-            'secret_key': dsn_config['SENTRY_SECRET_KEY']
+                'project': dsn_config['SENTRY_PROJECT'],
+                'servers': dsn_config['SENTRY_SERVERS'],
+                'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
+                'secret_key': dsn_config['SENTRY_SECRET_KEY']
             })
         except ValueError as exc:
             log.info(
@@ -135,10 +135,10 @@ def setup_handlers():
             conf_extras = transport_registry.compute_scope(url, dsn_config)
             dsn_config.update(conf_extras)
             options.update({
-            'project': dsn_config['SENTRY_PROJECT'],
-            'servers': dsn_config['SENTRY_SERVERS'],
-            'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-            'secret_key': dsn_config['SENTRY_SECRET_KEY']
+                'project': dsn_config['SENTRY_PROJECT'],
+                'servers': dsn_config['SENTRY_SERVERS'],
+                'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
+                'secret_key': dsn_config['SENTRY_SECRET_KEY']
             })
 
     # Allow options to be overridden if previously parsed, or define them
