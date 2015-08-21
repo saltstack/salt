@@ -33,7 +33,7 @@ except ImportError:
 import shlex
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltRenderError
 import salt.utils
 import salt.syspaths
 
