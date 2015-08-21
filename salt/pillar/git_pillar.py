@@ -26,6 +26,8 @@ The branch/tag which maps to that environment must then be specified along with
 the repo's URL. Configuration details can be found below.
 
 
+.. _git-pillar-pre-2015-8-0:
+
 Configuring git_pillar for Salt releases before 2015.8.0
 ========================================================
 
@@ -96,13 +98,22 @@ The corresponding Pillar top file would look like this:
       '*':
         - bar
 
+.. _git-pillar-2015-8-0-and-later:
+
 Configuring git_pillar for Salt releases 2015.8.0 and later
 ===========================================================
 
-Beginning with Salt version 2015.8.0, pygit2_ is now supported for git_pillar,
-in addition to GitPython_ (Dulwich_ will not be supported for the forseeable
-future). The requirements for GitPython_ and pygit2_ are the same as for gitfs,
-as described :ref:`here <gitfs-dependencies>`.
+.. note::
+    In version 2015.8.0, the method of configuring git external pillars has
+    changed, and now more closely resembles that of the :ref:`Git Fileserver
+    Backend <tutorial-gitfs>`. If Salt detects the old configuration schema, it
+    will use the pre-2015.8.0 code to compile the external pillar. A warning
+    will also be logged.
+
+Beginning with Salt version 2015.8.0, pygit2_ is now supported in addition to
+GitPython_ (Dulwich_ will not be supported for the forseeable future). The
+requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
+:ref:`here <gitfs-dependencies>`.
 
 Here is an example git_pillar configuration.
 
@@ -110,13 +121,27 @@ Here is an example git_pillar configuration.
 
     ext_pillar:
       - git:
+        # Use 'prod' instead of the branch name 'production' as the environment
         - production https://gitserver/git-pillar.git:
           - env: prod
+        # Use 'dev' instead of the branch name 'develop' as the environment
         - develop https://gitserver/git-pillar.git:
           - env: dev
+        # No per-remote config parameters (and no trailing colon), 'qa' will
+        # be used as the environment
         - qa https://gitserver/git-pillar.git
-        - master https://other-git-server/pillardata.git
+        # SSH key authentication
+        - master git@other-git-server:pillardata-ssh.git:
+          # Pillar SLS files will be read from the 'pillar' subdirectory in
+          # this repository
           - root: pillar
+          - privkey: /path/to/key
+          - pubkey: /path/to/key.pub
+          - passphrase: CorrectHorseBatteryStaple
+        # HTTPS authentication
+        - master https://other-git-server/pillardata-https.git:
+          - user: git
+          - password: CorrectHorseBatteryStaple
 
 The main difference between this and the old way of configuring git_pillar is
 that multiple remotes can be configured under one ``git`` section under
@@ -129,10 +154,10 @@ configuration parameters can also be set.
 
 With the addition of pygit2_ support, git_pillar can now interact with
 authenticated remotes. Authentication works just like in gitfs (as outlined in
-the :ref:`GitFS Walkthrough <gitfs-authentication>`), only with the global
-authenication parameter names prefixed with ``git_pillar`` instead of ``gitfs``
-(e.g. :conf_master:`git_pillar_pubkey`, :conf_master:`git_pillar_privkey`,
-:conf_master:`git_pillar_passphrase`, etc.).
+the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
+with the global authenication parameter names prefixed with ``git_pillar``
+instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
+:conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 
 A full list of the git_pillar configuration options can be found :ref:`here
 <git_pillar-config-opts>`.
@@ -209,7 +234,7 @@ def __virtual__():
 
 def ext_pillar(minion_id, repo, pillar_dirs):
     '''
-    Execute a command and read the output as YAML
+    Checkout the ext_pillar sources and compile the resulting pillar SLS
     '''
     if isinstance(repo, six.string_types):
         return _legacy_git_pillar(minion_id, repo, pillar_dirs)
@@ -228,7 +253,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
 
 
 # Legacy git_pillar code
-class LegacyGitPillar(object):
+class _LegacyGitPillar(object):
     '''
     Deal with the remote git repository for Pillar
     '''
@@ -363,7 +388,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     # environment is "different" from the branch
     branch, _, environment = branch_env.partition(':')
 
-    gitpil = LegacyGitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
     branch = gitpil.branch
 
     if environment == '':
@@ -402,7 +427,7 @@ def _update(branch, repo_location):
 
     return boolean whether it worked
     '''
-    gitpil = LegacyGitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
 
     return gitpil.update()
 
@@ -411,7 +436,7 @@ def _envs(branch, repo_location):
     '''
     Return a list of refs that can be used as environments
     '''
-    gitpil = LegacyGitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
 
     return gitpil.envs()
 
