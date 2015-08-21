@@ -59,7 +59,7 @@ def genrepo():
 
     .. code-block:: bash
 
-        salt-call winrepo.genrepo -c c:\salt\conf
+        salt-call winrepo.genrepo
     '''
     return _genrepo(opts=__opts__, fire_event=False)
 
