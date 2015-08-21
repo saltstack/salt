@@ -14,7 +14,6 @@ try:
     import netaddr
     HAS_NETADDR = True
 except ImportError as e:
-    print e
     HAS_NETADDR = False
 
 
