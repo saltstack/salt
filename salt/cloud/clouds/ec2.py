@@ -2809,10 +2809,13 @@ def destroy(name, call=None):
 
     ret = {}
 
-    if config.get_cloud_config_value('rename_on_destroy',
-                                     get_configured_provider(),
-                                     __opts__,
-                                     search_global=False) is True:
+    # Default behavior is to rename EC2 VMs when destroyed
+    # via salt-cloud, unless explicitly set to False.
+    rename_on_destroy = config.get_cloud_config_value('rename_on_destroy',
+                                                      get_configured_provider(),
+                                                      __opts__,
+                                                      search_global=False)
+    if rename_on_destroy is not False:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
