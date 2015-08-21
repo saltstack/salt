@@ -217,16 +217,19 @@ configuration, further details can be found :ref:`here
 Windows Software Repo Changes
 =============================
 
-Several config options have been renamed to make the naming more consistent.
+Several config options have been renamed to make their naming more consistent.
 For a list of the winrepo config options, see :ref:`here
-<winrepo-config-opts>`.
+<winrepo-master-config-opts>` for master config options, and :ref:`here
+<winrepo-minion-config-opts>` for configuration options for masterless Windows
+minions.
 
-The :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
-runner has been updated to use either pygit2_ or GitPython_ to checkout the git
-repositories containing repo data. If pygit2_ or GitPython_ is installed,
-existing winrepo git checkouts should be removed after upgrading to 2015.8.0,
-to allow them to be checked out again by running
-:py:func:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`.
+On the master, the :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>` runner has been updated to use either
+pygit2_ or GitPython_ to checkout the git repositories containing repo data. If
+pygit2_ or GitPython_ is installed, existing winrepo git checkouts should be
+removed after upgrading to 2015.8.0, to allow them to be checked out again by
+running :py:func:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>`.
 
 This enhancement also brings new functionality, see the :ref:`Windows Software
 Repository <2015-8-0-winrepo-changes>` documentation for more information.
@@ -235,6 +238,13 @@ If neither GitPython_ nor pygit2_ are installed, then Salt will fall back to
 the pre-existing behavior for :mod:`winrepo.update_git_repos
 <salt.runners.winrepo.update_git_repos>`, and a warning will be logged in the
 master log.
+
+.. note::
+    Standalone Windows minions do not support the new GitPython_/pygit2_
+    functionality, and will instead use the :py:func:`git.latest
+    <salt.states.git.latest>` state to keep repositories up-to-date. More
+    information on how to use the Windows Software Repo on a standalone minion
+    can be found :ref:`here <standalone-winrepo>`.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
