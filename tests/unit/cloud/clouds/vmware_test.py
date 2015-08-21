@@ -21,6 +21,14 @@ ensure_in_syspath('../../../')
 from salt.cloud.clouds import vmware
 from salt.exceptions import SaltCloudSystemExit
 
+# Attempt to import pyVim and pyVmomi libs
+HAS_LIBS = True
+try:
+    from pyVim.connect import SmartConnect, Disconnect
+    from pyVmomi import vim, vmodl
+except Exception:
+    HAS_LIBS = False
+
 # Global Variables
 vmware.__active_provider_name__ = ''
 vmware.__opts__ = {}
@@ -847,6 +855,7 @@ class VMwareTestCase(ExtendedTestCase):
                 kwargs={'host': 'my-esxi-host'},
                 call='function')
 
+    @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
     def test_add_host_cluster_not_exists(self):
         '''
@@ -870,6 +879,7 @@ class VMwareTestCase(ExtendedTestCase):
                 kwargs={'host': 'my-esxi-host', 'cluster': 'my-cluster'},
                 call='function')
 
+    @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
     def test_add_host_datacenter_not_exists(self):
         '''
@@ -915,6 +925,7 @@ class VMwareTestCase(ExtendedTestCase):
             kwargs={'foo': 'bar'},
             call='function')
 
+    @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
     def test_remove_host_not_exists(self):
         '''
@@ -950,6 +961,7 @@ class VMwareTestCase(ExtendedTestCase):
             kwargs={'foo': 'bar'},
             call='function')
 
+    @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
     def test_connect_host_not_exists(self):
         '''
@@ -985,6 +997,7 @@ class VMwareTestCase(ExtendedTestCase):
             kwargs={'foo': 'bar'},
             call='function')
 
+    @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
     def test_disconnect_host_not_exists(self):
         '''
@@ -1020,6 +1033,7 @@ class VMwareTestCase(ExtendedTestCase):
             kwargs={'foo': 'bar'},
             call='function')
 
+    @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
     def test_reboot_host_not_exists(self):
         '''
