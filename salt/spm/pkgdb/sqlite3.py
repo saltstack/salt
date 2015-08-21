@@ -185,3 +185,10 @@ def unregister_file(path, conn=None):
         conn = init()
 
     conn.execute('DELETE FROM files WHERE path=?', (path, ))
+
+
+def db_exists(db_):
+    '''
+    Check to see whether the file already exists
+    '''
+    return os.path.exists(db_)
