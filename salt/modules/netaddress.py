@@ -6,6 +6,7 @@ Module for getting information about network addresses.
 
 :depends: netaddr
 '''
+from __future__ import absolute_import
 
 __virtualname__ = 'netaddress'
 
