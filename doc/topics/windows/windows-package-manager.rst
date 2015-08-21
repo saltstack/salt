@@ -467,8 +467,8 @@ installed, then Salt will use it instead of the old method (which invokes the
 
     The :mod:`winrepo execution module <salt.modules.win_repo>` (discussed
     above in the :ref:`Managing Windows Software on a Standalone Windows Minion
-    <standalone-winrepo>` section) does not support the new GitPython_/pygit2_
-    support.
+    <standalone-winrepo>` section) does not yet support the new
+    GitPython_/pygit2_ functionality.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
