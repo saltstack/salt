@@ -1669,12 +1669,12 @@ def avail_images(call=None):
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        if vm["config.template"]:
+        if "config.template" in vm and vm["config.template"]:
             templates[vm["name"]] = {
                 'name': vm["name"],
-                'guest_fullname': vm["config.guestFullName"],
-                'cpus': vm["config.hardware.numCPU"],
-                'ram': vm["config.hardware.memoryMB"]
+                'guest_fullname': vm["config.guestFullName"] if "config.guestFullName" in vm else "N/A",
+                'cpus': vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A",
+                'ram': vm["config.hardware.memoryMB"] if "config.hardware.memoryMB" in vm else "N/A"
             }
 
     return templates
