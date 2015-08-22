@@ -134,7 +134,7 @@ def main(argv):  # pylint: disable=W0613
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
-        scpstat = subprocess.Popen(['/bin/bash', '-c', 'command -v scp']).wait()
+        scpstat = subprocess.Popen(['/bin/sh', '-c', 'command -v scp']).wait()
         if not scpstat == 0:
             sys.exit(EX_SCP_NOT_FOUND)
 
