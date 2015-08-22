@@ -108,7 +108,7 @@ def _sync(form, saltenv=None):
         # Grab only the desired files (.py, .pyx, .so)
         cache.extend(
             __salt__['cp.cache_dir'](
-                source, sub_env, include_pat=r'E@\.(pyx?|so)$'
+                source, sub_env, include_pat=r'E@\.(pyx?|so|zip)$'
             )
         )
         local_cache_dir = os.path.join(
