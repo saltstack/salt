@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from salttesting import TestCase
-from salttesting.mock import MagicMock
+from salttesting import TestCase, skipIf
+from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON
 from salt.states import jboss7
 from salt.exceptions import CommandExecutionError
 import __builtin__
@@ -13,6 +13,7 @@ except NameError:
     __builtin__.__salt__ = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JBoss7StateTestCase(TestCase):
 
     org_module_functions = {}
