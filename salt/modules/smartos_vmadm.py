@@ -64,7 +64,6 @@ def _exit_status(retcode):
 #reprovision [-f <filename>]
 #rollback-snapshot <uuid> <snapname>
 #send <uuid> [target]
-#sysrq <uuid> <nmi|screenshot>
 #update <uuid> [-f <filename>]
 # -or- update <uuid> property=value [property=value ...]
 #validate create [-f <filename>]
@@ -76,7 +75,7 @@ def start(vm=None, options=None, key='uuid'):
     Start a vm
 
     vm : string
-        Specifies the vm to be stopped
+        Specifies the vm to be started
     options : string
         Specifies additional options
     key : string
@@ -160,7 +159,7 @@ def reboot(vm=None, force=False, key='uuid'):
     Reboot a vm
 
     vm : string
-        Specifies the vm to be stopped
+        Specifies the vm to be rebooted
     force : boolean
         Specifies if the vm should be force stopped
     key : string
@@ -300,5 +299,50 @@ def lookup(search=None, order=None, one=False):
             result.append(vm)
 
     return result
+
+
+def sysrq(vm=None, action='nmi', key='uuid'):
+    '''
+    Send non maskable interrupt or capture screenshot for kvm
+
+    vm : string
+        Specifies the vm
+    action : string
+        Specifies the action nmi or screenshot
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.sysrq 186da9ab-7392-4f55-91a5-b8f1fe770543 nmi
+        salt '*' vmadm.sysrq 186da9ab-7392-4f55-91a5-b8f1fe770543 screenshot
+        salt '*' vmadm.sysrq nacl nmi key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    if action not in ['nmi', 'screenshot']:
+        ret['Error'] = 'Action must be either nmi or screenshot'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm sysrq <uuid> <nmi|screenshot>
+    cmd = '{vmadm} sysrq {uuid} {action}'.format(
+        vmadm=vmadm,
+        uuid=vm,
+        action=action
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
