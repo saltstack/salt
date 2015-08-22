@@ -74,7 +74,7 @@ def _exit_status(retcode):
 #validate update <brand> [-f <filename>]
 
 
-def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias'):
+def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=False):
     '''
     Return a list of VMs
 
@@ -85,6 +85,10 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias'):
     order : string
         Specifies the vmadm order (-o) property
         Default: uuid,type,ram,state,alias
+    keyed : boolean
+        Specified if the output should be an array (False) or dict (True)
+          Dict key is first field from order parameter
+          Note: if key is not unique last vm wins.
 
     CLI Example:
 
@@ -105,7 +109,7 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias'):
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
-    result = []
+    result = OrderedDict() if keyed else []
     if retcode != 0:
         if 'stderr' not in res:
             ret['Error'] = _exit_status(retcode)
@@ -118,12 +122,19 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias'):
     for vm in res['stdout'].splitlines():
         vm_data = OrderedDict()
         vm = vm.split(':')
-        if len(vm) > 1:
+        if keyed:
             for field in fields:
+                if fields.index(field) == 0:
+                    continue
                 vm_data[field.strip()] = vm[fields.index(field)].strip()
+            result[vm[0]] = vm_data
         else:
-            vm_data = vm[0]
-        result.append(vm_data)
+            if len(vm) > 1:
+                for field in fields:
+                    vm_data[field.strip()] = vm[fields.index(field)].strip()
+            else:
+                vm_data = vm[0]
+            result.append(vm_data)
     return result
 
 
