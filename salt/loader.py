@@ -844,6 +844,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
+                 static_modules=None
                  ):  # pylint: disable=W0231
 
         self.opts = self.__prep_mod_opts(opts)
@@ -867,6 +868,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.missing_modules = {}  # mapping of name -> error
         self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
+        self.static_modules = static_modules if static_modules else []
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
@@ -996,6 +998,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             self.file_mapping[f_noext] = (fpath, ext)
                 except OSError:
                     continue
+            for smod in self.static_modules:
+                self.file_mapping[smod] = (smod, '.o')
 
     def clear(self):
         '''
@@ -1070,6 +1074,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
+            if suffix == '.o':
+                mod = __import__(fpath, globals(), locals(), [], -1)
             else:
                 desc = self.suffix_map[suffix]
                 # if it is a directory, we dont open a file
