@@ -66,12 +66,13 @@ def _exit_status(retcode):
 #rollback-snapshot <uuid> <snapname>
 #send <uuid> [target]
 #start <uuid> [option=value ...]
-#stop <uuid> [-F]
 #sysrq <uuid> <nmi|screenshot>
 #update <uuid> [-f <filename>]
 # -or- update <uuid> property=value [property=value ...]
 #validate create [-f <filename>]
 #validate update <brand> [-f <filename>]
+
+# vmadm stop <uuid> [-F]
 
 
 def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=False):
@@ -138,7 +139,7 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=Fa
     return result
 
 
-def lookup(search=None, order=None):
+def lookup(search=None, order=None, one=False):
     '''
     Return a list of VMs using lookup
 
@@ -147,6 +148,8 @@ def lookup(search=None, order=None):
     order : string
         Specifies the vmadm order (-o) property
         Default: uuid,type,ram,state,alias
+    one : boolean
+        Specifies if you to one result only (-j)
 
     CLI Example:
 
@@ -158,8 +161,9 @@ def lookup(search=None, order=None):
     ret = {}
     vmadm = _check_vmadm()
     # vmadm lookup [-j|-1] [-o field,...] [field=value ...]
-    cmd = '{vmadm} lookup -j {order} {search}'.format(
+    cmd = '{vmadm} lookup {one} {order} {search}'.format(
         vmadm=vmadm,
+        one='-1' if one else '-j',
         order='-o {0}'.format(order) if order else '',
         search=search if search else ''
     )
@@ -173,8 +177,11 @@ def lookup(search=None, order=None):
             ret['Error'] = res['stderr']
         return ret
 
-    for vm in json.loads(res['stdout']):
-        result.append(vm)
+    if one:
+        result = res['stdout']
+    else:
+        for vm in json.loads(res['stdout']):
+            result.append(vm)
 
     return result
 
