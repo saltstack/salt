@@ -48,6 +48,86 @@ starts, so only the ``*.pyx`` file is required.
 
 .. _`Cython`: http://cython.org/
 
+Zip Archives as Modules
+=======================
+Python 2.3 and higher allows developers to directly import zip archives containing Python code.
+By setting :conf_minion:`enable_zip_modules` to ``True`` in the minion config, the Salt loader
+will be able to import ``.zip`` files in this fashion.  This allows Salt module developers to
+package dependencies with their modules for ease of deployment, isolation, etc.
+
+For a user, Zip Archive modules behave just like other modules.  When executing a function from a
+module provided as the file ``my_module.zip``, a user would call a function within that module
+as ``my_module.<function>``.
+
+Creating a Zip Archive Module
+-----------------------------
+A Zip Archive module is structured similarly to a simple `Python package`_.  The ``.zip`` file contains
+a single directory with the same name as the module.  The module code traditionally in ``<module_name>.py``
+goes in ``<module_name>/__init__.py``.  The dependency packages are subdirectories of ``<module_name>/``.
+
+Here is an example directory structure for the ``lumberjack`` module, which has two library dependencies
+(``sleep`` and ``work``) to be included.
+
+.. code-block:: bash
+
+    modules $ ls -R lumberjack
+    __init__.py     sleep           work
+
+    lumberjack/sleep:
+    __init__.py
+
+    lumberjack/work:
+    __init__.py
+
+The contents of ``lumberjack/__init__.py`` show how to import and use these included libraries.
+
+.. code-block:: python
+
+    # Libraries included in lumberjack.zip
+    from lumberjack import sleep, work
+
+
+    def is_ok(person):
+        ''' Checks whether a person is really a lumberjack '''
+        return sleep.all_night(person) and work.all_day(person)
+
+Then, create the zip:
+
+.. code-block:: bash
+
+    modules $ zip -r lumberjack lumberjack
+      adding: lumberjack/ (stored 0%)
+      adding: lumberjack/__init__.py (deflated 39%)
+      adding: lumberjack/sleep/ (stored 0%)
+      adding: lumberjack/sleep/__init__.py (deflated 7%)
+      adding: lumberjack/work/ (stored 0%)
+      adding: lumberjack/work/__init__.py (deflated 7%)
+    modules $ unzip -l lumberjack.zip
+    Archive:  lumberjack.zip
+      Length     Date   Time    Name
+     --------    ----   ----    ----
+            0  08-21-15 20:08   lumberjack/
+          348  08-21-15 20:08   lumberjack/__init__.py
+            0  08-21-15 19:53   lumberjack/sleep/
+           83  08-21-15 19:53   lumberjack/sleep/__init__.py
+            0  08-21-15 19:53   lumberjack/work/
+           81  08-21-15 19:21   lumberjack/work/__init__.py
+     --------                   -------
+          512                   6 files
+
+Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lumberjack.zip`` like any other module.
+
+.. code-block:: bash
+
+    $ sudo salt minion1 saltutil.sync_modules
+    minion1:
+      - modules.lumberjack
+    $ sudo salt minion1 lumberjack.is_ok 'Michael Palin'
+    minion1:
+      True
+
+.. _`Python package`: https://docs.python.org/2/tutorial/modules.html#packages
+
 Cross-Calling Modules
 =====================
 
