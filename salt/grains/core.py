@@ -1299,6 +1299,7 @@ def os_data():
     elif grains['kernel'] == 'Darwin':
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         grains['os'] = 'MacOS'
+        grains['os_family'] = 'MacOS'
         grains['osrelease'] = osrelease
         grains['osmajorrelease'] = osrelease.rsplit('.', 1)[0]
         grains.update(_bsd_cpudata(grains))
