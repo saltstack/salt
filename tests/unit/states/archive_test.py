@@ -6,11 +6,6 @@ unit tests for the archive state
 # Import Python Libs
 import os
 import tempfile
-try:
-    import pwd
-    HAS_PWD = True
-except ImportError:
-    HAS_PWD = False
 
 # Import Salt Libs
 from salt.states import archive
