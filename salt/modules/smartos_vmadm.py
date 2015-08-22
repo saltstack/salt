@@ -98,10 +98,9 @@ def stop(vm=None, force=False, key='uuid'):
     if key not in ['uuid', 'alias', 'hostname']:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
-    if key != 'uuid':
-        vm = lookup('{0}={1}'.format(key, vm), one=True)
-        if 'Error' in vm:
-            return vm
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
     # vmadm stop <uuid> [-F]
     cmd = '{vmadm} stop {force} {uuid}'.format(
         vmadm=vmadm,
