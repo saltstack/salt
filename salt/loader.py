@@ -949,7 +949,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 log.info('Cython is enabled in the options but not present '
                     'in the system path. Skipping Cython modules.')
         # Allow for zipimport of modules
-        if self.opts.get('enable_zipmodules', True) is True:
+        if self.opts.get('enable_zip_modules', True) is True:
             self.suffix_map['.zip'] = tuple()
         # allow for module dirs
         self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)

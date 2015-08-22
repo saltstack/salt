@@ -297,6 +297,9 @@ VALID_OPTS = {
     # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
 
+    # Tell the loader to attempt to import *.zip archives
+    'enable_zip_modules': bool,
+
     # Tell the client to show minions that have timed out
     'show_timeout': bool,
 
@@ -851,6 +854,7 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
     'state_output_diff': False,
