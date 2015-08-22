@@ -65,12 +65,53 @@ def _exit_status(retcode):
 #reprovision [-f <filename>]
 #rollback-snapshot <uuid> <snapname>
 #send <uuid> [target]
-#start <uuid> [option=value ...]
 #sysrq <uuid> <nmi|screenshot>
 #update <uuid> [-f <filename>]
 # -or- update <uuid> property=value [property=value ...]
 #validate create [-f <filename>]
 #validate update <brand> [-f <filename>]
+
+
+def start(vm=None, options=None, key='uuid'):
+    '''
+    Start a vm
+
+    vm : string
+        Specifies the vm to be stopped
+    options : string
+        Specifies additional options
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.start 186da9ab-7392-4f55-91a5-b8f1fe770543
+        salt '*' vmadm.start 186da9ab-7392-4f55-91a5-b8f1fe770543 options='order=c,once=d cdrom=/path/to/image.iso,ide'
+        salt '*' vmadm.start vm=nacl key=alias
+        salt '*' vmadm.start vm=nina.example.org key=hostname
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm start <uuid> [option=value ...]
+    cmd = '{vmadm} start {uuid} {options}'.format(
+        vmadm=vmadm,
+        uuid=vm,
+        options=options if options else ''
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
 
 
 def stop(vm=None, force=False, key='uuid'):
