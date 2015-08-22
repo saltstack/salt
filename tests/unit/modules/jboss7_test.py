@@ -4,8 +4,8 @@ from salt.utils.odict import OrderedDict
 
 from salt.modules import jboss7
 
-from salttesting import TestCase
-from salttesting.mock import MagicMock
+from salttesting import TestCase, skipIf
+from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON
 
 try:
     # will pass if executed along with other tests
@@ -15,6 +15,7 @@ except NameError:
     __builtin__.__salt__ = {}
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JBoss7TestCase(TestCase):
     jboss_config = {}
     org_run_operation = None

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from salt.modules import artifactory
-from salttesting import TestCase
-from salttesting.mock import MagicMock
+from salttesting import TestCase, skipIf
+from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArtifactoryTestCase(TestCase):
 
     org_module_functions = {}

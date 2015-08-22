@@ -6,11 +6,6 @@ unit tests for the archive state
 # Import Python Libs
 import os
 import tempfile
-try:
-    import pwd
-    HAS_PWD = True
-except ImportError:
-    HAS_PWD = False
 
 # Import Salt Libs
 from salt.states import archive
@@ -72,15 +67,9 @@ class ArchiveTest(TestCase):
                                                    'file.file_exists': mock_false,
                                                    'file.makedirs': mock_true,
                                                    'cmd.run_all': mock_run}):
-                    if HAS_PWD:
-                        running_as = pwd.getpwuid(os.getuid()).pw_name
-                    else:
-                        running_as = 'root'
                     filename = os.path.join(
                         tmp_dir,
-                        'files/test/_tmp{0}_test_archive_.tar'.format(
-                            '' if running_as == 'root' else '_{0}'.format(running_as)
-                        )
+                        'files/test/_tmp_test_archive_.tar'
                     )
                     for test_opts, ret_opts in zip(test_tar_opts, ret_tar_opts):
                         ret = archive.extracted(tmp_dir,
