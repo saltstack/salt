@@ -5,18 +5,19 @@ Module for running vmadm command on SmartOS
 from __future__ import absolute_import
 
 # Import Python libs
-import json
+import logging
 
 # Import Salt libs
-from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.ext.six as six
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
+from salt.utils.odict import OrderedDict
 
+log = logging.getLogger(__name__)
+
+# Function aliases
+__func_alias__ = {
+    'list_vms': 'list'
+}
 
 # Define the module's virtual name
 __virtualname__ = 'vmadm'
@@ -28,6 +29,7 @@ def _check_vmadm():
     Looks to see if vmadm is present on the system
     '''
     return salt.utils.which('vmadm')
+
 
 def __virtual__():
     '''
@@ -57,7 +59,6 @@ def _exit_status(retcode):
 #info <uuid> [type,...]
 #install <uuid>
 #kill [-s SIGNAL|-SIGNAL] <uuid>
-#list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]
 #lookup [-j|-1] [-o field,...] [field=value ...]
 #reboot <uuid> [-F]
 #receive [-f <filename>]
@@ -71,5 +72,59 @@ def _exit_status(retcode):
 # -or- update <uuid> property=value [property=value ...]
 #validate create [-f <filename>]
 #validate update <brand> [-f <filename>]
+
+
+def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias'):
+    '''
+    Return a list of VMs
+
+    search : string
+        Specifies the vmadm filter property
+    sort : string
+        Specifies the vmadm sort (-s) property
+    order : string
+        Specifies the vmadm order (-o) property
+        Default: uuid,type,ram,state,alias
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.list
+        salt '*' vmadm.list order=alias,ram,cpu_cap sort=-ram,-cpu_cap
+        salt '*' vmadm.list search='type=KVM'
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    # vmadm list [-p] [-H] [-o field,...] [-s field,...] [field=value ...]
+    cmd = '{vmadm} list -p -H {order} {sort} {search}'.format(
+        vmadm=vmadm,
+        order='-o {0}'.format(order) if order else '',
+        sort='-s {0}'.format(sort) if sort else '',
+        search=search if search else ''
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = []
+    if retcode != 0:
+        if 'stderr' not in res:
+            ret['Error'] = _exit_status(retcode)
+        else:
+            ret['Error'] = res['stderr']
+        return ret
+
+    fields = order.split(',')
+
+    for vm in res['stdout'].splitlines():
+        vm_data = OrderedDict()
+        vm = vm.split(':')
+        if len(vm) > 1:
+            for field in fields:
+                vm_data[field.strip()] = vm[fields.index(field)].strip()
+        else:
+            vm_data = vm[0]
+        result.append(vm_data)
+    return result
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
