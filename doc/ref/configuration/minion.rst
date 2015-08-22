@@ -661,6 +661,23 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 
     cython_enable: False
 
+.. conf_minion:: enable_zip_modules
+
+``enable_zip_modules``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Set this value to true to enable loading of zip archives as extension modules.
+This allows for packing module code with specific dependencies to avoid conflicts
+and/or having to install specific modules' dependencies in system libraries.
+
+.. code-block:: yaml
+
+    enable_zip_modules: False
+
 .. conf_minion:: providers
 
 ``providers``
