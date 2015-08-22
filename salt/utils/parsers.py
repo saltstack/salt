@@ -1543,9 +1543,9 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
     )
 
     # ConfigDirMixIn config filename attribute
-    _config_filename_ = 'minion'
+    _config_filename_ = 'proxy'
     # LogLevelMixIn attributes
-    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxyminion')
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxy')
 
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
