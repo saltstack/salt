@@ -60,7 +60,6 @@ def _exit_status(retcode):
 #info <uuid> [type,...]
 #install <uuid>
 #kill [-s SIGNAL|-SIGNAL] <uuid>
-#reboot <uuid> [-F]
 #receive [-f <filename>]
 #reprovision [-f <filename>]
 #rollback-snapshot <uuid> <snapname>
@@ -156,6 +155,48 @@ def stop(vm=None, force=False, key='uuid'):
     return True
 
 
+def reboot(vm=None, force=False, key='uuid'):
+    '''
+    Reboot a vm
+
+    vm : string
+        Specifies the vm to be stopped
+    force : boolean
+        Specifies if the vm should be force stopped
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.reboot 186da9ab-7392-4f55-91a5-b8f1fe770543
+        salt '*' vmadm.reboot 186da9ab-7392-4f55-91a5-b8f1fe770543 True
+        salt '*' vmadm.reboot vm=nacl key=alias
+        salt '*' vmadm.reboot vm=nina.example.org key=hostname
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm reboot <uuid> [-F]
+    cmd = '{vmadm} reboot {force} {uuid}'.format(
+        vmadm=vmadm,
+        force='-F' if force else '',
+        uuid=vm
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
+
+
 def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=False):
     '''
     Return a list of VMs
@@ -193,10 +234,7 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=Fa
     retcode = res['retcode']
     result = OrderedDict() if keyed else []
     if retcode != 0:
-        if 'stderr' not in res:
-            ret['Error'] = _exit_status(retcode)
-        else:
-            ret['Error'] = res['stderr']
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
 
     fields = order.split(',')
@@ -252,10 +290,7 @@ def lookup(search=None, order=None, one=False):
     retcode = res['retcode']
     result = []
     if retcode != 0:
-        if 'stderr' not in res:
-            ret['Error'] = _exit_status(retcode)
-        else:
-            ret['Error'] = res['stderr']
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
 
     if one:
