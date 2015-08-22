@@ -79,14 +79,14 @@ def start(vm=None, options=None, key='uuid'):
     options : string
         Specifies additional options
     key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        Specifies if 'vm' is a uuid, alias or hostname.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' vmadm.start 186da9ab-7392-4f55-91a5-b8f1fe770543
-        salt '*' vmadm.start 186da9ab-7392-4f55-91a5-b8f1fe770543 options='order=c,once=d cdrom=/path/to/image.iso,ide'
+        salt '*' vmadm.start 186da9ab-7392-4f55-91a5-b8f1fe770543 'order=c,once=d cdrom=/path/to/image.iso,ide'
         salt '*' vmadm.start vm=nacl key=alias
         salt '*' vmadm.start vm=nina.example.org key=hostname
     '''
@@ -124,7 +124,7 @@ def stop(vm=None, force=False, key='uuid'):
     force : boolean
         Specifies if the vm should be force stopped
     key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        Specifies if 'vm' is a uuid, alias or hostname.
 
     CLI Example:
 
@@ -167,9 +167,9 @@ def reboot(vm=None, force=False, key='uuid'):
     vm : string
         Specifies the vm to be rebooted
     force : boolean
-        Specifies if the vm should be force stopped
+        Specifies if the vm should be force rebooted
     key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        Specifies if 'vm' is a uuid, alias or hostname.
 
     CLI Example:
 
@@ -276,14 +276,14 @@ def lookup(search=None, order=None, one=False):
         Specifies the vmadm order (-o) property
         Default: uuid,type,ram,state,alias
     one : boolean
-        Specifies if you to one result only (-j)
+        Specifies if you to one result only (-1)
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' vmadm.lookup search='state=running'
-        salt '*' vmadm.lookup search='state=running' orde=uuid,alias,hostname
+        salt '*' vmadm.lookup saerch='state=running' order=uuid,alias,hostname
     '''
     ret = {}
     vmadm = _check_vmadm()
@@ -312,7 +312,7 @@ def lookup(search=None, order=None, one=False):
 
 def sysrq(vm=None, action='nmi', key='uuid'):
     '''
-    Send non maskable interrupt or capture screenshot for kvm
+    Send non-maskable interupt to vm or capture a screenshot
 
     vm : string
         Specifies the vm
