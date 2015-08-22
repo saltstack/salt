@@ -92,6 +92,9 @@ def start(vm=None, options=None, key='uuid'):
     '''
     ret = {}
     vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
     if key not in ['uuid', 'alias', 'hostname']:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
@@ -134,6 +137,9 @@ def stop(vm=None, force=False, key='uuid'):
     '''
     ret = {}
     vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
     if key not in ['uuid', 'alias', 'hostname']:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
@@ -176,6 +182,9 @@ def reboot(vm=None, force=False, key='uuid'):
     '''
     ret = {}
     vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
     if key not in ['uuid', 'alias', 'hostname']:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
@@ -322,6 +331,9 @@ def sysrq(vm=None, action='nmi', key='uuid'):
     '''
     ret = {}
     vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
     if key not in ['uuid', 'alias', 'hostname']:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
