@@ -999,7 +999,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 except OSError:
                     continue
         for smod in self.static_modules:
-            self.file_mapping[smod] = (smod, '.o')
+            f_noext = smod.split('.')[-1]
+            self.file_mapping[f_noext] = (smod, '.o')
 
     def clear(self):
         '''
@@ -1075,7 +1076,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
             if suffix == '.o':
-                mod = __import__(fpath, globals(), locals(), [], -1)
+                top_mod = __import__(fpath, globals(), locals(), [], -1)
+                comps = fpath.split('.')
+                if len(comps) < 2:
+                    mod = top_mod
+                else:
+                    for subname in comps[1:]:
+                        mod = getattr(top_mod, subname)
             else:
                 desc = self.suffix_map[suffix]
                 # if it is a directory, we dont open a file
