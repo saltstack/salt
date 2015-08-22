@@ -998,8 +998,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             self.file_mapping[f_noext] = (fpath, ext)
                 except OSError:
                     continue
-            for smod in self.static_modules:
-                self.file_mapping[smod] = (smod, '.o')
+        for smod in self.static_modules:
+            self.file_mapping[smod] = (smod, '.o')
 
     def clear(self):
         '''
