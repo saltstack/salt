@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import json
 
 # Import Salt libs
 import salt.utils
@@ -59,7 +60,6 @@ def _exit_status(retcode):
 #info <uuid> [type,...]
 #install <uuid>
 #kill [-s SIGNAL|-SIGNAL] <uuid>
-#lookup [-j|-1] [-o field,...] [field=value ...]
 #reboot <uuid> [-F]
 #receive [-f <filename>]
 #reprovision [-f <filename>]
@@ -137,5 +137,45 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=Fa
             result.append(vm_data)
     return result
 
+
+def lookup(search=None, order=None):
+    '''
+    Return a list of VMs using lookup
+
+    search : string
+        Specifies the vmadm filter property
+    order : string
+        Specifies the vmadm order (-o) property
+        Default: uuid,type,ram,state,alias
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.lookup search='state=running'
+        salt '*' vmadm.lookup search='state=running' orde=uuid,alias,hostname
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    # vmadm lookup [-j|-1] [-o field,...] [field=value ...]
+    cmd = '{vmadm} lookup -j {order} {search}'.format(
+        vmadm=vmadm,
+        order='-o {0}'.format(order) if order else '',
+        search=search if search else ''
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = []
+    if retcode != 0:
+        if 'stderr' not in res:
+            ret['Error'] = _exit_status(retcode)
+        else:
+            ret['Error'] = res['stderr']
+        return ret
+
+    for vm in json.loads(res['stdout']):
+        result.append(vm)
+
+    return result
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
