@@ -55,7 +55,7 @@ def _makedirs(path):
         if exc.errno != errno.EEXIST:
             raise
 
-
+@destructiveTest
 @skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
 
