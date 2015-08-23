@@ -454,22 +454,19 @@ def _elb_present(
             raise SaltInvocationError('Listeners must have at minimum port,'
                                       ' instance_port and protocol values in'
                                       ' the provided list.')
-        if 'elb_port' not in listener:
-            raise SaltInvocationError('elb_port is a required value for'
-                                      ' listeners.')
-        if 'instance_port' not in listener:
-            raise SaltInvocationError('instance_port is a required value for'
-                                      ' listeners.')
-        if 'elb_protocol' not in listener:
-            raise SaltInvocationError('elb_protocol is a required value for'
-                                      ' listeners.')
+        for config in ('elb_port', 'instance_port', 'elb_protocol'):
+            if not listener.get(config):
+                raise SaltInvocationError(
+                    '{0} is a required value for listeners.'.format(config)
+                )
+
         listener['elb_protocol'] = listener['elb_protocol'].upper()
         if listener['elb_protocol'] == 'HTTPS' and 'certificate' not in listener:
             raise SaltInvocationError('certificate is a required value for'
                                       ' listeners if HTTPS is set for'
                                       ' elb_protocol.')
         # We define all listeners as complex listeners.
-        if 'instance_protocol' not in listener:
+        if not listener.get('instance_protocol'):
             listener['instance_protocol'] = listener['elb_protocol'].upper()
         else:
             listener['instance_protocol'] = listener['instance_protocol'].upper()
