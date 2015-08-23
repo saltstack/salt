@@ -134,7 +134,8 @@ def minion_mods(
         include_errors=False,
         initial_load=False,
         loaded_base_name=None,
-        notify=False):
+        notify=False,
+        static_modules=None):
     '''
     Load execution modules
 
@@ -182,7 +183,8 @@ def minion_mods(
                      tag='module',
                      pack={'__context__': context, '__utils__': utils},
                      whitelist=whitelist,
-                     loaded_base_name=loaded_base_name)
+                     loaded_base_name=loaded_base_name,
+                     static_modules=static_modules)
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
