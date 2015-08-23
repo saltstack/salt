@@ -280,7 +280,6 @@ def load_args_and_kwargs(func, args, data=None):
                 # salt.utils.cli.yamlify_arg(), which could mangle the input.
                 _args.append(arg)
             elif string_kwarg:
-                import traceback; traceback.print_stack()
                 salt.utils.warn_until(
                     'Boron',
                     'The list of function args and kwargs should be parsed '
