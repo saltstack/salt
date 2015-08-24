@@ -85,9 +85,9 @@ class OutputReturnTest(integration.ShellCase):
         '''
         Tests outputter reliability with utf8
         '''
-        opts = copy.deepcopy(self.minion_opts)
+        opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion"))
         opts['output_file'] = os.path.join(
-            self.minion_opts['root_dir'], 'outputtest')
+            opts['root_dir'], 'outputtest')
         data = {'foo': {'result': False,
                         'aaa': 'azerzaeréééé',
                         'comment': u'ééééàààà'}}
