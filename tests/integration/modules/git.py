@@ -41,7 +41,7 @@ def _worktrees_supported():
     '''
     git_version = subprocess.Popen(
         ['git', '--version'],
-        shell=True,
+        shell=False,
         close_fds=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).communicate()[0]
