@@ -53,7 +53,6 @@ def _exit_status(retcode):
 ## TODO
 #create [-f <filename>]
 #create-snapshot <uuid> <snapname>
-#console <uuid>
 #delete <uuid>
 #delete-snapshot <uuid> <snapname>
 #get <uuid>
