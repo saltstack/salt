@@ -186,10 +186,10 @@ class SaltEvent(object):
         if salt.utils.is_windows() and not hasattr(opts, 'ipc_mode'):
             opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
-        if not self.cpub:
-            self.connect_pub()
         self.pending_tags = []
         self.pending_events = []
+        if not self.cpub:
+            self.connect_pub()
         self.__load_cache_regex()
 
     @classmethod

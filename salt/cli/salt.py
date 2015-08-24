@@ -87,7 +87,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 self._output_ret(ret, '')
 
             else:
-                batch = salt.cli.batch.Batch(self.config, eauth=eauth)
+                try:
+                    batch = salt.cli.batch.Batch(self.config, eauth=eauth)
+                except salt.exceptions.SaltClientError as exc:
+                    # We will print errors to the console further down the stack
+                    sys.exit(1)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
                     if self.options.failhard:
