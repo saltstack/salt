@@ -2413,6 +2413,10 @@ class BaseHighState(object):
                             saltenv=saltenv
                         )
                     )
+            if found > 1:
+                log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
+                            'Top file merging order is undefined; '
+                            'for better results use \'same\' option')
 
         if found == 0:
             log.error('No contents found in top file')
