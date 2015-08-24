@@ -11,8 +11,8 @@ Salt now uses a portable python. As a result the entire pip module is now
 functional on the salt installation itself. You can pip install dependencies
 for your custom modules. You can even upgrade salt itself using pip. For this
 to work properly, you must specify the Current Working Directory (``cwd``) and
-the Pip Binary (``bin_env``) salt should use.  The variable ``pip_bin`` can
-be either a virtualenv path or the path to the pip binary itself.
+the Pip Binary (``bin_env``) salt should use.  The variable ``pip_bin`` can be
+either a virtualenv path or the path to the pip binary itself.
 
 For example, the following command will list all software installed using pip
 to your current salt environment:
@@ -223,10 +223,8 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 )
                 if not cached_requirements:
                     ret = {'result': False,
-                           'comment': 'pip requirements file {0!r} not found'.format(
-                               requirement
-                               )
-                           }
+                           'comment': 'pip requirements file \'{0}\' not found'
+                                      .format(requirement)}
                     return None, ret
                 requirement = cached_requirements
 
@@ -236,12 +234,12 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 treq = salt.utils.mkstemp()
                 shutil.copyfile(requirement, treq)
                 logger.debug(
-                    'Changing ownership of requirements file {0!r} to '
-                    'user {1!r}'.format(treq, user)
+                    'Changing ownership of requirements file \'{0}\' to '
+                    'user \'{1}\''.format(treq, user)
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+            cmd.extend(['--requirement', treq or requirement])
     return cleanup_requirements, None
 
 
@@ -458,9 +456,13 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     cmd = [pip_bin, 'install']
 
-    cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
-                                                        saltenv=saltenv, user=user,
-                                                        no_chown=no_chown)
+    cleanup_requirements, error = _process_requirements(
+        requirements=requirements,
+        cmd=cmd,
+        saltenv=saltenv,
+        user=user,
+        no_chown=no_chown)
+
     if error:
         return error
 
@@ -495,21 +497,26 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('{0!r} is not writeable'.format(log))
+            raise IOError('\'{0}\' is not writeable'.format(log))
 
-        cmd.append('--log={0}'.format(log))
+        cmd.extend(['--log', log])
 
     if proxy:
-        cmd.append('--proxy={0!r}'.format(proxy))
+        cmd.extend(['--proxy', proxy])
 
     if timeout:
         try:
+            if isinstance(timeout, float):
+                # Catch floating point input, exception will be caught in
+                # exception class below.
+                raise ValueError('Timeout cannot be a float')
             int(timeout)
         except ValueError:
             raise ValueError(
-                '{0!r} is not a valid integer base 10.'.format(timeout)
+                '\'{0}\' is not a valid timeout, must be an integer'
+                .format(timeout)
             )
-        cmd.append('--timeout={0}'.format(timeout))
+        cmd.extend(['--timeout', timeout])
 
     if find_links:
         if isinstance(find_links, string_types):
@@ -518,7 +525,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for link in find_links:
             if not (salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
-                    '{0!r} must be a valid URL or path'.format(link)
+                    '\'{0}\' is not a valid URL or path'.format(link)
                 )
             cmd.append('--find-links={0}'.format(link))
 
@@ -531,16 +538,16 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if index_url:
         if not salt.utils.valid_url(index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                '{0!r} must be a valid URL'.format(index_url)
+                '\'{0}\' is not a valid URL'.format(index_url)
             )
-        cmd.append('--index-url={0!r}'.format(index_url))
+        cmd.extend(['--index-url', index_url])
 
     if extra_index_url:
         if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                '{0!r} must be a valid URL'.format(extra_index_url)
+                '\'{0}\' is not a valid URL'.format(extra_index_url)
             )
-        cmd.append('--extra-index-url={0!r}'.format(extra_index_url))
+        cmd.extend(['--extra-index-url', extra_index_url])
 
     if no_index:
         cmd.append('--no-index')
@@ -553,7 +560,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for mirror in mirrors:
             if not mirror.startswith('http://'):
                 raise CommandExecutionError(
-                    '{0!r} must be a valid URL'.format(mirror)
+                    '\'{0}\' is not a valid URL'.format(mirror)
                 )
             cmd.append('--mirrors={0}'.format(mirror))
 
@@ -584,11 +591,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if exists_action:
         if exists_action.lower() not in ('s', 'i', 'w', 'b'):
             raise CommandExecutionError(
-                'The `exists_action`(`--exists-action`) pip option only '
-                'allows one of (s, i, w, b) to be passed. The {0!r} value '
-                'is not valid.'.format(exists_action)
+                'The exists_action pip option only supports the values '
+                's, i, w, and b. \'{0}\' is not valid.'.format(exists_action)
             )
-        cmd.append('--exists-action={0}'.format(exists_action))
+        cmd.extend(['--exists-action', exists_action])
 
     if no_deps:
         cmd.append('--no-deps')
@@ -608,21 +614,21 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.append('--pre')
 
     if cert:
-        cmd.append('--cert={0}'.format(cert))
+        cmd.append(['--cert', cert])
 
     if global_options:
         if isinstance(global_options, string_types):
             global_options = [go.strip() for go in global_options.split(',')]
 
         for opt in global_options:
-            cmd.append('--global-option={0!r}'.format(opt))
+            cmd.extend(['--global-option', opt])
 
     if install_options:
         if isinstance(install_options, string_types):
             install_options = [io.strip() for io in install_options.split(',')]
 
         for opt in install_options:
-            cmd.append('--install-option={0!r}'.format(opt))
+            cmd.extend(['--install-option', opt])
 
     if pkgs:
         if isinstance(pkgs, string_types):
@@ -632,14 +638,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in while making sure the names are contained in
         # quotes, this allows for proper version spec passing salt>=0.17.0
-        if salt.utils.is_windows():
-            cmd.extend(
-                ['{0}'.format(p.replace(';', ',')) for p in pkgs]
-            )
-        else:
-            cmd.extend(
-                ['{0!r}'.format(p.replace(';', ',')) for p in pkgs]
-            )
+        cmd.extend(['{0}'.format(p.replace(';', ',')) for p in pkgs])
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
@@ -670,7 +669,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if allow_unverified:
         if isinstance(allow_unverified, string_types):
-            allow_unverified = [p.strip() for p in allow_unverified.split(',')]
+            allow_unverified = \
+                [p.strip() for p in allow_unverified.split(',')]
 
         for pkg in allow_unverified:
             cmd.append('--allow-unverified {0}'.format(pkg))
@@ -685,7 +685,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-        return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
+        return __salt__['cmd.run_all'](' '.join(cmd),
+                                       python_shell=False,
+                                       **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -780,21 +782,26 @@ def uninstall(pkgs=None,
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('{0!r} is not writeable'.format(log))
+            raise IOError('\'{0}\' is not writeable'.format(log))
 
-        cmd.append('--log={0}'.format(log))
+        cmd.extend(['--log', log])
 
     if proxy:
-        cmd.append('--proxy={0!r}'.format(proxy))
+        cmd.extend(['--proxy', proxy])
 
     if timeout:
         try:
+            if isinstance(timeout, float):
+                # Catch floating point input, exception will be caught in
+                # exception class below.
+                raise ValueError('Timeout cannot be a float')
             int(timeout)
         except ValueError:
             raise ValueError(
-                '{0!r} is not a valid integer base 10.'.format(timeout)
+                '\'{0}\' is not a valid timeout, must be an integer'
+                .format(timeout)
             )
-        cmd.append('--timeout={0}'.format(timeout))
+        cmd.extend(['--timeout', timeout])
 
     if pkgs:
         if isinstance(pkgs, string_types):
@@ -910,7 +917,7 @@ def list_(prefix=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line {0!r}'.format(line))
+            logger.error('Can\'t parse line \'{0}\''.format(line))
             continue
 
         if prefix:
@@ -976,7 +983,7 @@ def list_upgrades(bin_env=None,
         if match:
             name, version_ = match.groups()
         else:
-            logger.error('Can\'t parse line {0!r}'.format(line))
+            logger.error('Can\'t parse line \'{0}\''.format(line))
             continue
         packages[name] = version_
     return packages
