@@ -362,3 +362,7 @@ control the behaviour of salt:
         top files will be merged together. The order in which top files are
         merged together can be controlled with `env_order`.
 
+    - `default_top`
+        If `top_file_merging_strategy` is set to `same` and an environment does
+        not contain a top file, the top file in the environment specified by
+        `default_top` will be used instead.
