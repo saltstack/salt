@@ -57,8 +57,6 @@ def _exit_status(retcode):
 #delete-snapshot <uuid> <snapname>
 #get <uuid>
 #info <uuid> [type,...]
-#install <uuid>
-#kill [-s SIGNAL|-SIGNAL] <uuid>
 #receive [-f <filename>]
 #reprovision [-f <filename>]
 #rollback-snapshot <uuid> <snapname>
