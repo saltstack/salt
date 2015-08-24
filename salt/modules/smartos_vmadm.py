@@ -53,7 +53,6 @@ def _exit_status(retcode):
 ## TODO
 #create [-f <filename>]
 #create-snapshot <uuid> <snapname>
-#delete <uuid>
 #delete-snapshot <uuid> <snapname>
 #get <uuid>
 #info <uuid> [type,...]
@@ -354,5 +353,44 @@ def sysrq(vm=None, action='nmi', key='uuid'):
         return ret
     return True
 
+
+def delete(vm=None, key='uuid'):
+    '''
+    Delete a vm
+
+    vm : string
+        Specifies the vm
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.delete 186da9ab-7392-4f55-91a5-b8f1fe770543
+        salt '*' vmadm.delete nacl key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm delete <uuid>
+    cmd = '{vmadm} delete {uuid}'.format(
+        vmadm=vmadm,
+        uuid=vm
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
