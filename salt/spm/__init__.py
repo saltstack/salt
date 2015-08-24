@@ -109,6 +109,8 @@ class SPMClient(object):
                 self._list_files(args)
             elif command == 'info':
                 self._info(args)
+            else:
+                raise SPMInvocationError('Invalid command \'{0}\''.format(command))
         except SPMException as exc:
             self.ui.error(str(exc))
 
@@ -393,9 +395,9 @@ class SPMClient(object):
         if not self.opts['assume_yes']:
             self.ui.confirm(msg)
 
-        ui.status('... removing')
+        self.ui.status('... removing')
 
-        if not self.pkgfiles['{0}.db_exists'.format(self.db_prov)](self.opts['spm_db']):
+        if not self.pkgdb['{0}.db_exists'.format(self.db_prov)](self.opts['spm_db']):
             raise SPMDatabaseError('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
 
         # Look at local repo index
@@ -441,6 +443,9 @@ class SPMClient(object):
             raise SPMInvocationError('A package filename must be specified')
 
         pkg_file = args[1]
+
+        if not os.path.exists(pkg_file):
+            raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
         comps = pkg_file.split('-')
         comps = '-'.join(comps[:-2]).split('/')

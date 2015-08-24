@@ -4,12 +4,11 @@
 from __future__ import absolute_import
 import os
 import shutil
-import tarfile
 import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, destructiveTest
 
 import salt.config
 import salt.spm
@@ -36,6 +35,7 @@ __opts__ = {
     'file_roots': {'base': [os.path.join(_TMP_SPM, 'salt')]},
     'pillar_roots': {'base': [os.path.join(_TMP_SPM, 'pillar')]},
     'assume_yes': True,
+    'force': False,
 }
 
 _F1 = {
@@ -61,6 +61,7 @@ _F1['contents'] = (
 )
 
 
+@destructiveTest
 class SPMTestUserInterface(salt.spm.SPMUserInterface):
     '''
     Unit test user interface to SPMClient
@@ -68,12 +69,16 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
     def __init__(self):
         self._status = []
         self._confirm = []
+        self._error = []
 
     def status(self, msg):
         self._status.append(msg)
 
     def confirm(self, action):
         self._confirm.append(action)
+
+    def error(self, msg):
+        self._error.append(msg)
 
 
 class SPMTest(TestCase):
@@ -121,6 +126,48 @@ class SPMTest(TestCase):
                 ('release', 'Release: {0}'),
                 ('summary', 'Summary: {0}')):
             assert line.format(_F1['definition'][key]) in lines
+        # Reinstall with force=False, should fail
+        self.ui._error.clear()
+        self.client.run(['local', 'install', pkgpath])
+        assert len(self.ui._error) > 0
+        # Reinstall with force=True, should succeed
+        __opts__['force'] = True
+        self.ui._error.clear()
+        self.client.run(['local', 'install', pkgpath])
+        assert len(self.ui._error) == 0
+        __opts__['force'] = False
+
+    def test_failure_paths(self):
+        fail_args = (
+            ['bogus', 'command'],
+            ['create_repo'],
+            ['build'],
+            ['build', '/nonexistent/path'],
+            ['info'],
+            ['info', 'not_installed'],
+            ['files'],
+            ['files', 'not_installed'],
+            ['install'],
+            ['install', 'nonexistent.spm'],
+            ['remove'],
+            ['remove', 'not_installed'],
+            ['local', 'bogus', 'command'],
+            ['local', 'info'],
+            ['local', 'info', '/nonexistent/path/junk.spm'],
+            ['local', 'files'],
+            ['local', 'files', '/nonexistent/path/junk.spm'],
+            ['local', 'install'],
+            ['local', 'install', '/nonexistent/path/junk.spm'],
+            ['local', 'list'],
+            ['local', 'list', '/nonexistent/path/junk.spm'],
+            # XXX install failure due to missing deps
+            # XXX install failure due to missing field
+        )
+
+        for args in fail_args:
+            self.ui._error.clear()
+            self.client.run(args)
+            assert len(self.ui._error) > 0
 
 
 if __name__ == '__main__':
