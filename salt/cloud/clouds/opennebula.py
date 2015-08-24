@@ -599,7 +599,7 @@ def get_image(vm_):
         if vm_image in (images[image]['name'], images[image]['id']):
             return images[image]['id']
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -659,7 +659,7 @@ def get_location(vm_):
                            locations[location]['id']):
             return locations[location]['id']
     raise SaltCloudNotFound(
-        'The specified location, {0!r}, could not be found.'.format(
+        'The specified location, \'{0}\', could not be found.'.format(
             vm_location
         )
     )
@@ -925,7 +925,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -953,9 +953,9 @@ def create(vm_):
     ret['private_ips'] = private_ip
     ret['public_ips'] = []
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -4261,8 +4261,8 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
+                'Failed to get the data for node \'{0}\'. Remaining '
+                'attempts: {1}'.format(
                     name, attempts
                 )
             )
