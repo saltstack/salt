@@ -9,6 +9,7 @@ import sys
 import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
+from salt.utils.args import yamlify_arg
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
@@ -134,7 +135,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 kwargs['ret_config'] = getattr(self.options, 'return_config')
 
             if getattr(self.options, 'metadata'):
-                kwargs['metadata'] = getattr(self.options, 'metadata')
+                kwargs['metadata'] = yamlify_arg(
+                        getattr(self.options, 'metadata'))
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
