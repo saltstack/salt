@@ -54,7 +54,6 @@ def _exit_status(retcode):
 #create [-f <filename>]
 #create-snapshot <uuid> <snapname>
 #delete-snapshot <uuid> <snapname>
-#get <uuid>
 #info <uuid> [type,...]
 #receive [-f <filename>]
 #reprovision [-f <filename>]
@@ -392,5 +391,45 @@ def delete(vm=None, key='uuid'):
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
+
+
+def get(vm=None, key='uuid'):
+    '''
+    Output the JSON object describing a VM
+
+    vm : string
+        Specifies the vm
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.get 186da9ab-7392-4f55-91a5-b8f1fe770543
+        salt '*' vmadm.get nacl key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm get <uuid>
+    cmd = '{vmadm} get {uuid}'.format(
+        vmadm=vmadm,
+        uuid=vm
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return json.loads(res['stdout'])
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
