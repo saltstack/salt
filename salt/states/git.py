@@ -627,7 +627,7 @@ def latest(name,
                 elif fast_forward is True:
                     merge_action = 'fast-forwarded'
                 else:
-                    merge_action = None
+                    merge_action = 'updated'
 
                 if local_branch is None:
                     # No local branch, no upstream tracking branch
