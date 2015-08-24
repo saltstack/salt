@@ -46,8 +46,9 @@ def _worktrees_supported():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).communicate()[0]
     if not git_version:
-        # Git not installed
+        log.debug('Git not installed')
         return False
+    log.debug('Detected git version ' + git_version)
     try:
         return LooseVersion(git_version.split()[-1]) >= LooseVersion('2.5.0')
     except Exception:
