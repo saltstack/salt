@@ -104,6 +104,17 @@ def _strip_exc(exc):
     return re.sub(r'^Command [\'"].+[\'"] failed: ', '', exc.strerror)
 
 
+def _uptodate(ret, target, comments=None):
+    ret['comment'] = 'Repository {0} is up-to-date'.format(target)
+    if comments:
+        # Shouldn't be making any changes if the repo was up to date, but
+        # report on them so we are alerted to potential problems with our
+        # logic.
+        msg += '\n\nChanges already made: '
+        msg += _format_comments(comments)
+    return ret
+
+
 def _neutral_test(ret, comment):
     ret['result'] = None
     ret['comment'] = comment
@@ -166,8 +177,8 @@ def latest(name,
         Address of the remote repository as passed to "git clone"
 
     rev
-        The remote branch, tag, or revision ID to checkout after
-        clone / before update
+        The remote branch, tag, or revision ID to checkout after clone / before
+        update
 
     target
         Name of the target directory where repository is about to be cloned
@@ -445,6 +456,7 @@ def latest(name,
                 # git ls-remote did not find the rev, and because it's a
                 # hex string <= 40 chars we're going to assume that the
                 # desired rev is a SHA1
+                rev = rev.lower()
                 remote_rev = rev
                 desired_upstream = False
                 remote_rev_type = 'sha1'
@@ -471,6 +483,9 @@ def latest(name,
             all_local_tags = __salt__['git.list_tags'](target, user=user)
             local_rev, local_branch = _get_local_rev_and_branch(target, user)
             has_local_branch = local_branch in all_local_branches
+
+            if remote_rev_type == 'sha1' and local_rev.startswith(remote_rev):
+                return _uptodate(ret, target)
 
             if local_rev is not None and remote_rev is None:
                 return _fail(
@@ -1036,6 +1051,13 @@ def latest(name,
                 msg = str(exc)
             return _fail(ret, msg, comments)
 
+        if (remote_rev_type != 'sha1' and new_rev != remote_rev) \
+                or (remote_rev_type == 'sha1'
+                    and not new_rev.startswith(remote_rev)):
+            # Shouldn't get here, failure to checkout/merge/reset/etc. should
+            # raise an exception further up the chain which will return from
+            # the state before we ever get here.
+            return _fail(ret, 'Failed to update repository', comments)
         if local_rev != new_rev:
             log.info(
                 'Repository {0} updated: {1} => {2}'.format(
@@ -1044,7 +1066,7 @@ def latest(name,
             ret['comment'] = _format_comments(comments)
             ret['changes']['revision'] = {'old': local_rev, 'new': new_rev}
         else:
-            ret['comment'] = 'Repository {0} is up-to-date'.format(target)
+            return _uptodate(ret, target, comments)
     else:
         if os.path.isdir(target):
             if force_clone:
