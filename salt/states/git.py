@@ -110,8 +110,8 @@ def _uptodate(ret, target, comments=None):
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
         # logic.
-        msg += '\n\nChanges already made: '
-        msg += _format_comments(comments)
+        ret['comment'] += '\n\nChanges already made: '
+        ret['comment'] += _format_comments(comments)
     return ret
 
 
