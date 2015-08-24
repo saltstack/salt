@@ -140,26 +140,27 @@ def latest(name,
            target=None,
            branch=None,
            user=None,
-           force_clone=False,
            force_checkout=False,
+           force_clone=False,
+           force_fetch=False,
            force_reset=False,
            submodules=False,
            bare=False,
            mirror=False,
            remote='origin',
-           always_fetch=False,
            fetch_tags=True,
            depth=None,
            identity=None,
            https_user=None,
            https_pass=None,
-           remote_name=None,
-           force=None,
            onlyif=False,
-           unless=False):
+           unless=False,
+           **kwargs):
     '''
     Make sure the repository is cloned to the given directory and is up to
-    date.  The remote tracking branch will be set to ``<remote>/<rev>``.
+    date. The remote tracking branch will be set to ``<remote>/<rev>``, unless
+    ``rev`` refers to a tag or SHA1, in which case no remote tracking branch
+    will be set.
 
     name
         Address of the remote repository as passed to "git clone"
@@ -185,19 +186,32 @@ def latest(name,
 
         .. versionadded:: 0.17.0
 
-    force_clone : False
-        Force git to clone into pre-existing directories (deletes contents)
-
     force : False
         .. deprecated:: 2015.8.0
             Use ``force_clone`` instead. For earlier Salt versions, ``force``
             must be used.
 
     force_checkout : False
-        Force a checkout even if there might be overwritten changes
+        When checking out the local branch, the state will fail if there are
+        unwritten changes. Set this argument to ``True`` to discard unwritten
+        changes when checking out.
+
+    force_clone : False
+        If the ``target`` directory exists and is not a git repository, then
+        this state will fail. Set this argument to ``True`` to remove the
+        contents of the target directory and clone the repo into it.
+
+    force_fetch : False
+        If a fetch needs to be performed, non-fast-forward fetches will cause
+        this state to fail. Set this argument to ``True`` to force the fetch
+        even if it is a non-fast-forward update.
+
+        .. versionadded:: 2015.8.0
 
     force_reset : False
-        Force a hard-reset to the remote ref, if necessary
+        If the update is not a fast-forward, this state will fail. Set this
+        argument to ``True`` to force a hard-reset to the remote revision in
+        these cases.
 
     submodules : False
         Update submodules on clone or branch change
@@ -226,17 +240,6 @@ def latest(name,
         .. deprecated:: 2015.8.0
             Use ``remote`` instead. For earlier Salt versions, ``remote_name``
             must be used.
-
-    always_fetch : False
-        It ``False``, then if the local checkout has an upstream tracking
-        branch, and the tracking branch will not be changed by this state, a
-        fetch will not be performed. Set to ``True`` to force a fetch in this
-        instance.
-
-        .. versionchanged:: 2015.8.0
-            In addition to the above condition, a fetch will also not be
-            performed if the local checkout already has an up-to-date version
-            of ``rev``.
 
     fetch_tags : True
         If ``True``, then when a fetch is performed all tags will be fetched,
@@ -308,21 +311,36 @@ def latest(name,
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    if remote_name is not None:
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    always_fetch = kwargs.pop('always_fetch', False)
+    force = kwargs.pop('force', False)
+    remote_name = kwargs.pop('remote_name', False)
+    if kwargs:
+        return _fail(
+            ret,
+            salt.utils.invalid_kwargs(kwargs, raise_exc=False)
+        )
+
+    if always_fetch:
         salt.utils.warn_until(
             'Nitrogen',
-            'The \'remote_name\' argument to the git.latest state has been '
-            'deprecated, please use \'remote\' instead.'
+            'The \'always_fetch\' argument to the git.latest state no longer '
+            'has any effect, see the 2015.8.0 release notes for details.'
         )
-        remote = remote_name
-
-    if force is not None:
+    if force:
         salt.utils.warn_until(
             'Nitrogen',
             'The \'force\' argument to the git.latest state has been '
             'deprecated, please use \'force_clone\' instead.'
         )
         force_clone = force
+    if remote_name:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'remote_name\' argument to the git.latest state has been '
+            'deprecated, please use \'remote\' instead.'
+        )
+        remote = remote_name
 
     if not remote:
         return _fail(ret, '\'remote\' option is required')
@@ -390,7 +408,7 @@ def latest(name,
         ret.update(cret)
         return ret
 
-    fetch_opts = [
+    refspecs = [
         'refs/heads/*:refs/remotes/{0}/*'.format(remote),
         '+refs/tags/*:refs/tags/*'
     ] if fetch_tags else []
@@ -476,24 +494,42 @@ def latest(name,
                 has_remote_rev = False
                 if remote_rev is not None:
                     try:
-                        resolved_remote_rev = __salt__['git.rev_parse'](
+                        __salt__['git.rev_parse'](
                             target,
                             remote_rev + '^{commit}',
                             ignore_retcode=True)
-                        has_remote_rev = True
                     except CommandExecutionError:
                         # Local checkout doesn't have the remote_rev
                         pass
                     else:
-                        if remote_rev_type == 'tag':
-                            # The object might exist enough to get a rev-parse
-                            # to work, while the local ref could have been
-                            # deleted. Do some further sanity checks to
-                            # determine if we really do have the remote_rev
-                            if rev not in all_local_tags:
-                                # Local tag doesn't exist, we'll need to fetch
-                                has_remote_rev = False
-                            else:
+                        # The object might exist enough to get a rev-parse to
+                        # work, while the local ref could have been
+                        # deleted/changed/force updated. Do some further sanity
+                        # checks to determine if we really do have the
+                        # remote_rev.
+                        if remote_rev_type == 'branch':
+                            if remote in remotes:
+                                try:
+                                    # Do a rev-parse on <remote>/<rev> to get
+                                    # the local SHA1 for it, so we can compare
+                                    # it to the remote_rev SHA1.
+                                    local_copy = __salt__['git.rev_parse'](
+                                        target,
+                                        desired_upstream,
+                                        ignore_retcode=True)
+                                except CommandExecutionError:
+                                    pass
+                                else:
+                                    # If the SHA1s don't match, then the remote
+                                    # branch was force-updated, and we need to
+                                    # fetch to update our local copy the ref
+                                    # for the remote branch. If they do match,
+                                    # then we have the remote_rev and don't
+                                    # need to fetch.
+                                    if local_copy == remote_rev:
+                                        has_remote_rev = True
+                        elif remote_rev_type == 'tag':
+                            if rev in all_local_tags:
                                 try:
                                     local_tag_sha1 = __salt__['git.rev_parse'](
                                         target,
@@ -504,27 +540,32 @@ def latest(name,
                                     # locally but account for this just in
                                     # case.
                                     local_tag_sha1 = None
-                                if local_tag_sha1 != remote_rev:
-                                    # Remote tag is different than local tag,
-                                    # unless we're doing a hard reset then we
-                                    # don't need to proceed as we know that the
-                                    # fetch will update the tag and the only
-                                    # way to make the state succeed is to reset
-                                    # the branch to point at the tag's new rev
-                                    return _fail(
-                                        ret,
-                                        '\'{0}\' is a tag, but the remote '
-                                        'SHA1 for this tag ({1}) doesn\'t '
-                                        'match the local SHA1 ({2}). Set '
-                                        '\'force_reset\' to True to force '
-                                        'this update.'.format(
-                                            rev,
-                                            remote_rev[:7],
-                                            local_tag_sha1[:7] if
-                                                local_tag_sha1 is not None
-                                                else None
+                                if local_tag_sha1 == remote_rev:
+                                    has_remote_rev = True
+                                else:
+                                    if not force_reset:
+                                        # SHA1 of tag on remote repo is
+                                        # different than local tag. Unless
+                                        # we're doing a hard reset then we
+                                        # don't need to proceed as we know that
+                                        # the fetch will update the tag and the
+                                        # only way to make the state succeed is
+                                        # to reset the branch to point at the
+                                        # tag's new location.
+                                        return _fail(
+                                            ret,
+                                            '\'{0}\' is a tag, but the remote '
+                                            'SHA1 for this tag ({1}) doesn\'t '
+                                            'match the local SHA1 ({2}). Set '
+                                            '\'force_reset\' to True to force '
+                                            'this update.'.format(
+                                                rev,
+                                                remote_rev[:7],
+                                                local_tag_sha1[:7] if
+                                                    local_tag_sha1 is not None
+                                                    else None
+                                            )
                                         )
-                                    )
 
                 pre_rev = None
                 if not has_remote_rev or not has_local_branch:
@@ -572,11 +613,6 @@ def latest(name,
                     merge_action = 'fast-forwarded'
                 else:
                     merge_action = None
-
-                # If always_fetch is set to True, then we definitely need to
-                # fetch. Otherwise, we'll rely on the logic below to turn on
-                # fetch_needed if a fetch is required.
-                fetch_needed = always_fetch
 
                 if local_branch is None:
                     # No local branch, no upstream tracking branch
@@ -662,20 +698,14 @@ def latest(name,
                     comments.append(
                         'Remote \'{0}\' set to {1}'.format(remote, name)
                     )
-                    # We need to fetch since the remote was just set and we
-                    # need to grab all its refs.
-                    fetch_needed = True
 
                 if rev:
-                    if not has_remote_rev:
-                        fetch_needed = True
-
                     if __opts__['test']:
                         ret['changes']['revision'] = {
                             'old': local_rev, 'new': remote_rev
                         }
                         actions = []
-                        if fetch_needed:
+                        if not has_remote_rev:
                             actions.append(
                                 'Remote \'{0}\' would be fetched'
                                 .format(remote)
@@ -778,20 +808,35 @@ def latest(name,
                             .format(desired_upstream)
                         )
                         branch_opts = ['--set-upstream-to', desired_upstream]
-                        fetch_needed = True
                     else:
                         branch_opts = None
 
-                    if fetch_needed:
-                        output = __salt__['git.fetch'](
-                            target,
-                            remote=remote,
-                            opts=fetch_opts,
-                            user=user,
-                            identity=identity)
-                        fetch_changes = _parse_fetch(output)
-                        if fetch_changes:
-                            ret['changes']['fetch'] = fetch_changes
+                    if not has_remote_rev:
+                        try:
+                            output = __salt__['git.fetch'](
+                                target,
+                                remote=remote,
+                                force=force_fetch,
+                                refspecs=refspecs,
+                                user=user,
+                                identity=identity)
+                        except CommandExecutionError as exc:
+                            msg = 'Fetch failed'
+                            if isinstance(exc, CommandExecutionError):
+                                msg += (
+                                    '. Set \'force_fetch\' to True to force '
+                                    'the fetch if the failure was due to it '
+                                    'bein non-fast-forward. Output of the '
+                                    'fetch command follows:\n\n'
+                                )
+                                msg += _strip_exc(exc)
+                            else:
+                                msg += ':\n\n' + str(exc)
+                            return _fail(ret, msg, comments)
+                        else:
+                            fetch_changes = _parse_fetch(output)
+                            if fetch_changes:
+                                ret['changes']['fetch'] = fetch_changes
 
                     try:
                         __salt__['git.rev_parse'](
@@ -848,6 +893,16 @@ def latest(name,
                             comments)
 
                     if branch != local_branch:
+                        local_changes = __salt__['git.status'](target,
+                                                               user=user)
+                        if local_changes and not force_checkout:
+                            return _fail(
+                                ret,
+                                'Local branch \'{0}\' has uncommitted '
+                                'changes. Set \'force_checkout\' to discard '
+                                'them and proceed.'
+                            )
+
                         # TODO: Maybe re-retrieve all_local_branches to handle
                         # the corner case where the destination branch was
                         # added to the local checkout during a fetch that takes
@@ -939,7 +994,8 @@ def latest(name,
                     output = __salt__['git.fetch'](
                         target,
                         remote=remote,
-                        opts=fetch_opts,
+                        force=force_fetch,
+                        refspecs=refspecs,
                         user=user,
                         identity=identity)
                     fetch_changes = _parse_fetch(output)
