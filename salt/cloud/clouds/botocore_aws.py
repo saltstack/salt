@@ -92,7 +92,7 @@ def __virtual__():
 
         if not os.path.exists(details['private_key']):
             raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
+                'The AWS key file \'{0}\' used in the \'{1}\' provider '
                 'configuration does not exist\n'.format(
                     details['private_key'],
                     provider
@@ -104,7 +104,7 @@ def __virtual__():
         )
         if keymode not in ('0400', '0600'):
             raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
+                'The AWS key file \'{0}\' used in the \'{1}\' provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
                     details['private_key'],
                     provider

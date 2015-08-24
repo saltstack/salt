@@ -70,10 +70,10 @@ def main():
         config.set(HOST, 'password', password)
 
         config.write(open(RCFILE, 'w'))
-        print('username and password stored in {0!r}'.format(RCFILE))
+        print('username and password stored in \'{0}\''.format(RCFILE))
 
         os.chmod(RCFILE, 0600)
-        print('Secured the permissions on {0!r} to 0600'.format(RCFILE))
+        print('Secured the permissions on \'{0}\' to 0600'.format(RCFILE))
 
         sys.exit(0)
 

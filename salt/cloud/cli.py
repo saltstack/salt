@@ -51,12 +51,14 @@ class SaltCloud(parsers.SaltCloudParser):
         if not check_user(salt_master_user):
             self.error(
                 'If salt-cloud is running on a master machine, salt-cloud '
-                'needs to run as the same user as the salt-master, {0!r}. If '
-                'salt-cloud is not running on a salt-master, the appropriate '
-                'write permissions must be granted to {1!r}. Please run '
-                'salt-cloud as root, {0!r}, or change permissions for '
-                '{1!r}.'.format(salt_master_user,
-                                syspaths.CONFIG_DIR)
+                'needs to run as the same user as the salt-master, \'{0}\'. '
+                'If salt-cloud is not running on a salt-master, the '
+                'appropriate write permissions must be granted to \'{1}\'. '
+                'Please run salt-cloud as root, \'{0}\', or change '
+                'permissions for \'{1}\'.'.format(
+                    salt_master_user,
+                    syspaths.CONFIG_DIR
+                )
             )
 
         try:
@@ -124,7 +126,9 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.handle_exception(msg, exc)
 
             elif self.config.get('map', None):
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+                log.info(
+                    'Applying map from \'{0}\'.'.format(self.config['map'])
+                )
                 try:
                     ret = mapper.interpolated_map(
                         query=self.selected_query_option
@@ -211,7 +215,9 @@ class SaltCloud(parsers.SaltCloudParser):
         elif self.options.action and (self.config.get('names', None) or
                                       self.config.get('map', None)):
             if self.config.get('map', None):
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+                log.info(
+                    'Applying map from \'{0}\'.'.format(self.config['map'])
+                )
                 try:
                     names = mapper.get_vmnames_by_action(self.options.action)
                 except SaltCloudException as exc:
@@ -293,7 +299,9 @@ class SaltCloud(parsers.SaltCloudParser):
                 ret = {}
                 run_map = True
 
-                log.info('Applying map from {0!r}.'.format(self.config['map']))
+                log.info(
+                    'Applying map from \'{0}\'.'.format(self.config['map'])
+                )
                 dmap = mapper.map_data()
 
                 msg = ''
