@@ -1,6 +1,6 @@
-
-Changes for v2015.5.2..v2015.5.3
---------------------------------
+===========================
+Salt 2015.5.3 Release Notes
+===========================
 
 Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -621,7 +621,7 @@ Changes:
 
   - **ISSUE** `#24560`_: (*hydrosine*) Documentation missing on parameter
     | refs: `#24632`_
-  - **ISSUE** `#24547`_: (*dragonpaw*) Artifactory docs say module is 'jboss7'. 
+  - **ISSUE** `#24547`_: (*dragonpaw*) Artifactory docs say module is 'jboss7'.
     | refs: `#24632`_
   - **ISSUE** `#24375`_: (*companykitchen-dev*) Custom grain won't sync under any circumstances
     | refs: `#24632`_
@@ -634,7 +634,7 @@ Changes:
 
   * c7cdd41 Doc bug fixes Refs `#24547`_ Refs `#24275`_ Refs `#24375`_ Refs `#24560`_ Refs `#24163`_
 
-- **PR** `#24607`_: (*garethgreenaway*) fixes to minion.py 
+- **PR** `#24607`_: (*garethgreenaway*) fixes to minion.py
   @ *2015-06-17T18:16:42Z*
 
   - **ISSUE** `#24198`_: (*ahammond*) salt-call event.send doesn't send events from minion
@@ -852,7 +852,7 @@ Changes:
     | refs: `#24591`_
   - **ISSUE** `#21217`_: (*Colstuwjx*) Maybe a bug for jinja render?
     | refs: `#24591`_
-  - **PR** `#24591`_: (*tbaker57*) Add some documentation surrounding Jinja vs yaml comments - 
+  - **PR** `#24591`_: (*tbaker57*) Add some documentation surrounding Jinja vs yaml comments -
     | refs: `#24631`_
   - **PR** `#24492`_: (*DmitryKuzmenko*) Don't remove grains from opts
   * 5f491f9 Merge pull request `#24631`_ from rallytime/`bp-24591`_
@@ -1284,7 +1284,7 @@ Changes:
 - **PR** `#24426`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
   @ *2015-06-05T03:59:11Z*
 
-  - **ISSUE** `#24276`_: (*markuskramerIgitt*) Live salt-master Profiling with SIGUSR2 fails 
+  - **ISSUE** `#24276`_: (*markuskramerIgitt*) Live salt-master Profiling with SIGUSR2 fails
   - **PR** `#24405`_: (*jacksontj*) Fix for `#24276`_
   - **PR** `#24395`_: (*hvnsweeting*) handle exceptions when received data is not in good shape
   - **PR** `#24305`_: (*twangboy*) Added documentation, fixed formatting
