@@ -283,7 +283,8 @@ def lookup(search=None, order=None, one=False):
     .. code-block:: bash
 
         salt '*' vmadm.lookup search='state=running'
-        salt '*' vmadm.lookup saerch='state=running' order=uuid,alias,hostname
+        salt '*' vmadm.lookup search='state=running' order=uuid,alias,hostname
+        salt '*' vmadm.lookup search='alias=nacl' one=True
     '''
     ret = {}
     vmadm = _check_vmadm()
