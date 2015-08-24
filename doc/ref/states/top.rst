@@ -38,7 +38,7 @@ Top files have three components:
 
     - State files: A list of state files to apply to a target. Each state
       file describes one or more states to be configured and enforced
-      on the targeted machines. 
+      on the targeted machines.
 
 
 The relationship between these three components is nested as follows:
@@ -77,7 +77,7 @@ calls for multiple versions of state trees.
 Getting Started with Top Files
 ==============================
 
-Each environment is defined inside a salt master configuration variable 
+Each environment is defined inside a salt master configuration variable
 called, :conf_master:`file_roots` .
 
 
@@ -237,10 +237,10 @@ of matches you can perform:
             - networking
             - salt.minion
 
-        # All minions which have an ID that begins with the phrase 
+        # All minions which have an ID that begins with the phrase
         # 'salt-master' will have an SLS file applied that is named
         # 'master.sls' and is in the 'salt' directory, underneath
-        # the root specified in the ``base`` environment in the 
+        # the root specified in the ``base`` environment in the
         # configuration value for ``file_roots``.
 
         'salt-master*':
@@ -251,8 +251,8 @@ of matches you can perform:
         # nagios/mon directory applied. Additionally, minions matching
         # the regular expression will also have the 'server.sls' file
         # in the apache/ directory applied.
-        
-        # NOTE! 
+
+        # NOTE!
         #
         # Take note of the 'match' directive here, which tells Salt
         # to treat the target string as a regex to be matched!
