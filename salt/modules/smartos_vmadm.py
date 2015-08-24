@@ -474,7 +474,7 @@ def create_snapshot(vm=None, name=None, key='uuid'):
     if vmobj['brand'] in ['kvm']:
         ret['Error'] = 'VM must be of type OS'
         return ret
-    if vmobj['zone_state'] not in ['running']: # work around a vmadm bug
+    if vmobj['zone_state'] not in ['running']:  # work around a vmadm bug
         ret['Error'] = 'VM must be running to take a snapshot'
         return ret
     # vmadm create-snapshot <uuid> <snapname>
