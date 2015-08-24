@@ -55,7 +55,6 @@ def _exit_status(retcode):
 #info <uuid> [type,...]
 #receive [-f <filename>]
 #reprovision [-f <filename>]
-#rollback-snapshot <uuid> <snapname>
 #send <uuid> [target]
 #update <uuid> [-f <filename>]
 # -or- update <uuid> property=value [property=value ...]
@@ -534,11 +533,65 @@ def delete_snapshot(vm=None, name=None, key='uuid'):
     if vmobj['brand'] in ['kvm']:
         ret['Error'] = 'VM must be of type OS'
         return ret
-    if vmobj[''] in ['zone_state']:
-        ret['Error'] = 'VM must be of type OS'
-        return ret
     # vmadm delete-snapshot <uuid> <snapname>
     cmd = '{vmadm} delete-snapshot {uuid} {snapshot}'.format(
+        vmadm=vmadm,
+        snapshot=name,
+        uuid=vm
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
+
+
+def rollback_snapshot(vm=None, name=None, key='uuid'):
+    '''
+    Rollback snapshot of a vm
+
+    vm : string
+        Specifies the vm
+    name : string
+        Name of snapshot.
+        The snapname must be 64 characters or less
+        and must only contain alphanumeric characters and
+        characters in the set [-_.:%] to comply with ZFS restrictions.
+
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.rollback_snapshot 186da9ab-7392-4f55-91a5-b8f1fe770543 baseline
+        salt '*' vmadm.rollback_snapshot nacl baseline key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    if name is None:
+        ret['Error'] = 'Snapshot name most be specified'
+        return ret
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    vmobj = get(vm)
+    if 'datasets' in vmobj:
+        ret['Error'] = 'VM cannot have datasets'
+        return ret
+    if vmobj['brand'] in ['kvm']:
+        ret['Error'] = 'VM must be of type OS'
+        return ret
+    # vmadm rollback-snapshot <uuid> <snapname>
+    cmd = '{vmadm} rollback-snapshot {uuid} {snapshot}'.format(
         vmadm=vmadm,
         snapshot=name,
         uuid=vm
