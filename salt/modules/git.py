@@ -210,7 +210,6 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 result = __salt__['cmd.run_all'](command,
                                                  cwd=cwd,
                                                  runas=runas,
-                                                 output_loglevel='quiet',
                                                  env=env,
                                                  python_shell=False,
                                                  ignore_retcode=ignore_retcode,
@@ -235,7 +234,6 @@ def _git_run(command, cwd=None, runas=None, identity=None,
         result = __salt__['cmd.run_all'](command,
                                          cwd=cwd,
                                          runas=runas,
-                                         output_loglevel='quiet',
                                          env=env,
                                          python_shell=False,
                                          ignore_retcode=ignore_retcode,
@@ -1292,6 +1290,8 @@ def describe(cwd, rev='HEAD', user=None, ignore_retcode=False):
 
 def fetch(cwd,
           remote=None,
+          force=False,
+          refspecs=None,
           opts='',
           user=None,
           identity=None,
@@ -1305,6 +1305,17 @@ def fetch(cwd,
     remote
         Optional remote name to fetch. If not passed, then git will use its
         default behavior (as detailed in `git-fetch(1)`_).
+
+        .. versionadded:: 2015.8.0
+
+    force
+        Force the fetch even when it is not a fast-forward.
+
+        .. versionadded:: 2015.8.0
+
+    refspecs
+        Override the refspec(s) configured for the remote with this argument.
+        Multiple refspecs can be passed, comma-separated.
 
         .. versionadded:: 2015.8.0
 
@@ -1350,11 +1361,28 @@ def fetch(cwd,
     '''
     cwd = _expand_path(cwd, user)
     command = ['git', 'fetch']
+    if force:
+        command.append('--force')
+    command.extend(
+        [x for x in _format_opts(opts) if x not in ('-f', '--force')]
+    )
     if not isinstance(remote, six.string_types):
         remote = str(remote)
     if remote:
         command.append(remote)
-    command.extend(_format_opts(opts))
+    if refspecs is not None:
+        if isinstance(refspecs, (list, tuple)):
+            refspec_list = []
+            for item in refspecs:
+                if not isinstance(item, six.string_types):
+                    refspec_list.append(str(item))
+                else:
+                    refspec_list.append(item)
+        else:
+            if not isinstance(refspecs, six.string_types):
+                refspecs = str(refspecs)
+            refspec_list = refspecs.split(',')
+        command.extend(refspec_list)
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
