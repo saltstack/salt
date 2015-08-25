@@ -23,7 +23,6 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
-import salt.utils.odict
 import salt.utils.event
 import salt.utils.odict
 
@@ -837,6 +836,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         - move modules_max_memory into here
         - singletons (per tag)
     '''
+
+    mod_dict_class = salt.utils.odict.OrderedDict
+
     def __init__(self,
                  module_dirs,
                  opts=None,
@@ -890,7 +892,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         # if we have an attribute named that, lets return it.
         try:
-            return object.__getattr__(self, mod_name)
+            return object.__getattr__(self, mod_name)  # pylint: disable=no-member
         except AttributeError:
             pass
 
@@ -1216,7 +1218,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     module_name
                 )
             )
-        mod_dict = salt.utils.odict.OrderedDict()
+        mod_dict = self.mod_dict_class()
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1242,9 +1244,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # enforce depends
         try:
             Depends.enforce_dependencies(self._dict, self.tag)
-        except RuntimeError as e:
+        except RuntimeError as exc:
             log.info('Depends.enforce_dependencies() failed '
-                     'for reasons: {0}'.format(e))
+                     'for reasons: {0}'.format(exc))
 
         self.loaded_modules[module_name] = mod_dict
         return True
