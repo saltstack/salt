@@ -169,7 +169,7 @@ def execute(context=None, lens=None, commands=()):
             elif method == 'insert':
                 label, where, path = parts
                 if where not in ("before", "after"):
-                  raise ValueError("Expected 'before' or 'after', not %r" % (where,))
+                    raise ValueError("Expected 'before' or 'after', not %r" % (where,))
                 path = make_path(path)
                 args = {'path': path, 'label': label, 'before': where == 'before'}
             elif method == 'remove':
