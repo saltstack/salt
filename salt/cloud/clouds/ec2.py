@@ -187,26 +187,28 @@ def __virtual__():
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'ec2':
+        if 'ec2' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
+        parameters = details['ec2']
+
+        if not os.path.exists(parameters['private_key']):
             raise SaltCloudException(
                 'The EC2 key file {0!r} used in the {1!r} provider '
                 'configuration does not exist\n'.format(
-                    details['private_key'],
+                    parameters['private_key'],
                     provider
                 )
             )
 
         keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
+            oct(stat.S_IMODE(os.stat(parameters['private_key']).st_mode))
         )
         if keymode not in ('0400', '0600'):
             raise SaltCloudException(
                 'The EC2 key file {0!r} used in the {1!r} provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
+                    parameters['private_key'],
                     provider
                 )
             )

@@ -621,7 +621,7 @@ def sls(mods,
         )
         # Backwards compatibility
         saltenv = env
-    if not saltenv:
+    if saltenv is None:
         if __opts__.get('environment', None):
             saltenv = __opts__['environment']
         else:
