@@ -1153,7 +1153,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         refresh_db(branch_arg, repo_arg, exclude_arg)
 
     old = list_pkgs()
-    cmd = '{yum_command}-q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
+    cmd = '{yum_command} -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
         yum_command=_yum(),
         repo=repo_arg,
         exclude=exclude_arg,
