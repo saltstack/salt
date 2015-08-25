@@ -619,7 +619,7 @@ def sls(mods,
         )
         # Backwards compatibility
         saltenv = env
-    if not saltenv:
+    if saltenv is None:
         if __opts__.get('environment', None):
             saltenv = __opts__['environment']
         else:
@@ -632,9 +632,6 @@ def sls(mods,
             pillarenv = __opts__['pillarenv']
     else:
         __opts__['pillarenv'] = pillarenv
-
-    if saltenv is None:
-        saltenv = __opts__['environment'] or 'base'
 
     if queue:
         _wait(kwargs.get('__pub_jid'))
