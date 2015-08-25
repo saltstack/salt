@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+'''
+Tests for git execution module
+
+NOTE: These tests may modify the global git config, and have been marked as
+destructive as a result. If no values are set for user.name or user.email in
+the user's global .gitconfig, then these tests will set one.
+'''
 
 # Import Python Libs
 from __future__ import absolute_import
@@ -33,14 +40,15 @@ def _worktrees_supported():
     Check if the git version is 2.5.0 or later
     '''
     git_version = subprocess.Popen(
-        'git --version',
-        shell=True,
+        ['git', '--version'],
+        shell=False,
         close_fds=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).communicate()[0]
     if not git_version:
-        # Git not installed
+        log.debug('Git not installed')
         return False
+    log.debug('Detected git version ' + git_version)
     try:
         return LooseVersion(git_version.split()[-1]) >= LooseVersion('2.5.0')
     except Exception:
@@ -56,6 +64,7 @@ def _makedirs(path):
             raise
 
 
+@destructiveTest
 @skip_if_binaries_missing('git')
 class GitModuleTest(integration.ModuleCase):
 
@@ -77,11 +86,22 @@ class GitModuleTest(integration.ModuleCase):
                     fp_.write('This is a test file named ' + filename + '.')
         # Navigate to the root of the repo to init, stage, and commit
         os.chdir(self.repo)
+        # Initialize a new git repository
         subprocess.check_call(['git', 'init', '--quiet', self.repo])
-        subprocess.check_call(
-            ['git', 'config', '--global', 'user.name', 'Jenkins'])
-        subprocess.check_call(
-            ['git', 'config', '--global', 'user.email', 'qa@saltstack.com'])
+
+        # Set user.name and user.email config attributes if not present
+        for key, value in (('user.name', 'Jenkins'),
+                           ('user.email', 'qa@saltstack.com')):
+            # Check if key is missing
+            keycheck = subprocess.Popen(
+                ['git', 'config', '--get', '--global', key],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+            if keycheck.wait() != 0:
+                # Set the key if it is not present
+                subprocess.check_call(
+                    ['git', 'config', '--global', key, value])
+
         subprocess.check_call(['git', 'add', '.'])
         subprocess.check_call(
             ['git', 'commit', '--quiet', '--message', 'Initial commit']
@@ -300,7 +320,6 @@ class GitModuleTest(integration.ModuleCase):
         )
         self.assertTrue(bool(re.search(commit_re_prefix + commit_msg, ret)))
 
-    @destructiveTest
     def test_config(self):
         '''
         Test setting, getting, and unsetting config values

@@ -87,7 +87,7 @@ class DigitalOceanTest(integration.ShellCase):
         image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
 
         self.assertIn(
-            '14.10 x64',
+            '14.04 x64',
             [i.strip() for i in image_list]
         )
 

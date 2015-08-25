@@ -16,6 +16,7 @@ import sys
 
 # Import Salt libs
 import salt.utils
+import salt.modules.cmdmod
 import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
@@ -90,7 +91,7 @@ def __virtual__():
         else:
             cmd = 'ls /sys/module/zfs'
 
-    if cmd and __salt__['cmd.retcode'](
+    if cmd and salt.modules.cmdmod.retcode(
         cmd, output_loglevel='quiet', ignore_retcode=True
     ) == 0:
         # Build dynamic functions and allow loading module
