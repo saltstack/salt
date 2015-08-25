@@ -18,7 +18,7 @@ import salt.output
 import salt.utils
 import salt.loader
 import salt.template
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos
@@ -165,7 +165,7 @@ def show_sls(name, saltenv='base'):
             __opts__['renderer'])
 
     # Dump return the error if any
-    except SaltRenderError as exc:  # pylint: disable=E0602
+    except SaltRenderError as exc:
         log.debug('Failed to compile {0}.'.format(sls_file))
         log.debug('Error: {0}.'.format(exc))
         config['Message'] = 'Failed to compile {0}'.format(sls_file)
