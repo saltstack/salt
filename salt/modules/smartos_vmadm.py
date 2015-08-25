@@ -56,7 +56,6 @@ def _exit_status(retcode):
 
 ## TODO
 #create [-f <filename>]
-#info <uuid> [type,...]
 #receive [-f <filename>]
 #send <uuid> [target]
 #update <uuid> [-f <filename>]
@@ -424,6 +423,55 @@ def get(vm=None, key='uuid'):
     cmd = '{vmadm} get {uuid}'.format(
         vmadm=vmadm,
         uuid=vm
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return json.loads(res['stdout'])
+
+
+def info(vm=None, info_type='all', key='uuid'):
+    '''
+    Lookup info on running kvm
+
+    vm : string
+        Specifies the vm
+    info_type : string
+        Specifies what info to return.
+        Value = all|block|blockstats|chardev|cpus|kvm|pci|spice|version|vnc
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.info 186da9ab-7392-4f55-91a5-b8f1fe770543
+        salt '*' vmadm.info 186da9ab-7392-4f55-91a5-b8f1fe770543 vnc
+        salt '*' vmadm.info nacl key=alias
+        salt '*' vmadm.info nacl vnc key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    if info_type not in ['all', 'block', 'blockstats', 'chardev', 'cpus', 'kvm', 'pci', 'spice', 'version', 'vnc']:
+        ret['Error'] = 'Requested info_type is not available'
+        return ret
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm info <uuid> [type,...]
+    cmd = '{vmadm} info {uuid} {type}'.format(
+        vmadm=vmadm,
+        uuid=vm,
+        type=info_type
     )
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
