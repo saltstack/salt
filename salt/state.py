@@ -607,6 +607,7 @@ class State(object):
         self.__run_num = 0
         self.jid = jid
         self.instance_id = str(id(self))
+        self.inject_globals = {}
 
     def _gather_pillar(self):
         '''
@@ -730,6 +731,12 @@ class State(object):
                 ret.update({'comment': 'check_cmd determined the state failed', 'result': False})
                 return ret
         return ret
+
+    def reset_run_num(self):
+        '''
+        Rest the run_num value to 0
+        '''
+        self.__run_num = 0
 
     def load_modules(self, data=None):
         '''
@@ -1550,6 +1557,9 @@ class State(object):
             '__instance_id__': self.instance_id,
             '__lowstate__': immutabletypes.freeze(chunks) if chunks else {}
         }
+
+        if self.inject_globals:
+            inject_globals.update(self.inject_globals)
 
         if low.get('__prereq__'):
             test = sys.modules[self.states[cdata['full']].__module__].__opts__['test']
