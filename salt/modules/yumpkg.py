@@ -1084,7 +1084,7 @@ def install(name=None,
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if to_reinstall:
-        cmd = '{yum_command} {repo} {exclude} {branch} {gpgcheck} reinstall {pkg}'.format(
+        cmd = '{yum_command} -y {repo} {exclude} {branch} {gpgcheck} reinstall {pkg}'.format(
             yum_command=_yum(),
             repo=repo_arg,
             exclude=exclude_arg,
