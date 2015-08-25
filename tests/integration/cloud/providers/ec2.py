@@ -66,14 +66,14 @@ class EC2Test(integration.ShellCase):
             )
         )
 
-        id = config[profile_str][PROVIDER_NAME]['id']
+        id_ = config[profile_str][PROVIDER_NAME]['id']
         key = config[profile_str][PROVIDER_NAME]['key']
-        keyname = config[profile_str][PROVIDER_NAME]['keyname']
+        key_name = config[profile_str][PROVIDER_NAME]['keyname']
         sec_group = config[profile_str][PROVIDER_NAME]['securitygroup']
         private_key = config[profile_str][PROVIDER_NAME]['private_key']
         location = config[profile_str][PROVIDER_NAME]['location']
 
-        conf_items = [id, key, keyname, sec_group, private_key, location]
+        conf_items = [id_, key, key_name, sec_group, private_key, location]
         missing_conf_item = []
 
         for item in conf_items:
