@@ -29,7 +29,7 @@ from salt.ext.six.moves import range
 from salt.config import minion_config
 # pylint: enable=no-name-in-module,redefined-builtin
 
-from salt.loader import LazyLoader, _module_dirs
+from salt.loader import LazyLoader, _module_dirs, grains
 
 
 class LazyLoaderVirtualEnabledTest(TestCase):
@@ -39,6 +39,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     def setUp(self):
         self.opts = minion_config(None)
         self.opts['disable_modules'] = ['pillar']
+        self.opts['grains'] = grains(self.opts)
 
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
@@ -126,6 +127,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     '''
     def setUp(self):
         self.opts = _config = minion_config(None)
+        self.opts['grains'] = grains(self.opts)
         self.loader = LazyLoader(_module_dirs(self.opts, 'modules', 'module'),
                                  self.opts,
                                  tag='module',
@@ -186,6 +188,7 @@ class LazyLoaderReloadingTest(TestCase):
 
     def setUp(self):
         self.opts = _config = minion_config(None)
+        self.opts['grains'] = grains(self.opts)
         self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
 
         self.count = 0
@@ -310,6 +313,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
 
     def setUp(self):
         self.opts = _config = minion_config(None)
+        self.opts['grains'] = grains(self.opts)
         self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
         os.makedirs(self.module_dir)
 

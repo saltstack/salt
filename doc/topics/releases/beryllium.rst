@@ -45,21 +45,27 @@ The git state and execution modules have gone through an extensive overhaul.
 Changes in the :py:func:`git.latest <salt.states.git.latest>` State
 -------------------------------------------------------------------
 
-- The ``branch`` parameter has been added, allowing for a custom branch name to
+- The ``branch`` argument has been added, allowing for a custom branch name to
   be used in the local checkout maintained by the :py:func:`git.latest
   <salt.states.git.latest>` state. This can be helpful in avoiding ambiguous
-  refs in the local checkout when a tag is used as the ``rev`` parameter. If no
+  refs in the local checkout when a tag is used as the ``rev`` argument. If no
   ``branch`` is specified, then the state uses the value of ``rev`` as the
   branch name.
-- The ``remote_name`` parameter has been deprecated and renamed to ``remote``.
-- The ``force`` parameter has been deprecated and renamed to ``force_clone`` to
-  reduce ambiguity with the other "force" parameters.
-- Using SHA1 hashes (full or shortened) in the ``rev`` parameter is now
+- The ``always_fetch`` argument no longer has any effect, and will be removed
+  in a future release. The state now detects whether or not a fetch is needed
+  based on comparisons made between the local and remote repositories.
+- The ``force_fetch`` argument has been added to force a fetch if the fetch is
+  not a fast-forward (for instance, if someone has done a reset and
+  force-pushed to the remote repository).
+- The ``remote_name`` argument has been deprecated and renamed to ``remote``.
+- The ``force`` argument has been deprecated and renamed to ``force_clone`` to
+  reduce ambiguity with the other "force" arguments.
+- Using SHA1 hashes (full or shortened) in the ``rev`` argument is now
   properly supported.
 - Non-fast-forward merges are now detected before the repository is updated,
   and the state will not update the repository if the change is not a
   fast-forward. Non-fast-forward updates must be overridden with the
-  ``force_reset`` parameter. If ``force_reset`` is set to ``True``, the state
+  ``force_reset`` argument. If ``force_reset`` is set to ``True``, the state
   will only reset the repository if it cannot be fast-forwarded. This is in
   contrast to the earlier behavior, in which a hard-reset would be performed
   every time the state was run if ``force_reset`` was set to ``True``.
@@ -126,9 +132,9 @@ Changes to Functions in Git Execution Module
 
 - Now returns ``True`` when the ``git archive`` command was successful, and
   otherwise raises an error.
-- ``overwrite`` argument added to prevent an exixting archive from being
-  overwritten by this function.
-- ``fmt`` argument deprecated and renamed to ``format``
+- The ``overwrite`` argument has been added to prevent an existing archive from
+  being overwritten by this function.
+- The ``fmt`` argument has been deprecated and renamed to ``format``.
 - Trailing slash no longer implied in ``prefix`` argument, must be included if
   this argument is passed.
 
@@ -146,24 +152,24 @@ Changes to Functions in Git Execution Module
   which to clone the repository. If this option is specified, then the clone
   will be made within the directory specified by the ``cwd``, instead of at
   that location.
-- ``repository`` argument deprecated and renamed to ``url``
+- The ``repository`` argument has been deprecated and renamed to ``url``.
 
 :py:func:`git.config_get <salt.modules.git.config_get>`
 *******************************************************
 
-- ``setting_name`` argument deprecated and renamed to ``key``
+- The ``setting_name`` argument has been deprecated and renamed to ``key``.
 - The ``global`` argument has been added, to query the global git configuration
 - The ``all`` argument has been added to return a list of all values for the
   specified key, allowing for all values in a multivar to be returned.
-- ``cwd`` argument is now optional if ``global`` is set to ``True``
+- The ``cwd`` argument is now optional if ``global`` is set to ``True``
 
 :py:func:`git.config_set <salt.modules.git.config_set>`
 *******************************************************
 
 - The value(s) of the key being set are now returned
-- ``setting_name`` argument deprecated and renamed to ``key``
-- ``setting_value`` argument deprecated and renamed to ``value``
-- ``is_global`` argument deprecated and renamed to ``global``
+- The ``setting_name`` argument has been deprecated and renamed to ``key``.
+- The ``setting_value`` argument has been deprecated and renamed to ``value``.
+- The ``is_global`` argument has been deprecated and renamed to ``global``.
 - The ``multivar`` argument has been added to specify a list of values to set
   for the specified key. The ``value`` argument is not compatible with
   ``multivar``.
@@ -171,18 +177,30 @@ Changes to Functions in Git Execution Module
   just adds an ``--add`` to the ``git config`` command that is run to set the
   value).
 
+:py:func:`git.fetch <salt.modules.git.fetch>`
+*********************************************
+
+- The ``force`` argument has been added to force the fetch when it is not a
+  fast-forward. This could have been achieved in previous Salt versions by
+  including ``--force`` in the ``opts`` argument, this argument is just for
+  convenience and to match the usage of other functions with ``force``
+  arguments.
+- The ``refspecs`` argument has been added to allow for one or more refspecs to
+  be provided which overide the one(s) specified by the
+  **remote.remote_name.fetch** git configuration option.
+
 :py:func:`git.ls_remote <salt.modules.git.ls_remote>`
 *****************************************************
 
-- ``repository`` argument deprecated and renamed to ``remote``
-- ``branch`` argument deprecated and renamed to ``ref``
+- The ``repository`` argument has been deprecated and renamed to ``remote``.
+- The ``branch`` argument has been deprecated and renamed to ``ref``.
 - The ``opts`` argument has been added to allow for additional CLI options to
   be passed to the ``git ls-remote`` command.
 
 :py:func:`git.merge <salt.modules.git.merge>`
 *********************************************
 
-- The ``branch`` argument deprecated and renamed to ``rev``
+- The ``branch`` argument has been deprecated and renamed to ``rev``.
 
 :py:func:`git.status <salt.modules.git.status>`
 ***********************************************
@@ -217,16 +235,19 @@ configuration, further details can be found :ref:`here
 Windows Software Repo Changes
 =============================
 
-Several config options have been renamed to make the naming more consistent.
+Several config options have been renamed to make their naming more consistent.
 For a list of the winrepo config options, see :ref:`here
-<winrepo-config-opts>`.
+<winrepo-master-config-opts>` for master config options, and :ref:`here
+<winrepo-minion-config-opts>` for configuration options for masterless Windows
+minions.
 
-The :mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
-runner has been updated to use either pygit2_ or GitPython_ to checkout the git
-repositories containing repo data. If pygit2_ or GitPython_ is installed,
-existing winrepo git checkouts should be removed after upgrading to 2015.8.0,
-to allow them to be checked out again by running
-:py:func:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`.
+On the master, the :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>` runner has been updated to use either
+pygit2_ or GitPython_ to checkout the git repositories containing repo data. If
+pygit2_ or GitPython_ is installed, existing winrepo git checkouts should be
+removed after upgrading to 2015.8.0, to allow them to be checked out again by
+running :py:func:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>`.
 
 This enhancement also brings new functionality, see the :ref:`Windows Software
 Repository <2015-8-0-winrepo-changes>` documentation for more information.
@@ -235,6 +256,13 @@ If neither GitPython_ nor pygit2_ are installed, then Salt will fall back to
 the pre-existing behavior for :mod:`winrepo.update_git_repos
 <salt.runners.winrepo.update_git_repos>`, and a warning will be logged in the
 master log.
+
+.. note::
+    Standalone Windows minions do not support the new GitPython_/pygit2_
+    functionality, and will instead use the :py:func:`git.latest
+    <salt.states.git.latest>` state to keep repositories up-to-date. More
+    information on how to use the Windows Software Repo on a standalone minion
+    can be found :ref:`here <standalone-winrepo>`.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython

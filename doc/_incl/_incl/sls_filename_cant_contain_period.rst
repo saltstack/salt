@@ -6,5 +6,7 @@
     the name ( besides the suffix period) can not be referenced.  For example,
     webserver_1.0.sls is not referenceable because webserver_1.0 would refer
     to the directory/file webserver_1/0.sls
-    The same applies for any subdirecortories, this is especially 'tricky' when git repos are created. 
-    Another cmd that typically can't render it's output is ```state.show_sls``` of a file in a path that contains a dot.
+
+    The same applies for any subdirecortories, this is especially 'tricky' when
+    git repos are created.  Another command that typically can't render it's
+    output is ```state.show_sls``` of a file in a path that contains a dot.

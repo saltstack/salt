@@ -2722,7 +2722,7 @@ option then the master will log a warning message.
       - master.d/*
       - /etc/roles/webserver
 
-.. _winrepo-config-opts:
+.. _winrepo-master-config-opts:
 
 Windows Software Repo Settings
 ==============================
