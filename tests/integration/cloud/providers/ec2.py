@@ -92,22 +92,24 @@ class EC2Test(integration.ShellCase):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
-        # check if instance with salt installed returned
+        # create the instance
+        instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME))
+        ret_str = '{0}:'.format(INSTANCE_NAME)
+
+        # check if instance returned with salt installed
         try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME))]
-            )
+            self.assertIn(ret_str, instance)
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
         # delete the instance
+        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+        ret_str = '                    shutting-down'
+
+        # check if deletion was performed appropriately
         try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
-            )
+            self.assertIn(ret_str, delete)
         except AssertionError:
             raise
 
