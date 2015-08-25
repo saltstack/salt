@@ -1646,8 +1646,9 @@ class State(object):
         ret['start_time'] = start_time.time().isoformat()
         delta = (finish_time - start_time)
         # duration in milliseconds.microseconds
-        ret['duration'] = (delta.seconds * 1000000 + delta.microseconds)/1000.0
-        log.info('Completed state [{0}] at time {1}'.format(low['name'], finish_time.time().isoformat()))
+        duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
+        ret['duration'] = duration
+        log.info('Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'], finish_time.time().isoformat(), duration))
         return ret
 
     def call_chunks(self, chunks):
