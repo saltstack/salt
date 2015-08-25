@@ -35,7 +35,6 @@ class TimedProc(object):
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
 
-
     def wait(self, timeout=None):
         '''
         wait for subprocess to terminate and return subprocess' return code.
