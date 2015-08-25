@@ -11,10 +11,7 @@ import logging
 import os
 import re
 import shlex
-<<<<<<< 4790356e44d9f147b42e8d5cfc9a06fb815d28a3
 import sys
-=======
->>>>>>> removed subprocess import
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
