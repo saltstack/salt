@@ -28,14 +28,6 @@ class WinServiceTestCase(TestCase):
     '''
         Test cases for salt.modules.win_service
     '''
-    def test_has_powershell(self):
-        '''
-            Test to confirm if Powershell is available
-        '''
-        mock = MagicMock(return_value={'powershell': 'salt'})
-        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_service.has_powershell())
-
     def test_get_enabled(self):
         '''
             Test to return the enabled services
