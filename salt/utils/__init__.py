@@ -1532,7 +1532,20 @@ def is_windows():
     '''
     Simple function to return if a host is Windows or not
     '''
-    return sys.platform.startswith('win')
+    import __main__ as main
+    # This is a hack.  If a proxy minion is started by other
+    # means, e.g. a custom script that creates the minion objects
+    # then this will fail.
+    is_proxy = False
+    try:
+        if 'salt-proxy' in main.__file__:
+            is_proxy = True
+    except AttributeError:
+        pass
+    if is_proxy:
+        return False
+    else:
+        return sys.platform.startswith('win')
 
 
 def sanitize_win_path_string(winpath):
@@ -1553,12 +1566,12 @@ def sanitize_win_path_string(winpath):
 def is_proxy():
     '''
     Return True if this minion is a proxy minion.
-    Leverages the fact that is_linux() returns False
-    for proxies.
+    Leverages the fact that is_linux() and is_windows
+    both return False for proxies.
     TODO: Need to extend this for proxies that might run on
-    other Unices or Windows.
+    other Unices
     '''
-    return not is_linux()
+    return not (is_linux() or is_windows())
 
 
 @real_memoize
