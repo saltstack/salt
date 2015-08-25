@@ -54,6 +54,7 @@ def has_powershell():
             return True
     return False
 
+
 def get_enabled():
     '''
     Return the enabled services
