@@ -25,7 +25,8 @@ class SPM(parsers.SPMParser):
         '''
         Run the api
         '''
+        ui = salt.spm.SPMCmdlineInterface()
         self.parse_args()
         self.setup_logfile_logger()
-        client = salt.spm.SPMClient(self.config)
+        client = salt.spm.SPMClient(ui, self.config)
         client.run(self.args)

@@ -17,6 +17,7 @@ import hashlib
 import logging
 import pwd
 import grp
+import sys
 
 # Import Salt libs
 import salt.config
@@ -32,11 +33,42 @@ from salt.ext.six.moves import zip
 log = logging.getLogger(__name__)
 
 
+class SPMException(Exception):
+    '''
+    Base class for SPMClient exceptions
+    '''
+
+
+class SPMInvocationError(SPMException):
+    '''
+    Wrong number of arguments or other usage error
+    '''
+
+
+class SPMPackageError(SPMException):
+    '''
+    Problem with package file or package installation
+    '''
+
+
+class SPMDatabaseError(SPMException):
+    '''
+    SPM database not found, etc
+    '''
+
+
+class SPMOperationCanceled(SPMException):
+    '''
+    SPM install or uninstall was canceled
+    '''
+
+
 class SPMClient(object):
     '''
     Provide an SPM Client
     '''
-    def __init__(self, opts=None):  # pylint: disable=W0231
+    def __init__(self, ui, opts=None):  # pylint: disable=W0231
+        self.ui = ui
         if not opts:
             opts = salt.config.spm_config(
                 os.path.join(syspaths.CONFIG_DIR, 'spm')
@@ -60,22 +92,27 @@ class SPMClient(object):
         Run the SPM command
         '''
         command = args[0]
-        if command == 'install':
-            self._install(args)
-        elif command == 'local':
-            self._local(args)
-        elif command == 'remove':
-            self._remove(args)
-        elif command == 'build':
-            self._build(args)
-        elif command == 'update_repo':
-            self._download_repo_metadata(args)
-        elif command == 'create_repo':
-            self._create_repo(args)
-        elif command == 'files':
-            self._list_files(args)
-        elif command == 'info':
-            self._info(args)
+        try:
+            if command == 'install':
+                self._install(args)
+            elif command == 'local':
+                self._local(args)
+            elif command == 'remove':
+                self._remove(args)
+            elif command == 'build':
+                self._build(args)
+            elif command == 'update_repo':
+                self._download_repo_metadata(args)
+            elif command == 'create_repo':
+                self._create_repo(args)
+            elif command == 'files':
+                self._list_files(args)
+            elif command == 'info':
+                self._info(args)
+            else:
+                raise SPMInvocationError('Invalid command \'{0}\''.format(command))
+        except SPMException as exc:
+            self.ui.error(str(exc))
 
     def _local(self, args):
         '''
@@ -89,19 +126,19 @@ class SPMClient(object):
             self._local_list_files(args)
         elif command == 'info':
             self._local_info(args)
+        else:
+            raise SPMInvocationError('Invalid local command \'{0}\''.format(command))
 
     def _local_install(self, args, pkg_name=None):
         '''
         Install a package from a file
         '''
         if len(args) < 2:
-            log.error('A package file must be specified')
-            return False
+            raise SPMInvocationError('A package file must be specified')
 
         pkg_file = args[1]
         if not self.pkgfiles['{0}.path_exists'.format(self.files_prov)](pkg_file):
-            log.error('File {0} not found'.format(pkg_file))
-            return False
+            raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
         comps = pkg_file.split('-')
         comps = '-'.join(comps[:-2]).split('/')
@@ -113,8 +150,9 @@ class SPMClient(object):
 
         pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](name, self.db_conn)
         if pkg_info is not None and not self.opts['force']:
-            print('Package {0} already installed, not installing again'.format(formula_def['name']))
-            return
+            raise SPMPackageError(
+                'Package {0} already installed, not installing again'.format(formula_def['name'])
+            )
 
         if 'dependencies' in formula_def:
             if not isinstance(formula_def['dependencies'], list):
@@ -127,27 +165,23 @@ class SPMClient(object):
                 if data is not None:
                     continue
                 needs.append(dep)
-            print('Cannot install {0}, the following dependencies are needed: '
-                  '\n\n{1}'.format(formula_def['name'], '\n'.join(needs)))
-            return
+            raise SPMPackageError(
+                'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
+                    formula_def['name'], '\n'.join(needs))
+            )
 
         if pkg_name is None:
-            print('Installing package from file {0}'.format(pkg_file))
+            msg = 'Installing package from file {0}'.format(pkg_file)
         else:
-            print('Installing package {0}'.format(pkg_name))
-
+            msg = 'Installing package {0}'.format(pkg_name)
         if not self.opts['assume_yes']:
-            res = input('Proceed? [N/y] ')
-            if not res.lower().startswith('y'):
-                print('... canceled')
-                return False
+            self.ui.confirm(msg)
 
-        print('... installing')
+        self.ui.status('... installing')
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
-                log.error('Invalid package: the {0} was not found'.format(field))
-                return False
+                raise SPMPackageError('Invalid package: the {0} was not found'.format(field))
 
         pkg_files = formula_tar.getmembers()
         # First pass: check for files that already exist
@@ -156,7 +190,9 @@ class SPMClient(object):
         )
 
         if existing_files and not self.opts['force']:
-            return
+            raise SPMPackageError('Not installing {0} due to existing files:\n\n{1}'.format(
+                pkg_name, '\n'.join(existing_files))
+            )
 
         # We've decided to install
         self.pkgdb['{0}.register_pkg'.format(self.db_prov)](name, formula_def, self.db_conn)
@@ -265,7 +301,7 @@ class SPMClient(object):
             )
 
             if not os.path.exists(cache_path):
-                return
+                raise SPMPackageError('SPM cache {0} not found'.format(cache_path))
 
             with salt.utils.fopen(cache_path, 'r') as cph:
                 metadata[repo] = {
@@ -282,8 +318,7 @@ class SPMClient(object):
         all of the SPM files in that directory.
         '''
         if len(args) < 2:
-            log.error('A path to a directory must be specified')
-            return False
+            raise SPMInvocationError('A path to a directory must be specified')
 
         if args[1] == '.':
             repo_path = os.environ['PWD']
@@ -319,8 +354,7 @@ class SPMClient(object):
         Install a package from a repo
         '''
         if len(args) < 2:
-            log.error('A package must be specified')
-            return False
+            raise SPMInvocationError('A package must be specified')
 
         package = args[1]
 
@@ -346,36 +380,30 @@ class SPMClient(object):
 
                 self._local_install((None, out_file), package)
                 return
-        log.error('Cannot install package {0}, no source package'.format(package))
+        raise SPMPackageError('Cannot install package {0}, no source package'.format(package))
 
     def _remove(self, args):
         '''
         Remove a package
         '''
         if len(args) < 2:
-            log.error('A package must be specified')
-            return False
+            raise SPMInvocationError('A package must be specified')
 
         package = args[1]
-        print('Removing package {0}'.format(package))
+        msg = 'Removing package {0}'.format(package)
 
         if not self.opts['assume_yes']:
-            res = input('Proceed? [N/y] ')
-            if not res.lower().startswith('y'):
-                print('... canceled')
-                return False
+            self.ui.confirm(msg)
 
-        print('... removing')
+        self.ui.status('... removing')
 
-        if not self.pkgfiles['{0}.db_exists'.format(self.db_prov)](self.opts['spm_db']):
-            log.error('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
-            return
+        if not self.pkgdb['{0}.db_exists'.format(self.db_prov)](self.opts['spm_db']):
+            raise SPMDatabaseError('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
 
         # Look at local repo index
         pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](package, self.db_conn)
         if pkg_info is None:
-            print('package {0} not installed'.format(package))
-            return
+            raise SPMPackageError('package {0} not installed'.format(package))
 
         # Find files that have not changed and remove them
         files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
@@ -412,10 +440,12 @@ class SPMClient(object):
         List info for a package file
         '''
         if len(args) < 2:
-            log.error('A package filename must be specified')
-            return False
+            raise SPMInvocationError('A package filename must be specified')
 
         pkg_file = args[1]
+
+        if not os.path.exists(pkg_file):
+            raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
         comps = pkg_file.split('-')
         comps = '-'.join(comps[:-2]).split('/')
@@ -425,30 +455,26 @@ class SPMClient(object):
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = yaml.safe_load(formula_ref)
 
-        self._print_info(formula_def)
+        self.ui.status(self._get_info(formula_def))
 
     def _info(self, args):
         '''
         List info for a package
         '''
         if len(args) < 2:
-            log.error('A package must be specified')
-            return False
+            raise SPMInvocationError('A package must be specified')
 
         package = args[1]
 
         pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](package, self.db_conn)
         if pkg_info is None:
-            print('package {0} not installed'.format(package))
-        else:
-            self._print_info(pkg_info)
+            raise SPMPackageError('package {0} not installed'.format(package))
+        self.ui.status(self._get_info(pkg_info))
 
-    def _print_info(self, formula_def):
+    def _get_info(self, formula_def):
         '''
-        Print package info
+        Get package info
         '''
-        import pprint
-        pprint.pprint(formula_def)
         fields = (
             'name',
             'os',
@@ -468,77 +494,71 @@ class SPMClient(object):
         if 'installed' not in formula_def:
             formula_def['installed'] = 'Not installed'
 
-        print('''Name: {name}
-Version: {version}
-Release: {release}
-Install Date: {installed}
-Supported OSes: {os}
-Supported OS families: {os_family}
-Dependencies: {dependencies}
-OS Dependencies: {os_dependencies}
-OS Family Dependencies: {os_family_dependencies}
-Summary: {summary}
-Description:
-{description}
-'''.format(**formula_def))
+        return ('Name: {name}\n'
+                'Version: {version}\n'
+                'Release: {release}\n'
+                'Install Date: {installed}\n'
+                'Supported OSes: {os}\n'
+                'Supported OS families: {os_family}\n'
+                'Dependencies: {dependencies}\n'
+                'OS Dependencies: {os_dependencies}\n'
+                'OS Family Dependencies: {os_family_dependencies}\n'
+                'Summary: {summary}\n'
+                'Description:\n'
+                '{description}').format(**formula_def)
 
     def _local_list_files(self, args):
         '''
         List files for a package file
         '''
         if len(args) < 2:
-            log.error('A package filename must be specified')
-            return False
+            raise SPMInvocationError('A package filename must be specified')
 
         pkg_file = args[1]
+        if not os.path.exists(pkg_file):
+            raise SPMPackageError('Package file {0} not found'.format(pkg_file))
         formula_tar = tarfile.open(pkg_file, 'r:bz2')
         pkg_files = formula_tar.getmembers()
 
         for member in pkg_files:
-            print(member.name)
+            self.ui.status(member.name)
 
     def _list_files(self, args):
         '''
         List files for an installed package
         '''
         if len(args) < 2:
-            log.error('A package name must be specified')
-            return False
+            raise SPMInvocationError('A package name must be specified')
 
         package = args[1]
 
         files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
         if files is None:
-            print('Package {0} not installed'.format(package))
+            raise SPMPackageError('package {0} not installed'.format(package))
         else:
             for file_ in files:
-                print(file_[0])
+                self.ui.status(file_[0])
 
     def _build(self, args):
         '''
         Build a package
         '''
         if len(args) < 2:
-            log.error('A path to a formula must be specified')
-            return False
+            raise SPMInvocationError('A path to a formula must be specified')
 
         self.abspath = args[1].rstrip('/')
         comps = self.abspath.split('/')
         self.relpath = comps[-1]
 
         formula_path = '{0}/FORMULA'.format(self.abspath)
-        formula_conf = {}
-        if os.path.exists(formula_path):
-            with salt.utils.fopen(formula_path) as fp_:
-                formula_conf = yaml.safe_load(fp_)
-        else:
-            log.debug('File not found')
-            return False
+        if not os.path.exists(formula_path):
+            raise SPMPackageError('Formula file {0} not found'.format(formula_path))
+        with salt.utils.fopen(formula_path) as fp_:
+            formula_conf = yaml.safe_load(fp_)
 
-        for field in ('version', 'release', 'summary', 'description'):
+        for field in ('name', 'version', 'release', 'summary', 'description'):
             if field not in formula_conf:
-                log.error('Invalid package: a {0} must be defined'.format(field))
-                return False
+                raise SPMPackageError('Invalid package: a {0} must be defined'.format(field))
 
         out_path = '{0}/{1}-{2}-{3}.spm'.format(
             self.opts['spm_build_dir'],
@@ -551,18 +571,59 @@ Description:
             os.mkdir(self.opts['spm_build_dir'])
 
         formula_tar = tarfile.open(out_path, 'w:bz2')
-        formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
+        formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
         formula_tar.close()
 
-        log.debug(formula_path)
-        return formula_path
+        self.ui.status('Built package {0}'.format(out_path))
 
-    def _exclude(self, name):
+    def _exclude(self, member):
         '''
         Exclude based on opts
         '''
         for item in self.opts['spm_build_exclude']:
             exclude_name = '{0}/{1}'.format(self.abspath, item)
-            if name.startswith(exclude_name):
-                return True
-        return False
+            if member.name.startswith(exclude_name):
+                return None
+        return member
+
+
+class SPMUserInterface(object):
+    '''
+    Handle user interaction with an SPMClient object
+    '''
+    def status(self, msg):
+        '''
+        Report an SPMClient status message
+        '''
+        raise NotImplementedError()
+
+    def error(self, msg):
+        '''
+        Report an SPM error message
+        '''
+        raise NotImplementedError()
+
+    def confirm(self, action):
+        '''
+        Get confirmation from the user before performing an SPMClient action.
+        Return if the action is confirmed, or raise SPMOperationCanceled(<msg>)
+        if canceled.
+        '''
+        raise NotImplementedError()
+
+
+class SPMCmdlineInterface(SPMUserInterface):
+    '''
+    Command-line interface to SPMClient
+    '''
+    def status(self, msg):
+        print(msg)
+
+    def error(self, msg):
+        print(msg, file=sys.stderr)
+
+    def confirm(self, action):
+        print(action)
+        res = input('Proceed? [N/y] ')
+        if not res.lower().startswith('y'):
+            raise SPMOperationCanceled('canceled')
