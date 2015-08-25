@@ -510,8 +510,10 @@ def _find_set_info(set):
     setinfo = {}
     _tmp = out['stdout'].split('\n')
     for item in _tmp:
-        key, value = item.split(':', 1)
-        setinfo[key] = value[1:]
+        # Only split if item has a colon
+        if ':' in item:
+            key, value = item.split(':', 1)
+            setinfo[key] = value[1:]
     return setinfo
 
 
