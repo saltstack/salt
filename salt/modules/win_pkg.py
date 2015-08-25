@@ -603,8 +603,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
                 # Check if the installer was cached successfully
                 if not cached_pkg:
-                    log.error('Unable to cache file {0} from saltenv: {1}'\
-                              .format(installer, saltenv))
+                    log.error('Unable to cache file {0} from saltenv: {1}'.format(installer, saltenv))
                     ret[pkg_name] = {'unable to cache': installer}
                     continue
 
