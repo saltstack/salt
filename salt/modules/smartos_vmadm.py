@@ -7,6 +7,10 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import json
+try:
+    from shlex import quote as _quote_args  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _quote_args
 
 # Import Salt libs
 import salt.utils
@@ -54,7 +58,6 @@ def _exit_status(retcode):
 #create [-f <filename>]
 #info <uuid> [type,...]
 #receive [-f <filename>]
-#reprovision [-f <filename>]
 #send <uuid> [target]
 #update <uuid> [-f <filename>]
 # -or- update <uuid> property=value [property=value ...]
@@ -441,7 +444,6 @@ def create_snapshot(vm=None, name=None, key='uuid'):
         The snapname must be 64 characters or less
         and must only contain alphanumeric characters and
         characters in the set [-_.:%] to comply with ZFS restrictions.
-
     key : string
         Specifies what 'vm' is. Value = uuid|alias|hostname
 
@@ -501,7 +503,6 @@ def delete_snapshot(vm=None, name=None, key='uuid'):
         The snapname must be 64 characters or less
         and must only contain alphanumeric characters and
         characters in the set [-_.:%] to comply with ZFS restrictions.
-
     key : string
         Specifies what 'vm' is. Value = uuid|alias|hostname
 
@@ -602,5 +603,55 @@ def rollback_snapshot(vm=None, name=None, key='uuid'):
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
+
+
+def reprovision(vm=None, image=None, key='uuid'):
+    '''
+    Reprovision a vm
+
+    vm : string
+        Specifies the vm
+    image : string
+        uuid of new image
+    key : string
+        Specifies what 'vm' is. Value = uuid|alias|hostname
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.reprovision 186da9ab-7392-4f55-91a5-b8f1fe770543 c02a2044-c1bd-11e4-bd8c-dfc1db8b0182
+        salt '*' vmadm.reprovision nacl c02a2044-c1bd-11e4-bd8c-dfc1db8b0182 key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    if image is None:
+        ret['Error'] = 'Image uuid must be specified'
+        return ret
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    if image not in __salt__['imgadm.list']():
+        ret['Error'] = 'Image ({0}) is not present on this host'.format(image)
+        return ret
+    # vmadm reprovision <uuid> [-f <filename>]
+    cmd = 'echo {image} | {vmadm} reprovision {uuid}'.format(
+        vmadm=vmadm,
+        uuid=vm,
+        image=_quote_args(json.dumps({'image_uuid': image}))
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
