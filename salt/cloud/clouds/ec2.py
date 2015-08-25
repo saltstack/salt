@@ -193,7 +193,7 @@ def __virtual__():
 
         if not os.path.exists(details['private_key']):
             raise SaltCloudException(
-                'The EC2 key file {0!r} used in the {1!r} provider '
+                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
                 'configuration does not exist\n'.format(
                     details['private_key'],
                     provider
@@ -205,7 +205,7 @@ def __virtual__():
         )
         if keymode not in ('0400', '0600'):
             raise SaltCloudException(
-                'The EC2 key file {0!r} used in the {1!r} provider '
+                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
                     details['private_key'],
                     provider
@@ -921,9 +921,8 @@ def get_ssh_gateway_config(vm_):
     key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
-                key_filename
-            )
+            'The defined ssh_gateway_private_key \'{0}\' does not exist'
+            .format(key_filename)
         )
     elif (
         key_filename is None and
@@ -1292,7 +1291,7 @@ def _modify_eni_properties(eni_id, properties=None):
 
     raise SaltCloudException(
         'Could not change interface <{0}> attributes '
-        '<{1!r}> after 5 retries'.format(
+        '<\'{1}\'> after 5 retries'.format(
             eni_id, properties
         )
     )
@@ -1661,7 +1660,7 @@ def request_instance(vm_=None, call=None):
                                 sigver='4')
             if 'error' in rd_data:
                 return rd_data['error']
-            log.debug('EC2 Response: {0!r}'.format(rd_data))
+            log.debug('EC2 Response: \'{0}\''.format(rd_data))
         except Exception as exc:
             log.error(
                 'Error getting root device name for image id {0} for '
@@ -2196,7 +2195,7 @@ def create(vm_=None, call=None):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -2225,7 +2224,7 @@ def create(vm_=None, call=None):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -2372,9 +2371,9 @@ def create(vm_=None, call=None):
     for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(instance)
         )
     )
@@ -2985,8 +2984,8 @@ def _get_node(name=None, instance_id=None, location=None):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
+                'Failed to get the data for node \'{0}\'. Remaining '
+                'attempts: {1}'.format(
                     name, attempts
                 )
             )

@@ -231,7 +231,7 @@ def get_image(conn, vm_):
         return image['id']
     except novaclient.exceptions.NotFound as exc:
         raise SaltCloudNotFound(
-            'The specified image, {0!r}, could not be found: {1}'.format(
+            'The specified image, \'{0}\', could not be found: {1}'.format(
                 vm_image,
                 str(exc)
             )
@@ -266,7 +266,7 @@ def get_size(conn, vm_):
         if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
             return sizes[size]['id']
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -556,7 +556,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_key_file {0!r} does not exist'.format(
+            'The defined ssh_key_file \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -585,7 +585,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -773,9 +773,9 @@ def create(vm_):
     if 'password' in ret['extra']:
         del ret['extra']['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )

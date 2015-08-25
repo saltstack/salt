@@ -219,7 +219,7 @@ def _check_ip_available(ip_addr):
             log.debug('IP "{0}" is already defined'.format(ip_addr))
             return False
 
-    log.debug('IP {0!r} is available to be defined'.format(ip_addr))
+    log.debug('IP \'{0}\' is available to be defined'.format(ip_addr))
     return True
 
 
@@ -589,9 +589,9 @@ def create(vm_):
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     # Report success!
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
