@@ -147,7 +147,7 @@ def show_sls(name, saltenv='base'):
     if not os.path.exists(sls_file):
 
         # Maybe it's a directory with an init.sls
-        sls_file = '{0}\init.sls'.format(os.sep.join(repo))
+        sls_file = '{0}\\init.sls'.format(os.sep.join(repo))
         if not os.path.exists(sls_file):
 
             # It's neither, return
@@ -165,7 +165,7 @@ def show_sls(name, saltenv='base'):
             __opts__['renderer'])
 
     # Dump return the error if any
-    except SaltRenderError as exc:
+    except SaltRenderError as exc:  # pylint: disable=E0602
         log.debug('Failed to compile {0}.'.format(sls_file))
         log.debug('Error: {0}.'.format(exc))
         config['Message'] = 'Failed to compile {0}'.format(sls_file)
