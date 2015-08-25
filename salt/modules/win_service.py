@@ -7,6 +7,7 @@ Windows Service module.
 import salt.utils
 import time
 import logging
+import os
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -41,9 +42,13 @@ def has_powershell():
 
         salt '*' service.has_powershell
     '''
-    return 'powershell' in __salt__['cmd.run'](
-            ['where', 'powershell'], python_shell=False
-        )
+    for path in os.environ["PATH"].split(os.pathsep):
+        path = path.strip('"')
+        fullpath = os.path.join(path, "powershell.exe")
+        fullpath = os.path.normpath(fullpath)
+        if os.path.isfile(fullpath) and os.access(fullpath, os.X_OK):
+            return True
+    return False
 
 
 def get_enabled():
