@@ -633,6 +633,9 @@ def sls(mods,
     else:
         __opts__['pillarenv'] = pillarenv
 
+    if saltenv is None:
+        saltenv = __opts__['environment'] or 'base'
+
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
