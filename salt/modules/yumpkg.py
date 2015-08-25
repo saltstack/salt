@@ -1198,7 +1198,7 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, name=None, pkgs=None
         pkgname, version_num = pkg_item_list
         targets.append(pkgname)
 
-    cmd = '{yum_command}-q -y {repo} {exclude} {branch} {gpgcheck} upgrade {pkgs}'.format(
+    cmd = '{yum_command} -q -y {repo} {exclude} {branch} {gpgcheck} upgrade {pkgs}'.format(
         yum_command=_yum(),
         repo=repo_arg,
         exclude=exclude_arg,
