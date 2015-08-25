@@ -175,10 +175,6 @@ project's wiki_:
         uninstaller: '{23170F69-40C1-2702-0920-000001000000}'
         uninstall_flags: '/qn /norestart'
 
-Add ``cache_dir: True`` when the installer requires multiple source files. The
-directory containing the installer file will be recursively cached on the minion.
-Only applies to salt: installer URLs.
-
 Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file.
 
 .. code-block:: yaml
@@ -192,6 +188,10 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
         msiexec: True
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: '/qn /norestart'
+
+Add ``cache_dir: True`` when the installer requires multiple source files. The
+directory containing the installer file will be recursively cached on the minion.
+Only applies to salt: installer URLs.
 
 .. code-block:: yaml
 
