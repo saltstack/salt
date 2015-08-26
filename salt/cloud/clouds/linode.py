@@ -41,13 +41,13 @@ minion gets new keys and the keys get pre-seeded on the master, and the
 Cloning requires a post 2015-02-01 salt-bootstrap.
 
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
 from __future__ import absolute_import
 
 # Import python libs
 import pprint
 import logging
+import re
 import time
 from os.path import exists, expanduser
 
@@ -794,6 +794,8 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    if _validate_name(vm_['name']) is False:
+        return False
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1018,5 +1020,35 @@ def create(vm_):
         },
         transport=__opts__['transport']
     )
+
+    return ret
+
+
+def _validate_name(name):
+    '''
+    Checks if the provided name fits Linode's labeling parameters.
+
+    name
+        The VM name to validate
+    '''
+    ret = True
+    name_length = len(name)
+    regex = re.compile(r'^\w+$')
+
+    if name_length < 3 or name_length > 48:
+        ret = False
+
+    if not re.match(regex, name):
+        ret = False
+
+    if name.startswith(('-', '_',)) or name.endswith(('-', '_',)):
+        ret = False
+
+    if ret is False:
+        log.warning(
+            'A Linode label may only contain ASCII letters or numbers, dashes, and '
+            'underscores, must begin and end with letters or numbers, and be at least '
+            'three characters in length.'
+        )
 
     return ret
