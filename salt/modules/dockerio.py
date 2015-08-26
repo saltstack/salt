@@ -660,7 +660,7 @@ def create_container(image,
                 volumes.remove(volume)
 
     try:
-        if float(client.version()['ApiVersion']) > 1.18:
+        if salt.utils.version_cmp(client.version()['ApiVersion'], '1.18') == 1:
             container_info = client.create_container(
                 image=image,
                 command=command,
