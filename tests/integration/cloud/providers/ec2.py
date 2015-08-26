@@ -30,6 +30,7 @@ def __random_name(size=6):
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
+PROVIDER_NAME = 'ec2'
 
 
 @skipIf(True, 'Skipping until we can figure out why the testrunner bails.')
@@ -46,33 +47,35 @@ class EC2Test(integration.ShellCase):
         super(EC2Test, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'ec2-config:'
-        provider = 'ec2'
+        profile_str = 'ec2-config'
         providers = self.run_cloud('--list-providers')
 
-        if profile_str not in providers:
+        if profile_str + ':' not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(provider)
+                .format(PROVIDER_NAME)
             )
 
         # check if id, key, keyname, securitygroup, private_key, location,
         # and provider are present
-        path = os.path.join(integration.FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            provider + '.conf')
-        config = cloud_providers_config(path)
+        config = cloud_providers_config(
+            os.path.join(
+                integration.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
 
-        id = config['ec2-config']['ec2']['id']
-        key = config['ec2-config']['ec2']['key']
-        keyname = config['ec2-config']['ec2']['keyname']
-        sec_group = config['ec2-config']['ec2']['securitygroup']
-        private_key = config['ec2-config']['ec2']['private_key']
-        location = config['ec2-config']['ec2']['location']
+        id_ = config[profile_str][PROVIDER_NAME]['id']
+        key = config[profile_str][PROVIDER_NAME]['key']
+        key_name = config[profile_str][PROVIDER_NAME]['keyname']
+        sec_group = config[profile_str][PROVIDER_NAME]['securitygroup']
+        private_key = config[profile_str][PROVIDER_NAME]['private_key']
+        location = config[profile_str][PROVIDER_NAME]['location']
 
-        conf_items = [id, key, keyname, sec_group, private_key, location]
+        conf_items = [id_, key, key_name, sec_group, private_key, location]
         missing_conf_item = []
 
         for item in conf_items:
@@ -84,14 +87,13 @@ class EC2Test(integration.ShellCase):
                 'An id, key, keyname, security group, private key, and location must '
                 'be provided to run these tests. One or more of these elements is '
                 'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(provider)
+                .format(PROVIDER_NAME)
             )
 
     def test_instance(self):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
-
         # create the instance
         instance = self.run_cloud('-p ec2-test {0}'.format(INSTANCE_NAME))
         ret_str = '{0}:'.format(INSTANCE_NAME)

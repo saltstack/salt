@@ -37,6 +37,8 @@ def __random_name(size=6):
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
+PROVIDER_NAME = 'rackspace'
+DRIVER = 'openstack'
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
@@ -53,53 +55,54 @@ class RackspaceTest(integration.ShellCase):
         super(RackspaceTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'rackspace-config:'
-        provider = 'rackspace'
+        profile_str = 'rackspace-config'
         providers = self.run_cloud('--list-providers')
-        if profile_str not in providers:
+        if profile_str + ':' not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(provider)
+                .format(PROVIDER_NAME)
             )
 
         # check if api key, user, and tenant are present
-        path = os.path.join(integration.FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            provider + '.conf')
-        config = cloud_providers_config(path)
-        user = config['rackspace-config']['openstack']['user']
-        tenant = config['rackspace-config']['openstack']['tenant']
-        api = config['rackspace-config']['openstack']['apikey']
+        config = cloud_providers_config(
+            os.path.join(
+                integration.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+        user = config[profile_str][DRIVER]['user']
+        tenant = config[profile_str][DRIVER]['tenant']
+        api = config[profile_str][DRIVER]['apikey']
         if api == '' or tenant == '' or user == '':
             self.skipTest(
                 'A user, tenant, and an api key must be provided to run these '
                 'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(provider)
+                .format(PROVIDER_NAME)
             )
 
     def test_instance(self):
         '''
         Test creating an instance on rackspace with the openstack driver
         '''
-
-        # create the instance
-        instance = self.run_cloud('-p rackspace-test {0}'.format(INSTANCE_NAME))
-        ret = '        {0}'.format(INSTANCE_NAME)
-
-        # check if instance with salt installed returned successfully
+        # check if instance with salt installed returned
         try:
-            self.assertIn(ret, instance)
+            self.assertIn(
+                INSTANCE_NAME,
+                [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(INSTANCE_NAME))]
+            )
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        ret = '            True'
         try:
-            self.assertIn(ret, delete)
+            self.assertIn(
+                INSTANCE_NAME + ':',
+                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
+            )
         except AssertionError:
             raise
 
