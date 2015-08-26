@@ -84,10 +84,10 @@ def __virtual__():
     '''
     Check for OpenNebula configs.
     '''
-    if not HAS_XML_LIBS:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return __virtualname__
@@ -99,12 +99,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'opennebula',
+        __active_provider_name__ or __virtualname__,
         ('xml_rpc', 'user', 'password')
     )
 
 
-def avail_images(call=None):
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'lmxl': HAS_XML_LIBS}
+    )
+
+
+def avail_images(call=None):    
     '''
     Return available OpenNebula images.
 

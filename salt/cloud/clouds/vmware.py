@@ -79,13 +79,12 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
-HAS_LIBS = False
 try:
     from pyVim.connect import SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
-    HAS_LIBS = True
+    HAS_PYVMOMI = True
 except Exception:
-    pass
+    HAS_PYVMOMI = False
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
@@ -94,18 +93,20 @@ try:
 except Exception:
     pass
 
-# Import third party libs
 try:
     import salt.ext.six as six
+    HAS_SIX = True
 except ImportError:
     # Salt version <= 2014.7.0
     try:
         import six
     except ImportError:
-        HAS_LIBS = False
+        HAS_SIX = False
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'vmware'
 
 
 # Only load in this module if the VMware configurations are in place
@@ -113,13 +114,13 @@ def __virtual__():
     '''
     Check for VMware configuration and if required libs are available.
     '''
-    if not HAS_LIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -128,8 +129,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'vmware',
+        __active_provider_name__ or __virtualname__,
         ('url', 'user', 'password',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'pyVmomi': HAS_PYVMOMI,
+        'six': HAS_SIX
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
