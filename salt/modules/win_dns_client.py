@@ -45,10 +45,10 @@ def get_dns_servers(interface='Local Area Connection'):
         for iface in c.Win32_NetworkAdapter(NetEnabled=True):
             if interface == iface.NetConnectionID:
                 iface_config = c.Win32_NetworkAdapterConfiguration(Index=iface.Index).pop()
-+                try:
-+                    return list(iface_config.DNSServerSearchOrder)
-+                except:
-+                    return []                
+                try:
+                    return list(iface_config.DNSServerSearchOrder)
+                except TypeError:
+                    return []                
     log.debug('Interface "{0}" not found'.format(interface))
     return False
 
