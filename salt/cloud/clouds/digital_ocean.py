@@ -66,10 +66,10 @@ def __virtual__():
     '''
     Check for DigitalOcean configurations
     '''
-    if not HAS_REQUESTS:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return __virtualname__
@@ -81,8 +81,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'digital_ocean',
+        __active_provider_name__ or __virtualname__,
         ('personal_access_token',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
