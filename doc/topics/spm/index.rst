@@ -280,6 +280,11 @@ directory. The exception is the ``pillar.example`` file, which will be renamed
 to ``<package_name>.sls`` and placed in the pillar directory (``/srv/pillar/``
 by default).
 
+reactor
+-------
+By default, files from this type of package live in the ``/srv/reactor/``
+directory.
+
 conf
 ----
 The files in this type of package are configuration files for Salt, which
