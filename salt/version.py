@@ -553,6 +553,16 @@ def dependency_information(include_salt_cloud=False):
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
         ('timelib', 'timelib', 'version'),
+        ('dateutil', 'dateutil', '__version__'),
+        ('pygit2', 'pygit2', '__version__'),
+        ('smmap', 'smmap', '__version__'),
+        ('cffi', 'cffi', '__version__'),
+        ('pycparser', 'pycparser', '__version__'),
+        ('gitdb', 'gitdb', '__version__'),
+        ('gitpython', 'gitpython', '__version__'),
+        ('python-gnupg', 'python-gnupg', '__version__'),
+        ('mysql-python', 'mysql-python', '__version__'),
+        ('cherrypy', 'cherrypy', '__version__'),
     ]
 
     if include_salt_cloud:
