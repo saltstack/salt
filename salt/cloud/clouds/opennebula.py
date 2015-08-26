@@ -52,6 +52,8 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'opennebula'
+
 
 # Helper functions
 def _xmltodict(xml):
@@ -90,13 +92,13 @@ def __virtual__():
     '''
     Check for OpenNebula configurations
     '''
-    if not HAS_XMLLIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -105,8 +107,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'opennebula',
+        __active_provider_name__ or __virtualname__,
         ('xml_rpc', 'user', 'password')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'lmxl': HAS_XMLLIBS}
     )
 
 
