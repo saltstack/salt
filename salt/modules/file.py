@@ -3635,7 +3635,7 @@ def check_managed(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, template, contents)
+                              group, mode, saltenv, contents)
     __clean_tmp(sfn)
     if changes:
         log.info(changes)
@@ -3694,7 +3694,7 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, saltenv, template, contents)
+                              group, mode, saltenv, contents)
     __clean_tmp(sfn)
     return changes
 
@@ -3708,7 +3708,6 @@ def check_file_meta(
         group,
         mode,
         saltenv,
-        template=None,
         contents=None):
     '''
     Check for the changes in the file metadata.
@@ -3723,6 +3722,37 @@ def check_file_meta(
 
         Supported hash types include sha512, sha384, sha256, sha224, sha1, and
         md5.
+
+    name
+        Path to file destination
+
+    sfn
+        Template-processed source file contents
+
+    source
+        URL to file source
+
+    source_sum
+        File checksum information as a dictionary
+
+        .. code-block:: yaml
+
+            {hash_type: md5, hsum: <md5sum>}
+
+    user
+        Destination file user owner
+
+    group
+        Destination file group owner
+
+    mode
+        Destination file permissions mode
+
+    saltenv
+        Salt environment used to resolve source files
+
+    contents
+        File contents
     '''
     changes = {}
     if not source_sum:
