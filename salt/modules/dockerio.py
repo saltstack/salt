@@ -647,7 +647,7 @@ def create_container(image,
 
     try:
         docker_version = client.version()
-        if (float(docker_version['ApiVersion']) > 1.18):
+        if float(docker_version['ApiVersion']) > 1.18:
             container_info = client.create_container(
                 image=image,
                 command=command,
