@@ -143,6 +143,11 @@ def set_host(ip, alias):
     Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
 
+    .. versionchanged:: XXXX.X.X
+        If ``alias`` does not include any host names (it is the empty
+        string or contains only whitespace), all entries for the given
+        IP address are removed.
+
     CLI Example:
 
     .. code-block:: bash
@@ -153,6 +158,12 @@ def set_host(ip, alias):
     ovr = False
     if not os.path.isfile(hfn):
         return False
+
+    line_to_add = ip + '\t\t' + alias + '\n'
+    # support removing a host entry by providing an empty string
+    if not alias.strip():
+        line_to_add = ''
+
     lines = salt.utils.fopen(hfn).readlines()
     for ind, line in enumerate(lines):
         tmpline = line.strip()
@@ -163,7 +174,7 @@ def set_host(ip, alias):
         comps = tmpline.split()
         if comps[0] == ip:
             if not ovr:
-                lines[ind] = ip + '\t\t' + alias + '\n'
+                lines[ind] = line_to_add
                 ovr = True
             else:  # remove other entries
                 lines[ind] = ''
@@ -171,7 +182,7 @@ def set_host(ip, alias):
         # make sure there is a newline
         if lines and not lines[-1].endswith(('\n', '\r')):
             lines[-1] = '{0}\n'.format(lines[-1])
-        line = ip + '\t\t' + alias + '\n'
+        line = line_to_add
         lines.append(line)
     with salt.utils.fopen(hfn, 'w+') as ofile:
         ofile.writelines(lines)
