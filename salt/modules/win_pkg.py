@@ -980,4 +980,7 @@ def _get_latest_pkg_version(pkginfo):
 
 
 def compare_versions(ver1='', oper='==', ver2=''):
+    '''
+    Compare software package versions
+    '''
     return salt.utils.compare_versions(ver1, oper, ver2)
