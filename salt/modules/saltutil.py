@@ -795,7 +795,7 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(fun, **kwargs):
+def runner(_fun, **kwargs):
     '''
     Execute a runner module (this function must be run on the master)
 
@@ -822,10 +822,10 @@ def runner(fun, **kwargs):
     else:
         rclient = salt.runner.RunnerClient(__opts__)
 
-    return rclient.cmd(fun, [], kwarg=kwargs)
+    return rclient.cmd(_fun, kwarg=kwargs)
 
 
-def wheel(fun, **kwargs):
+def wheel(_fun, **kwargs):
     '''
     Execute a wheel module (this function must be run on the master)
 
@@ -843,7 +843,7 @@ def wheel(fun, **kwargs):
         salt '*' saltutil.wheel key.accept match=jerry
     '''
     wclient = salt.wheel.WheelClient(__opts__)
-    return wclient.cmd(fun, kwarg=kwargs)
+    return wclient.cmd(_fun, kwarg=kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots
