@@ -553,7 +553,6 @@ def dependency_information(include_salt_cloud=False):
         ('Mako', 'mako', '__version__'),
         ('Tornado', 'tornado', 'version'),
         ('timelib', 'timelib', 'version'),
-        ('dateutil', 'dateutil', '__version__'),
         ('pygit2', 'pygit2', '__version__'),
         ('smmap', 'smmap', '__version__'),
         ('cffi', 'cffi', '__version__'),
