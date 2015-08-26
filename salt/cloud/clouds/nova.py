@@ -88,40 +88,30 @@ will be created without the rest of the interfaces
 Note: For rackconnect v3, rackconnectv3 needs to be specified with the
 rackconnect v3 cloud network as its variable.
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
 
-# The import section is mostly libcloud boilerplate
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import socket
 import pprint
 import yaml
 
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+# Import Salt Libs
 import salt.ext.six as six
+import salt.utils
+import salt.client
 try:
     from salt.utils.openstack import nova
+    import novaclient.exceptions
     HAS_NOVA = True
 except NameError as exc:
     HAS_NOVA = False
 
+# Import Salt Cloud Libs
+from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
 import salt.utils.cloud
-
-# Import nova libs
-try:
-    import novaclient.exceptions
-except ImportError:
-    pass
-
-# Import salt libs
-import salt.utils
-import salt.client
-
-# Import salt.cloud libs
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
@@ -133,16 +123,23 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import netaddr IP matching
 try:
     from netaddr import all_matching_cidrs
     HAS_NETADDR = True
 except ImportError:
     HAS_NETADDR = False
 
+try:
+    import requests  # pylint: disable=unused-import
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 # Get logging started
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
+
+__virtualname__ = 'nova'
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -157,7 +154,11 @@ def __virtual__():
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return HAS_NOVA
+
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -166,7 +167,23 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'nova'
+        __active_provider_name__ or __virtualname__
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'libcloud': HAS_LIBCLOUD,
+        'netaddr': HAS_NETADDR,
+        'nova': HAS_NOVA,
+        'requests': HAS_REQUESTS
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 

@@ -1,6 +1,6 @@
-
-Changes for v2015.5.4..v2015.5.5
---------------------------------
+===========================
+Salt 2015.5.5 Release Notes
+===========================
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 

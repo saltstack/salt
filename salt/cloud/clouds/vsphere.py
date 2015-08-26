@@ -15,7 +15,7 @@ vSphere Cloud Module
 
 The vSphere cloud module is used to control access to VMWare vSphere.
 
-:depends:   - PySphere Python module >= 0.1.8
+:depends: PySphere Python module >= 0.1.8
 
 Note: Ensure python pysphere module is installed by running following one-liner
 check. The output should be 0.
@@ -124,19 +124,21 @@ except Exception:  # pylint: disable=W0703
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'vsphere'
+
 
 # Only load in this module if the vSphere configurations are in place
 def __virtual__():
     '''
     Check for vSphere configurations.
     '''
-    if not HAS_LIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -150,8 +152,18 @@ def get_configured_provider():
     )
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'vsphere',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'pysphere': HAS_LIBS}
     )
 
 
