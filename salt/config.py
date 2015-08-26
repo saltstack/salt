@@ -486,14 +486,17 @@ VALID_OPTS = {
     # encountering duplicate values
     'pillar_source_merging_strategy': str,
 
-    # The ordering for environment merging
+    # How to merge multiple top files from multiple salt environments
+    # (saltenvs); can be 'merge' or 'same'
+    'top_file_merging_strategy': str,
+
+    # The ordering for salt environment merging, when top_file_merging_strategy
+    # is set to 'same'
     'env_order': list,
 
+    # The salt environment which provides the default top file when
+    # top_file_merging_strategy is set to 'same'; defaults to 'base'
     'default_top': str,
-
-    # Can be 'merge', 'same', 'preferred'
-    'top_file_merging_strategy': str,
-    'top_file_base': str,
 
     'ping_on_rotate': bool,
     'peer': dict,
@@ -777,9 +780,9 @@ DEFAULT_MINION_OPTS = {
     'file_roots': {
         'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
     },
-    'default_top': 'base',
-    'env_order': [],
     'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -944,9 +947,9 @@ DEFAULT_MASTER_OPTS = {
     'pillar_roots': {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
     },
-    'default_top': 'base',
-    'env_order': [],
     'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
