@@ -891,7 +891,7 @@ class LowDataAdapter(object):
                     -d arg='du -sh .' \\
                     -d arg='/path/to/dir'
 
-            # Sending posiitonal args and Keyword args with JSON:
+            # Sending positional args and Keyword args with JSON:
             echo '[
                 {
                     "client": "local",
@@ -1067,6 +1067,9 @@ class Jobs(LowDataAdapter):
         .. http:get:: /jobs/(jid)
 
             List jobs or show a single job from the job cache.
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
 
             :status 200: |200|
             :status 401: |401|

@@ -20,11 +20,9 @@ except ImportError:
 import salt.utils
 import salt.utils.aws
 import salt.utils.xmlutil as xml
-import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
-DEFAULT_LOCATION = 'us-east-1'
 
 
 def query(key, keyid, method='GET', params=None, headers=None,
@@ -90,11 +88,6 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not key or not keyid:
         key = salt.utils.aws.IROLE_CODE
         keyid = salt.utils.aws.IROLE_CODE
-
-    if not location:
-        location = iam.get_iam_region()
-    if not location:
-        location = DEFAULT_LOCATION
 
     data = ''
     if method == 'PUT':
