@@ -2547,7 +2547,7 @@ def is_profile_configured(opts, provider, profile_name):
     return True
 
 
-def check_driver_dependencies(driver, dependencies=None):
+def check_driver_dependencies(driver, dependencies):
     '''
     Check if the driver's dependencies are available.
 
