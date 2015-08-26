@@ -48,7 +48,7 @@ def get_dns_servers(interface='Local Area Connection'):
                 try:
                     return list(iface_config.DNSServerSearchOrder)
                 except TypeError:
-                    return []                
+                    return []
     log.debug('Interface "{0}" not found'.format(interface))
     return False
 
