@@ -37,6 +37,8 @@ def __random_name(size=6):
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
+PROVIDER_NAME = 'azure'
+PROFILE_NAME = 'azure-test'
 
 
 @skipIf(HAS_AZURE is False, 'These tests require azure to be installed.')
@@ -53,50 +55,55 @@ class AzureTest(integration.ShellCase):
         super(AzureTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'azure-config:'
-        provider = 'azure'
+        provider_str = 'azure-config'
         providers = self.run_cloud('--list-providers')
-        if profile_str not in providers:
+        if provider_str + ':' not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(provider)
+                .format(PROVIDER_NAME)
             )
 
         # check if subscription_id and certificate_path are present in provider file
-        provider_path = os.path.join(integration.FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            provider + '.conf')
-        provider_config = cloud_providers_config(provider_path)
-        sub_id = provider_config['azure-config']['azure']['subscription_id']
-        cert_path = provider_config['azure-config']['azure']['certificate_path']
+        provider_config = cloud_providers_config(
+            os.path.join(
+                integration.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+        sub_id = provider_config[provider_str][PROVIDER_NAME]['subscription_id']
+        cert_path = provider_config[provider_str][PROVIDER_NAME]['certificate_path']
         if sub_id == '' or cert_path == '':
             self.skipTest(
                 'A subscription_id and certificate_path must be provided to run '
                 'these tests. Check '
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(
-                    provider
+                    PROVIDER_NAME
                 )
             )
 
         # check if ssh_username, ssh_password, and media_link are present
         # in the azure configuration file
-        profile_path = os.path.join(integration.FILES,
-                            'conf',
-                            'cloud.profiles.d',
-                            provider + '.conf')
-        profile_config = cloud_providers_config(profile_path)
-        ssh_user = profile_config['azure-test']['azure-config']['ssh_username']
-        ssh_pass = profile_config['azure-test']['azure-config']['ssh_password']
-        media_link = profile_config['azure-test']['azure-config']['media_link']
+        profile_config = cloud_providers_config(
+            os.path.join(
+                integration.FILES,
+                'conf',
+                'cloud.profiles.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+        ssh_user = profile_config[PROFILE_NAME][provider_str]['ssh_username']
+        ssh_pass = profile_config[PROFILE_NAME][provider_str]['ssh_password']
+        media_link = profile_config[PROFILE_NAME][provider_str]['media_link']
 
         if ssh_user == '' or ssh_pass == '' or media_link == '':
             self.skipTest(
                 'An ssh_username, ssh_password, and media_link must be provided to run '
                 'these tests. One or more of these elements is missing. Check '
                 'tests/integration/files/conf/cloud.profiles.d/{0}.conf'.format(
-                    provider
+                    PROVIDER_NAME
                 )
             )
 
@@ -104,22 +111,31 @@ class AzureTest(integration.ShellCase):
         '''
         Test creating an instance on Azure
         '''
-        # create the instance
-        instance = self.run_cloud('-p azure-test {0}'.format(INSTANCE_NAME))
-        ret_str = '        {0}'.format(INSTANCE_NAME)
-
-        # check if instance installed salt and returned correctly
+        # check if instance with salt installed returned
         try:
-            self.assertIn(ret_str, instance)
+            self.assertIn(
+                INSTANCE_NAME,
+                [i.strip() for i in self.run_cloud(
+                    '-p {0} {1}'.format(
+                        PROFILE_NAME,
+                        INSTANCE_NAME
+                    )
+                )]
+            )
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
             raise
 
         # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        not_deleted = 'No machines were found to be destroyed'
         try:
-            self.assertNotEqual(not_deleted, delete)
+            self.assertIn(
+                INSTANCE_NAME + ':',
+                [i.strip() for i in self.run_cloud(
+                    '-d {0} --assume-yes'.format(
+                        INSTANCE_NAME
+                    )
+                )]
+            )
         except AssertionError:
             raise
 
