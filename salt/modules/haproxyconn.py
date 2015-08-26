@@ -85,7 +85,6 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
 
         salt '*' haproxy.enable_server web1.example.com www
     '''
-    ha_conn = _get_conn(socket)
 
     if backend == '*':
         backends = show_backends(socket=socket).split('\n')
@@ -93,6 +92,7 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
         backends = [backend]
 
     for backend in backends:
+        ha_conn = _get_conn(socket)
         ha_cmd = haproxy.cmds.enableServer(server=name, backend=backend)
         ha_conn.sendCmd(ha_cmd)
 
@@ -118,7 +118,6 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
 
         salt '*' haproxy.disable_server db1.example.com mysql
     '''
-    ha_conn = _get_conn(socket)
 
     if backend == '*':
         backends = show_backends(socket=socket).split('\n')
@@ -126,6 +125,7 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
         backends = [backend]
 
     for backend in backends:
+        ha_conn = _get_conn(socket)
         ha_cmd = haproxy.cmds.disableServer(server=name, backend=backend)
         ha_conn.sendCmd(ha_cmd)
 
