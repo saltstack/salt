@@ -28,6 +28,7 @@ If this driver is still needed, set up the cloud configuration at
       driver: aws
 
 '''
+# pylint: disable=E0102
 
 # Import python libs
 from __future__ import absolute_import

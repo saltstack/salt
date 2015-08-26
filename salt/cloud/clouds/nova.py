@@ -88,6 +88,7 @@ will be created without the rest of the interfaces
 Note: For rackconnect v3, rackconnectv3 needs to be specified with the
 rackconnect v3 cloud network as its variable.
 '''
+# pylint: disable=E0102
 
 # Import python libs
 from __future__ import absolute_import
@@ -129,7 +130,7 @@ except ImportError:
     HAS_NETADDR = False
 
 try:
-    import requests
+    import requests  # pylint: disable=unused-import
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
