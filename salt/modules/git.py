@@ -162,6 +162,20 @@ def _git_run(command, cwd=None, runas=None, identity=None,
     '''
     env = {}
 
+    for item in command:
+        try:
+            if '<redacted>' in _remove_sensitive_data(item):
+                loglevel = 'quiet'
+                log.debug(
+                    'HTTPS user/password in git command, the command and '
+                    'output will redacted'
+                )
+                break
+        except TypeError:
+            continue
+    else:
+        loglevel = 'debug'
+
     if identity:
         stderrs = []
 
@@ -212,6 +226,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                                                  runas=runas,
                                                  env=env,
                                                  python_shell=False,
+                                                 output_loglevel=loglevel,
                                                  ignore_retcode=ignore_retcode,
                                                  **kwargs)
             finally:
@@ -236,6 +251,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                                          runas=runas,
                                          env=env,
                                          python_shell=False,
+                                         output_loglevel=loglevel,
                                          ignore_retcode=ignore_retcode,
                                          **kwargs)
 
@@ -480,7 +496,7 @@ def archive(cwd,
     return True
 
 
-def branch(cwd, name, opts='', user=None, ignore_retcode=False):
+def branch(cwd, name=None, opts='', user=None, ignore_retcode=False):
     '''
     Interface to `git-branch(1)`_
 
@@ -488,7 +504,8 @@ def branch(cwd, name, opts='', user=None, ignore_retcode=False):
         The path to the git checkout
 
     name
-        Name of the branch on which to operate
+        Name of the branch on which to operate. If not specified, the current
+        branch will be assumed.
 
     opts
         Any additional options to add to the command line, in a single string
@@ -533,7 +550,8 @@ def branch(cwd, name, opts='', user=None, ignore_retcode=False):
     cwd = _expand_path(cwd, user)
     command = ['git', 'branch']
     command.extend(_format_opts(opts))
-    command.append(name)
+    if name is not None:
+        command.append(name)
     _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     return True
 
@@ -2357,7 +2375,7 @@ def remote_get(cwd, remote='origin', user=None, ignore_retcode=False):
 
         .. versionadded:: 2015.8.0
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -2372,6 +2390,80 @@ def remote_get(cwd, remote='origin', user=None, ignore_retcode=False):
             .format(remote, cwd)
         )
     return all_remotes[remote]
+
+
+def remote_refs(url,
+                heads=False,
+                tags=False,
+                user=None,
+                identity=None,
+                https_user=None,
+                https_pass=None,
+                ignore_retcode=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Return the remote refs for the specified URL
+
+    url
+        URL of the remote repository
+
+    heads : False
+        Restrict output to heads. Can be combined with ``tags``.
+
+    tags : False
+        Restrict output to tags. Can be combined with ``heads``.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    identity
+        Path to a private key to use for ssh URLs
+
+        .. warning::
+
+            Key must be passphraseless to allow for non-interactive login. For
+            greater security with passphraseless private keys, see the
+            `sshd(8)`_ manpage for information on securing the keypair from the
+            remote side in the ``authorized_keys`` file.
+
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+    https_user
+        Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
+
+    https_pass
+        Set HTTP Basic Auth password. Only accepted for HTTPS URLs.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.remote_refs https://github.com/saltstack/salt.git
+    '''
+    command = ['git', 'ls-remote']
+    if heads:
+        command.append('--heads')
+    if tags:
+        command.append('--tags')
+    command.append(_add_http_basic_auth(url, https_user, https_pass))
+    output = _git_run(command,
+                      user=user,
+                      identity=identity,
+                      ignore_retcode=ignore_retcode)['stdout']
+    ret = {}
+    for line in salt.utils.itersplit(output, '\n'):
+        try:
+            sha1_hash, ref_name = line.split(None, 1)
+        except ValueError:
+            continue
+        ret[ref_name] = sha1_hash
+    return ret
 
 
 def remote_set(cwd,
