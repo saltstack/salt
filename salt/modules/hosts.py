@@ -108,6 +108,10 @@ def get_alias(ip):
     '''
     Return the list of aliases associated with an ip
 
+    Aliases (host names) are returned in the order in which they
+    appear in the hosts file.  If there are no aliases associated with
+    the IP, an empty list is returned.
+
     CLI Example:
 
     .. code-block:: bash
