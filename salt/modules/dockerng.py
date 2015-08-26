@@ -2658,6 +2658,16 @@ def create(image,
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
 
+    # Added to manage api change in 1.19.
+    # mem_limit and memswap_limit must be provided in host_config object
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+        create_kwargs['host_config'] = docker.utils.create_host_config(mem_limit=create_kwargs.get('mem_limit'),
+                                                                       memswap_limit=create_kwargs.get('memswap_limit'))
+        if 'mem_limit' in create_kwargs:
+            del create_kwargs['mem_limit']
+        if 'memswap_limit' in create_kwargs:
+            del create_kwargs['memswap_limit']
+
     log.debug(
         'dockerng.create is using the following kwargs to create '
         'container \'{0}\' from image \'{1}\': {2}'
