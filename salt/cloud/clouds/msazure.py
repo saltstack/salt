@@ -44,6 +44,7 @@ import copy
 import logging
 import pprint
 import time
+import yaml
 
 # Import salt libs
 import salt.config as config
@@ -51,9 +52,6 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
 # Import 3rd-party libs
-import yaml
-
-# Import azure libs
 HAS_LIBS = False
 try:
     import azure
@@ -80,10 +78,10 @@ def __virtual__():
     '''
     Check for Azure configurations.
     '''
-    if not HAS_LIBS:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return __virtualname__
@@ -97,6 +95,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or __virtualname__,
         ('subscription_id', 'certificate_path')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'azure': HAS_LIBS}
     )
 
 

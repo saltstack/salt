@@ -24,11 +24,9 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 
 :depends: softlayer
 '''
-# pylint: disable=E0102
-
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import time
 
@@ -47,19 +45,21 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'softlayer'
+
 
 # Only load in this module if the SoftLayer configurations are in place
 def __virtual__():
     '''
     Check for SoftLayer configurations.
     '''
-    if not HAS_SLLIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -68,8 +68,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'softlayer',
+        __active_provider_name__ or __virtualname__,
         ('apikey',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'softlayer': HAS_SLLIBS}
     )
 
 

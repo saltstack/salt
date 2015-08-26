@@ -59,7 +59,6 @@ Setting up Service Account Authentication:
       ssh_interface: public_ips
 
 :maintainer: Eric Johnson <erjohnso@google.com>
-:maturity: new
 :depends: libcloud >= 0.14.1
 :depends: pycrypto >= 2.1
 '''
@@ -76,8 +75,6 @@ import msgpack
 from ast import literal_eval
 
 # Import 3rd-party libs
-import salt.ext.six as six
-# The import section is mostly libcloud boilerplate
 # pylint: disable=import-error
 try:
     from libcloud.compute.types import Provider
@@ -95,8 +92,7 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import namespaced_function
-
-# Import saltcloud libs
+import salt.ext.six as six
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import http
@@ -109,6 +105,8 @@ from salt.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'gce'
 
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
@@ -130,10 +128,10 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for GCE configurations.
     '''
-    if not HAS_LIBCLOUD:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
@@ -152,11 +150,11 @@ def __virtual__():
                 )
             )
 
-        keymode = str(
+        key_mode = str(
             oct(stat.S_IMODE(os.stat(pathname).st_mode))
         )
 
-        if keymode not in ('0400', '0600'):
+        if key_mode not in ('0400', '0600'):
             raise SaltCloudException(
                 'The GCE service account private key {0!r} used in '
                 'the {1!r} provider configuration needs to be set to '
@@ -166,7 +164,7 @@ def __virtual__():
                 )
             )
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -179,6 +177,16 @@ def get_configured_provider():
         ('project',
          'service_account_email_address',
          'service_account_private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 

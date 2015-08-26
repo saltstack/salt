@@ -118,11 +118,9 @@ Alternatively, one could use the private IP to connect by specifying:
 
 
 '''
-from __future__ import absolute_import
-
-# The import section is mostly libcloud boilerplate
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import socket
@@ -135,7 +133,7 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
-# These functions requre libcloud trunk or >= 0.14.0
+# These functions require libcloud trunk or >= 0.14.0
 HAS014 = False
 try:
     from libcloud.compute.drivers.openstack import OpenStackNetwork
@@ -173,6 +171,8 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'openstack'
+
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -197,10 +197,10 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for OPENSTACK configurations
     '''
-    if not HAS_LIBCLOUD:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     salt.utils.warn_until(
@@ -209,7 +209,7 @@ def __virtual__():
         'Carbon release of Salt. Please use the nova driver instead.'
     )
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -218,8 +218,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'openstack',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'libcloud': HAS_LIBCLOUD,
+        'netaddr': HAS_NETADDR
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
