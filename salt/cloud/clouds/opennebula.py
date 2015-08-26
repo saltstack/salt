@@ -114,7 +114,7 @@ def get_dependencies():
     )
 
 
-def avail_images(call=None):    
+def avail_images(call=None):
     '''
     Return available OpenNebula images.
 
