@@ -562,7 +562,7 @@ def dependency_information(include_salt_cloud=False):
         ('gitpython', 'gitpython', '__version__'),
         ('python-gnupg', 'python-gnupg', '__version__'),
         ('mysql-python', 'mysql-python', '__version__'),
-        ('cherrypy', 'cherrypy', '__version__'),        
+        ('cherrypy', 'cherrypy', '__version__'),
     ]
 
     if include_salt_cloud:
