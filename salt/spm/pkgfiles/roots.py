@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import os
 import os.path
 import logging
+import salt.syspaths
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def check_existing(package, pkg_files, conn=None):
         elif package.endswith('-conf'):
             # Module files are distributed via _modules, _states, etc
             new_name = member.name.replace('{0}/'.format(package), '')
-            out_file = os.path.join('/', 'etc', 'salt', new_name)
+            out_file = os.path.join(salt.syspaths.CONFIG_DIR, new_name)
         else:
             out_file = os.path.join(conn['roots_path'], member.name)
 
@@ -83,7 +84,7 @@ def install_file(package, formula_tar, member, conn=None):
     elif package.endswith('-conf'):
         # Module files are distributed via _modules, _states, etc
         member.name = member.name.replace('{0}/'.format(package), '')
-        out_path = os.path.join('/', 'etc', 'salt')
+        out_path = salt.syspaths.CONFIG_DIR
 
     log.debug('Installing package file {0} to {1}'.format(member.name, out_path))
     formula_tar.extract(member, out_path)
