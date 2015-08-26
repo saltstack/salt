@@ -658,25 +658,47 @@ def create_container(image,
                 volumes.remove(volume)
 
     try:
-        container_info = client.create_container(
-            image=image,
-            command=command,
-            hostname=hostname,
-            user=user,
-            detach=detach,
-            stdin_open=stdin_open,
-            tty=tty,
-            mem_limit=mem_limit,
-            ports=ports,
-            environment=environment,
-            dns=dns,
-            volumes=volumes,
-            volumes_from=volumes_from,
-            name=name,
-            cpu_shares=cpu_shares,
-            cpuset=cpuset,
-            host_config=docker.utils.create_host_config(binds=binds)
-        )
+        if salt.utils.version_cmp(client.version()['ApiVersion'], '1.18') == 1:
+            container_info = client.create_container(
+                image=image,
+                command=command,
+                hostname=hostname,
+                user=user,
+                detach=detach,
+                stdin_open=stdin_open,
+                tty=tty,
+                ports=ports,
+                environment=environment,
+                dns=dns,
+                volumes=volumes,
+                volumes_from=volumes_from,
+                name=name,
+                cpu_shares=cpu_shares,
+                cpuset=cpuset,
+                host_config=docker.utils.create_host_config(binds=binds,
+                                                            mem_limit=mem_limit)
+            )
+        else:
+            container_info = client.create_container(
+                image=image,
+                command=command,
+                hostname=hostname,
+                user=user,
+                detach=detach,
+                stdin_open=stdin_open,
+                tty=tty,
+                mem_limit=mem_limit,
+                ports=ports,
+                environment=environment,
+                dns=dns,
+                volumes=volumes,
+                volumes_from=volumes_from,
+                name=name,
+                cpu_shares=cpu_shares,
+                cpuset=cpuset,
+                host_config=docker.utils.create_host_config(binds=binds)
+            )
+
         log.trace("docker.client.create_container returned: " + str(container_info))
         container = container_info['Id']
         callback = _valid
