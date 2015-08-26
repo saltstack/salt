@@ -49,8 +49,13 @@ def check_existing(package, pkg_files, conn=None):
             # Pillars are automatically put in the pillar_roots
             new_name = '{0}.sls.orig'.format(package)
             out_file = os.path.join(conn['pillar_path'], new_name)
+        elif package.endswith('-conf'):
+            # Module files are distributed via _modules, _states, etc
+            new_name = member.name.replace('{0}/'.format(package), '')
+            out_file = os.path.join('/', 'etc', 'salt', new_name)
         else:
             out_file = os.path.join(conn['roots_path'], member.name)
+
         if os.path.exists(out_file):
             existing_files.append(out_file)
             if not __opts__['force']:
@@ -75,6 +80,10 @@ def install_file(package, formula_tar, member, conn=None):
         # Pillars are automatically put in the pillar_roots
         member.name = '{0}.sls.orig'.format(package)
         out_path = conn['pillar_path']
+    elif package.endswith('-conf'):
+        # Module files are distributed via _modules, _states, etc
+        member.name = member.name.replace('{0}/'.format(package), '')
+        out_path = os.path.join('/', 'etc', 'salt')
 
     log.debug('Installing package file {0} to {1}'.format(member.name, out_path))
     formula_tar.extract(member, out_path)
