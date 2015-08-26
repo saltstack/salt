@@ -42,18 +42,20 @@ def check_existing(package, pkg_files, conn=None):
     for member in pkg_files:
         if member.isdir():
             continue
+        new_name = member.name.replace('{0}/'.format(package), '')
         if member.name.startswith('{0}/_'.format(package)):
             # Module files are distributed via _modules, _states, etc
-            new_name = member.name.replace('{0}/'.format(package), '')
             out_file = os.path.join(conn['roots_path'], new_name)
         elif member.name == '{0}/pillar.example'.format(package):
             # Pillars are automatically put in the pillar_roots
             new_name = '{0}.sls.orig'.format(package)
             out_file = os.path.join(conn['pillar_path'], new_name)
         elif package.endswith('-conf'):
-            # Module files are distributed via _modules, _states, etc
-            new_name = member.name.replace('{0}/'.format(package), '')
+            # Configuration files go into /etc/salt/
             out_file = os.path.join(salt.syspaths.CONFIG_DIR, new_name)
+        elif package.endswith('-reactor'):
+            # Reactor files go into /srv/reactor/
+            out_file = os.path.join(__opts__['reactor_roots'], member.name)
         else:
             out_file = os.path.join(conn['roots_path'], member.name)
 
@@ -82,9 +84,12 @@ def install_file(package, formula_tar, member, conn=None):
         member.name = '{0}.sls.orig'.format(package)
         out_path = conn['pillar_path']
     elif package.endswith('-conf'):
-        # Module files are distributed via _modules, _states, etc
+        # Configuration files go into /etc/salt/
         member.name = member.name.replace('{0}/'.format(package), '')
         out_path = salt.syspaths.CONFIG_DIR
+    elif package.endswith('-reactor'):
+        # Reactor files go into /srv/reactor/
+        out_path = __opts__['reactor_roots']
 
     log.debug('Installing package file {0} to {1}'.format(member.name, out_path))
     formula_tar.extract(member, out_path)
