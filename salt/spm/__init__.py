@@ -570,6 +570,8 @@ class SPMClient(object):
         if not os.path.exists(self.opts['spm_build_dir']):
             os.mkdir(self.opts['spm_build_dir'])
 
+        self.formula_conf = formula_conf
+
         formula_tar = tarfile.open(out_path, 'w:bz2')
         formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
         formula_tar.close()
@@ -581,8 +583,9 @@ class SPMClient(object):
         Exclude based on opts
         '''
         for item in self.opts['spm_build_exclude']:
-            exclude_name = '{0}/{1}'.format(self.abspath, item)
-            if member.name.startswith(exclude_name):
+            if member.name.startswith('{0}/{1}'.format(self.formula_conf['name'], item)):
+                return None
+            elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
                 return None
         return member
 
