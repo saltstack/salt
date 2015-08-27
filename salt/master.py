@@ -451,7 +451,9 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user {0!r}'.format(salt.utils.get_user())
+            'salt-master is starting as user \'{0}\''.format(
+                salt.utils.get_user()
+            )
         )
 
         enable_sigusr1_handler()
@@ -912,17 +914,19 @@ class AESFuncs(object):
         A utility function to perform common verification steps.
 
         :param dict load: A payload received from a minion
-        :param list verify_keys: A list of strings that should be present in a given load
+        :param list verify_keys: A list of strings that should be present in a
+        given load
 
         :rtype: bool
         :rtype: dict
-        :return: The original load (except for the token) if the load can be verified. False if the load is invalid.
+        :return: The original load (except for the token) if the load can be
+        verified. False if the load is invalid.
         '''
         if any(key not in load for key in verify_keys):
             return False
         if 'tok' not in load:
             log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                'Received incomplete call from {0} for \'{1}\', missing \'{2}\''
                 .format(
                     load['id'],
                     inspect_stack()['co_name'],
@@ -1072,12 +1076,13 @@ class AESFuncs(object):
             return False
         if 'tok' not in load:
             log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
+                'Received incomplete call from {0} for \'{1}\', missing '
+                '\'{2}\''.format(
                     load['id'],
                     inspect_stack()['co_name'],
                     'tok'
-                ))
+                )
+            )
             return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
