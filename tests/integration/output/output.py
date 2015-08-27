@@ -6,16 +6,17 @@
 # Import Salt Libs
 from __future__ import absolute_import
 import os
-import copy
 import traceback
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mixins import RUNTIME_VARS
 ensure_in_syspath('../../')
 
 # Import Salt libs
 import integration
 from salt.output import display_output
+import salt.config
 
 
 class OutputReturnTest(integration.ShellCase):
