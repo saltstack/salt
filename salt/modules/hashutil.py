@@ -144,7 +144,7 @@ def base64_encodefile(fname):
     '''
     Read a file from the file system and return as a base64 encoded string
 
-    .. versionadded:: 2015.2.0
+    .. versionadded:: Boron
 
     Pillar example:
 

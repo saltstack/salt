@@ -4620,6 +4620,8 @@ def decode(name,
     '''
     Decode an encoded file and write it to disk
 
+    .. versionadded:: Boron
+
     name
         Path of the file to be written.
     encoded_data
