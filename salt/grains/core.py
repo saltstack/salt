@@ -187,7 +187,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: {0!r}'.format(line))
+                log.debug('Unexpected lspci output: \'{0}\''.format(line))
 
         if error:
             log.warn(
@@ -788,7 +788,7 @@ def _virtual(osdata):
 
     for command in failed_commands:
         log.warn(
-            'Although {0!r} was found in path, the current user '
+            'Although \'{0}\' was found in path, the current user '
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
