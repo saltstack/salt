@@ -313,7 +313,9 @@ class FileTestCase(TestCase):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = \
                             'Directory {0} is set for removal'.format(name)
-                        ret.update({'comment': comt, 'result': None})
+                        ret.update({'comment': comt,
+                                    'pchanges': {'removed': name},
+                                    'result': None})
                         self.assertDictEqual(filestate.absent(name), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
@@ -328,6 +330,8 @@ class FileTestCase(TestCase):
                             ret.update({'comment': comt, 'result': False,
                                         'changes': {}})
                             self.assertDictEqual(filestate.absent(name), ret)
+                            ret.update({'pchanges': {}})
+
 
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
