@@ -22,7 +22,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       verify_ssl: True
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
-:maturity: new
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
@@ -34,6 +33,7 @@ import pprint
 import logging
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 
 # Import salt cloud libs
@@ -45,12 +45,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
-# Get logging started
-log = logging.getLogger(__name__)
-
+# Import Third Party Libs
 try:
     import requests
     HAS_REQUESTS = True
@@ -63,18 +58,23 @@ try:
 except ImportError:
     HAS_IPY = False
 
+# Get logging started
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'proxmox'
+
 
 def __virtual__():
     '''
     Check for PROXMOX configurations
     '''
-    if not (HAS_IPY and HAS_REQUESTS):
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -83,8 +83,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'proxmox',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'IPy': HAS_IPY
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
