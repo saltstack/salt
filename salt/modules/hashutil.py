@@ -145,6 +145,18 @@ def base64_encodefile(fname):
 
     .. versionadded:: 2015.2.0
 
+    Pillar example:
+
+    .. code-block:: yaml
+
+        path:
+          to:
+            data: |
+              {{ salt.hashutil.base64_encodefile('/path/to/binary_file') | indent(6) }}
+
+    The :py:func:`file.decode <salt.states.file.decode>` state function can be
+    used to decode this data and write it to disk.
+
     CLI Example:
 
     .. code-block:: bash

@@ -4626,9 +4626,12 @@ def decode(name,
         The encoded file. Either this option or ``contents_pillar`` must be
         specified.
     contents_pillar
-        A Pillar path to the encoded file. Uses the same syntax as
-        :py:func:`pillar.get <salt.modules.pillar.get>`. Either this option or
-        ``encoded_data`` must be specified.
+        A Pillar path to the encoded file. Uses the same path syntax as
+        :py:func:`pillar.get <salt.modules.pillar.get>`. The
+        :py:func:`hashutil.base64_encodefile
+        <salt.modules.hashutil.base64_encodefile>` function can load encoded
+        content into Pillar. Either this option or ``encoded_data`` must be
+        specified.
     encoding_type : ``base64``
         The type of encoding.
     checksum : ``md5``
@@ -4655,6 +4658,17 @@ def decode(name,
             - encoded_data: |
                 Z2V0IHNhbHRlZAo=
 
+    Be careful with multi-line strings that the YAML indentation is correct.
+    E.g.,
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                {{ salt.pillar.get('path:to:data') | indent(8) }}
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
