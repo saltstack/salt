@@ -186,7 +186,7 @@ class SPMClient(object):
         pkg_files = formula_tar.getmembers()
         # First pass: check for files that already exist
         existing_files = self.pkgfiles['{0}.check_existing'.format(self.files_prov)](
-            name, pkg_files
+            name, pkg_files, formula_def
         )
 
         if existing_files and not self.opts['force']:
@@ -220,15 +220,16 @@ class SPMClient(object):
                 digest = file_hash.hexdigest()
 
             out_path = self.pkgfiles['{0}.install_file'.format(self.files_prov)](
-                name, formula_tar, member, self.files_conn
+                name, formula_tar, member, formula_def, self.files_conn
             )
-            self.pkgdb['{0}.register_file'.format(self.db_prov)](
-                name,
-                member,
-                out_path,
-                digest,
-                self.db_conn
-            )
+            if out_path is not False:
+                self.pkgdb['{0}.register_file'.format(self.db_prov)](
+                    name,
+                    member,
+                    out_path,
+                    digest,
+                    self.db_conn
+                )
 
         formula_tar.close()
 

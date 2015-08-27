@@ -32,7 +32,7 @@ def init(**kwargs):
     }
 
 
-def check_existing(package, pkg_files, conn=None):
+def check_existing(package, pkg_files, formula_def, conn=None):
     '''
     Check the filesystem for existing files
     '''
@@ -43,7 +43,12 @@ def check_existing(package, pkg_files, conn=None):
     for member in pkg_files:
         if member.isdir():
             continue
+
+        tld = formula_def.get('top_level_dir', package)
         new_name = member.name.replace('{0}/'.format(package), '')
+        if not new_name.startswith(tld):
+            continue
+
         if member.name.startswith('{0}/_'.format(package)):
             # Module files are distributed via _modules, _states, etc
             out_file = os.path.join(conn['formula_path'], new_name)
@@ -68,14 +73,23 @@ def check_existing(package, pkg_files, conn=None):
     return existing_files
 
 
-def install_file(package, formula_tar, member, conn=None):
+def install_file(package, formula_tar, member, formula_def, conn=None):
     '''
     Install a single file to the file system
     '''
+    if member.name == package:
+        return False
+
     if conn is None:
         conn = init()
 
     out_path = conn['formula_path']
+
+    tld = formula_def.get('top_level_dir', package)
+    new_name = member.name.replace('{0}/'.format(package), '', 1)
+    if not new_name.startswith(tld) and not new_name.startswith('_') and not new_name.startswith('pillar.example'):
+        log.debug('{0} not in top level directory, not installing'.format(new_name))
+        return False
 
     if member.name.startswith('{0}/_'.format(package)):
         # Module files are distributed via _modules, _states, etc
