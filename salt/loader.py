@@ -752,18 +752,19 @@ def clouds(opts):
     # Let's bring __active_provider_name__, defaulting to None, to all cloud
     # drivers. This will get temporarily updated/overridden with a context
     # manager when needed.
-    functions = LazyLoader(_module_dirs(opts,
-                                           'clouds',
-                                           'cloud',
-                                           base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
-                                           int_type='clouds'),
-                              opts,
-                              tag='clouds',
-                              pack={'__active_provider_name__': None},
-                              )
+    functions = LazyLoader(
+        _module_dirs(opts,
+                     'clouds',
+                     'cloud',
+                     base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
+                     int_type='clouds'),
+        opts,
+        tag='clouds',
+        pack={'__active_provider_name__': None},
+    )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
-            '{0!r} has been marked as not supported. Removing from the list '
+            '\'{0}\' has been marked as not supported. Removing from the list '
             'of supported cloud functions'.format(
                 funcname
             )
@@ -1219,7 +1220,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         if getattr(mod, '__load__', False) is not False:
             log.info(
-                'The functions from module {0!r} are being loaded from the '
+                'The functions from module \'{0}\' are being loaded from the '
                 'provided __load__ attribute'.format(
                     module_name
                 )
@@ -1385,7 +1386,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             '{0}.__virtual__() is wrongly returning `None`. '
                             'It should either return `True`, `False` or a new '
                             'name. If you\'re the developer of the module '
-                            '{1!r}, please fix this.'.format(
+                            '\'{1}\', please fix this.'.format(
                                 mod.__name__,
                                 module_name
                             )
@@ -1406,11 +1407,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if not hasattr(mod, '__virtualname__'):
                         salt.utils.warn_until(
                             'Hydrogen',
-                            'The {0!r} module is renaming itself in it\'s '
+                            'The \'{0}\' module is renaming itself in its '
                             '__virtual__() function ({1} => {2}). Please '
                             'set it\'s virtual name as the '
                             '\'__virtualname__\' module attribute. '
-                            'Example: "__virtualname__ = {2!r}"'.format(
+                            'Example: "__virtualname__ = \'{2}\'"'.format(
                                 mod.__name__,
                                 module_name,
                                 virtual
@@ -1422,9 +1423,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         # being returned by the __virtual__() function. This
                         # should be considered an error.
                         log.error(
-                            'The module {0!r} is showing some bad usage. It\'s '
-                            '__virtualname__ attribute is set to {1!r} yet the '
-                            '__virtual__() function is returning {2!r}. These '
+                            'The module \'{0}\' is showing some bad usage. Its '
+                            '__virtualname__ attribute is set to \'{1}\' yet the '
+                            '__virtual__() function is returning \'{2}\'. These '
                             'values should match!'.format(
                                 mod.__name__,
                                 virtualname,
@@ -1434,7 +1435,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                     module_name = virtualname
 
-                # If the __virtual__ function returns True and __virtualname__ is set then use it
+                # If the __virtual__ function returns True and __virtualname__
+                # is set then use it
                 elif virtual is True and virtualname != module_name:
                     if virtualname is not True:
                         module_name = virtualname
