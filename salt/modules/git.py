@@ -16,6 +16,7 @@ from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
