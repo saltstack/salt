@@ -98,15 +98,14 @@ from salt.utils import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0401,W0614
-from salt.exceptions import (
-    SaltCloudException,
-    SaltCloudSystemExit,
-)
+from salt.exceptions import SaltCloudSystemExit
 
 
 # pylint: disable=C0103,E0602,E0102
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'gce'
 
 # Redirect GCE functions to this module namespace
 avail_locations = namespaced_function(avail_locations, globals())
@@ -138,20 +137,21 @@ def __virtual__():
         pathname = os.path.expanduser(parameters['service_account_private_key'])
 
         if not os.path.exists(pathname):
-            raise SaltCloudException(
+            log.error(
                 'The GCE service account private key {0!r} used in '
                 'the {1!r} provider configuration does not exist\n'.format(
                     parameters['service_account_private_key'],
                     provider
                 )
             )
+            return False
 
         keymode = str(
             oct(stat.S_IMODE(os.stat(pathname).st_mode))
         )
 
         if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
+            log.error(
                 'The GCE service account private key {0!r} used in '
                 'the {1!r} provider configuration needs to be set to '
                 'mode 0400 or 0600\n'.format(
@@ -159,8 +159,9 @@ def __virtual__():
                     provider
                 )
             )
+            return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
