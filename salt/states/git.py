@@ -720,7 +720,12 @@ def latest(name,
                                 remote_rev[:7]
                             )
                         )
-                    return _neutral_test(ret, _format_comments(actions))
+                    if ret['changes']:
+                        return _neutral_test(ret, _format_comments(actions))
+                    else:
+                        return _uptodate(ret,
+                                         target,
+                                         _format_comments(actions))
 
                 # The fetch_url for the desired remote does not match the
                 # specified URL (or the remote does not exist), so set the
@@ -833,7 +838,12 @@ def latest(name,
                             'old': upstream,
                             'new': desired_upstream
                         }
-                    return _neutral_test(ret, _format_comments(actions))
+                    if ret['changes']:
+                        return _neutral_test(ret, _format_comments(actions))
+                    else:
+                        return _uptodate(ret,
+                                         target,
+                                         _format_comments(actions))
 
                 if not upstream and desired_upstream:
                     upstream_action = (
@@ -1036,11 +1046,14 @@ def latest(name,
                                               identity=identity)
             elif bare:
                 if __opts__['test']:
-                    return _neutral_test(
-                        ret,
+                    msg = (
                         'Bare repository at {0} would be fetched'
                         .format(target)
                     )
+                    if ret['changes']:
+                        return _neutral_test(ret, msg)
+                    else:
+                        return _uptodate(ret, target, msg)
                 output = __salt__['git.fetch'](
                     target,
                     remote=remote,
