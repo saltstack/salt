@@ -1036,6 +1036,41 @@ def list_nodes_full(call=None):
     return _list_linodes(full=True)
 
 
+def list_nodes_min(call=None):
+    '''
+    Return a list of the VMs that are on the provider. Only a list of VM names and
+    their state is returned. This is the minimum amount of information needed to
+    check for existing VMs.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_min my-linode-config
+        salt-cloud --function list_nodes_min my-linode-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+
+    ret = {}
+    nodes = _query('linode', 'list')['DATA']
+
+    for node in nodes:
+        name = node['LABEL']
+        this_node = {
+            'id': str(node['LINODEID']),
+            'state': _get_status_descr_by_id(int(node['STATUS']))
+        }
+
+        ret[name] = this_node
+
+    return ret
+
+
 def reboot(name, call=None):
     '''
     Reboot a linode.
