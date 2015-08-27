@@ -172,7 +172,9 @@ class PrintableDict(OrderedDict):
     def __repr__(self):  # pylint: disable=W0221
         output = []
         for key, value in six.iteritems(self):
-            output.append('\'{0}\': \'{1}\''.format(key, value))
+            # Raw string formatter required here because this is a repr
+            # function.
+            output.append('\'{0}\': {1!r}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
 
