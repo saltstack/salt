@@ -241,7 +241,7 @@ def update_git_repos(opts=None, masterless=False):
         else:
             # New winrepo code utilizing salt.utils.gitfs
             try:
-                winrepo = salt.utils.gitfs.WinRepo(opts)
+                winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
                 winrepo.init_remotes(remotes, PER_REMOTE_PARAMS)
                 winrepo.fetch_remotes()
                 winrepo.checkout()
