@@ -304,9 +304,9 @@ class FileTestCase(TestCase):
                         comt = ('Removed file {0}'.format(name))
                         ret.update({'comment': '',
                                     'result': False,
-                                    'changes': {},
-                                    'pchanges': {}})
+                                    'changes': {}})
                         self.assertDictEqual(filestate.absent(name), ret)
+                        ret.update({'pchanges': {}})
 
             with patch.object(os.path, 'isfile', mock_f):
                 with patch.object(os.path, 'isdir', mock_t):
