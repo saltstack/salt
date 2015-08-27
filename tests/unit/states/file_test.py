@@ -332,7 +332,6 @@ class FileTestCase(TestCase):
                             self.assertDictEqual(filestate.absent(name), ret)
                             ret.update({'pchanges': {}})
 
-
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': True}):
                         comt = ('File {0} is not present'.format(name))
