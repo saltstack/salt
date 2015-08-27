@@ -1281,7 +1281,7 @@ def _validate_input(action,
                         )
                     if not isinstance(val, six.string_types):
                         raise SaltInvocationError(
-                            'Environment values must be strings {key}={val!r}'
+                            'Environment values must be strings {key}=\'{val}\''
                             .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
@@ -1289,7 +1289,7 @@ def _validate_input(action,
             for key, val in six.iteritems(kwargs['environment']):
                 if not isinstance(val, six.string_types):
                     raise SaltInvocationError(
-                        'Environment values must be strings {key}={val!r}'
+                        'Environment values must be strings {key}=\'{val}\''
                         .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
@@ -4546,8 +4546,12 @@ def _script(name,
         try:
             os.remove(path)
         except (IOError, OSError) as exc:
-            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
-                      .format(path, exc))
+            log.error(
+                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                    path,
+                    exc
+                )
+            )
 
     path = salt.utils.mkstemp(dir='/tmp',
                               prefix='salt',
