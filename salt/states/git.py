@@ -534,7 +534,7 @@ def latest(name,
                         return _fail(
                             ret,
                             'Unable to get position of local branch \'{0}\': '
-                            '{1}'.format(exc),
+                            '{1}'.format(branch, exc),
                             comments
                         )
 
