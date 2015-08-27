@@ -11,13 +11,14 @@ For documentation on Salt's Windows Repo feature, see :ref:`here
 # Import python libs
 from __future__ import absolute_import, print_function
 import logging
+import os
 
 # Import salt libs
 import salt.output
 import salt.utils
 import salt.loader
 import salt.template
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos
@@ -40,6 +41,25 @@ def __virtual__():
             salt.utils.namespaced_function(_update_git_repos, globals())
         return __virtualname__
     return False
+
+
+def _get_local_repo_dir(saltenv='base'):
+    if 'win_repo_source_dir' in __opts__:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo_source_dir\' config option is deprecated, please '
+            'use \'winrepo_source_dir\' instead.'
+        )
+        winrepo_source_dir = __opts__['win_repo_source_dir']
+    else:
+        winrepo_source_dir = __opts__['winrepo_source_dir']
+
+    dirs = []
+    dirs.append(salt.syspaths.CACHE_DIR)
+    dirs.extend(['minion', 'files'])
+    dirs.append(saltenv)
+    dirs.extend(winrepo_source_dir[7:].strip('/').split('/'))
+    return os.sep.join(dirs)
 
 
 def genrepo():
@@ -79,3 +99,76 @@ def update_git_repos():
             'accessible from the Command Prompt'
         )
     return _update_git_repos(opts=__opts__, masterless=True)
+
+
+def show_sls(name, saltenv='base'):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Display the rendered software definition from a specific sls file in the
+    local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
+    the latest software definitions from the master.
+
+
+    :param str name:
+        The name of the package you want to view. Start from the local winrepo
+        root. If you have ``.sls`` files organized in subdirectories you'll have
+        to denote them with ``.``. For example, if I have a ``test`` directory
+        in the winrepo root with a ``gvim.sls`` file inside, I would target that
+        file like so: ``test.gvim``. Directories can be targeted as well as long
+        as they contain an ``init.sls`` inside. For example, if I have a ``node``
+        directory with an ``init.sls`` inside, I would target that like so:
+        ``node``.
+
+    :param str saltenv:
+        The default environment is ``base``
+
+    :return:
+        Returns a dictionary containing the rendered data structure
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' winrepo.show_sls gvim
+        salt '*' winrepo.show_sls test.npp
+    '''
+    # Get the location of the local repo
+    repo = _get_local_repo_dir(saltenv)
+
+    # Add the sls file name to the path
+    repo = repo.split('\\')
+    definition = name.split('.')
+    repo.extend(definition)
+
+    # Check for the sls file by name
+    sls_file = '{0}.sls'.format(os.sep.join(repo))
+    if not os.path.exists(sls_file):
+
+        # Maybe it's a directory with an init.sls
+        sls_file = '{0}\\init.sls'.format(os.sep.join(repo))
+        if not os.path.exists(sls_file):
+
+            # It's neither, return
+            return 'Software definition {0} not found'.format(name)
+
+    # Load the renderer
+    renderers = salt.loader.render(__opts__, __salt__)
+    config = {}
+
+    # Run the file through the renderer
+    try:
+        config = salt.template.compile_template(
+            sls_file,
+            renderers,
+            __opts__['renderer'])
+
+    # Dump return the error if any
+    except SaltRenderError as exc:
+        log.debug('Failed to compile {0}.'.format(sls_file))
+        log.debug('Error: {0}.'.format(exc))
+        config['Message'] = 'Failed to compile {0}'.format(sls_file)
+        config['Error'] = '{0}'.format(exc)
+
+    return config

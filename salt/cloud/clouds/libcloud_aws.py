@@ -87,9 +87,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
@@ -98,6 +95,9 @@ def __virtual__():
         pass
 
     if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
@@ -163,6 +163,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 

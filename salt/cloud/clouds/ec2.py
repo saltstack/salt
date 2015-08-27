@@ -77,6 +77,7 @@ import uuid
 import pprint
 import logging
 import yaml
+
 # Import libs for talking to the EC2 API
 import hmac
 import hashlib
@@ -88,30 +89,7 @@ import json
 import re
 import decimal
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
-from salt.ext.six.moves import map, range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
-
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-# Import salt libs
+# Import Salt Libs
 import salt.utils
 from salt import syspaths
 from salt._compat import ElementTree as ET
@@ -128,6 +106,29 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+
+# Import 3rd-Party Libs
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -175,44 +176,48 @@ EC2_RETRY_CODES = [
 
 JS_COMMENT_RE = re.compile(r'/\*.*?\*/', re.S)
 
+__virtualname__ = 'ec2'
+
 
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
     '''
     Set up the libcloud functions and check for EC2 configurations
     '''
-    if not HAS_REQUESTS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'ec2':
+        if 'ec2' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
+        parameters = details['ec2']
+
+        if not os.path.exists(parameters['private_key']):
             raise SaltCloudException(
                 'The EC2 key file \'{0}\' used in the \'{1}\' provider '
                 'configuration does not exist\n'.format(
-                    details['private_key'],
+                    parameters['private_key'],
                     provider
                 )
             )
 
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
+        key_mode = str(
+            oct(stat.S_IMODE(os.stat(parameters['private_key']).st_mode))
         )
-        if keymode not in ('0400', '0600'):
+        if key_mode not in ('0400', '0600'):
             raise SaltCloudException(
                 'The EC2 key file \'{0}\' used in the \'{1}\' provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
+                    parameters['private_key'],
                     provider
                 )
             )
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -221,8 +226,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'ec2',
+        __active_provider_name__ or __virtualname__,
         ('id', 'key', 'keyname', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'pycrypto': HAS_PYCRYPTO
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 

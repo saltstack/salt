@@ -17,6 +17,7 @@ Previous Releases
     :maxdepth: 1
     :glob:
 
+    2015.8.*
     2015.5.*
     2014.7.*
     2014.1.*

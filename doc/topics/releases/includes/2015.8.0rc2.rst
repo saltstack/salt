@@ -1,6 +1,6 @@
-
-Changes for v2015.5.3..v2015.8.0rc2
------------------------------------
+==============================
+Salt 2015.8.0rc2 Release Notes
+==============================
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -1197,7 +1197,7 @@ Changes:
 - **PR** `#25257`_: (*notpeter*) Document SourceDestCheck added in `#25242`_.
   @ *2015-07-09T23:29:48Z*
 
-  - **ISSUE** `#25241`_: (*ruzarowski*) salt-cloud: SourceDestCheck flag not passed to AWS, provisioning NAT instances needs that 
+  - **ISSUE** `#25241`_: (*ruzarowski*) salt-cloud: SourceDestCheck flag not passed to AWS, provisioning NAT instances needs that
     | refs: `#25242`_
   - **PR** `#25242`_: (*ruzarowski*) Make SourceDestCheck flag available to network interface definition
   * cd405b4 Merge pull request `#25257`_ from notpeter/SourceDestCheck
@@ -1322,7 +1322,7 @@ Changes:
     | refs: `#25173`_
   - **PR** `#25001`_: (*jasonkeene*) Add docs for key arg in ssh_known_hosts.present
     | refs: `#25171`_
-  - **PR** `#24421`_: (*bechtoldt*) add missing module documentation 
+  - **PR** `#24421`_: (*bechtoldt*) add missing module documentation
     | refs: `#25019`_
   - **PR** `#21880`_: (*bechtoldt*) update references, fixes `#21879`_
     | refs: `#25019`_
@@ -1428,7 +1428,7 @@ Changes:
 - **PR** `#25242`_: (*ruzarowski*) Make SourceDestCheck flag available to network interface definition
   @ *2015-07-08T16:36:22Z*
 
-  - **ISSUE** `#25241`_: (*ruzarowski*) salt-cloud: SourceDestCheck flag not passed to AWS, provisioning NAT instances needs that 
+  - **ISSUE** `#25241`_: (*ruzarowski*) salt-cloud: SourceDestCheck flag not passed to AWS, provisioning NAT instances needs that
     | refs: `#25242`_
   * 810b109 Merge pull request `#25242`_ from ruzarowski/2015.8
   * 62b6d4f Make SourceDestCheck flag available to network interface definition
@@ -2036,7 +2036,7 @@ Changes:
     | refs: `#25019`_
   - **ISSUE** `#19262`_: (*bechtoldt*) salt.pillar.file_tree doesn't appear in the documentation
     | refs: `#25019`_
-  - **PR** `#24421`_: (*bechtoldt*) add missing module documentation 
+  - **PR** `#24421`_: (*bechtoldt*) add missing module documentation
     | refs: `#25019`_
   - **PR** `#21880`_: (*bechtoldt*) update references, fixes `#21879`_
     | refs: `#25019`_
@@ -2126,7 +2126,7 @@ Changes:
 - **PR** `#24976`_: (*cachedout*) Catch typeerror on msgpack failure
   @ *2015-06-25T22:02:04Z*
 
-  - **ISSUE** `#19130`_: (*Mrten*) grain typechecking 
+  - **ISSUE** `#19130`_: (*Mrten*) grain typechecking
     | refs: `#24976`_
   * 8e60cc2 Merge pull request `#24976`_ from cachedout/issue_19130
   * 9680996 Catch typeerror on msgpack failure
@@ -3260,14 +3260,14 @@ Changes:
 - **PR** `#24549`_: (*jfindlay*) Shutdown time
   @ *2015-06-11T16:20:55Z*
 
-  - **ISSUE** `#24411`_: (*vernondcole*) module system.shutdown timeout value not documented and inconsistant 
+  - **ISSUE** `#24411`_: (*vernondcole*) module system.shutdown timeout value not documented and inconsistant
     | refs: `#24549`_
   * 78a6814 Merge pull request `#24549`_ from jfindlay/shutdown_time
   * 79de6cd prefer shutdown timeout value in minutes on windows
 
   * b845775 document system.shutdown arg
 
-- **PR** `#24591`_: (*tbaker57*) Add some documentation surrounding Jinja vs yaml comments - 
+- **PR** `#24591`_: (*tbaker57*) Add some documentation surrounding Jinja vs yaml comments -
   @ *2015-06-11T15:54:17Z*
 
   - **ISSUE** `#24494`_: (*arnoutpierre*) Computed comments in jinja states
@@ -3790,7 +3790,7 @@ Changes:
 
   * ffb5018 Fixed a small pylint error
 
-- **PR** `#24421`_: (*bechtoldt*) add missing module documentation 
+- **PR** `#24421`_: (*bechtoldt*) add missing module documentation
   | refs: `#25019`_
   @ *2015-06-05T00:30:39Z*
 
@@ -4291,7 +4291,7 @@ Changes:
 
   * c4f5e23 Merge remote-tracking branch 'upstream/2015.5' into merge-forward-develop2
 
-- **PR** `#24248`_: (*msteed*) Reinit pycrypto RNG in Cloud multiprocess paths 
+- **PR** `#24248`_: (*msteed*) Reinit pycrypto RNG in Cloud multiprocess paths
   @ *2015-05-29T18:27:09Z*
 
   - **ISSUE** `#24176`_: (*nmadhok*) [salt-cloud] VM creation fails with NameError on develop branch
@@ -6360,7 +6360,7 @@ Changes:
 
   * 72ed91a Add 'upload_path' option
 
-- **PR** `#23282`_: (*lisa2lisa*) Iss23201-fix the revoke *.* bug for mysql module 
+- **PR** `#23282`_: (*lisa2lisa*) Iss23201-fix the revoke *.* bug for mysql module
   @ *2015-05-03T00:42:34Z*
 
   * bf867c6 Merge pull request `#23282`_ from lisa2lisa/iss23201
@@ -7410,7 +7410,7 @@ Changes:
 
   * 0e53fde fix authorityid bug
 
-- **PR** `#23003`_: (*notpeter*) Typo in ssh.check_key_file doc example 
+- **PR** `#23003`_: (*notpeter*) Typo in ssh.check_key_file doc example
   @ *2015-04-24T03:16:34Z*
 
   * 336373c Merge pull request `#23003`_ from notpeter/develop
@@ -9172,7 +9172,7 @@ Changes:
 - **PR** `#22414`_: (*syphernl*) Cloud: Do not look for disk underneath config in Proxmox driver
   @ *2015-04-07T19:13:54Z*
 
-  - **ISSUE** `#22382`_: (*ghost*) The 'proxmox' cloud provider alias, for the 'proxmox' driver, does not define the function 'disk'". 
+  - **ISSUE** `#22382`_: (*ghost*) The 'proxmox' cloud provider alias, for the 'proxmox' driver, does not define the function 'disk'".
     | refs: `#22414`_
   * ff04f10 Merge pull request `#22414`_ from syphernl/fix/proxmox_kvm
   * 6cfaeda Lint
@@ -10807,7 +10807,7 @@ Changes:
   * 40b99a2 Merge pull request `#21947`_ from dmyerscough/20625-Fixing-invalid-syntax
   * ac93e11 Ensure nginx config check passes by checking the exit status.... Nginx writes messages to stderr even when there are no errors
 
-- **PR** `#21930`_: (*ptonelli*) add hg_pillar similar to git_pillar 
+- **PR** `#21930`_: (*ptonelli*) add hg_pillar similar to git_pillar
   @ *2015-03-24T19:10:53Z*
 
   - **ISSUE** `#2`_: (*thatch45*) salt job queries
@@ -11914,7 +11914,7 @@ Changes:
 - **PR** `#21554`_: (*rallytime*) Add versionadded directive to docker.lastest_running function
   @ *2015-03-11T19:33:20Z*
 
-  - **ISSUE** `#21547`_: (*jasonm-makerbot*) docker.latest_running not in 2015.2 
+  - **ISSUE** `#21547`_: (*jasonm-makerbot*) docker.latest_running not in 2015.2
     | refs: `#21554`_
   * e3e455e Merge pull request `#21554`_ from rallytime/versionadded_docker_func
   * 1c3a764 Add versionadded directive to docker.lastest_running function
@@ -12274,7 +12274,7 @@ Changes:
     | refs: `#21421`_
   - **ISSUE** `#8754`_: (*techhat*) [salt.cloud] Need test cases for salt.cloud providers
     | refs: `#21421`_
-  - **PR** `#21421`_: (*junckritter*) Tests for cloud GCE provider 
+  - **PR** `#21421`_: (*junckritter*) Tests for cloud GCE provider
     | refs: `#21429`_
   * 0852db0 Merge pull request `#21429`_ from thatch45/junckritter-cloud-gce-tests
   * 0da8878 lint
@@ -12570,7 +12570,7 @@ Changes:
   * a52ebda Merge pull request `#21286`_ from ahus1/ahus1_releasedocs
   * 0887dfe make latest 2014.7.x releases visible in documentation
 
-- **PR** `#21285`_: (*pravka*) fix ca creation in tls module 
+- **PR** `#21285`_: (*pravka*) fix ca creation in tls module
   @ *2015-03-04T06:17:34Z*
 
   * b7d4232 Merge pull request `#21285`_ from atbell/fix_ca_creation
@@ -13151,7 +13151,7 @@ Changes:
   * 35f1266 Merge pull request `#20968`_ from jayeshka/win_firewall-unit-test
   * d5b70b5 adding win_firewall unit test case
 
-- **PR** `#20975`_: (*evilNullPointer*) Add Artifactory classifier support 
+- **PR** `#20975`_: (*evilNullPointer*) Add Artifactory classifier support
   @ *2015-02-24T21:38:29Z*
 
   * c61c3c1 Merge pull request `#20975`_ from FrimaStudio/add_artifactory_classifier
@@ -14044,7 +14044,7 @@ Changes:
     | refs: `#20658`_ `#20658`_
   - **PR** `#20618`_: (*cxfcxf*) add ranged interface support for bond interface
     | refs: `#20658`_ `#20649`_
-  - **PR** `#20602`_: (*cxfcxf*) adding range interface support and ability to turn arpcheck off to redhat related system, 
+  - **PR** `#20602`_: (*cxfcxf*) adding range interface support and ability to turn arpcheck off to redhat related system,
     | refs: `#20618`_ `#20658`_ `#20649`_
   * 84fc28b Merge pull request `#20658`_ from cxfcxf/develop
   * 4ddc1b1 range interface support for vlan
@@ -14099,7 +14099,7 @@ Changes:
   | refs: `#20658`_ `#20649`_
   @ *2015-02-12T17:39:33Z*
 
-  - **PR** `#20602`_: (*cxfcxf*) adding range interface support and ability to turn arpcheck off to redhat related system, 
+  - **PR** `#20602`_: (*cxfcxf*) adding range interface support and ability to turn arpcheck off to redhat related system,
     | refs: `#20618`_ `#20658`_ `#20649`_
   * 598f119 Merge pull request `#20618`_ from cxfcxf/develop
   * ef58955 add ranged interface support for bond and fix typo on rh6_eth.jinja
@@ -14427,7 +14427,7 @@ Changes:
 
   - **PR** `#20537`_: (*rallytime*) More python 3 compatibility changes
     | refs: `#20542`_
-  - **PR** `#20443`_: (*SmithSamuelM*) Fixed bug and reverted some unnecessary changes where .six.itervalues was applied 
+  - **PR** `#20443`_: (*SmithSamuelM*) Fixed bug and reverted some unnecessary changes where .six.itervalues was applied
     | refs: `#20542`_
   * f232f7f Merge pull request `#20542`_ from saltstack/revert-20537-py-3-compat
   * a0d5c3d Revert "More python 3 compatibility changes"
@@ -14649,7 +14649,7 @@ Changes:
   * 3b1ff44 Merge pull request `#20454`_ from scream3/develop
   * 3f7f50b Fix wrong check for rvm script existence
 
-- **PR** `#20443`_: (*SmithSamuelM*) Fixed bug and reverted some unnecessary changes where .six.itervalues was applied 
+- **PR** `#20443`_: (*SmithSamuelM*) Fixed bug and reverted some unnecessary changes where .six.itervalues was applied
   | refs: `#20542`_
   @ *2015-02-06T17:33:32Z*
 
@@ -18596,7 +18596,7 @@ Changes:
   * 3a1cffd Merge pull request `#19322`_ from garethgreenaway/19132_simple_state_notification
   * 6a3c15a Adding a simple notification function to the test module.
 
-- **PR** `#19307`_: (*blueicefield*) Feature : Adding functions to Mongodb module for the management of user roles 
+- **PR** `#19307`_: (*blueicefield*) Feature : Adding functions to Mongodb module for the management of user roles
   @ *2015-01-05T20:13:29Z*
 
   - **ISSUE** `#8933`_: (*thaddeusmt*) mongodb_user not creating users
@@ -18830,7 +18830,7 @@ Changes:
   * 846c78e Merge pull request `#19261`_ from manonthemat/develop
   * cd47b6d environ.set -> environ.setenv
 
-- **PR** `#19254`_: (*jacksontj*) Fix for:  TypeError: pub() got multiple values for keyword argument 'user' 
+- **PR** `#19254`_: (*jacksontj*) Fix for:  TypeError: pub() got multiple values for keyword argument 'user'
   @ *2014-12-28T20:42:16Z*
 
   * 7c85a70 Merge pull request `#19254`_ from jacksontj/multi_syndic

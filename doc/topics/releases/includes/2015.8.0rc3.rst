@@ -1,6 +1,6 @@
-
-Changes for v2015.8.0rc2..v2015.8.0rc3
---------------------------------------
+==============================
+Salt 2015.8.0rc3 Release Notes
+==============================
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -111,7 +111,7 @@ Changes:
   - **PR** `#25919`_: (*TheBigBear*) Minor update to msi un-installer info
   - **PR** `#25917`_: (*jmdcal*) adding missing format string
     | refs: `#25967`_
-  - **PR** `#25905`_: (*rallytime*) Back-port `#25982`_ to 2015.5 
+  - **PR** `#25905`_: (*rallytime*) Back-port `#25982`_ to 2015.5
   - **PR** `#25898`_: (*jfindlay*) clarify and expand syndic docs
   - **PR** `#25895`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
   - **PR** `#25894`_: (*jacobhammons*) Minor doc bug fixes
@@ -254,7 +254,7 @@ Changes:
     | refs: `#25642`_
   - **ISSUE** `#25478`_: (*zyio*) salt-ssh - Unable to locate current thin version
     | refs: `#25862`_
-  - **ISSUE** `#25447`_: (*spo0nman*) SaltMaster is crippled with Minion Re-Authentication 
+  - **ISSUE** `#25447`_: (*spo0nman*) SaltMaster is crippled with Minion Re-Authentication
     | refs: `#25856`_
   - **ISSUE** `#25437`_: (*lorengordon*) Stacktrace on Windows when running pkg.list_pkgs
     | refs: `#25763`_

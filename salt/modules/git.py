@@ -12,6 +12,7 @@ import os
 import re
 import shlex
 import sys
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
@@ -59,6 +60,14 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
             raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
 
+def _get_git_version():
+    '''
+    Return the version of git
+    '''
+    out = __salt__['cmd.run'](['git', '--version'])
+    return _LooseVersion(out.split()[-1])
+
+
 def _config_getter(get_opt,
                    key,
                    value_regex=None,
@@ -91,11 +100,15 @@ def _config_getter(get_opt,
         # Ignore value_regex
         value_regex = None
 
+    ver = _get_git_version()
     command = ['git', 'config']
     if global_:
         command.append('--global')
-    else:
+    elif ver >= _LooseVersion('1.7.12'):
         command.append('--local')
+    else:
+        log.warn('Git version {0} doesn\'t support --local'.format(ver))
+
     command.append(get_opt)
     command.append(key)
     if value_regex is not None:
@@ -1159,10 +1172,13 @@ def config_unset(key,
     else:
         command.append('--unset')
 
+    ver = _get_git_version()
     if global_:
         command.append('--global')
-    else:
+    elif ver >= _LooseVersion('1.7.12'):
         command.append('--local')
+    else:
+        log.warn('Git version {0} doesn\'t support --local'.format(ver))
 
     if cwd is None:
         if not global_:
