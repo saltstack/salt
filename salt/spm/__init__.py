@@ -81,7 +81,7 @@ class SPMClient(object):
         self.pkgdb = salt.loader.pkgdb(self.opts)
         self.db_conn = self.pkgdb[db_fun]()
 
-        self.files_prov = opts.get('spm_files_provider', 'roots')
+        self.files_prov = opts.get('spm_files_provider', 'local')
         files_fun = '{0}.init'.format(self.files_prov)
 
         self.pkgfiles = salt.loader.pkgfiles(self.opts)
