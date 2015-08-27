@@ -396,7 +396,9 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
 
             state_file = client.cache_file(import_file, saltenv)
             if not state_file:
-                raise ImportError("Could not find the file {0!r}".format(import_file))
+                raise ImportError(
+                    'Could not find the file \'{0}\''.format(import_file)
+                )
 
             with salt.utils.fopen(state_file) as f:
                 state_contents = f.read()
@@ -416,10 +418,12 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
                     alias = matches.group(2).strip()
 
                 if name not in state_locals:
-                    raise ImportError("{0!r} was not found in {1!r}".format(
-                        name,
-                        import_file
-                    ))
+                    raise ImportError(
+                        '\'{0}\' was not found in \'{1}\''.format(
+                            name,
+                            import_file
+                        )
+                    )
                 _globals[alias] = state_locals[name]
 
             matched = True

@@ -88,7 +88,7 @@ class NonBlockingPopen(subprocess.Popen):
         )
 
         log.info(
-            'Running command under pid {0}: {1!r}'.format(self.pid, *args)
+            'Running command under pid {0}: \'{1}\''.format(self.pid, *args)
         )
 
     def recv(self, maxsize=None):

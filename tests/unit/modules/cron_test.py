@@ -480,7 +480,7 @@ class CronTestCase(TestCase):
                     get_crontab(),
                     inc_tests[idx], (
                         "idx {0}\n'{1}'\n != \n'{2}'\n\n\n"
-                        "{1!r} != {2!r}"
+                        "\'{1}\' != \'{2}\'"
                     ).format(
                         idx, get_crontab(), inc_tests[idx]))
 

@@ -158,7 +158,7 @@ def _parse_interval(value):
     '''
     match = _INTERVAL_REGEX.match(str(value))
     if match is None:
-        raise ValueError('invalid time interval: {0!r}'.format(value))
+        raise ValueError('invalid time interval: \'{0}\''.format(value))
 
     result = 0
     resolution = None

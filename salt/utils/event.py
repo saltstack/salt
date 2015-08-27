@@ -513,7 +513,9 @@ class SaltEvent(object):
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+            raise ValueError(
+                'Dict object expected, not \'{0}\'.'.format(data)
+            )
 
         if not self.cpush:
             self.connect_pull(timeout=timeout)

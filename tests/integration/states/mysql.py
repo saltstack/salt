@@ -115,7 +115,7 @@ class MysqlDatabaseStateTest(integration.ModuleCase,
             if not isinstance(ret, dict) or 'results' not in ret:
                 raise AssertionError(
                     ('Unexpected result while testing connection'
-                    ' on db {0!r}: {1}').format(
+                    ' on db \'{0}\': {1}').format(
                         db_name,
                         repr(ret)
                     )
@@ -333,7 +333,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             tblname=mysqlmod.quote_identifier(self.table1),
             engine='MYISAM',
         ))
-        log.info('Adding table {0!r}'.format(self.table1,))
+        log.info('Adding table \'{0}\''.format(self.table1,))
         self.run_function(
             'mysql.query',
             database=self.testdb2,
@@ -347,7 +347,7 @@ class MysqlGrantsStateTest(integration.ModuleCase,
             tblname=mysqlmod.quote_identifier(self.table2),
             engine='MYISAM',
         ))
-        log.info('Adding table {0!r}'.format(self.table2,))
+        log.info('Adding table \'{0}\''.format(self.table2,))
         self.run_function(
             'mysql.query',
             database=self.testdb2,

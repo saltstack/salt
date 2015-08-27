@@ -321,14 +321,14 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 )
                 ret['success'] = True
             except CommandNotFoundError as exc:
-                msg = 'Command required for {0!r} not found'.format(
+                msg = 'Command required for \'{0}\' not found'.format(
                     function_name
                 )
                 log.debug(msg, exc_info=True)
                 ret['return'] = '{0}: {1}'.format(msg, exc)
             except CommandExecutionError as exc:
                 log.error(
-                    'A command in {0!r} had a problem: {1}'.format(
+                    'A command in \'{0}\' had a problem: {1}'.format(
                         function_name,
                         exc
                     ),
@@ -337,13 +337,13 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 ret['return'] = 'ERROR: {0}'.format(exc)
             except SaltInvocationError as exc:
                 log.error(
-                    'Problem executing {0!r}: {1}'.format(
+                    'Problem executing \'{0}\': {1}'.format(
                         function_name,
                         exc
                     ),
                     exc_info_on_loglevel=logging.DEBUG
                 )
-                ret['return'] = 'ERROR executing {0!r}: {1}'.format(
+                ret['return'] = 'ERROR executing \'{0}\': {1}'.format(
                     function_name, exc
                 )
             except TypeError as exc:
@@ -356,7 +356,7 @@ class SaltRaetNixJobber(ioflo.base.deeding.Deed):
                 log.warning(msg, exc_info_on_loglevel=logging.DEBUG)
                 ret['return'] = '{0}: {1}'.format(msg, traceback.format_exc())
         else:
-            ret['return'] = '{0!r} is not available.'.format(function_name)
+            ret['return'] = '\'{0}\' is not available.'.format(function_name)
 
         ret['jid'] = data['jid']
         ret['fun'] = data['fun']

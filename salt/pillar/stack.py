@@ -389,7 +389,7 @@ def _merge_dict(stack, obj):
                     v = stack_k
                 if type(stack[k]) != type(v):
                     log.debug('Force overwrite, types differ: '
-                              '{0!r} != {1!r}'.format(stack[k], v))
+                              '\'{0}\' != \'{1}\''.format(stack[k], v))
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
                     stack[k] = _merge_dict(stack[k], v)

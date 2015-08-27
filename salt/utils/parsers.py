@@ -351,7 +351,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         if not os.path.isfile(self.options.saltfile):
             self.error(
-                '{0!r} file does not exist.\n'.format(self.options.saltfile
+                '\'{0}\' file does not exist.\n'.format(self.options.saltfile
                 )
             )
 
@@ -360,7 +360,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         # Make sure we let the user know that we will be loading a Saltfile
         logging.getLogger(__name__).info(
-            'Loading Saltfile from {0!r}'.format(self.options.saltfile)
+            'Loading Saltfile from \'{0}\''.format(self.options.saltfile)
         )
 
         saltfile_config = config._read_conf_file(saltfile)
@@ -462,7 +462,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: CONFIG {0!r} directory does not exist.\n'.format(
+                'WARNING: CONFIG \'{0}\' directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
@@ -728,9 +728,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self._default_logging_logfile_
                     )
                     logging.getLogger(__name__).debug(
-                        'The user {0!r} is not allowed to write to {1!r}. '
+                        'The user \'{0}\' is not allowed to write to \'{1}\'. '
                         'The log file will be stored in '
-                        '\'~/.salt/{2!r}.log\''.format(
+                        '\'~/.salt/\'{2}\'.log\''.format(
                             current_user,
                             logfile,
                             logfile_basename
@@ -1070,7 +1070,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--out', '--output',
             dest='output',
             help=(
-                'Print the output from the {0!r} command using the '
+                'Print the output from the \'{0}\' command using the '
                 'specified outputter. The builtins are {1}.'.format(
                     self.get_prog_name(),
                     ', '.join([repr(k) for k in outputters])
@@ -2132,7 +2132,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             return
         if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'den', 'all')):
             self.error(
-                '{0!r} is not a valid argument to \'--list\''.format(
+                '\'{0}\' is not a valid argument to \'--list\''.format(
                     self.options.list
                 )
             )
