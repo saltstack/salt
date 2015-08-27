@@ -152,7 +152,7 @@ def only(name, hostnames):
     Ensure that only the given hostnames are associated with the
     given IP address.
 
-    .. versionadded:: XXXX.X.X
+    .. versionadded:: Boron
 
     name
         The IP address to associate with the given hostnames.
