@@ -382,32 +382,37 @@ def latest(name,
     # Ensure that certain arguments are strings to ensure that comparisons work
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    if target is not None and not isinstance(target, six.string_types):
-        target = str(target)
+    if target is not None:
+        if not isinstance(target, six.string_types):
+            target = str(target)
+        if not os.path.isabs(target):
+            return _fail(
+                ret,
+                'target \'{0}\' is not an absolute path'.format(target)
+            )
     if branch is not None and not isinstance(branch, six.string_types):
         branch = str(branch)
     if user is not None and not isinstance(user, six.string_types):
         user = str(user)
     if remote is not None and not isinstance(remote, six.string_types):
         remote = str(remote)
-    if identity is not None and not isinstance(identity, six.string_types):
-        identity = str(identity)
+    if identity is not None:
+        if isinstance(identity, six.string_types):
+            identity = [identity]
+        elif not isinstance(identity, list):
+            return _fail(ret, 'identity must be either a list or a string')
+        for ident_path in identity:
+            if not os.path.isabs(ident_path):
+                return _fail(
+                    ret,
+                    'identity \'{0}\' is not an absolute path'.format(
+                        ident_path
+                    )
+                )
     if https_user is not None and not isinstance(https_user, six.string_types):
         https_user = str(https_user)
     if https_pass is not None and not isinstance(https_pass, six.string_types):
         https_pass = str(https_pass)
-
-    # Force these arguments to be absolute paths
-    locals_ = locals()
-    for param in ('target', 'identity'):
-        if locals_[param] is not None and not os.path.isabs(locals_[param]):
-            return _fail(
-                ret,
-                '{0} \'{1}\' is not an absolute path'.format(
-                    param,
-                    locals_[param]
-                )
-            )
 
     if os.path.isfile(target):
         return _fail(
@@ -442,15 +447,21 @@ def latest(name,
     ] if fetch_tags else []
 
     log.info('Checking remote revision for {0}'.format(name))
-    all_remote_refs = __salt__['git.remote_refs'](
-        name,
-        heads=False,
-        tags=False,
-        user=user,
-        identity=identity,
-        https_user=https_user,
-        https_pass=https_pass,
-        ignore_retcode=False)
+    try:
+        all_remote_refs = __salt__['git.remote_refs'](
+            name,
+            heads=False,
+            tags=False,
+            user=user,
+            identity=identity,
+            https_user=https_user,
+            https_pass=https_pass,
+            ignore_retcode=False)
+    except CommandExecutionError as exc:
+        return _fail(
+            ret,
+            'Failed to check remote refs: {0}'.format(_strip_exc(exc))
+        )
 
     if bare:
         remote_rev = None
@@ -540,7 +551,7 @@ def latest(name,
                         return _fail(
                             ret,
                             'Unable to get position of local branch \'{0}\': '
-                            '{1}'.format(branch, exc),
+                            '{1}'.format(branch, _strip_exc(exc)),
                             comments
                         )
 
@@ -971,7 +982,7 @@ def latest(name,
                             else rev
                     __salt__['git.reset'](
                         target,
-                        opts=['--hard', reset_ref],
+                        opts=['--hard', remote_rev],
                         user=user
                     )
                     ret['changes']['forced update'] = True
@@ -1253,7 +1264,7 @@ def latest(name,
                                 else rev
                         __salt__['git.reset'](
                             target,
-                            opts=['--hard', reset_ref],
+                            opts=['--hard', remote_rev],
                             user=user
                         )
                         comments.append(
