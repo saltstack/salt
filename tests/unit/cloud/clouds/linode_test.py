@@ -31,7 +31,7 @@ class LinodeTestCase(TestCase):
         '''
         # Test when name begins with a hyphen
         self.assertFalse(linode._validate_name('-foo'))
-        
+
         # Test when name begins with an underscore
         self.assertFalse(linode._validate_name('_foo'))
 
