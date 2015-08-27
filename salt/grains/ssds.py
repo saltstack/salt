@@ -50,7 +50,7 @@ def _freebsd_ssds():
     camcontrol = salt.utils.which('camcontrol')
 
     devices = __salt__['cmd.run']('{0} kern.disks'.format(sysctl))
-    for device in devices.split(' '):
+    for device in devices.split(' ')[1:]:
         identify = __salt__['cmd.run']('{0} identify {1}'.format(camcontrol,
                                        device))
         if SSD_TOKEN in identify:
