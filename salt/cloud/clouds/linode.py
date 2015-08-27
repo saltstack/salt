@@ -1304,28 +1304,6 @@ def _list_linodes(full=False):
     return ret
 
 
-def _check_and_set_node_id(name, linode_id):
-    '''
-    Helper function that checks against name and linode_id collisions and returns a node_id.
-    '''
-    node_id = ''
-    if linode_id and name is None:
-        node_id = linode_id
-    elif name:
-        node_id = get_linode_id_from_name(name)
-
-    if linode_id and (linode_id != node_id):
-        raise SaltCloudException(
-            'A name and a linode_id were provided, but the provided linode_id, {0}, '
-            'does not match the linode_id found for the provided '
-            'name: \'{1}\': \'{2}\'. Nothing was done.'.format(
-                linode_id, name, node_id
-            )
-        )
-
-    return node_id
-
-
 def _query(action=None,
            command=None,
            args=None,
