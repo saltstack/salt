@@ -15,6 +15,7 @@ import salt.exceptions
 import salt.ext.six as six
 import salt.utils
 
+
 def digest(instr, checksum='md5'):
     '''
     Return a checksum digest for a string
