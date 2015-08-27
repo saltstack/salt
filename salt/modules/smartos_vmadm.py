@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import json
+import os
 try:
     from shlex import quote as _quote_args  # pylint: disable=E0611
 except ImportError:
@@ -59,7 +60,43 @@ def _create_from_file(path):
     '''
     Create vm from file
     '''
-    return False
+    ret = {}
+    vmadm = _check_vmadm()
+    if not os.path.isfile(path):
+        ret['Error'] = 'File ({0}) does not exists!'.format(path)
+        return ret
+    # vmadm validate create [-f <filename>]
+    cmd = '{vmadm} validate create -f {path}'.format(
+        vmadm=vmadm,
+        path=path
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = _exit_status(retcode)
+        if 'stderr' in res:
+            if res['stderr'][0] == '{':
+                ret['Error'] = json.loads(res['stderr'])
+            else:
+                ret['Error'] = res['stderr']
+        return ret
+    # vmadm create [-f <filename>]
+    cmd = '{vmadm} create -f {path}'.format(
+        vmadm=vmadm,
+        path=path
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = _exit_status(retcode)
+        if 'stderr' in res:
+            if res['stderr'][0] == '{':
+                ret['Error'] = json.loads(res['stderr'])
+            else:
+                ret['Error'] = res['stderr']
+        return ret
+
+    return True
 
 
 def _create_from_cfg(vmcfg):
@@ -738,8 +775,6 @@ def create(**kwargs):
         if key.startswith('_'):
             continue
         vmcfg[key] = value
-    # vmadm create [-f <filename>]
-    # vmadm validate create [-f <filename>]
     if 'from_file' in vmcfg:
         return _create_from_file(vmcfg['from_file'])
     else:
