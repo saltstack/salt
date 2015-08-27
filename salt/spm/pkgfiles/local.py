@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-This module allows SPM to use the local filesystem (``file_roots``) to install
-files for SPM.
+This module allows SPM to use the local filesystem to install files for SPM.
 
 .. versionadded:: 2015.8.0
 '''
@@ -20,14 +19,16 @@ def init(**kwargs):
     '''
     Initialize the directories for the files
     '''
-    roots_path = __opts__['file_roots']['base'][0]
-    pillar_path = __opts__['pillar_roots']['base'][0]
-    for dir_ in (roots_path, pillar_path):
+    formula_path = __opts__['formula_path']
+    pillar_path = __opts__['pillar_path']
+    reactor_path = __opts__['reactor_path']
+    for dir_ in (formula_path, pillar_path, reactor_path):
         if not os.path.exists(dir_):
             os.makedirs(dir_)
     return {
-        'roots_path': roots_path,
+        'formula_path': formula_path,
         'pillar_path': pillar_path,
+        'reactor_path': reactor_path,
     }
 
 
@@ -45,7 +46,7 @@ def check_existing(package, pkg_files, conn=None):
         new_name = member.name.replace('{0}/'.format(package), '')
         if member.name.startswith('{0}/_'.format(package)):
             # Module files are distributed via _modules, _states, etc
-            out_file = os.path.join(conn['roots_path'], new_name)
+            out_file = os.path.join(conn['formula_path'], new_name)
         elif member.name == '{0}/pillar.example'.format(package):
             # Pillars are automatically put in the pillar_roots
             new_name = '{0}.sls.orig'.format(package)
@@ -55,9 +56,9 @@ def check_existing(package, pkg_files, conn=None):
             out_file = os.path.join(salt.syspaths.CONFIG_DIR, new_name)
         elif package.endswith('-reactor'):
             # Reactor files go into /srv/reactor/
-            out_file = os.path.join(__opts__['reactor_roots'], member.name)
+            out_file = os.path.join(conn['reactor_path'], member.name)
         else:
-            out_file = os.path.join(conn['roots_path'], member.name)
+            out_file = os.path.join(conn['formula_path'], member.name)
 
         if os.path.exists(out_file):
             existing_files.append(out_file)
@@ -74,7 +75,7 @@ def install_file(package, formula_tar, member, conn=None):
     if conn is None:
         conn = init()
 
-    out_path = conn['roots_path']
+    out_path = conn['formula_path']
 
     if member.name.startswith('{0}/_'.format(package)):
         # Module files are distributed via _modules, _states, etc
