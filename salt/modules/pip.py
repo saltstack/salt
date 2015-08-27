@@ -11,8 +11,8 @@ Salt now uses a portable python. As a result the entire pip module is now
 functional on the salt installation itself. You can pip install dependencies
 for your custom modules. You can even upgrade salt itself using pip. For this
 to work properly, you must specify the Current Working Directory (``cwd``) and
-the Pip Binary (``bin_env``) salt should use.  The variable ``pip_bin`` can
-be either a virtualenv path or the path to the pip binary itself.
+the Pip Binary (``bin_env``) salt should use.  The variable ``pip_bin`` can be
+either a virtualenv path or the path to the pip binary itself.
 
 For example, the following command will list all software installed using pip
 to your current salt environment:
@@ -223,10 +223,8 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 )
                 if not cached_requirements:
                     ret = {'result': False,
-                           'comment': 'pip requirements file {0!r} not found'.format(
-                               requirement
-                               )
-                           }
+                           'comment': 'pip requirements file \'{0}\' not found'
+                                      .format(requirement)}
                     return None, ret
                 requirement = cached_requirements
 
@@ -236,12 +234,12 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                 treq = salt.utils.mkstemp()
                 shutil.copyfile(requirement, treq)
                 logger.debug(
-                    'Changing ownership of requirements file {0!r} to '
-                    'user {1!r}'.format(treq, user)
+                    'Changing ownership of requirements file \'{0}\' to '
+                    'user \'{1}\''.format(treq, user)
                 )
                 __salt__['file.chown'](treq, user, None)
                 cleanup_requirements.append(treq)
-            cmd.append('--requirement={0!r}'.format(treq or requirement))
+            cmd.extend(['--requirement', treq or requirement])
     return cleanup_requirements, None
 
 
@@ -296,92 +294,122 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     pkgs
         Comma separated list of packages to install
+
     requirements
         Path to requirements
+
     bin_env
         Path to pip bin or path to virtualenv. If doing a system install,
         and want to use a specific pip bin (pip-2.7, pip-2.6, etc..) just
         specify the pip bin you want.
-        If installing into a virtualenv, just use the path to the virtualenv
-        (/home/code/path/to/virtualenv/)
+
+        .. note::
+            If installing into a virtualenv, just use the path to the
+            virtualenv (e.g. ``/home/code/path/to/virtualenv/``)
+
     env
         Deprecated, use bin_env now
+
     use_wheel
         Prefer wheel archives (requires pip>=1.4)
+
     no_use_wheel
         Force to not use wheel archives (requires pip>=1.4)
+
     log
         Log file where a complete (maximum verbosity) record will be kept
+
     proxy
-        Specify a proxy in the form
-        user:passwd@proxy.server:port. Note that the
-        user:password@ is optional and required only if you
-        are behind an authenticated proxy.  If you provide
-        user@proxy.server:port then you will be prompted for a
-        password.
+        Specify a proxy in the form ``user:passwd@proxy.server:port``. Note
+        that the ``user:password@`` is optional and required only if you are
+        behind an authenticated proxy. If you provide
+        ``user@proxy.server:port`` then you will be prompted for a password.
+
     timeout
         Set the socket timeout (default 15 seconds)
+
     editable
-        install something editable (i.e.
-        git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed)
+        install something editable (e.g.
+        ``git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed``)
+
     find_links
-        URL to look for packages at
+        URL to search for packages
+
     index_url
         Base URL of Python Package Index
+
     extra_index_url
         Extra URLs of package indexes to use in addition to ``index_url``
+
     no_index
         Ignore package index
+
     mirrors
         Specific mirror URL(s) to query (automatically adds --use-mirrors)
+
     build
         Unpack packages into ``build`` dir
+
     target
         Install packages into ``target`` dir
+
     download
         Download packages into ``download`` instead of installing them
+
     download_cache
         Cache downloaded packages in ``download_cache`` dir
+
     source
         Check out ``editable`` packages into ``source`` dir
+
     upgrade
         Upgrade all packages to the newest available version
+
     force_reinstall
         When upgrading, reinstall all packages even if they are already
         up-to-date.
+
     ignore_installed
         Ignore the installed packages (reinstalling instead)
+
     exists_action
         Default action when a path already exists: (s)witch, (i)gnore, (w)ipe,
         (b)ackup
+
     no_deps
         Ignore package dependencies
+
     no_install
         Download and unpack all packages, but don't actually install them
+
     no_download
-        Don't download any packages, just install the ones
-        already downloaded (completes an install run with
-        --no-install)
+        Don't download any packages, just install the ones already downloaded
+        (completes an install run with ``--no-install``)
+
     install_options
-        Extra arguments to be supplied to the setup.py install
-        command (use like --install-option="--install-
-        scripts=/usr/local/bin").  Use multiple --install-
-        option options to pass multiple options to setup.py
-        install.  If you are using an option with a directory
-        path, be sure to use absolute path.
+        Extra arguments to be supplied to the setup.py install command (e.g.
+        like ``--install-option='--install-scripts=/usr/local/bin'``).  Use
+        multiple --install-option options to pass multiple options to setup.py
+        install. If you are using an option with a directory path, be sure to
+        use absolute path.
+
     global_options
         Extra global options to be supplied to the setup.py call before the
         install command.
+
     user
         The user under which to run pip
+
     no_chown
-        When user is given, do not attempt to copy and chown
-        a requirements file
+        When user is given, do not attempt to copy and chown a requirements
+        file
+
     cwd
         Current working directory to run pip from
+
     activate
-        Activates the virtual environment, if given via bin_env,
-        before running install.
+        Activates the virtual environment, if given via bin_env, before running
+        install.
 
         .. deprecated:: 2014.7.2
             If `bin_env` is given, pip will already be sourced from that
@@ -389,18 +417,27 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     pre_releases
         Include pre-releases in the available versions
+
     cert
         Provide a path to an alternate CA bundle
+
     allow_all_external
         Allow the installation of all externally hosted files
+
     allow_external
-        Allow the installation of externally hosted files (comma separated list)
+        Allow the installation of externally hosted files (comma separated
+        list)
+
     allow_unverified
-        Allow the installation of insecure and unverifiable files (comma separated list)
+        Allow the installation of insecure and unverifiable files (comma
+        separated list)
+
     process_dependency_links
         Enable the processing of dependency links
+
     use_vt
         Use VT terminal emulation (see ouptut while installing)
+
     env_vars
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
@@ -458,9 +495,13 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     cmd = [pip_bin, 'install']
 
-    cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
-                                                        saltenv=saltenv, user=user,
-                                                        no_chown=no_chown)
+    cleanup_requirements, error = _process_requirements(
+        requirements=requirements,
+        cmd=cmd,
+        saltenv=saltenv,
+        user=user,
+        no_chown=no_chown)
+
     if error:
         return error
 
@@ -495,21 +536,26 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('{0!r} is not writeable'.format(log))
+            raise IOError('\'{0}\' is not writeable'.format(log))
 
-        cmd.append('--log={0}'.format(log))
+        cmd.extend(['--log', log])
 
     if proxy:
-        cmd.append('--proxy={0!r}'.format(proxy))
+        cmd.extend(['--proxy', proxy])
 
     if timeout:
         try:
+            if isinstance(timeout, float):
+                # Catch floating point input, exception will be caught in
+                # exception class below.
+                raise ValueError('Timeout cannot be a float')
             int(timeout)
         except ValueError:
             raise ValueError(
-                '{0!r} is not a valid integer base 10.'.format(timeout)
+                '\'{0}\' is not a valid timeout, must be an integer'
+                .format(timeout)
             )
-        cmd.append('--timeout={0}'.format(timeout))
+        cmd.extend(['--timeout', timeout])
 
     if find_links:
         if isinstance(find_links, string_types):
@@ -518,9 +564,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for link in find_links:
             if not (salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
-                    '{0!r} must be a valid URL or path'.format(link)
+                    '\'{0}\' is not a valid URL or path'.format(link)
                 )
-            cmd.append('--find-links={0}'.format(link))
+            cmd.extend(['--find-links', link])
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
@@ -531,16 +577,16 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if index_url:
         if not salt.utils.valid_url(index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                '{0!r} must be a valid URL'.format(index_url)
+                '\'{0}\' is not a valid URL'.format(index_url)
             )
-        cmd.append('--index-url={0!r}'.format(index_url))
+        cmd.extend(['--index-url', index_url])
 
     if extra_index_url:
         if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
-                '{0!r} must be a valid URL'.format(extra_index_url)
+                '\'{0}\' is not a valid URL'.format(extra_index_url)
             )
-        cmd.append('--extra-index-url={0!r}'.format(extra_index_url))
+        cmd.extend(['--extra-index-url', extra_index_url])
 
     if no_index:
         cmd.append('--no-index')
@@ -553,24 +599,24 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         for mirror in mirrors:
             if not mirror.startswith('http://'):
                 raise CommandExecutionError(
-                    '{0!r} must be a valid URL'.format(mirror)
+                    '\'{0}\' is not a valid URL'.format(mirror)
                 )
-            cmd.append('--mirrors={0}'.format(mirror))
+            cmd.extend(['--mirrors', mirror])
 
     if build:
-        cmd.append('--build={0}'.format(build))
+        cmd.extend(['--build', build])
 
     if target:
-        cmd.append('--target={0}'.format(target))
+        cmd.extend(['--target', target])
 
     if download:
-        cmd.append('--download={0}'.format(download))
+        cmd.extend(['--download', download])
 
     if download_cache:
-        cmd.append('--download-cache={0}'.format(download_cache))
+        cmd.extend(['--download-cache', download_cache])
 
     if source:
-        cmd.append('--source={0}'.format(source))
+        cmd.extend(['--source', source])
 
     if upgrade:
         cmd.append('--upgrade')
@@ -584,11 +630,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if exists_action:
         if exists_action.lower() not in ('s', 'i', 'w', 'b'):
             raise CommandExecutionError(
-                'The `exists_action`(`--exists-action`) pip option only '
-                'allows one of (s, i, w, b) to be passed. The {0!r} value '
-                'is not valid.'.format(exists_action)
+                'The exists_action pip option only supports the values '
+                's, i, w, and b. \'{0}\' is not valid.'.format(exists_action)
             )
-        cmd.append('--exists-action={0}'.format(exists_action))
+        cmd.extend(['--exists-action', exists_action])
 
     if no_deps:
         cmd.append('--no-deps')
@@ -608,21 +653,21 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.append('--pre')
 
     if cert:
-        cmd.append('--cert={0}'.format(cert))
+        cmd.append(['--cert', cert])
 
     if global_options:
         if isinstance(global_options, string_types):
             global_options = [go.strip() for go in global_options.split(',')]
 
         for opt in global_options:
-            cmd.append('--global-option={0!r}'.format(opt))
+            cmd.extend(['--global-option', opt])
 
     if install_options:
         if isinstance(install_options, string_types):
             install_options = [io.strip() for io in install_options.split(',')]
 
         for opt in install_options:
-            cmd.append('--install-option={0!r}'.format(opt))
+            cmd.extend(['--install-option', opt])
 
     if pkgs:
         if isinstance(pkgs, string_types):
@@ -632,14 +677,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         # they would survive the previous line (in the pip.installed state).
         # Put the commas back in while making sure the names are contained in
         # quotes, this allows for proper version spec passing salt>=0.17.0
-        if salt.utils.is_windows():
-            cmd.extend(
-                ['{0}'.format(p.replace(';', ',')) for p in pkgs]
-            )
-        else:
-            cmd.extend(
-                ['{0!r}'.format(p.replace(';', ',')) for p in pkgs]
-            )
+        cmd.extend(['{0}'.format(p.replace(';', ',')) for p in pkgs])
 
     if editable:
         egg_match = re.compile(r'(?:#|#.*?&)egg=([^&]*)')
@@ -656,7 +694,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                     raise CommandExecutionError(
                         'You must specify an egg for this editable'
                     )
-            cmd.append('--editable={0}'.format(entry))
+            cmd.extend(['--editable', entry])
 
     if allow_all_external:
         cmd.append('--allow-all-external')
@@ -670,7 +708,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if allow_unverified:
         if isinstance(allow_unverified, string_types):
-            allow_unverified = [p.strip() for p in allow_unverified.split(',')]
+            allow_unverified = \
+                [p.strip() for p in allow_unverified.split(',')]
 
         for pkg in allow_unverified:
             cmd.append('--allow-unverified {0}'.format(pkg))
@@ -685,7 +724,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-        return __salt__['cmd.run_all'](' '.join(cmd), python_shell=False, **cmd_kwargs)
+        return __salt__['cmd.run_all'](cmd,
+                                       python_shell=False,
+                                       **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -780,21 +821,26 @@ def uninstall(pkgs=None,
             # TODO make this check if writeable
             os.path.exists(log)
         except IOError:
-            raise IOError('{0!r} is not writeable'.format(log))
+            raise IOError('\'{0}\' is not writeable'.format(log))
 
-        cmd.append('--log={0}'.format(log))
+        cmd.extend(['--log', log])
 
     if proxy:
-        cmd.append('--proxy={0!r}'.format(proxy))
+        cmd.extend(['--proxy', proxy])
 
     if timeout:
         try:
+            if isinstance(timeout, float):
+                # Catch floating point input, exception will be caught in
+                # exception class below.
+                raise ValueError('Timeout cannot be a float')
             int(timeout)
         except ValueError:
             raise ValueError(
-                '{0!r} is not a valid integer base 10.'.format(timeout)
+                '\'{0}\' is not a valid timeout, must be an integer'
+                .format(timeout)
             )
-        cmd.append('--timeout={0}'.format(timeout))
+        cmd.extend(['--timeout', timeout])
 
     if pkgs:
         if isinstance(pkgs, string_types):
@@ -816,7 +862,7 @@ def uninstall(pkgs=None,
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
     try:
-        return __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+        return __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
             try:
@@ -856,7 +902,7 @@ def freeze(bin_env=None,
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
 
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
@@ -891,7 +937,7 @@ def list_(prefix=None,
     if not prefix or prefix in ('p', 'pi', 'pip'):
         packages['pip'] = version(bin_env)
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     if result['retcode'] > 0:
         raise CommandExecutionError(result['stderr'])
 
@@ -910,7 +956,7 @@ def list_(prefix=None,
             name = line.split('==')[0]
             version_ = line.split('==')[1]
         else:
-            logger.error('Can\'t parse line {0!r}'.format(line))
+            logger.error('Can\'t parse line \'{0}\''.format(line))
             continue
 
         if prefix:
@@ -959,24 +1005,24 @@ def list_upgrades(bin_env=None,
     '''
     pip_bin = _get_pip_bin(bin_env)
 
-    cmd = [pip_bin, "list", "--outdated"]
+    cmd = [pip_bin, 'list', '--outdated']
 
     cmd_kwargs = dict(cwd=cwd, runas=user)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
-    result = __salt__['cmd.run_all'](' '.join(cmd), **cmd_kwargs)
+    result = __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     if result['retcode'] > 0:
         logger.error(result['stderr'])
         raise CommandExecutionError(result['stderr'])
 
     packages = {}
     for line in result['stdout'].splitlines():
-        match = re.search(r"(\S*)\s+\(.*Latest:\s+(.*)\)", line)
+        match = re.search(r'(\S*)\s+\(.*Latest:\s+(.*)\)', line)
         if match:
             name, version_ = match.groups()
         else:
-            logger.error('Can\'t parse line {0!r}'.format(line))
+            logger.error('Can\'t parse line \'{0}\''.format(line))
             continue
         packages[name] = version_
     return packages
@@ -1029,13 +1075,13 @@ def upgrade(bin_env=None,
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
-    cmd = [pip_bin, "install", "-U"]
+    cmd = [pip_bin, 'install', '-U']
     cmd_kwargs = dict(cwd=cwd, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     errors = False
     for pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd):
-        result = __salt__['cmd.run_all'](' '.join(cmd+[pkg]), **cmd_kwargs)
+        result = __salt__['cmd.run_all'](cmd + [pkg], **cmd_kwargs)
         if result['retcode'] != 0:
             errors = True
         if 'stderr' in result:
