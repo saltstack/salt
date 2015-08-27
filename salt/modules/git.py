@@ -292,8 +292,7 @@ def _remove_sensitive_data(output):
     # support flags even in Python 2.7.
     url_re = '(https?)://.*@'
     redacted = r'\1://<redacted>@'
-    if sys.version_info[0] > 2 \
-            or (sys.version_info[0] == 2 and sys.version_info[1] >= 7):
+    if sys.version_info >= (2, 7):
         # re.sub() supports flags as of 2.7, use this to do a case-insensitive
         # match.
         return re.sub(url_re, redacted, output, flags=re.IGNORECASE)
