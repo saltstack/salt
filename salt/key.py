@@ -124,7 +124,7 @@ class KeyCLI(object):
             keys[self.key.REJ] = matches[self.key.REJ]
         if not keys:
             msg = (
-                'The key glob {0!r} does not match any unaccepted {1}keys.'
+                'The key glob \'{0}\' does not match any unaccepted {1}keys.'
                 .format(match, 'or rejected ' if include_rejected else '')
             )
             print(msg)
@@ -189,7 +189,7 @@ class KeyCLI(object):
         matches = self.key.name_match(match)
         if not matches:
             print(
-                'The key glob {0!r} does not match any accepted, unaccepted '
+                'The key glob \'{0}\' does not match any accepted, unaccepted '
                 'or rejected keys.'.format(match)
             )
             raise salt.exceptions.SaltSystemExit(code=1)
@@ -230,7 +230,8 @@ class KeyCLI(object):
         Reject the matched keys
 
         :param str match: A string to match against. i.e. 'web*'
-        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
+        :param bool include_accepted: Whether or not to accept a matched key
+        that was formerly accepted
         '''
         def _print_rejected(matches, after_match):
             if self.key.REJ in after_match:
@@ -249,7 +250,7 @@ class KeyCLI(object):
         if include_accepted and bool(matches.get(self.key.ACC)):
             keys[self.key.ACC] = matches[self.key.ACC]
         if not keys:
-            msg = 'The key glob {0!r} does not match any {1} keys.'.format(
+            msg = 'The key glob \'{0}\' does not match any {1} keys.'.format(
                 match,
                 'accepted or unaccepted' if include_accepted else 'unaccepted'
             )
