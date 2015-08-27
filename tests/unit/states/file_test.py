@@ -297,13 +297,15 @@ class FileTestCase(TestCase):
                                     {'file.remove': mock_file}):
                         comt = ('Removed file {0}'.format(name))
                         ret.update({'comment': comt, 'result': True,
-                                    'changes': {'removed': name}})
+                                    'changes': {'removed': name},
+                                    'pchanges': {'removed': name}})
                         self.assertDictEqual(filestate.absent(name), ret)
 
                         comt = ('Removed file {0}'.format(name))
                         ret.update({'comment': '',
                                     'result': False,
-                                    'changes': {}})
+                                    'changes': {},
+                                    'pchanges': {}})
                         self.assertDictEqual(filestate.absent(name), ret)
 
             with patch.object(os.path, 'isfile', mock_f):
