@@ -153,7 +153,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
 
     if not os.path.isdir(project_path):
-        log.error('Django project dir: {0!r} not a directory!'.format(
+        log.error('Django project dir: \'{0}\' not a directory!'.format(
             project_path))
         return {}
     if HAS_VIRTUALENV and env is not None and os.path.isdir(env):
