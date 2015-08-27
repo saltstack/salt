@@ -5,15 +5,19 @@ Support for the Git SCM
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import os
 import re
 import subprocess
+import sys
 
 # Import salt libs
 from salt import utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -32,6 +36,15 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
     env = {}
+
+    if '<redacted>' in _remove_sensitive_data(cmd):
+        loglevel = 'quiet'
+        log.debug(
+            'HTTPS user/password in git command, the command and '
+            'output will redacted'
+        )
+    else:
+        loglevel = 'debug'
 
     if identity:
         stderrs = []
@@ -63,9 +76,9 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                 result = __salt__['cmd.run_all'](cmd,
                                                  cwd=cwd,
                                                  runas=runas,
-                                                 output_loglevel='quiet',
                                                  env=env,
                                                  python_shell=False,
+                                                 output_loglevel=loglevel,
                                                  **kwargs)
             finally:
                 if 'GIT_SSH' in env:
@@ -85,9 +98,9 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         result = __salt__['cmd.run_all'](cmd,
                                          cwd=cwd,
                                          runas=runas,
-                                         output_loglevel='quiet',
                                          env=env,
                                          python_shell=False,
+                                         output_loglevel=loglevel,
                                          **kwargs)
         retcode = result['retcode']
 
@@ -96,14 +109,33 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         else:
             stderr = _remove_sensitive_data(result['stderr'])
             raise CommandExecutionError(
-                'Command {0!r} failed. Stderr: {1!r}'.format(cmd, stderr))
+                'Command {0!r} failed. Stderr: {1!r}'.format(
+                    _remove_sensitive_data(cmd),
+                    stderr
+                )
+            )
 
 
-def _remove_sensitive_data(sensitive_output):
+def _remove_sensitive_data(output):
     '''
-        Remove HTTP user and password.
+    Remove HTTP user and password
     '''
-    return re.sub('(https?)://.*@', r'\1://<redacted>@', sensitive_output)
+    # We can't use re.compile because re.compile(someregex).sub() doesn't
+    # support flags even in Python 2.7.
+    url_re = '(https?)://.*@'
+    redacted = r'\1://<redacted>@'
+    if sys.version_info >= (2, 7):
+        # re.sub() supports flags as of 2.7, use this to do a case-insensitive
+        # match.
+        return re.sub(url_re, redacted, output, flags=re.IGNORECASE)
+    else:
+        # We're on python 2.6, test if a lowercased version of the output
+        # string matches the regex...
+        if re.search(url_re, output.lower()):
+            # ... and if it does, perform the regex substitution.
+            return re.sub(url_re, redacted, output.lower())
+    # No match, just return the original string
+    return output
 
 
 def _git_getdir(cwd, user=None):
@@ -994,5 +1026,5 @@ def ls_remote(cwd, repository="origin", branch="master", user=None,
     '''
     _check_git()
     repository = _add_http_basic_auth(repository, https_user, https_pass)
-    cmd = ' '.join(["git", "ls-remote", "-h", str(repository), str(branch), "| cut -f 1"])
+    cmd = ' '.join(["git", "ls-remote", "-h", "'" + str(repository) + "'", str(branch), "| cut -f 1"])
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
