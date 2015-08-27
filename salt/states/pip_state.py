@@ -474,7 +474,13 @@ def installed(name,
         bin_env = env
 
     # If pkgs is present, ignore name
-    if not pkgs:
+    if pkgs:
+        if not isinstance(pkgs, list):
+            return {'name': name,
+                    'result': False,
+                    'changes': {},
+                    'comment': 'pkgs argument must be formatted as a list'}
+    else:
         pkgs = [name]
 
     # Assumption: If `pkg` is not an `string`, it's a `collections.OrderedDict`
