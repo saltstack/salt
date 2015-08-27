@@ -139,7 +139,7 @@ def setup_handlers():
         if config_value is None and key not in options:
             log.debug(
                 'The required \'sentry_handler\' configuration key, '
-                '{0!r}, is not properly configured. Not configuring '
+                '\'{0}\', is not properly configured. Not configuring '
                 'the sentry logging handler.'.format(key)
             )
             return
