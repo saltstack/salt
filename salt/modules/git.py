@@ -262,7 +262,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 gitcommand = ' '.join(command) \
                     if isinstance(command, list) \
                     else command
-                msg = 'Command \'{0}\' failed'.format(gitcommand)
+                msg = 'Command \'{0}\' failed'.format(
+                    _remove_sensitive_data(gitcommand)
+                )
                 if result['stderr']:
                     msg += ': {0}'.format(
                         _remove_sensitive_data(result['stderr'])
