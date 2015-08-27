@@ -54,14 +54,27 @@ def _exit_status(retcode):
            2: 'Usage error.'}[retcode]
     return ret
 
+
+def _create_from_file(path):
+    '''
+    Create vm from file
+    '''
+    return False
+
+
+def _create_from_cfg(vmcfg):
+    '''
+    Create vm from configuration
+    '''
+    return False
+
+
 ## TODO
-#create [-f <filename>]
-#receive [-f <filename>]
-#send <uuid> [target]
-#update <uuid> [-f <filename>]
-# -or- update <uuid> property=value [property=value ...]
-#validate create [-f <filename>]
-#validate update <brand> [-f <filename>]
+# vmadm receive [-f <filename>]
+# vmadm send <uuid> [target]
+# vmdm update <uuid> [-f <filename>]
+# vmadm update <uuid> property=value [property=value ...]
+# vmadm validate update <brand> [-f <filename>]
 
 
 def start(vm=None, options=None, key='uuid'):
@@ -700,6 +713,37 @@ def reprovision(vm=None, image=None, key='uuid'):
         ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
         return ret
     return True
+
+
+def create(**kwargs):
+    '''
+    Create a new vm
+
+    from_file : string
+        Specifies the json file to create the vm from.
+        Note: when this is present all other options will be ignored.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.create from_file=/tmp/new_vm.json
+        salt '*' vmadm.create image_uuid='...' alias='...' nics='[{...}, {..}]' [...]
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    # prepare vmcfg
+    vmcfg = {}
+    for key, value in kwargs.iteritems():
+        if key.startswith('_'):
+            continue
+        vmcfg[key] = value
+    # vmadm create [-f <filename>]
+    # vmadm validate create [-f <filename>]
+    if 'from_file' in vmcfg:
+        return _create_from_file(vmcfg['from_file'])
+    else:
+        return _create_from_cfg(vmcfg)
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
