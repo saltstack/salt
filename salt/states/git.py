@@ -472,7 +472,13 @@ def latest(name,
             desired_upstream = '/'.join((remote, rev))
             remote_rev_type = 'branch'
         elif 'refs/tags/' + rev + '^{}' in all_remote_refs:
+            # Annotated tag
             remote_rev = all_remote_refs['refs/tags/' + rev + '^{}']
+            desired_upstream = False
+            remote_rev_type = 'tag'
+        elif 'refs/tags/' + rev in all_remote_refs:
+            # Non-annotated tag
+            remote_rev = all_remote_refs['refs/tags/' + rev]
             desired_upstream = False
             remote_rev_type = 'tag'
         else:
