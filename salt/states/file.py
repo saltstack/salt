@@ -4613,7 +4613,8 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
 
 def decode(name,
-        encoded_data,
+        encoded_data=None,
+        contents_pillar=None,
         encoding_type='base64',
         checksum='md5'):
     '''
@@ -4622,7 +4623,12 @@ def decode(name,
     name
         Path of the file to be written.
     encoded_data
-        The encoded file.
+        The encoded file. Either this option or ``contents_pillar`` must be
+        specified.
+    contents_pillar
+        A Pillar path to the encoded file. Uses the same syntax as
+        :py:func:`pillar.get <salt.modules.pillar.get>`. Either this option or
+        ``encoded_data`` must be specified.
     encoding_type : ``base64``
         The type of encoding.
     checksum : ``md5``
@@ -4638,15 +4644,38 @@ def decode(name,
           file.decode:
             - name: /tmp/new_file
             - encoding_type: base64
+            - contents_pillar: mypillar:thefile
+
+        # or
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
             - encoded_data: |
                 Z2V0IHNhbHRlZAo=
 
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
+    if not (encoded_data or contents_pillar):
+        raise CommandExecutionError("Specify either the 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data and contents_pillar:
+        raise CommandExecutionError("Specify only one 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data:
+        content = encoded_data
+    elif contents_pillar:
+        content = __salt__['pillar.get'](contents_pillar, False)
+        if content is False:
+            raise CommandExecutionError('Pillar data not found.')
+    else:
+        raise CommandExecutionError('No contents given.')
+
     dest_exists = __salt__['file.file_exists'](name)
     if dest_exists:
-        instr = __salt__['hashutil.base64_decodestring'](encoded_data)
+        instr = __salt__['hashutil.base64_decodestring'](content)
         insum = __salt__['hashutil.digest'](instr, checksum)
         del instr  # no need to keep in-memory after we have the hash
         outsum = __salt__['hashutil.digest_file'](name, checksum)
@@ -4668,7 +4697,7 @@ def decode(name,
         ret['result'] = None
         return ret
 
-    ret['result'] = __salt__['hashutil.base64_decodefile'](encoded_data, name)
+    ret['result'] = __salt__['hashutil.base64_decodefile'](content, name)
     ret['comment'] = 'File was updated.'
 
     if not ret['changes']:
