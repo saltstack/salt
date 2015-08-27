@@ -166,7 +166,7 @@ Pillars
 =======
 Formula packages include a pillar.example file. Rather than being placed in the
 formula directory, this file is renamed to ``<formula name>.sls.orig`` and
-placed in the ``pillar_roots``, where it can be easily updated to meet the
+placed in the ``pillar_path``, where it can be easily updated to meet the
 user's needs.
 
 Loader Modules
@@ -275,14 +275,14 @@ treated as if they have a ``-formula`` name.
 
 formula
 -------
-By default, most files from this type of package live in the ``/srv/salt/``
+By default, most files from this type of package live in the ``/srv/spm/salt/``
 directory. The exception is the ``pillar.example`` file, which will be renamed
-to ``<package_name>.sls`` and placed in the pillar directory (``/srv/pillar/``
+to ``<package_name>.sls`` and placed in the pillar directory (``/srv/spm/pillar/``
 by default).
 
 reactor
 -------
-By default, files from this type of package live in the ``/srv/reactor/``
+By default, files from this type of package live in the ``/srv/spm/reactor/``
 directory.
 
 conf
