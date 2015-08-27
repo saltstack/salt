@@ -1033,15 +1033,12 @@ def _validate_name(name):
     '''
     ret = True
     name_length = len(name)
-    regex = re.compile(r'^\w+$')
+    regex = re.compile(r'^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$')
 
     if name_length < 3 or name_length > 48:
         ret = False
 
     if not re.match(regex, name):
-        ret = False
-
-    if name.startswith(('-', '_',)) or name.endswith(('-', '_',)):
         ret = False
 
     if ret is False:
