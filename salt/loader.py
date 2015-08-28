@@ -403,11 +403,13 @@ def states(opts, functions, whitelist=None):
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None)
     '''
-    return LazyLoader(_module_dirs(opts, 'states', 'states'),
+    ret = LazyLoader(_module_dirs(opts, 'states', 'states'),
                       opts,
                       tag='states',
                       pack={'__salt__': functions},
                       whitelist=whitelist)
+    ret.pack['__states__'] = ret
+    return ret
 
 
 def beacons(opts, functions, context=None):
