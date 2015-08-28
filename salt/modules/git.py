@@ -7,9 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import os
-import re
 import subprocess
-import sys
 
 # Import salt libs
 import salt.utils
@@ -103,10 +101,10 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
         if retcode == 0:
             return result['stdout']
         else:
-            stderr = _remove_sensitive_data(result['stderr'])
+            stderr = salt.utils.url.redact_http_basic_auth(result['stderr'])
             raise CommandExecutionError(
                 'Command {0!r} failed. Stderr: {1!r}'.format(
-                    _remove_sensitive_data(cmd),
+                    salt.utils.url.redact_http_basic_auth(cmd),
                     stderr
                 )
             )
