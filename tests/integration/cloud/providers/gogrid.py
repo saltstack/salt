@@ -11,6 +11,7 @@ import string
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath, expensiveTest
+from salttesting import skipIf
 
 ensure_in_syspath('../../../')
 

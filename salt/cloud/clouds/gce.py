@@ -99,7 +99,6 @@ from salt.utils import http
 from salt import syspaths
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
-    SaltCloudException,
     SaltCloudSystemExit,
 )
 

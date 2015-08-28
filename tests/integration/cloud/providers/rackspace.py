@@ -40,7 +40,7 @@ def __random_name(size=6):
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'rackspace'
-DRIVER = 'openstack'
+DRIVER_NAME = 'openstack'
 
 
 @skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
