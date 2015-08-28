@@ -175,6 +175,8 @@ def eni_present(
     '''
     Ensure the EC2 ENI exists.
 
+    .. versionadded:: Boron
+
     name
         Name tag associated with the ENI.
 
@@ -346,6 +348,8 @@ def eni_absent(
         profile=None):
     '''
     Ensure the EC2 ENI is absent.
+
+    .. versionadded:: Boron
 
     name
         Name tag associated with the ENI.
