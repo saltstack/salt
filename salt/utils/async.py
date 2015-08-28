@@ -21,7 +21,6 @@ except ImportError:
 import contextlib
 
 
-
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     '''
@@ -58,13 +57,6 @@ class SyncWrapper(object):
 
         with current_ioloop(self.io_loop):
             self.async = method(*args, **kwargs)
-
-    def __del__(self):
-        '''
-        Once the async wrapper is complete, remove our loop from the in use set
-        so someone else can use it without making another one
-        '''
-        del self.loops_in_use[self.io_loop]
 
     def __getattribute__(self, key):
         try:
