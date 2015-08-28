@@ -1294,7 +1294,7 @@ def latest(name,
                         upstream = False
 
                     ver = _get_git_version()
-                    if ver >= _LooseVersion('1.7.12')
+                    if ver >= _LooseVersion('1.7.12'):
                         set_upstream = '--set-upstream-to'
                     else: 
                         log.warn('Git version {0} doesn\'t support --set-upstream-to. Using --track instead'.format(ver))
