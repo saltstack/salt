@@ -351,7 +351,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         if not os.path.isfile(self.options.saltfile):
             self.error(
-                '{0!r} file does not exist.\n'.format(self.options.saltfile
+                '\'{0}\' file does not exist.\n'.format(self.options.saltfile
                 )
             )
 
@@ -360,7 +360,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
         # Make sure we let the user know that we will be loading a Saltfile
         logging.getLogger(__name__).info(
-            'Loading Saltfile from {0!r}'.format(self.options.saltfile)
+            'Loading Saltfile from \'{0}\''.format(self.options.saltfile)
         )
 
         saltfile_config = config._read_conf_file(saltfile)
@@ -462,7 +462,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         if not os.path.isdir(self.options.config_dir):
             # No logging is configured yet
             sys.stderr.write(
-                'WARNING: CONFIG {0!r} directory does not exist.\n'.format(
+                'WARNING: CONFIG \'{0}\' directory does not exist.\n'.format(
                     self.options.config_dir
                 )
             )
@@ -728,9 +728,9 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                         self._default_logging_logfile_
                     )
                     logging.getLogger(__name__).debug(
-                        'The user {0!r} is not allowed to write to {1!r}. '
+                        'The user \'{0}\' is not allowed to write to \'{1}\'. '
                         'The log file will be stored in '
-                        '\'~/.salt/{2!r}.log\''.format(
+                        '\'~/.salt/\'{2}\'.log\''.format(
                             current_user,
                             logfile,
                             logfile_basename
@@ -1037,6 +1037,18 @@ class ArgsStdinMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--proxyid',
+            default=None,
+            dest='proxyid',
+            help=('Id for this proxy')
+        )
+
+
 class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     _mixin_prio_ = 40
@@ -1058,7 +1070,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--out', '--output',
             dest='output',
             help=(
-                'Print the output from the {0!r} command using the '
+                'Print the output from the \'{0}\' command using the '
                 'specified outputter. The builtins are {1}.'.format(
                     self.get_prog_name(),
                     ', '.join([repr(k) for k in outputters])
@@ -1513,6 +1525,31 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     def setup_config(self):
         return config.minion_config(self.get_config_file_path(),
                                     cache_minion_id=True)
+
+
+class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
+                                                 OptionParser,
+                                                 ConfigDirMixIn,
+                                                 MergeConfigMixIn,
+                                                 LogLevelMixIn,
+                                                 RunUserMixin,
+                                                 DaemonMixIn,
+                                                 PidfileMixin,
+                                                 SaltfileMixIn,
+                                                 ProxyIdMixIn)):  # pylint: disable=no-init
+
+    description = (
+        'The Salt proxy minion, connects to and controls devices not able to run a minion.  Receives commands from a remote Salt master.'
+    )
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'proxy'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxy')
+
+    def setup_config(self):
+        return config.minion_config(self.get_config_file_path(),
+                                   cache_minion_id=False)
 
 
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
@@ -2095,7 +2132,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             return
         if not self.options.list.startswith(('acc', 'pre', 'un', 'rej', 'den', 'all')):
             self.error(
-                '{0!r} is not a valid argument to \'--list\''.format(
+                '\'{0}\' is not a valid argument to \'--list\''.format(
                     self.options.list
                 )
             )
@@ -2710,7 +2747,7 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         # spm needs arguments
         if len(self.args) <= 1:
-            if self.args[0] not in ('update_repo',):
+            if not self.args or self.args[0] not in ('update_repo',):
                 self.print_help()
                 self.exit(salt.defaults.exitcodes.EX_USAGE)
 

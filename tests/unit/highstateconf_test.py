@@ -151,7 +151,7 @@ class TopFileMergeTestCase(TestCase):
         with patch('salt.fileclient.FSClient.envs', MagicMock(return_value=['a', 'b', 'c'])):
             highstate = HighState(config)
             ret = highstate.get_tops()
-        self.assertEqual(ret, OrderedDict([('b', [{}]), ('a', [{}]), ('c', [{}])]))
+        self.assertEqual(ret, OrderedDict([('a', [{}]), ('c', [{}]), ('b', [{}])]))
 
 
 if __name__ == '__main__':

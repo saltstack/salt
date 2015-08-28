@@ -2,33 +2,27 @@
 r'''
 Module to manage Windows software repo on a Standalone Minion
 
-``file_client: local`` must be set in the minion config file. Other config
-options of interest include:
+``file_client: local`` must be set in the minion config file.
 
-* :conf_minion:`winrepo_dir`
-* :conf_minion:`winrepo_cachefile`
-
-Place all Windows package files in the 'win_repo' directory.
+For documentation on Salt's Windows Repo feature, see :ref:`here
+<windows-package-manager`
 '''
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import os
 import logging
-
-# Import third party libs
-import salt.ext.six as six
-# pylint: disable=import-error
-try:
-    import msgpack
-except ImportError:
-    import msgpack_pure as msgpack
+import os
 
 # Import salt libs
 import salt.output
 import salt.utils
 import salt.loader
 import salt.template
+from salt.exceptions import CommandExecutionError, SaltRenderError
+from salt.runners.winrepo import (
+    genrepo as _genrepo,
+    update_git_repos as _update_git_repos
+)
 
 log = logging.getLogger(__name__)
 
@@ -41,116 +35,140 @@ def __virtual__():
     Set the winrepo module if the OS is Windows
     '''
     if salt.utils.is_windows():
+        global _genrepo, _update_git_repos
+        _genrepo = salt.utils.namespaced_function(_genrepo, globals())
+        _update_git_repos = \
+            salt.utils.namespaced_function(_update_git_repos, globals())
         return __virtualname__
     return False
 
 
+def _get_local_repo_dir(saltenv='base'):
+    if 'win_repo_source_dir' in __opts__:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo_source_dir\' config option is deprecated, please '
+            'use \'winrepo_source_dir\' instead.'
+        )
+        winrepo_source_dir = __opts__['win_repo_source_dir']
+    else:
+        winrepo_source_dir = __opts__['winrepo_source_dir']
+
+    dirs = []
+    dirs.append(salt.syspaths.CACHE_DIR)
+    dirs.extend(['minion', 'files'])
+    dirs.append(saltenv)
+    dirs.extend(winrepo_source_dir[7:].strip('/').split('/'))
+    return os.sep.join(dirs)
+
+
 def genrepo():
     r'''
-    Generate winrepo_cachefile based on sls files in the win_repo
+    Generate winrepo_cachefile based on sls files in the winrepo_dir
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt-call winrepo.genrepo -c c:\salt\conf
+        salt-call winrepo.genrepo
     '''
-    if 'win_repo' in __opts__:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
-        )
-        winrepo_dir = __opts__['win_repo']
-    else:
-        winrepo_dir = __opts__['winrepo_dir']
-
-    if 'win_repo_cachefile' in __opts__:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo_cachefile\' config option is deprecated, please '
-            'use \'winrepo_cachefile\' instead.'
-        )
-        winrepo_cachefile = __opts__['win_repo_cachefile']
-    else:
-        winrepo_cachefile = __opts__['winrepo_cachefile']
-
-    ret = {}
-    if not os.path.exists(winrepo_dir):
-        os.makedirs(winrepo_dir)
-    renderers = salt.loader.render(__opts__, __salt__)
-    for root, dirs, files in os.walk(winrepo_dir):
-        for name in files:
-            if name.endswith('.sls'):
-                config = salt.template.compile_template(
-                            os.path.join(root, name),
-                            renderers,
-                            __opts__['renderer'])
-                if config:
-                    revmap = {}
-                    for pkgname, versions in six.iteritems(config):
-                        for version, repodata in six.iteritems(versions):
-                            if not isinstance(version, six.string_types):
-                                config[pkgname][str(version)] = \
-                                    config[pkgname].pop(version)
-                            revmap[repodata['full_name']] = pkgname
-                    ret.setdefault('repo', {}).update(config)
-                    ret.setdefault('name_map', {}).update(revmap)
-    with salt.utils.fopen(
-            os.path.join(winrepo_dir, winrepo_cachefile), 'w+b') as repo:
-        repo.write(msgpack.dumps(ret))
-    salt.output.display_output(ret, 'pprint', __opts__)
-    return ret
+    return _genrepo(opts=__opts__, fire_event=False)
 
 
 def update_git_repos():
     '''
-    Checkout git repos containing Windows Software Package Definitions
+    Checkout git repos containing :ref:`Windows Software Package Definitions
+    <windows-package-manager>`
 
-    .. note::
+    .. important::
+        This function requires `Git for Windows`_ to be installed in order to
+        work. When installing, make sure to select an installation option which
+        permits the git executable to be run from the Command Prompt.
 
-        This function will not work unless git is installed and the git module
-        is further updated to work on Windows. In the meantime just place all
-        Windows package files in the :conf_minion:`winrepo_dir` directory.
+    .. _`Git for Windows`: https://git-for-windows.github.io/
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call winrepo.update_git_repos
     '''
-    if 'win_repo' in __opts__:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_repo\' config option is deprecated, please use '
-            '\'winrepo_dir\' instead.'
+    if not salt.utils.which('git'):
+        raise CommandExecutionError(
+            'Git for Windows is not installed, or not configured to be '
+            'accessible from the Command Prompt'
         )
-        winrepo_dir = __opts__['win_repo']
-    else:
-        winrepo_dir = __opts__['winrepo_dir']
+    return _update_git_repos(opts=__opts__, masterless=True)
 
-    if 'win_gitrepos' in __opts__:
-        salt.utils.warn_until(
-            'Nitrogen',
-            'The \'win_gitrepos\' config option is deprecated, please use '
-            '\'winrepo_remotes\' instead.'
-        )
-        winrepo_remotes = __opts__['win_gitrepos']
-    else:
-        winrepo_remotes = __opts__['winrepo_remotes']
 
-    ret = {}
-    #mminion = salt.minion.MasterMinion(__opts__)
-    for remote in winrepo_remotes:
-        #if '/' in remote:
-            #targetname = remote.split('/')[-1]
-        #else:
-            #targetname = remote
-        targetname = remote
-        rev = None
-        # If a revision is specified, use it.
-        if len(remote.strip().split(' ')) > 1:
-            rev, remote = remote.strip().split(' ')
-        gittarget = os.path.join(winrepo_dir, targetname)
-        #result = mminion.states['git.latest'](remote,
-        result = __salt__['git.latest'](remote,
-                                        rev=rev,
-                                        target=gittarget,
-                                        force=True)
-        ret[result['name']] = result['result']
-    salt.output.display_output(ret, 'pprint', __opts__)
-    return ret
+def show_sls(name, saltenv='base'):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Display the rendered software definition from a specific sls file in the
+    local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
+    the latest software definitions from the master.
+
+
+    :param str name:
+        The name of the package you want to view. Start from the local winrepo
+        root. If you have ``.sls`` files organized in subdirectories you'll have
+        to denote them with ``.``. For example, if I have a ``test`` directory
+        in the winrepo root with a ``gvim.sls`` file inside, I would target that
+        file like so: ``test.gvim``. Directories can be targeted as well as long
+        as they contain an ``init.sls`` inside. For example, if I have a ``node``
+        directory with an ``init.sls`` inside, I would target that like so:
+        ``node``.
+
+    :param str saltenv:
+        The default environment is ``base``
+
+    :return:
+        Returns a dictionary containing the rendered data structure
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' winrepo.show_sls gvim
+        salt '*' winrepo.show_sls test.npp
+    '''
+    # Get the location of the local repo
+    repo = _get_local_repo_dir(saltenv)
+
+    # Add the sls file name to the path
+    repo = repo.split('\\')
+    definition = name.split('.')
+    repo.extend(definition)
+
+    # Check for the sls file by name
+    sls_file = '{0}.sls'.format(os.sep.join(repo))
+    if not os.path.exists(sls_file):
+
+        # Maybe it's a directory with an init.sls
+        sls_file = '{0}\\init.sls'.format(os.sep.join(repo))
+        if not os.path.exists(sls_file):
+
+            # It's neither, return
+            return 'Software definition {0} not found'.format(name)
+
+    # Load the renderer
+    renderers = salt.loader.render(__opts__, __salt__)
+    config = {}
+
+    # Run the file through the renderer
+    try:
+        config = salt.template.compile_template(
+            sls_file,
+            renderers,
+            __opts__['renderer'])
+
+    # Dump return the error if any
+    except SaltRenderError as exc:
+        log.debug('Failed to compile {0}.'.format(sls_file))
+        log.debug('Error: {0}.'.format(exc))
+        config['Message'] = 'Failed to compile {0}'.format(sls_file)
+        config['Error'] = '{0}'.format(exc)
+
+    return config

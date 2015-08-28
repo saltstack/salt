@@ -59,7 +59,6 @@ Setting up Service Account Authentication:
       ssh_interface: public_ips
 
 :maintainer: Eric Johnson <erjohnso@google.com>
-:maturity: new
 :depends: libcloud >= 0.14.1
 :depends: pycrypto >= 2.1
 '''
@@ -76,8 +75,6 @@ import msgpack
 from ast import literal_eval
 
 # Import 3rd-party libs
-import salt.ext.six as six
-# The import section is mostly libcloud boilerplate
 # pylint: disable=import-error
 try:
     from libcloud.compute.types import Provider
@@ -95,8 +92,7 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import namespaced_function
-
-# Import saltcloud libs
+import salt.ext.six as six
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import http
@@ -109,6 +105,8 @@ from salt.exceptions import (
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'gce'
 
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
@@ -130,37 +128,43 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for GCE configurations.
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'gce':
+        if 'gce' not in details:
             continue
 
-        pathname = os.path.expanduser(details['service_account_private_key'])
+        parameters = details['gce']
+        pathname = os.path.expanduser(parameters['service_account_private_key'])
+
         if not os.path.exists(pathname):
             raise SaltCloudException(
-                'The GCE service account private key {0!r} used in '
-                'the {1!r} provider configuration does not exist\n'.format(
-                    details['service_account_private_key'], provider
-                )
-            )
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(pathname).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The GCE service account private key {0!r} used in '
-                'the {1!r} provider configuration needs to be set to '
-                'mode 0400 or 0600\n'.format(
-                    details['service_account_private_key'], provider
+                'The GCE service account private key \'{0}\' used in '
+                'the \'{1}\' provider configuration does not exist\n'.format(
+                    parameters['service_account_private_key'],
+                    provider
                 )
             )
 
-    return True
+        key_mode = str(
+            oct(stat.S_IMODE(os.stat(pathname).st_mode))
+        )
+
+        if key_mode not in ('0400', '0600'):
+            raise SaltCloudException(
+                'The GCE service account private key \'{0}\' used in '
+                'the \'{1}\' provider configuration needs to be set to '
+                'mode 0400 or 0600\n'.format(
+                    parameters['service_account_private_key'],
+                    provider
+                )
+            )
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -173,6 +177,16 @@ def get_configured_provider():
         ('project',
          'service_account_email_address',
          'service_account_private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -2080,7 +2094,9 @@ def create(vm_=None, call=None):
         kwargs['external_ip'] = None
     elif kwargs['external_ip'] != 'ephemeral':
         region = '-'.join(kwargs['location'].name.split('-')[:2])
-        kwargs['external_ip'] = __create_orget_address(conn, kwargs['external_ip'], region)
+        kwargs['external_ip'] = __create_orget_address(conn,
+                                                       kwargs['external_ip'],
+                                                       region)
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
@@ -2123,9 +2139,9 @@ def create(vm_=None, call=None):
     vm_['key_filename'] = ssh_key
     salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.trace(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(node_dict)
         )
     )

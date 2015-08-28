@@ -9,6 +9,7 @@ import sys
 import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
+from salt.utils.args import yamlify_arg
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
@@ -87,7 +88,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 self._output_ret(ret, '')
 
             else:
-                batch = salt.cli.batch.Batch(self.config, eauth=eauth)
+                try:
+                    batch = salt.cli.batch.Batch(self.config, eauth=eauth)
+                except salt.exceptions.SaltClientError as exc:
+                    # We will print errors to the console further down the stack
+                    sys.exit(1)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
                     if self.options.failhard:
@@ -130,7 +135,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 kwargs['ret_config'] = getattr(self.options, 'return_config')
 
             if getattr(self.options, 'metadata'):
-                kwargs['metadata'] = getattr(self.options, 'metadata')
+                kwargs['metadata'] = yamlify_arg(
+                        getattr(self.options, 'metadata'))
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials

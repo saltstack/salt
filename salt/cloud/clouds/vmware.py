@@ -79,13 +79,12 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
-HAS_LIBS = False
 try:
     from pyVim.connect import SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
-    HAS_LIBS = True
+    HAS_PYVMOMI = True
 except Exception:
-    pass
+    HAS_PYVMOMI = False
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
@@ -94,18 +93,20 @@ try:
 except Exception:
     pass
 
-# Import third party libs
 try:
     import salt.ext.six as six
+    HAS_SIX = True
 except ImportError:
     # Salt version <= 2014.7.0
     try:
         import six
     except ImportError:
-        HAS_LIBS = False
+        HAS_SIX = False
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'vmware'
 
 
 # Only load in this module if the VMware configurations are in place
@@ -113,13 +114,13 @@ def __virtual__():
     '''
     Check for VMware configuration and if required libs are available.
     '''
-    if not HAS_LIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -128,8 +129,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'vmware',
+        __active_provider_name__ or __virtualname__,
         ('url', 'user', 'password',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'pyVmomi': HAS_PYVMOMI,
+        'six': HAS_SIX
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -1669,12 +1684,12 @@ def avail_images(call=None):
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        if vm["config.template"]:
+        if "config.template" in vm and vm["config.template"]:
             templates[vm["name"]] = {
                 'name': vm["name"],
-                'guest_fullname': vm["config.guestFullName"],
-                'cpus': vm["config.hardware.numCPU"],
-                'ram': vm["config.hardware.memoryMB"]
+                'guest_fullname': vm["config.guestFullName"] if "config.guestFullName" in vm else "N/A",
+                'cpus': vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A",
+                'ram': vm["config.hardware.memoryMB"] if "config.hardware.memoryMB" in vm else "N/A"
             }
 
     return templates
@@ -2154,7 +2169,7 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and config.is_profile_configured(__opts__,
+        if config.is_profile_configured(__opts__,
                                         __active_provider_name__ or 'vmware',
                                         vm_['profile']) is False:
             return False
@@ -2228,6 +2243,9 @@ def create(vm_):
     )
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
+    )
+    hardware_version = config.get_cloud_config_value(
+        'hardware_version', vm_, __opts__, search_global=False, default=None
     )
 
     if 'clonefrom' in vm_:
@@ -2313,6 +2331,19 @@ def create(vm_):
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
+
+        # If the hardware version is specified and if it is different from the current
+        # hardware version, then schedule a hardware version upgrade
+        if hardware_version:
+            hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
+            if hardware_version != object_ref.config.version:
+                log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
+                scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
+                scheduled_hardware_upgrade.upgradePolicy = 'always'
+                scheduled_hardware_upgrade.versionKey = hardware_version
+                config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
+            else:
+                log.debug("Virtual hardware version already set to {1}".format(hardware_version))
 
         if num_cpus:
             log.debug("Setting cpu to: {0}".format(num_cpus))

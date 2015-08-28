@@ -77,6 +77,7 @@ import uuid
 import pprint
 import logging
 import yaml
+
 # Import libs for talking to the EC2 API
 import hmac
 import hashlib
@@ -88,30 +89,7 @@ import json
 import re
 import decimal
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
-from salt.ext.six.moves import map, range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
-
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-# Import salt libs
+# Import Salt Libs
 import salt.utils
 from salt import syspaths
 from salt._compat import ElementTree as ET
@@ -128,6 +106,29 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+
+# Import 3rd-Party Libs
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -175,44 +176,48 @@ EC2_RETRY_CODES = [
 
 JS_COMMENT_RE = re.compile(r'/\*.*?\*/', re.S)
 
+__virtualname__ = 'ec2'
+
 
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
     '''
     Set up the libcloud functions and check for EC2 configurations
     '''
-    if not HAS_REQUESTS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'ec2':
+        if 'ec2' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
+        parameters = details['ec2']
+
+        if not os.path.exists(parameters['private_key']):
             raise SaltCloudException(
-                'The EC2 key file {0!r} used in the {1!r} provider '
+                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
                 'configuration does not exist\n'.format(
-                    details['private_key'],
+                    parameters['private_key'],
                     provider
                 )
             )
 
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
+        key_mode = str(
+            oct(stat.S_IMODE(os.stat(parameters['private_key']).st_mode))
         )
-        if keymode not in ('0400', '0600'):
+        if key_mode not in ('0400', '0600'):
             raise SaltCloudException(
-                'The EC2 key file {0!r} used in the {1!r} provider '
+                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
                 'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
+                    parameters['private_key'],
                     provider
                 )
             )
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -221,8 +226,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'ec2',
+        __active_provider_name__ or __virtualname__,
         ('id', 'key', 'keyname', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'pycrypto': HAS_PYCRYPTO
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -921,9 +940,8 @@ def get_ssh_gateway_config(vm_):
     key_filename = ssh_gateway_config['ssh_gateway_key']
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_gateway_private_key {0!r} does not exist'.format(
-                key_filename
-            )
+            'The defined ssh_gateway_private_key \'{0}\' does not exist'
+            .format(key_filename)
         )
     elif (
         key_filename is None and
@@ -1292,7 +1310,7 @@ def _modify_eni_properties(eni_id, properties=None):
 
     raise SaltCloudException(
         'Could not change interface <{0}> attributes '
-        '<{1!r}> after 5 retries'.format(
+        '<\'{1}\'> after 5 retries'.format(
             eni_id, properties
         )
     )
@@ -1655,14 +1673,13 @@ def request_instance(vm_=None, call=None):
         }
         try:
             rd_data = aws.query(rd_params,
-                                return_root=True,
                                 location=get_location(),
                                 provider=get_provider(),
                                 opts=__opts__,
                                 sigver='4')
             if 'error' in rd_data:
                 return rd_data['error']
-            log.debug('EC2 Response: {0!r}'.format(rd_data))
+            log.debug('EC2 Response: \'{0}\''.format(rd_data))
         except Exception as exc:
             log.error(
                 'Error getting root device name for image id {0} for '
@@ -2197,7 +2214,7 @@ def create(vm_=None, call=None):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -2226,7 +2243,7 @@ def create(vm_=None, call=None):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -2364,7 +2381,7 @@ def create(vm_=None, call=None):
                 'volumes': volumes,
                 'zone': ret['placement']['availabilityZone'],
                 'instance_id': ret['instanceId'],
-                'del_all_vols_on_destroy': vm_.get('set_del_all_vols_on_destroy', False)
+                'del_all_vols_on_destroy': vm_.get('del_all_vols_on_destroy', False)
             },
             call='action'
         )
@@ -2373,9 +2390,9 @@ def create(vm_=None, call=None):
     for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(instance)
         )
     )
@@ -2810,10 +2827,13 @@ def destroy(name, call=None):
 
     ret = {}
 
-    if config.get_cloud_config_value('rename_on_destroy',
-                                     get_configured_provider(),
-                                     __opts__,
-                                     search_global=False) is True:
+    # Default behavior is to rename EC2 VMs when destroyed
+    # via salt-cloud, unless explicitly set to False.
+    rename_on_destroy = config.get_cloud_config_value('rename_on_destroy',
+                                                      get_configured_provider(),
+                                                      __opts__,
+                                                      search_global=False)
+    if rename_on_destroy is not False:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
@@ -2983,8 +3003,8 @@ def _get_node(name=None, instance_id=None, location=None):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
+                'Failed to get the data for node \'{0}\'. Remaining '
+                'attempts: {1}'.format(
                     name, attempts
                 )
             )
@@ -3851,38 +3871,52 @@ def delete_keypair(kwargs=None, call=None):
 
 def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     '''
-    Create a snapshot
+    Create a snapshot.
+
+    volume_id
+        The ID of the Volume from which to create a snapshot.
+
+    description
+        The optional description of the snapshot.
+
+    CLI Exampe:
+
+    .. code-block:: bash
+
+        salt-cloud -f create_snapshot my-ec2-config volume_id=vol-351d8826
+        salt-cloud -f create_snapshot my-ec2-config volume_id=vol-351d8826 \\
+            description="My Snapshot Description"
     '''
     if call != 'function':
-        log.error(
+        raise SaltCloudSystemExit(
             'The create_snapshot function must be called with -f '
             'or --function.'
         )
-        return False
 
-    if 'volume_id' not in kwargs:
-        log.error('A volume_id must be specified to create a snapshot.')
-        return False
+    if kwargs is None:
+        kwargs = {}
 
-    if 'description' not in kwargs:
-        kwargs['description'] = ''
+    volume_id = kwargs.get('volume_id', None)
+    description = kwargs.get('description', '')
 
-    params = {'Action': 'CreateSnapshot'}
+    if volume_id is None:
+        raise SaltCloudSystemExit(
+            'A volume_id must be specified to create a snapshot.'
+        )
 
-    if 'volume_id' in kwargs:
-        params['VolumeId'] = kwargs['volume_id']
-
-    if 'description' in kwargs:
-        params['Description'] = kwargs['description']
+    params = {'Action': 'CreateSnapshot',
+              'VolumeId': volume_id,
+              'Description': description}
 
     log.debug(params)
 
     data = aws.query(params,
                      return_url=True,
+                     return_root=True,
                      location=get_location(),
                      provider=get_provider(),
                      opts=__opts__,
-                     sigver='4')
+                     sigver='4')[0]
 
     r_data = {}
     for d in data:
@@ -3898,7 +3932,7 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
                                                 argument_being_watched='status',
                                                 required_argument_response='completed')
 
-    return data
+    return r_data
 
 
 def delete_snapshot(kwargs=None, call=None):

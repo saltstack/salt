@@ -78,7 +78,7 @@ def init_git_pillar(opts):
                     )
                 else:
                     ret.append(
-                        git_pillar.LegacyGitPillar(
+                        git_pillar._LegacyGitPillar(
                             br,
                             loc,
                             opts
@@ -348,7 +348,7 @@ class AutoKey(object):
         autosign_dir = os.path.join(self.opts['pki_dir'], 'minions_autosign')
 
         # cleanup expired files
-        expire_minutes = self.opts.get('autosign_expire_minutes', 10)
+        expire_minutes = self.opts.get('autosign_timeout', 120)
         if expire_minutes > 0:
             min_time = time.time() - (60 * int(expire_minutes))
             for root, dirs, filenames in os.walk(autosign_dir):
@@ -475,8 +475,9 @@ class RemoteFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
-        mopts['env_order'] = self.opts['env_order']
         mopts['top_file_merging_strategy'] = self.opts['top_file_merging_strategy']
+        mopts['env_order'] = self.opts['env_order']
+        mopts['default_top'] = self.opts['default_top']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']

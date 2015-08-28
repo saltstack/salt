@@ -17,13 +17,13 @@ import logging
 import inspect
 import tempfile
 from collections import MutableMapping
+from zipimport import zipimporter
 
 # Import salt libs
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 import salt.utils.lazy
-import salt.utils.odict
 import salt.utils.event
 import salt.utils.odict
 
@@ -134,7 +134,8 @@ def minion_mods(
         include_errors=False,
         initial_load=False,
         loaded_base_name=None,
-        notify=False):
+        notify=False,
+        static_modules=None):
     '''
     Load execution modules
 
@@ -182,7 +183,8 @@ def minion_mods(
                      tag='module',
                      pack={'__context__': context, '__utils__': utils},
                      whitelist=whitelist,
-                     loaded_base_name=loaded_base_name)
+                     loaded_base_name=loaded_base_name,
+                     static_modules=static_modules)
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -750,18 +752,19 @@ def clouds(opts):
     # Let's bring __active_provider_name__, defaulting to None, to all cloud
     # drivers. This will get temporarily updated/overridden with a context
     # manager when needed.
-    functions = LazyLoader(_module_dirs(opts,
-                                           'clouds',
-                                           'cloud',
-                                           base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
-                                           int_type='clouds'),
-                              opts,
-                              tag='clouds',
-                              pack={'__active_provider_name__': None},
-                              )
+    functions = LazyLoader(
+        _module_dirs(opts,
+                     'clouds',
+                     'cloud',
+                     base_path=os.path.join(SALT_BASE_PATH, 'cloud'),
+                     int_type='clouds'),
+        opts,
+        tag='clouds',
+        pack={'__active_provider_name__': None},
+    )
     for funcname in LIBCLOUD_FUNCS_NOT_SUPPORTED:
         log.trace(
-            '{0!r} has been marked as not supported. Removing from the list '
+            '\'{0}\' has been marked as not supported. Removing from the list '
             'of supported cloud functions'.format(
                 funcname
             )
@@ -835,6 +838,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         - move modules_max_memory into here
         - singletons (per tag)
     '''
+
+    mod_dict_class = salt.utils.odict.OrderedDict
+
     def __init__(self,
                  module_dirs,
                  opts=None,
@@ -844,7 +850,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
+                 static_modules=None
                  ):  # pylint: disable=W0231
+
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -866,6 +874,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.missing_modules = {}  # mapping of name -> error
         self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
+        self.static_modules = static_modules if static_modules else []
 
         self.disabled = set(self.opts.get('disable_{0}s'.format(self.tag), []))
 
@@ -885,7 +894,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         # if we have an attribute named that, lets return it.
         try:
-            return object.__getattr__(self, mod_name)
+            return object.__getattr__(self, mod_name)  # pylint: disable=no-member
         except AttributeError:
             pass
 
@@ -942,6 +951,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except ImportError:
                 log.info('Cython is enabled in the options but not present '
                     'in the system path. Skipping Cython modules.')
+        # Allow for zipimport of modules
+        if self.opts.get('enable_zip_modules', True) is True:
+            self.suffix_map['.zip'] = tuple()
         # allow for module dirs
         self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
 
@@ -995,6 +1007,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             self.file_mapping[f_noext] = (fpath, ext)
                 except OSError:
                     continue
+        for smod in self.static_modules:
+            f_noext = smod.split('.')[-1]
+            self.file_mapping[f_noext] = (smod, '.o')
 
     def clear(self):
         '''
@@ -1069,6 +1084,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
+            elif suffix == '.o':
+                top_mod = __import__(fpath, globals(), locals(), [])
+                comps = fpath.split('.')
+                if len(comps) < 2:
+                    mod = top_mod
+                else:
+                    mod = top_mod
+                    for subname in comps[1:]:
+                        mod = getattr(mod, subname)
+            elif suffix == '.zip':
+                mod = zipimporter(fpath).load_module(name)
             else:
                 desc = self.suffix_map[suffix]
                 # if it is a directory, we dont open a file
@@ -1182,10 +1208,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # containing the names of the proxy types that the module supports.
         #
         # Render modules and state modules are OK though
-        if 'proxy' in self.opts:
-            if self.tag not in ['render', 'states']:
+        if 'proxymodule' in self.opts:
+            if self.tag not in ['render', 'states', 'utils']:
                 if not hasattr(mod, '__proxyenabled__') or \
-                        (self.opts['proxy']['proxytype'] not in mod.__proxyenabled__ and
+                        (self.opts['proxymodule'].loaded_base_name not in mod.__proxyenabled__ and
                             '*' not in mod.__proxyenabled__):
                     err_string = 'not a proxy_minion enabled module'
                     self.missing_modules[module_name] = err_string
@@ -1194,12 +1220,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         if getattr(mod, '__load__', False) is not False:
             log.info(
-                'The functions from module {0!r} are being loaded from the '
+                'The functions from module \'{0}\' are being loaded from the '
                 'provided __load__ attribute'.format(
                     module_name
                 )
             )
-        mod_dict = salt.utils.odict.OrderedDict()
+        mod_dict = self.mod_dict_class()
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1225,9 +1251,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # enforce depends
         try:
             Depends.enforce_dependencies(self._dict, self.tag)
-        except RuntimeError as e:
+        except RuntimeError as exc:
             log.info('Depends.enforce_dependencies() failed '
-                     'for reasons: {0}'.format(e))
+                     'for reasons: {0}'.format(exc))
 
         self.loaded_modules[module_name] = mod_dict
         return True
@@ -1360,7 +1386,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             '{0}.__virtual__() is wrongly returning `None`. '
                             'It should either return `True`, `False` or a new '
                             'name. If you\'re the developer of the module '
-                            '{1!r}, please fix this.'.format(
+                            '\'{1}\', please fix this.'.format(
                                 mod.__name__,
                                 module_name
                             )
@@ -1381,11 +1407,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if not hasattr(mod, '__virtualname__'):
                         salt.utils.warn_until(
                             'Hydrogen',
-                            'The {0!r} module is renaming itself in it\'s '
+                            'The \'{0}\' module is renaming itself in its '
                             '__virtual__() function ({1} => {2}). Please '
                             'set it\'s virtual name as the '
                             '\'__virtualname__\' module attribute. '
-                            'Example: "__virtualname__ = {2!r}"'.format(
+                            'Example: "__virtualname__ = \'{2}\'"'.format(
                                 mod.__name__,
                                 module_name,
                                 virtual
@@ -1397,9 +1423,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         # being returned by the __virtual__() function. This
                         # should be considered an error.
                         log.error(
-                            'The module {0!r} is showing some bad usage. It\'s '
-                            '__virtualname__ attribute is set to {1!r} yet the '
-                            '__virtual__() function is returning {2!r}. These '
+                            'The module \'{0}\' is showing some bad usage. Its '
+                            '__virtualname__ attribute is set to \'{1}\' yet the '
+                            '__virtual__() function is returning \'{2}\'. These '
                             'values should match!'.format(
                                 mod.__name__,
                                 virtualname,
@@ -1409,7 +1435,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                     module_name = virtualname
 
-                # If the __virtual__ function returns True and __virtualname__ is set then use it
+                # If the __virtual__ function returns True and __virtualname__
+                # is set then use it
                 elif virtual is True and virtualname != module_name:
                     if virtualname is not True:
                         module_name = virtualname

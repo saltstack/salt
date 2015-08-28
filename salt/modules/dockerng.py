@@ -1281,7 +1281,7 @@ def _validate_input(action,
                         )
                     if not isinstance(val, six.string_types):
                         raise SaltInvocationError(
-                            'Environment values must be strings {key}={val!r}'
+                            'Environment values must be strings {key}=\'{val}\''
                             .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
@@ -1289,7 +1289,7 @@ def _validate_input(action,
             for key, val in six.iteritems(kwargs['environment']):
                 if not isinstance(val, six.string_types):
                     raise SaltInvocationError(
-                        'Environment values must be strings {key}={val!r}'
+                        'Environment values must be strings {key}=\'{val}\''
                         .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
@@ -2657,6 +2657,16 @@ def create(image,
             val = VALID_CREATE_OPTS[key]
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
+
+    # Added to manage api change in 1.19.
+    # mem_limit and memswap_limit must be provided in host_config object
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+        create_kwargs['host_config'] = docker.utils.create_host_config(mem_limit=create_kwargs.get('mem_limit'),
+                                                                       memswap_limit=create_kwargs.get('memswap_limit'))
+        if 'mem_limit' in create_kwargs:
+            del create_kwargs['mem_limit']
+        if 'memswap_limit' in create_kwargs:
+            del create_kwargs['memswap_limit']
 
     log.debug(
         'dockerng.create is using the following kwargs to create '
@@ -4536,8 +4546,12 @@ def _script(name,
         try:
             os.remove(path)
         except (IOError, OSError) as exc:
-            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
-                      .format(path, exc))
+            log.error(
+                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                    path,
+                    exc
+                )
+            )
 
     path = salt.utils.mkstemp(dir='/tmp',
                               prefix='salt',

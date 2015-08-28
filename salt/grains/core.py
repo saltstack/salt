@@ -21,6 +21,8 @@ import logging
 import locale
 import salt.exceptions
 
+__proxyenabled__ = ['*']
+
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
@@ -185,7 +187,7 @@ def _linux_gpu_data():
                 cur_dev[key.strip()] = val.strip()
             else:
                 error = True
-                log.debug('Unexpected lspci output: {0!r}'.format(line))
+                log.debug('Unexpected lspci output: \'{0}\''.format(line))
 
         if error:
             log.warn(
@@ -520,7 +522,9 @@ def _virtual(osdata):
 
             if ret['retcode'] > 0:
                 if salt.log.is_logging_configured():
-                    if salt.utils.is_windows():
+                    # systemd-detect-virt always returns > 0 on non-virtualized
+                    # systems
+                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd:
                         continue
                     failed_commands.add(command)
                 continue
@@ -784,7 +788,7 @@ def _virtual(osdata):
 
     for command in failed_commands:
         log.warn(
-            'Although {0!r} was found in path, the current user '
+            'Although \'{0}\' was found in path, the current user '
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
@@ -1032,7 +1036,13 @@ def os_data():
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.is_windows():
+    if salt.utils.is_proxy():
+        grains['kernel'] = 'proxy'
+        grains['kernelrelease'] = 'proxy'
+        grains['osrelease'] = 'proxy'
+        grains['os'] = 'proxy'
+        grains['os_family'] = 'proxy'
+    elif salt.utils.is_windows():
         with salt.utils.winapi.Com():
             wmi_c = wmi.WMI()
             grains['osrelease'] = grains['kernelrelease']
@@ -1291,6 +1301,7 @@ def os_data():
     elif grains['kernel'] == 'Darwin':
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         grains['os'] = 'MacOS'
+        grains['os_family'] = 'MacOS'
         grains['osrelease'] = osrelease
         grains['osmajorrelease'] = osrelease.rsplit('.', 1)[0]
         grains.update(_bsd_cpudata(grains))

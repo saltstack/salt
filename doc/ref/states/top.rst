@@ -19,11 +19,11 @@ that the Apache service should always be running.
 
 In Salt, the file which contains a mapping between groups of machines on a
 network and the configuration roles that should be applied to them is
-called a `top file`.
+called a ``top file``.
 
-Top files are named `top.sls` by default and they are so-named because they
+Top files are named ``top.sls`` by default and they are so-named because they
 always exist in the "top" of a directory hierarchy that contains state files.
-That directory hierarchy is called a `state tree`.
+That directory hierarchy is called a ``state tree``.
 
 A Basic Example
 ===============
@@ -38,7 +38,7 @@ Top files have three components:
 
     - State files: A list of state files to apply to a target. Each state
       file describes one or more states to be configured and enforced
-      on the targeted machines. 
+      on the targeted machines.
 
 
 The relationship between these three components is nested as follows:
@@ -49,7 +49,7 @@ The relationship between these three components is nested as follows:
 
 
 Putting these concepts together, we can describe a scenario in which all
-minions with an ID that begins with `web` have an `apache` state applied
+minions with an ID that begins with ``web`` have an ``apache`` state applied
 to them:
 
 .. code-block:: yaml
@@ -69,7 +69,7 @@ of state files.
 
 Environments can be used in many ways, however there is no requirement that
 they be used at all. In fact, the most common way to deploy Salt is with
-a single environment, called `base`. It is recommended that users only
+a single environment, called ``base``. It is recommended that users only
 create multiple environments if they have a use case which specifically
 calls for multiple versions of state trees.
 
@@ -77,7 +77,7 @@ calls for multiple versions of state trees.
 Getting Started with Top Files
 ==============================
 
-Each environment is defined inside a salt master configuration variable 
+Each environment is defined inside a salt master configuration variable
 called, :conf_master:`file_roots` .
 
 
@@ -96,9 +96,9 @@ In the above example, the top file will only have a single environment to pull
 from.
 
 
-Next is a simple single-environment top file placed in `/srv/salt/top.sls`,
-illustrating that for the environment called `base`, all minions will have the
-state files named `core.sls` and `edit.sls` applied to them.
+Next is a simple single-environment top file placed in ``/srv/salt/top.sls``,
+illustrating that for the environment called ``base``, all minions will have the
+state files named ``core.sls`` and ``edit.sls`` applied to them.
 
 .. code-block:: yaml
 
@@ -107,8 +107,8 @@ state files named `core.sls` and `edit.sls` applied to them.
         - core
         - edit
 
-Assuming the `file_roots` configuration from above, Salt will look in the
-`/srv/salt` directory for `core.sls` and `edit.sls`.
+Assuming the ``file_roots`` configuration from above, Salt will look in the
+``/srv/salt`` directory for ``core.sls`` and ``edit.sls``.
 
 
 Multiple Environments
@@ -134,7 +134,7 @@ expanded:
       prod:
         - /srv/salt/prod
 
-In the above, we declare three environments: `dev`, `qa` and `prod`.
+In the above, we declare three environments: ``dev``, ``qa`` and ``prod``.
 Each environment has a single directory assigned to it.
 
 Our top file references the environments:
@@ -159,12 +159,12 @@ Our top file references the environments:
 
 As seen above, the top file now declares the three environments and for each,
 targets are defined to map globs of minion IDs to state files. For example,
-all minions which have an ID beginning with the string `webserver` will have the
+all minions which have an ID beginning with the string ``webserver`` will have the
 webserver state from the requested environment assigned to it.
 
 In this manner, a proposed change to a state could first be made in a state
-file in `/srv/salt/dev` and the applied to development webservers before moving
-the state into QA by copying the state file into `/srv/salt/qa`.
+file in ``/srv/salt/dev`` and the applied to development webservers before moving
+the state into QA by copying the state file into ``/srv/salt/qa``.
 
 
 Choosing an Environment to Target
@@ -177,19 +177,19 @@ applied to that minion. The states that will be applied to a minion in a given
 environment can be viewed using the :py:func:`state.show_top
 <salt.modules.state.show_top>` execution function.
 
-Minions may be pinned to a particular environment by setting the `environment`
+Minions may be pinned to a particular environment by setting the ``environment``
 value in the minion configuration file. In doing so, a minion will only
 request files from the environment to which it is assigned.
 
 The environment to use may also be dynamically selected at the time that
-a `salt`, `salt-call` or `salt-ssh` by passing passing a flag to the
+a ``salt``, ``salt-call`` or ``salt-ssh`` by passing passing a flag to the
 execution module being called. This is most commonly done with
-functions in the `state` module by using the `saltenv=` argument. For
-example, to run a `highstate` on all minions, using the state files in
-the `prod` state tree, run: `salt '*' state.highstate saltenv=prod`.
+functions in the ``state`` module by using the ``saltenv=`` argument. For
+example, to run a ``highstate`` on all minions, using the state files in
+the ``prod`` state tree, run: ``salt '*' state.highstate saltenv=prod``.
 
 .. note::
-    Not all functions accept `saltenv` as an argument See individual
+    Not all functions accept ``saltenv`` as an argument See individual
     function documentation to verify.
 
 
@@ -227,7 +227,7 @@ of matches you can perform:
 .. code-block:: yaml
 
     # All files will be taken from the file path specified in the base
-    # environment in the `file_roots` configuration value.
+    # environment in the ``file_roots`` configuration value.
 
     base:
         # All minions get the following three state files applied
@@ -237,11 +237,11 @@ of matches you can perform:
             - networking
             - salt.minion
 
-        # All minions which have an ID that begins with the phrase 
+        # All minions which have an ID that begins with the phrase
         # 'salt-master' will have an SLS file applied that is named
         # 'master.sls' and is in the 'salt' directory, underneath
-        # the root specified in the `base` environment in the 
-        # configuration value for `file_roots`.
+        # the root specified in the ``base`` environment in the
+        # configuration value for ``file_roots``.
 
         'salt-master*':
             - salt.master
@@ -251,8 +251,8 @@ of matches you can perform:
         # nagios/mon directory applied. Additionally, minions matching
         # the regular expression will also have the 'server.sls' file
         # in the apache/ directory applied.
-        
-        # NOTE! 
+
+        # NOTE!
         #
         # Take note of the 'match' directive here, which tells Salt
         # to treat the target string as a regex to be matched!
@@ -310,7 +310,7 @@ each environment. The most common approach, and the easiest to maintain, is
 to use a single top file placed in only one environment.
 
 However, some workflows do call for multiple top files. In this case, top
-files may be merged together to create `high data` for the state compiler
+files may be merged together to create ``high data`` for the state compiler
 to use as a source to compile states on a minion.
 
 For the following discussion of top file compilation, assume the following
@@ -342,23 +342,27 @@ The astute reader will ask how the state compiler resolves which should be
 an obvious conflict if a minion is not pinned to a particular environment
 and if no environment argument is passed into a state function.
 
-Given the above, it is initially unclear whether `first.sls` will be applied
-or whether `second.sls` will be applied in a `salt '*' state.highstate` command.
+Given the above, it is initially unclear whether ``first.sls`` will be applied
+or whether ``second.sls`` will be applied in a ``salt '*' state.highstate`` command.
 
 When conflicting keys arise, there are several configuration options which
 control the behaviour of salt:
 
-    - `env_order`
-        Setting `env_order` will set the order in which environments are processed
+    - ``env_order``
+        Setting ``env_order`` will set the order in which environments are processed
         by the state compiler.
 
-    - `top_file_merging_strategy`
-        Can be set to `same`, which will process only the top file from the environment
-        that the minion belongs to via the `environment` configuration setting or
-        the environment that is requested via the `saltenv` argument supported
-        by some functions in the `state` module.
+    - ``top_file_merging_strategy``
+        Can be set to ``same``, which will process only the top file from the environment
+        that the minion belongs to via the ``environment`` configuration setting or
+        the environment that is requested via the ``saltenv`` argument supported
+        by some functions in the ``state`` module.
 
-        Can also be set to `merge`. This is the default. When set to `merge`,
+        Can also be set to ``merge``. This is the default. When set to ``merge``,
         top files will be merged together. The order in which top files are
-        merged together can be controlled with `env_order`.
+        merged together can be controlled with ``env_order``.
 
+    - ``default_top``
+        If ``top_file_merging_strategy`` is set to ``same`` and an environment does
+        not contain a top file, the top file in the environment specified by
+        ``default_top`` will be used instead.

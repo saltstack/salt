@@ -181,6 +181,8 @@ def members(name, members_list):
     '''
     Replaces members of the group with a provided list.
 
+    .. versionadded:: 2015.5.4
+
     CLI Example:
 
         salt '*' group.members foo 'user1,user2,user3,...'

@@ -9,8 +9,9 @@ import copy
 import logging
 try:
     import pwd
+    HAS_PWD = True
 except ImportError:
-    pass
+    HAS_PWD = False
 
 # Import 3rd party libs
 import salt.ext.six as six
@@ -29,7 +30,9 @@ def __virtual__():
     '''
     Set the user module if the kernel is FreeBSD
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    if HAS_PWD and __grains__['kernel'] == 'FreeBSD':
+        return __virtualname__
+    return False
 
 
 def _get_gecos(name):

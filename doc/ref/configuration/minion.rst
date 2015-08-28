@@ -661,6 +661,23 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 
     cython_enable: False
 
+.. conf_minion:: enable_zip_modules
+
+``enable_zip_modules``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Set this value to true to enable loading of zip archives as extension modules.
+This allows for packing module code with specific dependencies to avoid conflicts
+and/or having to install specific modules' dependencies in system libraries.
+
+.. code-block:: yaml
+
+    enable_zip_modules: False
+
 .. conf_minion:: providers
 
 ``providers``
@@ -1224,8 +1241,10 @@ have other services that need to go with it.
     update_restart_services: ['salt-minion']
 
 
-Windows Software Repo Settings
-==============================
+.. _winrepo-minion-config-opts:
+
+Standalone Minion Windows Software Repo Settings
+================================================
 
 .. important::
     To use these config options, the minion must be running in masterless mode
@@ -1238,24 +1257,27 @@ Windows Software Repo Settings
 ---------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo`` to ``winrepo_dir``
+    Renamed from ``win_repo`` to ``winrepo_dir``. Also, this option did not
+    have a default value until this version.
 
-Default: ``c:\\salt\\file_roots\\winrepo``
+Default: ``C:\salt\srv\salt\win\repo``
 
 Location on the minion where the :conf_minion:`winrepo_remotes` are checked
 out.
 
 .. code-block:: yaml
 
-    winrepo_dir: /srv/salt/win/repo
+    winrepo_dir: 'D:\winrepo'
 
 .. conf_minion:: winrepo_cachefile
+.. conf_minion:: win_repo_cachefile
 
 ``winrepo_cachefile``
 ---------------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
+    Renamed from ``win_repo_cachefile`` to ``winrepo_cachefile``. Also,
+    this option did not have a default value until this version.
 
 Default: ``winrepo.p``
 
@@ -1271,6 +1293,11 @@ created.
 
 ``winrepo_remotes``
 -------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``. Also, this option did
+    not have a default value until this version.
+
 
 .. versionadded:: 2015.8.0
 
