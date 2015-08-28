@@ -36,6 +36,11 @@ def _check_vmadm():
     '''
     return salt.utils.which('vmadm')
 
+def _check_zfs():
+    '''
+    Looks to see if zfs is present on the system
+    '''
+    return salt.utils.which('zfs')
 
 def __virtual__():
     '''
@@ -149,12 +154,6 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
         if res['stderr'].startswith('Successfully created VM'):
             return res['stderr'][24:]
     return True
-
-
-## TODO
-# vmadm receive [-f <filename>]
-# vmadm send <uuid> [target]
-# vmadm validate update <brand> [-f <filename>]
 
 
 def start(vm=None, options=None, key='uuid'):
@@ -882,5 +881,73 @@ def update(**kwargs):
         return _create_update_from_file('update', uuid, path=vmcfg['from_file'])
     else:
         return _create_update_from_cfg('update', uuid, vmcfg=vmcfg)
+
+
+def send(vm=None, target=None, key='uuid'):
+    '''
+    Send a vm to a directory or host
+
+    vm : string
+        Specifies the vm to be started
+    target : string
+        Specifies the target. Can be a directory path.
+    key : string
+        Specifies if 'vm' is a uuid, alias or hostname.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.send 186da9ab-7392-4f55-91a5-b8f1fe770543 /opt/backups
+        salt '*' vmadm.send vm=nacl target=/opt/backups key=alias
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    zfs = _check_zfs()
+    if vm is None:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    if target is None:
+        ret['Error'] = 'Target must be specified'
+        return ret
+    if not os.path.isdir(target):
+        ret['Error'] = 'Target must be a directory or host'
+        return ret
+    vm = lookup('{0}={1}'.format(key, vm), one=True)
+    if 'Error' in vm:
+        return vm
+    # vmadm send <uuid> [target]
+    cmd = '{vmadm} send {uuid} > {target}'.format(
+        vmadm=vmadm,
+        uuid=vm,
+        target=os.path.join(target, '{0}.vmdata'.format(vm))
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    vmobj = get(vm)
+    if 'datasets' not in vmobj:
+        return True
+    for dataset in vmobj['datasets']:
+        name = dataset.split('/')
+        name = name[-1]
+        cmd = '{zfs} send {dataset} > {target}'.format(
+            zfs=zfs,
+            dataset=dataset,
+            target=os.path.join(target, '{0}-{1}.zfsds'.format(vm, name))
+        )
+        res = __salt__['cmd.run_all'](cmd, python_shell=True)
+        retcode = res['retcode']
+        if retcode != 0:
+            ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+            return ret
+
+    return True
+
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
