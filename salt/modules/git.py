@@ -817,7 +817,7 @@ def remote_set(cwd, name='origin', url=None, user=None, https_user=None,
                                                  https_only=True)
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
-    cmd = 'git remote add {0} {1}'.format(name, url)
+    cmd = 'git remote add {0} \'{1}\''.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user)
     return remote_get(cwd=cwd, remote=name, user=None)
 

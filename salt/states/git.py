@@ -264,12 +264,15 @@ def latest(name,
                 if remote is None or remote[0] != desired_fetch_url:
                     __salt__['git.remote_set'](target,
                                                name=remote_name,
-                                               url=desired_fetch_url,
+                                               url=name,
                                                user=user,
                                                https_user=https_user,
                                                https_pass=https_pass)
                     ret['changes']['remote/{0}'.format(remote_name)] = (
-                        "{0} => {1}".format(str(remote), redacted_fetch_url)
+                        "{0} => {1}".format(
+                            salt.utils.url.redact_http_basic_auth(str(remote)),
+                            redacted_fetch_url
+                        )
                     )
                     # Set to fetch later since we just added the remote and
                     # need to get the refs
