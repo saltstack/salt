@@ -387,7 +387,7 @@ def roster(opts, whitelist=None):
                       whitelist=whitelist)
 
 
-def states(opts, functions, whitelist=None):
+def states(opts, functions, utils, whitelist=None):
     '''
     Returns the state modules
 
@@ -401,7 +401,7 @@ def states(opts, functions, whitelist=None):
         import salt.loader
 
         __opts__ = salt.config.minion_config('/etc/salt/minion')
-        statemods = salt.loader.states(__opts__, None)
+        statemods = salt.loader.states(__opts__, None, None)
     '''
     ret = LazyLoader(_module_dirs(opts, 'states', 'states'),
                       opts,
@@ -409,7 +409,7 @@ def states(opts, functions, whitelist=None):
                       pack={'__salt__': functions},
                       whitelist=whitelist)
     ret.pack['__states__'] = ret
-    ret.pack['__utils__'] = utils(opts)
+    ret.pack['__utils__'] = utils
     return ret
 
 
