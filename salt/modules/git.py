@@ -673,7 +673,7 @@ def clone(cwd,
                                                  https_pass,
                                                  https_only=True)
     except ValueError as exc:
-        return SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(exc.__str__())
 
     command = ['git', 'clone']
     command.extend(_format_opts(opts))
@@ -1770,7 +1770,7 @@ def ls_remote(cwd=None,
                                                     https_pass,
                                                     https_only=True)
     except ValueError as exc:
-        return SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(exc.__str__())
     command = ['git', 'ls-remote']
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -2434,7 +2434,7 @@ def remote_refs(url,
                                                           https_pass,
                                                           https_only=True))
     except ValueError as exc:
-        return SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(exc.__str__())
     output = _git_run(command,
                       user=user,
                       identity=identity,
@@ -2530,7 +2530,7 @@ def remote_set(cwd,
                                                  https_pass,
                                                  https_only=True)
     except ValueError as exc:
-        return SaltInvocationError(exc.__str__())
+        raise SaltInvocationError(exc.__str__())
     if not isinstance(remote, six.string_types):
         remote = str(remote)
     if not isinstance(url, six.string_types):
@@ -2546,7 +2546,7 @@ def remote_set(cwd,
                                                           push_https_pass,
                                                           https_only=True)
         except ValueError as exc:
-            return SaltInvocationError(exc.__str__())
+            raise SaltInvocationError(exc.__str__())
         command = ['git', 'remote', 'set-url', '--push', remote, push_url]
         _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     return remote_get(cwd=cwd,
