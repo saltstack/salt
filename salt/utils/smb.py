@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 try:
     import impacket.smbconnection
-    from impacket.smbconnection import SessionError
+    from impacket.smb3 import SessionError
     HAS_IMPACKET = True
 except ImportError:
     HAS_IMPACKET = False
