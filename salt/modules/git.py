@@ -698,7 +698,7 @@ def push(cwd, remote_name, branch='master', user=None, opts=None,
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
 
 
-def remotes(cwd, user=None):
+def remotes(cwd, user=None, redact_auth=True):
     '''
     Get remotes like git remote -v
 
@@ -719,11 +719,14 @@ def remotes(cwd, user=None):
     res = dict()
     for remote_name in ret.splitlines():
         remote = remote_name.strip()
-        res[remote] = remote_get(cwd, remote, user=user)
+        res[remote] = remote_get(cwd,
+                                 remote,
+                                 user=user,
+                                 redact_auth=redact_auth)
     return res
 
 
-def remote_get(cwd, remote='origin', user=None):
+def remote_get(cwd, remote='origin', user=None, redact_auth=True):
     '''
     get the fetch and push URL for a specified remote name
 
@@ -732,6 +735,19 @@ def remote_get(cwd, remote='origin', user=None):
 
     user : None
         Run git as a user other than what the minion runs as
+
+    redact_auth : True
+        Set to ``False`` to include the username/password if the remote uses
+        HTTPS Basic Auth. Otherwise, this information will be redacted.
+
+        .. warning::
+            Setting this to ``False`` will not only reveal any HTTPS Basic Auth
+            that is configured, but the return data will also be written to the
+            job cache. When possible, it is recommended to use SSH for
+            authentication.
+
+        .. versionadded:: 2015.5.6
+
 
     CLI Example:
 
@@ -747,6 +763,11 @@ def remote_get(cwd, remote='origin', user=None):
         remote_fetch_url = lines[1].replace('Fetch URL: ', '').strip()
         remote_push_url = lines[2].replace('Push  URL: ', '').strip()
         if remote_fetch_url != remote and remote_push_url != remote:
+            if redact_auth:
+                remote_fetch_url = \
+                    salt.utils.url.redact_http_basic_auth(remote_fetch_url)
+                remote_push_url = \
+                    salt.utils.url.redact_http_basic_auth(remote_push_url)
             res = (remote_fetch_url, remote_push_url)
             return res
         else:

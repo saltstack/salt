@@ -259,7 +259,8 @@ def latest(name,
                 # check remote if fetch_url not == name set it
                 remote = __salt__['git.remote_get'](target,
                                                     remote=remote_name,
-                                                    user=user)
+                                                    user=user,
+                                                    redact_auth=False)
                 if remote is None or remote[0] != desired_fetch_url:
                     __salt__['git.remote_set'](target,
                                                name=remote_name,
