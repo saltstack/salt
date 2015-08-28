@@ -150,29 +150,29 @@ def strip_proto(url):
 
 
 def add_http_basic_auth(url,
-                        https_user=None,
-                        https_pass=None,
+                        user=None,
+                        password=None,
                         https_only=False):
     '''
     Return a string with http basic auth incorporated into it
     '''
-    if https_user is None and https_pass is None:
+    if user is None and password is None:
         return url
     else:
         urltuple = urlparse(url)
         if https_only and urltuple.scheme != 'https':
             raise ValueError('Basic Auth only supported for HTTPS')
-        if https_pass is None:
+        if password is None:
             netloc = '{0}@{1}'.format(
-                https_user,
+                user,
                 urltuple.netloc
             )
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
         else:
             netloc = '{0}:{1}@{2}'.format(
-                https_user,
-                https_pass,
+                user,
+                password,
                 urltuple.netloc
             )
             urltuple = urltuple._replace(netloc=netloc)
