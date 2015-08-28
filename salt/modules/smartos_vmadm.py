@@ -806,7 +806,7 @@ def create(**kwargs):
     .. code-block:: bash
 
         salt '*' vmadm.create from_file=/tmp/new_vm.json
-        salt '*' vmadm.create image_uuid='...' alias='...' nics='[{...}, {..}]' [...]
+        salt '*' vmadm.create image_uuid='...' alias='...' nics='[{ "nic_tag": "admin", "ip": "127.0.1.1", ...}, {...}]' [...]
     '''
     ret = {}
     vmadm = _check_vmadm()
