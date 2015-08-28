@@ -1277,10 +1277,7 @@ def update_linode(linode_id, update_args=None):
     update_args
         The args to update the Linode with. Must be in dictionary form.
     '''
-    if update_args is None:
-        update_args = {}
-
-    if _validate_name(vm_['name']) is False:
+    if _validate_name(linode_id) is False:
         return False
 
     update_args.update({'LinodeID': linode_id})
