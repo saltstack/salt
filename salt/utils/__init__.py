@@ -1571,7 +1571,7 @@ def is_proxy():
     TODO: Need to extend this for proxies that might run on
     other Unices
     '''
-    return not (is_linux() or is_windows())
+    return not (is_linux() or is_sunos() or is_windows())
 
 
 @real_memoize
@@ -1609,7 +1609,20 @@ def is_sunos():
     '''
     Simple function to return if host is SunOS or not
     '''
-    return sys.platform.startswith('sunos')
+    import __main__ as main
+    # This is a hack.  If a proxy minion is started by other
+    # means, e.g. a custom script that creates the minion objects
+    # then this will fail.
+    is_proxy = False
+    try:
+        if 'salt-proxy' in main.__file__:
+            is_proxy = True
+    except AttributeError:
+        pass
+    if is_proxy:
+        return False
+    else:
+    	return sys.platform.startswith('sunos')
 
 
 @real_memoize
