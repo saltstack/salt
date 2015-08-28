@@ -409,6 +409,7 @@ def states(opts, functions, whitelist=None):
                       pack={'__salt__': functions},
                       whitelist=whitelist)
     ret.pack['__states__'] = ret
+    ret.pack['__utils__'] = utils(opts)
     return ret
 
 
