@@ -20,6 +20,7 @@ from distutils.version import LooseVersion as _LooseVersion
 import salt.utils
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
+from salt.modules.git import _get_git_version
 
 log = logging.getLogger(__name__)
 
@@ -159,14 +160,6 @@ def _not_fast_forward(ret, pre, post, branch, local_branch, comments):
         ),
         comments
     )
-
-
-def _get_git_version():
-    '''
-    Returns git version
-    '''
-    out = __salt__['cmd.run'](['git', '--version'])
-    return _LooseVersion(out.split()[-1])
 
 
 def latest(name,
