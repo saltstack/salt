@@ -81,7 +81,7 @@ class SPMClient(object):
         self.pkgdb = salt.loader.pkgdb(self.opts)
         self.db_conn = self.pkgdb[db_fun]()
 
-        self.files_prov = opts.get('spm_files_provider', 'roots')
+        self.files_prov = opts.get('spm_files_provider', 'local')
         files_fun = '{0}.init'.format(self.files_prov)
 
         self.pkgfiles = salt.loader.pkgfiles(self.opts)
@@ -186,7 +186,7 @@ class SPMClient(object):
         pkg_files = formula_tar.getmembers()
         # First pass: check for files that already exist
         existing_files = self.pkgfiles['{0}.check_existing'.format(self.files_prov)](
-            name, pkg_files
+            name, pkg_files, formula_def
         )
 
         if existing_files and not self.opts['force']:
@@ -220,15 +220,16 @@ class SPMClient(object):
                 digest = file_hash.hexdigest()
 
             out_path = self.pkgfiles['{0}.install_file'.format(self.files_prov)](
-                name, formula_tar, member, self.files_conn
+                name, formula_tar, member, formula_def, self.files_conn
             )
-            self.pkgdb['{0}.register_file'.format(self.db_prov)](
-                name,
-                member,
-                out_path,
-                digest,
-                self.db_conn
-            )
+            if out_path is not False:
+                self.pkgdb['{0}.register_file'.format(self.db_prov)](
+                    name,
+                    member,
+                    out_path,
+                    digest,
+                    self.db_conn
+                )
 
         formula_tar.close()
 
@@ -570,6 +571,8 @@ class SPMClient(object):
         if not os.path.exists(self.opts['spm_build_dir']):
             os.mkdir(self.opts['spm_build_dir'])
 
+        self.formula_conf = formula_conf
+
         formula_tar = tarfile.open(out_path, 'w:bz2')
         formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
         formula_tar.close()
@@ -581,8 +584,9 @@ class SPMClient(object):
         Exclude based on opts
         '''
         for item in self.opts['spm_build_exclude']:
-            exclude_name = '{0}/{1}'.format(self.abspath, item)
-            if member.name.startswith(exclude_name):
+            if member.name.startswith('{0}/{1}'.format(self.formula_conf['name'], item)):
+                return None
+            elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
                 return None
         return member
 

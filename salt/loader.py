@@ -388,7 +388,7 @@ def roster(opts, whitelist=None):
                       whitelist=whitelist)
 
 
-def states(opts, functions, whitelist=None):
+def states(opts, functions, utils, whitelist=None):
     '''
     Returns the state modules
 
@@ -402,13 +402,16 @@ def states(opts, functions, whitelist=None):
         import salt.loader
 
         __opts__ = salt.config.minion_config('/etc/salt/minion')
-        statemods = salt.loader.states(__opts__, None)
+        statemods = salt.loader.states(__opts__, None, None)
     '''
-    return LazyLoader(_module_dirs(opts, 'states', 'states'),
+    ret = LazyLoader(_module_dirs(opts, 'states', 'states'),
                       opts,
                       tag='states',
                       pack={'__salt__': functions},
                       whitelist=whitelist)
+    ret.pack['__states__'] = ret
+    ret.pack['__utils__'] = utils
+    return ret
 
 
 def beacons(opts, functions, context=None):
@@ -451,10 +454,6 @@ def log_handlers(opts):
 
     :param dict opts: The Salt options dictionary
     '''
-    pack = {
-        '__grains__': grains(opts),
-        '__salt__': minion_mods(opts)
-    }
     ret = LazyLoader(_module_dirs(opts,
                                   'log_handlers',
                                   'log_handlers',
@@ -462,7 +461,6 @@ def log_handlers(opts):
                                   base_path=os.path.join(SALT_BASE_PATH, 'log')),
                      opts,
                      tag='log_handlers',
-                     pack=pack
                      )
     return FilterDictWrapper(ret, '.setup_handlers')
 
