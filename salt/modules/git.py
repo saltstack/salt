@@ -219,7 +219,13 @@ def clone(cwd, repository, opts=None, user=None, identity=None,
     '''
     _check_git()
 
-    repository = _add_http_basic_auth(repository, https_user, https_pass)
+    try:
+        repository = salt.utils.url.add_http_basic_auth(repository,
+                                                        https_user,
+                                                        https_pass,
+                                                        https_only=True)
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
 
     if not opts:
         opts = ''
@@ -783,7 +789,13 @@ def remote_set(cwd, name='origin', url=None, user=None, https_user=None,
     if remote_get(cwd, name):
         cmd = 'git remote rm {0}'.format(name)
         _git_run(cmd, cwd=cwd, runas=user)
-    url = _add_http_basic_auth(url, https_user, https_pass)
+    try:
+        url = salt.utils.url.add_http_basic_auth(url,
+                                                 https_user,
+                                                 https_pass,
+                                                 https_only=True)
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
     cmd = 'git remote add {0} {1}'.format(name, url)
     _git_run(cmd, cwd=cwd, runas=user)
     return remote_get(cwd=cwd, remote=name, user=None)
@@ -982,6 +994,14 @@ def ls_remote(cwd, repository="origin", branch="master", user=None,
 
     '''
     _check_git()
-    repository = _add_http_basic_auth(repository, https_user, https_pass)
+
+    try:
+        repository = salt.utils.url.add_http_basic_auth(repository,
+                                                        https_user,
+                                                        https_pass,
+                                                        https_only=True)
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
+
     cmd = ' '.join(["git", "ls-remote", "-h", "'" + str(repository) + "'", str(branch), "| cut -f 1"])
     return _git_run(cmd, cwd=cwd, runas=user, identity=identity)
