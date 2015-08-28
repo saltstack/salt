@@ -12,7 +12,9 @@ import subprocess
 import sys
 
 # Import salt libs
-from salt import utils
+import salt.utils
+import salt.utils.files
+import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
@@ -24,7 +26,7 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    return True if utils.which('git') else False
+    return True if salt.utils.which('git') else False
 
 
 def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
@@ -36,15 +38,6 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
     commands don't return proper retcodes, so this can't replace 'cmd.run_all'.
     '''
     env = {}
-
-    if '<redacted>' in _remove_sensitive_data(cmd):
-        loglevel = 'quiet'
-        log.debug(
-            'HTTPS user/password in git command, the command and '
-            'output will redacted'
-        )
-    else:
-        loglevel = 'debug'
 
     if identity:
         stderrs = []
@@ -63,23 +56,26 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
 
             # copy wrapper to area accessible by ``runas`` user
             # currently no suppport in windows for wrapping git ssh
-            if not utils.is_windows():
-                ssh_id_wrapper = os.path.join(utils.templates.TEMPLATE_DIRNAME,
-                                              'git/ssh-id-wrapper')
-                tmp_file = utils.mkstemp()
-                utils.files.copyfile(ssh_id_wrapper, tmp_file)
+            if not salt.utils.is_windows():
+                ssh_id_wrapper = os.path.join(
+                    salt.utils.templates.TEMPLATE_DIRNAME,
+                    'git/ssh-id-wrapper'
+                )
+                tmp_file = salt.utils.mkstemp()
+                salt.utils.files.copyfile(ssh_id_wrapper, tmp_file)
                 os.chmod(tmp_file, 0o500)
                 os.chown(tmp_file, __salt__['file.user_to_uid'](runas), -1)
                 env['GIT_SSH'] = tmp_file
 
             try:
-                result = __salt__['cmd.run_all'](cmd,
-                                                 cwd=cwd,
-                                                 runas=runas,
-                                                 env=env,
-                                                 python_shell=False,
-                                                 output_loglevel=loglevel,
-                                                 **kwargs)
+                result = __salt__['cmd.run_all'](
+                    cmd,
+                    cwd=cwd,
+                    runas=runas,
+                    env=env,
+                    python_shell=False,
+                    log_callback=salt.utils.url.redact_http_basic_auth,
+                    **kwargs)
             finally:
                 if 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
@@ -88,20 +84,22 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
             if result['retcode'] == 0:
                 return result['stdout']
             else:
-                stderr = _remove_sensitive_data(result['stderr'])
+                stderr = \
+                    salt.utils.url.redact_http_basic_auth(result['stderr'])
                 stderrs.append(stderr)
 
         # we've tried all IDs and still haven't passed, so error out
         raise CommandExecutionError("\n\n".join(stderrs))
 
     else:
-        result = __salt__['cmd.run_all'](cmd,
-                                         cwd=cwd,
-                                         runas=runas,
-                                         env=env,
-                                         python_shell=False,
-                                         output_loglevel=loglevel,
-                                         **kwargs)
+        result = __salt__['cmd.run_all'](
+            cmd,
+            cwd=cwd,
+            runas=runas,
+            env=env,
+            python_shell=False,
+            log_callback=salt.utils.url.redact_http_basic_auth,
+            **kwargs)
         retcode = result['retcode']
 
         if retcode == 0:
@@ -114,28 +112,6 @@ def _git_run(cmd, cwd=None, runas=None, identity=None, **kwargs):
                     stderr
                 )
             )
-
-
-def _remove_sensitive_data(output):
-    '''
-    Remove HTTP user and password
-    '''
-    # We can't use re.compile because re.compile(someregex).sub() doesn't
-    # support flags even in Python 2.7.
-    url_re = '(https?)://.*@'
-    redacted = r'\1://<redacted>@'
-    if sys.version_info >= (2, 7):
-        # re.sub() supports flags as of 2.7, use this to do a case-insensitive
-        # match.
-        return re.sub(url_re, redacted, output, flags=re.IGNORECASE)
-    else:
-        # We're on python 2.6, test if a lowercased version of the output
-        # string matches the regex...
-        if re.search(url_re, output.lower()):
-            # ... and if it does, perform the regex substitution.
-            return re.sub(url_re, redacted, output.lower())
-    # No match, just return the original string
-    return output
 
 
 def _git_getdir(cwd, user=None):
@@ -157,24 +133,7 @@ def _check_git():
     '''
     Check if git is available
     '''
-    utils.check_or_die('git')
-
-
-def _add_http_basic_auth(repository, https_user=None, https_pass=None):
-    if https_user is None and https_pass is None:
-        return repository
-    else:
-        urltuple = _urlparse(repository)
-        if urltuple.scheme == 'https':
-            if https_pass:
-                auth_string = "{0}:{1}".format(https_user, https_pass)
-            else:
-                auth_string = https_user
-            netloc = "{0}@{1}".format(auth_string, urltuple.netloc)
-            urltuple = urltuple._replace(netloc=netloc)
-            return _urlunparse(urltuple)
-        else:
-            raise ValueError('Basic Auth only supported for HTTPS scheme')
+    salt.utils.check_or_die('git')
 
 
 def current_branch(cwd, user=None):
@@ -266,7 +225,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None,
 
     if not opts:
         opts = ''
-    if utils.is_windows():
+    if salt.utils.is_windows():
         cmd = 'git clone {0} {1} {2}'.format(repository, cwd, opts)
     else:
         cmd = 'git clone {0} {1!r} {2}'.format(repository, cwd, opts)
