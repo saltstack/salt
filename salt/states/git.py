@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import string
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
@@ -158,6 +159,14 @@ def _not_fast_forward(ret, pre, post, branch, local_branch, comments):
         ),
         comments
     )
+
+
+def _get_git_version():
+    '''
+    Returns git version
+    '''
+    out = __salt__['cmd.run'](['git', '--version'])
+    return _LooseVersion(out.split()[-1])
 
 
 def latest(name,
@@ -862,13 +871,20 @@ def latest(name,
                                          target,
                                          _format_comments(actions))
 
+                ver = _get_git_version()
+                if ver >= _LooseVersion('1.7.12'):
+                    set_upstream = '--set-upstream-to'
+                else:
+                    log.warn('Git version {0} doesn\'t support --set-upstream-to. Using --track instead'.format(ver))
+                    set_upstream = '--track'
+
                 if not upstream and desired_upstream:
                     upstream_action = (
                         'Tracking branch was set to {0}'.format(
                             desired_upstream
                         )
                     )
-                    branch_opts = ['--set-upstream-to', desired_upstream]
+                    branch_opts = [set_upstream, desired_upstream]
                 elif upstream and desired_upstream is False:
                     upstream_action = 'Tracking branch was unset'
                     branch_opts = ['--unset-upstream']
@@ -878,7 +894,7 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = ['--set-upstream-to', desired_upstream]
+                    branch_opts = [set_upstream, desired_upstream]
                 else:
                     branch_opts = None
 
@@ -1284,6 +1300,13 @@ def latest(name,
                     except CommandExecutionError:
                         upstream = False
 
+                    ver = _get_git_version()
+                    if ver >= _LooseVersion('1.7.12')
+                        set_upstream = '--set-upstream-to'
+                    else: 
+                        log.warn('Git version {0} doesn\'t support --set-upstream-to. Using --track instead'.format(ver))
+                        set_upstream = '--track'
+
                     if not upstream and desired_upstream:
                         upstream_action = (
                             'Tracking branch was set to {0}'.format(
@@ -1291,7 +1314,7 @@ def latest(name,
                             )
                         )
                         branch_opts = \
-                            ['--set-upstream-to', desired_upstream]
+                            [set_upstream, desired_upstream]
                     elif upstream and desired_upstream is False:
                         upstream_action = 'Tracking branch was unset'
                         branch_opts = ['--unset-upstream']
@@ -1302,7 +1325,7 @@ def latest(name,
                             )
                         )
                         branch_opts = \
-                            ['--set-upstream-to', desired_upstream]
+                            [set_upstream, desired_upstream]
                     else:
                         branch_opts = None
 
