@@ -23,6 +23,8 @@ import os.path
 import shutil
 
 # Import salt libs
+import salt.utils
+import salt.utils.url
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -176,7 +178,21 @@ def latest(name,
 
     if not target:
         return _fail(ret, '"target" option is required')
+
     target = os.path.expanduser(target)
+
+    try:
+        desired_fetch_url = salt.utils.url.add_http_basic_auth(
+            name,
+            https_user,
+            https_pass,
+            https_only=True
+        )
+    except ValueError as exc:
+        return _fail(ret, exc.__str__())
+
+    redacted_fetch_url = \
+        salt.utils.url.redact_http_basic_auth(desired_fetch_url)
 
     run_check_cmd_kwargs = {'runas': user}
     if 'shell' in __grains__:
@@ -244,15 +260,15 @@ def latest(name,
                 remote = __salt__['git.remote_get'](target,
                                                     remote=remote_name,
                                                     user=user)
-                if remote is None or remote[0] != name:
+                if remote is None or remote[0] != desired_fetch_url:
                     __salt__['git.remote_set'](target,
                                                name=remote_name,
-                                               url=name,
+                                               url=desired_fetch_url,
                                                user=user,
                                                https_user=https_user,
                                                https_pass=https_pass)
                     ret['changes']['remote/{0}'.format(remote_name)] = (
-                        "{0} => {1}".format(str(remote), name)
+                        "{0} => {1}".format(str(remote), redacted_fetch_url)
                     )
                     # Set to fetch later since we just added the remote and
                     # need to get the refs
