@@ -4,6 +4,7 @@ Direct call executor module
 
 @author: Dmitry Kuzmenko <dmitry.kuzmenko@dsr-company.com>
 '''
+from __future__ import absolute_import
 from salt.executors import ModuleExecutorBase
 
 
@@ -20,6 +21,7 @@ class DirectCallExecutor(ModuleExecutorBase):
         '''
         Constructor
         '''
+        super(DirectCallExecutor, self).__init__()
         self.func, self.args, self.kwargs = func, args, kwargs
 
     def execute(self):

@@ -868,7 +868,7 @@ class Minion(MinionBase):
         # we're done, reset the limits!
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
-            
+
         executors = salt.loader.executors(self.opts)
 
         return functions, returners, errors, executors
@@ -1305,7 +1305,7 @@ class Minion(MinionBase):
         Refresh the functions and returners.
         '''
         log.debug('Refreshing modules. Notify={0}'.format(notify))
-        self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
+        self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
@@ -1527,7 +1527,7 @@ class Minion(MinionBase):
                         del self.pub_channel
                         self._connect_master_future = self.connect_master()
                         self.block_until_connected()  # TODO: remove
-                        self.functions, self.returners, self.function_errors = self._load_modules()
+                        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
 

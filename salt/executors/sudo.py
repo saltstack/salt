@@ -64,6 +64,7 @@ class SudoExecutor(ModuleExecutorBase):
         '''
         Constructor
         '''
+        super(SudoExecutor, self).__init__()
         self.cmd = ['sudo',
                     '-u', opts.get('sudo_user'),
                     'salt-call',
