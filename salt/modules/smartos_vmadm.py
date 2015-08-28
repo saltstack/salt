@@ -56,7 +56,7 @@ def _exit_status(retcode):
     return ret
 
 
-def _create_from_file(path):
+def _create_update_from_file(mode, path):
     '''
     Create vm from file
     '''
@@ -66,8 +66,9 @@ def _create_from_file(path):
         ret['Error'] = 'File ({0}) does not exists!'.format(path)
         return ret
     # vmadm validate create [-f <filename>]
-    cmd = '{vmadm} validate create -f {path}'.format(
+    cmd = '{vmadm} validate {mode} -f {path}'.format(
         vmadm=vmadm,
+        mode=mode,
         path=path
     )
     res = __salt__['cmd.run_all'](cmd)
@@ -81,8 +82,9 @@ def _create_from_file(path):
                 ret['Error'] = res['stderr']
         return ret
     # vmadm create [-f <filename>]
-    cmd = '{vmadm} create -f {path}'.format(
+    cmd = '{vmadm} {mode} -f {path}'.format(
         vmadm=vmadm,
+        mode=mode,
         path=path
     )
     res = __salt__['cmd.run_all'](cmd)
@@ -95,11 +97,13 @@ def _create_from_file(path):
             else:
                 ret['Error'] = res['stderr']
         return ret
-
+    else:
+        if res['stderr'].startswith('Successfully created VM'):
+            return res['stderr'][24:]
     return True
 
 
-def _create_from_cfg(vmcfg):
+def _create_update_from_cfg(mode, vmcfg):
     '''
     Create vm from configuration
     '''
@@ -776,9 +780,9 @@ def create(**kwargs):
             continue
         vmcfg[key] = value
     if 'from_file' in vmcfg:
-        return _create_from_file(vmcfg['from_file'])
+        return _create_update_from_file('create', vmcfg['from_file'])
     else:
-        return _create_from_cfg(vmcfg)
+        return _create_update_from_cfg('create', vmcfg)
 
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
