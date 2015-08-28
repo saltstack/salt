@@ -60,6 +60,7 @@ import signal
 import hashlib
 import logging
 import datetime
+import weakref
 import multiprocessing
 from collections import MutableMapping
 
@@ -271,7 +272,7 @@ class SaltEvent(object):
         '''
         match_func = self._get_match_func(match_type)
 
-        self.pending_tags.append([tag, match_func])
+        self.pending_tags.append([tag, weakref.proxy(match_func)])
 
         return
 
@@ -410,11 +411,14 @@ class SaltEvent(object):
 
             if not match_func(ret['tag'], tag):
                 # tag not match
-                if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
-                    log.trace('get_event() caching unwanted event = {0}'.format(ret))
-                    self.pending_events.append(ret)
-                if wait:  # only update the wait timeout if we had one
-                    wait = timeout_at - time.time()
+                try:
+                    if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
+                        log.trace('get_event() caching unwanted event = {0}'.format(ret))
+                        self.pending_events.append(ret)
+                    if wait:  # only update the wait timeout if we had one
+                        wait = timeout_at - time.time()
+                except ReferenceError:
+                    log.trace('pmatch_func was prematurely dereferenced in _get_event')
                 continue
 
             log.trace('get_event() received = {0}'.format(ret))
