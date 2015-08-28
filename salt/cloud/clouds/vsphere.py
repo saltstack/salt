@@ -138,6 +138,12 @@ def __virtual__():
     if get_dependencies() is False:
         return False
 
+    warn_until(
+        'Carbon',
+        'The vsphere driver is deprecated in favor of the vmware driver and will be removed '
+        'in Salt Carbon. Please convert your vsphere provider configs to use the vmware driver.'
+    )
+
     return __virtualname__
 
 
@@ -145,11 +151,6 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    warn_until(
-        'Carbon',
-        'The vsphere driver is deprecated in favor of the vmware driver and will be removed '
-        'in Salt Carbon. Please convert your vsphere provider configs to use the vmware driver.'
-    )
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
