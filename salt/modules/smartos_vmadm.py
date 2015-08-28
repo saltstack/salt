@@ -56,19 +56,20 @@ def _exit_status(retcode):
     return ret
 
 
-def _create_update_from_file(mode, path):
+def _create_update_from_file(mode='create', uuid=None, path=None):
     '''
     Create vm from file
     '''
     ret = {}
     vmadm = _check_vmadm()
-    if not os.path.isfile(path):
+    if not os.path.isfile(path) or path is None:
         ret['Error'] = 'File ({0}) does not exists!'.format(path)
         return ret
     # vmadm validate create|update [-f <filename>]
-    cmd = '{vmadm} validate {mode} -f {path}'.format(
+    cmd = '{vmadm} validate {mode} {brand} -f {path}'.format(
         vmadm=vmadm,
         mode=mode,
+        brand=get(uuid)['brand'] if uuid is not None else '',
         path=path
     )
     res = __salt__['cmd.run_all'](cmd)
@@ -82,9 +83,10 @@ def _create_update_from_file(mode, path):
                 ret['Error'] = res['stderr']
         return ret
     # vmadm create|update [-f <filename>]
-    cmd = '{vmadm} {mode} -f {path}'.format(
+    cmd = '{vmadm} {mode} {uuid} -f {path}'.format(
         vmadm=vmadm,
         mode=mode,
+        uuid=uuid if uuid is not None else '',
         path=path
     )
     res = __salt__['cmd.run_all'](cmd)
@@ -103,16 +105,17 @@ def _create_update_from_file(mode, path):
     return True
 
 
-def _create_update_from_cfg(mode, vmcfg):
+def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
     '''
     Create vm from configuration
     '''
     ret = {}
     vmadm = _check_vmadm()
     # vmadm validate create|update [-f <filename>]
-    cmd = 'echo {vmcfg} | {vmadm} validate {mode}'.format(
+    cmd = 'echo {vmcfg} | {vmadm} validate {mode} {brand}'.format(
         vmadm=vmadm,
         mode=mode,
+        brand=get(uuid)['brand'] if uuid is not None else '',
         vmcfg=_quote_args(json.dumps(vmcfg))
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
@@ -126,9 +129,10 @@ def _create_update_from_cfg(mode, vmcfg):
                 ret['Error'] = res['stderr']
         return ret
     # vmadm create|update [-f <filename>]
-    cmd = 'echo {vmcfg} | {vmadm} {mode}'.format(
+    cmd = 'echo {vmcfg} | {vmadm} {mode} {uuid}'.format(
         vmadm=vmadm,
         mode=mode,
+        uuid=uuid if uuid is not None else '',
         vmcfg=_quote_args(json.dumps(vmcfg))
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
@@ -150,8 +154,6 @@ def _create_update_from_cfg(mode, vmcfg):
 ## TODO
 # vmadm receive [-f <filename>]
 # vmadm send <uuid> [target]
-# vmdm update <uuid> [-f <filename>]
-# vmadm update <uuid> property=value [property=value ...]
 # vmadm validate update <brand> [-f <filename>]
 
 
@@ -800,13 +802,17 @@ def create(**kwargs):
     from_file : string
         Specifies the json file to create the vm from.
         Note: when this is present all other options will be ignored.
+    * : string|int|...
+        Specifies options to set for the vm.
+        Example: image_uuid=UUID, will specify the image_uuid for the vm to be created.
+                 nics='[{"nic_tag": "admin", "ip": "198.51.100.123", "netmask": "255.255.255.0"}]', adds 1 nic over the admin tag
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' vmadm.create from_file=/tmp/new_vm.json
-        salt '*' vmadm.create image_uuid='...' alias='...' nics='[{ "nic_tag": "admin", "ip": "127.0.1.1", ...}, {...}]' [...]
+        salt '*' vmadm.create image_uuid='...' alias='...' nics='[{ "nic_tag": "admin", "ip": "198.51.100.123", ...}, {...}]' [...]
     '''
     ret = {}
     vmadm = _check_vmadm()
@@ -816,10 +822,65 @@ def create(**kwargs):
         if key.startswith('_'):
             continue
         vmcfg[key] = value
-    if 'from_file' in vmcfg:
-        return _create_update_from_file('create', vmcfg['from_file'])
-    else:
-        return _create_update_from_cfg('create', vmcfg)
 
+    if 'from_file' in vmcfg:
+        return _create_update_from_file('create', path=vmcfg['from_file'])
+    else:
+        return _create_update_from_cfg('create', vmcfg=vmcfg)
+
+
+def update(**kwargs):
+    '''
+    Update a new vm
+
+    vm : string
+        Specifies the vm to be updated
+    key : string
+        Specifies if 'vm' is a uuid, alias or hostname.
+    from_file : string
+        Specifies the json file to update the vm with.
+        Note: when this is present all other options except 'vm' and 'key' will be ignored.
+    * : string|int|...
+        Specifies options to updte for the vm.
+        Example: image_uuid=UUID, will specify the image_uuid for the vm to be created.
+                 add_nics='[{"nic_tag": "admin", "ip": "198.51.100.123", "netmask": "255.255.255.0"}]', adds 1 nic over the admin tag
+                 remove_nics='[ "12:ae:d3:28:98:b8" ], remove nics with mac 12:ae:d3:28:98:b8
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.update vm=186da9ab-7392-4f55-91a5-b8f1fe770543 from_file=/tmp/new_vm.json
+        salt '*' vmadm.update vm=nacl key=alias from_file=/tmp/new_vm.json
+        salt '*' vmadm.update vm=186da9ab-7392-4f55-91a5-b8f1fe770543 max_physical_memory=1024
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    # prepare vmcfg
+    vmcfg = {}
+    for key, value in kwargs.iteritems():
+        if key.startswith('_'):
+            continue
+        vmcfg[key] = value
+
+    if 'vm' not in vmcfg:
+        ret['Error'] = 'uuid, alias or hostname must be provided'
+        return ret
+    key = 'uuid' if 'key' not in vmcfg else vmcfg['key']
+    if key not in ['uuid', 'alias', 'hostname']:
+        ret['Error'] = 'Key must be either uuid, alias or hostname'
+        return ret
+    uuid = lookup('{0}={1}'.format(key, vmcfg['vm']), one=True)
+    if 'Error' in uuid:
+        return uuid
+    if 'vm' in vmcfg:
+        del vmcfg['vm']
+    if 'key' in vmcfg:
+        del vmcfg['key']
+
+    if 'from_file' in vmcfg:
+        return _create_update_from_file('update', uuid, path=vmcfg['from_file'])
+    else:
+        return _create_update_from_cfg('update', uuid, vmcfg=vmcfg)
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
