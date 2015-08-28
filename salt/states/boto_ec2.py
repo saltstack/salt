@@ -55,6 +55,10 @@ The below code deletes a key pair:
 from __future__ import absolute_import
 import logging
 
+# Import salt libs
+import salt.utils.dictupdate as dictupdate
+from salt.exceptions import SaltInvocationError
+
 log = logging.getLogger(__name__)
 
 
@@ -68,8 +72,8 @@ def __virtual__():
         return False
 
 
-def key_present(name, save_private=None, upload_public=None, region=None, key=None,
-            keyid=None, profile=None):
+def key_present(name, save_private=None, upload_public=None, region=None,
+                key=None, keyid=None, profile=None):
     '''
     Ensure key pair is present.
     '''
@@ -94,8 +98,9 @@ def key_present(name, save_private=None, upload_public=None, region=None, key=No
             ret['result'] = None
             return ret
         if save_private and not upload_public:
-            created = __salt__['boto_ec2.create_key'](name, save_private, region,
-                                                      key, keyid, profile)
+            created = __salt__['boto_ec2.create_key'](
+                name, save_private, region, key, keyid, profile
+            )
             if created:
                 ret['result'] = True
                 ret['comment'] = 'The key {0} is created.'.format(name)
@@ -153,4 +158,253 @@ def key_absent(name, region=None, key=None, keyid=None, profile=None):
     else:
         ret['result'] = True
         ret['comment'] = 'The key name {0} does not exist'.format(name)
+    return ret
+
+
+def eni_present(
+        name,
+        subnet_id,
+        private_ip_address=None,
+        description=None,
+        groups=None,
+        source_dest_check=True,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Ensure the EC2 ENI exists.
+
+    name
+        Name tag associated with the ENI.
+
+    subnet_id
+        The VPC subnet the ENI will exist within.
+
+    private_ip_address
+        The private ip address to use for this ENI. If this is not specified
+        AWS will automatically assign a private IP address to the ENI. Must be
+        specified at creation time; will be ignored afterward.
+
+    description
+        Description of the key.
+
+    groups
+        A list of security groups to apply to the ENI.
+
+    source_dest_check
+        Boolean specifying whether source/destination checking is enabled on
+        the ENI.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    if not subnet_id:
+        raise SaltInvocationError('subnet_id is a required argument.')
+    if not groups:
+        raise SaltInvocationError('groups is a required argument.')
+    if not isinstance(groups, list):
+        raise SaltInvocationError('groups must be a list.')
+    if not isinstance(source_dest_check, bool):
+        raise SaltInvocationError('source_dest_check must be a bool.')
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    r = __salt__['boto_ec2.get_network_interface'](
+        name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Error when attempting to find eni: {0}.'.format(
+            r['error']['message']
+        )
+        return ret
+    if not r['result']:
+        if __opts__['test']:
+            ret['comment'] = 'ENI is set to be created.'
+            ret['result'] = None
+            return ret
+        result_create = __salt__['boto_ec2.create_network_interface'](
+            name, subnet_id, private_ip_address=private_ip_address,
+            description=description, groups=groups, region=region, key=key,
+            keyid=keyid, profile=profile
+        )
+        if 'error' in result_create:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create ENI: {0}'.format(
+                result_create['error']['message']
+            )
+            return ret
+        r['result'] = result_create['result']
+        ret['comment'] = 'Created ENI {0}'.format(name)
+        ret['changes']['id'] = r['result']['id']
+    else:
+        _ret = _eni_attribute(
+            r['result'], 'description', description, region, key, keyid,
+            profile
+        )
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = _ret['comment']
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+        _ret = _eni_groups(
+            r['result'], groups, region, key, keyid, profile
+        )
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+    # Actions that need to occur whether creating or updating
+    _ret = _eni_attribute(
+        r['result'], 'source_dest_check', source_dest_check, region, key,
+        keyid, profile
+    )
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+    return ret
+
+
+def _eni_attribute(metadata, attr, value, region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if metadata[attr] == value:
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'ENI set to have {0} updated.'.format(attr)
+        ret['result'] = None
+        return ret
+    result_update = __salt__['boto_ec2.modify_network_interface_attribute'](
+        network_interface_id=metadata['id'], attr=attr,
+        value=value, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if 'error' in result_update:
+        msg = 'Failed to update ENI {0}: {1}.'
+        ret['result'] = False
+        ret['comment'] = msg.format(attr, result_update['error']['message'])
+    else:
+        ret['comment'] = 'Updated ENI {0}.'.format(attr)
+        ret['changes'][attr] = {
+            'old': metadata[attr],
+            'new': value
+        }
+    return ret
+
+
+def _eni_groups(metadata, groups, region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    group_ids = [g['id'] for g in metadata['groups']]
+    group_ids.sort()
+    _groups = __salt__['boto_secgroup.convert_to_group_ids'](
+        groups, vpc_id=metadata['vpc_id'], region=region, key=key, keyid=keyid,
+        profile=profile
+    )
+    if not _groups:
+        ret['comment'] = 'Could not find secgroup ids for provided groups.'
+        ret['result'] = False
+    _groups.sort()
+    if group_ids == _groups:
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'ENI set to have groups updated.'
+        ret['result'] = None
+        return ret
+    result_update = __salt__['boto_ec2.modify_network_interface_attribute'](
+        network_interface_id=metadata['id'], attr='groups',
+        value=_groups, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if 'error' in result_update:
+        msg = 'Failed to update ENI groups: {1}.'
+        ret['result'] = False
+        ret['comment'] = msg.format(result_update['error']['message'])
+    else:
+        ret['comment'] = 'Updated ENI groups.'
+        ret['changes']['groups'] = {
+            'old': group_ids,
+            'new': _groups
+        }
+    return ret
+
+
+def eni_absent(
+        name,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    '''
+    Ensure the EC2 ENI is absent.
+
+    name
+        Name tag associated with the ENI.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    r = __salt__['boto_ec2.get_network_interface'](
+        name=name, region=region, key=key, keyid=keyid, profile=profile
+    )
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Error when attempting to find eni: {0}.'.format(
+            r['error']['message']
+        )
+        return ret
+    if not r['result']:
+        if __opts__['test']:
+            ret['comment'] = 'ENI is set to be deleted.'
+            ret['result'] = None
+            return ret
+    else:
+        if __opts__['test']:
+            ret['comment'] = 'ENI is set to be deleted.'
+            ret['result'] = None
+            return ret
+        if 'id' in r['result']['attachment']:
+            result_detach = __salt__['boto_ec2.detach_network_interface'](
+                name=name, force=True, region=region, key=key,
+                keyid=keyid, profile=profile
+            )
+            if 'error' in result_detach:
+                ret['result'] = False
+                ret['comment'] = 'Failed to detach ENI: {0}'.format(
+                    result_detach['error']['message']
+                )
+                return ret
+            # TODO: Ensure the detach occurs before continuing
+        result_delete = __salt__['boto_ec2.delete_network_interface'](
+            name=name, region=region, key=key,
+            keyid=keyid, profile=profile
+        )
+        if 'error' in result_delete:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete ENI: {0}'.format(
+                result_delete['error']['message']
+            )
+            return ret
+        ret['comment'] = 'Deleted ENI {0}'.format(name)
+        ret['changes']['id'] = None
     return ret
