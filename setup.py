@@ -205,9 +205,9 @@ class GenerateSaltSyspaths(Command):
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
-                spm_formula_path=self.distribution.salt_spm_formula_path,
-                spm_pillar_path=self.distribution.salt_spm_pillar_path,
-                spm_reactor_path=self.distribution.salt_spm_reactor_path,
+                spm_formula_path=self.distribution.salt_spm_formula_dir,
+                spm_pillar_path=self.distribution.salt_spm_pillar_dir,
+                spm_reactor_path=self.distribution.salt_spm_reactor_dir,
             )
         )
 
