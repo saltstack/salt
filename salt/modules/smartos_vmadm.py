@@ -36,11 +36,13 @@ def _check_vmadm():
     '''
     return salt.utils.which('vmadm')
 
+
 def _check_zfs():
     '''
     Looks to see if zfs is present on the system
     '''
     return salt.utils.which('zfs')
+
 
 def __virtual__():
     '''
@@ -885,7 +887,7 @@ def update(**kwargs):
 
 def send(vm=None, target=None, key='uuid'):
     '''
-    Send a vm to a directory or host
+    Send a vm to a directory
 
     vm : string
         Specifies the vm to be started
@@ -933,6 +935,8 @@ def send(vm=None, target=None, key='uuid'):
     vmobj = get(vm)
     if 'datasets' not in vmobj:
         return True
+    log.warning('one or more datasets detected, this is not supported!')
+    log.warning('trying to zfs send datasets...')
     for dataset in vmobj['datasets']:
         name = dataset.split('/')
         name = name[-1]
@@ -946,8 +950,76 @@ def send(vm=None, target=None, key='uuid'):
         if retcode != 0:
             ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
             return ret
-
     return True
 
+
+def receive(uuid=None, source=None):
+    '''
+    Receive a vm from a directory
+
+    uuid : string
+        Specifies uuid of vm to receive
+    source : string
+        Specifies the target. Can be a directory path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vmadm.receive 186da9ab-7392-4f55-91a5-b8f1fe770543 /opt/backups
+    '''
+    ret = {}
+    vmadm = _check_vmadm()
+    zfs = _check_zfs()
+    if uuid is None:
+        ret['Error'] = 'uuid must be provided'
+        return ret
+    if source is None:
+        ret['Error'] = 'Source must be specified'
+        return ret
+    if not os.path.isdir(source):
+        ret['Error'] = 'Source must be a directory or host'
+        return ret
+    if not os.path.exists(os.path.join(source, '{0}.vmdata'.format(uuid))):
+        ret['Error'] = 'Unknow vm with uuid in {0}'.format(source)
+        return ret
+    # vmadm receive
+    cmd = '{vmadm} receive < {source}'.format(
+        vmadm=vmadm,
+        source=os.path.join(source, '{0}.vmdata'.format(uuid))
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = res['retcode']
+    if retcode != 0 and not res['stderr'].endswith('datasets'):
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    vmobj = get(uuid)
+    if 'datasets' not in vmobj:
+        return True
+    log.warning('one or more datasets detected, this is not supported!')
+    log.warning('trying to restore datasets, mountpoints will need to be set again...')
+    for dataset in vmobj['datasets']:
+        name = dataset.split('/')
+        name = name[-1]
+        cmd = '{zfs} receive {dataset} < {source}'.format(
+            zfs=zfs,
+            dataset=dataset,
+            source=os.path.join(source, '{0}-{1}.zfsds'.format(uuid, name))
+        )
+        res = __salt__['cmd.run_all'](cmd, python_shell=True)
+        retcode = res['retcode']
+        if retcode != 0:
+            ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+            return ret
+    cmd = '{vmadm} install {uuid}'.format(
+        vmadm=vmadm,
+        uuid=uuid
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = res['retcode']
+    if retcode != 0 and not res['stderr'].endswith('datasets'):
+        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        return ret
+    return True
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
