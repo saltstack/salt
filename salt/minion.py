@@ -1000,9 +1000,11 @@ class Minion(MinionBase):
                 executors = data.get('module_executors') or opts.get('module_executors', ['direct_call.get'])
                 if isinstance(executors, six.string_types):
                     executors = [executors]
-                elif not isinstance(executors, list):
-                    raise SaltInvocationError("Wrong executors specification: {0}. String or list expected".format(
-                        executors))
+                elif not isinstance(executors, list) or not executors:
+                    raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
+                        format(executors))
+                if opts.get('sudo_user', ''):
+                    executors[-1] = 'sudo.get'
                 # Get the last one that is function executor
                 executor = minion_instance.executors[
                     "{0}".format(executors.pop())](opts, data, func, *args, **kwargs)
