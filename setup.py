@@ -205,6 +205,9 @@ class GenerateSaltSyspaths(Command):
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
+                spm_formula_path=self.distribution.salt_spm_formula_dir,
+                spm_pillar_path=self.distribution.salt_spm_pillar_dir,
+                spm_reactor_path=self.distribution.salt_spm_reactor_dir,
             )
         )
 
@@ -620,6 +623,9 @@ BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
+SPM_FORMULA_PATH = {spm_formula_path!r}
+SPM_PILLAR_PATH = {spm_pillar_path!r}
+SPM_REACTOR_PATH = {spm_reactor_path!r}
 '''
 
 
@@ -823,6 +829,12 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured logs directory'),
         ('salt-pidfile-dir=', None,
          'Salt\'s pre-configured pidfiles directory'),
+        ('salt-spm-formula-dir=', None,
+         'Salt\'s pre-configured SPM formulas directory'),
+        ('salt-spm-pillar-dir=', None,
+         'Salt\'s pre-configured SPM pillar directory'),
+        ('salt-spm-reactor-dir=', None,
+         'Salt\'s pre-configured SPM reactor directory'),
     ]
 
     def __init__(self, attrs=None):
@@ -842,6 +854,9 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
+        self.salt_spm_formula_dir = None
+        self.salt_spm_pillar_dir = None
+        self.salt_spm_reactor_dir = None
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
