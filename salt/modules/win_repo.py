@@ -19,10 +19,13 @@ import salt.utils
 import salt.loader
 import salt.template
 from salt.exceptions import CommandExecutionError, SaltRenderError
+# pylint: disable=unused-import
 from salt.runners.winrepo import (
     genrepo as _genrepo,
-    update_git_repos as _update_git_repos
+    update_git_repos as _update_git_repos,
+    PER_REMOTE_PARAMS
 )
+# pylint: enable=unused-import
 
 log = logging.getLogger(__name__)
 

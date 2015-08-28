@@ -374,10 +374,16 @@ def latest(name,
         remote = remote_name
 
     if not remote:
-        return _fail(ret, '\'remote\' option is required')
+        return _fail(ret, '\'remote\' argument is required')
 
     if not target:
-        return _fail(ret, '\'target\' option is required')
+        return _fail(ret, '\'target\' argument is required')
+
+    if not rev:
+        return _fail(
+            ret,
+            '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
+        )
 
     # Ensure that certain arguments are strings to ensure that comparisons work
     if not isinstance(rev, six.string_types):
