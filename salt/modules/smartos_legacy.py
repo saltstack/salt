@@ -44,7 +44,7 @@ def __virtual__():
     if salt.utils.is_smartos_globalzone() and _check_vmadm():
         # Warn about deprication
         salt.utils.warn_until(
-            'Aluminum',
+            'Nitrogen',
             'The \'virt\' module on SmartOS has been depricated'
             'please use the smartos module or vmadm wrapper module.'
         )
