@@ -16,8 +16,6 @@ import salt.utils
 import salt.utils.files
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
-from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 
