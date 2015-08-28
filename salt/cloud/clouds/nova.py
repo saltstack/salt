@@ -155,6 +155,9 @@ def __virtual__():
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
 
+    if get_configured_provider() is False:
+        return False
+
     if get_dependencies() is False:
         return False
 
@@ -167,7 +170,8 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__
+        __active_provider_name__ or __virtualname__,
+        ('user', 'tenant', 'identity_url', 'compute_region',)
     )
 
 
