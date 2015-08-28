@@ -65,7 +65,7 @@ def _create_update_from_file(mode, path):
     if not os.path.isfile(path):
         ret['Error'] = 'File ({0}) does not exists!'.format(path)
         return ret
-    # vmadm validate create [-f <filename>]
+    # vmadm validate create|update [-f <filename>]
     cmd = '{vmadm} validate {mode} -f {path}'.format(
         vmadm=vmadm,
         mode=mode,
@@ -81,7 +81,7 @@ def _create_update_from_file(mode, path):
             else:
                 ret['Error'] = res['stderr']
         return ret
-    # vmadm create [-f <filename>]
+    # vmadm create|update [-f <filename>]
     cmd = '{vmadm} {mode} -f {path}'.format(
         vmadm=vmadm,
         mode=mode,
@@ -107,7 +107,44 @@ def _create_update_from_cfg(mode, vmcfg):
     '''
     Create vm from configuration
     '''
-    return False
+    ret = {}
+    vmadm = _check_vmadm()
+    # vmadm validate create|update [-f <filename>]
+    cmd = 'echo {vmcfg} | {vmadm} validate {mode}'.format(
+        vmadm=vmadm,
+        mode=mode,
+        vmcfg=_quote_args(json.dumps(vmcfg))
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = _exit_status(retcode)
+        if 'stderr' in res:
+            if res['stderr'][0] == '{':
+                ret['Error'] = json.loads(res['stderr'])
+            else:
+                ret['Error'] = res['stderr']
+        return ret
+    # vmadm create|update [-f <filename>]
+    cmd = 'echo {vmcfg} | {vmadm} {mode}'.format(
+        vmadm=vmadm,
+        mode=mode,
+        vmcfg=_quote_args(json.dumps(vmcfg))
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=True)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = _exit_status(retcode)
+        if 'stderr' in res:
+            if res['stderr'][0] == '{':
+                ret['Error'] = json.loads(res['stderr'])
+            else:
+                ret['Error'] = res['stderr']
+        return ret
+    else:
+        if res['stderr'].startswith('Successfully created VM'):
+            return res['stderr'][24:]
+    return True
 
 
 ## TODO
