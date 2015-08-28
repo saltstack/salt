@@ -201,7 +201,7 @@ def update_git_repos(opts=None, masterless=False):
                     targetname = remote_info.split('/')[-1]
                 else:
                     targetname = remote_info
-                rev = None
+                rev = 'HEAD'
                 # If a revision is specified, use it.
                 try:
                     rev, remote_url = remote_info.strip().split()
