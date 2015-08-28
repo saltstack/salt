@@ -513,6 +513,8 @@ def get_network_interface_id(name, region=None, key=None, keyid=None,
     '''
     Get an Elastic Network Interface id from its name tag.
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -540,6 +542,8 @@ def get_network_interface(name=None, network_interface_id=None, region=None,
                           key=None, keyid=None, profile=None):
     '''
     Get an Elastic Network Interface.
+
+    .. versionadded:: Boron
 
     CLI Example:
 
@@ -618,6 +622,8 @@ def create_network_interface(
     '''
     Create an Elastic Network Interface.
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -662,6 +668,8 @@ def delete_network_interface(
     '''
     Create an Elastic Network Interface.
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -696,6 +704,8 @@ def attach_network_interface(
         device_index=None, region=None, key=None, keyid=None, profile=None):
     '''
     Attach an Elastic Network Interface.
+
+    .. versionadded:: Boron
 
     CLI Example:
 
@@ -738,6 +748,8 @@ def detach_network_interface(
     '''
     Detach an Elastic Network Interface.
 
+    .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -774,6 +786,8 @@ def modify_network_interface_attribute(
         value=None, region=None, key=None, keyid=None, profile=None):
     '''
     Modify an attribute of an Elastic Network Interface.
+
+    .. versionadded:: Boron
 
     CLI Example:
 
