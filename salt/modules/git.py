@@ -61,14 +61,6 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
             raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
 
-def _get_git_version():
-    '''
-    Return the version of git
-    '''
-    out = __salt__['cmd.run'](['git', '--version'])
-    return _LooseVersion(out.split()[-1])
-
-
 def _config_getter(get_opt,
                    key,
                    value_regex=None,
@@ -101,14 +93,12 @@ def _config_getter(get_opt,
         # Ignore value_regex
         value_regex = None
 
-    ver = _get_git_version()
+    ver = _LooseVersion(version(versioninfo=False))
     command = ['git', 'config']
     if global_:
         command.append('--global')
     elif ver >= _LooseVersion('1.7.12'):
         command.append('--local')
-    else:
-        log.warn('Git version {0} doesn\'t support --local'.format(ver))
 
     command.append(get_opt)
     command.append(key)
@@ -1192,13 +1182,11 @@ def config_unset(key,
     else:
         command.append('--unset')
 
-    ver = _get_git_version()
+    ver = _LooseVersion(version(versioninfo=False))
     if global_:
         command.append('--global')
     elif ver >= _LooseVersion('1.7.12'):
         command.append('--local')
-    else:
-        log.warn('Git version {0} doesn\'t support --local'.format(ver))
 
     if cwd is None:
         if not global_:
@@ -3105,7 +3093,7 @@ def symbolic_ref(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def version(versioninfo=False, user=None):
+def version(versioninfo=False):
     '''
     .. versionadded:: 2015.8.0
 
@@ -3114,10 +3102,6 @@ def version(versioninfo=False, user=None):
     versioninfo : False
         If ``True``, return the version in a versioninfo list (e.g. ``[2, 5,
         0]``)
-
-    user
-        User under which to run the git command. By default, the command is run
-        by the user under which the minion is running.
 
 
     CLI Example:
@@ -3130,7 +3114,7 @@ def version(versioninfo=False, user=None):
     contextkey_info = 'git.versioninfo'
     if contextkey not in __context__:
         try:
-            version_ = _git_run(['git', '--version'], runas=user)['stdout']
+            version_ = _git_run(['git', '--version'])['stdout']
         except CommandExecutionError as exc:
             log.error(
                 'Failed to obtain the git version (error follows):\n{0}'
