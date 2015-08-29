@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import string
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
@@ -520,6 +521,13 @@ def latest(name,
             'repository'.format(rev)
         )
 
+    git_ver = _LooseVersion(__salt__['git.version'](versioninfo=False))
+    if git_ver >= _LooseVersion('1.7.12'):
+        set_upstream = '--set-upstream-to'
+    else:
+        # Older git uses --track instead of --set-upstream-to
+        set_upstream = '--track'
+
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
     comments = []
@@ -874,7 +882,7 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = ['--set-upstream-to', desired_upstream]
+                    branch_opts = [set_upstream, desired_upstream]
                 elif upstream and desired_upstream is False:
                     upstream_action = 'Tracking branch was unset'
                     branch_opts = ['--unset-upstream']
@@ -884,7 +892,7 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = ['--set-upstream-to', desired_upstream]
+                    branch_opts = [set_upstream, desired_upstream]
                 else:
                     branch_opts = None
 
@@ -1296,8 +1304,7 @@ def latest(name,
                                 desired_upstream
                             )
                         )
-                        branch_opts = \
-                            ['--set-upstream-to', desired_upstream]
+                        branch_opts = [set_upstream, desired_upstream]
                     elif upstream and desired_upstream is False:
                         upstream_action = 'Tracking branch was unset'
                         branch_opts = ['--unset-upstream']
@@ -1307,8 +1314,7 @@ def latest(name,
                                 desired_upstream
                             )
                         )
-                        branch_opts = \
-                            ['--set-upstream-to', desired_upstream]
+                        branch_opts = [set_upstream, desired_upstream]
                     else:
                         branch_opts = None
 
