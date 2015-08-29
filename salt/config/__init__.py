@@ -590,8 +590,10 @@ VALID_OPTS = {
     'winrepo_source_dir': str,
 
     'winrepo_dir': str,
+    'winrepo_dir_ng': str,
     'winrepo_cachefile': str,
     'winrepo_remotes': list,
+    'winrepo_remotes_ng': list,
     'winrepo_branch': str,
     'winrepo_ssl_verify': bool,
     'winrepo_user': str,
@@ -782,7 +784,8 @@ DEFAULT_MINION_OPTS = {
     'file_client': 'remote',
     'use_master_when_local': False,
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
@@ -796,7 +799,8 @@ DEFAULT_MINION_OPTS = {
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
@@ -881,10 +885,20 @@ DEFAULT_MINION_OPTS = {
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
-    'winrepo_source_dir': 'salt://win/repo/',
+    'winrepo_source_dir': 'salt://win/repo-ng/',
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
@@ -944,13 +958,15 @@ DEFAULT_MASTER_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
     'master_roots': {
         'base': [salt.syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
@@ -1089,8 +1105,10 @@ DEFAULT_MASTER_OPTS = {
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
     'winrepo_ssl_verify': False,
     'winrepo_user': '',
@@ -1198,13 +1216,15 @@ DEFAULT_API_OPTS = {
 
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
-    'reactor_roots': '/srv/reactor',
+    'formula_path': '/srv/spm/salt',
+    'pillar_path': '/srv/spm/pillar',
+    'reactor_path': '/srv/spm/reactor',
     'spm_logfile': '/var/log/salt/spm',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
-    'spm_build_dir': '/srv/spm',
-    'spm_build_exclude': ['.git'],
+    'spm_build_dir': '/srv/spm_build',
+    'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     # <---- Salt master settings overridden by SPM ----------------------
 }

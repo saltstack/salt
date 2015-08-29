@@ -416,24 +416,44 @@ def check(set=None, entry=None, family='ipv4'):
     if not entry:
         return 'Error: Entry needs to be specified'
 
-    if isinstance(entry, list):
-        entries = entry
-    else:
-        if entry.find("-") != -1 and entry.count("-") == 1:
-            start, end = entry.split("-")
-
-            entries = [str(ipaddress.ip_address(ip)) for ip in range(
-                ipaddress.ip_address(start),
-                ipaddress.ip_address(end) + 1
-            )]
-        elif entry.find("/") != -1 and entry.count("/") == 1:
-            entries = [str(ip) for ip in ipaddress.ip_network(entry)]
-        else:
-            entries = [entry]
-
     settype = _find_set_type(set)
     if not settype:
         return 'Error: Set {0} does not exist'.format(set)
+
+    if isinstance(entry, list):
+        entries = entry
+    else:
+        if entry.find('-') != -1 and entry.count('-') == 1:
+            start, end = entry.split('-')
+
+            if settype == 'hash:ip':
+                entries = [str(ipaddress.ip_address(ip)) for ip in range(
+                    ipaddress.ip_address(start),
+                    ipaddress.ip_address(end) + 1
+                )]
+
+            elif settype == 'hash:net':
+                networks = ipaddress.summarize_address_range(ipaddress.ip_address(start),
+                                                             ipaddress.ip_address(end))
+                entries = []
+                for network in networks:
+                    entries.append(network.with_prefixlen)
+            else:
+                entries = [entry]
+
+        elif entry.find('/') != -1 and entry.count('/') == 1:
+            if settype == 'hash:ip':
+                entries = [str(ip) for ip in ipaddress.ip_network(entry)]
+            elif settype == 'hash:net':
+                _entries = [str(ip) for ip in ipaddress.ip_network(entry)]
+                if len(_entries) == 1:
+                    entries = [_entries[0]]
+                else:
+                    entries = [entry]
+            else:
+                entries = [entry]
+        else:
+            entries = [entry]
 
     current_members = _find_set_members(set)
     for entry in entries:

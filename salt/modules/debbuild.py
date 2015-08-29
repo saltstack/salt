@@ -96,16 +96,16 @@ def _create_pbuilders(env):
 set -e
 cat > "/etc/apt/preferences" << EOF
 
-Package: python-abalaster
+Package: python-alabaster
 Pin: release a=testing
 Pin-Priority: 950
 
 Package: python-sphinx
-Pin: release a=experimental
+Pin: release a=testing
 Pin-Priority: 900
 
 Package: sphinx-common
-Pin: release a=experimental
+Pin: release a=testing
 Pin-Priority: 900
 
 Package: *
@@ -139,7 +139,7 @@ if [ -n "${DIST}" ]; then
   APTCACHE="/var/cache/pbuilder/$DIST/aptcache"
 fi
 HOOKDIR="${HOME}/.pbuilder-hooks"
-OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free  | deb http://ftp.us.debian.org/debian/ experimental main contrib non-free"
+OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free | deb http://ftp.us.debian.org/debian/ unstable main contrib non-free | deb http://ftp.us.debian.org/debian/ experimental main contrib non-free"
 '''
     home = os.path.expanduser('~')
     pbuilder_hooksdir = os.path.join(home, '.pbuilder-hooks')
@@ -244,7 +244,8 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     frontname = salttarball.split('.tar.gz')
     salttar_name = frontname[0]
-    debname = salttar_name.replace('-', '_')
+    k = salttar_name.rfind('-')
+    debname = salttar_name[:k] + '_' + salttar_name[k+1:]
     debname += '+ds'
     debname_orig = debname + '.orig.tar.gz'
     abspath_debname = os.path.join(tree_base, debname)
@@ -270,12 +271,11 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     __salt__['cmd.run'](cmd)
 
     for dfile in os.listdir(tree_base):
-        if dfile.startswith('salt_'):
-            if not dfile.endswith('.build'):
-                full = os.path.join(tree_base, dfile)
-                trgt = os.path.join(dest_dir, dfile)
-                shutil.copy(full, trgt)
-                ret.append(trgt)
+        if not dfile.endswith('.build'):
+            full = os.path.join(tree_base, dfile)
+            trgt = os.path.join(dest_dir, dfile)
+            shutil.copy(full, trgt)
+            ret.append(trgt)
 
     return ret
 
@@ -324,12 +324,8 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
 
             for bfile in os.listdir(results_dir):
                 full = os.path.join(results_dir, bfile)
-                if bfile.endswith('.deb'):
-                    bdist = os.path.join(dest_dir, bfile)
-                    shutil.copy(full, bdist)
-                else:
-                    with salt.utils.fopen(full, 'r') as fp_:
-                        ret[bfile] = fp_.read()
+                bdist = os.path.join(dest_dir, bfile)
+                shutil.copy(full, bdist)
             shutil.rmtree(results_dir)
     shutil.rmtree(dsc_dir)
     return ret
@@ -362,7 +358,7 @@ Pull: jessie
 
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
-            fow.write('Signwith: {0}\n'.format(keyid))
+            fow.write('SignWith: {0}\n'.format(keyid))
 
     repocfg_opts = _get_repo_env(env)
     repoconfopts = os.path.join(repoconf, 'options')

@@ -1036,6 +1036,41 @@ def list_nodes_full(call=None):
     return _list_linodes(full=True)
 
 
+def list_nodes_min(call=None):
+    '''
+    Return a list of the VMs that are on the provider. Only a list of VM names and
+    their state is returned. This is the minimum amount of information needed to
+    check for existing VMs.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_min my-linode-config
+        salt-cloud --function list_nodes_min my-linode-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+
+    ret = {}
+    nodes = _query('linode', 'list')['DATA']
+
+    for node in nodes:
+        name = node['LABEL']
+        this_node = {
+            'id': str(node['LINODEID']),
+            'state': _get_status_descr_by_id(int(node['STATUS']))
+        }
+
+        ret[name] = this_node
+
+    return ret
+
+
 def reboot(name, call=None):
     '''
     Reboot a linode.
@@ -1302,28 +1337,6 @@ def _list_linodes(full=False):
         ret[node['LABEL']] = this_node
 
     return ret
-
-
-def _check_and_set_node_id(name, linode_id):
-    '''
-    Helper function that checks against name and linode_id collisions and returns a node_id.
-    '''
-    node_id = ''
-    if linode_id and name is None:
-        node_id = linode_id
-    elif name:
-        node_id = get_linode_id_from_name(name)
-
-    if linode_id and (linode_id != node_id):
-        raise SaltCloudException(
-            'A name and a linode_id were provided, but the provided linode_id, {0}, '
-            'does not match the linode_id found for the provided '
-            'name: \'{1}\': \'{2}\'. Nothing was done.'.format(
-                linode_id, name, node_id
-            )
-        )
-
-    return node_id
 
 
 def _query(action=None,

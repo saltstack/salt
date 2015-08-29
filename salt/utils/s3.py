@@ -20,18 +20,16 @@ except ImportError:
 import salt.utils
 import salt.utils.aws
 import salt.utils.xmlutil as xml
-import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
-DEFAULT_LOCATION = 'us-east-1'
 
 
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=DEFAULT_LOCATION):
+          location=None):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -91,11 +89,6 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not key or not keyid:
         key = salt.utils.aws.IROLE_CODE
         keyid = salt.utils.aws.IROLE_CODE
-
-    if not location:
-        location = iam.get_iam_region()
-    if not location:
-        location = DEFAULT_LOCATION
 
     if kms_keyid is not None and method in ('PUT', 'POST'):
         headers['x-amz-server-side-encryption'] = 'aws:kms'
