@@ -99,8 +99,6 @@ def _config_getter(get_opt,
         command.append('--global')
     elif ver >= _LooseVersion('1.7.12'):
         command.append('--local')
-    else:
-        log.warn('Git version {0} doesn\'t support --local'.format(ver))
 
     command.append(get_opt)
     command.append(key)
@@ -1189,8 +1187,6 @@ def config_unset(key,
         command.append('--global')
     elif ver >= _LooseVersion('1.7.12'):
         command.append('--local')
-    else:
-        log.warn('Git version {0} doesn\'t support --local'.format(ver))
 
     if cwd is None:
         if not global_:
