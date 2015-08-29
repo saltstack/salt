@@ -1622,7 +1622,7 @@ def is_sunos():
     if is_proxy:
         return False
     else:
-    	return sys.platform.startswith('sunos')
+        return sys.platform.startswith('sunos')
 
 
 @real_memoize
