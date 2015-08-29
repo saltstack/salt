@@ -6,7 +6,7 @@ Manage HP ILO
 '''
 from __future__ import absolute_import
 
-import xml.etree.cElementTree as ET
+from salt._compat import ElementTree as ET
 import salt.utils
 import os
 import tempfile
