@@ -61,14 +61,6 @@ def _add_http_basic_auth(url, https_user=None, https_pass=None):
             raise SaltInvocationError('Basic Auth only supported for HTTPS')
 
 
-def _get_git_version():
-    '''
-    Return the version of git
-    '''
-    out = __salt__['cmd.run'](['git', '--version'])
-    return _LooseVersion(out.split()[-1])
-
-
 def _config_getter(get_opt,
                    key,
                    value_regex=None,
@@ -101,7 +93,7 @@ def _config_getter(get_opt,
         # Ignore value_regex
         value_regex = None
 
-    ver = _get_git_version()
+    ver = _LooseVersion(version(versioninfo=False))
     command = ['git', 'config']
     if global_:
         command.append('--global')
@@ -1192,7 +1184,7 @@ def config_unset(key,
     else:
         command.append('--unset')
 
-    ver = _get_git_version()
+    ver = _LooseVersion(version(versioninfo=False))
     if global_:
         command.append('--global')
     elif ver >= _LooseVersion('1.7.12'):
