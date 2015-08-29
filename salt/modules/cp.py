@@ -365,7 +365,7 @@ def cache_file(path, saltenv='base', env=None):
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(
-            'Unable to cache file {0!r} from saltenv {1!r}.'.format(
+            'Unable to cache file \'{0}\' from saltenv \'{1}\'.'.format(
                 path, saltenv
             )
         )
@@ -685,7 +685,7 @@ def push(path, keep_symlinks=False, upload_path=None):
         salt '*' cp.push /etc/system-release keep_symlinks=True
         salt '*' cp.push /etc/fstab upload_path='/new/path/fstab'
     '''
-    log.debug('Trying to copy {0!r} to master'.format(path))
+    log.debug('Trying to copy \'{0}\' to master'.format(path))
     if '../' in path or not os.path.isabs(path):
         log.debug('Path must be absolute, returning False')
         return False
