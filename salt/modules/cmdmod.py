@@ -25,11 +25,11 @@ from salt.utils import vt
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
-from salt.ext.six import string_types
+import salt.ext.six as six
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
-import salt.ext.six as six
 from salt.ext.six.moves import range
+from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -156,7 +156,7 @@ def _check_loglevel(level='info', quiet=False):
     '''
     def _bad_level(level):
         log.error(
-            'Invalid output_loglevel {0!r}. Valid levels are: {1}. Falling '
+            'Invalid output_loglevel \'{0}\'. Valid levels are: {1}. Falling '
             'back to \'info\'.'
             .format(
                 level,
@@ -290,7 +290,7 @@ def _run(cmd,
     env = _parse_env(env)
 
     for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
-        log.error('Environment variable {0!r} passed without a value. '
+        log.error('Environment variable \'{0}\' passed without a value. '
                   'Setting value to an empty string'.format(bad_env_key))
         env[bad_env_key] = ''
 
@@ -305,7 +305,7 @@ def _run(cmd,
             pwd.getpwnam(runas)
         except KeyError:
             raise CommandExecutionError(
-                'User {0!r} is not available'.format(runas)
+                'User \'{0}\' is not available'.format(runas)
             )
         try:
             # Getting the environment for the runas user
@@ -343,7 +343,7 @@ def _run(cmd,
                     env[key] = val.encode(fse)
         except ValueError:
             raise CommandExecutionError(
-                'Environment could not be retrieved for User {0!r}'.format(
+                'Environment could not be retrieved for User \'{0}\''.format(
                     runas
                 )
             )
@@ -353,8 +353,11 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            'Executing command {0!r} {1}in directory {2!r}'.format(
-                cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
+            'Executing command {0}{1}{0} {2}in directory \'{3}\''.format(
+                '\'' if not isinstance(cmd, list) else '',
+                cmd,
+                'as user \'{0}\' '.format(runas) if runas else '',
+                cwd
             )
         )
         log.info(log_callback(msg))
@@ -418,7 +421,7 @@ def _run(cmd,
 
     if not os.path.isabs(cwd) or not os.path.isdir(cwd):
         raise CommandExecutionError(
-            'Specified cwd {0!r} either not absolute or does not exist'
+            'Specified cwd \'{0}\' either not absolute or does not exist'
             .format(cwd)
         )
 
@@ -433,8 +436,8 @@ def _run(cmd,
             proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
-                'Unable to run command {0!r} with the context {1!r}, reason: {2}'
-                .format(cmd, kwargs, exc)
+                'Unable to run command \'{0}\' with the context \'{1}\', '
+                'reason: {2}'.format(cmd, kwargs, exc)
             )
 
         try:
@@ -832,8 +835,10 @@ def run(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command {0!r} failed with return code: {1}'
-                .format(cmd, ret['retcode'])
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
             )
             log.error(log_callback(msg))
         log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
@@ -1194,8 +1199,10 @@ def run_stdout(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command {0!r} failed with return code: {1}'
-                .format(cmd, ret['retcode'])
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
             )
             log.error(log_callback(msg))
         if ret['stdout']:
@@ -1376,8 +1383,10 @@ def run_stderr(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command {0!r} failed with return code: {1}'
-                .format(cmd, ret['retcode'])
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
             )
             log.error(log_callback(msg))
         if ret['stdout']:
@@ -1558,8 +1567,10 @@ def run_all(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command {0!r} failed with return code: {1}'
-                .format(cmd, ret['retcode'])
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
             )
             log.error(log_callback(msg))
         if ret['stdout']:
@@ -1741,8 +1752,10 @@ def retcode(cmd,
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
             msg = (
-                'Command {0!r} failed with return code: {1}'
-                .format(cmd, ret['retcode'])
+                'Command \'{0}\' failed with return code: {1}'.format(
+                    cmd,
+                    ret['retcode']
+                )
             )
             log.error(log_callback(msg))
         log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
@@ -1938,10 +1951,14 @@ def script(source,
         try:
             os.remove(path)
         except (IOError, OSError) as exc:
-            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
-                      .format(path, exc))
+            log.error(
+                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                    path,
+                    exc
+                )
+            )
 
-    if isinstance(__env__, string_types):
+    if isinstance(__env__, six.string_types):
         salt.utils.warn_until(
             'Boron',
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -2416,7 +2433,7 @@ def run_chroot(root,
 
     if isinstance(cmd, (list, tuple)):
         cmd = ' '.join([str(i) for i in cmd])
-    cmd = 'chroot {0} {1} -c {2!r}'.format(root, sh_, cmd)
+    cmd = 'chroot {0} {1} -c {2}'.format(root, sh_, _cmd_quote(cmd))
 
     run_func = __context__.pop('cmd.run_chroot.func', run_all)
 
