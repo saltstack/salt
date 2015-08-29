@@ -3105,7 +3105,7 @@ def symbolic_ref(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def version(versioninfo=False, user=None):
+def version(versioninfo=False):
     '''
     .. versionadded:: 2015.8.0
 
@@ -3114,10 +3114,6 @@ def version(versioninfo=False, user=None):
     versioninfo : False
         If ``True``, return the version in a versioninfo list (e.g. ``[2, 5,
         0]``)
-
-    user
-        User under which to run the git command. By default, the command is run
-        by the user under which the minion is running.
 
 
     CLI Example:
@@ -3130,7 +3126,7 @@ def version(versioninfo=False, user=None):
     contextkey_info = 'git.versioninfo'
     if contextkey not in __context__:
         try:
-            version_ = _git_run(['git', '--version'], runas=user)['stdout']
+            version_ = _git_run(['git', '--version'])['stdout']
         except CommandExecutionError as exc:
             log.error(
                 'Failed to obtain the git version (error follows):\n{0}'
