@@ -328,6 +328,65 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.strip_proto(resource), resource)
 
+    def test_http_basic_auth(self):
+        '''
+        Tests that adding basic auth to a URL works as expected
+        '''
+        # ((user, password), expected) tuples
+        test_inputs = (
+            ((None, None), 'http://example.com'),
+            (('user', None), 'http://user@example.com'),
+            (('user', 'pass'), 'http://user:pass@example.com'),
+        )
+        for (user, password), expected in test_inputs:
+            kwargs = {
+                'url': 'http://example.com',
+                'user': user,
+                'password': password,
+            }
+            # Test http
+            result = salt.utils.url.add_http_basic_auth(**kwargs)
+            self.assertEqual(result, expected)
+            # Test https
+            kwargs['url'] = kwargs['url'].replace('http://', 'https://', 1)
+            expected = expected.replace('http://', 'https://', 1)
+            result = salt.utils.url.add_http_basic_auth(**kwargs)
+            self.assertEqual(result, expected)
+
+    def test_http_basic_auth_https_only(self):
+        '''
+        Tests that passing a non-https URL with https_only=True will raise a
+        ValueError.
+        '''
+        kwargs = {
+            'url': 'http://example.com',
+            'user': 'foo',
+            'password': 'bar',
+            'https_only': True,
+        }
+        self.assertRaises(
+            ValueError,
+            salt.utils.url.add_http_basic_auth,
+            **kwargs
+        )
+
+    def test_redact_http_basic_auth(self):
+        sensitive_outputs = (
+            'https://deadbeaf@example.com',
+            'https://user:pw@example.com',
+        )
+        sanitized = 'https://<redacted>@example.com'
+        for sensitive_output in sensitive_outputs:
+            result = salt.utils.url.redact_http_basic_auth(sensitive_output)
+            self.assertEqual(result, sanitized)
+
+    def test_redact_non_auth_output(self):
+        non_auth_output = 'This is just normal output'
+        self.assertEqual(
+            non_auth_output,
+            salt.utils.url.redact_http_basic_auth(non_auth_output)
+        )
+
 
 if __name__ == '__main__':
     from integration import run_tests
