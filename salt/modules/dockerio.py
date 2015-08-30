@@ -331,7 +331,7 @@ def _get_image_infos(image):
     if not status['id']:
         _invalid(status)
         raise CommandExecutionError(
-            'ImageID {0!r} could not be resolved to '
+            'ImageID \'{0}\' could not be resolved to '
             'an existing Image'.format(image)
         )
     return status['out']
@@ -859,8 +859,8 @@ def kill(container, signal=None):
                 # no need to check if container is running
                 # because some signals might not stop the container.
                 _valid(status,
-                       comment='Kill signal {0!r} successfully'
-                       ' sent to the container {1!r}'.format(signal, container),
+                       comment='Kill signal \'{0}\' successfully'
+                       ' sent to the container \'{1}\''.format(signal, container),
                        id_=container)
             else:
                 if not is_running(dcontainer):
@@ -1858,7 +1858,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
             )
     else:
         raise NotImplementedError(
-            'Unknown docker ExecutionDriver {0!r}. Or didn\'t find command'
+            'Unknown docker ExecutionDriver \'{0}\'. Or didn\'t find command'
             ' to attach to the container'.format(driver))
 
     # now execute the command
