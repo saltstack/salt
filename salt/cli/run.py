@@ -7,6 +7,7 @@ from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import SaltClientError
 import salt.defaults.exitcodes
 
+
 class SaltRun(parsers.SaltRunOptionParser):
     '''
     Used to execute Salt runners

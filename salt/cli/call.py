@@ -9,6 +9,7 @@ from salt.config import _expand_glob_path
 import salt.cli.caller
 import salt.defaults.exitcodes
 
+
 class SaltCall(parsers.SaltCallOptionParser):
     '''
     Used to locally execute a salt command
