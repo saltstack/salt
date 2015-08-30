@@ -7,7 +7,7 @@ from salt.utils import parsers
 from salt.utils.verify import verify_env, verify_files
 from salt.config import _expand_glob_path
 import salt.cli.caller
-
+import salt.defaults.exitcodes
 
 class SaltCall(parsers.SaltCallOptionParser):
     '''
