@@ -45,7 +45,7 @@ class SaltRun(parsers.SaltRunOptionParser):
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
             runner.print_docs()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         # Run this here so SystemExit isn't raised anywhere else when
         # someone tries to use the runners via the python API
