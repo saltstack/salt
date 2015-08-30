@@ -2,8 +2,6 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-import os
-
 from salt.utils import parsers
 from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import SaltClientError
