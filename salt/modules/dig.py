@@ -205,7 +205,7 @@ def SPF(domain, record='SPF', nameserver=None):
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
         log.warn(
-            'dig returned exit code {0!r}. Returning empty list as fallback.'
+            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
             .format(result['retcode'])
         )
         return []
