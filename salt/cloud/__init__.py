@@ -1696,7 +1696,15 @@ class Map(Cloud):
                             #   - bar1:
                             #   - bar2:
                             overrides = {}
-                        overrides.setdefault('name', name)
+                        try:
+                            overrides.setdefault('name', name)
+                        except AttributeError:
+                            log.error(
+                                'Cannot use \'name\' as a minion id in a cloud map as it '
+                                'is a reserved word. Please change \'name\' to a different '
+                                'minion id reference.'
+                            )
+                            return ''
                         entries[name] = overrides
                 map_[profile] = entries
                 continue
