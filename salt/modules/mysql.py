@@ -49,13 +49,25 @@ import salt.utils
 
 # Import third party libs
 try:
+    # Try to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
     HAS_MYSQLDB = True
 except ImportError:
-    HAS_MYSQLDB = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+        from MySQLdb.constants import FIELD_TYPE, FLAG
+        HAS_MYSQLDB = True
+    except ImportError:
+        # No MySQL Connector installed, return False
+        HAS_MYSQLDB = False
 
 log = logging.getLogger(__name__)
 
