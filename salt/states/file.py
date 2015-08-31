@@ -4610,3 +4610,116 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
     # No reason to stop, return True
     return True
+
+
+def decode(name,
+        encoded_data=None,
+        contents_pillar=None,
+        encoding_type='base64',
+        checksum='md5'):
+    '''
+    Decode an encoded file and write it to disk
+
+    .. versionadded:: Boron
+
+    name
+        Path of the file to be written.
+    encoded_data
+        The encoded file. Either this option or ``contents_pillar`` must be
+        specified.
+    contents_pillar
+        A Pillar path to the encoded file. Uses the same path syntax as
+        :py:func:`pillar.get <salt.modules.pillar.get>`. The
+        :py:func:`hashutil.base64_encodefile
+        <salt.modules.hashutil.base64_encodefile>` function can load encoded
+        content into Pillar. Either this option or ``encoded_data`` must be
+        specified.
+    encoding_type : ``base64``
+        The type of encoding.
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Wraps the
+        :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
+        function.
+
+    Usage:
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - contents_pillar: mypillar:thefile
+
+        # or
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                Z2V0IHNhbHRlZAo=
+
+    Be careful with multi-line strings that the YAML indentation is correct.
+    E.g.,
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                {{ salt.pillar.get('path:to:data') | indent(8) }}
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not (encoded_data or contents_pillar):
+        raise CommandExecutionError("Specify either the 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data and contents_pillar:
+        raise CommandExecutionError("Specify only one 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data:
+        content = encoded_data
+    elif contents_pillar:
+        content = __salt__['pillar.get'](contents_pillar, False)
+        if content is False:
+            raise CommandExecutionError('Pillar data not found.')
+    else:
+        raise CommandExecutionError('No contents given.')
+
+    dest_exists = __salt__['file.file_exists'](name)
+    if dest_exists:
+        instr = __salt__['hashutil.base64_decodestring'](content)
+        insum = __salt__['hashutil.digest'](instr, checksum)
+        del instr  # no need to keep in-memory after we have the hash
+        outsum = __salt__['hashutil.digest_file'](name, checksum)
+
+        if insum != outsum:
+            ret['changes'] = {
+                'old': outsum,
+                'new': insum,
+            }
+
+        if not ret['changes']:
+            ret['comment'] = 'File is in the correct state.'
+            ret['result'] = True
+
+            return ret
+
+    if __opts__['test'] is True:
+        ret['comment'] = 'File is set to be updated.'
+        ret['result'] = None
+        return ret
+
+    ret['result'] = __salt__['hashutil.base64_decodefile'](content, name)
+    ret['comment'] = 'File was updated.'
+
+    if not ret['changes']:
+        ret['changes'] = {
+            'old': None,
+            'new': __salt__['hashutil.digest_file'](name, checksum),
+        }
+
+    return ret
