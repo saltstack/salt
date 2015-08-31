@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from salt.utils import parsers
 from salt.utils.verify import check_user, verify_env, verify_files
 from salt.exceptions import SaltClientError
-import salt.defaults.exitcodes
+import salt.defaults.exitcodes  # pylint: disable=W0611
 
 
 class SaltRun(parsers.SaltRunOptionParser):
