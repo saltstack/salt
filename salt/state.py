@@ -1652,6 +1652,7 @@ class State(object):
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
+        ret['__id__'] = low['__id__']
         log.info('Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'], finish_time.time().isoformat(), duration))
         return ret
 
