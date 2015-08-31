@@ -7,6 +7,12 @@ import os
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -28,6 +34,7 @@ class TestEnvironState(TestCase):
         envstate.__env__ = 'base'
         envstate.__opts__ = {'test': False}
         envstate.__salt__ = {'environ.setenv': envmodule.setenv}
+        envmodule.__salt__ = {}
 
         shared = {'INITIAL': 'initial'}
         envstate.os.environ = shared
@@ -50,6 +57,17 @@ class TestEnvironState(TestCase):
         # once again with the same value
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
+
+    @patch('salt.utils.is_windows', MagicMock(return_value=True))
+    def test_setenv_permanent(self):
+        with patch.dict(envmodule.__salt__, {'reg.set_value': MagicMock(), 'reg.delete_value': MagicMock()}):
+            ret = envstate.setenv('test', 'value', permanent=True)
+            self.assertEqual(ret['changes'], {'test': 'value'})
+            envmodule.__salt__['reg.set_value'].assert_called_with("HKCU", "Environment", 'test', 'value')
+
+            ret = envstate.setenv('test', False, false_unsets=True, permanent=True)
+            self.assertEqual(ret['changes'], {'test': None})
+            envmodule.__salt__['reg.delete_value'].assert_called_with("HKCU", "Environment", 'test')
 
     def test_setenv_dict(self):
         '''test that setenv can be invoked with dict'''
