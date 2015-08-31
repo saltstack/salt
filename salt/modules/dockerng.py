@@ -110,7 +110,25 @@ The following options can be set in the :ref:`minion config
 
 - ``docker.url``: URL to the docker service (default: local socket).
 - ``docker.version``: API version to use (default: currently 1.4 API).
-- ``docker.exec_driver``: Execution driver to use (default: docker-exec).
+- ``docker.exec_driver``: Execution driver to use, one of the following:
+    - nsenter_
+    - lxc-attach_
+    - docker-exec_
+
+    If this configuration option is not found, Salt will use the appropriate
+    interface (either nsenter_ or lxc-attach_) based on the ``Execution
+    Driver`` value returned from ``docker info``. docker-exec_ will not be used
+    by default, as it is presently (as of version 1.6.2) only able to execute
+    commands as the effective user of the container. Thus, if a ``USER``
+    directive was used to run as a non-privileged user, docker-exec_ would be
+    unable to perform the action as root. Salt can still use docker-exec_ as an
+    execution driver, but must be explicitly configured (as in the example
+    above) to do so at this time.  If possible, try to manually specify the
+    execution driver, as it will save Salt a little work.
+
+.. _lxc-attach: https://linuxcontainers.org/lxc/manpages/man1/lxc-attach.1.html
+.. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
+.. _docker-exec: http://docs.docker.com/reference/commandline/cli/#exec
 
 Functions
 ---------
