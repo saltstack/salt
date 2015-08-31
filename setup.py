@@ -605,7 +605,7 @@ INSTALL_VERSION_TEMPLATE = '''\
 
 from salt.version import SaltStackVersion
 
-__saltstack_version__ = SaltStackVersion{full_version_info!r}
+__saltstack_version__ = SaltStackVersion\'{full_version_info}\'
 '''
 
 
