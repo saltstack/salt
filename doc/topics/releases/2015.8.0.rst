@@ -127,6 +127,9 @@ State and Execution Module Improvements
   without a preceding ``-``, so it is better to not confuse the user into
   thinking they're using the non- ``-`` format, when really they are using the
   with- ``-`` format.
+- Added ``__states__`` to state modules, for cross-calling states. This enables
+  using existing states when writing custom states. See :ref:`cross calling states
+  <cross-calling-state-modules>`.
 
 Windows Improvements
 ====================
