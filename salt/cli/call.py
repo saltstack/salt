@@ -7,6 +7,7 @@ from salt.utils import parsers
 from salt.utils.verify import verify_env, verify_files
 from salt.config import _expand_glob_path
 import salt.cli.caller
+import salt.defaults.exitcodes
 
 
 class SaltCall(parsers.SaltCallOptionParser):
@@ -60,10 +61,10 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         if self.options.doc:
             caller.print_docs()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.grains_run:
             caller.print_grains()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         caller.run()
