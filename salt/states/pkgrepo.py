@@ -174,19 +174,20 @@ def managed(name, **kwargs):
 
     dist
        This dictates the release of the distro the packages should be built
-       for.  (e.g. unstable)
+       for.  (e.g. unstable). This option is rarely needed.
 
     keyid
        The KeyID of the GPG key to install.  This option also requires
-       the 'keyserver' option to be set.
+       the ``keyserver`` option to be set.
 
     keyserver
        This is the name of the keyserver to retrieve gpg keys from.  The
-       keyid option must also be set for this option to work.
+       ``keyid`` option must also be set for this option to work.
 
     key_url
        URL to retrieve a GPG key from. Allows the usage of ``http://``,
-       ``https://`` as well as ``salt://``.
+       ``https://`` as well as ``salt://``. Use either ``keyid``/``keyserver``
+       or ``key_url``, but not both.
 
     consolidate
        If set to true, this will consolidate all sources definitions to
