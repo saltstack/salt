@@ -132,7 +132,7 @@ Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lu
 
 .. _cross-calling-execution-modules:
 
-Cross-Calling Execution Modules
+Cross Calling Execution Modules
 ===============================
 
 All of the Salt execution modules are available to each other and modules can call
