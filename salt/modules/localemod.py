@@ -37,6 +37,7 @@ def __virtual__():
 
     return __virtualname__
 
+
 def _uses_dbus():
     if 'Arch' in __grains__['os_family']:
         return True
@@ -46,6 +47,7 @@ def _uses_dbus():
         return False
     elif 'Gentoo' in __grains__['os_family']:
         return False
+
 
 def _parse_dbus_locale():
     '''
@@ -250,7 +252,7 @@ def avail(locale):
         return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
-       if _normalize_locale(x.strip()) == normalized_locale), False)
+                          if _normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
 
 
@@ -303,10 +305,12 @@ def gen_locale(locale, **kwargs):
                                      locale_info['territory']) in os.listdir(search)
         except OSError, ex:
             log.error(ex)
-            raise CommandExecutionError("Locale \"{0}\" is not available.".format(locale))
+            raise CommandExecutionError(
+                "Locale \"{0}\" is not available.".format(locale))
 
     if not valid:
-        log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
+        log.error(
+            'The provided locale "{0}" is not found in {1}'.format(locale, search))
         return False
 
     if os.path.exists('/etc/locale.gen'):
@@ -334,7 +338,8 @@ def gen_locale(locale, **kwargs):
         cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
         cmd = ['localedef', '--force',
-               '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']),
+               '-i', "{0}_{1}".format(locale_info['language'],
+                                      locale_info['territory']),
                '-f', locale_info['codeset'],
                locale]
         cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')
