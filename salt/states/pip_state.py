@@ -250,6 +250,12 @@ def installed(name,
     '''
     Make sure the package is installed
 
+    .. note::
+
+        There is a known issue when using pip v1.0 that causes ``pip install`` to return
+        1 when executed without arguments. See :issue:`21845` for details and
+        potential workarounds.
+
     name
         The name of the python package to install. You can also specify version
         numbers here using the standard operators ``==, >=, <=``. If
