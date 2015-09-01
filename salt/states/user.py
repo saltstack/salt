@@ -173,8 +173,8 @@ def _changes(name,
     if 'user.chhomephone' in __salt__:
         if homephone is not None and lusr['homephone'] != homephone:
             change['homephone'] = homephone
-    # OpenBSD login class
-    if __grains__['kernel'] == 'OpenBSD':
+    # OpenBSD/FreeBSD login class
+    if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
         if not loginclass:
             loginclass = '""'
         if __salt__['user.get_loginclass'](name)['loginclass'] != loginclass:
@@ -444,7 +444,7 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
-        if __grains__['kernel'] == 'OpenBSD':
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
         for key, val in six.iteritems(changes):
@@ -502,7 +502,7 @@ def present(name,
         if 'shadow.info' in __salt__:
             if lshad['passwd'] != password:
                 spost = __salt__['shadow.info'](name)
-        if __grains__['kernel'] == 'OpenBSD':
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
@@ -512,7 +512,7 @@ def present(name,
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
-        if __grains__['kernel'] == 'OpenBSD':
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             if lcpost['loginclass'] != lcpre['loginclass']:
                 ret['changes']['loginclass'] = lcpost['loginclass']
         if ret['changes']:
