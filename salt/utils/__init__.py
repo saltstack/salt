@@ -2875,24 +2875,3 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
         raise SaltInvocationError(msg)
     else:
         return msg
-
-
-def itersplit(orig, sep=None):
-    '''
-    Generator function for iterating through large strings, particularly useful
-    as a replacement for str.splitlines() if the string is expected to contain
-    a lot of lines.
-
-    See http://stackoverflow.com/a/3865367
-    '''
-    exp = re.compile(r'\s+' if sep is None else re.escape(sep))
-    pos = 0
-    while True:
-        match = exp.search(orig, pos)
-        if not match:
-            if pos < len(orig) or sep is not None:
-                yield orig[pos:]
-            break
-        if pos < match.start() or sep is not None:
-            yield orig[pos:match.start()]
-        pos = match.end()
