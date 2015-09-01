@@ -446,7 +446,7 @@ def latest(name,
         bare = True
 
     # Check to make sure rev and mirror/bare are not both in use
-    if rev and bare:
+    if rev != 'HEAD' and bare:
         return _fail(ret, ('\'rev\' is not compatible with the \'mirror\' and '
                            '\'bare\' arguments'))
 
