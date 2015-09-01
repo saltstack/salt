@@ -67,7 +67,7 @@ def setval(key, val, false_unsets=False, permanent=False):
         permanent_key = 'Environment'
         if permanent == 'HKLM':
             permanent_hive = 'HKLM'
-            permanent_key = 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+            permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
 
     if not isinstance(key, six.string_types):
         log.debug(
