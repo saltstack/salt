@@ -49,6 +49,21 @@ except ImportError:
         #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+if not hasattr(msgpack, 'exceptions'):
+    class PackValueError(Exception):
+        '''
+        older versions of msgpack do not have PackValueError
+        '''
+
+    class exceptions(object):
+        '''
+        older versions of msgpack do not have an exceptions module
+        '''
+        PackValueError = PackValueError()
+
+    msgpack.exceptions = exceptions()
+
+
 def package(payload):
     '''
     This method for now just wraps msgpack.dumps, but it is here so that

@@ -39,8 +39,8 @@ def show_top(minion=None, saltenv='base'):
 def show_pillar(minion='*', **kwargs):
     '''
     Returns the compiled pillar either of a specific minion
-    or just the global available pillars. I assume that no minion
-    is using the id ``*``.
+    or just the global available pillars. This function assumes
+    that no minion has the id ``*``.
 
     CLI Example:
 
@@ -71,7 +71,7 @@ def show_pillar(minion='*', **kwargs):
         opts = salt.config.master_config('/etc/salt/master')
         runner = salt.runner.RunnerClient(opts)
         pillar = runner.cmd('pillar.show_pillar', [])
-        print pillar¬
+        print(pillar)
     '''
 
     saltenv = 'base'

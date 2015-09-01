@@ -1,3 +1,5 @@
+.. _execution-modules:
+
 =================
 Execution Modules
 =================
@@ -128,8 +130,10 @@ Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lu
 
 .. _`Python package`: https://docs.python.org/2/tutorial/modules.html#packages
 
-Cross-Calling Modules
-=====================
+.. _cross-calling-execution-modules:
+
+Cross Calling Execution Modules
+===============================
 
 All of the Salt execution modules are available to each other and modules can call
 functions available in other execution modules.
@@ -148,8 +152,8 @@ Salt modules can be cross-called by accessing the value in the ``__salt__`` dict
     def foo(bar):
         return __salt__['cmd.run'](bar)
 
-This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>` and pass the argument
-``bar`` to it.
+This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>`
+module and pass the argument ``bar`` to it.
 
 
 Preloaded Execution Module Data

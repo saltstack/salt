@@ -178,3 +178,4 @@ Changes to Functions in Git Execution Module
 - Added the ``command`` argument to allow for operations other than ``update``
   to be run on submodules, and deprecated the ``init`` argument. To do a
   submodule update with ``init=True`` moving forward, use ``command=update
+  opts='--init'``.

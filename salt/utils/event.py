@@ -270,7 +270,6 @@ class SaltEvent(object):
         to get_event.
         '''
         match_func = self._get_match_func(match_type)
-
         self.pending_tags.append([tag, match_func])
 
         return
@@ -355,7 +354,8 @@ class SaltEvent(object):
                 log.trace('get_event() discarding cached event that no longer has any subscriptions = {0}'.format(evt))
         return ret
 
-    def _match_tag_startswith(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_startswith(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses startswith to check.
@@ -363,7 +363,8 @@ class SaltEvent(object):
         '''
         return event_tag.startswith(search_tag)
 
-    def _match_tag_endswith(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_endswith(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses endswith to check.
@@ -371,7 +372,8 @@ class SaltEvent(object):
         '''
         return event_tag.endswith(search_tag)
 
-    def _match_tag_find(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_find(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses find to check.
