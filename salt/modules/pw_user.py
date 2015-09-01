@@ -3,6 +3,30 @@
 Manage users with the useradd command
 '''
 
+# Notes:
+# ------
+#
+# Format of the master.passwd file:
+#
+# - name      User's login name.
+# - password  User's encrypted password.
+# - uid       User's id.
+# - gid       User's login group id.
+# - class     User's login class.
+# - change    Password change time.
+# - expire    Account expiration time.
+# - gecos     General information about the user.
+# - home_dir  User's home directory.
+# - shell     User's login shell.
+#
+# The usershow command allows viewing of an account in a format that is
+# identical to the format used in /etc/master.passwd (with the password field
+# replaced with a ‘*’.)
+#
+# Example:
+# % pw usershow -n someuser
+# someuser:*:1001:1001::0:0:SomeUser Name:/home/someuser:/bin/sh
+
 # Import python libs
 from __future__ import absolute_import
 import copy
@@ -75,6 +99,7 @@ def add(name,
         workphone='',
         homephone='',
         createhome=True,
+        loginclass=None,
         **kwargs):
     '''
     Add a user to the minion
@@ -104,6 +129,8 @@ def add(name,
         cmd += '-d {0} '.format(home)
     if createhome is True:
         cmd += '-m '
+    if loginclass:
+        cmd += '-L {0}'.format(loginclass)
     if shell:
         cmd += '-s {0} '.format(shell)
     if not salt.utils.is_true(unique):
@@ -407,6 +434,26 @@ def info(name):
     except KeyError:
         return {}
     return ret
+
+
+def get_loginclass(name):
+    '''
+    Get the login class of the user
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_loginclass foo
+
+    '''
+
+    userinfo = __salt__['cmd.run_stdout']('pw usershow -n {0}'.format(name))
+    userinfo = userinfo.split(':')
+
+    return {'loginclass': userinfo[4] if len(userinfo) == 10 else ''}
 
 
 def list_groups(name):
