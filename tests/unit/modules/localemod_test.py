@@ -41,7 +41,7 @@ class LocalemodTestCase(TestCase):
         Test for Get the current system locale
         '''
         with patch.dict(localemod.__grains__, {'os_family': ['Arch']}):
-            with patch.object(localemod, '_localectl_get', return_value=True):
+            with patch.object(localemod, '_locale_get', return_value=True):
                 self.assertTrue(localemod.get_locale())
 
         with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):

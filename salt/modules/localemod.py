@@ -8,7 +8,12 @@ from __future__ import absolute_import
 import logging
 import re
 import os
-import dbus
+HAS_DBUS = False
+try:
+    import dbus
+    HAS_DBUS = True
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils
@@ -25,14 +30,26 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
+    if HAS_DBUS is False and _uses_dbus():
+        return False
     if salt.utils.is_windows():
         return False
+
     return __virtualname__
 
+def _uses_dbus():
+    if 'Arch' in __grains__['os_family']:
+        return True
+    elif 'RedHat' in __grains__['os_family']:
+        return False
+    elif 'Debian' in __grains__['os_family']:
+        return False
+    elif 'Gentoo' in __grains__['os_family']:
+        return False
 
-def _parse_localectl():
+def _parse_dbus_locale():
     '''
-    Get the 'System Locale' parameters from localectl
+    Get the 'System Locale' parameters from dbus
     '''
     ret = {}
 
@@ -55,11 +72,11 @@ def _parse_localectl():
     return ret
 
 
-def _localectl_get():
+def _locale_get():
     '''
-    Use systemd's localectl command to get the current locale
+    Use dbus to get the current locale
     '''
-    return _parse_localectl().get('LANG', '')
+    return _parse_dbus_locale().get('LANG', '')
 
 
 def _localectl_set(locale=''):
@@ -67,7 +84,7 @@ def _localectl_set(locale=''):
     Use systemd's localectl command to set the LANG locale parameter, making
     sure not to trample on other params that have been set.
     '''
-    locale_params = _parse_localectl()
+    locale_params = _parse_dbus_locale()
     locale_params['LANG'] = str(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v)
                      for k, v in six.iteritems(locale_params)])
@@ -102,7 +119,7 @@ def get_locale():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        return _localectl_get()
+        return _locale_get()
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
     elif 'Debian' in __grains__['os_family']:
