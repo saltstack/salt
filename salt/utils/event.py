@@ -60,7 +60,6 @@ import signal
 import hashlib
 import logging
 import datetime
-import weakref
 import multiprocessing
 from collections import MutableMapping
 
@@ -271,8 +270,7 @@ class SaltEvent(object):
         to get_event.
         '''
         match_func = self._get_match_func(match_type)
-
-        self.pending_tags.append([tag, weakref.proxy(match_func)])
+        self.pending_tags.append([tag, match_func])
 
         return
 
@@ -356,7 +354,8 @@ class SaltEvent(object):
                 log.trace('get_event() discarding cached event that no longer has any subscriptions = {0}'.format(evt))
         return ret
 
-    def _match_tag_startswith(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_startswith(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses startswith to check.
@@ -364,7 +363,8 @@ class SaltEvent(object):
         '''
         return event_tag.startswith(search_tag)
 
-    def _match_tag_endswith(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_endswith(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses endswith to check.
@@ -372,7 +372,8 @@ class SaltEvent(object):
         '''
         return event_tag.endswith(search_tag)
 
-    def _match_tag_find(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_find(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses find to check.
@@ -411,14 +412,11 @@ class SaltEvent(object):
 
             if not match_func(ret['tag'], tag):
                 # tag not match
-                try:
-                    if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
-                        log.trace('get_event() caching unwanted event = {0}'.format(ret))
-                        self.pending_events.append(ret)
-                    if wait:  # only update the wait timeout if we had one
-                        wait = timeout_at - time.time()
-                except ReferenceError:
-                    log.trace('pmatch_func was prematurely dereferenced in _get_event')
+                if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
+                    log.trace('get_event() caching unwanted event = {0}'.format(ret))
+                    self.pending_events.append(ret)
+                if wait:  # only update the wait timeout if we had one
+                    wait = timeout_at - time.time()
                 continue
 
             log.trace('get_event() received = {0}'.format(ret))
