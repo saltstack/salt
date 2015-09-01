@@ -229,7 +229,7 @@ def get_image(vm_):
     ))
     for image in images:
         if vm_image in (images[image]['name'], images[image]['slug'], images[image]['id']):
-            if images[image]['slug'] is not None:
+            if images[image]['slug'] != 'None':
                 return images[image]['slug']
             return int(images[image]['id'])
     raise SaltCloudNotFound(
