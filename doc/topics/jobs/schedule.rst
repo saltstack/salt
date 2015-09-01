@@ -184,14 +184,15 @@ configuration file:
 .. code-block:: yaml
 
     schedule:
-      orchestrate:
+      run_my_orch:
         function: state.orchestrate
-        seconds: 35
-        minutes: 30
-        hours: 3
+        hours: 6
+        splay: 600
+        args:
+          - orchestration.my_orch
 
-The above configuration will execute the state.orchestrate runner every 3 hours,
-30 minutes and 35 seconds, or every 12,635 seconds.
+The above configuration is analogous to running
+``salt-run state.orch orchestration.my_orch`` every 6 hours.
 
 Scheduler With Returner
 =======================
