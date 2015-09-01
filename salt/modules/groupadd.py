@@ -4,10 +4,13 @@ Manage groups on Linux, OpenBSD and NetBSD
 '''
 
 # Import python libs
+import logging
 try:
     import grp
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'group'
@@ -141,12 +144,17 @@ def adduser(name, username):
     Verifies if a valid username 'bar' as a member of an existing group 'foo',
     if not then adds it.
     '''
+    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+
     if __grains__['kernel'] == 'Linux':
-        retcode = __salt__['cmd.retcode']('gpasswd --add {0} {1}'.format(
-            username, name), python_shell=False)
+        if on_redhat_5:
+            cmd = 'gpasswd -a {0} {1}'.format(username, name)
+        else:
+            cmd = 'gpasswd --add {0} {1}'.format(username, name)
     else:
-        retcode = __salt__['cmd.retcode']('usermod -G {0} {1}'.format(
-            name, username), python_shell=False)
+        cmd = 'usermod -G {0} {1}'.format(name, username)
+
+    retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
 
     return not retcode
 
@@ -164,21 +172,27 @@ def deluser(name, username):
     Removes a member user 'bar' from a group 'foo'. If group is not present
     then returns True.
     '''
+    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+
     grp_info = __salt__['group.info'](name)
     try:
         if username in grp_info['members']:
             if __grains__['kernel'] == 'Linux':
-                retcode = __salt__['cmd.retcode']('gpasswd --del {0} {1}'
-                    .format(username, name), python_shell=False)
+                if on_redhat_5:
+                    cmd = 'gpasswd -d {0} {1}'.format(username, name)
+                else:
+                    cmd = 'gpasswd --del {0} {1}'.format(username, name)
+                retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
             elif __grains__['kernel'] == 'OpenBSD':
-                cmd = 'usermod -S '
                 out = __salt__['cmd.run_stdout']('id -Gn {0}'.format(username),
                                                  python_shell=False)
-                for group in out.split(" "):
-                    if group != format(name):
-                        cmd += '{0},'.format(group)
-                retcode = __salt__['cmd.retcode']('{0} {1}'.format(
-                    cmd, username), python_shell=False)
+                cmd = 'usermod -S '
+                cmd += ','.join([g for g in out.split() if g != str(name)])
+                cmd += ' {0}'.format(username)
+                retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
+            else:
+                log.error('group.deluser is not yet supported on this platform')
+                return False
             return not retcode
         else:
             return True
@@ -197,9 +211,14 @@ def members(name, members_list):
     Replaces a membership list for a local group 'foo'.
         foo:x:1234:user1,user2,user3,...
     '''
+    on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+
     if __grains__['kernel'] == 'Linux':
-        retcode = __salt__['cmd.retcode']('gpasswd --members {0} {1}'.format(
-            members_list, name), python_shell=False)
+        if on_redhat_5:
+            cmd = 'gpasswd -M {0} {1}'.format(members_list, name)
+        else:
+            cmd = 'gpasswd --members {0} {1}'.format(members_list, name)
+        retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
     elif __grains__['kernel'] == 'OpenBSD':
         retcode = 1
         grp_info = __salt__['group.info'](name)
@@ -218,5 +237,8 @@ def members(name, members_list):
                 # provided list is '': users previously deleted from group
                 else:
                     retcode = 0
+    else:
+        log.error('group.members is not yet supported on this platform')
+        return False
 
     return not retcode
