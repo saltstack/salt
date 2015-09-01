@@ -228,6 +228,22 @@ prepared to refresh, then return True and the mod_init will not be called
 the next time a pkg state is evaluated, otherwise return False and the mod_init
 will be called next time a pkg state is evaluated.
 
+Log Output
+==========
+
+You can call the logger from custom modules to write messages to the minion
+logs. The following code snippet demonstrates writing log messages:
+
+.. code-block:: python
+    import logging
+
+    log = logging.getLogger(__name__)
+
+    log.info('Here is Some Information')
+    log.warning('You Should Not Do That')
+    log.error('It Is Busted')
+
+
 Full State Module Example
 =========================
 

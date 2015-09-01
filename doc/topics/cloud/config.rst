@@ -500,35 +500,11 @@ And in the map file:
 Saltify
 -------
 
-The Saltify driver is a new, experimental driver for installing Salt on
-existing machines (virtual or bare metal). Because it does not use an actual
-cloud provider, it needs no configuration in the main cloud config file.
-However, it does still require a profile to be set up, and is most useful when
-used inside a map file. The key parameters to be set are ``ssh_host``,
-``ssh_username`` and either ``ssh_keyfile`` or ``ssh_password``. These may all
-be set in either the profile or the map. An example configuration might use the
-following in cloud.profiles:
-
-.. code-block:: yaml
-
-    make_salty:
-      driver: saltify
-
-And in the map file:
-
-.. code-block:: yaml
-
-    make_salty:
-      - myinstance:
-        ssh_host: 54.262.11.38
-        ssh_username: ubuntu
-        ssh_keyfile: '/etc/salt/mysshkey.pem'
-        sudo: True
-
-.. note::
-
-    In the cloud profile that uses this provider configuration, the syntax for the
-    ``provider`` required field would be ``provider: make_salty``.
+The Saltify driver is a new, experimental driver designed to install Salt on a remote
+machine, virtual or bare metal, using SSH. This driver is useful for provisioning
+machines which are already installed, but not Salted. For more information about using
+this driver and for configuration examples, please see the
+:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
 
 
 Extending Profiles and Cloud Providers Configuration
