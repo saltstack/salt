@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 import re
 import os
+import dbus
 
 # Import salt libs
 import salt.utils
@@ -34,17 +35,19 @@ def _parse_localectl():
     Get the 'System Locale' parameters from localectl
     '''
     ret = {}
-    for line in __salt__['cmd.run']('localectl').splitlines():
-        cols = [x.strip() for x in line.split(':', 1)]
-        cur_param = cols.pop(0) if len(cols) > 1 else ''
-        if cur_param == 'System Locale':
+    
+    bus = dbus.SystemBus()
+    localed = bus.get_object('org.freedesktop.locale1',
+                             '/org/freedesktop/locale1')
+    properties = dbus.Interface(localed, 'org.freedesktop.DBus.Properties')
+    system_locale = properties.Get('org.freedesktop.locale1', 'Locale')        
             try:
-                key, val = re.match('^([A-Z_]+)=(.*)$', cols[0]).groups()
+                key, val = re.match('^([A-Z_]+)=(.*)$', system_locale[0]).groups()
             except AttributeError:
-                log.error('Odd locale parameter "{0}" detected in localectl '
-                          'output. This should not happen. localectl should '
-                          'catch this. You should probably investigate what '
-                          'caused this.'.format(cols[0]))
+                log.error('Odd locale parameter "{0}" detected in dbus locale '
+                          'output. This should not happen. You should '
+                          'probably investigate what caused this.'.format(
+                              system_locale[0]))
             else:
                 ret[key] = val.replace('"', '')
     return ret
