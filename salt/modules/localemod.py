@@ -36,8 +36,7 @@ def _parse_localectl():
     ret = {}
     for line in __salt__['cmd.run']('localectl').splitlines():
         cols = [x.strip() for x in line.split(':', 1)]
-        if len(cols) > 1:
-            cur_param = cols.pop(0)
+        cur_param = cols.pop(0) if len(cols) > 1 else ''
         if cur_param == 'System Locale':
             try:
                 key, val = re.match('^([A-Z_]+)=(.*)$', cols[0]).groups()
