@@ -422,11 +422,11 @@ class SPMClient(object):
                     self.pkgfiles['{0}.remove_file'.format(self.files_prov)](filerow[0], self.files_conn)
                 else:
                     log.trace('Not removing file {0}'.format(filerow[0]))
-                self.pkgdb['{0}.unregister_file'.format(self.db_prov)](filerow[0], self.db_conn)
+                self.pkgdb['{0}.unregister_file'.format(self.db_prov)](filerow[0], package, self.db_conn)
 
         # Clean up directories
         for dir_ in sorted(dirs, reverse=True):
-            self.pkgdb['{0}.unregister_file'.format(self.db_prov)](dir_, self.db_conn)
+            self.pkgdb['{0}.unregister_file'.format(self.db_prov)](dir_, package, self.db_conn)
             try:
                 log.trace('Removing directory {0}'.format(dir_))
                 os.rmdir(dir_)

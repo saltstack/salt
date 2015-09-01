@@ -177,7 +177,7 @@ def unregister_pkg(name, conn=None):
     conn.execute('DELETE FROM packages WHERE package=?', (name, ))
 
 
-def unregister_file(path, conn=None):
+def unregister_file(path, pkg=None, conn=None):  # pylint: disable=W0612
     '''
     Unregister a file from the package database
     '''
