@@ -450,7 +450,7 @@ def get_loginclass(name):
     userinfo = __salt__['cmd.run_stdout']('pw usershow -n {0}'.format(name))
     userinfo = userinfo.split(':')
 
-    return {'loginclass' : userinfo[4] if len(userinfo) == 10 else ''}
+    return {'loginclass': userinfo[4] if len(userinfo) == 10 else ''}
 
 
 def list_groups(name):
