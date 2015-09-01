@@ -92,7 +92,7 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-def datasource_exists(name, jboss_config, datasource_properties, recreate=False):
+def datasource_exists(name, jboss_config, datasource_properties, recreate=False, profile=None):
     '''
     Ensures that a datasource with given properties exist on the jboss instance.
     If datasource doesn't exist, it is created, otherwise only the properties that are different will be updated.
@@ -105,6 +105,8 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
         Dict with datasource properties
     recreate : False
         If set to True and datasource exists it will be removed and created again. However, if there are deployments that depend on the datasource, it will not me possible to remove it.
+    profile : None
+        The profile name for this datasource (domain mode only)
 
     Example:
 
@@ -122,6 +124,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
                min-pool-size: 3
                use-java-context: True
            - jboss_config: {{ pillar['jboss'] }}
+           - profile: full-ha
 
     '''
     log.debug(" ======================== STATE: jboss7.datasource_exists (name: %s) ", name)
@@ -132,11 +135,11 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
 
     has_changed = False
     ds_current_properties = {}
-    ds_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
+    ds_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name, profile=profile)
     if ds_result['success']:
         ds_current_properties = ds_result['result']
         if recreate:
-            remove_result = __salt__['jboss7.remove_datasource'](jboss_config=jboss_config, name=name)
+            remove_result = __salt__['jboss7.remove_datasource'](jboss_config=jboss_config, name=name, profile=profile)
             if remove_result['success']:
                 ret['changes']['removed'] = name
             else:
@@ -146,7 +149,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
 
             has_changed = True  # if we are here, we have already made a change
 
-            create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties)
+            create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties, profile=profile)
             if create_result['success']:
                 ret['changes']['created'] = name
             else:
@@ -154,7 +157,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
                 ret['comment'] = 'Could not create datasource. Stdout: '+create_result['stdout']
                 return ret
 
-            read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
+            read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name, profile=profile)
             if read_result['success']:
                 ds_new_properties = read_result['result']
             else:
@@ -163,7 +166,7 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
                 return ret
 
         else:
-            update_result = __salt__['jboss7.update_datasource'](jboss_config=jboss_config, name=name, new_properties=datasource_properties)
+            update_result = __salt__['jboss7.update_datasource'](jboss_config=jboss_config, name=name, new_properties=datasource_properties, profile=profile)
             if not update_result['success']:
                 ret['result'] = False
                 ret['comment'] = 'Could not update datasource. '+update_result['comment']
@@ -171,13 +174,13 @@ def datasource_exists(name, jboss_config, datasource_properties, recreate=False)
             else:
                 ret['comment'] = 'Datasource updated.'
 
-            read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
+            read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name, profile=profile)
             ds_new_properties = read_result['result']
     else:
         if ds_result['err_code'] == 'JBAS014807':  # ok, resource not exists:
-            create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties)
+            create_result = __salt__['jboss7.create_datasource'](jboss_config=jboss_config, name=name, datasource_properties=datasource_properties, profile=profile)
             if create_result['success']:
-                read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name)
+                read_result = __salt__['jboss7.read_datasource'](jboss_config=jboss_config, name=name, profile=profile)
                 ds_new_properties = read_result['result']
                 ret['comment'] = 'Datasource created.'
             else:
@@ -236,7 +239,7 @@ def __get_ds_value(dct, key):
         return str(dct[key])
 
 
-def bindings_exist(name, jboss_config, bindings):
+def bindings_exist(name, jboss_config, bindings, profile=None):
     '''
     Ensures that given JNDI binding are present on the server.
     If a binding doesn't exist on the server it will be created.
@@ -246,6 +249,8 @@ def bindings_exist(name, jboss_config, bindings):
         Dict with connection properties (see state description)
     bindings:
         Dict with bindings to set.
+    profile:
+        The profile name (domain mode only)
 
     Example:
 
@@ -259,7 +264,7 @@ def bindings_exist(name, jboss_config, bindings):
                - jboss_config: {{ pillar['jboss'] }}
 
     '''
-    log.debug(" ======================== STATE: jboss7.bindings_exist (name: %s) ", name)
+    log.debug(" ======================== STATE: jboss7.bindings_exist (name: %s) (profile: %s) ", name, profile)
     log.debug('bindings='+str(bindings))
     ret = {'name': name,
            'result': True,
@@ -269,11 +274,11 @@ def bindings_exist(name, jboss_config, bindings):
     has_changed = False
     for key in bindings:
         value = str(bindings[key])
-        query_result = __salt__['jboss7.read_simple_binding'](binding_name=key, jboss_config=jboss_config)
+        query_result = __salt__['jboss7.read_simple_binding'](binding_name=key, jboss_config=jboss_config, profile=profile)
         if query_result['success']:
             current_value = query_result['result']['value']
             if current_value != value:
-                update_result = __salt__['jboss7.update_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config)
+                update_result = __salt__['jboss7.update_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config, profile=profile)
                 if update_result['success']:
                     has_changed = True
                     __log_binding_change(ret['changes'], 'changed', key, value, current_value)
@@ -281,7 +286,7 @@ def bindings_exist(name, jboss_config, bindings):
                     raise CommandExecutionError(update_result['failure-description'])
         else:
             if query_result['err_code'] == 'JBAS014807':  # ok, resource not exists:
-                create_result = __salt__['jboss7.create_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config)
+                create_result = __salt__['jboss7.create_simple_binding'](binding_name=key, value=value, jboss_config=jboss_config, profile=profile)
                 if create_result['success']:
                     has_changed = True
                     __log_binding_change(ret['changes'], 'added', key, value)
