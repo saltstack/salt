@@ -15,6 +15,7 @@ from distutils.version import LooseVersion as _LooseVersion
 # Import salt libs
 import salt.utils
 import salt.utils.files
+import salt.utils.itertools
 import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
@@ -2440,7 +2441,7 @@ def remote_refs(url,
                       identity=identity,
                       ignore_retcode=ignore_retcode)['stdout']
     ret = {}
-    for line in salt.utils.itersplit(output, '\n'):
+    for line in salt.utils.itertools.split(output, '\n'):
         try:
             sha1_hash, ref_name = line.split(None, 1)
         except ValueError:
@@ -2599,7 +2600,7 @@ def remotes(cwd, user=None, redact_auth=True, ignore_retcode=False):
                       cwd=cwd,
                       runas=user,
                       ignore_retcode=ignore_retcode)['stdout']
-    for remote_line in salt.utils.itersplit(output, '\n'):
+    for remote_line in salt.utils.itertools.split(output, '\n'):
         try:
             remote, remote_info = remote_line.split(None, 1)
         except ValueError:
