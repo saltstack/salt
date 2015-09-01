@@ -1435,11 +1435,11 @@ def init(cwd,
     if template is not None:
         if not isinstance(template, six.string_types):
             template = str(template)
-        command.extend(['--template', template])
+        command.append('--template={0}'.format(template))
     if separate_git_dir is not None:
         if not isinstance(separate_git_dir, six.string_types):
             separate_git_dir = str(separate_git_dir)
-        command.extend(['--separate-git-dir', separate_git_dir])
+        command.append('--separate-git-dir={0}'.format(separate_git_dir))
     if shared is not None:
         if isinstance(shared, six.integer_types):
             shared = '0' + str(shared)
@@ -1447,7 +1447,7 @@ def init(cwd,
             # Using lower here because booleans would be capitalized when
             # converted to a string.
             shared = str(shared).lower()
-        command.extend(['--shared', shared])
+        command.append('--shared={0}'.format(shared))
     command.extend(_format_opts(opts))
     command.append(cwd)
     return _git_run(command,
