@@ -41,15 +41,17 @@ def _parse_localectl():
                              '/org/freedesktop/locale1')
     properties = dbus.Interface(localed, 'org.freedesktop.DBus.Properties')
     system_locale = properties.Get('org.freedesktop.locale1', 'Locale')        
-            try:
-                key, val = re.match('^([A-Z_]+)=(.*)$', system_locale[0]).groups()
-            except AttributeError:
-                log.error('Odd locale parameter "{0}" detected in dbus locale '
-                          'output. This should not happen. You should '
-                          'probably investigate what caused this.'.format(
-                              system_locale[0]))
-            else:
-                ret[key] = val.replace('"', '')
+
+    try:
+        key, val = re.match('^([A-Z_]+)=(.*)$', system_locale[0]).groups()
+    except AttributeError:
+        log.error('Odd locale parameter "{0}" detected in dbus locale '
+                  'output. This should not happen. You should '
+                  'probably investigate what caused this.'.format(
+                      system_locale[0]))
+    else:
+        ret[key] = val.replace('"', '')
+
     return ret
 
 
