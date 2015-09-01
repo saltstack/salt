@@ -345,6 +345,9 @@ def create(vm_):
     # to use driver: "driver: <provider-engine>"
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
+        
+    if _validate_name(vm_['name']) is False:
+        return False
 
     salt.utils.cloud.fire_event(
         'event',
@@ -1277,9 +1280,6 @@ def update_linode(linode_id, update_args=None):
     update_args
         The args to update the Linode with. Must be in dictionary form.
     '''
-    if _validate_name(linode_id) is False:
-        return False
-
     update_args.update({'LinodeID': linode_id})
 
     result = _query('linode', 'update', args=update_args)
