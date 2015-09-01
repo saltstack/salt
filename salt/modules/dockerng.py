@@ -102,6 +102,19 @@ The second way is to use separate pillar variables ending in
 Both methods can be combined; any registry configured under
 ``docker-registries`` or ``*-docker-registries`` will be detected.
 
+Configuration Options
+---------------------
+
+The following options can be set in the :ref:`minion config
+<configuration-salt-minion>`:
+
+- ``docker.url``: URL to the docker service (default: local socket).
+- ``docker.version``: API version to use (default: currently 1.4 API).
+- ``docker.exec_driver``: Execution driver to use, one of the following:
+    - nsenter
+    - lxc-attach
+    - docker-exec
+    See :ref:`Executing Commands Within a Running Container <docker-execution-driver>`.
 
 Functions
 ---------
