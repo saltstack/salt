@@ -35,12 +35,12 @@ def _parse_localectl():
     Get the 'System Locale' parameters from localectl
     '''
     ret = {}
-    
+
     bus = dbus.SystemBus()
     localed = bus.get_object('org.freedesktop.locale1',
                              '/org/freedesktop/locale1')
     properties = dbus.Interface(localed, 'org.freedesktop.DBus.Properties')
-    system_locale = properties.Get('org.freedesktop.locale1', 'Locale')        
+    system_locale = properties.Get('org.freedesktop.locale1', 'Locale')
 
     try:
         key, val = re.match('^([A-Z_]+)=(.*)$', system_locale[0]).groups()
