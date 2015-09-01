@@ -40,6 +40,6 @@ class ClientACL(object):
             else:
                 funs_to_check = cmd
             for fun in funs_to_check:
-                if re.match(cmd, fun):
+                if re.match(blacklisted_module, fun):
                     return True
         return False
