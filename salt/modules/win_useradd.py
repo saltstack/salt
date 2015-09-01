@@ -20,6 +20,8 @@ import logging
 log = logging.getLogger(__name__)
 
 try:
+    import wmi
+    import pythoncom
     import win32net
     import win32netcon
     import win32security
@@ -447,15 +449,51 @@ def rename(name, new_name):
 
         salt '*' user.rename name new_name
     '''
+    # Load information for the current name
     current_info = info(name)
     if not current_info:
         raise CommandExecutionError('User {0!r} does not exist'.format(name))
+
+    # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
         raise CommandExecutionError('User {0!r} already exists'.format(new_name))
-    cmd = 'wmic useraccount where name="{0}" rename {1}'.format(name, new_name)
-    __salt__['cmd.run'](cmd)
+
+    # Rename the user account
+    # Connect to WMI
+    pythoncom.CoInitialize()
+    c = wmi.WMI(find_classes=0)
+
+    # Get the user object
+    try:
+        user = c.Win32_UserAccount(Name=name)[0]
+    except IndexError:
+        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+
+    # Rename the user
+    result = user.Rename(new_name)[0]
+
+    # Check the result (0 means success)
+    if not result == 0:
+        # Define Error Dict
+        error_dict = {0: 'Success',
+                      1: 'Instance not found',
+                      2: 'Instance required',
+                      3: 'Invalid parameter',
+                      4: 'User not found',
+                      5: 'Domain not found',
+                      6: 'Operation is allowed only on the primary domain controller of the domain',
+                      7: 'Operation is not allowed on the last administrative account',
+                      8: 'Operation is not allowed on specified special groups: user, admin, local, or guest',
+                      9: 'Other API error',
+                      10: 'Internal error'}
+        raise CommandExecutionError('There was an error renaming {0!r} to {1!r}. Error: {2}'.format(name, new_name, error_dict[result]))
+
+    # Load information for the new name
     post_info = info(new_name)
+
+    # Verify that the name has changed
     if post_info['name'] != current_info['name']:
         return post_info['name'] == new_name
+
     return False
