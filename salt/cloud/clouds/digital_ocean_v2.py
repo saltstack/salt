@@ -228,7 +228,6 @@ def get_image(vm_):
         'image', vm_, __opts__, search_global=False
     )
     for image in images:
-        log.info(images[image])
         if vm_image in (images[image]['name'], images[image]['slug'], images[image]['id']):
             if images[image]['slug'] is not None:
                 return images[image]['slug']
