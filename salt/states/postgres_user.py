@@ -41,6 +41,7 @@ def present(name,
             inherit=None,
             login=None,
             password=None,
+            default_password=None,
             refresh_password=None,
             groups=None,
             user=None,
@@ -92,6 +93,9 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
+    default_passwoord
+        The password used only when creating the user, unless password is set.
+
     refresh_password
         Password refresh flag
 
@@ -138,6 +142,11 @@ def present(name,
     password = postgres._maybe_encrypt_password(name,
                                                 password,
                                                 encrypted=encrypted)
+
+    if default_password is not None:
+        default_password = postgres._maybe_encrypt_password(name,
+                                                            password,
+                                                            encrypted=encrypted)
 
     db_args = {
         'maintenance_db': maintenance_db,
@@ -193,6 +202,9 @@ def present(name,
             if isinstance(lgroups, list):
                 if [a for a in lgroups if a not in user_groups]:
                     update = True
+
+    if mode == 'create' and password is None:
+        password = default_password
 
     if mode == 'create' or (mode == 'update' and update):
         if __opts__['test']:
